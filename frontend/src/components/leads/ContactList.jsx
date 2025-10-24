@@ -1,23 +1,24 @@
 // src/components/leads/ContactList.jsx
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { FiUser, FiMail, FiPhone, FiFileText, FiChevronDown } from 'react-icons/fi';
 
 const ContactList = ({ contacts = [], leadType }) => {
   const [expandedContact, setExpandedContact] = useState(null);
-  
+
   // Bascule de l'expansion d'un contact
   const toggleExpand = (contactId) => {
     setExpandedContact(expandedContact === contactId ? null : contactId);
   };
-  
+
   // Si aucun contact n'est disponible
   if (contacts.length === 0) {
     return (
       <div className="bg-gray-900/30 rounded-lg p-6 text-center">
-        <div className="text-4xl mb-3">👤</div>
+        <div className="text-4xl mb-3"><FiUser /></div>
         <h4 className="text-lg font-medium text-gray-300 mb-2">Aucun contact</h4>
         <p className="text-gray-400 text-sm">
-          {leadType === 'company' 
+          {leadType === 'company'
             ? "Ajoutez des contacts pour cette entreprise."
             : "Ajoutez des informations de contact pour ce prospect."
           }
@@ -56,10 +57,10 @@ const ContactList = ({ contacts = [], leadType }) => {
               animate={{ rotate: expandedContact === contact.id ? 180 : 0 }}
               transition={{ duration: 0.3 }}
             >
-              ▼
+              <FiChevronDown />
             </motion.button>
           </div>
-          
+
           {/* Détails du contact (conditionnellement visibles) */}
           <AnimatePresence>
             {expandedContact === contact.id && (
@@ -75,12 +76,12 @@ const ContactList = ({ contacts = [], leadType }) => {
                   {contact.email && (
                     <div className="flex items-start">
                       <div className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center text-gray-400 mr-3">
-                        ✉️
+                        <FiMail />
                       </div>
                       <div>
                         <p className="text-xs text-gray-400 mb-1">Email</p>
-                        <a 
-                          href={`mailto:${contact.email}`} 
+                        <a
+                          href={`mailto:${contact.email}`}
                           className="text-indigo-300 hover:text-indigo-200 transition-colors"
                         >
                           {contact.email}
@@ -88,17 +89,17 @@ const ContactList = ({ contacts = [], leadType }) => {
                       </div>
                     </div>
                   )}
-                  
+
                   {/* Téléphone */}
                   {contact.phone && (
                     <div className="flex items-start">
                       <div className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center text-gray-400 mr-3">
-                        📞
+                        <FiPhone />
                       </div>
                       <div>
                         <p className="text-xs text-gray-400 mb-1">Téléphone</p>
-                        <a 
-                          href={`tel:${contact.phone}`} 
+                        <a
+                          href={`tel:${contact.phone}`}
                           className="text-indigo-300 hover:text-indigo-200 transition-colors"
                         >
                           {contact.phone}
@@ -106,12 +107,12 @@ const ContactList = ({ contacts = [], leadType }) => {
                       </div>
                     </div>
                   )}
-                  
+
                   {/* Notes */}
                   {contact.notes && (
                     <div className="flex items-start">
                       <div className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center text-gray-400 mr-3">
-                        📝
+                        <FiFileText />
                       </div>
                       <div>
                         <p className="text-xs text-gray-400 mb-1">Notes</p>

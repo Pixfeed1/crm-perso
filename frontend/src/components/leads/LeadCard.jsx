@@ -1,6 +1,7 @@
 // src/components/leads/LeadCard.jsx
 import React from 'react';
 import { motion } from 'framer-motion';
+import { FiMapPin } from 'react-icons/fi';
 
 const LeadCard = ({ lead, isSelected, onClick }) => {
   // Configuration des couleurs de statut
@@ -92,8 +93,8 @@ const LeadCard = ({ lead, isSelected, onClick }) => {
         
         {/* Indicateur de source */}
         {lead.source && (
-          <div className="flex items-center text-xs text-gray-400 mb-2">
-            <span className="mr-1">📌</span>
+          <div className="flex items-center text-xs text-gray-400 mb-2 gap-1">
+            <FiMapPin />
             <span>{lead.source}</span>
           </div>
         )}
