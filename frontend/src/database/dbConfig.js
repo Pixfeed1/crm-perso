@@ -2,6 +2,13 @@
 import initSqlJs from 'sql.js';
 import { openDB } from 'idb';
 
+// Détecter le mode de fonctionnement
+const API_URL = process.env.REACT_APP_API_URL;
+const IS_API_MODE = API_URL && API_URL.trim() !== '';
+
+console.log('🔧 Mode de fonctionnement détecté:', IS_API_MODE ? 'API Backend' : 'Local SQLite');
+console.log('📍 REACT_APP_API_URL:', API_URL || '(non défini)');
+
 // Singleton pour la connexion à la base de données
 let dbInstance = null;
 
@@ -20,6 +27,12 @@ const IDB_TIMEOUT = 30000; // 30 secondes pour IndexedDB
 
 // Initialisation de la base de données
 export const initDB = async () => {
+  // En mode API, ne pas initialiser SQL.js
+  if (IS_API_MODE) {
+    console.log('✅ Mode API détecté - SQL.js désactivé');
+    return Promise.resolve({ mode: 'api', message: 'SQL.js non chargé en mode API' });
+  }
+
   // Ne pas initialiser la base de données si une réinitialisation est en cours
   if (window.isAppResetting || window.stopAllDbOperations) {
     console.log('Initialisation de la base de données annulée car une réinitialisation est en cours');
@@ -440,12 +453,17 @@ const setupAutoSave = (db, idb) => {
 
 // Obtenir une instance de la base de données
 export const getDB = async () => {
+  // En mode API, ne pas utiliser SQL.js
+  if (IS_API_MODE) {
+    return Promise.resolve({ mode: 'api', message: 'Utiliser les appels API au lieu de SQL.js' });
+  }
+
   // Vérifier si une réinitialisation est en cours
   if (window.isAppResetting || window.stopAllDbOperations) {
     console.warn('Tentative d\'accès à la base de données pendant une réinitialisation');
     return Promise.reject(new Error('DB_RESET_IN_PROGRESS'));
   }
-  
+
   if (!dbInstance) {
     return await initDB();
   }
@@ -454,11 +472,17 @@ export const getDB = async () => {
 
 // Exécuter une requête SQL
 export const executeQuery = async (query, params = []) => {
+  // En mode API, ne pas exécuter de requêtes SQL.js
+  if (IS_API_MODE) {
+    console.warn('⚠️ executeQuery appelé en mode API - utilisez les appels API à la place');
+    return Promise.resolve([]);
+  }
+
   if (window.isAppResetting || window.stopAllDbOperations) {
     console.warn('Tentative d\'exécution de requête pendant une réinitialisation');
     return Promise.reject(new Error('DB_RESET_IN_PROGRESS'));
   }
-  
+
   try {
     const db = await getDB();
     return db.exec(query, params);
