@@ -351,3 +351,61 @@ export const dashboardAPI = {
     return apiRequest('/dashboard');
   }
 };
+
+// ===== DEVIS =====
+export const quotesAPI = {
+  getAll: () => {
+    console.log('Appel API: récupération de tous les devis');
+    return apiRequest('/quotes');
+  },
+  getById: (id) => {
+    console.log(`Appel API: récupération du devis ID ${id}`);
+    return apiRequest(`/quotes/${id}`);
+  },
+  create: (data) => {
+    console.log('Appel API: création d\'un nouveau devis', data);
+    return apiRequest('/quotes', 'POST', data);
+  },
+  update: (id, data) => {
+    console.log(`Appel API: mise à jour du devis ID ${id}`, data);
+    return apiRequest(`/quotes/${id}`, 'PUT', data);
+  },
+  delete: (id) => {
+    console.log(`Appel API: suppression du devis ID ${id}`);
+    return apiRequest(`/quotes/${id}`, 'DELETE');
+  },
+  send: (id) => {
+    console.log(`Appel API: marquer le devis ID ${id} comme envoyé`);
+    return apiRequest(`/quotes/${id}/send`, 'POST');
+  },
+  accept: (id) => {
+    console.log(`Appel API: accepter le devis ID ${id}`);
+    return apiRequest(`/quotes/${id}/accept`, 'POST');
+  },
+  reject: (id) => {
+    console.log(`Appel API: rejeter le devis ID ${id}`);
+    return apiRequest(`/quotes/${id}/reject`, 'POST');
+  },
+  getPDF: async (id) => {
+    console.log(`Appel API: téléchargement PDF du devis ID ${id}`);
+    const token = getAuthToken();
+
+    const response = await fetch(`${API_BASE_URL}/quotes/${id}/pdf`, {
+      method: 'GET',
+      headers: {
+        'Authorization': token ? `Bearer ${token}` : '',
+      },
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      throw new Error('Erreur lors du téléchargement du PDF');
+    }
+
+    return response.blob();
+  },
+  convertToProject: (id) => {
+    console.log(`Appel API: conversion du devis ID ${id} en projet`);
+    return apiRequest(`/quotes/${id}/convert-to-project`, 'POST');
+  }
+};

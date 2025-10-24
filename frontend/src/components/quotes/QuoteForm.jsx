@@ -9,7 +9,7 @@ import {
   CheckIcon
 } from '@heroicons/react/24/outline';
 import QuoteItemsEditor from './QuoteItemsEditor';
-import api from '../../utils/api';
+import { quotesAPI, leadsAPI } from '../../services/api';
 
 /**
  * Formulaire de création/édition d'un devis
@@ -52,8 +52,8 @@ const QuoteForm = ({ quoteId = null, onSuccess }) => {
 
   const loadLeads = async () => {
     try {
-      const response = await api.get('/api/leads');
-      setLeads(response.data);
+      const leads = await leadsAPI.getAll();
+      setLeads(leads);
     } catch (error) {
       console.error('Erreur lors du chargement des leads:', error);
     }
@@ -62,8 +62,7 @@ const QuoteForm = ({ quoteId = null, onSuccess }) => {
   const loadQuote = async () => {
     try {
       setLoading(true);
-      const response = await api.get(`/api/quotes/${quoteId}`);
-      const quote = response.data;
+      const quote = await quotesAPI.getById(quoteId);
 
       setFormData({
         lead_id: quote.lead_id || '',
@@ -131,11 +130,11 @@ const QuoteForm = ({ quoteId = null, onSuccess }) => {
 
       if (quoteId) {
         // Mise à jour
-        await api.put(`/api/quotes/${quoteId}`, quoteData);
+        await quotesAPI.update(quoteId, quoteData);
         alert('Devis mis à jour avec succès');
       } else {
         // Création
-        await api.post('/api/quotes', quoteData);
+        await quotesAPI.create(quoteData);
         alert('Devis créé avec succès');
       }
 
@@ -146,7 +145,7 @@ const QuoteForm = ({ quoteId = null, onSuccess }) => {
       }
     } catch (error) {
       console.error('Erreur lors de l\'enregistrement du devis:', error);
-      alert(error.response?.data?.message || 'Erreur lors de l\'enregistrement du devis');
+      alert(error.message || 'Erreur lors de l\'enregistrement du devis');
     } finally {
       setLoading(false);
     }

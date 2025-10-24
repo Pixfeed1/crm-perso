@@ -11,7 +11,7 @@ import {
   PencilIcon,
   FunnelIcon
 } from '@heroicons/react/24/outline';
-import api from '../utils/api';
+import { quotesAPI } from '../services/api';
 import usePermissions from '../hooks/usePermissions';
 
 /**
@@ -37,8 +37,8 @@ const Quotes = () => {
   const loadQuotes = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/api/quotes');
-      setQuotes(response.data);
+      const quotes = await quotesAPI.getAll();
+      setQuotes(quotes);
     } catch (error) {
       console.error('Erreur lors du chargement des devis:', error);
       alert('Erreur lors du chargement des devis');

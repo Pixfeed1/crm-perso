@@ -16,7 +16,7 @@ import {
   CalendarIcon,
   UserIcon
 } from '@heroicons/react/24/outline';
-import api from '../../utils/api';
+import { quotesAPI } from '../../services/api';
 import usePermissions from '../../hooks/usePermissions';
 
 /**
@@ -37,8 +37,8 @@ const QuoteDetails = () => {
   const loadQuote = async () => {
     try {
       setLoading(true);
-      const response = await api.get(`/api/quotes/${id}`);
-      setQuote(response.data);
+      const quote = await quotesAPI.getById(id);
+      setQuote(quote);
     } catch (error) {
       console.error('Erreur lors du chargement du devis:', error);
       alert('Erreur lors du chargement du devis');
@@ -53,12 +53,12 @@ const QuoteDetails = () => {
 
     try {
       setActionLoading(true);
-      await api.post(`/api/quotes/${id}/send`);
+      await quotesAPI.send(id);
       alert('Devis marqué comme envoyé');
       loadQuote();
     } catch (error) {
       console.error('Erreur:', error);
-      alert(error.response?.data?.message || 'Erreur lors de l\'envoi');
+      alert(error.message || 'Erreur lors de l\'envoi');
     } finally {
       setActionLoading(false);
     }
@@ -69,12 +69,12 @@ const QuoteDetails = () => {
 
     try {
       setActionLoading(true);
-      await api.post(`/api/quotes/${id}/accept`);
+      await quotesAPI.accept(id);
       alert('Devis accepté');
       loadQuote();
     } catch (error) {
       console.error('Erreur:', error);
-      alert(error.response?.data?.message || 'Erreur lors de l\'acceptation');
+      alert(error.message || 'Erreur lors de l\'acceptation');
     } finally {
       setActionLoading(false);
     }
@@ -85,12 +85,12 @@ const QuoteDetails = () => {
 
     try {
       setActionLoading(true);
-      await api.post(`/api/quotes/${id}/reject`);
+      await quotesAPI.reject(id);
       alert('Devis rejeté');
       loadQuote();
     } catch (error) {
       console.error('Erreur:', error);
-      alert(error.response?.data?.message || 'Erreur lors du rejet');
+      alert(error.message || 'Erreur lors du rejet');
     } finally {
       setActionLoading(false);
     }
@@ -101,12 +101,12 @@ const QuoteDetails = () => {
 
     try {
       setActionLoading(true);
-      const response = await api.post(`/api/quotes/${id}/convert-to-project`);
+      const result = await quotesAPI.convertToProject(id);
       alert('Devis converti en projet avec succès');
-      navigate(`/projects/${response.data.project.id}`);
+      navigate(`/projects/${result.project.id}`);
     } catch (error) {
       console.error('Erreur:', error);
-      alert(error.response?.data?.message || 'Erreur lors de la conversion');
+      alert(error.message || 'Erreur lors de la conversion');
     } finally {
       setActionLoading(false);
     }
@@ -115,12 +115,10 @@ const QuoteDetails = () => {
   const handleDownloadPDF = async () => {
     try {
       setActionLoading(true);
-      const response = await api.get(`/api/quotes/${id}/pdf`, {
-        responseType: 'blob'
-      });
+      const blob = await quotesAPI.getPDF(id);
 
       // Créer un lien de téléchargement
-      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
       link.setAttribute('download', `${quote.quote_number}.pdf`);
@@ -140,12 +138,12 @@ const QuoteDetails = () => {
 
     try {
       setActionLoading(true);
-      await api.delete(`/api/quotes/${id}`);
+      await quotesAPI.delete(id);
       alert('Devis supprimé');
       navigate('/quotes');
     } catch (error) {
       console.error('Erreur:', error);
-      alert(error.response?.data?.message || 'Erreur lors de la suppression');
+      alert(error.message || 'Erreur lors de la suppression');
     } finally {
       setActionLoading(false);
     }
