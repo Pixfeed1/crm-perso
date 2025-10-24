@@ -8,19 +8,19 @@ const GoalFilter = ({ filters, setFilters }) => {
   // Options de catégorie
   const categoryOptions = [
     { value: 'all', label: 'Toutes les catégories' },
-    { value: 'leads', label: 'Leads', icon: '👥' },
-    { value: 'revenue', label: 'Revenus', icon: '💰' },
-    { value: 'productivity', label: 'Productivité', icon: '⚙️' },
-    { value: 'marketing', label: 'Marketing', icon: '📢' },
-    { value: 'personal', label: 'Personnel', icon: '🌱' }
+    { value: 'leads', label: 'Leads' },
+    { value: 'revenue', label: 'Revenus' },
+    { value: 'productivity', label: 'Productivité' },
+    { value: 'marketing', label: 'Marketing' },
+    { value: 'personal', label: 'Personnel' }
   ];
-  
+
   // Options de période
   const periodOptions = [
     { value: 'all', label: 'Toutes les périodes' },
-    { value: 'monthly', label: 'Mensuel', icon: '📅' },
-    { value: 'quarterly', label: 'Trimestriel', icon: '🗓️' },
-    { value: 'yearly', label: 'Annuel', icon: '📆' }
+    { value: 'monthly', label: 'Mensuel' },
+    { value: 'quarterly', label: 'Trimestriel' },
+    { value: 'yearly', label: 'Annuel' }
   ];
   
   // Mise à jour des filtres
