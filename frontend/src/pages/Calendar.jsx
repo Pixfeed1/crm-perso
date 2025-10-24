@@ -1,6 +1,7 @@
 // src/pages/Calendar.jsx
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { FiCalendar } from 'react-icons/fi';
 // Remplacer executeQuery par la fonction d'API
 import { eventsAPI } from '../services/api';
 
@@ -389,7 +390,7 @@ const Calendar = () => {
                   className="h-full flex items-center justify-center"
                 >
                   <EmptyState
-                    icon="📅"
+                    icon={<FiCalendar />}
                     title={view === 'day' ? 'Sélectionnez un événement' : 'Calendrier'}
                     description={
                       view === 'day'

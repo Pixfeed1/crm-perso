@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { FiEdit2, FiTrash2, FiDollarSign } from 'react-icons/fi';
 
 // Composants
 import RevenueStats from '../components/revenues/RevenueStats';
@@ -528,7 +529,7 @@ const Revenues = () => {
                         setSelectedRevenue(null);
                       }}
                     >
-                      ✏️
+                      <FiEdit2 />
                     </motion.button>
                     <motion.button
                       className="p-2 rounded-lg bg-rose-600/30 hover:bg-rose-600/50 text-rose-300"
@@ -536,7 +537,7 @@ const Revenues = () => {
                       whileTap={{ scale: 0.95 }}
                       onClick={() => handleDeleteRevenue(selectedRevenue.id)}
                     >
-                      🗑️
+                      <FiTrash2 />
                     </motion.button>
                   </div>
                 </div>
@@ -550,7 +551,7 @@ const Revenues = () => {
                 className="h-full flex items-center justify-center"
               >
                 <EmptyState
-                  icon="💰"
+                  icon={<FiDollarSign />}
                   title="Revenus"
                   description="Sélectionnez un revenu dans la liste ou ajoutez-en un nouveau."
                 />

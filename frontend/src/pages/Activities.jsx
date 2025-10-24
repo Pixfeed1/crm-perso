@@ -1,6 +1,7 @@
 // src/pages/Activities.jsx
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { FiClipboard, FiCalendar, FiEdit2, FiTrash2, FiMonitor, FiEdit, FiUsers, FiPhone, FiMegaphone, FiTool, FiCheck } from 'react-icons/fi';
 // Importer vos services d'API
 import { activitiesAPI, projectsAPI } from '../services/api';
 
@@ -324,7 +325,7 @@ const Activities = () => {
               whileTap={{ scale: 0.95 }}
               onClick={() => setView('list')}
             >
-              <span className="mr-1">📋</span>
+              <FiClipboard className="mr-1" />
               Liste
             </motion.button>
             <motion.button
@@ -337,7 +338,7 @@ const Activities = () => {
               whileTap={{ scale: 0.95 }}
               onClick={() => setView('calendar')}
             >
-              <span className="mr-1">📅</span>
+              <FiCalendar className="mr-1" />
               Calendrier
             </motion.button>
           </div>
@@ -447,7 +448,7 @@ const Activities = () => {
                         setSelectedActivity(null);
                       }}
                     >
-                      ✏️
+                      <FiEdit2 />
                     </motion.button>
                     {/* Bouton Supprimer */}
                     <motion.button
@@ -456,7 +457,7 @@ const Activities = () => {
                       className="p-2 rounded-lg bg-rose-600/30 hover:bg-rose-600/50 text-rose-300"
                       onClick={() => handleDeleteActivity(selectedActivity.id)}
                     >
-                      🗑️
+                      <FiTrash2 />
                     </motion.button>
                   </div>
                 </div>
@@ -465,13 +466,13 @@ const Activities = () => {
                   {/* Type */}
                   <div className="flex justify-between items-center">
                     <span className="text-gray-400">Type</span>
-                    <span className="text-white capitalize">
-                      {selectedActivity.type === 'development' ? '💻 Développement' :
-                       selectedActivity.type === 'design'      ? '🎨 Design'        :
-                       selectedActivity.type === 'meeting'     ? '👥 Réunion'       :
-                       selectedActivity.type === 'call'        ? '📞 Appel'         :
-                       selectedActivity.type === 'marketing'   ? '📢 Marketing'     :
-                       selectedActivity.type === 'maintenance' ? '🔧 Maintenance'   :
+                    <span className="text-white capitalize flex items-center gap-1">
+                      {selectedActivity.type === 'development' ? <><FiMonitor /> Développement</> :
+                       selectedActivity.type === 'design'      ? <><FiEdit /> Design</>        :
+                       selectedActivity.type === 'meeting'     ? <><FiUsers /> Réunion</>       :
+                       selectedActivity.type === 'call'        ? <><FiPhone /> Appel</>         :
+                       selectedActivity.type === 'marketing'   ? <><FiMegaphone /> Marketing</>     :
+                       selectedActivity.type === 'maintenance' ? <><FiTool /> Maintenance</>   :
                        selectedActivity.type}
                     </span>
                   </div>
@@ -569,7 +570,7 @@ const Activities = () => {
                           }
                         }}
                       >
-                        <span className="mr-2">✓</span>
+                        <FiCheck className="mr-2" />
                         Marquer comme terminé
                       </motion.button>
                     </div>
@@ -586,7 +587,7 @@ const Activities = () => {
                 className="h-full flex items-center justify-center"
               >
                 <EmptyState
-                  icon="📋"
+                  icon={<FiClipboard />}
                   title="Activités"
                   description="Sélectionnez une activité dans la liste ou ajoutez-en une nouvelle."
                 />

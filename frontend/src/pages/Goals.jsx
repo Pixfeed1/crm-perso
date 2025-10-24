@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { goalsAPI } from '../services/api';
+import { FiTarget, FiZap, FiCheckCircle, FiClock } from 'react-icons/fi';
 
 // Composants
 import GoalStats from '../components/goals/GoalStats';
@@ -409,7 +410,7 @@ const Goals = () => {
             }`}
             onClick={() => setView('all')}
           >
-            <span className="mr-1">🎯</span>
+            <FiTarget className="mr-1" />
             Tous
           </button>
           <button
@@ -420,7 +421,7 @@ const Goals = () => {
             }`}
             onClick={() => setView('active')}
           >
-            <span className="mr-1">⚡</span>
+            <FiZap className="mr-1" />
             En cours
           </button>
           <button
@@ -431,7 +432,7 @@ const Goals = () => {
             }`}
             onClick={() => setView('completed')}
           >
-            <span className="mr-1">✅</span>
+            <FiCheckCircle className="mr-1" />
             Complétés
           </button>
           <button
@@ -442,7 +443,7 @@ const Goals = () => {
             }`}
             onClick={() => setView('upcoming')}
           >
-            <span className="mr-1">🔮</span>
+            <FiClock className="mr-1" />
             À venir
           </button>
         </div>
@@ -502,8 +503,8 @@ const Goals = () => {
               key="empty-state"
               className="h-full flex items-center justify-center"
             >
-              <EmptyState 
-                icon="🎯"
+              <EmptyState
+                icon={<FiTarget />}
                 title="Objectifs"
                 description="Sélectionnez un objectif dans la liste ou créez-en un nouveau."
               />

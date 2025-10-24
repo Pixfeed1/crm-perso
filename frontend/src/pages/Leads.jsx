@@ -1,6 +1,7 @@
 // src/pages/Leads.jsx
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { FiUsers, FiStar } from 'react-icons/fi';
 // Remplacer executeQuery par la fonction d'API
 import { leadsAPI } from '../services/api';
 
@@ -286,8 +287,8 @@ const Leads = () => {
                   </motion.div>
                 ))
               ) : (
-                <EmptyState 
-                  icon="👥"
+                <EmptyState
+                  icon={<FiUsers />}
                   title="Aucun lead trouvé"
                   description="Ajoutez de nouveaux leads ou modifiez vos filtres."
                 />
@@ -347,8 +348,8 @@ const Leads = () => {
                   exit={{ opacity: 0 }}
                   className="h-full flex items-center justify-center"
                 >
-                  <EmptyState 
-                    icon="✨"
+                  <EmptyState
+                    icon={<FiStar />}
                     title="Sélectionnez un lead"
                     description="Choisissez un lead dans la liste ou créez-en un nouveau."
                   />
