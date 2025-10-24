@@ -1,7 +1,7 @@
 // src/components/goals/GoalList.jsx
 import React from 'react';
 import { motion } from 'framer-motion';
-import { FiUsers, FiDollarSign, FiSettings, FiMegaphone, FiStar, FiCheckCircle, FiClock, FiZap, FiAlertCircle, FiMinusCircle } from 'react-icons/fi';
+import { FiUsers, FiDollarSign, FiSettings, FiMegaphone, FiStar, FiCheckCircle, FiClock, FiZap, FiAlertCircle, FiMinusCircle, FiTarget, FiMapPin } from 'react-icons/fi';
 
 const GoalList = ({ goals, selectedGoal, onSelectGoal }) => {
   // Fonction pour calculer le pourcentage de progression
@@ -105,7 +105,7 @@ const GoalList = ({ goals, selectedGoal, onSelectGoal }) => {
   if (goals.length === 0) {
     return (
       <div className="bg-white/10 backdrop-blur-md rounded-lg p-6 text-center">
-        <div className="text-5xl mb-4">🎯</div>
+        <div className="text-5xl mb-4"><FiTarget /></div>
         <h4 className="text-lg font-medium text-white mb-2">Sélectionnez un objectif dans la liste ou créez-en un nouveau</h4>
         <p className="text-gray-300 text-sm">
           Aucun objectif trouvé pour cette période ou avec ces filtres.
@@ -121,7 +121,7 @@ const GoalList = ({ goals, selectedGoal, onSelectGoal }) => {
         const progress = calculateProgress(goal.current_value, goal.target_value);
         const statusInfo = getGoalStatus(goal);
         const timeRemaining = getTimeRemaining(goal);
-        const categoryInfo = categoryConfig[goal.category] || { icon: '📌', label: goal.category, color: 'text-gray-300' };
+        const categoryInfo = categoryConfig[goal.category] || { icon: <FiMapPin />, label: goal.category, color: 'text-gray-300' };
         const periodInfo = periodConfig[goal.period] || { label: goal.period, color: 'text-gray-300' };
         
         return (

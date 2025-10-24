@@ -1,6 +1,7 @@
 // src/components/goals/GoalFilter.jsx
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { FiSearch, FiX } from 'react-icons/fi';
 
 const GoalFilter = ({ filters, setFilters }) => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -58,7 +59,7 @@ const GoalFilter = ({ filters, setFilters }) => {
             className="w-full bg-white text-gray-800 border border-gray-400 rounded-lg px-4 py-2 pl-10 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent relative z-10"
           />
           <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 z-[15]">
-            🔍
+            <FiSearch />
           </span>
           {filters.search && (
             <motion.button
@@ -67,7 +68,7 @@ const GoalFilter = ({ filters, setFilters }) => {
               whileTap={{ scale: 0.9 }}
               onClick={() => handleFilterChange('search', '')}
             >
-              ✕
+              <FiX />
             </motion.button>
           )}
         </div>
@@ -78,8 +79,8 @@ const GoalFilter = ({ filters, setFilters }) => {
         className="px-3 py-2 flex justify-between items-center cursor-pointer hover:bg-gray-700/30 relative z-10"
         onClick={() => setIsExpanded(!isExpanded)}
       >
-        <div className="flex items-center text-sm">
-          <span className="mr-2">🔍</span>
+        <div className="flex items-center text-sm gap-2">
+          <FiSearch />
           <span className="text-gray-300 font-medium">Filtres avancés</span>
           {hasActiveFilters && (
             <span className="ml-2 px-1.5 py-0.5 bg-amber-600 rounded-full text-xs text-white">

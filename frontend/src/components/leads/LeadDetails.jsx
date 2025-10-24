@@ -1,7 +1,7 @@
 // src/components/leads/LeadDetails.jsx
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiStar, FiEye, FiCheckCircle, FiMessageCircle, FiAward, FiXCircle, FiHelpCircle, FiClipboard, FiBuilding, FiUser, FiFileText, FiUsers } from 'react-icons/fi';
+import { FiStar, FiEye, FiCheckCircle, FiMessageCircle, FiAward, FiXCircle, FiHelpCircle, FiClipboard, FiBuilding, FiUser, FiFileText, FiUsers, FiEdit2, FiTrash2 } from 'react-icons/fi';
 
 // Sous-composants
 import ContactList from './ContactList';
@@ -129,7 +129,7 @@ const LeadDetails = ({ lead, onUpdate, onDelete, onAddContact }) => {
             className="p-2 rounded-lg bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300"
             onClick={() => setIsEditing(true)}
           >
-            ✏️
+            <FiEdit2 />
           </motion.button>
           
           <motion.button
@@ -138,7 +138,7 @@ const LeadDetails = ({ lead, onUpdate, onDelete, onAddContact }) => {
             className="p-2 rounded-lg bg-rose-600/30 hover:bg-rose-600/50 text-rose-300"
             onClick={() => setShowDeleteConfirm(true)}
           >
-            🗑️
+            <FiTrash2 />
           </motion.button>
         </div>
       </div>

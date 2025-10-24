@@ -1,6 +1,7 @@
 // src/components/leads/LeadFilter.jsx
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { FiSearch, FiX } from 'react-icons/fi';
 
 const LeadFilter = ({ filters, setFilters }) => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -56,7 +57,7 @@ const LeadFilter = ({ filters, setFilters }) => {
             className="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-4 py-2 pl-10 text-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
           />
           <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-            🔍
+            <FiSearch />
           </span>
           {filters.search && (
             <motion.button
@@ -65,7 +66,7 @@ const LeadFilter = ({ filters, setFilters }) => {
               whileTap={{ scale: 0.9 }}
               onClick={() => handleFilterChange('search', '')}
             >
-              ✕
+              <FiX />
             </motion.button>
           )}
         </div>
@@ -77,7 +78,7 @@ const LeadFilter = ({ filters, setFilters }) => {
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <div className="flex items-center text-sm">
-          <span className="mr-2">🔍</span>
+          <span className="mr-2"><FiSearch /></span>
           <span className="text-gray-300 font-medium">Filtres avancés</span>
           {hasActiveFilters && (
             <span className="ml-2 px-1.5 py-0.5 bg-indigo-600 rounded-full text-xs text-white">

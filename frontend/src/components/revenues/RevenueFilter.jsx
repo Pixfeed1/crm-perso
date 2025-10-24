@@ -1,6 +1,7 @@
 // src/components/revenues/RevenueFilter.jsx
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { FiSearch, FiX } from 'react-icons/fi';
 
 const RevenueFilter = ({ filters, setFilters, projects }) => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -71,7 +72,7 @@ const RevenueFilter = ({ filters, setFilters, projects }) => {
             className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500"
             style={iconStyle}
           >
-            🔍
+            <FiSearch />
           </span>
           {filters.search && (
             <motion.button
@@ -81,7 +82,7 @@ const RevenueFilter = ({ filters, setFilters, projects }) => {
               whileTap={{ scale: 0.9 }}
               onClick={() => handleFilterChange('search', '')}
             >
-              ✕
+              <FiX />
             </motion.button>
           )}
         </div>
@@ -93,7 +94,7 @@ const RevenueFilter = ({ filters, setFilters, projects }) => {
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <div className="flex items-center text-sm">
-          <span className="mr-2">🔍</span>
+          <span className="mr-2"><FiSearch /></span>
           <span className="text-gray-300 font-medium">Filtres avancés</span>
           {hasActiveFilters && (
             <span className="ml-2 px-1.5 py-0.5 bg-teal-600 rounded-full text-xs text-white">

@@ -1,7 +1,7 @@
 // src/components/goals/GoalDetails.jsx
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiUsers, FiDollarSign, FiSettings, FiMegaphone, FiStar, FiCheckCircle, FiClock, FiZap, FiAlertCircle, FiMinusCircle } from 'react-icons/fi';
+import { FiUsers, FiDollarSign, FiSettings, FiMegaphone, FiStar, FiCheckCircle, FiClock, FiZap, FiAlertCircle, FiMinusCircle, FiMapPin, FiEdit2, FiTrash2, FiTrendingUp, FiClipboard, FiAward, FiCheck, FiCircle } from 'react-icons/fi';
 
 const GoalDetails = ({
   goal,
@@ -141,7 +141,7 @@ const GoalDetails = ({
   const progress = calculateProgress(goal.current_value, goal.target_value);
   const statusInfo = getGoalStatus();
   const timeRemaining = getTimeRemaining();
-  const categoryInfo = categoryConfig[goal.category] || { icon: '📌', label: goal.category, color: 'text-gray-300' };
+  const categoryInfo = categoryConfig[goal.category] || { icon: '<FiMapPin />', label: goal.category, color: 'text-gray-300' };
   const periodInfo = periodConfig[goal.period] || { label: goal.period, color: 'text-gray-300' };
   
   return (
@@ -171,7 +171,7 @@ const GoalDetails = ({
             className="p-2 rounded-lg bg-amber-600/30 hover:bg-amber-600/50 text-amber-300"
             onClick={() => setIsEditing(true)}
           >
-            ✏️
+            <FiEdit2 />
           </motion.button>
           
           <motion.button
@@ -180,7 +180,7 @@ const GoalDetails = ({
             className="p-2 rounded-lg bg-rose-600/30 hover:bg-rose-600/50 text-rose-300"
             onClick={() => setShowDeleteConfirm(true)}
           >
-            🗑️
+            <FiTrash2 />
           </motion.button>
         </div>
       </div>
@@ -199,7 +199,7 @@ const GoalDetails = ({
       {/* Progression */}
       <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl p-5 mb-6">
         <h3 className="text-lg font-medium text-gray-200 mb-4 flex items-center">
-          <span className="mr-2">📈</span>
+          <span className="mr-2"><FiTrendingUp /></span>
           Progression
         </h3>
         
@@ -284,7 +284,7 @@ const GoalDetails = ({
       {/* Informations détaillées */}
       <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl p-5 mb-6">
         <h3 className="text-lg font-medium text-gray-200 mb-4 flex items-center">
-          <span className="mr-2">📋</span>
+          <span className="mr-2"><FiClipboard /></span>
           Détails
         </h3>
         
@@ -322,7 +322,7 @@ const GoalDetails = ({
       <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl p-5">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-medium text-gray-200 flex items-center">
-            <span className="mr-2">🏆</span>
+            <span className="mr-2"><FiAward /></span>
             Étapes
           </h3>
           
@@ -353,7 +353,7 @@ const GoalDetails = ({
                       ? 'bg-green-500 text-white' 
                       : 'bg-gray-700 text-gray-400'
                   }`}>
-                    {milestone.achieved ? '✓' : '○'}
+                    {milestone.achieved ? '<FiCheck />' : '<FiCircle />'}
                   </div>
                   <div>
                     <div className="font-medium text-white">{milestone.name}</div>
