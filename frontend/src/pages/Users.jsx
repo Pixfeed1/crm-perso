@@ -28,7 +28,7 @@ const Users = () => {
       const token = localStorage.getItem('token');
       const response = await fetch('http://localhost:5000/api/users', {
         headers: {
-          'Authorization': \`Bearer \${token}\`,
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
@@ -56,7 +56,7 @@ const Users = () => {
       const response = await fetch('http://localhost:5000/api/users', {
         method: 'POST',
         headers: {
-          'Authorization': \`Bearer \${token}\`,
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(formData)
@@ -91,7 +91,7 @@ const Users = () => {
       const response = await fetch(\`http://localhost:5000/api/users/\${user.id}\`, {
         method: 'DELETE',
         headers: {
-          'Authorization': \`Bearer \${token}\`,
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
@@ -121,7 +121,7 @@ const Users = () => {
       const response = await fetch(\`http://localhost:5000/api/users/\${userId}/change-password\`, {
         method: 'POST',
         headers: {
-          'Authorization': \`Bearer \${token}\`,
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ oldPassword: passwordData.oldPassword, newPassword: passwordData.newPassword })
