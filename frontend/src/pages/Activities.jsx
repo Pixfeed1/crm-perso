@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiClipboard, FiCalendar, FiEdit2, FiTrash2, FiMonitor, FiEdit, FiUsers, FiPhone, FiMegaphone, FiTool, FiCheck, FiDownload } from 'react-icons/fi';
+import { useToast } from '../hooks/useToast';
 // Importer vos services d'API
 import { activitiesAPI, projectsAPI, exportAPI } from '../services/api';
 
@@ -14,6 +15,7 @@ import ActivityCalendar from '../components/activities/ActivityCalendar';
 import EmptyState from '../components/common/EmptyState';
 
 const Activities = () => {
+  const { toast } = useToast();
   const [activities, setActivities] = useState([]);
   const [filteredActivities, setFilteredActivities] = useState([]);
   const [selectedActivity, setSelectedActivity] = useState(null);
@@ -205,8 +207,8 @@ const Activities = () => {
       if (error.message && error.message.includes('lead_name')) {
         errorMessage = 'Ce serveur ne prend pas en charge le champ "lead_name". Veuillez mettre à jour la base de données.';
       }
-      
-      alert(errorMessage);
+
+      toast.error(errorMessage);
     }
   };
 
@@ -227,7 +229,7 @@ const Activities = () => {
       setSelectedActivity(updated);
     } catch (error) {
       console.error('Erreur de mise à jour:', error);
-      alert('Erreur lors de la mise à jour: ' + error.message);
+      toast.error('Erreur lors de la mise à jour: ' + error.message);
     }
   };
 
@@ -243,7 +245,7 @@ const Activities = () => {
       setSelectedActivity(null);
     } catch (error) {
       console.error('Erreur suppression:', error);
-      alert('Erreur lors de la suppression: ' + error.message);
+      toast.error('Erreur lors de la suppression: ' + error.message);
     }
   };
 
@@ -261,7 +263,7 @@ const Activities = () => {
       setSelectedActivity(completed);
     } catch (error) {
       console.error('Erreur completion:', error);
-      alert('Erreur lors de la complétion: ' + error.message);
+      toast.error('Erreur lors de la complétion: ' + error.message);
     }
   };
 

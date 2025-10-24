@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { goalsAPI, exportAPI } from '../services/api';
 import { FiTarget, FiZap, FiCheckCircle, FiClock, FiDownload } from 'react-icons/fi';
+import { useToast } from '../hooks/useToast';
 
 // Composants
 import GoalStats from '../components/goals/GoalStats';
@@ -11,6 +12,7 @@ import GoalFilter from '../components/goals/GoalFilter';
 import EmptyState from '../components/common/EmptyState';
 
 const Goals = () => {
+  const { toast } = useToast();
   const [goals, setGoals] = useState([]);
   const [filteredGoals, setFilteredGoals] = useState([]);
   const [selectedGoal, setSelectedGoal] = useState(null);
@@ -194,12 +196,12 @@ const Goals = () => {
       calculateStats(updatedGoals);
       setIsAddingGoal(false);
       setSelectedGoal(newGoal);
-      
+
       // Notification de succès
-      alert("Objectif créé avec succès!");
+      toast.success("Objectif créé avec succès!");
     } catch (error) {
       console.error('Erreur lors de la sauvegarde de l\'objectif:', error);
-      alert(`Erreur lors de la création de l'objectif: ${error.message || 'Une erreur est survenue'}`);
+      toast.error(`Erreur lors de la création de l'objectif: ${error.message || 'Une erreur est survenue'}`);
     }
   };
 
@@ -277,12 +279,12 @@ const Goals = () => {
       setGoals(updatedGoals);
       calculateStats(updatedGoals);
       setSelectedGoal(updatedGoals.find(goal => goal.id === id));
-      
+
       // Notification de succès
-      alert("Objectif mis à jour avec succès!");
+      toast.success("Objectif mis à jour avec succès!");
     } catch (error) {
       console.error('Erreur lors de la mise à jour de l\'objectif:', error);
-      alert(`Erreur lors de la mise à jour de l'objectif: ${error.message || 'Une erreur est survenue'}`);
+      toast.error(`Erreur lors de la mise à jour de l'objectif: ${error.message || 'Une erreur est survenue'}`);
     }
   };
 
@@ -298,11 +300,11 @@ const Goals = () => {
       setGoals(remainingGoals);
       calculateStats(remainingGoals);
       setSelectedGoal(null);
-      
-      alert("Objectif supprimé avec succès");
+
+      toast.success("Objectif supprimé avec succès");
     } catch (error) {
       console.error('Erreur lors de la suppression de l\'objectif:', error);
-      alert(`Erreur lors de la suppression de l'objectif: ${error.message || 'Une erreur est survenue'}`);
+      toast.error(`Erreur lors de la suppression de l'objectif: ${error.message || 'Une erreur est survenue'}`);
     }
   };
 
@@ -328,7 +330,7 @@ const Goals = () => {
       setSelectedGoal(updatedGoals.find(goal => goal.id === goalId));
     } catch (error) {
       console.error('Erreur lors de l\'ajout de l\'étape:', error);
-      alert(`Erreur lors de l'ajout de l'étape: ${error.message || 'Une erreur est survenue'}`);
+      toast.error(`Erreur lors de l'ajout de l'étape: ${error.message || 'Une erreur est survenue'}`);
     }
   };
 
@@ -361,7 +363,7 @@ const Goals = () => {
       setSelectedGoal(updatedGoals.find(goal => goal.id === goalId));
     } catch (error) {
       console.error('Erreur lors de la mise à jour de l\'étape:', error);
-      alert(`Erreur lors de la mise à jour de l'étape: ${error.message || 'Une erreur est survenue'}`);
+      toast.error(`Erreur lors de la mise à jour de l'étape: ${error.message || 'Une erreur est survenue'}`);
     }
   };
 

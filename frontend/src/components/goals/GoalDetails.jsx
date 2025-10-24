@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiUsers, FiDollarSign, FiSettings, FiMegaphone, FiStar, FiCheckCircle, FiClock, FiZap, FiAlertCircle, FiMinusCircle, FiMapPin, FiEdit2, FiTrash2, FiTrendingUp, FiClipboard, FiAward, FiCheck, FiCircle } from 'react-icons/fi';
+import { useToast } from '../../hooks/useToast';
 
 const GoalDetails = ({
   goal,
@@ -10,6 +11,7 @@ const GoalDetails = ({
   onAddMilestone,
   onUpdateMilestone
 }) => {
+  const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const [isAddingMilestone, setIsAddingMilestone] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -116,9 +118,9 @@ const GoalDetails = ({
   const handleUpdateCurrentValue = () => {
     // Conversion explicite en nombre et validation
     const numericValue = parseFloat(editData.current_value);
-    
+
     if (isNaN(numericValue)) {
-      alert("Veuillez entrer une valeur numérique valide");
+      toast.error("Veuillez entrer une valeur numérique valide");
       return;
     }
     
@@ -129,7 +131,7 @@ const GoalDetails = ({
   
   const handleSubmitMilestone = () => {
     if (!milestoneData.name || milestoneData.target <= 0) {
-      alert("Veuillez entrer un nom et une valeur cible valide");
+      toast.error("Veuillez entrer un nom et une valeur cible valide");
       return;
     }
     

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiEdit2, FiTrash2, FiDollarSign, FiDownload } from 'react-icons/fi';
+import { useToast } from '../hooks/useToast';
 
 // Composants
 import RevenueStats from '../components/revenues/RevenueStats';
@@ -16,6 +17,7 @@ import EmptyState from '../components/common/EmptyState';
 import { revenuesAPI, projectsAPI, exportAPI } from '../services/api';
 
 const Revenues = () => {
+  const { toast } = useToast();
   const [revenues, setRevenues] = useState([]);
   const [filteredRevenues, setFilteredRevenues] = useState([]);
   const [selectedRevenue, setSelectedRevenue] = useState(null);
@@ -255,8 +257,8 @@ const Revenues = () => {
       if (error.message && error.message.includes("no such table")) {
         errorMessage = "La table 'revenues' n'existe pas dans la base de données. Veuillez exécuter les migrations pour la créer.";
       }
-      
-      alert(errorMessage);
+
+      toast.error(errorMessage);
     }
   };
 
@@ -277,7 +279,7 @@ const Revenues = () => {
       setSelectedRevenue(updated);
     } catch (error) {
       console.error('Erreur lors de la mise à jour du revenu:', error);
-      alert(`Erreur lors de la mise à jour: ${error.message}`);
+      toast.error(`Erreur lors de la mise à jour: ${error.message}`);
     }
   };
 
@@ -292,7 +294,7 @@ const Revenues = () => {
       setSelectedRevenue(null);
     } catch (error) {
       console.error('Erreur lors de la suppression du revenu:', error);
-      alert(`Erreur lors de la suppression: ${error.message}`);
+      toast.error(`Erreur lors de la suppression: ${error.message}`);
     }
   };
 

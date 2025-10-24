@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { initDB } from './database/dbConfig';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ToastProvider } from './contexts/ToastContext';
 
 // Importation du composant Login et pages de récupération de mot de passe
 import Login from './pages/Login';
@@ -91,12 +92,13 @@ const App = () => {
 
   return (
     <AuthProvider>
-      <Router>
-        <Routes>
-          {/* Routes d'authentification non protégées */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
+      <ToastProvider>
+        <Router>
+          <Routes>
+            {/* Routes d'authentification non protégées */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
 
           {/* Routes protégées avec Layout */}
           <Route path="/dashboard" element={
@@ -160,6 +162,7 @@ const App = () => {
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </Router>
+      </ToastProvider>
     </AuthProvider>
   );
 };

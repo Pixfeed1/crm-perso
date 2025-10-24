@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FiUsers, FiStar, FiArrowLeft, FiDownload, FiList, FiTrello } from 'react-icons/fi';
 // Remplacer executeQuery par la fonction d'API
 import { leadsAPI, exportAPI } from '../services/api';
+import { useToast } from '../hooks/useToast';
 
 // Composants
 import LeadCard from '../components/leads/LeadCard';
@@ -14,6 +15,7 @@ import KanbanView from '../components/kanban/KanbanView';
 import EmptyState from '../components/common/EmptyState';
 
 const Leads = () => {
+  const { toast } = useToast();
   const [leads, setLeads] = useState([]);
   const [filteredLeads, setFilteredLeads] = useState([]);
   const [selectedLead, setSelectedLead] = useState(null);
@@ -126,7 +128,7 @@ const Leads = () => {
       setSelectedLead(newLead);
     } catch (error) {
       console.error('Erreur lors de la sauvegarde du lead:', error);
-      alert("Une erreur est survenue lors de la création du lead.");
+      toast.error("Une erreur est survenue lors de la création du lead.");
     }
   };
 
@@ -146,7 +148,7 @@ const Leads = () => {
       setSelectedLead({ ...selectedLead, ...updatedLead });
     } catch (error) {
       console.error('Erreur lors de la mise à jour du lead:', error);
-      alert("Une erreur est survenue lors de la mise à jour du lead.");
+      toast.error("Une erreur est survenue lors de la mise à jour du lead.");
     }
   };
 
@@ -165,7 +167,7 @@ const Leads = () => {
       setShowDetails(false); // Retour à la liste sur mobile
     } catch (error) {
       console.error('Erreur lors de la suppression du lead:', error);
-      alert("Une erreur est survenue lors de la suppression du lead.");
+      toast.error("Une erreur est survenue lors de la suppression du lead.");
     }
   };
 
@@ -186,7 +188,7 @@ const Leads = () => {
       }
     } catch (error) {
       console.error('Erreur lors de l\'ajout du contact:', error);
-      alert("Une erreur est survenue lors de l'ajout du contact.");
+      toast.error("Une erreur est survenue lors de l'ajout du contact.");
     }
   };
 
@@ -210,7 +212,7 @@ const Leads = () => {
       }
     } catch (error) {
       console.error('Erreur lors de la mise à jour du contact:', error);
-      alert("Une erreur est survenue lors de la mise à jour du contact.");
+      toast.error("Une erreur est survenue lors de la mise à jour du contact.");
     }
   };
 
@@ -232,7 +234,7 @@ const Leads = () => {
       }
     } catch (error) {
       console.error('Erreur lors de la suppression du contact:', error);
-      alert("Une erreur est survenue lors de la suppression du contact.");
+      toast.error("Une erreur est survenue lors de la suppression du contact.");
     }
   };
 
@@ -253,7 +255,7 @@ const Leads = () => {
       }
     } catch (error) {
       console.error('Erreur lors de l\'ajout de l\'interaction:', error);
-      alert("Une erreur est survenue lors de l'ajout de l'interaction.");
+      toast.error("Une erreur est survenue lors de l'ajout de l'interaction.");
     }
   };
 
@@ -277,7 +279,7 @@ const Leads = () => {
       }
     } catch (error) {
       console.error('Erreur lors de la mise à jour de l\'interaction:', error);
-      alert("Une erreur est survenue lors de la mise à jour de l'interaction.");
+      toast.error("Une erreur est survenue lors de la mise à jour de l'interaction.");
     }
   };
 
@@ -299,7 +301,7 @@ const Leads = () => {
       }
     } catch (error) {
       console.error('Erreur lors de la suppression de l\'interaction:', error);
-      alert("Une erreur est survenue lors de la suppression de l'interaction.");
+      toast.error("Une erreur est survenue lors de la suppression de l'interaction.");
     }
   };
 

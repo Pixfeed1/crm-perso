@@ -1,8 +1,10 @@
 // src/components/projects/ProjectForm.jsx
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { useToast } from '../../hooks/useToast';
 
 const ProjectForm = ({ project = {}, onSave, onCancel }) => {
+  const { toast } = useToast();
   // État du formulaire avec valeurs par défaut ou existantes
   const [formData, setFormData] = useState({
     name: project.name || '',
@@ -15,7 +17,7 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
     status: project.status || 'planifié',
     amount: project.amount || 0
   });
-  
+
   const [leads, setLeads] = useState([]);
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
@@ -176,7 +178,7 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
       await onSave(projectData);
     } catch (error) {
       console.error('Erreur lors de la sauvegarde:', error);
-      alert("Erreur lors de la sauvegarde du projet: " + (error.message || "Erreur inconnue"));
+      toast.error("Erreur lors de la sauvegarde du projet: " + (error.message || "Erreur inconnue"));
     } finally {
       setSubmitting(false);
     }

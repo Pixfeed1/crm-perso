@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiCalendar } from 'react-icons/fi';
+import { useToast } from '../hooks/useToast';
 // Remplacer executeQuery par la fonction d'API
 import { eventsAPI } from '../services/api';
 
@@ -15,6 +16,7 @@ import EventForm from '../components/calendar/EventForm';
 import EmptyState from '../components/common/EmptyState';
 
 const Calendar = () => {
+  const { toast } = useToast();
   const [view, setView] = useState('month'); // 'month', 'week', 'day'
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -142,7 +144,7 @@ const Calendar = () => {
       
       if (!isValidDate(startDate) || !isValidDate(endDate)) {
         console.error("Dates invalides:", eventData.start_date, eventData.end_date);
-        alert("Erreur: Les dates saisies sont invalides.");
+        toast.error("Erreur: Les dates saisies sont invalides.");
         return;
       }
       
@@ -171,7 +173,7 @@ const Calendar = () => {
       console.log("Événement créé avec succès:", newEvent);
     } catch (error) {
       console.error("Erreur lors de la sauvegarde de l'événement:", error);
-      alert("Une erreur est survenue lors de la création de l'événement.");
+      toast.error("Une erreur est survenue lors de la création de l'événement.");
     }
   };
 
@@ -193,7 +195,7 @@ const Calendar = () => {
           formattedData.start_datetime = startDate.toISOString();
         } else {
           console.error("Date de début invalide:", updatedData.start_date);
-          alert("Erreur: La date de début est invalide.");
+          toast.error("Erreur: La date de début est invalide.");
           return;
         }
       }
@@ -207,7 +209,7 @@ const Calendar = () => {
           formattedData.end_datetime = endDate.toISOString();
         } else {
           console.error("Date de fin invalide:", updatedData.end_date);
-          alert("Erreur: La date de fin est invalide.");
+          toast.error("Erreur: La date de fin est invalide.");
           return;
         }
       }
@@ -227,7 +229,7 @@ const Calendar = () => {
       console.log("Événement mis à jour avec succès:", updatedEvent);
     } catch (error) {
       console.error("Erreur lors de la mise à jour de l'événement:", error);
-      alert("Une erreur est survenue lors de la mise à jour de l'événement.");
+      toast.error("Une erreur est survenue lors de la mise à jour de l'événement.");
     }
   };
 
@@ -248,7 +250,7 @@ const Calendar = () => {
       console.log("Événement supprimé avec succès, ID:", id);
     } catch (error) {
       console.error("Erreur lors de la suppression de l'événement:", error);
-      alert("Une erreur est survenue lors de la suppression de l'événement.");
+      toast.error("Une erreur est survenue lors de la suppression de l'événement.");
     }
   };
 

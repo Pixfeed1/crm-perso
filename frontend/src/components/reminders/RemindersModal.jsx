@@ -2,11 +2,13 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiX, FiClock, FiAlertCircle, FiPlus, FiCheck, FiXCircle } from 'react-icons/fi';
+import { useToast } from '../../hooks/useToast';
 import { remindersAPI } from '../../services/api';
 import ReminderForm from './ReminderForm';
 import RemindersList from './RemindersList';
 
 const RemindersModal = ({ onClose }) => {
+  const { toast } = useToast();
   const [reminders, setReminders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all'); // 'all', 'overdue', 'upcoming'
@@ -44,7 +46,7 @@ const RemindersModal = ({ onClose }) => {
       fetchReminders();
     } catch (error) {
       console.error('Erreur lors du marquage du rappel comme complété:', error);
-      alert('Erreur lors du marquage du rappel comme complété');
+      toast.error('Erreur lors du marquage du rappel comme complété');
     }
   };
 
@@ -55,7 +57,7 @@ const RemindersModal = ({ onClose }) => {
       fetchReminders();
     } catch (error) {
       console.error('Erreur lors du rejet du rappel:', error);
-      alert('Erreur lors du rejet du rappel');
+      toast.error('Erreur lors du rejet du rappel');
     }
   };
 
@@ -70,7 +72,7 @@ const RemindersModal = ({ onClose }) => {
       fetchReminders();
     } catch (error) {
       console.error('Erreur lors de la suppression du rappel:', error);
-      alert('Erreur lors de la suppression du rappel');
+      toast.error('Erreur lors de la suppression du rappel');
     }
   };
 
@@ -82,7 +84,7 @@ const RemindersModal = ({ onClose }) => {
       fetchReminders();
     } catch (error) {
       console.error('Erreur lors de la création du rappel:', error);
-      alert('Erreur lors de la création du rappel');
+      toast.error('Erreur lors de la création du rappel');
     }
   };
 

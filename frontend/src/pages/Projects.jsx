@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { projectsAPI, exportAPI } from '../services/api';
 import { FiAlertTriangle, FiRocket, FiTarget, FiArrowLeft, FiDownload } from 'react-icons/fi';
+import { useToast } from '../hooks/useToast';
 
 // Composants
 import ProjectCard from '../components/projects/ProjectCard';
@@ -12,6 +13,7 @@ import ProjectFilter from '../components/projects/ProjectFilter';
 import EmptyState from '../components/common/EmptyState';
 
 const Projects = () => {
+  const { toast } = useToast();
   const [projects, setProjects] = useState([]);
   const [filteredProjects, setFilteredProjects] = useState([]);
   const [selectedProject, setSelectedProject] = useState(null);
@@ -169,7 +171,7 @@ const Projects = () => {
       setSelectedProject(completeProject);
     } catch (error) {
       console.error('Erreur lors de la sauvegarde du projet:', error);
-      alert("Une erreur est survenue lors de la création du projet: " + (error.message || 'Erreur inconnue'));
+      toast.error("Une erreur est survenue lors de la création du projet: " + (error.message || 'Erreur inconnue'));
     }
   };
 
@@ -205,7 +207,7 @@ const Projects = () => {
       }
     } catch (error) {
       console.error('Erreur lors de la mise à jour du projet:', error);
-      alert("Une erreur est survenue lors de la mise à jour du projet: " + (error.message || 'Erreur inconnue'));
+      toast.error("Une erreur est survenue lors de la mise à jour du projet: " + (error.message || 'Erreur inconnue'));
     }
   };
 
@@ -226,7 +228,7 @@ const Projects = () => {
       setShowDetails(false); // Retour à la liste sur mobile
     } catch (error) {
       console.error('Erreur lors de la suppression du projet:', error);
-      alert("Une erreur est survenue lors de la suppression du projet: " + (error.message || 'Erreur inconnue'));
+      toast.error("Une erreur est survenue lors de la suppression du projet: " + (error.message || 'Erreur inconnue'));
     }
   };
 
@@ -266,7 +268,7 @@ const Projects = () => {
       }
     } catch (error) {
       console.error('Erreur lors de l\'ajout de la tâche:', error);
-      alert("Une erreur est survenue lors de l'ajout de la tâche: " + (error.message || 'Erreur inconnue'));
+      toast.error("Une erreur est survenue lors de l'ajout de la tâche: " + (error.message || 'Erreur inconnue'));
     }
   };
 
@@ -316,7 +318,7 @@ const Projects = () => {
       setProjects(updatedProjects);
     } catch (error) {
       console.error('Erreur lors de la mise à jour de la tâche:', error);
-      alert("Une erreur est survenue lors de la mise à jour de la tâche: " + (error.message || 'Erreur inconnue'));
+      toast.error("Une erreur est survenue lors de la mise à jour de la tâche: " + (error.message || 'Erreur inconnue'));
     }
   };
 

@@ -5,8 +5,10 @@ import { FiUser, FiBriefcase, FiFileText, FiMessageCircle, FiCheckCircle, FiXCir
 import KanbanColumn from './KanbanColumn';
 import KanbanCard from './KanbanCard';
 import { leadsAPI } from '../../services/api';
+import { useToast } from '../../hooks/useToast';
 
 const KanbanView = ({ leads, onLeadUpdate, onLeadSelect }) => {
+  const { toast } = useToast();
   const [draggedLead, setDraggedLead] = useState(null);
   const [stats, setStats] = useState(null);
   const [isLoadingStats, setIsLoadingStats] = useState(true);
@@ -112,7 +114,7 @@ const KanbanView = ({ leads, onLeadUpdate, onLeadSelect }) => {
       fetchStats();
     } catch (error) {
       console.error('Erreur lors de la mise à jour du lead:', error);
-      alert('Erreur lors du déplacement du lead');
+      toast.error('Erreur lors du déplacement du lead');
     } finally {
       setDraggedLead(null);
     }
