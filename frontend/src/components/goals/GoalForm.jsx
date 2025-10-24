@@ -1,7 +1,8 @@
 // src/components/goals/GoalForm.jsx
 import React, { useState, useEffect } from 'react';
-// Suppression de framer-motion pour éviter les conflits WebAssembly
-// import { motion } from 'framer-motion';
+import FormInput from '../common/FormInput';
+import FormTextarea from '../common/FormTextarea';
+import { FormButtons } from '../common/Button';
 
 const GoalForm = ({ goal = {}, onSave, onCancel }) => {
   const defaultStartDate = new Date();
@@ -179,89 +180,60 @@ const GoalForm = ({ goal = {}, onSave, onCancel }) => {
       
       <div className="space-y-6">
         {/* Titre de l'objectif (pour name) */}
-        <div>
-          <label htmlFor="title" className="block text-sm font-medium text-gray-300 mb-1">
-            Nom de l'objectif<span className="text-rose-500 ml-1">*</span>
-          </label>
-          <input
-            type="text"
-            id="title"
-            name="title"
-            value={formData.title}
-            onChange={handleInputChange}
-            className={`w-full bg-white text-gray-800 border ${
-              errors.title ? 'border-rose-500' : 'border-gray-400'
-            } rounded-lg px-4 py-2 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent break-words`}
-            placeholder="Ex: Acquérir 5 nouveaux clients"
-          />
-          {errors.title && (
-            <p className="mt-1 text-xs text-rose-500">
-              {errors.title}
-            </p>
-          )}
-        </div>
+        <FormInput
+          label="Nom de l'objectif"
+          name="title"
+          value={formData.title}
+          onChange={handleInputChange}
+          error={errors.title}
+          placeholder="Ex: Acquérir 5 nouveaux clients"
+          required
+          variant="light"
+        />
         
         {/* Description */}
-        <div>
-          <label htmlFor="description" className="block text-sm font-medium text-gray-300 mb-1">
-            Description
-          </label>
-          <textarea
-            id="description"
-            name="description"
-            value={formData.description}
-            onChange={handleInputChange}
-            rows="3"
-            className="w-full bg-white text-gray-800 border border-gray-400 rounded-lg px-4 py-2 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-            placeholder="Décrivez votre objectif en quelques mots..."
-          />
-        </div>
+        <FormTextarea
+          label="Description"
+          name="description"
+          value={formData.description}
+          onChange={handleInputChange}
+          rows={3}
+          placeholder="Décrivez votre objectif en quelques mots..."
+          variant="light"
+        />
         
         {/* Valeurs cible et actuelle */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label htmlFor="target_value" className="block text-sm font-medium text-gray-300 mb-1">
-              Valeur cible<span className="text-rose-500 ml-1">*</span>
-            </label>
-            <input
+            <FormInput
+              label="Valeur cible"
               type="number"
-              id="target_value"
               name="target_value"
               value={formData.target_value}
               onChange={handleInputChange}
-              className={`w-full bg-white text-gray-800 border ${
-                errors.target_value ? 'border-rose-500' : 'border-gray-400'
-              } rounded-lg px-4 py-2 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent`}
+              error={errors.target_value}
               placeholder="Ex: 5000"
               step="0.01"
               min="0"
+              required
+              variant="light"
             />
             <p className="mt-1 text-xs text-gray-300">
               La valeur cible doit être supérieure à 0
             </p>
-            {errors.target_value && (
-              <p className="mt-1 text-xs text-rose-500">
-                {errors.target_value}
-              </p>
-            )}
           </div>
-          
-          <div>
-            <label htmlFor="current_value" className="block text-sm font-medium text-gray-300 mb-1">
-              Valeur actuelle
-            </label>
-            <input
-              type="number"
-              id="current_value"
-              name="current_value"
-              value={formData.current_value}
-              onChange={handleInputChange}
-              className="w-full bg-white text-gray-800 border border-gray-400 rounded-lg px-4 py-2 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-              placeholder="Ex: 0"
-              step="0.01"
-              min="0"
-            />
-          </div>
+
+          <FormInput
+            label="Valeur actuelle"
+            type="number"
+            name="current_value"
+            value={formData.current_value}
+            onChange={handleInputChange}
+            placeholder="Ex: 0"
+            step="0.01"
+            min="0"
+            variant="light"
+          />
         </div>
         
         {/* Catégorie */}
@@ -329,72 +301,40 @@ const GoalForm = ({ goal = {}, onSave, onCancel }) => {
         
         {/* Dates de début et de fin */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label htmlFor="start_date" className="block text-sm font-medium text-gray-300 mb-1">
-              Date de début<span className="text-rose-500 ml-1">*</span>
-            </label>
-            <input
-              type="date"
-              id="start_date"
-              name="start_date"
-              value={formData.start_date}
-              onChange={handleInputChange}
-              className={`w-full bg-white text-gray-800 border ${
-                errors.start_date ? 'border-rose-500' : 'border-gray-400'
-              } rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent`}
-            />
-            {errors.start_date && (
-              <p className="mt-1 text-xs text-rose-500">
-                {errors.start_date}
-              </p>
-            )}
-          </div>
+          <FormInput
+            label="Date de début"
+            type="date"
+            name="start_date"
+            value={formData.start_date}
+            onChange={handleInputChange}
+            error={errors.start_date}
+            required
+            variant="light"
+          />
 
-          <div>
-            <label htmlFor="end_date" className="block text-sm font-medium text-gray-300 mb-1">
-              Date de fin<span className="text-rose-500 ml-1">*</span>
-            </label>
-            <input
-              type="date"
-              id="end_date"
-              name="end_date"
-              value={formData.end_date}
-              onChange={handleInputChange}
-              className={`w-full bg-white text-gray-800 border ${
-                errors.end_date ? 'border-rose-500' : 'border-gray-400'
-              } rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent`}
-            />
-            {errors.end_date && (
-              <p className="mt-1 text-xs text-rose-500">
-                {errors.end_date}
-              </p>
-            )}
-          </div>
+          <FormInput
+            label="Date de fin"
+            type="date"
+            name="end_date"
+            value={formData.end_date}
+            onChange={handleInputChange}
+            error={errors.end_date}
+            required
+            variant="light"
+          />
         </div>
 
         {/* Boutons d'action */}
-        <div className="pt-6 flex justify-end space-x-4">
-          <button
-            type="button"
-            className="px-5 py-2 rounded-lg border border-gray-400 bg-white text-gray-800 hover:bg-gray-100 shadow-md"
-            onClick={onCancel}
-          >
-            Annuler
-          </button>
-
-          <button
-            type="button"
-            onClick={handleSubmit}
-            className={`px-6 py-2 rounded-lg ${
-              !formValid ? 
-              'bg-amber-600/50 text-white/70 cursor-not-allowed' : 
-              'bg-amber-600 hover:bg-amber-700 text-white'
-            } font-medium shadow-md`}
-            disabled={!formValid || submitting}
-          >
-            {submitting ? 'Enregistrement...' : goal.id ? 'Mettre à jour' : 'Enregistrer'}
-          </button>
-        </div>
+        <form onSubmit={handleSubmit}>
+          <FormButtons
+            onCancel={onCancel}
+            loading={submitting}
+            submitLabel={goal.id ? 'Mettre à jour' : 'Enregistrer'}
+            cancelLabel="Annuler"
+            className="pt-6"
+            disabled={!formValid}
+          />
+        </form>
       </div>
     </div>
   );

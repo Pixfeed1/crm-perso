@@ -1,6 +1,8 @@
 // src/components/revenues/RevenueForm.jsx
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import FormInput from '../common/FormInput';
+import FormSelect from '../common/FormSelect';
+import { FormButtons } from '../common/Button';
 
 const RevenueForm = ({ revenue = {}, onSave, onCancel, projects }) => {
   // État du formulaire avec valeurs par défaut ou existantes
@@ -97,132 +99,70 @@ const RevenueForm = ({ revenue = {}, onSave, onCancel, projects }) => {
       
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Montant */}
-        <div>
-          <label htmlFor="amount" className="block text-sm font-medium text-gray-300 mb-1">
-            Montant (€)<span className="text-rose-500 ml-1">*</span>
-          </label>
-          <div className="relative">
-            <input
-              type="number"
-              id="amount"
-              name="amount"
-              value={formData.amount}
-              onChange={handleInputChange}
-              step="0.01"
-              min="0"
-              className={`w-full bg-white text-gray-800 border ${
-                errors.amount ? 'border-rose-500' : 'border-gray-400'
-              } rounded-lg px-4 py-2 pl-10 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent`}
-            />
-            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-600">
-              €
-            </span>
-          </div>
-          {errors.amount && (
-            <motion.p 
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mt-1 text-xs text-rose-500"
-            >
-              {errors.amount}
-            </motion.p>
-          )}
+        <div className="relative">
+          <FormInput
+            label="Montant (€)"
+            type="number"
+            name="amount"
+            value={formData.amount}
+            onChange={handleInputChange}
+            error={errors.amount}
+            step="0.01"
+            min="0"
+            required
+            variant="light"
+            inputClassName="pl-10"
+          />
+          <span className="absolute left-3 top-[2.4rem] text-gray-600">
+            €
+          </span>
         </div>
         
         {/* Date */}
-        <div>
-          <label htmlFor="date" className="block text-sm font-medium text-gray-300 mb-1">
-            Date<span className="text-rose-500 ml-1">*</span>
-          </label>
-          <input
-            type="date"
-            id="date"
-            name="date"
-            value={formData.date}
-            onChange={handleInputChange}
-            className={`w-full bg-white text-gray-800 border ${
-              errors.date ? 'border-rose-500' : 'border-gray-400'
-            } rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent`}
-          />
-          {errors.date && (
-            <motion.p 
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mt-1 text-xs text-rose-500"
-            >
-              {errors.date}
-            </motion.p>
-          )}
-        </div>
-        
+        <FormInput
+          label="Date"
+          type="date"
+          name="date"
+          value={formData.date}
+          onChange={handleInputChange}
+          error={errors.date}
+          required
+          variant="light"
+        />
+
         {/* Description */}
-        <div>
-          <label htmlFor="description" className="block text-sm font-medium text-gray-300 mb-1">
-            Description<span className="text-rose-500 ml-1">*</span>
-          </label>
-          <input
-            type="text"
-            id="description"
-            name="description"
-            value={formData.description}
-            onChange={handleInputChange}
-            className={`w-full bg-white text-gray-800 border ${
-              errors.description ? 'border-rose-500' : 'border-gray-400'
-            } rounded-lg px-4 py-2 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent`}
-            placeholder="Ex: Acompte projet site web"
-          />
-          {errors.description && (
-            <motion.p 
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mt-1 text-xs text-rose-500"
-            >
-              {errors.description}
-            </motion.p>
-          )}
-        </div>
+        <FormInput
+          label="Description"
+          name="description"
+          value={formData.description}
+          onChange={handleInputChange}
+          error={errors.description}
+          placeholder="Ex: Acompte projet site web"
+          required
+          variant="light"
+        />
         
         {/* Projet associé */}
-        <div>
-          <label htmlFor="project_id" className="block text-sm font-medium text-gray-300 mb-1">
-            Associer à un projet
-          </label>
-          <select
-            id="project_id"
-            name="project_id"
-            value={formData.project_id}
-            onChange={handleInputChange}
-            className="w-full bg-white text-gray-800 border border-gray-400 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-          >
-            <option value="">Aucun projet</option>
-            {projects.map(project => (
-              <option key={project.id} value={project.id}>
-                {project.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        
+        <FormSelect
+          label="Associer à un projet"
+          name="project_id"
+          value={formData.project_id}
+          onChange={handleInputChange}
+          options={projects.map(project => ({ value: project.id, label: project.name }))}
+          placeholder="Aucun projet"
+          variant="light"
+        />
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Type */}
-          <div>
-            <label htmlFor="type" className="block text-sm font-medium text-gray-300 mb-1">
-              Type
-            </label>
-            <select
-              id="type"
-              name="type"
-              value={formData.type}
-              onChange={handleInputChange}
-              className="w-full bg-white text-gray-800 border border-gray-400 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-            >
-              {typeOptions.map(option => (
-                <option key={option.value} value={option.value}>
-                  {option.icon} {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
+          <FormSelect
+            label="Type"
+            name="type"
+            value={formData.type}
+            onChange={handleInputChange}
+            options={typeOptions}
+            variant="light"
+          />
           
           {/* Statut */}
           <div>
@@ -255,39 +195,13 @@ const RevenueForm = ({ revenue = {}, onSave, onCancel, projects }) => {
         </div>
         
         {/* Boutons d'action */}
-        <div className="flex justify-end space-x-3 pt-4">
-          <motion.button
-            type="button"
-            onClick={onCancel}
-            className="px-4 py-2 rounded-lg border border-gray-400 bg-white text-gray-800 hover:bg-gray-100"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            disabled={submitting}
-          >
-            Annuler
-          </motion.button>
-          
-          <motion.button
-            type="submit"
-            className="px-4 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-medium flex items-center"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            disabled={submitting}
-          >
-            {submitting ? (
-              <>
-                <motion.div
-                  className="w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2"
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                />
-                Enregistrement...
-              </>
-            ) : (
-              <>Enregistrer</>
-            )}
-          </motion.button>
-        </div>
+        <FormButtons
+          onCancel={onCancel}
+          loading={submitting}
+          submitLabel="Enregistrer"
+          cancelLabel="Annuler"
+          className="pt-4"
+        />
       </form>
     </div>
   );

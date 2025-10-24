@@ -1,6 +1,8 @@
 // src/components/activities/ActivityForm.jsx
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import FormInput from '../common/FormInput';
+import FormSelect from '../common/FormSelect';
+import { FormButtons } from '../common/Button';
 
 const ActivityForm = ({ activity = {}, onSave, onCancel, projects, defaultDate }) => {
   const today = defaultDate ? new Date(defaultDate) : new Date();
@@ -93,129 +95,74 @@ const ActivityForm = ({ activity = {}, onSave, onCancel, projects, defaultDate }
       
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Description */}
-        <div className="w-full">
-          <label htmlFor="description" className="block text-sm font-medium text-gray-300 mb-1">
-            Description <span className="text-rose-500">*</span>
-          </label>
-          <input
-            type="text"
-            id="description"
-            name="description"
-            value={formData.description}
-            onChange={handleInputChange}
-            className={`w-full bg-white text-gray-800 border ${
-              errors.description ? 'border-rose-500' : 'border-gray-400'
-            } rounded-lg px-2 sm:px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-gray-500`}
-            placeholder="Ex: Développement de la page d'accueil"
-          />
-          {errors.description && (
-            <span className="text-rose-500 text-xs">{errors.description}</span>
-          )}
-        </div>
+        <FormInput
+          label="Description"
+          name="description"
+          value={formData.description}
+          onChange={handleInputChange}
+          error={errors.description}
+          placeholder="Ex: Développement de la page d'accueil"
+          required
+          variant="light"
+        />
         
         {/* Type et priorité */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="w-full">
-            <label htmlFor="type" className="block text-sm font-medium text-gray-300 mb-1">
-              Type d'activité
-            </label>
-            <select
-              id="type"
-              name="type"
-              value={formData.type}
-              onChange={handleInputChange}
-              className="w-full bg-white text-gray-800 border border-gray-400 rounded-lg px-2 sm:px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
-            >
-              {activityTypes.map(type => (
-                <option key={type.value} value={type.value}>
-                  {type.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          
-          <div className="w-full">
-            <label htmlFor="priority" className="block text-sm font-medium text-gray-300 mb-1">
-              Priorité
-            </label>
-            <select
-              id="priority"
-              name="priority"
-              value={formData.priority}
-              onChange={handleInputChange}
-              className="w-full bg-white text-gray-800 border border-gray-400 rounded-lg px-2 sm:px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
-            >
-              {priorityLevels.map(priority => (
-                <option key={priority.value} value={priority.value}>
-                  {priority.label}
-                </option>
-              ))}
-            </select>
-          </div>
+          <FormSelect
+            label="Type d'activité"
+            name="type"
+            value={formData.type}
+            onChange={handleInputChange}
+            options={activityTypes}
+            variant="light"
+          />
+
+          <FormSelect
+            label="Priorité"
+            name="priority"
+            value={formData.priority}
+            onChange={handleInputChange}
+            options={priorityLevels}
+            variant="light"
+          />
         </div>
         
         {/* Date et temps prévu */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="w-full">
-            <label htmlFor="date" className="block text-sm font-medium text-gray-300 mb-1">
-              Date <span className="text-rose-500">*</span>
-            </label>
-            <input
-              type="date"
-              id="date"
-              name="date"
-              value={formData.date}
-              onChange={handleInputChange}
-              className={`w-full bg-white text-gray-800 border ${
-                errors.date ? 'border-rose-500' : 'border-gray-400'
-              } rounded-lg px-2 sm:px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm`}
-            />
-            {errors.date && (
-              <span className="text-rose-500 text-xs">{errors.date}</span>
-            )}
-          </div>
-          
-          <div className="w-full">
-            <label htmlFor="planned_time" className="block text-sm font-medium text-gray-300 mb-1">
-              Temps prévu (min) <span className="text-rose-500">*</span>
-            </label>
-            <input
-              type="number"
-              id="planned_time"
-              name="planned_time"
-              value={formData.planned_time}
-              onChange={handleInputChange}
-              min="1"
-              className={`w-full bg-white text-gray-800 border ${
-                errors.planned_time ? 'border-rose-500' : 'border-gray-400'
-              } rounded-lg px-2 sm:px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm`}
-            />
-            {errors.planned_time && (
-              <span className="text-rose-500 text-xs">{errors.planned_time}</span>
-            )}
-          </div>
+          <FormInput
+            label="Date"
+            type="date"
+            name="date"
+            value={formData.date}
+            onChange={handleInputChange}
+            error={errors.date}
+            required
+            variant="light"
+          />
+
+          <FormInput
+            label="Temps prévu (min)"
+            type="number"
+            name="planned_time"
+            value={formData.planned_time}
+            onChange={handleInputChange}
+            error={errors.planned_time}
+            min="1"
+            required
+            variant="light"
+          />
         </div>
         
         {/* Projet */}
-        <div className="w-full">
-          <label htmlFor="project_id" className="block text-sm font-medium text-gray-300 mb-1">
-            Projet associé
-          </label>
-          <select
-            id="project_id"
-            name="project_id"
-            value={formData.project_id}
-            onChange={handleInputChange}
-            className="w-full bg-white text-gray-800 border border-gray-400 rounded-lg px-2 sm:px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
-          >
-            <option value="">Aucun projet</option>
-            {projects && projects.map(project => (
-              <option key={project.id} value={project.id}>
-                {project.name}
-              </option>
-            ))}
-          </select>
-        </div>
+        <FormSelect
+          label="Projet associé"
+          name="project_id"
+          value={formData.project_id}
+          onChange={handleInputChange}
+          options={projects ? projects.map(project => ({ value: project.id, label: project.name })) : []}
+          placeholder="Aucun projet"
+          variant="light"
+        />
         
         {/* Lead */}
         <div className="w-full">
@@ -236,41 +183,25 @@ const ActivityForm = ({ activity = {}, onSave, onCancel, projects, defaultDate }
               </label>
             </div>
           </div>
-          
+
           {showLeadInput && (
-            <input
-              type="text"
-              id="lead_name"
+            <FormInput
               name="lead_name"
               value={formData.lead_name}
               onChange={handleInputChange}
-              className="w-full bg-white text-gray-800 border border-gray-400 rounded-lg px-2 sm:px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-gray-500 text-sm"
               placeholder="Nom du lead"
+              variant="light"
             />
           )}
         </div>
         
         {/* Boutons d'actions */}
-        <div className="flex justify-center sm:justify-end space-x-3 pt-4">
-          <motion.button
-            type="button"
-            className="px-3 sm:px-4 py-2 rounded-lg bg-white text-gray-800 border border-gray-400 hover:bg-gray-100 shadow-sm text-sm"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={onCancel}
-          >
-            Annuler
-          </motion.button>
-          
-          <motion.button
-            type="submit"
-            className="px-3 sm:px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm text-sm"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            {activity.id ? 'Mettre à jour' : 'Enregistrer'}
-          </motion.button>
-        </div>
+        <FormButtons
+          onCancel={onCancel}
+          submitLabel={activity.id ? 'Mettre à jour' : 'Enregistrer'}
+          cancelLabel="Annuler"
+          className="pt-4"
+        />
       </form>
     </div>
   );
