@@ -4,8 +4,10 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'r
 import { initDB } from './database/dbConfig';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 
-// Importation du composant Login
+// Importation du composant Login et pages de récupération de mot de passe
 import Login from './pages/Login';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 
 // Layout
 import Layout from './components/Layout';
@@ -91,9 +93,11 @@ const App = () => {
     <AuthProvider>
       <Router>
         <Routes>
-          {/* Route de login non protégée */}
+          {/* Routes d'authentification non protégées */}
           <Route path="/login" element={<Login />} />
-          
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+
           {/* Routes protégées avec Layout */}
           <Route path="/dashboard" element={
             <ProtectedRoute>

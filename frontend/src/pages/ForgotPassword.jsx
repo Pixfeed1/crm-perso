@@ -1,113 +1,61 @@
-// src/pages/Login.jsx
-import React, { useState, useEffect } from 'react';
+// src/pages/ForgotPassword.jsx
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
 import { motion } from 'framer-motion';
 
-const Login = () => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+const ForgotPassword = () => {
+  const [email, setEmail] = useState('');
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const { login, isAuthenticated } = useAuth();
-
-  // Log initial
-  console.log("=== RENDU DU COMPOSANT LOGIN ===");
-  console.log("État initial:", { 
-    usernameLength: username.length, 
-    passwordEntered: !!password, 
-    hasError: !!error, 
-    isLoading, 
-    isAuthenticated 
-  });
-
-  // Rediriger si déjà connecté
-  useEffect(() => {
-    console.log("useEffect - Vérification d'authentification");
-    console.log("État d'authentification actuel:", isAuthenticated);
-    
-    if (isAuthenticated) {
-      console.log("Utilisateur déjà authentifié, redirection vers dashboard");
-      navigate('/dashboard');
-    } else {
-      console.log("Utilisateur non authentifié, affichage du formulaire de connexion");
-    }
-  }, [isAuthenticated, navigate]);
 
   const handleSubmit = async (e) => {
-    console.log("=== SOUMISSION DU FORMULAIRE DE CONNEXION ===");
     e.preventDefault();
-    console.log("Identifiants soumis:", { username, passwordLength: password.length });
-    
     setError('');
     setIsLoading(true);
-    console.log("État mis à jour: isLoading=true, error=''");
 
-    if (!username || !password) {
-      console.log("Validation: Champs manquants détectés");
-      setError('Veuillez entrer un identifiant et un mot de passe');
+    if (!email) {
+      setError('Veuillez entrer votre adresse email');
       setIsLoading(false);
-      console.log("État mis à jour: isLoading=false, error='Veuillez entrer un identifiant et un mot de passe'");
+      return;
+    }
+
+    // Validation basique de l'email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError('Veuillez entrer une adresse email valide');
+      setIsLoading(false);
       return;
     }
 
     try {
-      console.log("Validation réussie, tentative de connexion...");
-      console.log("Envoi de la requête d'authentification à /api/auth/login");
-      
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch('/api/auth/forgot-password', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache'
         },
-        body: JSON.stringify({ username, password })
-      });
-      
-      console.log("Réponse reçue du serveur:", { 
-        status: response.status, 
-        ok: response.ok 
+        body: JSON.stringify({ email })
       });
 
       const data = await response.json();
-      console.log("Données de réponse:", { 
-        hasToken: !!data.token, 
-        hasUserData: !!data.user,
-        message: data.message || 'Pas de message' 
-      });
-      
+
       if (response.ok) {
-        console.log("Connexion réussie côté serveur, appel de la fonction login");
-        login(data.token, data.user);
-        console.log("Redirection vers le dashboard");
-        navigate('/dashboard');
+        setSuccess(true);
       } else {
-        console.log("Échec de la connexion côté serveur:", data.message);
-        setError(data.message || 'Identifiants incorrects');
+        setError(data.message || 'Une erreur est survenue');
       }
     } catch (error) {
-      console.error("ERREUR lors de la tentative de connexion:", error);
+      console.error('Erreur:', error);
       setError('Erreur de connexion au serveur');
     } finally {
       setIsLoading(false);
-      console.log("État mis à jour: isLoading=false");
     }
   };
 
-  // Log avant rendu
-  console.log("Préparation du rendu avec état:", { 
-    usernameLength: username.length, 
-    passwordEntered: !!password, 
-    hasError: !!error, 
-    errorMessage: error,
-    isLoading, 
-    isAuthenticated 
-  });
-
   return (
     <>
-      {/* CSS injecté pour reproduire le style de login.html */}
+      {/* CSS injecté - même style que Login */}
       <style>{`
         :root {
           --primary-color: #6d28d9;
@@ -118,7 +66,7 @@ const Login = () => {
           --text-light: #f3f4f6;
           --text-dim: #9ca3af;
         }
-        
+
         body {
           font-family: 'Poppins', sans-serif;
           background: linear-gradient(135deg, var(--background-dark), #312e81);
@@ -131,7 +79,7 @@ const Login = () => {
           margin: 0;
           padding: 0;
         }
-        
+
         .login-container {
           width: 100%;
           max-width: 420px;
@@ -139,7 +87,7 @@ const Login = () => {
           position: relative;
           z-index: 10;
         }
-        
+
         .login-card {
           background: rgba(31, 41, 55, 0.7);
           backdrop-filter: blur(10px);
@@ -150,7 +98,7 @@ const Login = () => {
           overflow: hidden;
           position: relative;
         }
-        
+
         .login-card::before {
           content: '';
           position: absolute;
@@ -168,12 +116,12 @@ const Login = () => {
           transform: rotate(30deg);
           pointer-events: none;
         }
-        
+
         .login-header {
           text-align: center;
           margin-bottom: 2rem;
         }
-        
+
         .login-header h1 {
           font-size: 2.5rem;
           font-weight: 700;
@@ -182,23 +130,23 @@ const Login = () => {
           -webkit-background-clip: text;
           color: transparent;
         }
-        
+
         .login-header p {
           color: var(--text-dim);
           font-size: 0.9rem;
         }
-        
+
         .login-form .form-group {
           margin-bottom: 1.5rem;
         }
-        
+
         .login-form label {
           display: block;
           margin-bottom: 0.5rem;
           font-size: 0.9rem;
           color: var(--text-dim);
         }
-        
+
         .login-form input {
           width: 100%;
           padding: 0.75rem 1rem;
@@ -209,13 +157,13 @@ const Login = () => {
           font-size: 1rem;
           transition: all 0.3s;
         }
-        
+
         .login-form input:focus {
           outline: none;
           border-color: var(--primary-color);
           box-shadow: 0 0 0 2px rgba(109, 40, 217, 0.3);
         }
-        
+
         .login-form button {
           width: 100%;
           padding: 0.75rem;
@@ -231,7 +179,7 @@ const Login = () => {
           position: relative;
           overflow: hidden;
         }
-        
+
         .login-form button::before {
           content: '';
           position: absolute;
@@ -247,16 +195,21 @@ const Login = () => {
           );
           transition: all 0.5s;
         }
-        
+
         .login-form button:hover::before {
           left: 100%;
         }
-        
+
         .login-form button:hover {
           transform: translateY(-2px);
           box-shadow: 0 10px 25px -5px rgba(109, 40, 217, 0.5);
         }
-        
+
+        .login-form button:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
         .orbs {
           position: fixed;
           top: 0;
@@ -266,7 +219,7 @@ const Login = () => {
           overflow: hidden;
           z-index: 1;
         }
-        
+
         .orb {
           position: absolute;
           border-radius: 50%;
@@ -274,7 +227,7 @@ const Login = () => {
           opacity: 0.3;
           animation: float 15s infinite ease-in-out;
         }
-        
+
         .orb:nth-child(1) {
           top: 20%;
           left: 15%;
@@ -283,7 +236,7 @@ const Login = () => {
           background: rgba(139, 92, 246, 0.5);
           animation-delay: 0s;
         }
-        
+
         .orb:nth-child(2) {
           top: 60%;
           left: 70%;
@@ -292,7 +245,7 @@ const Login = () => {
           background: rgba(236, 72, 153, 0.5);
           animation-delay: -5s;
         }
-        
+
         .orb:nth-child(3) {
           top: 80%;
           left: 30%;
@@ -301,7 +254,7 @@ const Login = () => {
           background: rgba(52, 211, 153, 0.5);
           animation-delay: -10s;
         }
-        
+
         @keyframes float {
           0% { transform: translate(0, 0) rotate(0deg); }
           25% { transform: translate(-20px, 20px) rotate(5deg); }
@@ -309,22 +262,39 @@ const Login = () => {
           75% { transform: translate(-10px, -15px) rotate(0deg); }
           100% { transform: translate(0, 0) rotate(0deg); }
         }
-        
+
         .error-message {
           color: #f87171;
           font-size: 0.85rem;
           margin-top: 0.5rem;
-          display: none;
         }
-        
-        .error-message.visible {
-          display: block;
+
+        .success-message {
+          color: #34d399;
+          font-size: 0.85rem;
+          margin-top: 0.5rem;
+        }
+
+        .back-link {
+          text-align: center;
+          margin-top: 1.5rem;
+        }
+
+        .back-link a {
+          color: #a78bfa;
+          text-decoration: none;
+          font-size: 0.9rem;
+          transition: color 0.3s;
+        }
+
+        .back-link a:hover {
+          color: #c4b5fd;
         }
       `}</style>
 
       {/* Effet visuel des orbes */}
       <div className="orbs">
-        <motion.div 
+        <motion.div
           className="orb"
           animate={{
             x: [0, 20, -10, 15, 0],
@@ -336,7 +306,7 @@ const Login = () => {
             ease: "easeInOut"
           }}
         />
-        <motion.div 
+        <motion.div
           className="orb"
           animate={{
             x: [0, -15, 10, -20, 0],
@@ -348,7 +318,7 @@ const Login = () => {
             ease: "easeInOut"
           }}
         />
-        <motion.div 
+        <motion.div
           className="orb"
           animate={{
             x: [0, 10, -5, 15, 0],
@@ -364,7 +334,7 @@ const Login = () => {
 
       {/* Contenu principal */}
       <div className="login-container">
-        <motion.div 
+        <motion.div
           className="login-card"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -383,78 +353,90 @@ const Login = () => {
               animate={{ opacity: 1 }}
               transition={{ delay: 0.4, duration: 0.5 }}
             >
-              Connectez-vous pour accéder à votre espace
+              Réinitialisation du mot de passe
             </motion.p>
           </div>
-          
-          <form className="login-form" onSubmit={handleSubmit}>
-            <div className="form-group">
-              <label htmlFor="username">Identifiant</label>
-              <input 
-                type="text" 
-                id="username" 
-                name="username" 
-                value={username}
-                onChange={(e) => {
-                  console.log("Mise à jour du champ username:", e.target.value);
-                  setUsername(e.target.value);
-                }}
-                required 
-                autoComplete="username"
-              />
-            </div>
-            
-            <div className="form-group">
-              <label htmlFor="password">Mot de passe</label>
-              <input
-                type="password"
-                id="password"
-                name="password"
-                value={password}
-                onChange={(e) => {
-                  console.log("Mise à jour du champ password (longueur):", e.target.value.length);
-                  setPassword(e.target.value);
-                }}
-                required
-                autoComplete="current-password"
-              />
-              <div id="error-message" className={`error-message ${error ? 'visible' : ''}`}>
-                {error}
+
+          {!success ? (
+            <form className="login-form" onSubmit={handleSubmit}>
+              <div className="form-group">
+                <label htmlFor="email">Adresse email</label>
+                <input
+                  type="email"
+                  id="email"
+                  name="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="votre@email.com"
+                  required
+                  autoComplete="email"
+                />
+                {error && <div className="error-message">{error}</div>}
+              </div>
+
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-dim)', marginBottom: '1rem' }}>
+                Entrez votre adresse email. Vous recevrez un lien pour réinitialiser votre mot de passe.
+              </p>
+
+              <motion.button
+                type="submit"
+                disabled={isLoading}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                {isLoading ? (
+                  <div className="flex items-center justify-center">
+                    <div className="w-5 h-5 border-t-2 border-b-2 border-white rounded-full animate-spin mr-2"></div>
+                    Envoi en cours...
+                  </div>
+                ) : 'Envoyer le lien'}
+              </motion.button>
+
+              <div className="back-link">
+                <a
+                  href="/login"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    navigate('/login');
+                  }}
+                >
+                  ← Retour à la connexion
+                </a>
+              </div>
+            </form>
+          ) : (
+            <div style={{ textAlign: 'center' }}>
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ duration: 0.5 }}
+                style={{ fontSize: '3rem', marginBottom: '1rem' }}
+              >
+                ✉️
+              </motion.div>
+              <h3 style={{ color: '#34d399', marginBottom: '1rem' }}>Email envoyé !</h3>
+              <p style={{ color: 'var(--text-dim)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
+                Un lien de réinitialisation a été envoyé à <strong style={{ color: 'var(--text-light)' }}>{email}</strong>.
+                <br />
+                Vérifiez votre boîte de réception et suivez les instructions.
+              </p>
+              <div className="back-link">
+                <a
+                  href="/login"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    navigate('/login');
+                  }}
+                >
+                  ← Retour à la connexion
+                </a>
               </div>
             </div>
-
-            <div className="text-right mb-4">
-              <a
-                href="/forgot-password"
-                className="text-sm text-purple-400 hover:text-purple-300 transition-colors"
-                onClick={(e) => {
-                  e.preventDefault();
-                  navigate('/forgot-password');
-                }}
-              >
-                Mot de passe oublié ?
-              </a>
-            </div>
-
-            <motion.button
-              type="submit"
-              disabled={isLoading}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => console.log("Bouton de connexion cliqué")}
-            >
-              {isLoading ? (
-                <div className="flex items-center justify-center">
-                  <div className="w-5 h-5 border-t-2 border-b-2 border-white rounded-full animate-spin mr-2"></div>
-                  Connexion en cours...
-                </div>
-              ) : 'Se connecter'}
-            </motion.button>
-          </form>
+          )}
         </motion.div>
       </div>
     </>
   );
 };
 
-export default Login;
+export default ForgotPassword;
