@@ -38,7 +38,8 @@ const runMigrations = async (pool) => {
       addLeadConversionTracking,
       addEventInterconnections,
       createProjectContactsTable,
-      createQuotesTables
+      createQuotesTables,
+      createPasswordResetTokensTable
     ];
     
     // Exécuter les migrations manquantes
@@ -507,4 +508,46 @@ async function createQuotesTables(pool) {
   }
 
   console.log('[PGMigrations] Tables de devis créées avec succès');
+}
+
+// Migration 11: Création de la table password_reset_tokens pour la récupération de mot de passe
+async function createPasswordResetTokensTable(pool) {
+  console.log('[PGMigrations] Création de la table password_reset_tokens...');
+
+  // Vérifier si la table existe déjà
+  const tableCheck = await pool.query(`
+    SELECT table_name
+    FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'password_reset_tokens'
+  `);
+
+  if (tableCheck.rowCount === 0) {
+    await pool.query(`
+      CREATE TABLE password_reset_tokens (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        token TEXT NOT NULL UNIQUE,
+        expires_at TIMESTAMP NOT NULL,
+        used BOOLEAN DEFAULT false,
+        used_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Index pour améliorer les performances des recherches par token
+    await pool.query(`
+      CREATE INDEX idx_password_reset_tokens_token ON password_reset_tokens(token)
+    `);
+
+    // Index pour nettoyer les tokens expirés
+    await pool.query(`
+      CREATE INDEX idx_password_reset_tokens_expires_at ON password_reset_tokens(expires_at)
+    `);
+
+    console.log('[PGMigrations] Table password_reset_tokens créée avec succès');
+  } else {
+    console.log('[PGMigrations] La table password_reset_tokens existe déjà');
+  }
+
+  console.log('[PGMigrations] Table de récupération de mot de passe créée avec succès');
 }

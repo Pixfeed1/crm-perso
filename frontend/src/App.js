@@ -6,6 +6,8 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 
 // Importation du composant Login
 import Login from './pages/Login';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 
 // Layout
 import Layout from './components/Layout';
@@ -98,9 +100,11 @@ const App = () => {
     <AuthProvider>
       <Router>
         <Routes>
-          {/* Route de login non protégée */}
+          {/* Routes non protégées */}
           <Route path="/login" element={<Login />} />
-          
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+
           {/* Routes protégées avec Layout */}
           <Route path="/dashboard" element={
             <ProtectedRoute>

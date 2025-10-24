@@ -437,6 +437,20 @@ const Login = () => {
                 </div>
               ) : 'Se connecter'}
             </motion.button>
+
+            {/* Lien Mot de passe oublié */}
+            <div className="text-center mt-4">
+              <a
+                href="/forgot-password"
+                className="text-sm text-purple-400 hover:text-purple-300 transition-colors"
+                onClick={(e) => {
+                  e.preventDefault();
+                  navigate('/forgot-password');
+                }}
+              >
+                Mot de passe oublié ?
+              </a>
+            </div>
           </form>
         </motion.div>
       </div>

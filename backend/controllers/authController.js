@@ -126,7 +126,143 @@ const checkAuth = async (req, res) => {
   }
 };
 
+// Fonction pour générer un token de réinitialisation de mot de passe
+const forgotPassword = async (req, res) => {
+  console.log("[AUTH] Demande de réinitialisation de mot de passe");
+  const { username } = req.body;
+
+  try {
+    // Vérifier si l'utilisateur existe
+    const user = await userModel.getUserByUsername(username);
+    if (!user) {
+      console.log("[AUTH] Utilisateur non trouvé:", username);
+      // Pour des raisons de sécurité, ne pas révéler si l'utilisateur existe ou non
+      return res.status(200).json({
+        message: 'Si un compte existe avec cet identifiant, un token de réinitialisation a été généré',
+        resetToken: null
+      });
+    }
+
+    console.log("[AUTH] Utilisateur trouvé, génération du token de réinitialisation");
+
+    // Générer un token unique
+    const crypto = require('crypto');
+    const resetToken = crypto.randomBytes(32).toString('hex');
+
+    // Token expire dans 1 heure
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+
+    // Sauvegarder le token dans la base de données
+    const db = require('../config/pgConfig');
+    await new Promise((resolve, reject) => {
+      db.run(
+        'INSERT INTO password_reset_tokens (user_id, token, expires_at) VALUES (?, ?, ?)',
+        [user.id, resetToken, expiresAt.toISOString()],
+        function(err) {
+          if (err) {
+            reject(err);
+          } else {
+            resolve();
+          }
+        }
+      );
+    });
+
+    console.log("[AUTH] Token de réinitialisation généré et sauvegardé");
+
+    // En production, envoyer le token par email
+    // Pour le développement, on le retourne directement
+    res.status(200).json({
+      message: 'Token de réinitialisation généré avec succès',
+      resetToken: resetToken,
+      expiresIn: '1 heure'
+    });
+  } catch (error) {
+    console.error("[AUTH] Erreur lors de la génération du token:", error);
+    res.status(500).json({ message: 'Erreur serveur lors de la génération du token' });
+  }
+};
+
+// Fonction pour réinitialiser le mot de passe avec un token
+const resetPasswordWithToken = async (req, res) => {
+  console.log("[AUTH] Tentative de réinitialisation de mot de passe avec token");
+  const { resetToken, newPassword } = req.body;
+
+  try {
+    // Valider les données
+    if (!resetToken || !newPassword) {
+      return res.status(400).json({ message: 'Token et nouveau mot de passe requis' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: 'Le mot de passe doit contenir au moins 6 caractères' });
+    }
+
+    // Rechercher le token dans la base de données
+    const db = require('../config/pgConfig');
+    const tokenData = await new Promise((resolve, reject) => {
+      db.get(
+        'SELECT * FROM password_reset_tokens WHERE token = ? AND used = 0',
+        [resetToken],
+        (err, row) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(row);
+          }
+        }
+      );
+    });
+
+    if (!tokenData) {
+      console.log("[AUTH] Token invalide ou déjà utilisé");
+      return res.status(400).json({ message: 'Token invalide ou déjà utilisé' });
+    }
+
+    // Vérifier si le token a expiré
+    const now = new Date();
+    const expiresAt = new Date(tokenData.expires_at);
+
+    if (now > expiresAt) {
+      console.log("[AUTH] Token expiré");
+      return res.status(400).json({ message: 'Token expiré' });
+    }
+
+    console.log("[AUTH] Token valide, réinitialisation du mot de passe pour l'utilisateur ID:", tokenData.user_id);
+
+    // Réinitialiser le mot de passe
+    await userModel.resetPassword(tokenData.user_id, newPassword);
+
+    // Marquer le token comme utilisé
+    await new Promise((resolve, reject) => {
+      db.run(
+        'UPDATE password_reset_tokens SET used = 1, used_at = CURRENT_TIMESTAMP WHERE id = ?',
+        [tokenData.id],
+        function(err) {
+          if (err) {
+            reject(err);
+          } else {
+            resolve();
+          }
+        }
+      );
+    });
+
+    console.log("[AUTH] Mot de passe réinitialisé avec succès");
+
+    res.status(200).json({
+      message: 'Mot de passe réinitialisé avec succès',
+      success: true
+    });
+  } catch (error) {
+    console.error("[AUTH] Erreur lors de la réinitialisation du mot de passe:", error);
+    res.status(500).json({ message: 'Erreur serveur lors de la réinitialisation du mot de passe' });
+  }
+};
+
 module.exports = {
   login,
-  checkAuth
+  checkAuth,
+  forgotPassword,
+  resetPasswordWithToken
 };
