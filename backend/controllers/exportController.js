@@ -242,6 +242,41 @@ const exportContacts = async (req, res) => {
 };
 
 /**
+ * Export des clients en CSV
+ */
+const exportClients = async (req, res) => {
+  try {
+    const db = req.app.locals.db;
+
+    const clients = await new Promise((resolve, reject) => {
+      db.all(
+        `SELECT
+          id, name, company, type, email, phone, address,
+          website, industry, source, contract_start_date,
+          lifetime_value, status, tags, notes, created_at, updated_at
+         FROM crm_clients
+         ORDER BY created_at DESC`,
+        [],
+        (err, rows) => {
+          if (err) reject(err);
+          else resolve(rows || []);
+        }
+      );
+    });
+
+    const headers = ['id', 'name', 'company', 'type', 'email', 'phone', 'address', 'website', 'industry', 'source', 'contract_start_date', 'lifetime_value', 'status', 'tags', 'notes', 'created_at', 'updated_at'];
+    const csv = arrayToCSV(clients, headers);
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="clients_${Date.now()}.csv"`);
+    res.send('\uFEFF' + csv);
+  } catch (error) {
+    console.error('Erreur lors de l\'export des clients:', error);
+    res.status(500).json({ message: 'Erreur serveur', error: error.message });
+  }
+};
+
+/**
  * Export complet (toutes les données) en ZIP
  * Note: Pour simplifier, on retourne un objet JSON avec toutes les données
  * Le frontend pourra télécharger plusieurs fichiers CSV
@@ -321,5 +356,6 @@ module.exports = {
   exportRevenues,
   exportActivities,
   exportContacts,
+  exportClients,
   exportAll
 };

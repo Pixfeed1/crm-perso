@@ -1,21 +1,27 @@
 // src/components/leads/LeadDetails.jsx
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiStar, FiEye, FiCheckCircle, FiMessageCircle, FiAward, FiXCircle, FiHelpCircle, FiClipboard, FiBuilding, FiUser, FiFileText, FiUsers, FiEdit2, FiTrash2, FiClock } from 'react-icons/fi';
-import { leadsAPI } from '../../services/api';
+import { FiStar, FiEye, FiCheckCircle, FiMessageCircle, FiAward, FiXCircle, FiHelpCircle, FiClipboard, FiBuilding, FiUser, FiFileText, FiUsers, FiEdit2, FiTrash2, FiClock, FiUserCheck } from 'react-icons/fi';
+import { leadsAPI, clientsAPI } from '../../services/api';
+import { useToast } from '../../hooks/useToast';
+import { useConfirm } from '../../hooks/useConfirm';
 
 // Sous-composants
 import ContactList from './ContactList';
 import ContactForm from './ContactForm';
 import InteractionTimeline from './InteractionTimeline';
 import InteractionForm from './InteractionForm';
+import ConfirmModal from '../common/ConfirmModal';
 
 const LeadDetails = ({ lead, onUpdate, onDelete, onAddContact, onUpdateContact, onDeleteContact, onAddInteraction, onUpdateInteraction, onDeleteInteraction }) => {
+  const { toast } = useToast();
+  const { confirm, confirmState } = useConfirm();
   const [isEditing, setIsEditing] = useState(false);
   const [isAddingContact, setIsAddingContact] = useState(false);
   const [isAddingInteraction, setIsAddingInteraction] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [interactions, setInteractions] = useState([]);
+  const [isConverting, setIsConverting] = useState(false);
 
   // Format de la date
   const formatDate = (dateString) => {
@@ -168,6 +174,43 @@ const LeadDetails = ({ lead, onUpdate, onDelete, onAddContact, onUpdateContact, 
     }
   };
 
+  // Conversion du lead en client
+  const handleConvertToClient = async () => {
+    const confirmed = await confirm({
+      title: "Convertir ce lead en client ?",
+      message: "Le lead sera marqué comme 'Gagné' et sera créé comme client dans le module Clients.",
+      confirmText: "Convertir",
+      cancelText: "Annuler",
+      variant: "warning",
+      itemName: `${lead.name}${lead.company ? ` (${lead.company})` : ''}`
+    });
+
+    if (!confirmed) return;
+
+    setIsConverting(true);
+    try {
+      const result = await clientsAPI.convertFromLead(lead.id, {
+        contract_start_date: new Date().toISOString().split('T')[0],
+        notes: lead.notes
+      });
+
+      toast.success('Lead converti en client avec succès !');
+
+      // Mettre à jour le statut du lead dans l'interface
+      await onUpdate({ status: 'won' });
+
+    } catch (error) {
+      console.error('Erreur lors de la conversion du lead:', error);
+      if (error.message.includes('déjà été converti')) {
+        toast.warning('Ce lead a déjà été converti en client');
+      } else {
+        toast.error('Erreur lors de la conversion du lead en client');
+      }
+    } finally {
+      setIsConverting(false);
+    }
+  };
+
   return (
     <div>
       {/* En-tête avec actions */}
@@ -182,6 +225,20 @@ const LeadDetails = ({ lead, onUpdate, onDelete, onAddContact, onUpdateContact, 
         </div>
 
         <div className="flex space-x-2 flex-shrink-0">
+          {/* Bouton "Convertir en client" - visible uniquement si le lead n'est pas déjà gagné ou perdu */}
+          {lead.status !== 'won' && lead.status !== 'lost' && (
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="px-3 py-2 rounded-lg bg-green-600/30 hover:bg-green-600/50 text-green-300 flex items-center gap-2 text-sm"
+              onClick={handleConvertToClient}
+              disabled={isConverting}
+            >
+              <FiUserCheck className="text-base" />
+              <span className="hidden sm:inline">{isConverting ? 'Conversion...' : 'Convertir'}</span>
+            </motion.button>
+          )}
+
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -424,6 +481,9 @@ const LeadDetails = ({ lead, onUpdate, onDelete, onAddContact, onUpdateContact, 
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Modal de confirmation pour la conversion */}
+      <ConfirmModal {...confirmState.config} isOpen={confirmState.isOpen} />
     </div>
   );
 };

@@ -16,6 +16,7 @@ import Layout from './components/Layout';
 // Pages
 import Dashboard from './pages/Dashboard';
 import Leads from './pages/Leads';
+import Clients from './pages/Clients';
 import Projects from './pages/Projects';
 import Calendar from './pages/Calendar';
 import Revenues from './pages/Revenues';
@@ -116,7 +117,15 @@ const App = () => {
               </Layout>
             </ProtectedRoute>
           } />
-          
+
+          <Route path="/clients" element={
+            <ProtectedRoute>
+              <Layout>
+                <Clients />
+              </Layout>
+            </ProtectedRoute>
+          } />
+
           <Route path="/projects" element={
             <ProtectedRoute>
               <Layout>

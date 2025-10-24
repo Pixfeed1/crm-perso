@@ -11,6 +11,7 @@ router.get('/goals', exportController.exportGoals);
 router.get('/revenues', exportController.exportRevenues);
 router.get('/activities', exportController.exportActivities);
 router.get('/contacts', exportController.exportContacts);
+router.get('/clients', exportController.exportClients);
 
 // Export complet
 router.get('/all', exportController.exportAll);

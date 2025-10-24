@@ -8,6 +8,7 @@ import { remindersAPI } from '../services/api';
 // Utiliser les icônes de React Icons (Feather Icons)
 import { FiGrid as DashboardIcon } from 'react-icons/fi';
 import { FiUsers as LeadsIcon } from 'react-icons/fi';
+import { FiUserCheck as ClientsIcon } from 'react-icons/fi';
 import { FiBriefcase as ProjectsIcon } from 'react-icons/fi';
 import { FiCalendar as CalendarIcon } from 'react-icons/fi';
 import { FiDollarSign as RevenuesIcon } from 'react-icons/fi';
@@ -82,6 +83,7 @@ const Layout = ({ children }) => {
   const navigationItems = [
     { path: '/dashboard', label: 'Dashboard', icon: <DashboardIcon /> },
     { path: '/leads', label: 'Leads', icon: <LeadsIcon /> },
+    { path: '/clients', label: 'Clients', icon: <ClientsIcon /> },
     { path: '/projects', label: 'Projets', icon: <ProjectsIcon /> },
     { path: '/calendar', label: 'Calendrier', icon: <CalendarIcon /> },
     { path: '/revenues', label: 'Revenus', icon: <RevenuesIcon /> },

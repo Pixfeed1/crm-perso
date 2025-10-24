@@ -225,6 +225,38 @@ export const leadsAPI = {
   }
 };
 
+// ===== CLIENTS =====
+export const clientsAPI = {
+  getAll: () => {
+    console.log('Appel API: récupération de tous les clients');
+    return apiRequest('/clients');
+  },
+  getById: (id) => {
+    console.log(`Appel API: récupération du client ID ${id}`);
+    return apiRequest(`/clients/${id}`);
+  },
+  create: (data) => {
+    console.log('Appel API: création d\'un nouveau client', data);
+    return apiRequest('/clients', 'POST', data);
+  },
+  update: (id, data) => {
+    console.log(`Appel API: mise à jour du client ID ${id}`, data);
+    return apiRequest(`/clients/${id}`, 'PUT', data);
+  },
+  delete: (id) => {
+    console.log(`Appel API: suppression du client ID ${id}`);
+    return apiRequest(`/clients/${id}`, 'DELETE');
+  },
+  convertFromLead: (leadId, data = {}) => {
+    console.log(`Appel API: conversion du lead ID ${leadId} en client`, data);
+    return apiRequest(`/clients/convert/${leadId}`, 'POST', data);
+  },
+  getStats: () => {
+    console.log('Appel API: récupération des statistiques des clients');
+    return apiRequest('/clients/stats');
+  }
+};
+
 // ===== ÉVÉNEMENTS =====
 export const eventsAPI = {
   getAll: () => {
@@ -489,6 +521,13 @@ export const exportAPI = {
   contacts: () => {
     console.log('Appel API: export des contacts en CSV');
     const url = `${API_BASE_URL}/export/contacts`;
+    window.open(url, '_blank');
+  },
+
+  // Export des clients en CSV
+  clients: () => {
+    console.log('Appel API: export des clients en CSV');
+    const url = `${API_BASE_URL}/export/clients`;
     window.open(url, '_blank');
   },
 

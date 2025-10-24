@@ -46,6 +46,9 @@ class DatabaseMigrations {
 
     // Migration 7: Création de la table des rappels/notifications
     this.migrations.push(this.createRemindersTable.bind(this));
+
+    // Migration 8: Création de la table clients pour les leads convertis
+    this.migrations.push(this.createClientsTable.bind(this));
   }
 
   /**
@@ -639,6 +642,82 @@ class DatabaseMigrations {
               }
 
               console.log('[Migrations] Migration 7 terminée avec succès');
+              resolve();
+            });
+          });
+        });
+      });
+    });
+  }
+
+  /**
+   * Migration 8: Création de la table clients pour les leads convertis
+   */
+  async createClientsTable() {
+    return new Promise((resolve, reject) => {
+      console.log('[Migrations] Migration 8: Création de la table clients');
+
+      // Vérifier si la table existe déjà
+      this.db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='crm_clients'", (err, row) => {
+        if (err) {
+          console.error('[Migrations] Erreur lors de la vérification de la table crm_clients:', err);
+          return reject(err);
+        }
+
+        if (row) {
+          console.log('[Migrations] La table crm_clients existe déjà, skip');
+          return resolve();
+        }
+
+        // Créer la table crm_clients (on évite le nom 'clients' qui existe déjà dans migration 1)
+        this.db.run(`
+          CREATE TABLE crm_clients (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            lead_id INTEGER,
+            name TEXT NOT NULL,
+            company TEXT,
+            type TEXT DEFAULT 'individual',
+            email TEXT,
+            phone TEXT,
+            address TEXT,
+            website TEXT,
+            industry TEXT,
+            source TEXT,
+            contract_start_date TEXT,
+            lifetime_value REAL DEFAULT 0,
+            notes TEXT,
+            tags TEXT,
+            status TEXT DEFAULT 'active',
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            FOREIGN KEY (lead_id) REFERENCES leads(id) ON DELETE SET NULL
+          )
+        `, (err) => {
+          if (err) {
+            console.error('[Migrations] Erreur lors de la création de la table crm_clients:', err);
+            return reject(err);
+          }
+
+          console.log('[Migrations] Table crm_clients créée avec succès');
+
+          // Créer un index sur lead_id pour des requêtes rapides
+          this.db.run(`
+            CREATE INDEX idx_clients_lead_id ON crm_clients(lead_id)
+          `, (err) => {
+            if (err) {
+              console.error('[Migrations] Erreur lors de la création de l\'index lead_id:', err);
+              // On continue même si l'index échoue
+            }
+
+            // Créer un index sur status
+            this.db.run(`
+              CREATE INDEX idx_clients_status ON crm_clients(status)
+            `, (err) => {
+              if (err) {
+                console.error('[Migrations] Erreur lors de la création de l\'index status:', err);
+              }
+
+              console.log('[Migrations] Migration 8 terminée avec succès');
               resolve();
             });
           });
