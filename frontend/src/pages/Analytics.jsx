@@ -775,6 +775,7 @@ const MetricBadge = ({ label, value, icon, color = 'indigo' }) => {
       <div className="text-sm text-gray-400">{label}</div>
     </div>
   );
+};
 
 /**
  * État vide
