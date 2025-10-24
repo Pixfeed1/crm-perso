@@ -1,7 +1,7 @@
 // backend/models/userModel.js
 
 // Récupérer l'instance de la base de données
-const db = require('../config/dbConfig');
+const db = require('../config/pgConfig');
 
 // Obtenir un utilisateur par son nom d'utilisateur
 const getUserByUsername = (username) => {

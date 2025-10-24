@@ -73,35 +73,42 @@ class DatabaseConfig {
    */
   async initDefaultUser() {
     console.log('[DBConfig] Vérification de l\'utilisateur par défaut...');
-    
-    const username = 'mvaertan';
-    const password = 'Vashthestampede2a';
-    
+
+    // Utiliser les variables d'environnement pour l'utilisateur par défaut
+    const username = process.env.DEFAULT_USER_USERNAME;
+    const password = process.env.DEFAULT_USER_PASSWORD;
+
+    // Ne créer l'utilisateur que si les variables d'environnement sont définies
+    if (!username || !password) {
+      console.log('[DBConfig] Aucun utilisateur par défaut configuré (DEFAULT_USER_USERNAME et DEFAULT_USER_PASSWORD non définis)');
+      return;
+    }
+
     try {
       // Vérifier si l'utilisateur existe déjà
       const userCheck = await this.pool.query(
-        'SELECT id, username FROM users WHERE username = $1', 
+        'SELECT id, username FROM users WHERE username = $1',
         [username]
       );
-      
+
       if (userCheck.rowCount > 0) {
-        console.log('[DBConfig] Utilisateur par défaut déjà existant:', 
+        console.log('[DBConfig] Utilisateur par défaut déjà existant:',
           userCheck.rows[0].id, userCheck.rows[0].username);
         return;
       }
-      
+
       console.log('[DBConfig] Création de l\'utilisateur par défaut...');
-      
+
       // Hacher le mot de passe
       const hash = await bcrypt.hash(password, 10);
-      
+
       // Insérer l'utilisateur dans la base de données
       const insertResult = await this.pool.query(
-        'INSERT INTO users (username, password) VALUES ($1, $2) RETURNING id', 
+        'INSERT INTO users (username, password) VALUES ($1, $2) RETURNING id',
         [username, hash]
       );
-      
-      console.log('[DBConfig] Utilisateur par défaut créé avec succès, ID:', 
+
+      console.log('[DBConfig] Utilisateur par défaut créé avec succès, ID:',
         insertResult.rows[0].id);
     } catch (error) {
       console.error('[DBConfig] Erreur lors de la création de l\'utilisateur:', error.message);
