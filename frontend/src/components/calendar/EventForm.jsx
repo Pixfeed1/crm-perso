@@ -50,10 +50,10 @@ const EventForm = ({ event = {}, selectedDate, onSave, onCancel }) => {
   
   // Options de catégorie
   const categoryOptions = [
-    { value: 'meeting', label: '👥 Réunion' },
-    { value: 'deadline', label: '⏰ Échéance' },
+    { value: 'meeting', label: 'Réunion' },
+    { value: 'deadline', label: 'Échéance' },
     { value: 'appointment', label: '📅 Rendez-vous' },
-    { value: 'task', label: '✓ Tâche' },
+    { value: 'task', label: 'Tâche' },
     { value: 'reminder', label: '🔔 Rappel' },
     { value: 'personal', label: '🏠 Personnel' }
   ];

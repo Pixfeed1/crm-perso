@@ -1,11 +1,12 @@
 // src/components/calendar/EventDetails.jsx
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { FiUsers, FiPhone, FiClock, FiCheck, FiHome, FiClipboard } from 'react-icons/fi';
 
 const EventDetails = ({ event, onUpdate, onDelete }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  
+
   // Configuration des couleurs de catégorie
   const categoryConfig = {
     'meeting': {
@@ -13,38 +14,38 @@ const EventDetails = ({ event, onUpdate, onDelete }) => {
       text: 'text-blue-300',
       border: 'border-blue-500/50',
       label: 'Réunion',
-      icon: '👥'
+      icon: <FiUsers />
     },
     'call': {
       bg: 'bg-green-500/30',
       text: 'text-green-300',
       border: 'border-green-500/50',
       label: 'Appel',
-      icon: '📞'
+      icon: <FiPhone />
     },
     'deadline': {
       bg: 'bg-amber-500/30',
       text: 'text-amber-300',
       border: 'border-amber-500/50',
       label: 'Échéance',
-      icon: '⏰'
+      icon: <FiClock />
     },
     'task': {
       bg: 'bg-purple-500/30',
       text: 'text-purple-300',
       border: 'border-purple-500/50',
       label: 'Tâche',
-      icon: '✓'
+      icon: <FiCheck />
     },
     'personal': {
       bg: 'bg-rose-500/30',
       text: 'text-rose-300',
       border: 'border-rose-500/50',
       label: 'Personnel',
-      icon: '🏠'
+      icon: <FiHome />
     }
   };
-  
+
   // Configuration des couleurs de priorité
   const priorityConfig = {
     'low': {
@@ -75,7 +76,7 @@ const EventDetails = ({ event, onUpdate, onDelete }) => {
     text: 'text-gray-300',
     border: 'border-gray-500/50',
     label: event.category || 'Autre',
-    icon: '📋'
+    icon: <FiClipboard />
   };
   
   const priorityStyle = priorityConfig[event.priority] || {
@@ -257,13 +258,13 @@ const EventDetails = ({ event, onUpdate, onDelete }) => {
       {/* Statut de l'événement */}
       <div className="mb-6">
         {isPast() ? (
-          <div className="bg-gray-800/30 text-gray-300 px-4 py-2 rounded-lg flex items-center">
-            <span className="mr-2">✓</span>
+          <div className="bg-gray-800/30 text-gray-300 px-4 py-2 rounded-lg flex items-center gap-2">
+            <FiCheck />
             Événement passé
           </div>
         ) : isOngoing() ? (
-          <div className="bg-green-900/30 text-green-300 px-4 py-2 rounded-lg flex items-center">
-            <span className="mr-2">▶️</span>
+          <div className="bg-green-900/30 text-green-300 px-4 py-2 rounded-lg flex items-center gap-2">
+            <FiClock />
             En cours
           </div>
         ) : (
