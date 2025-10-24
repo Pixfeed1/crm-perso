@@ -13,11 +13,11 @@ const KPIOrb = ({
   const [isHovered, setIsHovered] = useState(false);
   const [pulsing, setPulsing] = useState(false);
   
-  // Définition des tailles
+  // Définition des tailles - responsive
   const sizeClasses = {
-    sm: "w-20 h-20 text-lg",
-    md: "w-28 h-28 text-xl",
-    lg: "w-36 h-36 text-2xl"
+    sm: "w-16 h-16 sm:w-20 sm:h-20 text-base sm:text-lg",
+    md: "w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 text-lg sm:text-xl",
+    lg: "w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 lg:w-36 lg:h-36 text-xl sm:text-2xl"
   };
   
   // Animation de pulsation périodique
@@ -93,21 +93,21 @@ const KPIOrb = ({
       </motion.div>
       
       {/* Titre et sous-valeur */}
-      <div className="mt-3 text-center">
-        <motion.h4 
-          className="font-medium text-indigo-100"
+      <div className="mt-2 sm:mt-3 text-center px-1">
+        <motion.h4
+          className="font-medium text-indigo-100 text-xs sm:text-sm"
           animate={{ opacity: isHovered ? 1 : 0.8 }}
         >
           {title}
         </motion.h4>
-        
+
         {subValue && (
-          <motion.p 
-            className="text-xs text-indigo-300 mt-1"
+          <motion.p
+            className="text-xs sm:text-xs text-indigo-300 mt-1"
             initial={{ opacity: 0, y: -10 }}
-            animate={{ 
-              opacity: isHovered ? 1 : 0.7, 
-              y: isHovered ? 0 : -5 
+            animate={{
+              opacity: isHovered ? 1 : 0.7,
+              y: isHovered ? 0 : -5
             }}
             transition={{ duration: 0.2 }}
           >
