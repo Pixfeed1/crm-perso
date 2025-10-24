@@ -235,7 +235,7 @@ const goalTracker = {
       // Trouver les objectifs de type 'leads' qui incluent cette date de création
       db.all(
         `SELECT id FROM goals
-         WHERE category IN ('leads', 'acquisition')
+         WHERE category IN ('leads', 'acquisition', 'conversion')
          AND start_date <= ? AND end_date >= ?`,
         [lead.created_at, lead.created_at],
         async (err, goals) => {
@@ -245,6 +245,44 @@ const goalTracker = {
           }
 
           console.log(`[GoalTracker] ${goals.length} objectifs leads affectés`);
+
+          const results = [];
+
+          for (const goal of goals) {
+            try {
+              const result = await goalTracker.updateGoalProgress(goal.id);
+              results.push(result);
+            } catch (error) {
+              console.error(`[GoalTracker] Erreur mise à jour objectif ${goal.id}:`, error);
+            }
+          }
+
+          resolve(results);
+        }
+      );
+    });
+  },
+
+  /**
+   * Met à jour les objectifs affectés par une activité
+   * @param {Object} activity - Activité avec date, actual_time
+   * @returns {Promise<Array>} Objectifs mis à jour
+   */
+  updateGoalsForActivity: async (activity) => {
+    return new Promise((resolve, reject) => {
+      // Trouver les objectifs de type 'productivity' ou 'time' qui incluent cette date
+      db.all(
+        `SELECT id FROM goals
+         WHERE category IN ('productivity', 'time')
+         AND start_date <= ? AND end_date >= ?`,
+        [activity.date, activity.date],
+        async (err, goals) => {
+          if (err) {
+            console.error('[GoalTracker] Erreur lors de la recherche des objectifs productivity:', err);
+            return reject(err);
+          }
+
+          console.log(`[GoalTracker] ${goals.length} objectifs productivity affectés par l'activité`);
 
           const results = [];
 

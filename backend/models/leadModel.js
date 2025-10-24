@@ -4,6 +4,7 @@
  * Modèle pour la gestion des leads (prospects)
  */
 const db = require('../config/pgConfig');
+const goalTracker = require('../utils/goalTracker');
 
 const leadModel = {
   /**
@@ -114,6 +115,16 @@ const leadModel = {
               console.error('[LeadModel] Erreur lors de la récupération du lead créé:', err);
               resolve({ id: newLeadId, ...leadData });
             } else {
+              // Mettre à jour les objectifs de type leads/acquisition
+              goalTracker.updateGoalsForLead(lead)
+                .then(() => {
+                  console.log(`[LeadModel] Objectifs mis à jour pour le lead ${lead.id}`);
+                })
+                .catch(goalErr => {
+                  console.error('[LeadModel] Erreur lors de la mise à jour des objectifs:', goalErr);
+                  // Ne pas bloquer la création du lead
+                });
+
               resolve(lead);
             }
           });
@@ -209,6 +220,16 @@ const leadModel = {
                 console.error('[LeadModel] Erreur lors de la récupération du lead mis à jour:', err);
                 resolve({ id, ...lead, ...updateData });
               } else {
+                // Mettre à jour les objectifs de type leads/acquisition
+                goalTracker.updateGoalsForLead(updatedLead)
+                  .then(() => {
+                    console.log(`[LeadModel] Objectifs mis à jour pour le lead ${updatedLead.id}`);
+                  })
+                  .catch(goalErr => {
+                    console.error('[LeadModel] Erreur lors de la mise à jour des objectifs:', goalErr);
+                    // Ne pas bloquer la mise à jour du lead
+                  });
+
                 resolve(updatedLead);
               }
             });

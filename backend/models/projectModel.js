@@ -4,6 +4,7 @@
  * Modèle pour la gestion des projets
  * Note: Ce modèle n'est pas encore utilisé par le contrôleur, mais il est prêt à l'emploi.
  */
+const goalTracker = require('../utils/goalTracker');
 
 // Cette fonction prendra la connexion à la base de données en paramètre
 const createProjectModel = (db) => {
@@ -165,6 +166,19 @@ const createProjectModel = (db) => {
                       // Continuer malgré l'erreur
                     } else {
                       console.log(`[ProjectModel] Lead ${lead_id} marqué comme converti vers projet ${newProjectId}`);
+
+                      // Mettre à jour les objectifs de type conversion
+                      db.get('SELECT * FROM leads WHERE id = ?', [lead_id], (leadErr, lead) => {
+                        if (!leadErr && lead) {
+                          goalTracker.updateGoalsForLead(lead)
+                            .then(() => {
+                              console.log(`[ProjectModel] Objectifs de conversion mis à jour pour le lead ${lead_id}`);
+                            })
+                            .catch(goalErr => {
+                              console.error('[ProjectModel] Erreur lors de la mise à jour des objectifs de conversion:', goalErr);
+                            });
+                        }
+                      });
                     }
                   });
                 }

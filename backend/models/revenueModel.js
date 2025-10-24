@@ -4,6 +4,7 @@
  * Modèle pour la gestion des revenus
  */
 const db = require('../config/pgConfig');
+const goalTracker = require('../utils/goalTracker');
 
 const revenueModel = {
   /**
@@ -134,6 +135,16 @@ const revenueModel = {
               console.error('[RevenueModel] Erreur lors de la récupération du revenu créé:', err);
               resolve({ id: newRevenueId, ...revenueData });
             } else {
+              // Mettre à jour les objectifs de type revenue/sales
+              goalTracker.updateGoalsForRevenue(revenue)
+                .then(() => {
+                  console.log(`[RevenueModel] Objectifs mis à jour pour le revenu ${revenue.id}`);
+                })
+                .catch(goalErr => {
+                  console.error('[RevenueModel] Erreur lors de la mise à jour des objectifs:', goalErr);
+                  // Ne pas bloquer la création du revenu
+                });
+
               resolve(revenue);
             }
           });
@@ -226,6 +237,16 @@ const revenueModel = {
                 console.error('[RevenueModel] Erreur lors de la récupération du revenu mis à jour:', err);
                 resolve({ id, ...revenue, ...updateData });
               } else {
+                // Mettre à jour les objectifs de type revenue/sales
+                goalTracker.updateGoalsForRevenue(updatedRevenue)
+                  .then(() => {
+                    console.log(`[RevenueModel] Objectifs mis à jour pour le revenu ${updatedRevenue.id}`);
+                  })
+                  .catch(goalErr => {
+                    console.error('[RevenueModel] Erreur lors de la mise à jour des objectifs:', goalErr);
+                    // Ne pas bloquer la mise à jour du revenu
+                  });
+
                 resolve(updatedRevenue);
               }
             });

@@ -4,6 +4,7 @@
  * Modèle pour les activités
  */
 const db = require('../config/pgConfig');
+const goalTracker = require('../utils/goalTracker');
 
 const activityModel = {
   /**
@@ -100,7 +101,28 @@ const activityModel = {
           console.error('Erreur dans createActivity:', error);
           reject(new Error('Erreur serveur lors de la création de l\'activité: ' + error.message));
         } else {
-          resolve(this.lastID);
+          const newActivityId = this.lastID;
+
+          // Récupérer l'activité créée pour mettre à jour les objectifs
+          db.get('SELECT * FROM activities WHERE id = ?', [newActivityId], (err, activity) => {
+            if (err) {
+              console.error('Erreur lors de la récupération de l\'activité créée:', err);
+              resolve(newActivityId);
+            } else if (activity) {
+              // Mettre à jour les objectifs de type productivity/time
+              goalTracker.updateGoalsForActivity(activity)
+                .then(() => {
+                  console.log(`[ActivityModel] Objectifs mis à jour pour l'activité ${activity.id}`);
+                })
+                .catch(goalErr => {
+                  console.error('[ActivityModel] Erreur lors de la mise à jour des objectifs:', goalErr);
+                });
+
+              resolve(newActivityId);
+            } else {
+              resolve(newActivityId);
+            }
+          });
         }
       });
     });
@@ -182,9 +204,34 @@ const activityModel = {
           console.error('Erreur dans updateActivity:', error);
           reject(new Error('Erreur serveur lors de la mise à jour de l\'activité: ' + error.message));
         } else {
-          resolve({
-            changes: this.changes,
-            id: id
+          // Récupérer l'activité mise à jour pour mettre à jour les objectifs
+          db.get('SELECT * FROM activities WHERE id = ?', [id], (err, activity) => {
+            if (err) {
+              console.error('Erreur lors de la récupération de l\'activité mise à jour:', err);
+              resolve({
+                changes: this.changes,
+                id: id
+              });
+            } else if (activity) {
+              // Mettre à jour les objectifs de type productivity/time
+              goalTracker.updateGoalsForActivity(activity)
+                .then(() => {
+                  console.log(`[ActivityModel] Objectifs mis à jour pour l'activité ${activity.id}`);
+                })
+                .catch(goalErr => {
+                  console.error('[ActivityModel] Erreur lors de la mise à jour des objectifs:', goalErr);
+                });
+
+              resolve({
+                changes: this.changes,
+                id: id
+              });
+            } else {
+              resolve({
+                changes: this.changes,
+                id: id
+              });
+            }
           });
         }
       });
@@ -215,9 +262,34 @@ const activityModel = {
           console.error('Erreur dans completeActivity:', error);
           reject(new Error('Erreur serveur lors de la complétion de l\'activité: ' + error.message));
         } else {
-          resolve({
-            changes: this.changes,
-            id: id
+          // Récupérer l'activité complétée pour mettre à jour les objectifs
+          db.get('SELECT * FROM activities WHERE id = ?', [id], (err, activity) => {
+            if (err) {
+              console.error('Erreur lors de la récupération de l\'activité complétée:', err);
+              resolve({
+                changes: this.changes,
+                id: id
+              });
+            } else if (activity) {
+              // Mettre à jour les objectifs de type productivity/time
+              goalTracker.updateGoalsForActivity(activity)
+                .then(() => {
+                  console.log(`[ActivityModel] Objectifs mis à jour après complétion de l'activité ${activity.id}`);
+                })
+                .catch(goalErr => {
+                  console.error('[ActivityModel] Erreur lors de la mise à jour des objectifs:', goalErr);
+                });
+
+              resolve({
+                changes: this.changes,
+                id: id
+              });
+            } else {
+              resolve({
+                changes: this.changes,
+                id: id
+              });
+            }
           });
         }
       });
