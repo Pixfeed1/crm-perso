@@ -37,7 +37,8 @@ const runMigrations = async (pool) => {
       addUserIdColumns,
       addLeadConversionTracking,
       addEventInterconnections,
-      createProjectContactsTable
+      createProjectContactsTable,
+      createQuotesTables
     ];
     
     // Exécuter les migrations manquantes
@@ -441,3 +442,69 @@ async function createProjectContactsTable(pool) {
 }
 
 module.exports = runMigrations;
+// Migration 10: Création des tables quotes et quote_items pour le module de devis
+async function createQuotesTables(pool) {
+  console.log('[PGMigrations] Création des tables quotes et quote_items...');
+
+  // Table quotes
+  const quotesTableCheck = await pool.query(`
+    SELECT table_name
+    FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'quotes'
+  `);
+
+  if (quotesTableCheck.rowCount === 0) {
+    await pool.query(`
+      CREATE TABLE quotes (
+        id SERIAL PRIMARY KEY,
+        quote_number TEXT NOT NULL UNIQUE,
+        title TEXT NOT NULL,
+        lead_id INTEGER REFERENCES leads(id) ON DELETE SET NULL,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        status TEXT DEFAULT 'draft',
+        subtotal DECIMAL(15,2) DEFAULT 0,
+        tax_rate DECIMAL(5,2) DEFAULT 20,
+        tax_amount DECIMAL(15,2) DEFAULT 0,
+        total_amount DECIMAL(15,2) DEFAULT 0,
+        notes TEXT,
+        terms TEXT,
+        valid_until DATE,
+        sent_at TIMESTAMP,
+        accepted_at TIMESTAMP,
+        rejected_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('[PGMigrations] Table quotes créée avec succès');
+  } else {
+    console.log('[PGMigrations] La table quotes existe déjà');
+  }
+
+  // Table quote_items
+  const quoteItemsTableCheck = await pool.query(`
+    SELECT table_name
+    FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'quote_items'
+  `);
+
+  if (quoteItemsTableCheck.rowCount === 0) {
+    await pool.query(`
+      CREATE TABLE quote_items (
+        id SERIAL PRIMARY KEY,
+        quote_id INTEGER NOT NULL REFERENCES quotes(id) ON DELETE CASCADE,
+        description TEXT NOT NULL,
+        quantity DECIMAL(10,2) DEFAULT 1,
+        unit_price DECIMAL(15,2) NOT NULL,
+        total_price DECIMAL(15,2) NOT NULL,
+        position INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('[PGMigrations] Table quote_items créée avec succès');
+  } else {
+    console.log('[PGMigrations] La table quote_items existe déjà');
+  }
+
+  console.log('[PGMigrations] Tables de devis créées avec succès');
+}

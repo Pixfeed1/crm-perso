@@ -21,6 +21,10 @@ import Goals from './pages/Goals';
 import SalesPipeline from './pages/SalesPipeline';
 import Analytics from './pages/Analytics';
 import Users from './pages/Users';
+import Quotes from './pages/Quotes';
+import QuoteNew from './pages/QuoteNew';
+import QuoteEdit from './pages/QuoteEdit';
+import QuoteDetails from './components/quotes/QuoteDetails';
 
 // Composant ProtectedRoute pour protéger les routes
 const ProtectedRoute = ({ children }) => {
@@ -174,6 +178,38 @@ const App = () => {
             <ProtectedRoute>
               <Layout>
                 <Users />
+              </Layout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/quotes" element={
+            <ProtectedRoute>
+              <Layout>
+                <Quotes />
+              </Layout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/quotes/new" element={
+            <ProtectedRoute>
+              <Layout>
+                <QuoteNew />
+              </Layout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/quotes/edit/:id" element={
+            <ProtectedRoute>
+              <Layout>
+                <QuoteEdit />
+              </Layout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/quotes/:id" element={
+            <ProtectedRoute>
+              <Layout>
+                <QuoteDetails />
               </Layout>
             </ProtectedRoute>
           } />

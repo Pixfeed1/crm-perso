@@ -324,3 +324,27 @@ const leadModel = {
 };
 
 module.exports = leadModel;
+
+// Marquer un lead comme converti en projet
+const markAsConverted = (leadId, projectId) => {
+  return new Promise((resolve, reject) => {
+    db.run(
+      `UPDATE leads SET
+        status = 'won',
+        converted_at = CURRENT_TIMESTAMP,
+        converted_to_project_id = ?,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?`,
+      [projectId, leadId],
+      function(err) {
+        if (err) {
+          return reject(err);
+        }
+        if (this.changes === 0) {
+          return reject(new Error('Lead non trouvé'));
+        }
+        resolve({ message: 'Lead marqué comme converti' });
+      }
+    );
+  });
+};

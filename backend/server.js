@@ -108,6 +108,7 @@ app.use('/api/stats', require('./routes/statsRoutes'));
 app.use('/api/search', require('./routes/searchRoutes'));
 app.use('/api/users', require('./routes/usersRoutes'));
 app.use('/api/export', require('./routes/exportRoutes'));
+app.use('/api/quotes', require('./routes/quotesRoutes'));
 
 // 2. Servir les fichiers statiques du dossier public
 app.use(express.static(publicPath));

@@ -18,6 +18,7 @@ import { FiTrendingUp as SalesPipelineIcon } from 'react-icons/fi';
 import { FiSearch as SearchIcon } from 'react-icons/fi';
 import { FiBarChart2 as AnalyticsIcon } from 'react-icons/fi';
 import { FiUsers as UsersIcon } from 'react-icons/fi';
+import { FiFileText as QuotesIcon } from 'react-icons/fi';
 
 // Composant GlobalSearch
 import GlobalSearch from './search/GlobalSearch';
@@ -78,6 +79,7 @@ const Layout = ({ children }) => {
     { path: '/goals', label: 'Objectifs', icon: <GoalsIcon /> },
     { path: '/sales-pipeline', label: 'Pipeline', icon: <SalesPipelineIcon /> },
     { path: '/analytics', label: 'Analytics', icon: <AnalyticsIcon /> },
+    { path: '/quotes', label: 'Devis', icon: <QuotesIcon /> },
     { path: '/users', label: 'Utilisateurs', icon: <UsersIcon /> },
     // Ajouter l'option de déconnexion
     { path: '/logout', label: 'Déconnexion', icon: <LogoutIcon />, isLogout: true }
