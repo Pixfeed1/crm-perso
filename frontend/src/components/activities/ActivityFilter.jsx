@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
+import { FiSearch, FiX, FiChevronDown, FiRotateCcw, FiFilter } from 'react-icons/fi';
 
 const ActivityFilter = ({ 
   filters, 
@@ -19,27 +20,27 @@ const ActivityFilter = ({
   // Options de type
   const typeOptions = [
     { value: 'all', label: 'Tous les types' },
-    { value: 'development', label: '💻 Développement' },
-    { value: 'design', label: '🎨 Design' },
-    { value: 'meeting', label: '👥 Réunion' },
-    { value: 'call', label: '📞 Appel' },
-    { value: 'marketing', label: '📢 Marketing' },
-    { value: 'maintenance', label: '🔧 Maintenance' }
+    { value: 'development', label: 'Développement' },
+    { value: 'design', label: 'Design' },
+    { value: 'meeting', label: 'Réunion' },
+    { value: 'call', label: 'Appel' },
+    { value: 'marketing', label: 'Marketing' },
+    { value: 'maintenance', label: 'Maintenance' }
   ];
-  
+
   // Options de priorité
   const priorityOptions = [
     { value: 'all', label: 'Toutes les priorités' },
-    { value: 'high', label: '🔴 Haute' },
-    { value: 'medium', label: '🟠 Moyenne' },
-    { value: 'low', label: '🔵 Basse' }
+    { value: 'high', label: 'Haute' },
+    { value: 'medium', label: 'Moyenne' },
+    { value: 'low', label: 'Basse' }
   ];
-  
+
   // Options de statut
   const statusOptions = [
     { value: 'all', label: 'Tous les statuts' },
-    { value: 'pending', label: '⏳ En attente' },
-    { value: 'completed', label: '✅ Terminé' }
+    { value: 'pending', label: 'En attente' },
+    { value: 'completed', label: 'Terminé' }
   ];
   
   // Options de période prédéfinies
@@ -191,7 +192,7 @@ const ActivityFilter = ({
               className="w-full bg-white text-gray-800 border border-gray-400 rounded-lg px-4 py-2 pl-10 pr-8 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
             />
             <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
-              🔍
+              <FiSearch />
             </span>
             {filters.search && (
               <motion.button
@@ -200,19 +201,19 @@ const ActivityFilter = ({
                 whileTap={{ scale: 0.9 }}
                 onClick={() => handleFilterChange('search', '')}
               >
-                ✕
+                <FiX />
               </motion.button>
             )}
           </div>
         </div>
         
         {/* Bouton d'expansion des filtres */}
-        <div 
+        <div
           className="px-3 py-2 flex justify-between items-center cursor-pointer hover:bg-gray-700/30"
           onClick={() => setIsExpanded(!isExpanded)}
         >
           <div className="flex items-center text-sm">
-            <span className="mr-2">🔍</span>
+            <span className="mr-2"><FiFilter /></span>
             <span className="text-gray-300 font-medium">Filtres avancés</span>
             {hasActiveFilters && (
               <span className="ml-2 px-1.5 py-0.5 bg-indigo-600 rounded-full text-xs text-white">
@@ -225,7 +226,7 @@ const ActivityFilter = ({
             transition={{ duration: 0.3 }}
             className="text-gray-400"
           >
-            ⌄
+            <FiChevronDown />
           </motion.span>
         </div>
         
@@ -331,12 +332,12 @@ const ActivityFilter = ({
                 {hasActiveFilters && (
                   <div className="pt-2 flex justify-end">
                     <motion.button
-                      className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center bg-gray-700/50 px-2 py-1 rounded"
+                      className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 bg-gray-700/50 px-2 py-1 rounded"
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                       onClick={resetFilters}
                     >
-                      <span className="mr-1">↺</span>
+                      <FiRotateCcw />
                       Réinitialiser les filtres
                     </motion.button>
                   </div>

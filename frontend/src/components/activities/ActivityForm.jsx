@@ -71,18 +71,18 @@ const ActivityForm = ({ activity = {}, onSave, onCancel, projects, defaultDate }
   };
   
   const activityTypes = [
-    { value: 'development', label: '💻 Développement' },
-    { value: 'design', label: '🎨 Design' },
-    { value: 'meeting', label: '👥 Réunion' },
-    { value: 'call', label: '📞 Appel' },
-    { value: 'marketing', label: '📢 Marketing' },
-    { value: 'maintenance', label: '🔧 Maintenance' }
+    { value: 'development', label: 'Développement' },
+    { value: 'design', label: 'Design' },
+    { value: 'meeting', label: 'Réunion' },
+    { value: 'call', label: 'Appel' },
+    { value: 'marketing', label: 'Marketing' },
+    { value: 'maintenance', label: 'Maintenance' }
   ];
-  
+
   const priorityLevels = [
-    { value: 'high', label: '🔴 Haute' },
-    { value: 'medium', label: '🟠 Moyenne' },
-    { value: 'low', label: '🔵 Basse' }
+    { value: 'high', label: 'Haute' },
+    { value: 'medium', label: 'Moyenne' },
+    { value: 'low', label: 'Basse' }
   ];
 
   return (

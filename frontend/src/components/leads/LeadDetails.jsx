@@ -1,6 +1,7 @@
 // src/components/leads/LeadDetails.jsx
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { FiStar, FiEye, FiCheckCircle, FiMessageCircle, FiAward, FiXCircle, FiHelpCircle, FiClipboard, FiBuilding, FiUser, FiFileText, FiUsers } from 'react-icons/fi';
 
 // Sous-composants
 import ContactList from './ContactList';
@@ -10,54 +11,54 @@ const LeadDetails = ({ lead, onUpdate, onDelete, onAddContact }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [isAddingContact, setIsAddingContact] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  
+
   // Format de la date
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    return new Intl.DateTimeFormat('fr-FR', { 
+    return new Intl.DateTimeFormat('fr-FR', {
       day: 'numeric',
       month: 'long',
       year: 'numeric'
     }).format(date);
   };
-  
+
   // Configuration des couleurs de statut
   const statusConfig = {
     nouveau: {
       bg: 'bg-blue-500/20',
       text: 'text-blue-300',
       border: 'border-blue-500/30',
-      icon: '🆕'
+      icon: <FiStar />
     },
     prospect: {
       bg: 'bg-purple-500/20',
       text: 'text-purple-300',
       border: 'border-purple-500/30',
-      icon: '👀'
+      icon: <FiEye />
     },
     qualifié: {
       bg: 'bg-emerald-500/20',
       text: 'text-emerald-300',
       border: 'border-emerald-500/30',
-      icon: '✅'
+      icon: <FiCheckCircle />
     },
     négociation: {
       bg: 'bg-amber-500/20',
       text: 'text-amber-300',
       border: 'border-amber-500/30',
-      icon: '💬'
+      icon: <FiMessageCircle />
     },
     client: {
       bg: 'bg-teal-500/20',
       text: 'text-teal-300',
       border: 'border-teal-500/30',
-      icon: '🏆'
+      icon: <FiAward />
     },
     perdu: {
       bg: 'bg-rose-500/20',
       text: 'text-rose-300',
       border: 'border-rose-500/30',
-      icon: '❌'
+      icon: <FiXCircle />
     }
   };
 
@@ -66,7 +67,7 @@ const LeadDetails = ({ lead, onUpdate, onDelete, onAddContact }) => {
     bg: 'bg-gray-500/20',
     text: 'text-gray-300',
     border: 'border-gray-500/30',
-    icon: '❓'
+    icon: <FiHelpCircle />
   };
   
   // Mise à jour du statut du lead
@@ -146,17 +147,17 @@ const LeadDetails = ({ lead, onUpdate, onDelete, onAddContact }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         {/* Panneau de gauche */}
         <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl p-5">
-          <h3 className="text-lg font-medium text-gray-200 mb-4 flex items-center">
-            <span className="mr-2">📋</span>
+          <h3 className="text-lg font-medium text-gray-200 mb-4 flex items-center gap-2">
+            <FiClipboard />
             Informations
           </h3>
-          
+
           <div className="space-y-4">
             {/* Type */}
             <div className="flex justify-between">
               <span className="text-gray-400">Type</span>
-              <span className="font-medium text-white">
-                {lead.type === 'company' ? '🏢 Entreprise' : '👤 Particulier'}
+              <span className="font-medium text-white flex items-center gap-2">
+                {lead.type === 'company' ? <><FiBuilding /> Entreprise</> : <><FiUser /> Particulier</>}
               </span>
             </div>
             
@@ -207,22 +208,22 @@ const LeadDetails = ({ lead, onUpdate, onDelete, onAddContact }) => {
         
         {/* Panneau de droite (Notes) */}
         <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl p-5">
-          <h3 className="text-lg font-medium text-gray-200 mb-4 flex items-center">
-            <span className="mr-2">📝</span>
+          <h3 className="text-lg font-medium text-gray-200 mb-4 flex items-center gap-2">
+            <FiFileText />
             Notes
           </h3>
-          
+
           <div className="bg-gray-900/50 rounded-lg p-4 min-h-[120px] text-gray-300">
             {lead.notes || 'Aucune note pour ce lead.'}
           </div>
         </div>
       </div>
-      
+
       {/* Section Contacts */}
       <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl p-5 mb-6">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-medium text-gray-200 flex items-center">
-            <span className="mr-2">👥</span>
+          <h3 className="text-lg font-medium text-gray-200 flex items-center gap-2">
+            <FiUsers />
             Contacts
           </h3>
           

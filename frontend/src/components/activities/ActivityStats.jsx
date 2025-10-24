@@ -1,6 +1,7 @@
 // src/components/activities/ActivityStats.jsx
 import React from 'react';
 import { motion } from 'framer-motion';
+import { FiCheckCircle, FiClipboard, FiClock, FiWatch } from 'react-icons/fi';
 
 const ActivityStats = ({ stats }) => {
   // Fonction pour formater le temps en heures et minutes
@@ -14,7 +15,7 @@ const ActivityStats = ({ stats }) => {
     {
       label: 'Taux de complétion',
       value: `${Math.round(stats.completion_rate)}%`,
-      icon: '✓',
+      icon: <FiCheckCircle />,
       color: 'from-indigo-500 to-purple-500',
       detail: `${stats.completed}/${stats.total} activités`,
       delay: 0.1
@@ -22,7 +23,7 @@ const ActivityStats = ({ stats }) => {
     {
       label: 'Activités à venir',
       value: stats.pending.toString(),
-      icon: '📋',
+      icon: <FiClipboard />,
       color: 'from-amber-500 to-orange-500',
       detail: 'En attente',
       delay: 0.2
@@ -30,14 +31,14 @@ const ActivityStats = ({ stats }) => {
     {
       label: 'Temps prévu total',
       value: formatTime(stats.planned_time),
-      icon: '⏱️',
+      icon: <FiClock />,
       color: 'from-blue-500 to-indigo-500',
       delay: 0.3
     },
     {
       label: 'Temps réel total',
       value: formatTime(stats.actual_time),
-      icon: '⏰',
+      icon: <FiWatch />,
       color: 'from-emerald-500 to-teal-500',
       detail: `${Math.round(stats.time_efficiency)}% d'efficacité`,
       delay: 0.4

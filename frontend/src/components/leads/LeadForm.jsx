@@ -1,6 +1,7 @@
 // src/components/leads/LeadForm.jsx
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import { FiBuilding, FiUser } from 'react-icons/fi';
 
 const LeadForm = ({ lead = {}, onSave, onCancel }) => {
   // État du formulaire avec valeurs par défaut ou existantes
@@ -112,24 +113,24 @@ const LeadForm = ({ lead = {}, onSave, onCancel }) => {
                 onChange={handleInputChange}
                 className="sr-only"
               />
-              <span className="text-lg mr-2">🏢</span>
+              <FiBuilding className="text-lg mr-2" />
               <span>Entreprise</span>
             </label>
-            
+
             <label className={`flex items-center px-4 py-2 rounded-lg cursor-pointer transition-colors ${
-              formData.type === 'individual' 
-                ? 'bg-purple-600/40 border-purple-500' 
+              formData.type === 'individual'
+                ? 'bg-purple-600/40 border-purple-500'
                 : 'bg-gray-800/40 border-gray-700 hover:bg-gray-700/30'
             } border`}>
-              <input 
-                type="radio" 
-                name="type" 
-                value="individual" 
-                checked={formData.type === 'individual'} 
+              <input
+                type="radio"
+                name="type"
+                value="individual"
+                checked={formData.type === 'individual'}
                 onChange={handleInputChange}
                 className="sr-only"
               />
-              <span className="text-lg mr-2">👤</span>
+              <FiUser className="text-lg mr-2" />
               <span>Particulier</span>
             </label>
           </div>
