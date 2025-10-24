@@ -21,14 +21,6 @@ const ProjectCard = ({ project, isSelected, onClick }) => {
     'autre': { icon: '📦', label: 'Autre' }
   };
 
-  // Valeurs par défaut si le statut ou type n'est pas configuré
-  const statusStyle = statusConfig[project.status] || {
-    bg: 'bg-gray-500/20',
-    text: 'text-gray-300',
-    border: 'border-gray-500/30',
-    label: project.status || 'Inconnu'
-  };
-
   const typeInfo = typeConfig[project.type] || { icon: '📋', label: project.type || 'Autre' };
 
   // Format des dates

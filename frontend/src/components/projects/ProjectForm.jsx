@@ -273,7 +273,7 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
         </div>
 
         {/* Montant */}
-        <div className="max-w-xs">
+        <div className="max-w-xs relative">
           <FormInput
             label="Montant (€)"
             type="number"

@@ -113,7 +113,7 @@ const RevenueForm = ({ revenue = {}, onSave, onCancel, projects }) => {
             variant="light"
             inputClassName="pl-10"
           />
-          <span className="absolute left-3 top-[2.4rem] text-gray-600">
+          <span className="absolute left-3 top-[2.6rem] text-gray-600 pointer-events-none">
             €
           </span>
         </div>

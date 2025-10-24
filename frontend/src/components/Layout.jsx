@@ -259,17 +259,17 @@ const Layout = ({ children }) => {
               
               <h2 className="text-white text-2xl font-bold mb-4">Réinitialisation en cours</h2>
               <p className="text-gray-300 text-lg mb-6">Veuillez patienter, ne fermez pas la page</p>
-              <p className="text-gray-400">L'application redémarrera automatiquement</p>
-              
+              <p className="text-gray-300">L'application redémarrera automatiquement</p>
+
               {/* Barre de progression */}
               <div className="h-2 bg-gray-700 mt-6 rounded-full overflow-hidden">
-                <motion.div 
+                <motion.div
                   className="h-full bg-indigo-500"
                   style={{ width: `${resetProgress}%` }}
                 />
               </div>
-              
-              <div className="mt-2 text-gray-400 text-sm">
+
+              <div className="mt-2 text-gray-300 text-sm">
                 Nettoyage et préparation de l'application...
               </div>
             </div>

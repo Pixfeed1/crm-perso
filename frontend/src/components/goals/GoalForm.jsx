@@ -325,7 +325,7 @@ const GoalForm = ({ goal = {}, onSave, onCancel }) => {
         </div>
 
         {/* Boutons d'action */}
-        <form onSubmit={handleSubmit}>
+        <div>
           <FormButtons
             onCancel={onCancel}
             loading={submitting}
@@ -334,7 +334,7 @@ const GoalForm = ({ goal = {}, onSave, onCancel }) => {
             className="pt-6"
             disabled={!formValid}
           />
-        </form>
+        </div>
       </div>
     </div>
   );
