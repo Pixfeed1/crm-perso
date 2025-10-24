@@ -77,7 +77,9 @@ const eventModel = {
         priority,
         color,
         reminder_time,
-        activity_id
+        activity_id,
+        project_id,
+        lead_id
       } = eventData;
 
       if (!title || !start_datetime) {
@@ -87,8 +89,9 @@ const eventModel = {
       const query = `
         INSERT INTO events (
           title, description, start_datetime, end_datetime, all_day,
-          location, category, priority, color, reminder_time, activity_id, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          location, category, priority, color, reminder_time, activity_id,
+          project_id, lead_id, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
 
       const now = new Date().toISOString();
@@ -105,6 +108,8 @@ const eventModel = {
         color || null,
         reminder_time || null,
         activity_id || null,
+        project_id || null,
+        lead_id || null,
         now,
         now
       ], function(err) {
@@ -204,6 +209,16 @@ const eventModel = {
         if (updateData.activity_id !== undefined) {
           updates.push('activity_id = ?');
           params.push(updateData.activity_id);
+        }
+
+        if (updateData.project_id !== undefined) {
+          updates.push('project_id = ?');
+          params.push(updateData.project_id);
+        }
+
+        if (updateData.lead_id !== undefined) {
+          updates.push('lead_id = ?');
+          params.push(updateData.lead_id);
         }
 
         // Ajouter la date de mise à jour

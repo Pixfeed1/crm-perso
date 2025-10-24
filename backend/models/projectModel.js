@@ -147,15 +147,36 @@ const createProjectModel = (db) => {
               } else {
                 const newProjectId = this.lastID;
                 console.log(`[ProjectModel] Projet créé avec succès, ID: ${newProjectId}`);
-                
+
+                // Si un lead_id est fourni, marquer le lead comme converti
+                if (lead_id) {
+                  const convertQuery = `
+                    UPDATE leads
+                    SET converted_at = ?,
+                        converted_to_project_id = ?,
+                        status = CASE WHEN status NOT IN ('won', 'lost') THEN 'won' ELSE status END,
+                        updated_at = ?
+                    WHERE id = ?
+                  `;
+
+                  db.run(convertQuery, [now, newProjectId, now, lead_id], (convertErr) => {
+                    if (convertErr) {
+                      console.error(`[ProjectModel] Erreur lors de la conversion du lead ${lead_id}:`, convertErr);
+                      // Continuer malgré l'erreur
+                    } else {
+                      console.log(`[ProjectModel] Lead ${lead_id} marqué comme converti vers projet ${newProjectId}`);
+                    }
+                  });
+                }
+
                 // Récupérer le projet créé
                 const getQuery = `
-                  SELECT p.*, l.name as lead_name 
-                  FROM projects p 
-                  LEFT JOIN leads l ON p.lead_id = l.id 
+                  SELECT p.*, l.name as lead_name
+                  FROM projects p
+                  LEFT JOIN leads l ON p.lead_id = l.id
                   WHERE p.id = ?
                 `;
-                
+
                 db.get(getQuery, [newProjectId], (getErr, project) => {
                   if (getErr) {
                     console.error(`[ProjectModel] Erreur lors de la récupération du nouveau projet ID ${newProjectId}:`, getErr);

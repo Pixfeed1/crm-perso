@@ -34,7 +34,10 @@ const runMigrations = async (pool) => {
       addProgressToProjects,
       ensureActivitiesLeadNameColumn,
       createContactsTable,
-      addUserIdColumns
+      addUserIdColumns,
+      addLeadConversionTracking,
+      addEventInterconnections,
+      createProjectContactsTable
     ];
     
     // Exécuter les migrations manquantes
@@ -346,6 +349,95 @@ async function addUserIdColumns(pool) {
   }
 
   console.log('[PGMigrations] Support multi-utilisateurs ajouté avec succès');
+}
+
+// Migration 7: Ajout du tracking de conversion Lead → Project
+async function addLeadConversionTracking(pool) {
+  console.log('[PGMigrations] Ajout du tracking de conversion Lead → Project...');
+
+  const columns = ['converted_at', 'converted_to_project_id'];
+
+  for (const columnName of columns) {
+    // Vérifier si la colonne existe déjà
+    const columnCheck = await pool.query(`
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_name = 'leads' AND column_name = $1
+    `, [columnName]);
+
+    if (columnCheck.rowCount === 0) {
+      if (columnName === 'converted_at') {
+        await pool.query(`ALTER TABLE leads ADD COLUMN converted_at TIMESTAMP`);
+        console.log('[PGMigrations] Colonne converted_at ajoutée à la table leads');
+      } else if (columnName === 'converted_to_project_id') {
+        await pool.query(`
+          ALTER TABLE leads
+          ADD COLUMN converted_to_project_id INTEGER REFERENCES projects(id) ON DELETE SET NULL
+        `);
+        console.log('[PGMigrations] Colonne converted_to_project_id ajoutée à la table leads');
+      }
+    } else {
+      console.log(`[PGMigrations] La colonne ${columnName} existe déjà dans la table leads`);
+    }
+  }
+
+  console.log('[PGMigrations] Tracking de conversion Lead → Project ajouté avec succès');
+}
+
+// Migration 8: Ajout de project_id et lead_id aux events pour les interconnexions
+async function addEventInterconnections(pool) {
+  console.log('[PGMigrations] Ajout des interconnexions aux events (project_id, lead_id)...');
+
+  const columns = [
+    { name: 'project_id', type: 'INTEGER REFERENCES projects(id) ON DELETE SET NULL' },
+    { name: 'lead_id', type: 'INTEGER REFERENCES leads(id) ON DELETE SET NULL' }
+  ];
+
+  for (const column of columns) {
+    // Vérifier si la colonne existe déjà
+    const columnCheck = await pool.query(`
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_name = 'events' AND column_name = $1
+    `, [column.name]);
+
+    if (columnCheck.rowCount === 0) {
+      await pool.query(`ALTER TABLE events ADD COLUMN ${column.name} ${column.type}`);
+      console.log(`[PGMigrations] Colonne ${column.name} ajoutée à la table events`);
+    } else {
+      console.log(`[PGMigrations] La colonne ${column.name} existe déjà dans la table events`);
+    }
+  }
+
+  console.log('[PGMigrations] Interconnexions events ajoutées avec succès');
+}
+
+// Migration 9: Création de la table de liaison project_contacts
+async function createProjectContactsTable(pool) {
+  console.log('[PGMigrations] Création de la table project_contacts...');
+
+  // Vérifier si la table existe déjà
+  const tableCheck = await pool.query(`
+    SELECT table_name
+    FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'project_contacts'
+  `);
+
+  if (tableCheck.rowCount === 0) {
+    await pool.query(`
+      CREATE TABLE project_contacts (
+        id SERIAL PRIMARY KEY,
+        project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+        contact_id INTEGER NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+        role TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(project_id, contact_id)
+      )
+    `);
+    console.log('[PGMigrations] Table project_contacts créée avec succès');
+  } else {
+    console.log('[PGMigrations] La table project_contacts existe déjà');
+  }
 }
 
 module.exports = runMigrations;
