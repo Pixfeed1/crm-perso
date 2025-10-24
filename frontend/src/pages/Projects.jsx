@@ -1,8 +1,8 @@
 // src/pages/Projects.jsx
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { projectsAPI } from '../services/api';
-import { FiAlertTriangle, FiRocket, FiTarget, FiArrowLeft } from 'react-icons/fi';
+import { projectsAPI, exportAPI } from '../services/api';
+import { FiAlertTriangle, FiRocket, FiTarget, FiArrowLeft, FiDownload } from 'react-icons/fi';
 
 // Composants
 import ProjectCard from '../components/projects/ProjectCard';
@@ -381,14 +381,25 @@ const Projects = () => {
         >
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3 px-2 sm:px-0">
             <h2 className="text-lg sm:text-xl font-semibold text-white">Vos Projets</h2>
-            <motion.button
-              className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 sm:px-4 sm:py-2 rounded-full flex items-center text-sm sm:text-base"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={handleAddProject}
-            >
-              <span className="mr-1">+</span> Nouveau Projet
-            </motion.button>
+            <div className="flex gap-2">
+              <motion.button
+                className="bg-gray-700 hover:bg-gray-600 text-white px-3 py-2 sm:px-4 sm:py-2 rounded-full flex items-center text-sm sm:text-base"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => exportAPI.projects()}
+                title="Exporter les projets en CSV"
+              >
+                <FiDownload className="mr-1" /> Exporter
+              </motion.button>
+              <motion.button
+                className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 sm:px-4 sm:py-2 rounded-full flex items-center text-sm sm:text-base"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={handleAddProject}
+              >
+                <span className="mr-1">+</span> Nouveau Projet
+              </motion.button>
+            </div>
           </div>
 
           <div className="px-2 sm:px-0">

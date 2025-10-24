@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiEdit2, FiTrash2, FiDollarSign } from 'react-icons/fi';
+import { FiEdit2, FiTrash2, FiDollarSign, FiDownload } from 'react-icons/fi';
 
 // Composants
 import RevenueStats from '../components/revenues/RevenueStats';
@@ -13,7 +13,7 @@ import RevenueFilter from '../components/revenues/RevenueFilter';
 import EmptyState from '../components/common/EmptyState';
 
 // API
-import { revenuesAPI, projectsAPI } from '../services/api';
+import { revenuesAPI, projectsAPI, exportAPI } from '../services/api';
 
 const Revenues = () => {
   const [revenues, setRevenues] = useState([]);
@@ -404,6 +404,15 @@ const Revenues = () => {
               </motion.button>
             ))}
           </div>
+          <motion.button
+            className="px-3 py-2 sm:px-4 sm:py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg flex items-center justify-center text-sm sm:text-base"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => exportAPI.revenues()}
+            title="Exporter les revenus en CSV"
+          >
+            <FiDownload className="mr-1" /> Exporter
+          </motion.button>
           <motion.button
             className="px-3 py-2 sm:px-4 sm:py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg flex items-center justify-center text-sm sm:text-base"
             whileHover={{ scale: 1.05 }}

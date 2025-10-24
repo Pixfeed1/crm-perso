@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { goalsAPI } from '../services/api';
-import { FiTarget, FiZap, FiCheckCircle, FiClock } from 'react-icons/fi';
+import { goalsAPI, exportAPI } from '../services/api';
+import { FiTarget, FiZap, FiCheckCircle, FiClock, FiDownload } from 'react-icons/fi';
 
 // Composants
 import GoalStats from '../components/goals/GoalStats';
@@ -448,7 +448,14 @@ const Goals = () => {
           </button>
         </div>
 
-        <div className="flex items-center">
+        <div className="flex items-center gap-2">
+          <button
+            className="px-3 py-2 sm:px-4 sm:py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg flex items-center justify-center shadow-md hover:scale-105 active:scale-95 transition-transform text-sm sm:text-base"
+            onClick={() => exportAPI.goals()}
+            title="Exporter les objectifs en CSV"
+          >
+            <FiDownload className="mr-1" /> Exporter
+          </button>
           <button
             className="w-full sm:w-auto px-3 py-2 sm:px-4 sm:py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg flex items-center justify-center shadow-md hover:scale-105 active:scale-95 transition-transform text-sm sm:text-base"
             onClick={handleAddGoal}

@@ -1,9 +1,9 @@
 // src/pages/Activities.jsx
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiClipboard, FiCalendar, FiEdit2, FiTrash2, FiMonitor, FiEdit, FiUsers, FiPhone, FiMegaphone, FiTool, FiCheck } from 'react-icons/fi';
+import { FiClipboard, FiCalendar, FiEdit2, FiTrash2, FiMonitor, FiEdit, FiUsers, FiPhone, FiMegaphone, FiTool, FiCheck, FiDownload } from 'react-icons/fi';
 // Importer vos services d'API
-import { activitiesAPI, projectsAPI } from '../services/api';
+import { activitiesAPI, projectsAPI, exportAPI } from '../services/api';
 
 // Composants internes
 import ActivityStats from '../components/activities/ActivityStats';
@@ -342,7 +342,16 @@ const Activities = () => {
               Calendrier
             </motion.button>
           </div>
-          {/* Bouton ajouter une nouvelle activité */}
+          {/* Boutons export et ajout */}
+          <motion.button
+            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg flex items-center"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => exportAPI.activities()}
+            title="Exporter les activités en CSV"
+          >
+            <FiDownload className="mr-1" /> Exporter
+          </motion.button>
           <motion.button
             className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg flex items-center"
             whileHover={{ scale: 1.05 }}

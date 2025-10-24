@@ -431,3 +431,65 @@ export const searchAPI = {
     return apiRequest(`/search?query=${encodeURIComponent(query)}`);
   }
 };
+
+// ===== EXPORTS =====
+export const exportAPI = {
+  // Fonction utilitaire pour déclencher le téléchargement d'un fichier
+  downloadFile: (url, filename) => {
+    console.log(`Téléchargement de ${filename} depuis ${url}`);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  },
+
+  // Export des leads en CSV
+  leads: () => {
+    console.log('Appel API: export des leads en CSV');
+    const url = `${API_BASE_URL}/export/leads`;
+    window.open(url, '_blank');
+  },
+
+  // Export des projets en CSV
+  projects: () => {
+    console.log('Appel API: export des projets en CSV');
+    const url = `${API_BASE_URL}/export/projects`;
+    window.open(url, '_blank');
+  },
+
+  // Export des objectifs en CSV
+  goals: () => {
+    console.log('Appel API: export des objectifs en CSV');
+    const url = `${API_BASE_URL}/export/goals`;
+    window.open(url, '_blank');
+  },
+
+  // Export des revenus en CSV
+  revenues: () => {
+    console.log('Appel API: export des revenus en CSV');
+    const url = `${API_BASE_URL}/export/revenues`;
+    window.open(url, '_blank');
+  },
+
+  // Export des activités en CSV
+  activities: () => {
+    console.log('Appel API: export des activités en CSV');
+    const url = `${API_BASE_URL}/export/activities`;
+    window.open(url, '_blank');
+  },
+
+  // Export des contacts en CSV
+  contacts: () => {
+    console.log('Appel API: export des contacts en CSV');
+    const url = `${API_BASE_URL}/export/contacts`;
+    window.open(url, '_blank');
+  },
+
+  // Export complet (toutes les données en JSON)
+  all: async () => {
+    console.log('Appel API: export complet de toutes les données');
+    return apiRequest('/export/all');
+  }
+};

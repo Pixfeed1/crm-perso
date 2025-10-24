@@ -1,9 +1,9 @@
 // src/pages/Leads.jsx
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiUsers, FiStar, FiArrowLeft } from 'react-icons/fi';
+import { FiUsers, FiStar, FiArrowLeft, FiDownload } from 'react-icons/fi';
 // Remplacer executeQuery par la fonction d'API
-import { leadsAPI } from '../services/api';
+import { leadsAPI, exportAPI } from '../services/api';
 
 // Composants
 import LeadCard from '../components/leads/LeadCard';
@@ -334,14 +334,25 @@ const Leads = () => {
         >
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3 px-2 sm:px-0">
             <h2 className="text-lg sm:text-xl font-semibold text-white">Vos Leads</h2>
-            <motion.button
-              className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 sm:px-4 sm:py-2 rounded-full flex items-center text-sm sm:text-base"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={handleAddLead}
-            >
-              <span className="mr-1">+</span> Nouveau Lead
-            </motion.button>
+            <div className="flex gap-2">
+              <motion.button
+                className="bg-gray-700 hover:bg-gray-600 text-white px-3 py-2 sm:px-4 sm:py-2 rounded-full flex items-center text-sm sm:text-base"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => exportAPI.leads()}
+                title="Exporter les leads en CSV"
+              >
+                <FiDownload className="mr-1" /> Exporter
+              </motion.button>
+              <motion.button
+                className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 sm:px-4 sm:py-2 rounded-full flex items-center text-sm sm:text-base"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={handleAddLead}
+              >
+                <span className="mr-1">+</span> Nouveau Lead
+              </motion.button>
+            </div>
           </div>
 
           <div className="px-2 sm:px-0">
