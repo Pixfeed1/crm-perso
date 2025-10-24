@@ -32,7 +32,9 @@ const runMigrations = async (pool) => {
       createInitialTables,
       addGoalsTables,
       addProgressToProjects,
-      ensureActivitiesLeadNameColumn
+      ensureActivitiesLeadNameColumn,
+      createContactsTable,
+      addUserIdColumns
     ];
     
     // Exécuter les migrations manquantes
@@ -257,6 +259,93 @@ async function ensureActivitiesLeadNameColumn(pool) {
   } else {
     console.log('[PGMigrations] La colonne lead_name existe déjà dans la table activities');
   }
+}
+
+// Migration 5: Création de la table contacts (précédemment créée dynamiquement dans leadsRoutes.js)
+async function createContactsTable(pool) {
+  console.log('[PGMigrations] Création de la table contacts...');
+
+  // Vérifier si la table existe déjà
+  const tableCheck = await pool.query(`
+    SELECT table_name
+    FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'contacts'
+  `);
+
+  if (tableCheck.rowCount === 0) {
+    await pool.query(`
+      CREATE TABLE contacts (
+        id SERIAL PRIMARY KEY,
+        lead_id INTEGER NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
+        name TEXT NOT NULL,
+        position TEXT,
+        email TEXT,
+        phone TEXT,
+        is_primary BOOLEAN DEFAULT false,
+        notes TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('[PGMigrations] Table contacts créée avec succès');
+  } else {
+    console.log('[PGMigrations] La table contacts existe déjà');
+
+    // Vérifier et ajouter les colonnes manquantes si nécessaire
+    const columnsCheck = await pool.query(`
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_name = 'contacts'
+    `);
+
+    const existingColumns = columnsCheck.rows.map(row => row.column_name);
+
+    if (!existingColumns.includes('updated_at')) {
+      await pool.query(`ALTER TABLE contacts ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`);
+      console.log('[PGMigrations] Colonne updated_at ajoutée à la table contacts');
+    }
+  }
+}
+
+// Migration 6: Ajout de la colonne user_id à toutes les tables pour le multi-utilisateurs
+async function addUserIdColumns(pool) {
+  console.log('[PGMigrations] Ajout des colonnes user_id pour le support multi-utilisateurs...');
+
+  const tables = ['leads', 'projects', 'activities', 'goals', 'revenues', 'events', 'contacts'];
+
+  for (const tableName of tables) {
+    // Vérifier si la colonne user_id existe déjà
+    const columnCheck = await pool.query(`
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_name = $1 AND column_name = 'user_id'
+    `, [tableName]);
+
+    if (columnCheck.rowCount === 0) {
+      await pool.query(`
+        ALTER TABLE ${tableName}
+        ADD COLUMN user_id INTEGER REFERENCES users(id) ON DELETE SET NULL
+      `);
+      console.log(`[PGMigrations] Colonne user_id ajoutée à la table ${tableName}`);
+
+      // Mettre à jour les enregistrements existants avec le premier utilisateur
+      const firstUser = await pool.query('SELECT id FROM users ORDER BY id LIMIT 1');
+
+      if (firstUser.rowCount > 0) {
+        const userId = firstUser.rows[0].id;
+        await pool.query(`
+          UPDATE ${tableName}
+          SET user_id = $1
+          WHERE user_id IS NULL
+        `, [userId]);
+        console.log(`[PGMigrations] Enregistrements existants de ${tableName} assignés à l'utilisateur ${userId}`);
+      }
+    } else {
+      console.log(`[PGMigrations] La colonne user_id existe déjà dans la table ${tableName}`);
+    }
+  }
+
+  console.log('[PGMigrations] Support multi-utilisateurs ajouté avec succès');
 }
 
 module.exports = runMigrations;
