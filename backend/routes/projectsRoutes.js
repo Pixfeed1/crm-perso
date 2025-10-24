@@ -430,4 +430,236 @@ router.delete('/:projectId/tasks/:taskId', (req, res) => {
   );
 });
 
+// ============================================
+// ROUTES POUR LES CONTACTS DE PROJET
+// ============================================
+
+// Obtenir tous les contacts d'un projet
+router.get('/:id/contacts', (req, res) => {
+  const db = req.app.locals.db;
+  const { id } = req.params;
+
+  // Vérifier que le projet existe
+  db.get('SELECT id FROM projects WHERE id = ?', [id], (err, project) => {
+    if (err) {
+      console.error('Erreur lors de la vérification du projet:', err);
+      return res.status(500).json({ message: 'Erreur serveur' });
+    }
+
+    if (!project) {
+      return res.status(404).json({ message: 'Projet non trouvé' });
+    }
+
+    // Récupérer les contacts du projet avec leurs informations complètes
+    const query = `
+      SELECT
+        pc.id as project_contact_id,
+        pc.role,
+        pc.created_at as added_at,
+        c.id,
+        c.lead_id,
+        c.name,
+        c.position,
+        c.email,
+        c.phone,
+        c.is_primary,
+        c.notes,
+        l.name as lead_name,
+        l.company as lead_company
+      FROM project_contacts pc
+      INNER JOIN contacts c ON pc.contact_id = c.id
+      LEFT JOIN leads l ON c.lead_id = l.id
+      WHERE pc.project_id = ?
+      ORDER BY pc.created_at DESC
+    `;
+
+    db.all(query, [id], (err, contacts) => {
+      if (err) {
+        console.error('Erreur lors de la récupération des contacts du projet:', err);
+        return res.status(500).json({ message: 'Erreur serveur' });
+      }
+
+      res.json(contacts);
+    });
+  });
+});
+
+// Ajouter un contact à un projet
+router.post('/:id/contacts', (req, res) => {
+  const db = req.app.locals.db;
+  const { id } = req.params;
+  const { contact_id, role } = req.body;
+
+  if (!contact_id) {
+    return res.status(400).json({ message: 'contact_id est requis' });
+  }
+
+  // Vérifier que le projet existe
+  db.get('SELECT id FROM projects WHERE id = ?', [id], (err, project) => {
+    if (err) {
+      console.error('Erreur lors de la vérification du projet:', err);
+      return res.status(500).json({ message: 'Erreur serveur' });
+    }
+
+    if (!project) {
+      return res.status(404).json({ message: 'Projet non trouvé' });
+    }
+
+    // Vérifier que le contact existe
+    db.get('SELECT id, name FROM contacts WHERE id = ?', [contact_id], (err, contact) => {
+      if (err) {
+        console.error('Erreur lors de la vérification du contact:', err);
+        return res.status(500).json({ message: 'Erreur serveur' });
+      }
+
+      if (!contact) {
+        return res.status(404).json({ message: 'Contact non trouvé' });
+      }
+
+      // Vérifier que le contact n'est pas déjà lié au projet
+      db.get(
+        'SELECT id FROM project_contacts WHERE project_id = ? AND contact_id = ?',
+        [id, contact_id],
+        (err, existing) => {
+          if (err) {
+            console.error('Erreur lors de la vérification du lien existant:', err);
+            return res.status(500).json({ message: 'Erreur serveur' });
+          }
+
+          if (existing) {
+            return res.status(409).json({ message: 'Ce contact est déjà lié à ce projet' });
+          }
+
+          // Ajouter le contact au projet
+          const insertQuery = `
+            INSERT INTO project_contacts (project_id, contact_id, role, created_at)
+            VALUES (?, ?, ?, ?)
+          `;
+
+          const now = new Date().toISOString();
+
+          db.run(
+            insertQuery,
+            [id, contact_id, role || null, now],
+            function(err) {
+              if (err) {
+                console.error('Erreur lors de l\'ajout du contact au projet:', err);
+                return res.status(500).json({ message: 'Erreur serveur' });
+              }
+
+              // Récupérer le lien créé avec les infos du contact
+              const query = `
+                SELECT
+                  pc.id as project_contact_id,
+                  pc.role,
+                  pc.created_at as added_at,
+                  c.id,
+                  c.name,
+                  c.position,
+                  c.email,
+                  c.phone,
+                  c.is_primary,
+                  l.name as lead_name,
+                  l.company as lead_company
+                FROM project_contacts pc
+                INNER JOIN contacts c ON pc.contact_id = c.id
+                LEFT JOIN leads l ON c.lead_id = l.id
+                WHERE pc.id = ?
+              `;
+
+              db.get(query, [this.lastID], (err, result) => {
+                if (err) {
+                  console.error('Erreur lors de la récupération du contact ajouté:', err);
+                  return res.status(500).json({ message: 'Erreur serveur' });
+                }
+
+                res.status(201).json({
+                  message: 'Contact ajouté au projet avec succès',
+                  data: result
+                });
+              });
+            }
+          );
+        }
+      );
+    });
+  });
+});
+
+// Mettre à jour le rôle d'un contact dans un projet
+router.put('/:projectId/contacts/:contactId', (req, res) => {
+  const db = req.app.locals.db;
+  const { projectId, contactId } = req.params;
+  const { role } = req.body;
+
+  // Vérifier que le lien existe
+  db.get(
+    'SELECT id FROM project_contacts WHERE project_id = ? AND contact_id = ?',
+    [projectId, contactId],
+    (err, link) => {
+      if (err) {
+        console.error('Erreur lors de la vérification du lien:', err);
+        return res.status(500).json({ message: 'Erreur serveur' });
+      }
+
+      if (!link) {
+        return res.status(404).json({ message: 'Ce contact n\'est pas lié à ce projet' });
+      }
+
+      // Mettre à jour le rôle
+      db.run(
+        'UPDATE project_contacts SET role = ? WHERE project_id = ? AND contact_id = ?',
+        [role || null, projectId, contactId],
+        function(err) {
+          if (err) {
+            console.error('Erreur lors de la mise à jour du rôle:', err);
+            return res.status(500).json({ message: 'Erreur serveur' });
+          }
+
+          res.json({
+            message: 'Rôle du contact mis à jour avec succès',
+            role: role
+          });
+        }
+      );
+    }
+  );
+});
+
+// Retirer un contact d'un projet
+router.delete('/:projectId/contacts/:contactId', (req, res) => {
+  const db = req.app.locals.db;
+  const { projectId, contactId } = req.params;
+
+  // Vérifier que le lien existe
+  db.get(
+    'SELECT id FROM project_contacts WHERE project_id = ? AND contact_id = ?',
+    [projectId, contactId],
+    (err, link) => {
+      if (err) {
+        console.error('Erreur lors de la vérification du lien:', err);
+        return res.status(500).json({ message: 'Erreur serveur' });
+      }
+
+      if (!link) {
+        return res.status(404).json({ message: 'Ce contact n\'est pas lié à ce projet' });
+      }
+
+      // Supprimer le lien
+      db.run(
+        'DELETE FROM project_contacts WHERE project_id = ? AND contact_id = ?',
+        [projectId, contactId],
+        function(err) {
+          if (err) {
+            console.error('Erreur lors de la suppression du lien:', err);
+            return res.status(500).json({ message: 'Erreur serveur' });
+          }
+
+          res.json({ message: 'Contact retiré du projet avec succès' });
+        }
+      );
+    }
+  );
+});
+
 module.exports = router;
