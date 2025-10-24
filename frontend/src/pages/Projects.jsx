@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { projectsAPI } from '../services/api';
+import { FiAlertTriangle, FiRocket, FiTarget } from 'react-icons/fi';
 
 // Composants
 import ProjectCard from '../components/projects/ProjectCard';
@@ -324,7 +325,7 @@ const Projects = () => {
   if (error && projects.length === 0) {
     return (
       <div className="h-full flex flex-col items-center justify-center">
-        <div className="text-4xl mb-4">⚠️</div>
+        <div className="text-4xl mb-4"><FiAlertTriangle /></div>
         <h2 className="text-xl font-semibold text-white mb-2">Erreur de chargement</h2>
         <p className="text-gray-300 mb-4">{error}</p>
         <button 
@@ -400,11 +401,11 @@ const Projects = () => {
                   </motion.div>
                 ))
               ) : (
-                <EmptyState 
-                  icon="🚀"
+                <EmptyState
+                  icon={<FiRocket />}
                   title="Aucun projet trouvé"
-                  description={filters.search || filters.status !== 'all' || filters.type !== 'all' || filters.timeframe !== 'all' ? 
-                    "Modifiez vos filtres pour voir plus de projets." : 
+                  description={filters.search || filters.status !== 'all' || filters.type !== 'all' || filters.timeframe !== 'all' ?
+                    "Modifiez vos filtres pour voir plus de projets." :
                     "Ajoutez de nouveaux projets pour commencer."
                   }
                 />
@@ -468,8 +469,8 @@ const Projects = () => {
                     exit={{ opacity: 0 }}
                     className="h-full flex items-center justify-center"
                   >
-                    <EmptyState 
-                      icon="🎯"
+                    <EmptyState
+                      icon={<FiTarget />}
                       title="Sélectionnez un projet"
                       description="Choisissez un projet dans la liste ou créez-en un nouveau."
                     />
