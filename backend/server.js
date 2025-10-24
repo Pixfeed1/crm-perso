@@ -104,6 +104,7 @@ app.use('/api/revenues', require('./routes/revenuesRoutes'));
 app.use('/api/dashboard', require('./routes/dashboardRoutes'));
 app.use('/api/alerts', require('./routes/alertsRoutes'));
 app.use('/api/sales-pipeline', require('./routes/salesPipelineRoutes'));
+app.use('/api/stats', require('./routes/statsRoutes'));
 
 // 2. Servir les fichiers statiques du dossier public
 app.use(express.static(publicPath));
