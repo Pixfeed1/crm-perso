@@ -82,13 +82,13 @@ const Users = () => {
       return;
     }
 
-    if (!window.confirm(\`Êtes-vous sûr de vouloir supprimer \${user.username} ?\`)) {
+    if (!window.confirm(`Êtes-vous sûr de vouloir supprimer ${user.username} ?`)) {
       return;
     }
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(\`http://localhost:5000/api/users/\${user.id}\`, {
+      const response = await fetch(`http://localhost:5000/api/users/${user.id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -118,7 +118,7 @@ const Users = () => {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(\`http://localhost:5000/api/users/\${userId}/change-password\`, {
+      const response = await fetch(`http://localhost:5000/api/users/${userId}/change-password`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -222,11 +222,11 @@ const Users = () => {
                     </td>
                     <td className="py-4 px-6 text-gray-300">{user.email || '-'}</td>
                     <td className="py-4 px-6">
-                      <span className={\`px-3 py-1 rounded-full text-sm \${
+                      <span className={`px-3 py-1 rounded-full text-sm ${
                         user.role === 'admin' ? 'bg-rose-500/20 text-rose-300' :
                         user.role === 'manager' ? 'bg-blue-500/20 text-blue-300' :
                         'bg-gray-500/20 text-gray-300'
-                      }\`}>
+                      }`}>
                         {user.role === 'admin' ? 'Admin' : user.role === 'manager' ? 'Manager' : 'Utilisateur'}
                       </span>
                     </td>
