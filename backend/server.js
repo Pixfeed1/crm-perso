@@ -102,6 +102,7 @@ app.use('/api/projects', require('./routes/projectsRoutes'));
 app.use('/api/events', require('./routes/eventsRoutes'));
 app.use('/api/goals', require('./routes/goalsRoutes'));
 app.use('/api/revenues', require('./routes/revenuesRoutes'));
+app.use('/api/reminders', require('./routes/reminderRoutes'));
 app.use('/api/dashboard', require('./routes/dashboardRoutes'));
 
 // 2. Servir les fichiers statiques du dossier public

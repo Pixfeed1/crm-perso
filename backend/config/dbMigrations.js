@@ -43,6 +43,9 @@ class DatabaseMigrations {
 
     // Migration 6: Création de la table des interactions avec les leads
     this.migrations.push(this.createLeadInteractionsTable.bind(this));
+
+    // Migration 7: Création de la table des rappels/notifications
+    this.migrations.push(this.createRemindersTable.bind(this));
   }
 
   /**
@@ -571,6 +574,74 @@ class DatabaseMigrations {
           console.log('[Migrations] Table lead_interactions créée avec succès');
           console.log('[Migrations] Migration 6 terminée avec succès');
           resolve();
+        });
+      });
+    });
+  }
+
+  /**
+   * Migration 7: Création de la table reminders pour les rappels
+   */
+  async createRemindersTable() {
+    return new Promise((resolve, reject) => {
+      console.log('[Migrations] Migration 7: Création de la table reminders');
+
+      // Vérifier si la table existe déjà
+      this.db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='reminders'", (err, row) => {
+        if (err) {
+          console.error('[Migrations] Erreur lors de la vérification de la table reminders:', err);
+          return reject(err);
+        }
+
+        if (row) {
+          console.log('[Migrations] La table reminders existe déjà, skip');
+          return resolve();
+        }
+
+        // Créer la table reminders
+        this.db.run(`
+          CREATE TABLE reminders (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            entity_type TEXT NOT NULL,
+            entity_id INTEGER NOT NULL,
+            title TEXT NOT NULL,
+            description TEXT,
+            due_date TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'pending',
+            priority TEXT NOT NULL DEFAULT 'medium',
+            created_at TEXT NOT NULL,
+            completed_at TEXT,
+            dismissed_at TEXT
+          )
+        `, (err) => {
+          if (err) {
+            console.error('[Migrations] Erreur lors de la création de la table reminders:', err);
+            return reject(err);
+          }
+
+          console.log('[Migrations] Table reminders créée avec succès');
+
+          // Créer un index sur entity_type et entity_id pour des requêtes rapides
+          this.db.run(`
+            CREATE INDEX idx_reminders_entity ON reminders(entity_type, entity_id)
+          `, (err) => {
+            if (err) {
+              console.error('[Migrations] Erreur lors de la création de l\'index:', err);
+              // On continue même si l'index échoue
+            }
+
+            // Créer un index sur due_date et status pour filtrer les rappels actifs
+            this.db.run(`
+              CREATE INDEX idx_reminders_due_status ON reminders(due_date, status)
+            `, (err) => {
+              if (err) {
+                console.error('[Migrations] Erreur lors de la création de l\'index due_status:', err);
+              }
+
+              console.log('[Migrations] Migration 7 terminée avec succès');
+              resolve();
+            });
+          });
         });
       });
     });

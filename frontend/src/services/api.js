@@ -368,3 +368,58 @@ export const dashboardAPI = {
     return apiRequest('/dashboard');
   }
 };
+
+// ===== RAPPELS =====
+export const remindersAPI = {
+  // Récupération
+  getActive: () => {
+    console.log('Appel API: récupération des rappels actifs');
+    return apiRequest('/reminders/active');
+  },
+  getOverdue: () => {
+    console.log('Appel API: récupération des rappels en retard');
+    return apiRequest('/reminders/overdue');
+  },
+  getUpcoming: (days = 7) => {
+    console.log(`Appel API: récupération des rappels à venir (${days} jours)`);
+    return apiRequest(`/reminders/upcoming?days=${days}`);
+  },
+  getByEntity: (entityType, entityId) => {
+    console.log(`Appel API: récupération des rappels pour ${entityType} ID ${entityId}`);
+    return apiRequest(`/reminders/entity/${entityType}/${entityId}`);
+  },
+  getById: (id) => {
+    console.log(`Appel API: récupération du rappel ID ${id}`);
+    return apiRequest(`/reminders/${id}`);
+  },
+  getCount: () => {
+    console.log('Appel API: récupération du nombre de rappels');
+    return apiRequest('/reminders/count');
+  },
+
+  // Création
+  create: (data) => {
+    console.log('Appel API: création d\'un nouveau rappel', data);
+    return apiRequest('/reminders', 'POST', data);
+  },
+
+  // Mise à jour
+  update: (id, data) => {
+    console.log(`Appel API: mise à jour du rappel ID ${id}`, data);
+    return apiRequest(`/reminders/${id}`, 'PUT', data);
+  },
+  complete: (id) => {
+    console.log(`Appel API: marquage du rappel ID ${id} comme complété`);
+    return apiRequest(`/reminders/${id}/complete`, 'PATCH');
+  },
+  dismiss: (id) => {
+    console.log(`Appel API: rejet du rappel ID ${id}`);
+    return apiRequest(`/reminders/${id}/dismiss`, 'PATCH');
+  },
+
+  // Suppression
+  delete: (id) => {
+    console.log(`Appel API: suppression du rappel ID ${id}`);
+    return apiRequest(`/reminders/${id}`, 'DELETE');
+  }
+};

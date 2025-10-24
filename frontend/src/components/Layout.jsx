@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { remindersAPI } from '../services/api';
 
 // Utiliser les icônes de React Icons (Feather Icons)
 import { FiGrid as DashboardIcon } from 'react-icons/fi';
@@ -13,6 +14,10 @@ import { FiDollarSign as RevenuesIcon } from 'react-icons/fi';
 import { FiActivity as ActivitiesIcon } from 'react-icons/fi';
 import { FiTarget as GoalsIcon } from 'react-icons/fi';
 import { FiLogOut as LogoutIcon } from 'react-icons/fi';
+import { FiBell } from 'react-icons/fi';
+
+// Import du modal de rappels
+import RemindersModal from './reminders/RemindersModal';
 
 const Layout = ({ children }) => {
   const location = useLocation();
@@ -21,10 +26,42 @@ const Layout = ({ children }) => {
   const [activeModule, setActiveModule] = useState('/dashboard');
   const [menuOpen, setMenuOpen] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
+  const [remindersOpen, setRemindersOpen] = useState(false);
+  const [reminderCount, setReminderCount] = useState({ active: 0, overdue: 0 });
 
   useEffect(() => {
     setActiveModule(location.pathname);
   }, [location]);
+
+  // Charger le nombre de rappels
+  useEffect(() => {
+    const fetchReminderCount = async () => {
+      try {
+        const count = await remindersAPI.getCount();
+        setReminderCount(count);
+      } catch (error) {
+        console.error('Erreur lors du chargement du nombre de rappels:', error);
+      }
+    };
+
+    fetchReminderCount();
+
+    // Rafraîchir toutes les 30 secondes
+    const interval = setInterval(fetchReminderCount, 30000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Rafraîchir le compteur après fermeture du modal
+  const handleRemindersClose = async () => {
+    setRemindersOpen(false);
+    try {
+      const count = await remindersAPI.getCount();
+      setReminderCount(count);
+    } catch (error) {
+      console.error('Erreur lors du rafraîchissement du nombre de rappels:', error);
+    }
+  };
 
   const navigationItems = [
     { path: '/dashboard', label: 'Dashboard', icon: <DashboardIcon /> },
@@ -90,8 +127,37 @@ const Layout = ({ children }) => {
 
   return (
     <div className="flex h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900 text-white overflow-hidden">
+      {/* Badge de notifications en haut à droite */}
+      <motion.button
+        className="absolute top-6 right-6 z-40 w-12 h-12 sm:w-14 sm:h-14 bg-indigo-600 rounded-full flex items-center justify-center shadow-xl"
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.95 }}
+        onClick={() => setRemindersOpen(true)}
+      >
+        <FiBell className="text-xl sm:text-2xl" />
+        {reminderCount.overdue > 0 && (
+          <motion.div
+            className="absolute -top-1 -right-1 bg-rose-500 text-white text-xs font-bold rounded-full w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center"
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: "spring", stiffness: 500 }}
+          >
+            {reminderCount.overdue > 9 ? '9+' : reminderCount.overdue}
+          </motion.div>
+        )}
+      </motion.button>
+
+      {/* Modal des rappels */}
+      <AnimatePresence>
+        {remindersOpen && (
+          <RemindersModal
+            onClose={handleRemindersClose}
+          />
+        )}
+      </AnimatePresence>
+
       {/* Navigation innovante circulaire */}
-      <motion.div 
+      <motion.div
         className="absolute bottom-6 right-6 z-40"
         initial={false}
         animate={menuOpen ? "open" : "closed"}
