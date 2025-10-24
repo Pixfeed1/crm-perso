@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiEdit2, FiTrash2, FiDollarSign, FiDownload } from 'react-icons/fi';
 import { useToast } from '../hooks/useToast';
+import { useConfirm } from '../hooks/useConfirm';
+import ConfirmModal from '../components/common/ConfirmModal';
 
 // Composants
 import RevenueStats from '../components/revenues/RevenueStats';
@@ -18,6 +20,7 @@ import { revenuesAPI, projectsAPI, exportAPI } from '../services/api';
 
 const Revenues = () => {
   const { toast } = useToast();
+  const { confirm, confirmState } = useConfirm();
   const [revenues, setRevenues] = useState([]);
   const [filteredRevenues, setFilteredRevenues] = useState([]);
   const [selectedRevenue, setSelectedRevenue] = useState(null);
@@ -286,12 +289,30 @@ const Revenues = () => {
   // Supprimer un revenu
   const handleDeleteRevenue = async (id) => {
     try {
+      // Trouver le revenu à supprimer
+      const revenueToDelete = revenues.find(r => r.id === id);
+      if (!revenueToDelete) return;
+
+      // Demander confirmation
+      const confirmed = await confirm({
+        title: "Supprimer ce revenu ?",
+        message: "Cette action est irréversible.",
+        confirmText: "Supprimer",
+        cancelText: "Annuler",
+        variant: "danger",
+        itemName: `Revenu de ${revenueToDelete.amount}€`
+      });
+
+      if (!confirmed) return;
+
       await revenuesAPI.delete(id);
-      
+
       const remaining = revenues.filter(r => r.id !== id);
       setRevenues(remaining);
       calculateStats(remaining);
       setSelectedRevenue(null);
+
+      toast.success("Revenu supprimé avec succès");
     } catch (error) {
       console.error('Erreur lors de la suppression du revenu:', error);
       toast.error(`Erreur lors de la suppression: ${error.message}`);
@@ -581,6 +602,9 @@ const Revenues = () => {
           onSelectRevenue={handleSelectRevenue}
         />
       </div>
+
+      {/* Modal de confirmation */}
+      <ConfirmModal {...confirmState.config} isOpen={confirmState.isOpen} />
     </div>
   );
 };

@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { goalsAPI, exportAPI } from '../services/api';
 import { FiTarget, FiZap, FiCheckCircle, FiClock, FiDownload } from 'react-icons/fi';
 import { useToast } from '../hooks/useToast';
+import { useConfirm } from '../hooks/useConfirm';
+import ConfirmModal from '../components/common/ConfirmModal';
 
 // Composants
 import GoalStats from '../components/goals/GoalStats';
@@ -13,6 +15,7 @@ import EmptyState from '../components/common/EmptyState';
 
 const Goals = () => {
   const { toast } = useToast();
+  const { confirm, confirmState } = useConfirm();
   const [goals, setGoals] = useState([]);
   const [filteredGoals, setFilteredGoals] = useState([]);
   const [selectedGoal, setSelectedGoal] = useState(null);
@@ -291,10 +294,26 @@ const Goals = () => {
   // Suppression d'un objectif via l'API
   const handleDeleteGoal = async (id) => {
     try {
+      // Trouver l'objectif à supprimer
+      const goalToDelete = goals.find(goal => goal.id === id);
+      if (!goalToDelete) return;
+
+      // Demander confirmation
+      const confirmed = await confirm({
+        title: "Supprimer cet objectif ?",
+        message: "Cette action est irréversible. Toutes les étapes associées seront également supprimées.",
+        confirmText: "Supprimer",
+        cancelText: "Annuler",
+        variant: "danger",
+        itemName: goalToDelete.title || goalToDelete.name
+      });
+
+      if (!confirmed) return;
+
       // Utiliser l'API pour supprimer l'objectif
       await goalsAPI.delete(id);
       console.log('Objectif supprimé via API');
-      
+
       // Mettre à jour l'état local
       const remainingGoals = goals.filter(goal => goal.id !== id);
       setGoals(remainingGoals);
@@ -521,6 +540,9 @@ const Goals = () => {
           )}
         </div>
       </div>
+
+      {/* Modal de confirmation */}
+      <ConfirmModal {...confirmState.config} isOpen={confirmState.isOpen} />
     </div>
   );
 };

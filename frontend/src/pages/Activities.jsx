@@ -3,6 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiClipboard, FiCalendar, FiEdit2, FiTrash2, FiMonitor, FiEdit, FiUsers, FiPhone, FiMegaphone, FiTool, FiCheck, FiDownload } from 'react-icons/fi';
 import { useToast } from '../hooks/useToast';
+import { useConfirm } from '../hooks/useConfirm';
+import ConfirmModal from '../components/common/ConfirmModal';
 // Importer vos services d'API
 import { activitiesAPI, projectsAPI, exportAPI } from '../services/api';
 
@@ -16,6 +18,7 @@ import EmptyState from '../components/common/EmptyState';
 
 const Activities = () => {
   const { toast } = useToast();
+  const { confirm, confirmState } = useConfirm();
   const [activities, setActivities] = useState([]);
   const [filteredActivities, setFilteredActivities] = useState([]);
   const [selectedActivity, setSelectedActivity] = useState(null);
@@ -236,6 +239,22 @@ const Activities = () => {
   // Suppression
   const handleDeleteActivity = async (id) => {
     try {
+      // Trouver l'activité à supprimer
+      const activityToDelete = activities.find(a => a.id === id);
+      if (!activityToDelete) return;
+
+      // Demander confirmation
+      const confirmed = await confirm({
+        title: "Supprimer cette activité ?",
+        message: "Cette action est irréversible.",
+        confirmText: "Supprimer",
+        cancelText: "Annuler",
+        variant: "danger",
+        itemName: activityToDelete.description
+      });
+
+      if (!confirmed) return;
+
       console.log('Suppression activité ID:', id);
       await activitiesAPI.delete(id);
       const remaining = activities.filter(a => a.id !== id);
@@ -243,6 +262,8 @@ const Activities = () => {
       setActivities(remaining);
       calculateStats(remaining);
       setSelectedActivity(null);
+
+      toast.success("Activité supprimée avec succès");
     } catch (error) {
       console.error('Erreur suppression:', error);
       toast.error('Erreur lors de la suppression: ' + error.message);
@@ -607,6 +628,9 @@ const Activities = () => {
           </AnimatePresence>
         </div>
       </div>
+
+      {/* Modal de confirmation */}
+      <ConfirmModal {...confirmState.config} isOpen={confirmState.isOpen} />
     </div>
   );
 };

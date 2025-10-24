@@ -5,6 +5,7 @@ import { FiUsers, FiStar, FiArrowLeft, FiDownload, FiList, FiTrello } from 'reac
 // Remplacer executeQuery par la fonction d'API
 import { leadsAPI, exportAPI } from '../services/api';
 import { useToast } from '../hooks/useToast';
+import { useConfirm } from '../hooks/useConfirm';
 
 // Composants
 import LeadCard from '../components/leads/LeadCard';
@@ -13,9 +14,11 @@ import LeadForm from '../components/leads/LeadForm';
 import LeadFilter from '../components/leads/LeadFilter';
 import KanbanView from '../components/kanban/KanbanView';
 import EmptyState from '../components/common/EmptyState';
+import ConfirmModal from '../components/common/ConfirmModal';
 
 const Leads = () => {
   const { toast } = useToast();
+  const { confirm, confirmState } = useConfirm();
   const [leads, setLeads] = useState([]);
   const [filteredLeads, setFilteredLeads] = useState([]);
   const [selectedLead, setSelectedLead] = useState(null);
@@ -154,6 +157,19 @@ const Leads = () => {
 
   // Suppression d'un lead via l'API
   const handleDeleteLead = async (id) => {
+    const leadToDelete = leads.find(l => l.id === id);
+
+    const confirmed = await confirm({
+      title: "Supprimer ce lead ?",
+      message: "Cette action est irréversible. Toutes les données associées (contacts, interactions) seront également supprimées.",
+      confirmText: "Supprimer",
+      cancelText: "Annuler",
+      variant: "danger",
+      itemName: leadToDelete ? `${leadToDelete.name}${leadToDelete.company ? ` (${leadToDelete.company})` : ''}` : null
+    });
+
+    if (!confirmed) return;
+
     try {
       // Utiliser l'API pour supprimer le lead
       await leadsAPI.delete(id);
@@ -165,6 +181,7 @@ const Leads = () => {
       setLeads(remainingLeads);
       setSelectedLead(null);
       setShowDetails(false); // Retour à la liste sur mobile
+      toast.success("Lead supprimé avec succès");
     } catch (error) {
       console.error('Erreur lors de la suppression du lead:', error);
       toast.error("Une erreur est survenue lors de la suppression du lead.");
@@ -218,6 +235,19 @@ const Leads = () => {
 
   // Suppression d'un contact via l'API
   const handleDeleteContact = async (leadId, contactId) => {
+    const contactToDelete = selectedLead?.contacts?.find(c => c.id === contactId);
+
+    const confirmed = await confirm({
+      title: "Supprimer ce contact ?",
+      message: "Cette action est irréversible.",
+      confirmText: "Supprimer",
+      cancelText: "Annuler",
+      variant: "danger",
+      itemName: contactToDelete ? contactToDelete.name : null
+    });
+
+    if (!confirmed) return;
+
     try {
       // Utiliser l'API pour supprimer un contact
       await leadsAPI.deleteContact(leadId, contactId);
@@ -285,6 +315,19 @@ const Leads = () => {
 
   // Suppression d'une interaction via l'API
   const handleDeleteInteraction = async (interactionId) => {
+    const interactionToDelete = selectedLead?.interactions?.find(i => i.id === interactionId);
+
+    const confirmed = await confirm({
+      title: "Supprimer cette interaction ?",
+      message: "Cette action est irréversible.",
+      confirmText: "Supprimer",
+      cancelText: "Annuler",
+      variant: "danger",
+      itemName: interactionToDelete ? interactionToDelete.type : null
+    });
+
+    if (!confirmed) return;
+
     try {
       // Utiliser l'API pour supprimer une interaction
       await leadsAPI.deleteInteraction(interactionId);
@@ -533,6 +576,9 @@ const Leads = () => {
         </motion.div>
         </div>
       )}
+
+      {/* Modal de confirmation */}
+      <ConfirmModal {...confirmState.config} isOpen={confirmState.isOpen} />
     </div>
   );
 };

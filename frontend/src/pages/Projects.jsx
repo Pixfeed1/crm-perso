@@ -4,6 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { projectsAPI, exportAPI } from '../services/api';
 import { FiAlertTriangle, FiRocket, FiTarget, FiArrowLeft, FiDownload } from 'react-icons/fi';
 import { useToast } from '../hooks/useToast';
+import { useConfirm } from '../hooks/useConfirm';
+import ConfirmModal from '../components/common/ConfirmModal';
 
 // Composants
 import ProjectCard from '../components/projects/ProjectCard';
@@ -14,6 +16,7 @@ import EmptyState from '../components/common/EmptyState';
 
 const Projects = () => {
   const { toast } = useToast();
+  const { confirm, confirmState } = useConfirm();
   const [projects, setProjects] = useState([]);
   const [filteredProjects, setFilteredProjects] = useState([]);
   const [selectedProject, setSelectedProject] = useState(null);
@@ -214,6 +217,22 @@ const Projects = () => {
   // Suppression d'un projet via l'API
   const handleDeleteProject = async (id) => {
     try {
+      // Trouver le projet à supprimer
+      const projectToDelete = projects.find(project => project.id === id);
+      if (!projectToDelete) return;
+
+      // Demander confirmation
+      const confirmed = await confirm({
+        title: "Supprimer ce projet ?",
+        message: "Cette action est irréversible. Toutes les tâches associées seront également supprimées.",
+        confirmText: "Supprimer",
+        cancelText: "Annuler",
+        variant: "danger",
+        itemName: projectToDelete.name
+      });
+
+      if (!confirmed) return;
+
       console.log(`Suppression du projet ${id}`);
 
       // Utiliser l'API pour supprimer le projet
@@ -226,6 +245,8 @@ const Projects = () => {
       setProjects(remainingProjects);
       setSelectedProject(null);
       setShowDetails(false); // Retour à la liste sur mobile
+
+      toast.success("Projet supprimé avec succès");
     } catch (error) {
       console.error('Erreur lors de la suppression du projet:', error);
       toast.error("Une erreur est survenue lors de la suppression du projet: " + (error.message || 'Erreur inconnue'));
@@ -520,6 +541,9 @@ const Projects = () => {
           </div>
         </motion.div>
       </div>
+
+      {/* Modal de confirmation */}
+      <ConfirmModal {...confirmState.config} isOpen={confirmState.isOpen} />
     </div>
   );
 };
