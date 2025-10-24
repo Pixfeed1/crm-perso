@@ -20,6 +20,7 @@ import Activities from './pages/Activities';
 import Goals from './pages/Goals';
 import SalesPipeline from './pages/SalesPipeline';
 import Analytics from './pages/Analytics';
+import Users from './pages/Users';
 
 // Composant ProtectedRoute pour protéger les routes
 const ProtectedRoute = ({ children }) => {
@@ -165,6 +166,14 @@ const App = () => {
             <ProtectedRoute>
               <Layout>
                 <Analytics />
+              </Layout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/users" element={
+            <ProtectedRoute>
+              <Layout>
+                <Users />
               </Layout>
             </ProtectedRoute>
           } />
