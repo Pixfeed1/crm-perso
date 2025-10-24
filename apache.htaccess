@@ -1,0 +1,26 @@
+# Configuration Apache pour proxyfier vers Node.js
+# À copier dans: /home/crmPixfeed/public_html/.htaccess
+
+# Active le moteur de réécriture
+RewriteEngine On
+
+# Force HTTPS
+RewriteCond %{HTTPS} off
+RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+
+# Proxy vers Node.js sur le port 5000
+# IMPORTANT: Garde les en-têtes originaux
+RewriteCond %{REQUEST_URI} !^/\.well-known/
+RewriteRule ^(.*)$ http://localhost:5000/$1 [P,L]
+
+# Préserve les en-têtes pour WebSocket et CORS
+ProxyPreserveHost On
+ProxyPass / http://localhost:5000/
+ProxyPassReverse / http://localhost:5000/
+
+# Headers pour CORS et sécurité
+<IfModule mod_headers.c>
+    Header always set Access-Control-Allow-Origin "*"
+    Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+    Header always set Access-Control-Allow-Headers "Content-Type, Authorization"
+</IfModule>

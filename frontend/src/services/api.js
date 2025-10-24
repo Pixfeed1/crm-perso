@@ -6,9 +6,12 @@
 import { getAuthToken, clearAuth, isTokenExpired } from './authService';
 
 // URL de base de l'API
-const API_BASE_URL = process.env.NODE_ENV === 'production' 
-  ? 'https://crm.pixfeed.net/api'
-  : 'http://localhost:5000/api';
+// En production avec REACT_APP_API_URL=/api, utilise l'URL relative (même origine, pas de CORS)
+// En développement, utilise http://localhost:5000/api
+const API_BASE_URL = process.env.REACT_APP_API_URL ||
+  (process.env.NODE_ENV === 'production'
+    ? '/api'  // URL relative en production par défaut
+    : 'http://localhost:5000/api');
 
 /**
  * Fonction générique pour effectuer des requêtes à l'API
