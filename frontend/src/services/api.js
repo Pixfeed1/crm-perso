@@ -423,3 +423,11 @@ export const remindersAPI = {
     return apiRequest(`/reminders/${id}`, 'DELETE');
   }
 };
+
+// ===== RECHERCHE =====
+export const searchAPI = {
+  global: (query) => {
+    console.log(`Appel API: recherche globale pour "${query}"`);
+    return apiRequest(`/search?query=${encodeURIComponent(query)}`);
+  }
+};

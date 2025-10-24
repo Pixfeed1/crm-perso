@@ -16,8 +16,10 @@ import { FiTarget as GoalsIcon } from 'react-icons/fi';
 import { FiLogOut as LogoutIcon } from 'react-icons/fi';
 import { FiBell } from 'react-icons/fi';
 
-// Import du modal de rappels
+// Import des modals
 import RemindersModal from './reminders/RemindersModal';
+import SearchModal from './search/SearchModal';
+import { FiSearch } from 'react-icons/fi';
 
 const Layout = ({ children }) => {
   const location = useLocation();
@@ -28,6 +30,7 @@ const Layout = ({ children }) => {
   const [isHovering, setIsHovering] = useState(false);
   const [remindersOpen, setRemindersOpen] = useState(false);
   const [reminderCount, setReminderCount] = useState({ active: 0, overdue: 0 });
+  const [searchOpen, setSearchOpen] = useState(false);
 
   useEffect(() => {
     setActiveModule(location.pathname);
@@ -62,6 +65,19 @@ const Layout = ({ children }) => {
       console.error('Erreur lors du rafraîchissement du nombre de rappels:', error);
     }
   };
+
+  // Raccourci clavier pour la recherche (Ctrl+K / Cmd+K)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setSearchOpen(true);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const navigationItems = [
     { path: '/dashboard', label: 'Dashboard', icon: <DashboardIcon /> },
@@ -127,6 +143,20 @@ const Layout = ({ children }) => {
 
   return (
     <div className="flex h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900 text-white overflow-hidden">
+      {/* Barre de recherche en haut à gauche */}
+      <motion.button
+        className="absolute top-6 left-6 z-40 px-4 py-2 sm:px-6 sm:py-3 bg-gray-800/50 backdrop-blur-sm border border-purple-500/30 rounded-full flex items-center gap-2 sm:gap-3 shadow-xl hover:bg-gray-800/70 transition-colors"
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        onClick={() => setSearchOpen(true)}
+      >
+        <FiSearch className="text-lg sm:text-xl text-indigo-300" />
+        <span className="hidden sm:inline text-sm text-gray-400">Rechercher...</span>
+        <kbd className="hidden sm:inline px-2 py-1 bg-gray-900/50 border border-gray-700 rounded text-xs text-gray-500">
+          Ctrl+K
+        </kbd>
+      </motion.button>
+
       {/* Badge de notifications en haut à droite */}
       <motion.button
         className="absolute top-6 right-6 z-40 w-12 h-12 sm:w-14 sm:h-14 bg-indigo-600 rounded-full flex items-center justify-center shadow-xl"
@@ -146,6 +176,15 @@ const Layout = ({ children }) => {
           </motion.div>
         )}
       </motion.button>
+
+      {/* Modal de recherche */}
+      <AnimatePresence>
+        {searchOpen && (
+          <SearchModal
+            onClose={() => setSearchOpen(false)}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Modal des rappels */}
       <AnimatePresence>
