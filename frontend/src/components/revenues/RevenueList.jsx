@@ -1,7 +1,7 @@
 // src/components/revenues/RevenueList.jsx
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { FiFileText, FiRefreshCw, FiPackage, FiDollarSign, FiArrowUp, FiArrowDown, FiArrowUpDown } from 'react-icons/fi';
+import { FiFileText, FiRefreshCw, FiPackage, FiDollarSign, FiArrowUp, FiArrowDown } from 'react-icons/fi';
 
 const RevenueList = ({ revenues, selectedRevenue, onSelectRevenue }) => {
   const [sortConfig, setSortConfig] = useState({
@@ -21,7 +21,7 @@ const RevenueList = ({ revenues, selectedRevenue, onSelectRevenue }) => {
   // Obtenir le class name pour l'indicateur de tri
   const getSortDirectionIcon = (key) => {
     if (sortConfig.key !== key) {
-      return <FiArrowUpDown />;
+      return <FiArrowUp className="opacity-30" />;
     }
     return sortConfig.direction === 'asc' ? <FiArrowUp /> : <FiArrowDown />;
   };

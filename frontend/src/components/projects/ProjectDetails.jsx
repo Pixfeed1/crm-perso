@@ -1,7 +1,7 @@
 // src/components/projects/ProjectDetails.jsx
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiGlobe, FiSmartphone, FiMonitor, FiEdit2, FiMegaphone, FiTool, FiPackage, FiClipboard, FiRotateCw, FiCalendar, FiCheckCircle, FiPauseCircle, FiXCircle, FiHelpCircle, FiTrash2, FiFileText, FiCheck } from 'react-icons/fi';
+import { FiGlobe, FiSmartphone, FiMonitor, FiEdit2, FiVolume2, FiTool, FiPackage, FiClipboard, FiRotateCw, FiCalendar, FiCheckCircle, FiPauseCircle, FiXCircle, FiHelpCircle, FiTrash2, FiFileText, FiCheck } from 'react-icons/fi';
 
 // Sous-composants
 import TaskList from './TaskList';
@@ -57,7 +57,7 @@ const ProjectDetails = ({ project, onUpdate, onDelete, onAddTask, onToggleTaskSt
     'application-mobile': { icon: <FiSmartphone />, label: 'App Mobile' },
     'application-bureau': { icon: <FiMonitor />, label: 'App Bureau' },
     'design': { icon: <FiEdit2 />, label: 'Design' },
-    'marketing': { icon: <FiMegaphone />, label: 'Marketing' },
+    'marketing': { icon: <FiVolume2 />, label: 'Marketing' },
     'maintenance': { icon: <FiTool />, label: 'Maintenance' },
     'autre': { icon: <FiPackage />, label: 'Autre' }
   };

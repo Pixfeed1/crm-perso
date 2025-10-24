@@ -1,7 +1,7 @@
 // src/components/activities/ActivityList.jsx
 import React from 'react';
 import { motion } from 'framer-motion';
-import { FiMonitor, FiEdit2, FiUsers, FiPhone, FiMegaphone, FiTool, FiClipboard, FiCheckCircle, FiRocket, FiUser, FiClock } from 'react-icons/fi';
+import { FiMonitor, FiEdit2, FiUsers, FiPhone, FiVolume2, FiTool, FiClipboard, FiCheckCircle, FiZap, FiUser, FiClock } from 'react-icons/fi';
 
 const ActivityList = ({ activities, selectedActivity, onSelectActivity, onCompleteActivity }) => {
   // Fonction pour formater le temps en heures et minutes
@@ -23,7 +23,7 @@ const ActivityList = ({ activities, selectedActivity, onSelectActivity, onComple
     'design': { icon: <FiEdit2 />, label: 'Design', bg: 'bg-purple-900/20' },
     'meeting': { icon: <FiUsers />, label: 'Réunion', bg: 'bg-indigo-900/20' },
     'call': { icon: <FiPhone />, label: 'Appel', bg: 'bg-green-900/20' },
-    'marketing': { icon: <FiMegaphone />, label: 'Marketing', bg: 'bg-amber-900/20' },
+    'marketing': { icon: <FiVolume2 />, label: 'Marketing', bg: 'bg-amber-900/20' },
     'maintenance': { icon: <FiTool />, label: 'Maintenance', bg: 'bg-teal-900/20' }
   };
   
@@ -101,7 +101,7 @@ const ActivityList = ({ activities, selectedActivity, onSelectActivity, onComple
                         {/* Association projet/lead */}
                         {activity.project_name && (
                           <span className="inline-flex items-center px-2 py-1 rounded-full bg-indigo-900/30 text-indigo-300 text-xs gap-1">
-                            <FiRocket /> {activity.project_name}
+                            <FiZap /> {activity.project_name}
                           </span>
                         )}
                         {activity.lead_name && (

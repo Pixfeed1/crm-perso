@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { projectsAPI, exportAPI } from '../services/api';
-import { FiAlertTriangle, FiRocket, FiTarget, FiArrowLeft, FiDownload } from 'react-icons/fi';
+import { FiAlertTriangle, FiZap, FiTarget, FiArrowLeft, FiDownload } from 'react-icons/fi';
 import { useToast } from '../hooks/useToast';
 import { useConfirm } from '../hooks/useConfirm';
 import ConfirmModal from '../components/common/ConfirmModal';
@@ -450,7 +450,7 @@ const Projects = () => {
                 ))
               ) : (
                 <EmptyState
-                  icon={<FiRocket />}
+                  icon={<FiZap />}
                   title="Aucun projet trouvé"
                   description={filters.search || filters.status !== 'all' || filters.type !== 'all' || filters.timeframe !== 'all' ?
                     "Modifiez vos filtres pour voir plus de projets." :
