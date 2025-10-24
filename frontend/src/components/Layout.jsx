@@ -14,6 +14,11 @@ import { FiDollarSign as RevenuesIcon } from 'react-icons/fi';
 import { FiActivity as ActivitiesIcon } from 'react-icons/fi';
 import { FiTarget as GoalsIcon } from 'react-icons/fi';
 import { FiLogOut as LogoutIcon } from 'react-icons/fi';
+import { FiTrendingUp as SalesPipelineIcon } from 'react-icons/fi';
+import { FiSearch as SearchIcon } from 'react-icons/fi';
+
+// Composant GlobalSearch
+import GlobalSearch from './search/GlobalSearch';
 
 const Layout = ({ children }) => {
   const location = useLocation();
@@ -24,10 +29,24 @@ const Layout = ({ children }) => {
   const [isHovering, setIsHovering] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [resetProgress, setResetProgress] = useState(0);
+  const [searchOpen, setSearchOpen] = useState(false);
 
   useEffect(() => {
     setActiveModule(location.pathname);
   }, [location]);
+
+  // Raccourci clavier pour ouvrir la recherche globale (Ctrl+K / Cmd+K)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        setSearchOpen(true);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Effet pour simuler la progression de la réinitialisation
   useEffect(() => {
@@ -55,6 +74,7 @@ const Layout = ({ children }) => {
     { path: '/revenues', label: 'Revenus', icon: <RevenuesIcon /> },
     { path: '/activities', label: 'Activités', icon: <ActivitiesIcon /> },
     { path: '/goals', label: 'Objectifs', icon: <GoalsIcon /> },
+    { path: '/sales-pipeline', label: 'Pipeline', icon: <SalesPipelineIcon /> },
     // Ajouter l'option de déconnexion
     { path: '/logout', label: 'Déconnexion', icon: <LogoutIcon />, isLogout: true }
   ];
@@ -281,8 +301,25 @@ const Layout = ({ children }) => {
 
   return (
     <div className="flex h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900 text-white overflow-hidden">
+      {/* GlobalSearch Modal */}
+      <GlobalSearch isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
+
       {/* Bouton de réinitialisation */}
       <ResetButton />
+
+      {/* Bouton de recherche flottant */}
+      <motion.button
+        className="absolute top-4 left-4 p-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-lg z-50 flex items-center gap-2"
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        onClick={() => setSearchOpen(true)}
+      >
+        <SearchIcon className="w-5 h-5" />
+        <span className="text-sm font-medium">Rechercher</span>
+        <kbd className="hidden sm:inline-block px-2 py-1 text-xs bg-indigo-800 rounded">
+          Ctrl+K
+        </kbd>
+      </motion.button>
       
       {/* Navigation innovante circulaire */}
       <motion.div 

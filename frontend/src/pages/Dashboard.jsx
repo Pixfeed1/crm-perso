@@ -13,6 +13,7 @@ import ProjectTimeline from '../components/dashboard/ProjectTimeline';
 import RevenueVisualizer from '../components/dashboard/RevenueVisualizer';
 import ActivityStream from '../components/dashboard/ActivityStream';
 import GoalProgress from '../components/dashboard/GoalProgress';
+import AlertsWidget from '../components/alerts/AlertsWidget';
 
 const Dashboard = () => {
   const [dashboardData, setDashboardData] = useState({
@@ -134,12 +135,17 @@ const Dashboard = () => {
         </motion.div>
 
         {/* Panneau latéral avec visuels supplémentaires */}
-        <motion.div 
-          className="col-span-12 lg:col-span-4 grid grid-rows-3 gap-6"
+        <motion.div
+          className="col-span-12 lg:col-span-4 grid grid-rows-4 gap-6"
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5, delay: 0.4 }}
         >
+          {/* Widget des alertes */}
+          <div className="row-span-1">
+            <AlertsWidget />
+          </div>
+
           {/* Projets récents */}
           <div className="row-span-1 bg-purple-900/30 backdrop-blur-md rounded-2xl p-4 overflow-hidden">
             <h3 className="text-lg font-semibold mb-3 text-purple-200">Projets Récents</h3>

@@ -18,6 +18,7 @@ import Calendar from './pages/Calendar';
 import Revenues from './pages/Revenues';
 import Activities from './pages/Activities';
 import Goals from './pages/Goals';
+import SalesPipeline from './pages/SalesPipeline';
 
 // Composant ProtectedRoute pour protéger les routes
 const ProtectedRoute = ({ children }) => {
@@ -150,7 +151,15 @@ const App = () => {
               </Layout>
             </ProtectedRoute>
           } />
-          
+
+          <Route path="/sales-pipeline" element={
+            <ProtectedRoute>
+              <Layout>
+                <SalesPipeline />
+              </Layout>
+            </ProtectedRoute>
+          } />
+
           {/* Rediriger la racine et toutes les autres routes vers Dashboard ou Login selon l'authentification */}
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
