@@ -49,7 +49,7 @@ const QuoteDetails = () => {
   };
 
   const handleSend = async () => {
-    if (!confirm('Marquer ce devis comme envoyé ?')) return;
+    if (!window.confirm('Marquer ce devis comme envoyé ?')) return;
 
     try {
       setActionLoading(true);
@@ -65,7 +65,7 @@ const QuoteDetails = () => {
   };
 
   const handleAccept = async () => {
-    if (!confirm('Accepter ce devis ?')) return;
+    if (!window.confirm('Accepter ce devis ?')) return;
 
     try {
       setActionLoading(true);
@@ -81,7 +81,7 @@ const QuoteDetails = () => {
   };
 
   const handleReject = async () => {
-    if (!confirm('Rejeter ce devis ?')) return;
+    if (!window.confirm('Rejeter ce devis ?')) return;
 
     try {
       setActionLoading(true);
@@ -97,7 +97,7 @@ const QuoteDetails = () => {
   };
 
   const handleConvertToProject = async () => {
-    if (!confirm('Convertir ce devis en projet ?')) return;
+    if (!window.confirm('Convertir ce devis en projet ?')) return;
 
     try {
       setActionLoading(true);
@@ -134,7 +134,7 @@ const QuoteDetails = () => {
   };
 
   const handleDelete = async () => {
-    if (!confirm('Supprimer ce devis ? Cette action est irréversible.')) return;
+    if (!window.confirm('Supprimer ce devis ? Cette action est irréversible.')) return;
 
     try {
       setActionLoading(true);

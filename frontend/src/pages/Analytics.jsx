@@ -30,7 +30,9 @@ import {
   FiTarget,
   FiZap,
   FiBarChart2,
-  FiPieChart
+  FiPieChart,
+  FiUsers,
+  FiBriefcase
 } from 'react-icons/fi';
 
 /**
@@ -773,10 +775,6 @@ const MetricBadge = ({ label, value, icon, color = 'indigo' }) => {
       <div className="text-sm text-gray-400">{label}</div>
     </div>
   );
-};
-
-// Import manquant
-import { FiUsers, FiBriefcase } from 'react-icons/fi';
 
 /**
  * État vide
