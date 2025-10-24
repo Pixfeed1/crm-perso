@@ -52,17 +52,17 @@ const EventForm = ({ event = {}, selectedDate, onSave, onCancel }) => {
   const categoryOptions = [
     { value: 'meeting', label: 'Réunion' },
     { value: 'deadline', label: 'Échéance' },
-    { value: 'appointment', label: '📅 Rendez-vous' },
+    { value: 'appointment', label: 'Rendez-vous' },
     { value: 'task', label: 'Tâche' },
-    { value: 'reminder', label: '🔔 Rappel' },
-    { value: 'personal', label: '🏠 Personnel' }
+    { value: 'reminder', label: 'Rappel' },
+    { value: 'personal', label: 'Personnel' }
   ];
-  
+
   // Options de priorité
   const priorityOptions = [
-    { value: 'high', label: '🔴 Haute', color: 'bg-rose-600' },
-    { value: 'medium', label: '🟠 Moyenne', color: 'bg-amber-600' },
-    { value: 'low', label: '🔵 Basse', color: 'bg-blue-600' }
+    { value: 'high', label: 'Haute', color: 'bg-rose-600' },
+    { value: 'medium', label: 'Moyenne', color: 'bg-amber-600' },
+    { value: 'low', label: 'Basse', color: 'bg-blue-600' }
   ];
   
   // Options de couleur

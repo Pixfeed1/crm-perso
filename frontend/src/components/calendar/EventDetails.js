@@ -1,7 +1,7 @@
 // src/components/calendar/EventDetails.jsx
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiUsers, FiPhone, FiClock, FiCheck, FiHome, FiClipboard } from 'react-icons/fi';
+import { FiUsers, FiPhone, FiClock, FiCheck, FiHome, FiClipboard, FiEdit2, FiTrash2, FiCalendar, FiFileText, FiUser, FiRocket } from 'react-icons/fi';
 
 const EventDetails = ({ event, onUpdate, onDelete }) => {
   const [isEditing, setIsEditing] = useState(false);
@@ -241,16 +241,16 @@ const EventDetails = ({ event, onUpdate, onDelete }) => {
             className="p-2 rounded-lg bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300"
             onClick={() => setIsEditing(true)}
           >
-            ✏️
+            <FiEdit2 />
           </motion.button>
-          
+
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             className="p-2 rounded-lg bg-rose-600/30 hover:bg-rose-600/50 text-rose-300"
             onClick={() => setShowDeleteConfirm(true)}
           >
-            🗑️
+            <FiTrash2 />
           </motion.button>
         </div>
       </div>
@@ -268,8 +268,8 @@ const EventDetails = ({ event, onUpdate, onDelete }) => {
             En cours
           </div>
         ) : (
-          <div className="bg-indigo-900/30 text-indigo-300 px-4 py-2 rounded-lg flex items-center">
-            <span className="mr-2">🕒</span>
+          <div className="bg-indigo-900/30 text-indigo-300 px-4 py-2 rounded-lg flex items-center gap-2">
+            <FiClock />
             À venir
           </div>
         )}
@@ -279,8 +279,8 @@ const EventDetails = ({ event, onUpdate, onDelete }) => {
       <div className="grid grid-cols-1 gap-6">
         {/* Panneau Date et heure */}
         <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl p-5">
-          <h3 className="text-lg font-medium text-gray-200 mb-4 flex items-center">
-            <span className="mr-2">🗓️</span>
+          <h3 className="text-lg font-medium text-gray-200 mb-4 flex items-center gap-2">
+            <FiCalendar />
             Date et heure
           </h3>
           
@@ -332,8 +332,8 @@ const EventDetails = ({ event, onUpdate, onDelete }) => {
         
         {/* Panneau Détails */}
         <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl p-5">
-          <h3 className="text-lg font-medium text-gray-200 mb-4 flex items-center">
-            <span className="mr-2">📝</span>
+          <h3 className="text-lg font-medium text-gray-200 mb-4 flex items-center gap-2">
+            <FiFileText />
             Détails
           </h3>
           
@@ -358,8 +358,8 @@ const EventDetails = ({ event, onUpdate, onDelete }) => {
             {event.related_to && (
               <div className="flex justify-between items-center">
                 <span className="text-gray-400">Associé à</span>
-                <span className="px-3 py-1 rounded-full bg-gray-700/50 text-gray-300 text-sm">
-                  {event.related_to.type === 'lead' ? '👤 ' : '🚀 '}
+                <span className="px-3 py-1 rounded-full bg-gray-700/50 text-gray-300 text-sm flex items-center gap-1">
+                  {event.related_to.type === 'lead' ? <FiUser /> : <FiRocket />}
                   {event.related_to.name}
                 </span>
               </div>
