@@ -18,9 +18,9 @@ const RevenueForm = ({ revenue = {}, onSave, onCancel, projects }) => {
 
   // Options de type
   const typeOptions = [
-    { value: 'invoice', label: 'Facture', icon: '📄' },
-    { value: 'recurring', label: 'Récurrent', icon: '🔄' },
-    { value: 'other', label: 'Autre', icon: '📦' }
+    { value: 'invoice', label: 'Facture' },
+    { value: 'recurring', label: 'Récurrent' },
+    { value: 'other', label: 'Autre' }
   ];
   
   // Options de statut
