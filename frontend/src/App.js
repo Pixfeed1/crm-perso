@@ -19,6 +19,7 @@ import Revenues from './pages/Revenues';
 import Activities from './pages/Activities';
 import Goals from './pages/Goals';
 import SalesPipeline from './pages/SalesPipeline';
+import Analytics from './pages/Analytics';
 
 // Composant ProtectedRoute pour protéger les routes
 const ProtectedRoute = ({ children }) => {
@@ -156,6 +157,14 @@ const App = () => {
             <ProtectedRoute>
               <Layout>
                 <SalesPipeline />
+              </Layout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/analytics" element={
+            <ProtectedRoute>
+              <Layout>
+                <Analytics />
               </Layout>
             </ProtectedRoute>
           } />
