@@ -1,7 +1,7 @@
 // src/pages/Leads.jsx
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiUsers, FiStar, FiArrowLeft, FiDownload } from 'react-icons/fi';
+import { FiUsers, FiStar, FiArrowLeft, FiDownload, FiList, FiTrello } from 'react-icons/fi';
 // Remplacer executeQuery par la fonction d'API
 import { leadsAPI, exportAPI } from '../services/api';
 
@@ -10,6 +10,7 @@ import LeadCard from '../components/leads/LeadCard';
 import LeadDetails from '../components/leads/LeadDetails';
 import LeadForm from '../components/leads/LeadForm';
 import LeadFilter from '../components/leads/LeadFilter';
+import KanbanView from '../components/kanban/KanbanView';
 import EmptyState from '../components/common/EmptyState';
 
 const Leads = () => {
@@ -19,6 +20,7 @@ const Leads = () => {
   const [isAddingLead, setIsAddingLead] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [showDetails, setShowDetails] = useState(false); // Pour toggle mobile
+  const [view, setView] = useState('list'); // 'list' ou 'kanban'
   const [filters, setFilters] = useState({
     search: '',
     status: 'all',
@@ -324,36 +326,83 @@ const Leads = () => {
         </motion.p>
       </header>
 
-      <div className="flex flex-col lg:flex-row flex-grow overflow-hidden gap-4">
-        {/* Panneau de gauche: Liste des leads */}
-        <motion.div
-          className={`${showDetails ? 'hidden lg:flex' : 'flex'} w-full lg:w-1/3 overflow-hidden flex-col`}
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.3 }}
-        >
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3 px-2 sm:px-0">
-            <h2 className="text-lg sm:text-xl font-semibold text-white">Vos Leads</h2>
-            <div className="flex gap-2">
-              <motion.button
-                className="bg-gray-700 hover:bg-gray-600 text-white px-3 py-2 sm:px-4 sm:py-2 rounded-full flex items-center text-sm sm:text-base"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => exportAPI.leads()}
-                title="Exporter les leads en CSV"
-              >
-                <FiDownload className="mr-1" /> Exporter
-              </motion.button>
-              <motion.button
-                className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 sm:px-4 sm:py-2 rounded-full flex items-center text-sm sm:text-base"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={handleAddLead}
-              >
-                <span className="mr-1">+</span> Nouveau Lead
-              </motion.button>
-            </div>
+      {/* Toggle de vue et actions */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3 px-2 sm:px-0">
+        <div className="flex items-center gap-3">
+          <h2 className="text-lg sm:text-xl font-semibold text-white">Vos Leads</h2>
+
+          {/* Toggle Liste / Kanban */}
+          <div className="bg-gray-800/50 rounded-lg p-1 flex">
+            <motion.button
+              className={`px-3 py-1 rounded-lg text-sm flex items-center gap-1 ${
+                view === 'list'
+                  ? 'bg-indigo-600 text-white'
+                  : 'text-gray-300 hover:bg-gray-700/50'
+              }`}
+              whileHover={{ scale: view === 'list' ? 1 : 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setView('list')}
+            >
+              <FiList />
+              Liste
+            </motion.button>
+            <motion.button
+              className={`px-3 py-1 rounded-lg text-sm flex items-center gap-1 ${
+                view === 'kanban'
+                  ? 'bg-indigo-600 text-white'
+                  : 'text-gray-300 hover:bg-gray-700/50'
+              }`}
+              whileHover={{ scale: view === 'kanban' ? 1 : 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setView('kanban')}
+            >
+              <FiTrello />
+              Kanban
+            </motion.button>
           </div>
+        </div>
+
+        <div className="flex gap-2">
+          <motion.button
+            className="bg-gray-700 hover:bg-gray-600 text-white px-3 py-2 sm:px-4 sm:py-2 rounded-full flex items-center text-sm sm:text-base"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => exportAPI.leads()}
+            title="Exporter les leads en CSV"
+          >
+            <FiDownload className="mr-1" /> Exporter
+          </motion.button>
+          <motion.button
+            className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 sm:px-4 sm:py-2 rounded-full flex items-center text-sm sm:text-base"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={handleAddLead}
+          >
+            <span className="mr-1">+</span> Nouveau Lead
+          </motion.button>
+        </div>
+      </div>
+
+      {/* Vue conditionnelle */}
+      {view === 'kanban' ? (
+        /* Vue Kanban - prend toute la largeur */
+        <div className="flex-grow overflow-hidden">
+          <KanbanView
+            leads={filteredLeads}
+            onLeadUpdate={handleUpdateLead}
+            onLeadSelect={handleSelectLead}
+          />
+        </div>
+      ) : (
+        /* Vue Liste - layout original */
+        <div className="flex flex-col lg:flex-row flex-grow overflow-hidden gap-4">
+          {/* Panneau de gauche: Liste des leads */}
+          <motion.div
+            className={`${showDetails ? 'hidden lg:flex' : 'flex'} w-full lg:w-1/3 overflow-hidden flex-col`}
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.3 }}
+          >
 
           <div className="px-2 sm:px-0">
             <LeadFilter filters={filters} setFilters={setFilters} />
@@ -469,7 +518,8 @@ const Leads = () => {
             </AnimatePresence>
           </div>
         </motion.div>
-      </div>
+        </div>
+      )}
     </div>
   );
 };

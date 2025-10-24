@@ -2,9 +2,13 @@
 const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middleware/authMiddleware');
+const leadController = require('../controllers/leadController');
 
 // Appliquer le middleware d'authentification à toutes les routes
 router.use(authMiddleware);
+
+// Obtenir les statistiques Kanban
+router.get('/kanban/stats', leadController.getKanbanStats);
 
 // Obtenir tous les leads
 router.get('/', (req, res) => {
