@@ -28,15 +28,18 @@ class DatabaseMigrations {
   initMigrations() {
     // Migration 1: Création des tables initiales
     this.migrations.push(this.createInitialTables.bind(this));
-    
+
     // Migration 2: Ajout des tables pour les objectifs
     this.migrations.push(this.addGoalsTables.bind(this));
-    
+
     // Migration 3: Ajout de la colonne progress à la table projects
     this.migrations.push(this.addProgressToProjects.bind(this));
-    
+
     // Migration 4: Vérification et correction de la table activities pour le lead_name
     this.migrations.push(this.ensureActivitiesLeadNameColumn.bind(this));
+
+    // Migration 5: Ajout des colonnes pour la récupération de mot de passe
+    this.migrations.push(this.addPasswordResetColumns.bind(this));
   }
 
   /**
@@ -466,6 +469,58 @@ class DatabaseMigrations {
             });
           });
         }
+      });
+    });
+  }
+
+  /**
+   * Migration 5: Ajout des colonnes pour la récupération de mot de passe
+   * @returns {Promise<void>}
+   */
+  async addPasswordResetColumns() {
+    return new Promise((resolve, reject) => {
+      console.log('[Migrations] Migration 5: Ajout des colonnes pour la récupération de mot de passe');
+
+      // Vérifier si les colonnes existent déjà
+      this.db.all("PRAGMA table_info(users)", (err, columns) => {
+        if (err) {
+          console.error('[Migrations] Erreur lors de la récupération des informations de la table users:', err);
+          return reject(err);
+        }
+
+        const resetTokenExists = columns.some(col => col.name === 'reset_token');
+        const resetTokenExpiresExists = columns.some(col => col.name === 'reset_token_expires');
+
+        if (resetTokenExists && resetTokenExpiresExists) {
+          console.log('[Migrations] Les colonnes reset_token et reset_token_expires existent déjà');
+          return resolve();
+        }
+
+        // Ajouter les colonnes si elles n'existent pas
+        this.db.serialize(() => {
+          if (!resetTokenExists) {
+            this.db.run("ALTER TABLE users ADD COLUMN reset_token TEXT", (err) => {
+              if (err) {
+                console.error('[Migrations] Erreur lors de l\'ajout de reset_token:', err);
+                return reject(err);
+              }
+              console.log('[Migrations] Colonne reset_token ajoutée');
+            });
+          }
+
+          if (!resetTokenExpiresExists) {
+            this.db.run("ALTER TABLE users ADD COLUMN reset_token_expires INTEGER", (err) => {
+              if (err) {
+                console.error('[Migrations] Erreur lors de l\'ajout de reset_token_expires:', err);
+                return reject(err);
+              }
+              console.log('[Migrations] Colonne reset_token_expires ajoutée');
+            });
+          }
+
+          console.log('[Migrations] Migration 5 terminée avec succès');
+          resolve();
+        });
       });
     });
   }
