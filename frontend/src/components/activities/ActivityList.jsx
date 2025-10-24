@@ -1,7 +1,7 @@
 // src/components/activities/ActivityList.jsx
 import React from 'react';
 import { motion } from 'framer-motion';
-import { FiMonitor, FiEdit2, FiUsers, FiPhone, FiMegaphone, FiTool, FiClipboard, FiCheckCircle, FiRocket, FiUser } from 'react-icons/fi';
+import { FiMonitor, FiEdit2, FiUsers, FiPhone, FiMegaphone, FiTool, FiClipboard, FiCheckCircle, FiRocket, FiUser, FiClock } from 'react-icons/fi';
 
 const ActivityList = ({ activities, selectedActivity, onSelectActivity, onCompleteActivity }) => {
   // Fonction pour formater le temps en heures et minutes
@@ -138,7 +138,7 @@ const ActivityList = ({ activities, selectedActivity, onSelectActivity, onComple
                           }
                         }}
                       >
-                        ⏱️ Terminer
+                        <FiClock className="mr-1" /> Terminer
                       </motion.button>
                     )}
                   </div>

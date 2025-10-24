@@ -383,14 +383,14 @@ const Goals = () => {
 
   return (
     <div className="h-full flex flex-col">
-      <header className="mb-6">
-        <h1 
-          className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-amber-300 to-orange-300"
+      <header className="mb-4 sm:mb-6 px-2 sm:px-0">
+        <h1
+          className="text-3xl sm:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-amber-300 to-orange-300"
         >
           Objectifs
         </h1>
-        <p 
-          className="text-amber-200 mt-2"
+        <p
+          className="text-amber-200 mt-2 text-sm sm:text-base"
         >
           Définissez vos objectifs et suivez votre progression vers le succès
         </p>
@@ -400,57 +400,57 @@ const Goals = () => {
       <GoalStats stats={stats} />
       
       {/* Filtres et contrôles */}
-      <div className="flex flex-wrap justify-between items-center mb-6 gap-3">
+      <div className="flex flex-col sm:flex-row flex-wrap justify-between items-stretch sm:items-center mb-4 sm:mb-6 gap-3 px-2 sm:px-0">
         <div className="flex flex-wrap gap-2">
           <button
-            className={`px-3 py-2 rounded-lg text-sm flex items-center ${
+            className={`px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm flex items-center justify-center ${
               view === 'all'
                 ? 'bg-amber-600 text-white'
                 : 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50'
             }`}
             onClick={() => setView('all')}
           >
-            <FiTarget className="mr-1" />
-            Tous
+            <FiTarget className="mr-1 text-xs sm:text-base" />
+            <span className="hidden xs:inline">Tous</span>
           </button>
           <button
-            className={`px-3 py-2 rounded-lg text-sm flex items-center ${
+            className={`px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm flex items-center justify-center ${
               view === 'active'
                 ? 'bg-amber-600 text-white'
                 : 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50'
             }`}
             onClick={() => setView('active')}
           >
-            <FiZap className="mr-1" />
-            En cours
+            <FiZap className="mr-1 text-xs sm:text-base" />
+            <span className="hidden xs:inline">En cours</span>
           </button>
           <button
-            className={`px-3 py-2 rounded-lg text-sm flex items-center ${
+            className={`px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm flex items-center justify-center ${
               view === 'completed'
                 ? 'bg-amber-600 text-white'
                 : 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50'
             }`}
             onClick={() => setView('completed')}
           >
-            <FiCheckCircle className="mr-1" />
-            Complétés
+            <FiCheckCircle className="mr-1 text-xs sm:text-base" />
+            <span className="hidden xs:inline">Complétés</span>
           </button>
           <button
-            className={`px-3 py-2 rounded-lg text-sm flex items-center ${
+            className={`px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm flex items-center justify-center ${
               view === 'upcoming'
                 ? 'bg-amber-600 text-white'
                 : 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50'
             }`}
             onClick={() => setView('upcoming')}
           >
-            <FiClock className="mr-1" />
-            À venir
+            <FiClock className="mr-1 text-xs sm:text-base" />
+            <span className="hidden xs:inline">À venir</span>
           </button>
         </div>
-        
-        <div className="flex items-center space-x-3">
+
+        <div className="flex items-center">
           <button
-            className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg flex items-center shadow-md hover:scale-105 active:scale-95 transition-transform"
+            className="w-full sm:w-auto px-3 py-2 sm:px-4 sm:py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg flex items-center justify-center shadow-md hover:scale-105 active:scale-95 transition-transform text-sm sm:text-base"
             onClick={handleAddGoal}
           >
             <span className="mr-2">+</span>
@@ -466,19 +466,19 @@ const Goals = () => {
       />
       
       {/* Contenu principal */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 flex-grow">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6 flex-grow overflow-hidden px-2 sm:px-0">
         {/* Liste des objectifs */}
-        <div className="md:col-span-2 bg-gray-800/30 backdrop-blur-sm rounded-2xl p-6">
-          <h3 className="text-xl font-semibold text-white mb-4">Liste des objectifs</h3>
-          <GoalList 
+        <div className="lg:col-span-2 bg-gray-800/30 backdrop-blur-sm rounded-xl sm:rounded-2xl p-4 sm:p-6 overflow-y-auto">
+          <h3 className="text-lg sm:text-xl font-semibold text-white mb-3 sm:mb-4">Liste des objectifs</h3>
+          <GoalList
             goals={filteredGoals}
             selectedGoal={selectedGoal}
             onSelectGoal={handleSelectGoal}
           />
         </div>
-        
+
         {/* Panneau de détails ou formulaire */}
-        <div className="bg-gray-800/30 backdrop-blur-sm rounded-2xl p-6">
+        <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl sm:rounded-2xl p-4 sm:p-6 overflow-y-auto">
           {isAddingGoal ? (
             <div key="add-form">
               <GoalForm 

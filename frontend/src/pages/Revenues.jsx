@@ -314,9 +314,9 @@ const Revenues = () => {
   return (
     <div className="h-full flex flex-col">
       {/* En-tête */}
-      <header className="mb-6">
+      <header className="mb-4 sm:mb-6 px-2 sm:px-0">
         <motion.h1
-          className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-300 to-teal-300"
+          className="text-3xl sm:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-300 to-teal-300"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
@@ -324,7 +324,7 @@ const Revenues = () => {
           Revenus
         </motion.h1>
         <motion.p
-          className="text-teal-200 mt-2"
+          className="text-teal-200 mt-2 text-sm sm:text-base"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.2 }}
@@ -335,12 +335,12 @@ const Revenues = () => {
 
       {/* Affichage des erreurs */}
       {error && (
-        <motion.div 
-          className="mb-6 p-4 bg-rose-900/30 border border-rose-800 rounded-lg text-rose-200"
+        <motion.div
+          className="mb-4 sm:mb-6 mx-2 sm:mx-0 p-3 sm:p-4 bg-rose-900/30 border border-rose-800 rounded-lg text-rose-200 text-sm sm:text-base"
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
         >
-          <h3 className="font-medium text-rose-100 mb-1">Erreur</h3>
+          <h3 className="font-medium text-rose-100 mb-1 text-sm sm:text-base">Erreur</h3>
           <p>{error}</p>
         </motion.div>
       )}
@@ -351,11 +351,11 @@ const Revenues = () => {
       </div>
 
       {/* Navigation de période */}
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex items-center">
-          <div className="flex space-x-2 mr-4">
+      <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center mb-4 sm:mb-6 gap-3 px-2 sm:px-0">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-0">
+          <div className="flex gap-1 sm:gap-2 sm:mr-4">
             <motion.button
-              className="p-2 rounded-lg bg-gray-800/50 hover:bg-gray-700/50 text-gray-300"
+              className="flex-1 sm:flex-none p-1.5 sm:p-2 rounded-lg bg-gray-800/50 hover:bg-gray-700/50 text-gray-300 text-xs sm:text-base"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={navigateToPrevious}
@@ -363,7 +363,7 @@ const Revenues = () => {
               ◀
             </motion.button>
             <motion.button
-              className="p-2 rounded-lg bg-gray-800/50 hover:bg-gray-700/50 text-gray-300"
+              className="flex-1 sm:flex-none px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg bg-gray-800/50 hover:bg-gray-700/50 text-gray-300 text-xs sm:text-sm whitespace-nowrap"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={navigateToToday}
@@ -371,7 +371,7 @@ const Revenues = () => {
               Aujourd'hui
             </motion.button>
             <motion.button
-              className="p-2 rounded-lg bg-gray-800/50 hover:bg-gray-700/50 text-gray-300"
+              className="flex-1 sm:flex-none p-1.5 sm:p-2 rounded-lg bg-gray-800/50 hover:bg-gray-700/50 text-gray-300 text-xs sm:text-base"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={navigateToNext}
@@ -379,17 +379,17 @@ const Revenues = () => {
               ▶
             </motion.button>
           </div>
-          <h2 className="text-2xl font-semibold text-white capitalize">
+          <h2 className="text-lg sm:text-2xl font-semibold text-white capitalize text-center sm:text-left">
             {formatPeriodTitle()}
           </h2>
         </div>
 
-        <div className="flex items-center space-x-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
           <div className="bg-gray-800/50 rounded-lg p-1 flex">
             {['month', 'quarter', 'year'].map((p) => (
               <motion.button
                 key={p}
-                className={`px-3 py-1 rounded-lg text-sm ${
+                className={`flex-1 sm:flex-none px-2 py-1 sm:px-3 sm:py-1 rounded-lg text-xs sm:text-sm ${
                   period === p
                     ? 'bg-teal-600 text-white'
                     : 'text-gray-300 hover:bg-gray-700/50'
@@ -405,7 +405,7 @@ const Revenues = () => {
             ))}
           </div>
           <motion.button
-            className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg flex items-center"
+            className="px-3 py-2 sm:px-4 sm:py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg flex items-center justify-center text-sm sm:text-base"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={handleAddRevenue}
