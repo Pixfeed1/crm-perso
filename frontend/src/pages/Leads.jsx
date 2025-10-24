@@ -224,6 +224,73 @@ const Leads = () => {
     }
   };
 
+  // Ajout d'une interaction à un lead via l'API
+  const handleAddInteraction = async (leadId, interactionData) => {
+    try {
+      // Utiliser l'API pour ajouter une interaction
+      const newInteraction = await leadsAPI.addInteraction(leadId, interactionData);
+      console.log('Interaction ajoutée via API:', newInteraction);
+
+      // Mettre à jour l'état local du lead sélectionné
+      if (selectedLead && selectedLead.id === leadId) {
+        const updatedInteractions = [...(selectedLead.interactions || []), newInteraction];
+        setSelectedLead({
+          ...selectedLead,
+          interactions: updatedInteractions
+        });
+      }
+    } catch (error) {
+      console.error('Erreur lors de l\'ajout de l\'interaction:', error);
+      alert("Une erreur est survenue lors de l'ajout de l'interaction.");
+    }
+  };
+
+  // Mise à jour d'une interaction existante via l'API
+  const handleUpdateInteraction = async (interactionId, updatedData) => {
+    try {
+      // Utiliser l'API pour mettre à jour une interaction
+      const updatedInteraction = await leadsAPI.updateInteraction(interactionId, updatedData);
+      console.log('Interaction mise à jour via API:', updatedInteraction);
+
+      // Mettre à jour l'état local du lead sélectionné
+      if (selectedLead && selectedLead.interactions) {
+        const updatedInteractions = selectedLead.interactions.map(interaction =>
+          interaction.id === interactionId ? { ...interaction, ...updatedInteraction } : interaction
+        );
+
+        setSelectedLead({
+          ...selectedLead,
+          interactions: updatedInteractions
+        });
+      }
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour de l\'interaction:', error);
+      alert("Une erreur est survenue lors de la mise à jour de l'interaction.");
+    }
+  };
+
+  // Suppression d'une interaction via l'API
+  const handleDeleteInteraction = async (interactionId) => {
+    try {
+      // Utiliser l'API pour supprimer une interaction
+      await leadsAPI.deleteInteraction(interactionId);
+      console.log('Interaction supprimée via API');
+
+      // Mettre à jour l'état local du lead sélectionné
+      if (selectedLead && selectedLead.interactions) {
+        const remainingInteractions = selectedLead.interactions.filter(interaction => interaction.id !== interactionId);
+
+        setSelectedLead({
+          ...selectedLead,
+          interactions: remainingInteractions
+        });
+      }
+    } catch (error) {
+      console.error('Erreur lors de la suppression de l\'interaction:', error);
+      alert("Une erreur est survenue lors de la suppression de l'interaction.");
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="h-full flex items-center justify-center">
@@ -363,6 +430,13 @@ const Leads = () => {
                     }
                     onDeleteContact={(contactId) =>
                       handleDeleteContact(selectedLead.id, contactId)
+                    }
+                    onAddInteraction={(interactionData) => handleAddInteraction(selectedLead.id, interactionData)}
+                    onUpdateInteraction={(interactionId, updatedData) =>
+                      handleUpdateInteraction(interactionId, updatedData)
+                    }
+                    onDeleteInteraction={(interactionId) =>
+                      handleDeleteInteraction(interactionId)
                     }
                   />
                 </motion.div>

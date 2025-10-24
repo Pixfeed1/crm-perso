@@ -40,6 +40,9 @@ class DatabaseMigrations {
 
     // Migration 5: Ajout des colonnes pour la récupération de mot de passe
     this.migrations.push(this.addPasswordResetColumns.bind(this));
+
+    // Migration 6: Création de la table des interactions avec les leads
+    this.migrations.push(this.createLeadInteractionsTable.bind(this));
   }
 
   /**
@@ -519,6 +522,54 @@ class DatabaseMigrations {
           }
 
           console.log('[Migrations] Migration 5 terminée avec succès');
+          resolve();
+        });
+      });
+    });
+  }
+
+  /**
+   * Migration 6: Création de la table des interactions avec les leads
+   * Pour le suivi des appels, emails, rencontres, notes
+   */
+  async createLeadInteractionsTable() {
+    return new Promise((resolve, reject) => {
+      console.log('[Migrations] Migration 6: Création de la table lead_interactions');
+
+      // Vérifier si la table existe déjà
+      this.db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='lead_interactions'", (err, row) => {
+        if (err) {
+          console.error('[Migrations] Erreur lors de la vérification de la table lead_interactions:', err);
+          return reject(err);
+        }
+
+        if (row) {
+          console.log('[Migrations] La table lead_interactions existe déjà, skip');
+          return resolve();
+        }
+
+        // Créer la table lead_interactions
+        this.db.run(`
+          CREATE TABLE lead_interactions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            lead_id INTEGER NOT NULL,
+            contact_id INTEGER,
+            type TEXT NOT NULL,
+            date TEXT NOT NULL,
+            description TEXT,
+            notes TEXT,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY (lead_id) REFERENCES leads(id) ON DELETE CASCADE,
+            FOREIGN KEY (contact_id) REFERENCES contacts(id) ON DELETE SET NULL
+          )
+        `, (err) => {
+          if (err) {
+            console.error('[Migrations] Erreur lors de la création de la table lead_interactions:', err);
+            return reject(err);
+          }
+
+          console.log('[Migrations] Table lead_interactions créée avec succès');
+          console.log('[Migrations] Migration 6 terminée avec succès');
           resolve();
         });
       });

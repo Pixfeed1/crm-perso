@@ -97,6 +97,7 @@ app.get('/api/debug', (req, res) => {
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/activities', require('./routes/activitiesRoutes'));
 app.use('/api/leads', require('./routes/leadsRoutes'));
+app.use('/api/leads', require('./routes/leadInteractionRoutes'));
 app.use('/api/projects', require('./routes/projectsRoutes'));
 app.use('/api/events', require('./routes/eventsRoutes'));
 app.use('/api/goals', require('./routes/goalsRoutes'));

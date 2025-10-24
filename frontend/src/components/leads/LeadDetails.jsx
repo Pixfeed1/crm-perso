@@ -1,16 +1,21 @@
 // src/components/leads/LeadDetails.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiStar, FiEye, FiCheckCircle, FiMessageCircle, FiAward, FiXCircle, FiHelpCircle, FiClipboard, FiBuilding, FiUser, FiFileText, FiUsers, FiEdit2, FiTrash2 } from 'react-icons/fi';
+import { FiStar, FiEye, FiCheckCircle, FiMessageCircle, FiAward, FiXCircle, FiHelpCircle, FiClipboard, FiBuilding, FiUser, FiFileText, FiUsers, FiEdit2, FiTrash2, FiClock } from 'react-icons/fi';
+import { leadsAPI } from '../../services/api';
 
 // Sous-composants
 import ContactList from './ContactList';
 import ContactForm from './ContactForm';
+import InteractionTimeline from './InteractionTimeline';
+import InteractionForm from './InteractionForm';
 
-const LeadDetails = ({ lead, onUpdate, onDelete, onAddContact, onUpdateContact, onDeleteContact }) => {
+const LeadDetails = ({ lead, onUpdate, onDelete, onAddContact, onUpdateContact, onDeleteContact, onAddInteraction, onUpdateInteraction, onDeleteInteraction }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [isAddingContact, setIsAddingContact] = useState(false);
+  const [isAddingInteraction, setIsAddingInteraction] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [interactions, setInteractions] = useState([]);
 
   // Format de la date
   const formatDate = (dateString) => {
@@ -96,6 +101,60 @@ const LeadDetails = ({ lead, onUpdate, onDelete, onAddContact, onUpdateContact, 
       setIsAddingContact(false);
     } catch (error) {
       console.error('Erreur lors de l\'ajout du contact:', error);
+    }
+  };
+
+  // Charger les interactions lorsque le lead change
+  useEffect(() => {
+    const fetchInteractions = async () => {
+      if (lead && lead.id) {
+        try {
+          const interactionsData = await leadsAPI.getInteractions(lead.id);
+          setInteractions(interactionsData);
+        } catch (error) {
+          console.error('Erreur lors du chargement des interactions:', error);
+          setInteractions([]);
+        }
+      }
+    };
+
+    fetchInteractions();
+  }, [lead]);
+
+  // Sauvegarde d'une nouvelle interaction
+  const handleSaveInteraction = async (interactionData) => {
+    try {
+      await onAddInteraction(interactionData);
+      setIsAddingInteraction(false);
+      // Recharger les interactions
+      const interactionsData = await leadsAPI.getInteractions(lead.id);
+      setInteractions(interactionsData);
+    } catch (error) {
+      console.error('Erreur lors de l\'ajout de l\'interaction:', error);
+    }
+  };
+
+  // Mise à jour d'une interaction
+  const handleUpdateInteractionLocal = async (interactionId, updatedData) => {
+    try {
+      await onUpdateInteraction(interactionId, updatedData);
+      // Recharger les interactions
+      const interactionsData = await leadsAPI.getInteractions(lead.id);
+      setInteractions(interactionsData);
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour de l\'interaction:', error);
+    }
+  };
+
+  // Suppression d'une interaction
+  const handleDeleteInteractionLocal = async (interactionId) => {
+    try {
+      await onDeleteInteraction(interactionId);
+      // Recharger les interactions
+      const interactionsData = await leadsAPI.getInteractions(lead.id);
+      setInteractions(interactionsData);
+    } catch (error) {
+      console.error('Erreur lors de la suppression de l\'interaction:', error);
     }
   };
   
@@ -237,7 +296,7 @@ const LeadDetails = ({ lead, onUpdate, onDelete, onAddContact, onUpdateContact, 
             Ajouter un contact
           </motion.button>
         </div>
-        
+
         {/* Liste des contacts ou formulaire d'ajout */}
         <AnimatePresence mode="wait">
           {isAddingContact ? (
@@ -247,7 +306,7 @@ const LeadDetails = ({ lead, onUpdate, onDelete, onAddContact, onUpdateContact, 
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
             >
-              <ContactForm 
+              <ContactForm
                 onSave={handleSaveContact}
                 onCancel={() => setIsAddingContact(false)}
               />
@@ -264,6 +323,58 @@ const LeadDetails = ({ lead, onUpdate, onDelete, onAddContact, onUpdateContact, 
                 leadType={lead.type}
                 onUpdateContact={onUpdateContact}
                 onDeleteContact={onDeleteContact}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Section Interactions */}
+      <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl p-4 sm:p-5 mb-4 sm:mb-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 sm:mb-4 gap-3">
+          <h3 className="text-base sm:text-lg font-medium text-gray-200 flex items-center gap-2">
+            <FiClock className="text-base sm:text-lg" />
+            Historique des interactions
+          </h3>
+
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 px-3 py-1.5 sm:py-1 rounded-lg text-xs sm:text-sm flex items-center whitespace-nowrap"
+            onClick={() => setIsAddingInteraction(true)}
+          >
+            <span className="mr-1">+</span>
+            Nouvelle interaction
+          </motion.button>
+        </div>
+
+        {/* Timeline des interactions ou formulaire d'ajout */}
+        <AnimatePresence mode="wait">
+          {isAddingInteraction ? (
+            <motion.div
+              key="interaction-form"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+            >
+              <InteractionForm
+                contacts={lead.contacts || []}
+                onSave={handleSaveInteraction}
+                onCancel={() => setIsAddingInteraction(false)}
+              />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="interaction-timeline"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <InteractionTimeline
+                interactions={interactions}
+                contacts={lead.contacts || []}
+                onUpdateInteraction={handleUpdateInteractionLocal}
+                onDeleteInteraction={handleDeleteInteractionLocal}
               />
             </motion.div>
           )}

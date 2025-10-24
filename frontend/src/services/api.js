@@ -200,6 +200,23 @@ export const leadsAPI = {
   deleteContact: (leadId, contactId) => {
     console.log(`Appel API: suppression du contact ID ${contactId} du lead ID ${leadId}`);
     return apiRequest(`/leads/${leadId}/contacts/${contactId}`, 'DELETE');
+  },
+  // Interactions
+  getInteractions: (leadId) => {
+    console.log(`Appel API: récupération des interactions du lead ID ${leadId}`);
+    return apiRequest(`/leads/${leadId}/interactions`);
+  },
+  addInteraction: (leadId, data) => {
+    console.log(`Appel API: ajout d'une interaction au lead ID ${leadId}`, data);
+    return apiRequest(`/leads/${leadId}/interactions`, 'POST', data);
+  },
+  updateInteraction: (interactionId, data) => {
+    console.log(`Appel API: mise à jour de l'interaction ID ${interactionId}`, data);
+    return apiRequest(`/leads/interactions/${interactionId}`, 'PUT', data);
+  },
+  deleteInteraction: (interactionId) => {
+    console.log(`Appel API: suppression de l'interaction ID ${interactionId}`);
+    return apiRequest(`/leads/interactions/${interactionId}`, 'DELETE');
   }
 };
 
