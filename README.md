@@ -49,9 +49,16 @@ crm-perso/
 │   ├── src/
 │   │   ├── pages/           # Pages principales
 │   │   ├── components/      # Composants réutilisables
+│   │   │   ├── common/      # Composants UI communs (Button, FormInput, etc.)
+│   │   │   ├── leads/       # Composants spécifiques aux leads
+│   │   │   ├── projects/    # Composants spécifiques aux projets
+│   │   │   └── ...          # Autres domaines fonctionnels
+│   │   ├── constants/       # Constantes (couleurs de statut, etc.)
 │   │   ├── contexts/        # Contexts React (Auth, etc.)
 │   │   ├── services/        # Services API
 │   │   └── App.js           # Composant racine
+│   ├── tailwind.config.js   # Configuration Tailwind
+│   ├── postcss.config.js    # Configuration PostCSS
 │   └── package.json         # Dépendances frontend
 │
 └── README.md                 # Ce fichier
@@ -224,8 +231,35 @@ L'architecture frontend est organisée par fonctionnalités :
 
 - **Pages** : Composants de pages principales
 - **Components** : Composants réutilisables organisés par domaine
+  - **common/** : Composants UI réutilisables (Button, FormInput, FormSelect, FormTextarea)
+  - Domaines spécifiques (leads, projects, activities, etc.)
+- **Constants** : Constantes partagées (couleurs de statut, configurations)
 - **Contexts** : Gestion d'état global (AuthContext)
 - **Services** : Communication avec l'API backend
+
+#### Composants réutilisables disponibles
+
+Le projet inclut des composants UI standardisés pour garantir la cohérence :
+
+1. **FormInput** - Input de formulaire avec validation et états d'erreur
+2. **FormTextarea** - Zone de texte avec style cohérent
+3. **FormSelect** - Select avec options et validation
+4. **Button** - Bouton avec variants (primary, secondary, success, danger, outline, ghost)
+5. **FormButtons** - Groupe de boutons Cancel/Submit pour formulaires
+
+Ces composants assurent :
+- Style cohérent avec le thème sombre
+- Accessibilité (attributs ARIA, labels appropriés)
+- États de chargement et d'erreur
+- Validation visuelle
+
+#### Thème et styles
+
+Le projet utilise Tailwind CSS avec un thème personnalisé :
+- Palette de couleurs primaires (purple/violet)
+- Couleurs pour thème sombre optimisées
+- Animations personnalisées (fade-in, slide-up)
+- Constantes de couleurs pour les statuts (leads, projects, activities)
 
 ## Scripts disponibles
 

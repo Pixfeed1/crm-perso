@@ -53,9 +53,10 @@ const LeadFilter = ({ filters, setFilters }) => {
             placeholder="Rechercher un lead..."
             value={filters.search}
             onChange={(e) => handleFilterChange('search', e.target.value)}
-            className="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-4 py-2 pl-10 text-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            className="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-4 py-2 pl-10 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+            aria-label="Rechercher un lead"
           />
-          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" aria-hidden="true">
             🔍
           </span>
           {filters.search && (
@@ -64,6 +65,7 @@ const LeadFilter = ({ filters, setFilters }) => {
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               onClick={() => handleFilterChange('search', '')}
+              aria-label="Effacer la recherche"
             >
               ✕
             </motion.button>
