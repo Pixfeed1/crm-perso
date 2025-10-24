@@ -233,7 +233,7 @@ const DayView = ({
       {sortedEvents.length === 0 && (
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center text-gray-400">
-            <div className="text-4xl mb-3">📅</div>
+            <div className="text-4xl mb-3"><FiCalendar /></div>
             <h4 className="text-lg font-medium text-gray-300 mb-2">Pas d'événements</h4>
             <p className="text-sm">
               Aucun événement planifié pour cette journée.
