@@ -9,9 +9,7 @@ import {
 import { FaFilter, FaChartLine, FaBullseye, FaCalendarAlt, FaSourcetree } from 'react-icons/fa';
 
 const SalesPipeline = () => {
-  const [pipelineData, setP
-
-ipelineData] = useState(null);
+  const [pipelineData, setPipelineData] = useState(null);
   const [conversionRates, setConversionRates] = useState(null);
   const [forecast, setForecast] = useState(null);
   const [sources, setSources] = useState(null);
