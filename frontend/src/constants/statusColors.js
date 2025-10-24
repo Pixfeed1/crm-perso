@@ -43,33 +43,33 @@ export const LEAD_STATUS_COLORS = {
 };
 
 export const PROJECT_STATUS_COLORS = {
-  'planifie': {
-    bg: 'bg-blue-500/20',
-    text: 'text-blue-400',
-    border: 'border-blue-500/30',
+  'planifié': {
+    bg: 'bg-purple-500/20',
+    text: 'text-purple-300',
+    border: 'border-purple-500/30',
     label: 'Planifié'
   },
   'en-cours': {
-    bg: 'bg-purple-500/20',
-    text: 'text-purple-400',
-    border: 'border-purple-500/30',
+    bg: 'bg-blue-500/20',
+    text: 'text-blue-300',
+    border: 'border-blue-500/30',
     label: 'En cours'
   },
-  'en-pause': {
+  'pause': {
     bg: 'bg-amber-500/20',
-    text: 'text-amber-400',
+    text: 'text-amber-300',
     border: 'border-amber-500/30',
     label: 'En pause'
   },
-  'termine': {
+  'terminé': {
     bg: 'bg-emerald-500/20',
-    text: 'text-emerald-400',
+    text: 'text-emerald-300',
     border: 'border-emerald-500/30',
     label: 'Terminé'
   },
-  'annule': {
+  'annulé': {
     bg: 'bg-rose-500/20',
-    text: 'text-rose-400',
+    text: 'text-rose-300',
     border: 'border-rose-500/30',
     label: 'Annulé'
   }

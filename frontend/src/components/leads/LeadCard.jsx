@@ -1,48 +1,11 @@
 // src/components/leads/LeadCard.jsx
 import React from 'react';
 import { motion } from 'framer-motion';
+import { getStatusColors } from '../../constants/statusColors';
 
 const LeadCard = ({ lead, isSelected, onClick }) => {
-  // Configuration des couleurs de statut
-  const statusConfig = {
-    nouveau: {
-      bg: 'bg-blue-500/20',
-      text: 'text-blue-300',
-      border: 'border-blue-500/30'
-    },
-    prospect: {
-      bg: 'bg-purple-500/20',
-      text: 'text-purple-300',
-      border: 'border-purple-500/30'
-    },
-    qualifié: {
-      bg: 'bg-emerald-500/20',
-      text: 'text-emerald-300',
-      border: 'border-emerald-500/30'
-    },
-    négociation: {
-      bg: 'bg-amber-500/20',
-      text: 'text-amber-300',
-      border: 'border-amber-500/30'
-    },
-    client: {
-      bg: 'bg-teal-500/20',
-      text: 'text-teal-300',
-      border: 'border-teal-500/30'
-    },
-    perdu: {
-      bg: 'bg-rose-500/20',
-      text: 'text-rose-300',
-      border: 'border-rose-500/30'
-    }
-  };
-
-  // Valeurs par défaut si le statut n'est pas configuré
-  const statusStyle = statusConfig[lead.status] || {
-    bg: 'bg-gray-500/20',
-    text: 'text-gray-300',
-    border: 'border-gray-500/30'
-  };
+  // Récupération des couleurs depuis la configuration centralisée
+  const statusStyle = getStatusColors(lead.status, 'lead');
 
   // Format de la date
   const formatDate = (dateString) => {

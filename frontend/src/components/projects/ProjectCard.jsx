@@ -1,44 +1,14 @@
 // src/components/projects/ProjectCard.jsx
 import React from 'react';
 import { motion } from 'framer-motion';
+import { getStatusColors } from '../../constants/statusColors';
 
 const ProjectCard = ({ project, isSelected, onClick }) => {
   // S'assurer que le projet a une valeur progress
   const projectProgress = typeof project.progress === 'number' ? project.progress : 0;
-  
-  // Configuration des couleurs de statut
-  const statusConfig = {
-    'en-cours': {
-      bg: 'bg-blue-500/20',
-      text: 'text-blue-300',
-      border: 'border-blue-500/30',
-      label: 'En cours'
-    },
-    'planifié': {
-      bg: 'bg-purple-500/20',
-      text: 'text-purple-300',
-      border: 'border-purple-500/30',
-      label: 'Planifié'
-    },
-    'terminé': {
-      bg: 'bg-emerald-500/20',
-      text: 'text-emerald-300',
-      border: 'border-emerald-500/30',
-      label: 'Terminé'
-    },
-    'pause': {
-      bg: 'bg-amber-500/20',
-      text: 'text-amber-300',
-      border: 'border-amber-500/30',
-      label: 'En pause'
-    },
-    'annulé': {
-      bg: 'bg-rose-500/20',
-      text: 'text-rose-300',
-      border: 'border-rose-500/30',
-      label: 'Annulé'
-    }
-  };
+
+  // Récupération des couleurs depuis la configuration centralisée
+  const statusStyle = getStatusColors(project.status, 'project');
 
   // Configuration des icônes de type
   const typeConfig = {
