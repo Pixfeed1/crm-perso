@@ -71,12 +71,7 @@ const KanbanView = ({ leads, onLeadUpdate, onLeadSelect }) => {
   const fetchStats = async () => {
     setIsLoadingStats(true);
     try {
-      const response = await fetch('http://localhost:5000/api/leads/kanban/stats', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      const data = await response.json();
+      const data = await leadsAPI.getKanbanStats();
       setStats(data);
     } catch (error) {
       console.error('Erreur lors du chargement des statistiques Kanban:', error);

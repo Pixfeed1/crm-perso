@@ -217,6 +217,11 @@ export const leadsAPI = {
   deleteInteraction: (interactionId) => {
     console.log(`Appel API: suppression de l'interaction ID ${interactionId}`);
     return apiRequest(`/leads/interactions/${interactionId}`, 'DELETE');
+  },
+  // Kanban
+  getKanbanStats: () => {
+    console.log('Appel API: récupération des statistiques Kanban');
+    return apiRequest('/leads/kanban/stats');
   }
 };
 

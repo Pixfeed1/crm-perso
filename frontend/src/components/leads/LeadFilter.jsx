@@ -3,18 +3,18 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiSearch, FiX } from 'react-icons/fi';
 
-const LeadFilter = ({ filters, setFilters }) => {
+const LeadFilter = ({ filters, setFilters, isKanbanView = false }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  
-  // Options de statut
+
+  // Options de statut (alignées avec le Kanban)
   const statusOptions = [
     { value: 'all', label: 'Tous les statuts' },
-    { value: 'nouveau', label: 'Nouveau' },
-    { value: 'prospect', label: 'Prospect' },
-    { value: 'qualifié', label: 'Qualifié' },
-    { value: 'négociation', label: 'Négociation' },
-    { value: 'client', label: 'Client' },
-    { value: 'perdu', label: 'Perdu' }
+    { value: 'new', label: 'Nouveau' },
+    { value: 'contacted', label: 'Contacté' },
+    { value: 'proposal', label: 'Proposition' },
+    { value: 'negotiation', label: 'Négociation' },
+    { value: 'won', label: 'Gagné' },
+    { value: 'lost', label: 'Perdu' }
   ];
   
   // Options de type
@@ -106,27 +106,29 @@ const LeadFilter = ({ filters, setFilters }) => {
             className="overflow-hidden"
           >
             <div className="p-3 space-y-3 border-t border-gray-700/50">
-              {/* Sélection du statut */}
-              <div>
-                <label className="block text-xs text-gray-400 mb-1">Statut</label>
-                <div className="flex flex-wrap gap-2">
-                  {statusOptions.map(option => (
-                    <motion.button
-                      key={option.value}
-                      className={`px-3 py-1 rounded-full text-xs font-medium ${
-                        filters.status === option.value
-                          ? 'bg-indigo-600 text-white'
-                          : 'bg-gray-700/50 text-gray-300 hover:bg-gray-700'
-                      }`}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => handleFilterChange('status', option.value)}
-                    >
-                      {option.label}
-                    </motion.button>
-                  ))}
+              {/* Sélection du statut (masqué en vue Kanban car redondant) */}
+              {!isKanbanView && (
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">Statut</label>
+                  <div className="flex flex-wrap gap-2">
+                    {statusOptions.map(option => (
+                      <motion.button
+                        key={option.value}
+                        className={`px-3 py-1 rounded-full text-xs font-medium ${
+                          filters.status === option.value
+                            ? 'bg-indigo-600 text-white'
+                            : 'bg-gray-700/50 text-gray-300 hover:bg-gray-700'
+                        }`}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => handleFilterChange('status', option.value)}
+                      >
+                        {option.label}
+                      </motion.button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
               
               {/* Sélection du type */}
               <div>

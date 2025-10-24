@@ -70,6 +70,16 @@ const Leads = () => {
     setFilteredLeads(result);
   }, [leads, filters]);
 
+  // Réinitialiser le filtre de statut en mode Kanban (car les colonnes montrent déjà les statuts)
+  useEffect(() => {
+    if (view === 'kanban' && filters.status !== 'all') {
+      setFilters(prev => ({
+        ...prev,
+        status: 'all'
+      }));
+    }
+  }, [view]);
+
   // Sélection d'un lead
   const handleSelectLead = async (lead) => {
     try {
@@ -383,6 +393,11 @@ const Leads = () => {
         </div>
       </div>
 
+      {/* Filtres (affichés dans les deux vues) */}
+      <div className="mb-4 px-2 sm:px-0">
+        <LeadFilter filters={filters} setFilters={setFilters} isKanbanView={view === 'kanban'} />
+      </div>
+
       {/* Vue conditionnelle */}
       {view === 'kanban' ? (
         /* Vue Kanban - prend toute la largeur */
@@ -403,10 +418,6 @@ const Leads = () => {
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.3 }}
           >
-
-          <div className="px-2 sm:px-0">
-            <LeadFilter filters={filters} setFilters={setFilters} />
-          </div>
 
           <div className="flex-grow overflow-y-auto px-2 sm:px-0 space-y-3 mt-4">
             <AnimatePresence>
