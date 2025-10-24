@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { projectsAPI } from '../services/api';
-import { FiAlertTriangle, FiRocket, FiTarget } from 'react-icons/fi';
+import { FiAlertTriangle, FiRocket, FiTarget, FiArrowLeft } from 'react-icons/fi';
 
 // Composants
 import ProjectCard from '../components/projects/ProjectCard';
@@ -18,6 +18,7 @@ const Projects = () => {
   const [isAddingProject, setIsAddingProject] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showDetails, setShowDetails] = useState(false); // Pour toggle mobile
   const [filters, setFilters] = useState({
     search: '',
     status: 'all',
@@ -34,13 +35,13 @@ const Projects = () => {
         // Récupérer les projets via l'API
         const projectsData = await projectsAPI.getAll();
         console.log('Projets chargés via API:', projectsData);
-        
+
         // Assurer que chaque projet a une valeur de progression
         const projectsWithProgress = projectsData.map(project => ({
           ...project,
           progress: project.progress !== undefined ? project.progress : 0
         }));
-        
+
         setProjects(projectsWithProgress);
         setFilteredProjects(projectsWithProgress);
       } catch (error) {
@@ -52,7 +53,7 @@ const Projects = () => {
         setIsLoading(false);
       }
     };
-    
+
     fetchProjects();
   }, []);
 
@@ -60,22 +61,22 @@ const Projects = () => {
   useEffect(() => {
     const result = projects.filter(project => {
       // Filtre par recherche
-      const searchMatch = filters.search === '' || 
+      const searchMatch = filters.search === '' ||
         project.name.toLowerCase().includes(filters.search.toLowerCase()) ||
         (project.lead_name && project.lead_name.toLowerCase().includes(filters.search.toLowerCase()));
-      
+
       // Filtre par statut
       const statusMatch = filters.status === 'all' || project.status === filters.status;
-      
+
       // Filtre par type
       const typeMatch = filters.type === 'all' || project.type === filters.type;
-      
+
       // Filtre par période
       let timeframeMatch = true;
       const now = new Date();
       const startDate = new Date(project.start_date);
       const endDate = new Date(project.end_date);
-      
+
       if (filters.timeframe === 'current') {
         timeframeMatch = startDate <= now && endDate >= now;
       } else if (filters.timeframe === 'upcoming') {
@@ -83,10 +84,10 @@ const Projects = () => {
       } else if (filters.timeframe === 'past') {
         timeframeMatch = endDate < now;
       }
-      
+
       return searchMatch && statusMatch && typeMatch && timeframeMatch;
     });
-    
+
     setFilteredProjects(result);
   }, [projects, filters]);
 
@@ -97,14 +98,15 @@ const Projects = () => {
       // Récupérer les détails complets du projet via l'API
       const projectDetails = await projectsAPI.getById(project.id);
       console.log('Détails du projet chargés via API:', projectDetails);
-      
+
       // S'assurer que le projet a une propriété progress
       if (projectDetails.progress === undefined) {
         projectDetails.progress = 0;
       }
-      
+
       setSelectedProject(projectDetails);
       setIsAddingProject(false);
+      setShowDetails(true); // Afficher les détails sur mobile
     } catch (error) {
       console.error(`Erreur lors du chargement des détails du projet ${project.id}:`, error);
       // Utiliser les informations de base du projet si les détails ne peuvent pas être chargés
@@ -114,6 +116,7 @@ const Projects = () => {
         tasks: []
       });
       setIsAddingProject(false);
+      setShowDetails(true); // Afficher les détails sur mobile
     } finally {
       setIsLoading(false);
     }
@@ -123,6 +126,14 @@ const Projects = () => {
   const handleAddProject = () => {
     setSelectedProject(null);
     setIsAddingProject(true);
+    setShowDetails(true); // Afficher le formulaire sur mobile
+  };
+
+  // Retour à la liste (mobile)
+  const handleBackToList = () => {
+    setShowDetails(false);
+    setSelectedProject(null);
+    setIsAddingProject(false);
   };
 
   // Sauvegarde d'un nouveau projet via l'API
@@ -133,25 +144,25 @@ const Projects = () => {
         ...projectData,
         progress: 0 // Valeur initiale de progression
       };
-      
+
       console.log('Données envoyées pour la création du projet:', projectWithProgress);
-      
+
       // Utiliser l'API pour créer le projet
       const newProject = await projectsAPI.create(projectWithProgress);
       console.log('Projet créé via API:', newProject);
-      
+
       // Vérifier que nous avons bien reçu un projet valide
       if (!newProject || !newProject.id) {
         throw new Error('Réponse de création de projet invalide');
       }
-      
+
       // S'assurer que tous les champs nécessaires sont présents
       const completeProject = {
         ...newProject,
         progress: newProject.progress !== undefined ? newProject.progress : 0,
         tasks: newProject.tasks || []
       };
-      
+
       // Mettre à jour l'état local
       setProjects([...projects, completeProject]);
       setIsAddingProject(false);
@@ -166,27 +177,27 @@ const Projects = () => {
   const handleUpdateProject = async (id, updatedData) => {
     try {
       console.log(`Mise à jour du projet ${id} avec données:`, updatedData);
-      
+
       // Utiliser l'API pour mettre à jour le projet
       const updatedProject = await projectsAPI.update(id, updatedData);
       console.log('Projet mis à jour via API:', updatedProject);
-      
+
       // S'assurer que le projet a une propriété progress
       if (updatedProject.progress === undefined) {
         updatedProject.progress = selectedProject?.progress || 0;
       }
-      
+
       // Mettre à jour l'état local
-      const updatedProjects = projects.map(project => 
+      const updatedProjects = projects.map(project =>
         project.id === id ? { ...project, ...updatedProject } : project
       );
-      
+
       setProjects(updatedProjects);
-      
+
       // Mettre à jour le projet sélectionné
       if (selectedProject && selectedProject.id === id) {
-        setSelectedProject({ 
-          ...selectedProject, 
+        setSelectedProject({
+          ...selectedProject,
           ...updatedProject,
           // Conserver les tâches si elles ne sont pas incluses dans la réponse
           tasks: updatedProject.tasks || selectedProject.tasks || []
@@ -202,16 +213,17 @@ const Projects = () => {
   const handleDeleteProject = async (id) => {
     try {
       console.log(`Suppression du projet ${id}`);
-      
+
       // Utiliser l'API pour supprimer le projet
       await projectsAPI.delete(id);
       console.log('Projet supprimé via API');
-      
+
       // Mettre à jour l'état local
       const remainingProjects = projects.filter(project => project.id !== id);
-      
+
       setProjects(remainingProjects);
       setSelectedProject(null);
+      setShowDetails(false); // Retour à la liste sur mobile
     } catch (error) {
       console.error('Erreur lors de la suppression du projet:', error);
       alert("Une erreur est survenue lors de la suppression du projet: " + (error.message || 'Erreur inconnue'));
@@ -222,34 +234,34 @@ const Projects = () => {
   const handleAddTask = async (projectId, taskData) => {
     try {
       console.log(`Ajout d'une tâche au projet ${projectId}:`, taskData);
-      
+
       // Utiliser l'API pour ajouter une tâche
       const newTask = await projectsAPI.addTask(projectId, taskData);
       console.log('Tâche ajoutée via API:', newTask);
-      
+
       // Mettre à jour l'état local du projet sélectionné
       if (selectedProject && selectedProject.id === projectId) {
         const updatedTasks = [...(selectedProject.tasks || []), newTask];
-        
+
         // Recalculer la progression
         const completedTasks = updatedTasks.filter(task => task.completed).length;
-        const progress = updatedTasks.length > 0 
-          ? Math.round((completedTasks / updatedTasks.length) * 100) 
+        const progress = updatedTasks.length > 0
+          ? Math.round((completedTasks / updatedTasks.length) * 100)
           : 0;
-        
+
         const updatedProject = {
           ...selectedProject,
           tasks: updatedTasks,
           progress
         };
-        
+
         setSelectedProject(updatedProject);
-        
+
         // Mettre également à jour la liste des projets
-        const updatedProjects = projects.map(project => 
+        const updatedProjects = projects.map(project =>
           project.id === projectId ? { ...project, progress } : project
         );
-        
+
         setProjects(updatedProjects);
       }
     } catch (error) {
@@ -264,43 +276,43 @@ const Projects = () => {
       if (!selectedProject || !selectedProject.tasks) {
         throw new Error("Données du projet non disponibles");
       }
-      
+
       // Trouver la tâche actuelle pour connaître son statut
       const task = selectedProject.tasks.find(t => t.id === taskId);
       if (!task) return;
-      
+
       console.log(`Changement du statut de la tâche ${taskId} du projet ${projectId} à: ${!task.completed}`);
-      
+
       // Utiliser l'API pour mettre à jour le statut de la tâche
-      const updatedTask = await projectsAPI.updateTask(projectId, taskId, { 
-        completed: !task.completed 
+      const updatedTask = await projectsAPI.updateTask(projectId, taskId, {
+        completed: !task.completed
       });
       console.log('Statut de la tâche mis à jour via API:', updatedTask);
-      
+
       // Mettre à jour l'état local du projet sélectionné
-      const updatedTasks = selectedProject.tasks.map(task => 
+      const updatedTasks = selectedProject.tasks.map(task =>
         task.id === taskId ? { ...task, completed: !task.completed } : task
       );
-      
+
       // Recalculer la progression
       const completedTasks = updatedTasks.filter(task => task.completed).length;
-      const progress = updatedTasks.length > 0 
-        ? Math.round((completedTasks / updatedTasks.length) * 100) 
+      const progress = updatedTasks.length > 0
+        ? Math.round((completedTasks / updatedTasks.length) * 100)
         : 0;
-      
+
       const updatedProject = {
         ...selectedProject,
         tasks: updatedTasks,
         progress
       };
-      
+
       setSelectedProject(updatedProject);
-      
+
       // Mettre également à jour la liste des projets
-      const updatedProjects = projects.map(project => 
+      const updatedProjects = projects.map(project =>
         project.id === projectId ? { ...project, progress } : project
       );
-      
+
       setProjects(updatedProjects);
     } catch (error) {
       console.error('Erreur lors de la mise à jour de la tâche:', error);
@@ -313,7 +325,7 @@ const Projects = () => {
     return (
       <div className="h-full flex items-center justify-center">
         <motion.div
-          className="w-16 h-16 border-4 border-indigo-500 border-t-transparent rounded-full"
+          className="w-12 h-12 sm:w-16 sm:h-16 border-4 border-indigo-500 border-t-transparent rounded-full"
           animate={{ rotate: 360 }}
           transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
         />
@@ -324,12 +336,12 @@ const Projects = () => {
   // Affichage en cas d'erreur
   if (error && projects.length === 0) {
     return (
-      <div className="h-full flex flex-col items-center justify-center">
-        <div className="text-4xl mb-4"><FiAlertTriangle /></div>
-        <h2 className="text-xl font-semibold text-white mb-2">Erreur de chargement</h2>
-        <p className="text-gray-300 mb-4">{error}</p>
-        <button 
-          className="px-4 py-2 bg-indigo-600 text-white rounded-lg"
+      <div className="h-full flex flex-col items-center justify-center px-4">
+        <div className="text-3xl sm:text-4xl mb-4"><FiAlertTriangle /></div>
+        <h2 className="text-lg sm:text-xl font-semibold text-white mb-2">Erreur de chargement</h2>
+        <p className="text-sm sm:text-base text-gray-300 mb-4 text-center">{error}</p>
+        <button
+          className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm sm:text-base"
           onClick={() => window.location.reload()}
         >
           Réessayer
@@ -340,17 +352,17 @@ const Projects = () => {
 
   return (
     <div className="h-full flex flex-col">
-      <header className="mb-6">
-        <motion.h1 
-          className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-300 to-indigo-300"
+      <header className="mb-4 sm:mb-6 px-2 sm:px-0">
+        <motion.h1
+          className="text-3xl sm:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-300 to-indigo-300"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
           Projets
         </motion.h1>
-        <motion.p 
-          className="text-indigo-200 mt-2"
+        <motion.p
+          className="text-indigo-200 mt-2 text-sm sm:text-base"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.2 }}
@@ -359,18 +371,18 @@ const Projects = () => {
         </motion.p>
       </header>
 
-      <div className="flex flex-grow h-[calc(100%-80px)] overflow-hidden">
+      <div className="flex flex-col lg:flex-row flex-grow overflow-hidden gap-4">
         {/* Panneau de gauche: Liste des projets */}
-        <motion.div 
-          className="w-1/3 pr-4 overflow-hidden flex flex-col"
+        <motion.div
+          className={`${showDetails ? 'hidden lg:flex' : 'flex'} w-full lg:w-1/3 overflow-hidden flex-col`}
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.3 }}
         >
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold text-white">Vos Projets</h2>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3 px-2 sm:px-0">
+            <h2 className="text-lg sm:text-xl font-semibold text-white">Vos Projets</h2>
             <motion.button
-              className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-full flex items-center"
+              className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 sm:px-4 sm:py-2 rounded-full flex items-center text-sm sm:text-base"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={handleAddProject}
@@ -378,10 +390,12 @@ const Projects = () => {
               <span className="mr-1">+</span> Nouveau Projet
             </motion.button>
           </div>
-          
-          <ProjectFilter filters={filters} setFilters={setFilters} />
-          
-          <div className="flex-grow overflow-y-auto pr-2 space-y-3 mt-4">
+
+          <div className="px-2 sm:px-0">
+            <ProjectFilter filters={filters} setFilters={setFilters} />
+          </div>
+
+          <div className="flex-grow overflow-y-auto px-2 sm:px-0 space-y-3 mt-4">
             <AnimatePresence>
               {filteredProjects.length > 0 ? (
                 filteredProjects.map((project) => (
@@ -393,7 +407,7 @@ const Projects = () => {
                     transition={{ duration: 0.2 }}
                     layout
                   >
-                    <ProjectCard 
+                    <ProjectCard
                       project={project}
                       isSelected={selectedProject && selectedProject.id === project.id}
                       onClick={() => handleSelectProject(project)}
@@ -413,19 +427,31 @@ const Projects = () => {
             </AnimatePresence>
           </div>
         </motion.div>
-        
+
         {/* Panneau de droite: Détails du projet ou formulaire d'ajout */}
-        <motion.div 
-          className="w-2/3 pl-4 overflow-hidden"
+        <motion.div
+          className={`${showDetails ? 'flex' : 'hidden lg:flex'} w-full lg:w-2/3 overflow-hidden flex-col`}
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.3, delay: 0.1 }}
         >
-          <div className="bg-gray-800/30 backdrop-blur-sm rounded-2xl p-6 h-full overflow-y-auto">
+          {/* Bouton retour mobile */}
+          {showDetails && (
+            <motion.button
+              className="lg:hidden mb-3 flex items-center text-purple-300 hover:text-purple-200 px-2"
+              onClick={handleBackToList}
+              whileTap={{ scale: 0.95 }}
+            >
+              <FiArrowLeft className="mr-2" />
+              <span className="text-sm">Retour à la liste</span>
+            </motion.button>
+          )}
+
+          <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl sm:rounded-2xl p-4 sm:p-6 h-full overflow-y-auto">
             {isLoading && selectedProject ? (
               <div className="h-full flex items-center justify-center">
                 <motion.div
-                  className="w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full"
+                  className="w-10 h-10 sm:w-12 sm:h-12 border-4 border-purple-500 border-t-transparent rounded-full"
                   animate={{ rotate: 360 }}
                   transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                 />
@@ -440,9 +466,9 @@ const Projects = () => {
                     exit={{ opacity: 0, y: -20 }}
                     transition={{ duration: 0.3 }}
                   >
-                    <ProjectForm 
+                    <ProjectForm
                       onSave={handleSaveProject}
-                      onCancel={() => setIsAddingProject(false)}
+                      onCancel={handleBackToList}
                     />
                   </motion.div>
                 ) : selectedProject ? (
@@ -453,7 +479,7 @@ const Projects = () => {
                     exit={{ opacity: 0, y: -20 }}
                     transition={{ duration: 0.3 }}
                   >
-                    <ProjectDetails 
+                    <ProjectDetails
                       project={selectedProject}
                       onUpdate={(updatedData) => handleUpdateProject(selectedProject.id, updatedData)}
                       onDelete={() => handleDeleteProject(selectedProject.id)}

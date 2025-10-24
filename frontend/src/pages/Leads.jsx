@@ -1,7 +1,7 @@
 // src/pages/Leads.jsx
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiUsers, FiStar } from 'react-icons/fi';
+import { FiUsers, FiStar, FiArrowLeft } from 'react-icons/fi';
 // Remplacer executeQuery par la fonction d'API
 import { leadsAPI } from '../services/api';
 
@@ -18,6 +18,7 @@ const Leads = () => {
   const [selectedLead, setSelectedLead] = useState(null);
   const [isAddingLead, setIsAddingLead] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [showDetails, setShowDetails] = useState(false); // Pour toggle mobile
   const [filters, setFilters] = useState({
     search: '',
     status: 'all',
@@ -32,7 +33,7 @@ const Leads = () => {
         // Récupérer les leads via l'API
         const leadsData = await leadsAPI.getAll();
         console.log('Leads chargés via API:', leadsData);
-        
+
         setLeads(leadsData);
         setFilteredLeads(leadsData);
       } catch (error) {
@@ -43,7 +44,7 @@ const Leads = () => {
         setIsLoading(false);
       }
     };
-    
+
     fetchLeads();
   }, []);
 
@@ -51,19 +52,19 @@ const Leads = () => {
   useEffect(() => {
     const result = leads.filter(lead => {
       // Filtre par recherche
-      const searchMatch = filters.search === '' || 
+      const searchMatch = filters.search === '' ||
         lead.name.toLowerCase().includes(filters.search.toLowerCase()) ||
         (lead.company && lead.company.toLowerCase().includes(filters.search.toLowerCase()));
-      
+
       // Filtre par statut
       const statusMatch = filters.status === 'all' || lead.status === filters.status;
-      
+
       // Filtre par type
       const typeMatch = filters.type === 'all' || lead.type === filters.type;
-      
+
       return searchMatch && statusMatch && typeMatch;
     });
-    
+
     setFilteredLeads(result);
   }, [leads, filters]);
 
@@ -73,14 +74,16 @@ const Leads = () => {
       // Récupérer les détails complets du lead via l'API
       const leadDetails = await leadsAPI.getById(lead.id);
       console.log('Détails du lead chargés via API:', leadDetails);
-      
+
       setSelectedLead(leadDetails);
       setIsAddingLead(false);
+      setShowDetails(true); // Afficher les détails sur mobile
     } catch (error) {
       console.error(`Erreur lors du chargement des détails du lead ${lead.id}:`, error);
       // Utiliser les informations de base du lead si les détails ne peuvent pas être chargés
       setSelectedLead(lead);
       setIsAddingLead(false);
+      setShowDetails(true); // Afficher les détails sur mobile
     }
   };
 
@@ -88,6 +91,14 @@ const Leads = () => {
   const handleAddLead = () => {
     setSelectedLead(null);
     setIsAddingLead(true);
+    setShowDetails(true); // Afficher le formulaire sur mobile
+  };
+
+  // Retour à la liste (mobile)
+  const handleBackToList = () => {
+    setShowDetails(false);
+    setSelectedLead(null);
+    setIsAddingLead(false);
   };
 
   // Sauvegarde d'un nouveau lead via l'API
@@ -96,7 +107,7 @@ const Leads = () => {
       // Utiliser l'API pour créer le lead
       const newLead = await leadsAPI.create(leadData);
       console.log('Lead créé via API:', newLead);
-      
+
       // Mettre à jour l'état local
       setLeads([...leads, newLead]);
       setIsAddingLead(false);
@@ -113,12 +124,12 @@ const Leads = () => {
       // Utiliser l'API pour mettre à jour le lead
       const updatedLead = await leadsAPI.update(id, updatedData);
       console.log('Lead mis à jour via API:', updatedLead);
-      
+
       // Mettre à jour l'état local
-      const updatedLeads = leads.map(lead => 
+      const updatedLeads = leads.map(lead =>
         lead.id === id ? { ...lead, ...updatedLead } : lead
       );
-      
+
       setLeads(updatedLeads);
       setSelectedLead({ ...selectedLead, ...updatedLead });
     } catch (error) {
@@ -133,12 +144,13 @@ const Leads = () => {
       // Utiliser l'API pour supprimer le lead
       await leadsAPI.delete(id);
       console.log('Lead supprimé via API');
-      
+
       // Mettre à jour l'état local
       const remainingLeads = leads.filter(lead => lead.id !== id);
-      
+
       setLeads(remainingLeads);
       setSelectedLead(null);
+      setShowDetails(false); // Retour à la liste sur mobile
     } catch (error) {
       console.error('Erreur lors de la suppression du lead:', error);
       alert("Une erreur est survenue lors de la suppression du lead.");
@@ -151,7 +163,7 @@ const Leads = () => {
       // Utiliser l'API pour ajouter un contact
       const newContact = await leadsAPI.addContact(leadId, contactData);
       console.log('Contact ajouté via API:', newContact);
-      
+
       // Mettre à jour l'état local du lead sélectionné
       if (selectedLead && selectedLead.id === leadId) {
         const updatedContacts = [...(selectedLead.contacts || []), newContact];
@@ -172,13 +184,13 @@ const Leads = () => {
       // Utiliser l'API pour mettre à jour un contact
       const updatedContact = await leadsAPI.updateContact(leadId, contactId, updatedData);
       console.log('Contact mis à jour via API:', updatedContact);
-      
+
       // Mettre à jour l'état local du lead sélectionné
       if (selectedLead && selectedLead.id === leadId && selectedLead.contacts) {
-        const updatedContacts = selectedLead.contacts.map(contact => 
+        const updatedContacts = selectedLead.contacts.map(contact =>
           contact.id === contactId ? { ...contact, ...updatedContact } : contact
         );
-        
+
         setSelectedLead({
           ...selectedLead,
           contacts: updatedContacts
@@ -196,11 +208,11 @@ const Leads = () => {
       // Utiliser l'API pour supprimer un contact
       await leadsAPI.deleteContact(leadId, contactId);
       console.log('Contact supprimé via API');
-      
+
       // Mettre à jour l'état local du lead sélectionné
       if (selectedLead && selectedLead.id === leadId && selectedLead.contacts) {
         const remainingContacts = selectedLead.contacts.filter(contact => contact.id !== contactId);
-        
+
         setSelectedLead({
           ...selectedLead,
           contacts: remainingContacts
@@ -216,7 +228,7 @@ const Leads = () => {
     return (
       <div className="h-full flex items-center justify-center">
         <motion.div
-          className="w-16 h-16 border-4 border-indigo-500 border-t-transparent rounded-full"
+          className="w-12 h-12 sm:w-16 sm:h-16 border-4 border-indigo-500 border-t-transparent rounded-full"
           animate={{ rotate: 360 }}
           transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
         />
@@ -226,17 +238,17 @@ const Leads = () => {
 
   return (
     <div className="h-full flex flex-col">
-      <header className="mb-6">
-        <motion.h1 
-          className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-300 to-purple-300"
+      <header className="mb-4 sm:mb-6 px-2 sm:px-0">
+        <motion.h1
+          className="text-3xl sm:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-300 to-purple-300"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
           Leads & Contacts
         </motion.h1>
-        <motion.p 
-          className="text-indigo-200 mt-2"
+        <motion.p
+          className="text-indigo-200 mt-2 text-sm sm:text-base"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.2 }}
@@ -245,18 +257,18 @@ const Leads = () => {
         </motion.p>
       </header>
 
-      <div className="flex flex-grow h-[calc(100%-80px)] overflow-hidden">
+      <div className="flex flex-col lg:flex-row flex-grow overflow-hidden gap-4">
         {/* Panneau de gauche: Liste des leads */}
-        <motion.div 
-          className="w-1/3 pr-4 overflow-hidden flex flex-col"
+        <motion.div
+          className={`${showDetails ? 'hidden lg:flex' : 'flex'} w-full lg:w-1/3 overflow-hidden flex-col`}
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.3 }}
         >
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold text-white">Vos Leads</h2>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3 px-2 sm:px-0">
+            <h2 className="text-lg sm:text-xl font-semibold text-white">Vos Leads</h2>
             <motion.button
-              className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-full flex items-center"
+              className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 sm:px-4 sm:py-2 rounded-full flex items-center text-sm sm:text-base"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={handleAddLead}
@@ -264,10 +276,12 @@ const Leads = () => {
               <span className="mr-1">+</span> Nouveau Lead
             </motion.button>
           </div>
-          
-          <LeadFilter filters={filters} setFilters={setFilters} />
-          
-          <div className="flex-grow overflow-y-auto pr-2 space-y-3 mt-4">
+
+          <div className="px-2 sm:px-0">
+            <LeadFilter filters={filters} setFilters={setFilters} />
+          </div>
+
+          <div className="flex-grow overflow-y-auto px-2 sm:px-0 space-y-3 mt-4">
             <AnimatePresence>
               {filteredLeads.length > 0 ? (
                 filteredLeads.map((lead) => (
@@ -279,7 +293,7 @@ const Leads = () => {
                     transition={{ duration: 0.2 }}
                     layout
                   >
-                    <LeadCard 
+                    <LeadCard
                       lead={lead}
                       isSelected={selectedLead && selectedLead.id === lead.id}
                       onClick={() => handleSelectLead(lead)}
@@ -296,15 +310,27 @@ const Leads = () => {
             </AnimatePresence>
           </div>
         </motion.div>
-        
+
         {/* Panneau de droite: Détails du lead ou formulaire d'ajout */}
-        <motion.div 
-          className="w-2/3 pl-4 overflow-hidden"
+        <motion.div
+          className={`${showDetails ? 'flex' : 'hidden lg:flex'} w-full lg:w-2/3 overflow-hidden flex-col`}
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.3, delay: 0.1 }}
         >
-          <div className="bg-gray-800/30 backdrop-blur-sm rounded-2xl p-6 h-full overflow-y-auto">
+          {/* Bouton retour mobile */}
+          {showDetails && (
+            <motion.button
+              className="lg:hidden mb-3 flex items-center text-indigo-300 hover:text-indigo-200 px-2"
+              onClick={handleBackToList}
+              whileTap={{ scale: 0.95 }}
+            >
+              <FiArrowLeft className="mr-2" />
+              <span className="text-sm">Retour à la liste</span>
+            </motion.button>
+          )}
+
+          <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl sm:rounded-2xl p-4 sm:p-6 h-full overflow-y-auto">
             <AnimatePresence mode="wait">
               {isAddingLead ? (
                 <motion.div
@@ -314,9 +340,9 @@ const Leads = () => {
                   exit={{ opacity: 0, y: -20 }}
                   transition={{ duration: 0.3 }}
                 >
-                  <LeadForm 
+                  <LeadForm
                     onSave={handleSaveLead}
-                    onCancel={() => setIsAddingLead(false)}
+                    onCancel={handleBackToList}
                   />
                 </motion.div>
               ) : selectedLead ? (
@@ -327,15 +353,15 @@ const Leads = () => {
                   exit={{ opacity: 0, y: -20 }}
                   transition={{ duration: 0.3 }}
                 >
-                  <LeadDetails 
+                  <LeadDetails
                     lead={selectedLead}
                     onUpdate={(updatedData) => handleUpdateLead(selectedLead.id, updatedData)}
                     onDelete={() => handleDeleteLead(selectedLead.id)}
                     onAddContact={(contactData) => handleAddContact(selectedLead.id, contactData)}
-                    onUpdateContact={(contactId, updatedData) => 
+                    onUpdateContact={(contactId, updatedData) =>
                       handleUpdateContact(selectedLead.id, contactId, updatedData)
                     }
-                    onDeleteContact={(contactId) => 
+                    onDeleteContact={(contactId) =>
                       handleDeleteContact(selectedLead.id, contactId)
                     }
                   />
