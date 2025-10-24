@@ -1,11 +1,12 @@
 // src/components/projects/ProjectCard.jsx
 import React from 'react';
 import { motion } from 'framer-motion';
+import { FiGlobe, FiSmartphone, FiMonitor, FiEdit2, FiMegaphone, FiTool, FiPackage, FiClipboard } from 'react-icons/fi';
 
 const ProjectCard = ({ project, isSelected, onClick }) => {
   // S'assurer que le projet a une valeur progress
   const projectProgress = typeof project.progress === 'number' ? project.progress : 0;
-  
+
   // Configuration des couleurs de statut
   const statusConfig = {
     'en-cours': {
@@ -42,13 +43,13 @@ const ProjectCard = ({ project, isSelected, onClick }) => {
 
   // Configuration des icônes de type
   const typeConfig = {
-    'site-web': { icon: '🌐', label: 'Site Web' },
-    'application-mobile': { icon: '📱', label: 'App Mobile' },
-    'application-bureau': { icon: '💻', label: 'App Bureau' },
-    'design': { icon: '🎨', label: 'Design' },
-    'marketing': { icon: '📢', label: 'Marketing' },
-    'maintenance': { icon: '🔧', label: 'Maintenance' },
-    'autre': { icon: '📦', label: 'Autre' }
+    'site-web': { icon: <FiGlobe />, label: 'Site Web' },
+    'application-mobile': { icon: <FiSmartphone />, label: 'App Mobile' },
+    'application-bureau': { icon: <FiMonitor />, label: 'App Bureau' },
+    'design': { icon: <FiEdit2 />, label: 'Design' },
+    'marketing': { icon: <FiMegaphone />, label: 'Marketing' },
+    'maintenance': { icon: <FiTool />, label: 'Maintenance' },
+    'autre': { icon: <FiPackage />, label: 'Autre' }
   };
 
   // Valeurs par défaut si le statut ou type n'est pas configuré
@@ -59,7 +60,7 @@ const ProjectCard = ({ project, isSelected, onClick }) => {
     label: project.status || 'Inconnu'
   };
 
-  const typeInfo = typeConfig[project.type] || { icon: '📋', label: project.type || 'Autre' };
+  const typeInfo = typeConfig[project.type] || { icon: <FiClipboard />, label: project.type || 'Autre' };
 
   // Format des dates
   const formatDate = (dateString) => {
@@ -125,7 +126,7 @@ const ProjectCard = ({ project, isSelected, onClick }) => {
         {/* En-tête avec type et date */}
         <div className="flex justify-between items-start mb-2">
           <div className="flex items-center">
-            <span className="text-lg mr-2">{typeInfo.icon}</span>
+            <span className="text-base mr-2">{typeInfo.icon}</span>
             <span className="text-xs text-gray-400">{typeInfo.label}</span>
           </div>
           <div className={`text-xs px-2 py-1 rounded-full ${statusStyle.bg} ${statusStyle.text} font-medium`}>

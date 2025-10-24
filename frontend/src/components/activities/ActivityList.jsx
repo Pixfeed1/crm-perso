@@ -1,6 +1,7 @@
 // src/components/activities/ActivityList.jsx
 import React from 'react';
 import { motion } from 'framer-motion';
+import { FiMonitor, FiEdit2, FiUsers, FiPhone, FiMegaphone, FiTool, FiClipboard, FiCheckCircle, FiRocket, FiUser } from 'react-icons/fi';
 
 const ActivityList = ({ activities, selectedActivity, onSelectActivity, onCompleteActivity }) => {
   // Fonction pour formater le temps en heures et minutes
@@ -9,21 +10,21 @@ const ActivityList = ({ activities, selectedActivity, onSelectActivity, onComple
     const mins = minutes % 60;
     return `${hours}h${mins > 0 ? ` ${mins}min` : ''}`;
   };
-  
+
   // Formatage de la date
   const formatDate = (dateString) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
   };
-  
+
   // Configuration des couleurs de type
   const typeConfig = {
-    'development': { icon: '💻', label: 'Développement', bg: 'bg-blue-900/20' },
-    'design': { icon: '🎨', label: 'Design', bg: 'bg-purple-900/20' },
-    'meeting': { icon: '👥', label: 'Réunion', bg: 'bg-indigo-900/20' },
-    'call': { icon: '📞', label: 'Appel', bg: 'bg-green-900/20' },
-    'marketing': { icon: '📢', label: 'Marketing', bg: 'bg-amber-900/20' },
-    'maintenance': { icon: '🔧', label: 'Maintenance', bg: 'bg-teal-900/20' }
+    'development': { icon: <FiMonitor />, label: 'Développement', bg: 'bg-blue-900/20' },
+    'design': { icon: <FiEdit2 />, label: 'Design', bg: 'bg-purple-900/20' },
+    'meeting': { icon: <FiUsers />, label: 'Réunion', bg: 'bg-indigo-900/20' },
+    'call': { icon: <FiPhone />, label: 'Appel', bg: 'bg-green-900/20' },
+    'marketing': { icon: <FiMegaphone />, label: 'Marketing', bg: 'bg-amber-900/20' },
+    'maintenance': { icon: <FiTool />, label: 'Maintenance', bg: 'bg-teal-900/20' }
   };
   
   // Configuration des couleurs de priorité
@@ -49,7 +50,7 @@ const ActivityList = ({ activities, selectedActivity, onSelectActivity, onComple
   if (activities.length === 0) {
     return (
       <div className="bg-gray-900/30 rounded-lg p-6 text-center">
-        <div className="text-4xl mb-3">📋</div>
+        <div className="text-4xl mb-3"><FiClipboard /></div>
         <h4 className="text-lg font-medium text-gray-300 mb-2">Aucune activité</h4>
         <p className="text-gray-400 text-sm">
           Aucune activité trouvée pour cette période ou avec ces filtres.
@@ -70,7 +71,7 @@ const ActivityList = ({ activities, selectedActivity, onSelectActivity, onComple
           
           {groupedActivities[date].map(activity => {
             const isSelected = selectedActivity && selectedActivity.id === activity.id;
-            const typeInfo = typeConfig[activity.type] || { icon: '📋', label: activity.type, bg: 'bg-gray-900/20' };
+            const typeInfo = typeConfig[activity.type] || { icon: <FiClipboard />, label: activity.type, bg: 'bg-gray-900/20' };
             const priorityInfo = priorityConfig[activity.priority] || { color: 'bg-gray-500/20 text-gray-300', label: activity.priority };
             
             return (
@@ -99,13 +100,13 @@ const ActivityList = ({ activities, selectedActivity, onSelectActivity, onComple
                         
                         {/* Association projet/lead */}
                         {activity.project_name && (
-                          <span className="inline-flex items-center px-2 py-1 rounded-full bg-indigo-900/30 text-indigo-300 text-xs">
-                            🚀 {activity.project_name}
+                          <span className="inline-flex items-center px-2 py-1 rounded-full bg-indigo-900/30 text-indigo-300 text-xs gap-1">
+                            <FiRocket /> {activity.project_name}
                           </span>
                         )}
                         {activity.lead_name && (
-                          <span className="inline-flex items-center px-2 py-1 rounded-full bg-purple-900/30 text-purple-300 text-xs">
-                            👤 {activity.lead_name}
+                          <span className="inline-flex items-center px-2 py-1 rounded-full bg-purple-900/30 text-purple-300 text-xs gap-1">
+                            <FiUser /> {activity.lead_name}
                           </span>
                         )}
                       </div>
@@ -118,8 +119,8 @@ const ActivityList = ({ activities, selectedActivity, onSelectActivity, onComple
                       {formatTime(activity.planned_time)}
                     </div>
                     {activity.status === 'completed' ? (
-                      <span className="inline-flex items-center px-2 py-1 mt-2 rounded-full bg-green-900/30 text-green-300 text-xs">
-                        ✓ Terminé
+                      <span className="inline-flex items-center px-2 py-1 mt-2 rounded-full bg-green-900/30 text-green-300 text-xs gap-1">
+                        <FiCheckCircle /> Terminé
                       </span>
                     ) : (
                       <motion.button

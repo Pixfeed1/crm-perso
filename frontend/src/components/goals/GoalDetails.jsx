@@ -1,13 +1,14 @@
 // src/components/goals/GoalDetails.jsx
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { FiUsers, FiDollarSign, FiSettings, FiMegaphone, FiStar, FiCheckCircle, FiClock, FiZap, FiAlertCircle, FiMinusCircle } from 'react-icons/fi';
 
-const GoalDetails = ({ 
-  goal, 
-  onUpdate, 
-  onDelete, 
-  onAddMilestone, 
-  onUpdateMilestone 
+const GoalDetails = ({
+  goal,
+  onUpdate,
+  onDelete,
+  onAddMilestone,
+  onUpdateMilestone
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [isAddingMilestone, setIsAddingMilestone] = useState(false);
@@ -19,12 +20,12 @@ const GoalDetails = ({
   const [editData, setEditData] = useState({
     current_value: goal.current_value
   });
-  
+
   // Fonction pour calculer le pourcentage de progression
   const calculateProgress = (current, target) => {
     return Math.min(100, Math.round((current / target) * 100));
   };
-  
+
   // Formatage des dates
   const formatDate = (dateString) => {
     if (!dateString) return 'Non défini';
@@ -40,23 +41,23 @@ const GoalDetails = ({
       return 'Date invalide';
     }
   };
-  
+
   // Configuration des couleurs de catégorie
   const categoryConfig = {
-    'leads': { icon: '👥', label: 'Leads', color: 'text-blue-300' },
-    'revenue': { icon: '💰', label: 'Revenus', color: 'text-emerald-300' },
-    'productivity': { icon: '⚙️', label: 'Productivité', color: 'text-purple-300' },
-    'marketing': { icon: '📢', label: 'Marketing', color: 'text-amber-300' },
-    'personal': { icon: '🌱', label: 'Personnel', color: 'text-rose-300' }
+    'leads': { icon: <FiUsers />, label: 'Leads', color: 'text-blue-300' },
+    'revenue': { icon: <FiDollarSign />, label: 'Revenus', color: 'text-emerald-300' },
+    'productivity': { icon: <FiSettings />, label: 'Productivité', color: 'text-purple-300' },
+    'marketing': { icon: <FiMegaphone />, label: 'Marketing', color: 'text-amber-300' },
+    'personal': { icon: <FiStar />, label: 'Personnel', color: 'text-rose-300' }
   };
-  
+
   // Configuration des couleurs de période
   const periodConfig = {
     'monthly': { label: 'Mensuel', color: 'text-blue-300' },
     'quarterly': { label: 'Trimestriel', color: 'text-purple-300' },
     'yearly': { label: 'Annuel', color: 'text-amber-300' }
   };
-  
+
   // Vérifier si un objectif est actif (en cours)
   const isActive = () => {
     const now = new Date();
@@ -64,38 +65,38 @@ const GoalDetails = ({
     const endDate = new Date(goal.end_date);
     return startDate <= now && endDate >= now;
   };
-  
+
   // Vérifier si un objectif est à venir
   const isUpcoming = () => {
     const now = new Date();
     const startDate = new Date(goal.start_date);
     return startDate > now;
   };
-  
+
   // Vérifier si un objectif est complété
   const isCompleted = () => {
     return goal.current_value >= goal.target_value;
   };
-  
+
   // Vérifier si un objectif est expiré (passé la date de fin)
   const isExpired = () => {
     const now = new Date();
     const endDate = new Date(goal.end_date);
     return endDate < now && !isCompleted();
   };
-  
+
   // Obtenir le statut de l'objectif
   const getGoalStatus = () => {
     if (isCompleted()) {
-      return { text: 'Complété', color: 'bg-green-900/30 text-green-300', icon: '✓' };
+      return { text: 'Complété', color: 'bg-green-900/30 text-green-300', icon: <FiCheckCircle /> };
     } else if (isUpcoming()) {
-      return { text: 'À venir', color: 'bg-purple-900/30 text-purple-300', icon: '🔮' };
+      return { text: 'À venir', color: 'bg-purple-900/30 text-purple-300', icon: <FiClock /> };
     } else if (isActive()) {
-      return { text: 'En cours', color: 'bg-blue-900/30 text-blue-300', icon: '⚡' };
+      return { text: 'En cours', color: 'bg-blue-900/30 text-blue-300', icon: <FiZap /> };
     } else if (isExpired()) {
-      return { text: 'Expiré', color: 'bg-rose-900/30 text-rose-300', icon: '⏰' };
+      return { text: 'Expiré', color: 'bg-rose-900/30 text-rose-300', icon: <FiAlertCircle /> };
     } else {
-      return { text: 'Inactif', color: 'bg-gray-900/30 text-gray-300', icon: '📌' };
+      return { text: 'Inactif', color: 'bg-gray-900/30 text-gray-300', icon: <FiMinusCircle /> };
     }
   };
   

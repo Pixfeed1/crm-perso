@@ -1,6 +1,7 @@
 // src/components/projects/ProjectDetails.jsx
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { FiGlobe, FiSmartphone, FiMonitor, FiEdit2, FiMegaphone, FiTool, FiPackage, FiClipboard, FiRotateCw, FiCalendar, FiCheckCircle, FiPauseCircle, FiXCircle, FiHelpCircle, FiTrash2, FiFileText, FiCheck } from 'react-icons/fi';
 
 // Sous-composants
 import TaskList from './TaskList';
@@ -10,7 +11,7 @@ const ProjectDetails = ({ project, onUpdate, onDelete, onAddTask, onToggleTaskSt
   const [isEditing, setIsEditing] = useState(false);
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  
+
   // Configuration des couleurs de statut
   const statusConfig = {
     'en-cours': {
@@ -18,47 +19,47 @@ const ProjectDetails = ({ project, onUpdate, onDelete, onAddTask, onToggleTaskSt
       text: 'text-blue-300',
       border: 'border-blue-500/30',
       label: 'En cours',
-      icon: '🔄'
+      icon: <FiRotateCw />
     },
     'planifié': {
       bg: 'bg-purple-500/20',
       text: 'text-purple-300',
       border: 'border-purple-500/30',
       label: 'Planifié',
-      icon: '📅'
+      icon: <FiCalendar />
     },
     'terminé': {
       bg: 'bg-emerald-500/20',
       text: 'text-emerald-300',
       border: 'border-emerald-500/30',
       label: 'Terminé',
-      icon: '✅'
+      icon: <FiCheckCircle />
     },
     'pause': {
       bg: 'bg-amber-500/20',
       text: 'text-amber-300',
       border: 'border-amber-500/30',
       label: 'En pause',
-      icon: '⏸️'
+      icon: <FiPauseCircle />
     },
     'annulé': {
       bg: 'bg-rose-500/20',
       text: 'text-rose-300',
       border: 'border-rose-500/30',
       label: 'Annulé',
-      icon: '❌'
+      icon: <FiXCircle />
     }
   };
 
   // Configuration des icônes de type
   const typeConfig = {
-    'site-web': { icon: '🌐', label: 'Site Web' },
-    'application-mobile': { icon: '📱', label: 'App Mobile' },
-    'application-bureau': { icon: '💻', label: 'App Bureau' },
-    'design': { icon: '🎨', label: 'Design' },
-    'marketing': { icon: '📢', label: 'Marketing' },
-    'maintenance': { icon: '🔧', label: 'Maintenance' },
-    'autre': { icon: '📦', label: 'Autre' }
+    'site-web': { icon: <FiGlobe />, label: 'Site Web' },
+    'application-mobile': { icon: <FiSmartphone />, label: 'App Mobile' },
+    'application-bureau': { icon: <FiMonitor />, label: 'App Bureau' },
+    'design': { icon: <FiEdit2 />, label: 'Design' },
+    'marketing': { icon: <FiMegaphone />, label: 'Marketing' },
+    'maintenance': { icon: <FiTool />, label: 'Maintenance' },
+    'autre': { icon: <FiPackage />, label: 'Autre' }
   };
 
   // Valeurs par défaut si le statut ou type n'est pas configuré
@@ -67,10 +68,10 @@ const ProjectDetails = ({ project, onUpdate, onDelete, onAddTask, onToggleTaskSt
     text: 'text-gray-300',
     border: 'border-gray-500/30',
     label: project.status,
-    icon: '❓'
+    icon: <FiHelpCircle />
   };
 
-  const typeInfo = typeConfig[project.type] || { icon: '📋', label: project.type };
+  const typeInfo = typeConfig[project.type] || { icon: <FiClipboard />, label: project.type };
   
   // Format des dates
   const formatDate = (dateString) => {
@@ -179,16 +180,16 @@ const ProjectDetails = ({ project, onUpdate, onDelete, onAddTask, onToggleTaskSt
             className="p-2 rounded-lg bg-purple-600/30 hover:bg-purple-600/50 text-purple-300"
             onClick={() => setIsEditing(true)}
           >
-            ✏️
+            <FiEdit2 />
           </motion.button>
-          
+
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             className="p-2 rounded-lg bg-rose-600/30 hover:bg-rose-600/50 text-rose-300"
             onClick={() => setShowDeleteConfirm(true)}
           >
-            🗑️
+            <FiTrash2 />
           </motion.button>
         </div>
       </div>
@@ -198,7 +199,7 @@ const ProjectDetails = ({ project, onUpdate, onDelete, onAddTask, onToggleTaskSt
         {/* Panneau de gauche (Informations) */}
         <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl p-5">
           <h3 className="text-lg font-medium text-gray-200 mb-4 flex items-center">
-            <span className="mr-2">📋</span>
+            <span className="mr-2"><FiClipboard /></span>
             Détails du projet
           </h3>
           
@@ -274,7 +275,7 @@ const ProjectDetails = ({ project, onUpdate, onDelete, onAddTask, onToggleTaskSt
         {/* Panneau de droite (Description) */}
         <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl p-5">
           <h3 className="text-lg font-medium text-gray-200 mb-4 flex items-center">
-            <span className="mr-2">📝</span>
+            <span className="mr-2"><FiFileText /></span>
             Description
           </h3>
           
@@ -316,7 +317,7 @@ const ProjectDetails = ({ project, onUpdate, onDelete, onAddTask, onToggleTaskSt
       <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl p-5 mb-6">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-medium text-gray-200 flex items-center">
-            <span className="mr-2">✓</span>
+            <span className="mr-2"><FiCheck /></span>
             Tâches
           </h3>
           

@@ -48,13 +48,13 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
 
   // Options de type
   const typeOptions = [
-    { value: 'site-web', label: 'Site Web', icon: '🌐' },
-    { value: 'application-mobile', label: 'Application Mobile', icon: '📱' },
-    { value: 'application-bureau', label: 'Application Bureau', icon: '💻' },
-    { value: 'design', label: 'Design', icon: '🎨' },
-    { value: 'marketing', label: 'Marketing', icon: '📢' },
-    { value: 'maintenance', label: 'Maintenance', icon: '🔧' },
-    { value: 'autre', label: 'Autre', icon: '📦' }
+    { value: 'site-web', label: 'Site Web' },
+    { value: 'application-mobile', label: 'Application Mobile' },
+    { value: 'application-bureau', label: 'Application Bureau' },
+    { value: 'design', label: 'Design' },
+    { value: 'marketing', label: 'Marketing' },
+    { value: 'maintenance', label: 'Maintenance' },
+    { value: 'autre', label: 'Autre' }
   ];
   
   // Options de statut
@@ -231,7 +231,7 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
             >
               {typeOptions.map(option => (
                 <option key={option.value} value={option.value}>
-                  {option.icon} {option.label}
+                  {option.label}
                 </option>
               ))}
             </select>

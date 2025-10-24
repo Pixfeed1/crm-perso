@@ -53,11 +53,11 @@ const GoalForm = ({ goal = {}, onSave, onCancel }) => {
 
   // Options de catégorie
   const categoryOptions = [
-    { value: 'leads', label: 'Leads', icon: '👥', description: 'Objectifs liés à l\'acquisition de clients' },
-    { value: 'revenue', label: 'Revenus', icon: '💰', description: 'Objectifs financiers et de chiffre d\'affaires' },
-    { value: 'productivity', label: 'Productivité', icon: '⚙️', description: 'Objectifs liés à l\'efficacité et à la performance' },
-    { value: 'marketing', label: 'Marketing', icon: '📢', description: 'Objectifs de visibilité et de communication' },
-    { value: 'personal', label: 'Personnel', icon: '🌱', description: 'Objectifs de développement personnel' }
+    { value: 'leads', label: 'Leads', description: 'Objectifs liés à l\'acquisition de clients' },
+    { value: 'revenue', label: 'Revenus', description: 'Objectifs financiers et de chiffre d\'affaires' },
+    { value: 'productivity', label: 'Productivité', description: 'Objectifs liés à l\'efficacité et à la performance' },
+    { value: 'marketing', label: 'Marketing', description: 'Objectifs de visibilité et de communication' },
+    { value: 'personal', label: 'Personnel', description: 'Objectifs de développement personnel' }
   ];
   
   // Options de période
