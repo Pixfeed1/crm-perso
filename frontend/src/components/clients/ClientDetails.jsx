@@ -6,29 +6,15 @@ import {
   FiMapPin, FiGlobe, FiCalendar, FiDollarSign, FiTag, FiFileText
 } from 'react-icons/fi';
 import ClientForm from './ClientForm';
+import { formatLongDate, formatValue } from '../../utils/formatters';
 
 const ClientDetails = ({ client, onUpdate, onDelete, onClose }) => {
   const [isEditing, setIsEditing] = useState(false);
 
-  // Format de la date
-  const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('fr-FR', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
-    }).format(date);
-  };
-
-  // Format de la valeur
-  const formatValue = (value) => {
+  // Format de la valeur avec texte par défaut
+  const formatClientValue = (value) => {
     if (!value || value === 0) return 'Non définie';
-    return new Intl.NumberFormat('fr-FR', {
-      style: 'currency',
-      currency: 'EUR',
-      maximumFractionDigits: 0
-    }).format(value);
+    return formatValue(value, { showZero: false });
   };
 
   // Configuration des statuts
@@ -217,7 +203,7 @@ const ClientDetails = ({ client, onUpdate, onDelete, onClose }) => {
             <span>Valeur vie client</span>
           </div>
           <div className="text-xl font-semibold text-green-400">
-            {formatValue(client.lifetime_value)}
+            {formatClientValue(client.lifetime_value)}
           </div>
         </div>
 
@@ -227,7 +213,7 @@ const ClientDetails = ({ client, onUpdate, onDelete, onClose }) => {
             <span>Début contrat</span>
           </div>
           <div className="text-white">
-            {client.contract_start_date ? formatDate(client.contract_start_date) : 'N/A'}
+            {client.contract_start_date ? formatLongDate(client.contract_start_date) : 'N/A'}
           </div>
         </div>
 
@@ -237,7 +223,7 @@ const ClientDetails = ({ client, onUpdate, onDelete, onClose }) => {
             <span>Client depuis</span>
           </div>
           <div className="text-white">
-            {formatDate(client.created_at)}
+            {formatLongDate(client.created_at)}
           </div>
         </div>
       </div>

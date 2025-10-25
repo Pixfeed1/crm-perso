@@ -265,11 +265,11 @@ const ClientForm = ({ client = {}, onSave, onCancel }) => {
               name="industry"
               value={formData.industry}
               onChange={handleInputChange}
-              className="w-full px-4 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+              className="w-full px-4 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500 [&>option]:bg-gray-800 [&>option]:text-white"
             >
-              <option value="">Sélectionner...</option>
+              <option value="" className="bg-gray-800 text-white">Sélectionner...</option>
               {industryOptions.map(option => (
-                <option key={option.value} value={option.value}>{option.label}</option>
+                <option key={option.value} value={option.value} className="bg-gray-800 text-white">{option.label}</option>
               ))}
             </select>
           </div>
@@ -280,11 +280,11 @@ const ClientForm = ({ client = {}, onSave, onCancel }) => {
               name="source"
               value={formData.source}
               onChange={handleInputChange}
-              className="w-full px-4 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+              className="w-full px-4 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500 [&>option]:bg-gray-800 [&>option]:text-white"
             >
-              <option value="">Sélectionner...</option>
+              <option value="" className="bg-gray-800 text-white">Sélectionner...</option>
               {sourceOptions.map(option => (
-                <option key={option.value} value={option.value}>{option.label}</option>
+                <option key={option.value} value={option.value} className="bg-gray-800 text-white">{option.label}</option>
               ))}
             </select>
           </div>
@@ -326,10 +326,10 @@ const ClientForm = ({ client = {}, onSave, onCancel }) => {
               name="status"
               value={formData.status}
               onChange={handleInputChange}
-              className="w-full px-4 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+              className="w-full px-4 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500 [&>option]:bg-gray-800 [&>option]:text-white"
             >
-              <option value="active">Actif</option>
-              <option value="inactive">Inactif</option>
+              <option value="active" className="bg-gray-800 text-white">Actif</option>
+              <option value="inactive" className="bg-gray-800 text-white">Inactif</option>
             </select>
           </div>
 

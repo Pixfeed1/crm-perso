@@ -2,6 +2,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { FiBriefcase, FiUser, FiMail, FiPhone } from 'react-icons/fi';
+import { formatDate, formatValue } from '../../utils/formatters';
 
 const ClientCard = ({ client, isSelected, onClick }) => {
   // Configuration des couleurs de statut
@@ -30,26 +31,6 @@ const ClientCard = ({ client, isSelected, onClick }) => {
 
   const typeInfo = typeConfig[client.type] || typeConfig.individual;
   const TypeIcon = typeInfo.icon;
-
-  // Format de la date
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('fr-FR', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric'
-    }).format(date);
-  };
-
-  // Format de la valeur
-  const formatValue = (value) => {
-    if (!value || value === 0) return null;
-    return new Intl.NumberFormat('fr-FR', {
-      style: 'currency',
-      currency: 'EUR',
-      maximumFractionDigits: 0
-    }).format(value);
-  };
 
   return (
     <motion.div
