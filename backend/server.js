@@ -7,8 +7,7 @@ const dotenv = require('dotenv');
 const cookieParser = require('cookie-parser');
 const fs = require('fs');
 const db = require('./config/pgConfig'); // Changé pour utiliser PostgreSQL
-const { createRemindersTable } = require('./scripts/createRemindersTable');
-const { createClientsTable } = require('./scripts/createClientsTable');
+const { initAllTables } = require('./scripts/initAllTables');
 
 // Charger les variables d'environnement
 dotenv.config();
@@ -165,15 +164,12 @@ app.use((err, req, res, next) => {
 async function initializeDatabase() {
   try {
     console.log('🔄 Initialisation de la base de données...');
-    await createRemindersTable();
-    await createClientsTable();
+    await initAllTables();
     console.log('✅ Base de données initialisée avec succès.');
   } catch (error) {
     console.error('⚠️ Erreur lors de l\'initialisation de la base de données:', error.message);
-    // Ne pas bloquer le démarrage du serveur si la table existe déjà
-    if (!error.message.includes('existe déjà')) {
-      console.error('❌ Erreur critique lors de l\'initialisation de la base de données');
-    }
+    // Ne pas bloquer le démarrage du serveur
+    console.error('❌ Erreur lors de l\'initialisation, mais le serveur va démarrer quand même');
   }
 }
 
