@@ -23,12 +23,20 @@ export const searchCompanies = async (query) => {
     const encodedQuery = encodeURIComponent(query);
 
     // Appel à l'API Sirene - recherche dans la dénomination
+    // NOTE: L'API entreprise.data.gouv.fr peut avoir des problèmes de connexion
+    // Si l'API est indisponible, on retourne un tableau vide sans bloquer l'interface
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // Timeout 5 secondes
+
     const response = await fetch(
-      `${SIRENE_API_URL}/unites_legales?q=${encodedQuery}&nombre=10&champs=siren,denominationUniteLegale,categorieJuridiqueUniteLegale,activitePrincipaleUniteLegale,nomenclatureActivitePrincipaleUniteLegale,trancheEffectifsUniteLegale`
+      `${SIRENE_API_URL}/unites_legales?q=${encodedQuery}&nombre=10&champs=siren,denominationUniteLegale,categorieJuridiqueUniteLegale,activitePrincipaleUniteLegale,nomenclatureActivitePrincipaleUniteLegale,trancheEffectifsUniteLegale`,
+      { signal: controller.signal }
     );
 
+    clearTimeout(timeoutId);
+
     if (!response.ok) {
-      console.error('Erreur API Sirene:', response.status);
+      console.warn('API Sirene indisponible (statut:', response.status, '). L\'auto-complétion est désactivée.');
       return [];
     }
 
@@ -48,7 +56,13 @@ export const searchCompanies = async (query) => {
 
     return [];
   } catch (error) {
-    console.error('Erreur lors de la recherche Sirene:', error);
+    // Si l'API est down (ERR_CONNECTION_RESET, timeout, etc.), on retourne vide
+    // L'utilisateur peut toujours saisir manuellement le nom de l'entreprise
+    if (error.name === 'AbortError') {
+      console.warn('API Sirene timeout (>5s). Saisie manuelle uniquement.');
+    } else {
+      console.warn('API Sirene inaccessible:', error.message, '. Saisie manuelle uniquement.');
+    }
     return [];
   }
 };
@@ -64,12 +78,18 @@ export const getCompanyDetails = async (siren) => {
   }
 
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+
     const response = await fetch(
-      `${SIRENE_API_URL}/unites_legales/${siren}`
+      `${SIRENE_API_URL}/unites_legales/${siren}`,
+      { signal: controller.signal }
     );
 
+    clearTimeout(timeoutId);
+
     if (!response.ok) {
-      console.error('Erreur API Sirene (détails):', response.status);
+      console.warn('API Sirene (détails) indisponible:', response.status);
       return null;
     }
 
@@ -93,7 +113,11 @@ export const getCompanyDetails = async (siren) => {
 
     return null;
   } catch (error) {
-    console.error('Erreur lors de la récupération des détails Sirene:', error);
+    if (error.name === 'AbortError') {
+      console.warn('API Sirene (détails) timeout.');
+    } else {
+      console.warn('API Sirene (détails) inaccessible:', error.message);
+    }
     return null;
   }
 };

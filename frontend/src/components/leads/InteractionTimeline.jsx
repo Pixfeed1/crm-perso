@@ -105,7 +105,7 @@ const InteractionTimeline = ({ interactions = [], contacts = [], onUpdateInterac
               <div className="flex gap-3 sm:gap-4">
                 {/* Icône du type d'interaction */}
                 <div className={`flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-full ${config.bg} border ${config.border} flex items-center justify-center ${config.color} relative z-10`}>
-                  <span className="text-sm sm:text-base">{config.icon}</span>
+                  <span className="text-sm sm:text-base text-white">{config.icon}</span>
                 </div>
 
                 {/* Contenu de l'interaction */}
@@ -142,7 +142,7 @@ const InteractionTimeline = ({ interactions = [], contacts = [], onUpdateInterac
                         whileTap={{ scale: 0.95 }}
                         onClick={() => setEditingInteraction(interaction)}
                       >
-                        <FiEdit2 className="text-xs sm:text-sm" />
+                        <FiEdit2 className="text-xs sm:text-sm text-indigo-300" />
                       </motion.button>
                       <motion.button
                         className="text-xs sm:text-sm text-rose-300 hover:text-rose-200 p-1.5 sm:p-2 rounded-lg hover:bg-rose-900/30"
@@ -150,7 +150,7 @@ const InteractionTimeline = ({ interactions = [], contacts = [], onUpdateInterac
                         whileTap={{ scale: 0.95 }}
                         onClick={() => setDeletingInteraction(interaction)}
                       >
-                        <FiTrash2 className="text-xs sm:text-sm" />
+                        <FiTrash2 className="text-xs sm:text-sm text-rose-300" />
                       </motion.button>
                     </div>
                   </div>

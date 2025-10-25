@@ -621,7 +621,7 @@ const Projects = () => {
               whileTap={{ scale: 0.95 }}
             >
               <FiArrowLeft className="mr-2" />
-              <span className="text-sm">Retour à la liste</span>
+              <span className="text-sm text-white">Retour à la liste</span>
             </motion.button>
           )}
 

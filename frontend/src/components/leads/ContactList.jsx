@@ -96,7 +96,7 @@ const ContactList = ({ contacts = [], leadType, onUpdateContact, onDeleteContact
                     {contact.email && (
                       <div className="flex items-start">
                         <div className="w-7 h-7 sm:w-8 sm:h-8 flex-shrink-0 rounded-full bg-gray-800 flex items-center justify-center text-gray-400 mr-2 sm:mr-3">
-                          <FiMail className="text-sm sm:text-base" />
+                          <FiMail className="text-sm sm:text-base text-indigo-400" />
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="text-xs text-gray-400 mb-1">Email</p>
@@ -114,7 +114,7 @@ const ContactList = ({ contacts = [], leadType, onUpdateContact, onDeleteContact
                     {contact.phone && (
                       <div className="flex items-start">
                         <div className="w-7 h-7 sm:w-8 sm:h-8 flex-shrink-0 rounded-full bg-gray-800 flex items-center justify-center text-gray-400 mr-2 sm:mr-3">
-                          <FiPhone className="text-sm sm:text-base" />
+                          <FiPhone className="text-sm sm:text-base text-green-400" />
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="text-xs text-gray-400 mb-1">Téléphone</p>
@@ -132,7 +132,7 @@ const ContactList = ({ contacts = [], leadType, onUpdateContact, onDeleteContact
                     {contact.notes && (
                       <div className="flex items-start">
                         <div className="w-7 h-7 sm:w-8 sm:h-8 flex-shrink-0 rounded-full bg-gray-800 flex items-center justify-center text-gray-400 mr-2 sm:mr-3">
-                          <FiFileText className="text-sm sm:text-base" />
+                          <FiFileText className="text-sm sm:text-base text-purple-400" />
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="text-xs text-gray-400 mb-1">Notes</p>

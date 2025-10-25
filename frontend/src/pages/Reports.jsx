@@ -121,7 +121,22 @@ const Reports = () => {
 
   const handleExportPDF = () => {
     try {
+      // S'assurer que autoTable est bien chargé
+      if (typeof autoTable !== 'function') {
+        console.error('jspdf-autotable n\'est pas chargé correctement');
+        alert('Erreur: Le module d\'export PDF n\'est pas disponible. Veuillez recharger la page.');
+        return;
+      }
+
       const doc = new jsPDF();
+
+      // Vérifier que autoTable est disponible sur l'instance
+      if (typeof doc.autoTable !== 'function') {
+        console.error('doc.autoTable n\'est pas une fonction');
+        alert('Erreur: La fonction autoTable n\'est pas disponible. Veuillez recharger la page.');
+        return;
+      }
+
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
 

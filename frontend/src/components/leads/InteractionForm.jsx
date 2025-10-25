@@ -113,8 +113,8 @@ const InteractionForm = ({ interaction = {}, contacts = [], onSave, onCancel }) 
                   onChange={handleInputChange}
                   className="sr-only"
                 />
-                <span className="text-sm sm:text-base mr-2">{type.icon}</span>
-                <span className="text-xs sm:text-sm">{type.label}</span>
+                <span className="text-sm sm:text-base mr-2 text-white">{type.icon}</span>
+                <span className="text-xs sm:text-sm text-white">{type.label}</span>
               </label>
             ))}
           </div>

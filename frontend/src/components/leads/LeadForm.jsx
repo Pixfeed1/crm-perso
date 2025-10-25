@@ -116,8 +116,8 @@ const LeadForm = ({ lead = {}, onSave, onCancel }) => {
                 onChange={handleInputChange}
                 className="sr-only"
               />
-              <FiBriefcase className="text-base sm:text-lg mr-2" />
-              <span className="text-sm sm:text-base">Entreprise</span>
+              <FiBriefcase className="text-base sm:text-lg mr-2 text-white" />
+              <span className="text-sm sm:text-base text-white">Entreprise</span>
             </label>
 
             <label className={`flex items-center px-3 py-2 sm:px-4 sm:py-2 rounded-lg cursor-pointer transition-colors ${
@@ -133,8 +133,8 @@ const LeadForm = ({ lead = {}, onSave, onCancel }) => {
                 onChange={handleInputChange}
                 className="sr-only"
               />
-              <FiUser className="text-base sm:text-lg mr-2" />
-              <span className="text-sm sm:text-base">Particulier</span>
+              <FiUser className="text-base sm:text-lg mr-2 text-white" />
+              <span className="text-sm sm:text-base text-white">Particulier</span>
             </label>
           </div>
         </div>

@@ -131,7 +131,7 @@ const Dashboard = () => {
               </button>
               <button className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors flex items-center gap-2">
                 <FaPlus className="w-4 h-4" />
-                <span className="text-sm font-medium">Nouveau</span>
+                <span className="text-sm font-medium text-white">Nouveau</span>
               </button>
             </div>
           </div>

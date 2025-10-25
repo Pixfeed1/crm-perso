@@ -273,7 +273,7 @@ const LeadDetails = ({ lead, onUpdate, onDelete, onAddContact, onUpdateContact, 
             <div className="flex justify-between items-center">
               <span className="text-gray-400 text-sm sm:text-base">Type</span>
               <span className="font-medium text-white flex items-center gap-1 sm:gap-2 text-sm sm:text-base">
-                {lead.type === 'company' ? <><FiBriefcase className="text-sm sm:text-base" /> Entreprise</> : <><FiUser className="text-sm sm:text-base" /> Particulier</>}
+                {lead.type === 'company' ? <><FiBriefcase className="text-sm sm:text-base text-white" /> <span className="text-white">Entreprise</span></> : <><FiUser className="text-sm sm:text-base text-white" /> <span className="text-white">Particulier</span></>}
               </span>
             </div>
             
@@ -285,7 +285,7 @@ const LeadDetails = ({ lead, onUpdate, onDelete, onAddContact, onUpdateContact, 
                 <button
                   className={`flex items-center px-2 sm:px-3 py-1 rounded-full ${statusStyle.bg} ${statusStyle.text} border ${statusStyle.border} text-xs sm:text-sm font-medium`}
                 >
-                  <span className="mr-1 text-xs sm:text-sm">{statusStyle.icon}</span>
+                  <span className="mr-1 text-xs sm:text-sm text-white">{statusStyle.icon}</span>
                   {lead.status.charAt(0).toUpperCase() + lead.status.slice(1)}
                   <span className="ml-1">▼</span>
                 </button>
