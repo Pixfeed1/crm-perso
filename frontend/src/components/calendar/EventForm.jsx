@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
+import AddressAutocomplete from '../common/AddressAutocomplete';
 
 const EventForm = ({ event = {}, selectedDate, onSave, onCancel }) => {
   // Déterminer la date de début et de fin par défaut
@@ -274,19 +275,24 @@ const EventForm = ({ event = {}, selectedDate, onSave, onCancel }) => {
           </div>
         </div>
         
-        {/* Lieu */}
+        {/* Lieu avec auto-complétion */}
         <div>
           <label htmlFor="location" className="block text-sm font-medium text-gray-300 mb-1">
             Lieu
           </label>
-          <input
-            type="text"
-            id="location"
-            name="location"
+          <AddressAutocomplete
             value={formData.location}
-            onChange={handleInputChange}
-            className="w-full bg-white text-gray-800 border border-gray-400 rounded-lg px-4 py-2 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            placeholder="Ex: Salle de réunion, Visioconférence..."
+            onChange={(value) => {
+              setFormData(prev => ({ ...prev, location: value }));
+            }}
+            onSelect={(addressDetails) => {
+              console.log('Adresse sélectionnée pour l\'événement:', addressDetails);
+              setFormData(prev => ({
+                ...prev,
+                location: addressDetails.address
+              }));
+            }}
+            placeholder="Ex: 10 rue de Rivoli, Paris ou Salle de réunion..."
           />
         </div>
         
