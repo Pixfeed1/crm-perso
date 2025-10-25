@@ -29,8 +29,13 @@ const Leads = () => {
   const [filters, setFilters] = useState({
     search: '',
     status: 'all',
-    type: 'all'
+    type: 'all',
+    source: 'all',
+    dateFrom: '',
+    dateTo: ''
   });
+  const [sortField, setSortField] = useState('created_at');
+  const [sortDirection, setSortDirection] = useState('desc');
 
   // Récupération des leads depuis l'API
   useEffect(() => {
@@ -55,9 +60,9 @@ const Leads = () => {
     fetchLeads();
   }, []);
 
-  // Filtrage des leads
+  // Filtrage et tri des leads
   useEffect(() => {
-    const result = leads.filter(lead => {
+    let result = leads.filter(lead => {
       // Filtre par recherche
       const searchMatch = filters.search === '' ||
         lead.name.toLowerCase().includes(filters.search.toLowerCase()) ||
@@ -69,11 +74,58 @@ const Leads = () => {
       // Filtre par type
       const typeMatch = filters.type === 'all' || lead.type === filters.type;
 
-      return searchMatch && statusMatch && typeMatch;
+      // Filtre par source
+      const sourceMatch = filters.source === 'all' || lead.source === filters.source;
+
+      // Filtre par date de création (range)
+      const dateMatch =
+        (!filters.dateFrom || new Date(lead.created_at) >= new Date(filters.dateFrom)) &&
+        (!filters.dateTo || new Date(lead.created_at) <= new Date(filters.dateTo + 'T23:59:59'));
+
+      return searchMatch && statusMatch && typeMatch && sourceMatch && dateMatch;
+    });
+
+    // Tri des résultats
+    result.sort((a, b) => {
+      let aValue, bValue;
+
+      switch (sortField) {
+        case 'name':
+          aValue = a.name.toLowerCase();
+          bValue = b.name.toLowerCase();
+          break;
+        case 'company':
+          aValue = (a.company || '').toLowerCase();
+          bValue = (b.company || '').toLowerCase();
+          break;
+        case 'created_at':
+        case 'updated_at':
+          aValue = new Date(a[sortField]);
+          bValue = new Date(b[sortField]);
+          break;
+        default:
+          return 0;
+      }
+
+      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
     });
 
     setFilteredLeads(result);
-  }, [leads, filters]);
+  }, [leads, filters, sortField, sortDirection]);
+
+  // Gestion du tri
+  const handleSort = (field) => {
+    if (sortField === field) {
+      // Toggle entre asc et desc si c'est déjà le champ actif
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      // Nouveau champ de tri: définir à 'asc' par défaut
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
 
   // Réinitialiser le filtre de statut en mode Kanban (car les colonnes montrent déjà les statuts)
   useEffect(() => {
@@ -440,7 +492,14 @@ const Leads = () => {
 
       {/* Filtres (affichés dans les deux vues) */}
       <div className="mb-4 px-2 sm:px-0">
-        <LeadFilter filters={filters} setFilters={setFilters} isKanbanView={view === 'kanban'} />
+        <LeadFilter
+          filters={filters}
+          setFilters={setFilters}
+          onSort={handleSort}
+          sortField={sortField}
+          sortDirection={sortDirection}
+          isKanbanView={view === 'kanban'}
+        />
       </div>
 
       {/* Vue conditionnelle */}
