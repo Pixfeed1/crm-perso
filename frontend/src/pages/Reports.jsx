@@ -179,7 +179,7 @@ const Reports = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-4 sm:p-6">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-gray-900 p-4 sm:p-6">
       <div className="max-w-7xl mx-auto">
 
         {/* ========== HEADER ========== */}
@@ -197,7 +197,7 @@ const Reports = () => {
 
             <div className="flex gap-2">
               {/* Sélecteur de période */}
-              <div className="flex bg-gray-800/50 border border-gray-700 rounded-lg p-1">
+              <div className="flex bg-slate-800/50 backdrop-blur rounded-lg p-1">
                 {['month', 'quarter', 'year'].map((p) => (
                   <button
                     key={p}
@@ -232,52 +232,80 @@ const Reports = () => {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-gradient-to-br from-blue-900/40 to-indigo-900/40 backdrop-blur-md rounded-xl p-4 border border-blue-500/30"
+            className="relative bg-gradient-to-br from-slate-800/50 to-slate-800/30 backdrop-blur rounded-2xl p-6 shadow-xl shadow-black/20 overflow-hidden"
           >
-            <div className="flex items-center gap-3 mb-2">
-              <FiUsers className="text-blue-400 text-xl" />
-              <span className="text-gray-400 text-sm">Nouveaux Leads</span>
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-cyan-500 opacity-60"></div>
+            <div className="relative z-10">
+              <div className="flex items-start justify-between mb-4">
+                <div className="p-2.5 rounded-xl bg-slate-700/50">
+                  <FiUsers className="text-xl text-blue-400" />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs text-gray-400">Nouveaux Leads</p>
+                <p className="text-3xl font-bold text-white">{reportData.summary.newLeads}</p>
+              </div>
             </div>
-            <div className="text-3xl font-bold text-white">{reportData.summary.newLeads}</div>
           </motion.div>
 
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="bg-gradient-to-br from-green-900/40 to-emerald-900/40 backdrop-blur-md rounded-xl p-4 border border-green-500/30"
+            className="relative bg-gradient-to-br from-slate-800/50 to-slate-800/30 backdrop-blur rounded-2xl p-6 shadow-xl shadow-black/20 overflow-hidden"
           >
-            <div className="flex items-center gap-3 mb-2">
-              <FiTrendingUp className="text-green-400 text-xl" />
-              <span className="text-gray-400 text-sm">Taux de Conversion</span>
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 to-teal-500 opacity-60"></div>
+            <div className="relative z-10">
+              <div className="flex items-start justify-between mb-4">
+                <div className="p-2.5 rounded-xl bg-slate-700/50">
+                  <FiTrendingUp className="text-xl text-emerald-400" />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs text-gray-400">Taux de Conversion</p>
+                <p className="text-3xl font-bold text-white">{reportData.leadConversion.conversionRate}%</p>
+              </div>
             </div>
-            <div className="text-3xl font-bold text-white">{reportData.leadConversion.conversionRate}%</div>
           </motion.div>
 
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="bg-gradient-to-br from-purple-900/40 to-pink-900/40 backdrop-blur-md rounded-xl p-4 border border-purple-500/30"
+            className="relative bg-gradient-to-br from-slate-800/50 to-slate-800/30 backdrop-blur rounded-2xl p-6 shadow-xl shadow-black/20 overflow-hidden"
           >
-            <div className="flex items-center gap-3 mb-2">
-              <FiDollarSign className="text-purple-400 text-xl" />
-              <span className="text-gray-400 text-sm">Revenus Totaux</span>
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 to-pink-500 opacity-60"></div>
+            <div className="relative z-10">
+              <div className="flex items-start justify-between mb-4">
+                <div className="p-2.5 rounded-xl bg-slate-700/50">
+                  <FiDollarSign className="text-xl text-purple-400" />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs text-gray-400">Revenus Totaux</p>
+                <p className="text-2xl font-bold text-white">{formatAmount(reportData.summary.totalRevenue)}</p>
+              </div>
             </div>
-            <div className="text-3xl font-bold text-white">{formatAmount(reportData.summary.totalRevenue)}</div>
           </motion.div>
 
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="bg-gradient-to-br from-amber-900/40 to-orange-900/40 backdrop-blur-md rounded-xl p-4 border border-amber-500/30"
+            className="relative bg-gradient-to-br from-slate-800/50 to-slate-800/30 backdrop-blur rounded-2xl p-6 shadow-xl shadow-black/20 overflow-hidden"
           >
-            <div className="flex items-center gap-3 mb-2">
-              <FiUsers className="text-amber-400 text-xl" />
-              <span className="text-gray-400 text-sm">Clients Actifs</span>
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-500 to-orange-500 opacity-60"></div>
+            <div className="relative z-10">
+              <div className="flex items-start justify-between mb-4">
+                <div className="p-2.5 rounded-xl bg-slate-700/50">
+                  <FiUsers className="text-xl text-amber-400" />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs text-gray-400">Clients Actifs</p>
+                <p className="text-3xl font-bold text-white">{reportData.summary.activeClients}</p>
+              </div>
             </div>
-            <div className="text-3xl font-bold text-white">{reportData.summary.activeClients}</div>
           </motion.div>
         </div>
 
@@ -288,7 +316,7 @@ const Reports = () => {
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="bg-gray-800/30 border border-gray-700 rounded-2xl p-6"
+            className="bg-slate-800/30 backdrop-blur rounded-2xl p-6 shadow-xl shadow-black/20"
           >
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-semibold text-white flex items-center gap-2">
@@ -301,13 +329,13 @@ const Reports = () => {
             </div>
 
             <div className="space-y-4">
-              <div className="flex justify-between items-center p-3 bg-gray-900/50 rounded-lg">
+              <div className="flex justify-between items-center p-3 bg-slate-700/20 rounded-lg">
                 <span className="text-gray-300">Total Leads</span>
                 <span className="text-white font-semibold">{reportData.leadConversion.totalLeads}</span>
               </div>
-              <div className="flex justify-between items-center p-3 bg-green-500/10 rounded-lg border border-green-500/30">
+              <div className="flex justify-between items-center p-3 bg-emerald-500/10 rounded-lg border border-emerald-500/30">
                 <span className="text-gray-300">Leads Convertis</span>
-                <span className="text-green-400 font-semibold">{reportData.leadConversion.convertedLeads}</span>
+                <span className="text-emerald-400 font-semibold">{reportData.leadConversion.convertedLeads}</span>
               </div>
 
               {/* Répartition par statut */}
@@ -320,7 +348,7 @@ const Reports = () => {
                         <span className="text-gray-300">{getStatusLabel(item.status)}</span>
                         <span className="text-gray-400">{item.count} ({item.percentage}%)</span>
                       </div>
-                      <div className="h-2 bg-gray-700/50 rounded-full overflow-hidden">
+                      <div className="h-2 bg-slate-700/50 rounded-full overflow-hidden">
                         <motion.div
                           initial={{ width: 0 }}
                           animate={{ width: `${item.percentage}%` }}
@@ -339,7 +367,7 @@ const Reports = () => {
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="bg-gray-800/30 border border-gray-700 rounded-2xl p-6"
+            className="bg-slate-800/30 backdrop-blur rounded-2xl p-6 shadow-xl shadow-black/20"
           >
             <h2 className="text-xl font-semibold text-white mb-6 flex items-center gap-2">
               <FiPieChart className="text-purple-400" />
@@ -353,7 +381,7 @@ const Reports = () => {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}
-                  className="p-4 bg-gray-900/50 rounded-lg border border-gray-700/50 hover:border-purple-500/30 transition-colors"
+                  className="p-4 bg-slate-700/20 rounded-lg hover:bg-slate-700/30 transition-colors"
                 >
                   <div className="flex justify-between items-center mb-2">
                     <span className="font-medium text-white">{source.source}</span>
@@ -368,7 +396,7 @@ const Reports = () => {
                     </div>
                     <div>
                       <span className="text-gray-500">Convertis: </span>
-                      <span className="text-green-400 font-medium">{source.converted}</span>
+                      <span className="text-emerald-400 font-medium">{source.converted}</span>
                     </div>
                   </div>
                 </motion.div>
@@ -386,7 +414,7 @@ const Reports = () => {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-gray-800/30 border border-gray-700 rounded-2xl p-6 lg:col-span-2"
+            className="bg-slate-800/30 backdrop-blur rounded-2xl p-6 shadow-xl shadow-black/20 lg:col-span-2"
           >
             <h2 className="text-xl font-semibold text-white mb-6 flex items-center gap-2">
               <FaChartLine className="text-teal-400" />
@@ -416,7 +444,7 @@ const Reports = () => {
                         </span>
                         <span className="font-semibold text-teal-300">{formatAmount(item.amount)}</span>
                       </div>
-                      <div className="h-4 bg-gray-700/50 rounded-full overflow-hidden border border-gray-700/30">
+                      <div className="h-4 bg-slate-700/50 rounded-full overflow-hidden">
                         <motion.div
                           className="h-full bg-gradient-to-r from-teal-500 to-emerald-500 rounded-full"
                           initial={{ width: 0 }}
@@ -438,8 +466,8 @@ const Reports = () => {
         </div>
 
         {/* Note de bas de page */}
-        <div className="mt-6 p-4 bg-indigo-900/20 border border-indigo-500/30 rounded-lg">
-          <p className="text-sm text-indigo-300">
+        <div className="mt-6 p-4 bg-slate-800/30 backdrop-blur rounded-lg shadow-xl shadow-black/20">
+          <p className="text-sm text-gray-300">
             💡 <strong>Astuce :</strong> Ces rapports sont générés en temps réel à partir de vos données.
             Utilisez le sélecteur de période pour analyser différentes périodes et exportez en PDF pour vos présentations.
           </p>
