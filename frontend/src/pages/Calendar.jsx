@@ -268,7 +268,7 @@ const Calendar = () => {
 
   return (
     <div className="h-screen flex flex-col overflow-hidden">
-      <header className="mb-4 flex-shrink-0">
+      <header className="mb-4 flex-shrink-0 pt-16 sm:pt-0">
         <motion.h1
           className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-teal-300 to-indigo-300"
           initial={{ opacity: 0, y: -20 }}

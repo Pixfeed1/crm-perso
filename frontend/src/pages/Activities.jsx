@@ -303,7 +303,7 @@ const Activities = () => {
   return (
     <div className="h-full flex flex-col">
       {/* Titre de page */}
-      <header className="mb-6">
+      <header className="mb-6 pt-16 sm:pt-0">
         <motion.h1 
           className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-300 to-indigo-300"
           initial={{ opacity: 0, y: -20 }}

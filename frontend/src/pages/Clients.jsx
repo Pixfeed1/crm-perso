@@ -184,7 +184,7 @@ const Clients = () => {
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-4 sm:p-6">
       <div className="max-w-7xl mx-auto">
         {/* En-tête avec statistiques */}
-        <div className="mb-6">
+        <div className="mb-6 pt-16 sm:pt-0">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center">

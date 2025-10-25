@@ -337,7 +337,7 @@ const Revenues = () => {
   return (
     <div className="h-full flex flex-col">
       {/* En-tête */}
-      <header className="mb-4 sm:mb-6 px-2 sm:px-0">
+      <header className="mb-4 sm:mb-6 px-2 sm:px-0 pt-16 sm:pt-0">
         <motion.h1
           className="text-3xl sm:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-300 to-teal-300"
           initial={{ opacity: 0, y: -20 }}

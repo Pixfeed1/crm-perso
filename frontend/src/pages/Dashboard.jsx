@@ -68,7 +68,7 @@ const Dashboard = () => {
 
   return (
     <div className="h-full overflow-y-auto">
-      <header className="mb-6 sm:mb-8 px-2 sm:px-0">
+      <header className="mb-6 sm:mb-8 px-2 sm:px-0 pt-16 sm:pt-0">
         <motion.h1
           className="text-3xl sm:text-4xl md:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-300 to-purple-300"
           initial={{ opacity: 0, y: -20 }}

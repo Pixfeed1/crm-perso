@@ -145,9 +145,9 @@ const Layout = ({ children }) => {
 
   return (
     <div className="flex h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900 text-white overflow-hidden">
-      {/* Barre de recherche en haut à gauche */}
+      {/* Barre de recherche en haut à gauche - Position fixe pour visibilité constante */}
       <motion.button
-        className="absolute top-6 left-6 z-40 px-4 py-2 sm:px-6 sm:py-3 bg-gray-800/50 backdrop-blur-sm border border-purple-500/30 rounded-full flex items-center gap-2 sm:gap-3 shadow-xl hover:bg-gray-800/70 transition-colors"
+        className="fixed top-4 left-4 z-50 px-4 py-2 sm:px-6 sm:py-3 bg-gray-800/80 backdrop-blur-md border border-purple-500/30 rounded-full flex items-center gap-2 sm:gap-3 shadow-xl hover:bg-gray-800/90 transition-all"
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={() => setSearchOpen(true)}
@@ -159,9 +159,9 @@ const Layout = ({ children }) => {
         </kbd>
       </motion.button>
 
-      {/* Badge de notifications en haut à droite */}
+      {/* Badge de notifications en haut à droite - Position fixe pour visibilité constante */}
       <motion.button
-        className="absolute top-6 right-6 z-40 w-12 h-12 sm:w-14 sm:h-14 bg-indigo-600 rounded-full flex items-center justify-center shadow-xl"
+        className="fixed top-4 right-4 z-50 w-12 h-12 sm:w-14 sm:h-14 bg-indigo-600 rounded-full flex items-center justify-center shadow-xl hover:bg-indigo-700 transition-all"
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.95 }}
         onClick={() => setRemindersOpen(true)}
