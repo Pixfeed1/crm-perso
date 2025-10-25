@@ -13,8 +13,8 @@ import {
 } from 'react-icons/fi';
 import { FaFileExport, FaChartLine } from 'react-icons/fa';
 import { dashboardAPI, leadsAPI, clientsAPI, revenuesAPI } from '../services/api';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const Reports = () => {
   const [period, setPeriod] = useState('month'); // month, quarter, year
