@@ -2,6 +2,8 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { FiPhone, FiMail, FiUsers, FiFileText } from 'react-icons/fi';
+import TemplateSelector from '../common/TemplateSelector';
+import { templateCategories } from '../../services/templates';
 
 const InteractionForm = ({ interaction = {}, contacts = [], onSave, onCancel }) => {
   const [formData, setFormData] = useState({
@@ -205,9 +207,17 @@ const InteractionForm = ({ interaction = {}, contacts = [], onSave, onCancel }) 
 
         {/* Notes */}
         <div>
-          <label htmlFor="interaction-notes" className="block text-xs sm:text-sm font-medium text-gray-300 mb-1">
-            Notes détaillées
-          </label>
+          <div className="flex items-center justify-between mb-1">
+            <label htmlFor="interaction-notes" className="block text-xs sm:text-sm font-medium text-gray-300">
+              Notes détaillées
+            </label>
+            <TemplateSelector
+              category={templateCategories.INTERACTION}
+              currentValue={formData.notes}
+              onSelect={(content) => setFormData(prev => ({ ...prev, notes: content }))}
+              buttonText="Template"
+            />
+          </div>
           <textarea
             id="interaction-notes"
             name="notes"

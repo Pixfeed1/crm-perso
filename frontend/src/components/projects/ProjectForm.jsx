@@ -2,6 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useToast } from '../../hooks/useToast';
+import TemplateSelector from '../common/TemplateSelector';
+import { templateCategories } from '../../services/templates';
 
 const ProjectForm = ({ project = {}, onSave, onCancel }) => {
   const { toast } = useToast();
@@ -275,9 +277,17 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
         
         {/* Description */}
         <div>
-          <label htmlFor="description" className="block text-sm font-medium text-gray-300 mb-1">
-            Description
-          </label>
+          <div className="flex items-center justify-between mb-1">
+            <label htmlFor="description" className="block text-sm font-medium text-gray-300">
+              Description
+            </label>
+            <TemplateSelector
+              category={templateCategories.PROJECT}
+              currentValue={formData.description}
+              onSelect={(content) => setFormData(prev => ({ ...prev, description: content }))}
+              buttonText="Template"
+            />
+          </div>
           <textarea
             id="description"
             name="description"

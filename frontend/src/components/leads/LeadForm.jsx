@@ -3,6 +3,8 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { FiBriefcase, FiUser } from 'react-icons/fi';
 import CompanyAutocomplete from '../common/CompanyAutocomplete';
+import TemplateSelector from '../common/TemplateSelector';
+import { templateCategories } from '../../services/templates';
 
 const LeadForm = ({ lead = {}, onSave, onCancel }) => {
   // État du formulaire avec valeurs par défaut ou existantes
@@ -242,9 +244,17 @@ const LeadForm = ({ lead = {}, onSave, onCancel }) => {
 
         {/* Notes */}
         <div>
-          <label htmlFor="notes" className="block text-xs sm:text-sm font-medium text-gray-300 mb-1">
-            Notes
-          </label>
+          <div className="flex items-center justify-between mb-1">
+            <label htmlFor="notes" className="block text-xs sm:text-sm font-medium text-gray-300">
+              Notes
+            </label>
+            <TemplateSelector
+              category={templateCategories.LEAD}
+              currentValue={formData.notes}
+              onSelect={(content) => setFormData(prev => ({ ...prev, notes: content }))}
+              buttonText="Template"
+            />
+          </div>
           <textarea
             id="notes"
             name="notes"

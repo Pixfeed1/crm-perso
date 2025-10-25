@@ -4,6 +4,8 @@ import { motion } from 'framer-motion';
 import { FiBriefcase, FiUser, FiX } from 'react-icons/fi';
 import CompanyAutocomplete from '../common/CompanyAutocomplete';
 import AddressAutocomplete from '../common/AddressAutocomplete';
+import TemplateSelector from '../common/TemplateSelector';
+import { templateCategories } from '../../services/templates';
 
 const ClientForm = ({ client = {}, onSave, onCancel }) => {
   // État du formulaire avec valeurs par défaut ou existantes
@@ -368,7 +370,15 @@ const ClientForm = ({ client = {}, onSave, onCancel }) => {
 
         {/* Notes */}
         <div>
-          <label className="block text-gray-300 mb-2 font-medium">Notes</label>
+          <div className="flex items-center justify-between mb-2">
+            <label className="block text-gray-300 font-medium">Notes</label>
+            <TemplateSelector
+              category={templateCategories.CLIENT}
+              currentValue={formData.notes}
+              onSelect={(content) => setFormData(prev => ({ ...prev, notes: content }))}
+              buttonText="Template"
+            />
+          </div>
           <textarea
             name="notes"
             value={formData.notes}
