@@ -5,8 +5,9 @@
 
 // ===== API SIRENE (INSEE) - Recherche d'entreprises françaises =====
 // Documentation: https://api.insee.fr/catalogue/
+// NOTE: Appels via le backend pour éviter les problèmes CORS
 
-const SIRENE_API_URL = 'https://entreprise.data.gouv.fr/api/sirene/v3';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 /**
  * Recherche d'entreprises dans la base Sirene
@@ -19,50 +20,30 @@ export const searchCompanies = async (query) => {
   }
 
   try {
-    // Encoder la requête pour l'URL
-    const encodedQuery = encodeURIComponent(query);
-
-    // Appel à l'API Sirene - recherche dans la dénomination
-    // NOTE: L'API entreprise.data.gouv.fr peut avoir des problèmes de connexion
-    // Si l'API est indisponible, on retourne un tableau vide sans bloquer l'interface
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000); // Timeout 5 secondes
-
+    // Appel au backend qui sert de proxy pour l'API Sirene
+    // Cela évite les problèmes CORS et de connexion directe
     const response = await fetch(
-      `${SIRENE_API_URL}/unites_legales?q=${encodedQuery}&nombre=10&champs=siren,denominationUniteLegale,categorieJuridiqueUniteLegale,activitePrincipaleUniteLegale,nomenclatureActivitePrincipaleUniteLegale,trancheEffectifsUniteLegale`,
-      { signal: controller.signal }
+      `${API_BASE_URL}/sirene/search?q=${encodeURIComponent(query)}`,
+      {
+        credentials: 'include', // Inclure les cookies d'authentification
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }
     );
 
-    clearTimeout(timeoutId);
-
     if (!response.ok) {
-      console.warn('API Sirene indisponible (statut:', response.status, '). L\'auto-complétion est désactivée.');
+      console.warn('Backend proxy Sirene indisponible (statut:', response.status, ')');
       return [];
     }
 
     const data = await response.json();
 
-    // Formater les résultats pour l'auto-complétion
-    if (data.unite_legale && data.unite_legale.length > 0) {
-      return data.unite_legale.map(company => ({
-        siren: company.siren,
-        name: company.denomination_unite_legale || company.denomination_usuelle_unite_legale_1 || 'Nom non disponible',
-        legalForm: getCategorieJuridiqueLabel(company.categorie_juridique_unite_legale),
-        activity: company.activite_principale_unite_legale,
-        activityLabel: getNafLabel(company.activite_principale_unite_legale),
-        employees: getTrancheEffectifsLabel(company.tranche_effectifs_unite_legale)
-      }));
-    }
+    // Le backend retourne déjà les données formatées
+    return data;
 
-    return [];
   } catch (error) {
-    // Si l'API est down (ERR_CONNECTION_RESET, timeout, etc.), on retourne vide
-    // L'utilisateur peut toujours saisir manuellement le nom de l'entreprise
-    if (error.name === 'AbortError') {
-      console.warn('API Sirene timeout (>5s). Saisie manuelle uniquement.');
-    } else {
-      console.warn('API Sirene inaccessible:', error.message, '. Saisie manuelle uniquement.');
-    }
+    console.warn('Erreur lors de la recherche d\'entreprises:', error.message);
     return [];
   }
 };
@@ -78,67 +59,36 @@ export const getCompanyDetails = async (siren) => {
   }
 
   try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000);
-
+    // Appel au backend qui sert de proxy pour l'API Sirene
     const response = await fetch(
-      `${SIRENE_API_URL}/unites_legales/${siren}`,
-      { signal: controller.signal }
+      `${API_BASE_URL}/sirene/details/${siren}`,
+      {
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }
     );
 
-    clearTimeout(timeoutId);
-
     if (!response.ok) {
-      console.warn('API Sirene (détails) indisponible:', response.status);
+      console.warn('Backend proxy Sirene (détails) indisponible:', response.status);
       return null;
     }
 
     const data = await response.json();
 
-    if (data.unite_legale) {
-      const company = data.unite_legale;
+    // Le backend retourne déjà les données formatées
+    return data;
 
-      return {
-        siren: company.siren,
-        siret: company.etablissements?.[0]?.siret || null,
-        name: company.denomination_unite_legale || company.denomination_usuelle_unite_legale_1,
-        legalForm: getCategorieJuridiqueLabel(company.categorie_juridique_unite_legale),
-        activity: company.activite_principale_unite_legale,
-        activityLabel: getNafLabel(company.activite_principale_unite_legale),
-        employees: getTrancheEffectifsLabel(company.tranche_effectifs_unite_legale),
-        address: company.etablissements?.[0] ? formatSireneAddress(company.etablissements[0]) : null,
-        creationDate: company.date_creation_unite_legale
-      };
-    }
-
-    return null;
   } catch (error) {
-    if (error.name === 'AbortError') {
-      console.warn('API Sirene (détails) timeout.');
-    } else {
-      console.warn('API Sirene (détails) inaccessible:', error.message);
-    }
+    console.warn('Erreur lors de la récupération des détails:', error.message);
     return null;
   }
 };
 
-/**
- * Formate l'adresse depuis les données Sirene
- */
-const formatSireneAddress = (etablissement) => {
-  const parts = [];
-
-  if (etablissement.geo_l4) parts.push(etablissement.geo_l4);
-  if (etablissement.geo_l5) parts.push(etablissement.geo_l5);
-
-  const cityParts = [];
-  if (etablissement.code_postal_etablissement) cityParts.push(etablissement.code_postal_etablissement);
-  if (etablissement.libelle_commune_etablissement) cityParts.push(etablissement.libelle_commune_etablissement);
-
-  if (cityParts.length > 0) parts.push(cityParts.join(' '));
-
-  return parts.join(', ');
-};
+// NOTE: Les fonctions de formatage (formatSireneAddress, getCategorieJuridiqueLabel, etc.)
+// ont été déplacées vers le backend (sireneController.js) car les données sont
+// maintenant formatées côté serveur avant d'être envoyées au frontend.
 
 // ===== API ADRESSE (data.gouv.fr) - Géocodage français =====
 // Documentation: https://adresse.data.gouv.fr/api-doc/adresse
@@ -225,69 +175,5 @@ export const reverseGeocode = async (lat, lon) => {
   }
 };
 
-// ===== HELPERS =====
-
-/**
- * Convertit le code catégorie juridique en libellé lisible
- */
-const getCategorieJuridiqueLabel = (code) => {
-  const categories = {
-    '5499': 'SA',
-    '5710': 'SAS',
-    '5720': 'SASU',
-    '5498': 'SARL',
-    '5505': 'EURL',
-    '1000': 'Entrepreneur individuel',
-    '6540': 'Auto-entrepreneur',
-    '9220': 'Association',
-    '7210': 'EPIC'
-  };
-
-  return categories[code] || code || 'Non spécifié';
-};
-
-/**
- * Obtient le libellé d'un code NAF/APE
- * Note: Pour une vraie application, utiliser une table de correspondance complète
- */
-const getNafLabel = (code) => {
-  if (!code) return 'Non spécifié';
-
-  // Exemples de codes NAF courants
-  const nafCodes = {
-    '62.01Z': 'Programmation informatique',
-    '62.02A': 'Conseil en systèmes et logiciels informatiques',
-    '70.22Z': 'Conseil pour les affaires et autres conseils de gestion',
-    '47.91A': 'Vente à distance sur catalogue général',
-    '47.91B': 'Vente à distance sur catalogue spécialisé',
-    '73.11Z': 'Activités des agences de publicité',
-    '82.11Z': 'Services administratifs combinés de bureau'
-  };
-
-  return nafCodes[code] || `Code NAF ${code}`;
-};
-
-/**
- * Convertit la tranche d'effectifs en libellé
- */
-const getTrancheEffectifsLabel = (code) => {
-  const tranches = {
-    '00': '0 salarié',
-    '01': '1 ou 2 salariés',
-    '02': '3 à 5 salariés',
-    '03': '6 à 9 salariés',
-    '11': '10 à 19 salariés',
-    '12': '20 à 49 salariés',
-    '21': '50 à 99 salariés',
-    '22': '100 à 199 salariés',
-    '31': '200 à 249 salariés',
-    '32': '250 à 499 salariés',
-    '41': '500 à 999 salariés',
-    '42': '1000 à 1999 salariés',
-    '51': '2000 à 4999 salariés',
-    '52': '5000 à 9999 salariés',
-    '53': '10000 salariés et plus'
-  };
-
-  return tranches[code] || 'Non communiqué';
-};
+// Les fonctions helper (getCategorieJuridiqueLabel, getNafLabel, getTrancheEffectifsLabel)
+// ont été déplacées vers le backend (sireneController.js)
