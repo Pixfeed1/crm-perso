@@ -1,12 +1,13 @@
 // src/pages/Quotes.jsx
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiFileText, FiPlus, FiEdit2, FiTrash2, FiEye, FiSend, FiCheck, FiX, FiClock } from 'react-icons/fi';
+import { FiFileText, FiPlus, FiEdit2, FiTrash2, FiEye, FiSend, FiCheck, FiX, FiClock, FiDownload } from 'react-icons/fi';
 import { quotesAPI } from '../services/quotesAPI';
 import { useToast } from '../hooks/useToast';
 import { useConfirm } from '../hooks/useConfirm';
 import QuoteForm from '../components/quotes/QuoteForm';
 import ConfirmModal from '../components/common/ConfirmModal';
+import { exportQuoteToPDF } from '../services/exportPDF';
 
 const Quotes = () => {
   const { toast } = useToast();
@@ -243,6 +244,13 @@ const Quotes = () => {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => exportQuoteToPDF(quote)}
+                          className="p-2 text-green-400 hover:bg-green-500/20 rounded transition-colors"
+                          title="Télécharger PDF"
+                        >
+                          <FiDownload className="w-4 h-4" />
+                        </button>
                         <button
                           onClick={() => {
                             setSelectedQuote(quote);

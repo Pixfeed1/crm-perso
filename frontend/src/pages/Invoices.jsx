@@ -1,17 +1,21 @@
 // src/pages/Invoices.jsx
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { FiFileText, FiPlus, FiEdit2, FiTrash2, FiDollarSign, FiAlertCircle } from 'react-icons/fi';
+import { motion, AnimatePresence } from 'framer-motion';
+import { FiFileText, FiPlus, FiEdit2, FiTrash2, FiDollarSign, FiAlertCircle, FiDownload } from 'react-icons/fi';
 import { invoicesAPI } from '../services/quotesAPI';
 import { useToast } from '../hooks/useToast';
 import { useConfirm } from '../hooks/useConfirm';
+import InvoiceForm from '../components/invoices/InvoiceForm';
 import ConfirmModal from '../components/common/ConfirmModal';
+import { exportInvoiceToPDF } from '../services/exportPDF';
 
 const Invoices = () => {
   const { toast } = useToast();
   const { confirm, confirmState } = useConfirm();
   const [invoices, setInvoices] = useState([]);
   const [filteredInvoices, setFilteredInvoices] = useState([]);
+  const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [isFormOpen, setIsFormOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -47,6 +51,24 @@ const Invoices = () => {
     }
     setFilteredInvoices(filtered);
   }, [searchTerm, statusFilter, invoices]);
+
+  const handleSaveInvoice = async (invoiceData) => {
+    try {
+      if (selectedInvoice) {
+        await invoicesAPI.update(selectedInvoice.id, invoiceData);
+        toast.success('Facture modifiée avec succès');
+      } else {
+        await invoicesAPI.create(invoiceData);
+        toast.success('Facture créée avec succès');
+      }
+      setIsFormOpen(false);
+      setSelectedInvoice(null);
+      fetchInvoices();
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde:', error);
+      toast.error('Erreur lors de la sauvegarde de la facture');
+    }
+  };
 
   const handleDelete = async (id) => {
     const confirmed = await confirm({
@@ -119,7 +141,10 @@ const Invoices = () => {
           </p>
         </div>
         <button
-          onClick={() => toast.info('Fonction à venir')}
+          onClick={() => {
+            setSelectedInvoice(null);
+            setIsFormOpen(true);
+          }}
           className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
         >
           <FiPlus />
@@ -195,6 +220,23 @@ const Invoices = () => {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => exportInvoiceToPDF(invoice)}
+                          className="p-2 text-purple-400 hover:bg-purple-500/20 rounded transition-colors"
+                          title="Télécharger PDF"
+                        >
+                          <FiDownload className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedInvoice(invoice);
+                            setIsFormOpen(true);
+                          }}
+                          className="p-2 text-blue-400 hover:bg-blue-500/20 rounded transition-colors"
+                          title="Modifier"
+                        >
+                          <FiEdit2 className="w-4 h-4" />
+                        </button>
                         {invoice.payment_status !== 'paid' && (
                           <button
                             onClick={() => handleMarkAsPaid(invoice.id)}
@@ -220,6 +262,39 @@ const Invoices = () => {
           </div>
         </div>
       )}
+
+      {/* Modal formulaire */}
+      <AnimatePresence>
+        {isFormOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => {
+              setIsFormOpen(false);
+              setSelectedInvoice(null);
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.95 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.95 }}
+              className="bg-gray-900 rounded-lg border border-gray-700 max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <InvoiceForm
+                invoice={selectedInvoice}
+                onSave={handleSaveInvoice}
+                onCancel={() => {
+                  setIsFormOpen(false);
+                  setSelectedInvoice(null);
+                }}
+              />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <ConfirmModal {...confirmState} />
     </div>
