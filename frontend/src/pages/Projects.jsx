@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { projectsAPI, exportAPI } from '../services/api';
-import { FiAlertTriangle, FiZap, FiTarget, FiArrowLeft, FiDownload } from 'react-icons/fi';
+import { FiAlertTriangle, FiZap, FiTarget, FiArrowLeft, FiDownload, FiList, FiCalendar } from 'react-icons/fi';
 import { useToast } from '../hooks/useToast';
 import { useConfirm } from '../hooks/useConfirm';
 import ConfirmModal from '../components/common/ConfirmModal';
@@ -12,6 +12,7 @@ import ProjectCard from '../components/projects/ProjectCard';
 import ProjectDetails from '../components/projects/ProjectDetails';
 import ProjectForm from '../components/projects/ProjectForm';
 import ProjectFilter from '../components/projects/ProjectFilter';
+import TimelineView from '../components/projects/TimelineView';
 import EmptyState from '../components/common/EmptyState';
 
 const Projects = () => {
@@ -24,6 +25,7 @@ const Projects = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showDetails, setShowDetails] = useState(false); // Pour toggle mobile
+  const [view, setView] = useState('list'); // 'list' or 'timeline'
   const [filters, setFilters] = useState({
     search: '',
     status: 'all',
@@ -493,16 +495,53 @@ const Projects = () => {
         </div>
       )}
 
-      <div className="flex flex-col lg:flex-row flex-grow overflow-hidden gap-4">
-        {/* Panneau de gauche: Liste des projets */}
+      {view === 'timeline' ? (
+        /* Vue Timeline/Gantt */
         <motion.div
-          className={`${showDetails ? 'hidden lg:flex' : 'flex'} w-full lg:w-1/3 overflow-hidden flex-col`}
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
+          className="flex-grow overflow-hidden"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
           transition={{ duration: 0.3 }}
         >
+          <TimelineView
+            projects={filteredProjects}
+            onProjectClick={handleSelectProject}
+          />
+        </motion.div>
+      ) : (
+        /* Vue Liste */
+        <div className="flex flex-col lg:flex-row flex-grow overflow-hidden gap-4">
+          {/* Panneau de gauche: Liste des projets */}
+          <motion.div
+            className={`${showDetails ? 'hidden lg:flex' : 'flex'} w-full lg:w-1/3 overflow-hidden flex-col`}
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.3 }}
+          >
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3 px-2 sm:px-0">
-            <h2 className="text-lg sm:text-xl font-semibold text-white">Vos Projets</h2>
+            <div className="flex items-center gap-4">
+              <h2 className="text-lg sm:text-xl font-semibold text-white">Vos Projets</h2>
+              <div className="bg-gray-800/50 rounded-lg p-1 flex">
+                <motion.button
+                  className={`px-3 py-1 rounded-lg text-sm flex items-center gap-1 transition-colors ${
+                    view === 'list' ? 'bg-purple-600 text-white' : 'text-gray-300 hover:bg-gray-700/50'
+                  }`}
+                  onClick={() => setView('list')}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <FiList size={14} /> Liste
+                </motion.button>
+                <motion.button
+                  className={`px-3 py-1 rounded-lg text-sm flex items-center gap-1 transition-colors ${
+                    view === 'timeline' ? 'bg-purple-600 text-white' : 'text-gray-300 hover:bg-gray-700/50'
+                  }`}
+                  onClick={() => setView('timeline')}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <FiCalendar size={14} /> Timeline
+                </motion.button>
+              </div>
+            </div>
             <div className="flex gap-2">
               <motion.button
                 className="bg-gray-700 hover:bg-gray-600 text-white px-3 py-2 sm:px-4 sm:py-2 rounded-full flex items-center text-sm sm:text-base"
@@ -645,7 +684,8 @@ const Projects = () => {
             )}
           </div>
         </motion.div>
-      </div>
+        </div>
+      )}
 
       {/* Modal de confirmation */}
       <ConfirmModal {...confirmState.config} isOpen={confirmState.isOpen} />
