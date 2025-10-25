@@ -63,8 +63,8 @@ const Dashboard = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-gray-900 flex items-center justify-center">
-        <motion.div 
+      <div className="h-full flex items-center justify-center">
+        <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           className="text-center"
@@ -98,8 +98,8 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-gray-900">
-      
+    <div className="h-full flex flex-col overflow-y-auto">
+
       {/* ========== HEADER ÉPURÉ ========== */}
       <motion.header 
         className="px-6 pt-8 pb-4"

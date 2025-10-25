@@ -181,8 +181,8 @@ const Clients = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-4 sm:p-6">
-      <div className="max-w-7xl mx-auto">
+    <div className="h-full flex flex-col overflow-y-auto p-4 sm:p-6">
+      <div className="max-w-7xl mx-auto w-full">
         {/* En-tête avec statistiques */}
         <div className="mb-6 pt-16 sm:pt-0">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
