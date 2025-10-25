@@ -1,7 +1,9 @@
 // backend/controllers/searchController.js
 
-// Note: projectModel et activityModel existent mais ne sont pas utilisés dans ce fichier
-// La recherche utilise des requêtes SQL directes pour l'instant
+const leadModel = require('../models/leadModel');
+const projectModel = require('../models/projectModel');
+const goalModel = require('../models/goalModel');
+const activityModel = require('../models/activityModel');
 
 /**
  * Recherche globale dans toutes les entités
@@ -17,97 +19,116 @@ const globalSearch = async (req, res) => {
         projects: [],
         goals: [],
         activities: [],
-        contacts: []
+        contacts: [],
+        total: 0
       });
     }
 
-    const searchTerm = `%${query.toLowerCase()}%`;
+    const searchTerm = query.toLowerCase();
+
+    // Récupérer toutes les données en parallèle
+    const [allLeads, allProjects, allGoals, allActivities] = await Promise.all([
+      leadModel.getAllLeads(db).catch(() => []),
+      projectModel.getAllProjects(db).catch(() => []),
+      goalModel.getAllGoals(db).catch(() => []),
+      activityModel.getAllActivities(db).catch(() => [])
+    ]);
 
     // Recherche dans les leads
-    const leadsPromise = new Promise((resolve, reject) => {
-      db.all(
-        `SELECT id, name, company, status, type
-         FROM leads
-         WHERE LOWER(name) LIKE ? OR LOWER(company) LIKE ? OR LOWER(email) LIKE ?
-         LIMIT 10`,
-        [searchTerm, searchTerm, searchTerm],
-        (err, rows) => {
-          if (err) reject(err);
-          else resolve(rows || []);
-        }
-      );
-    });
+    const leads = allLeads
+      .filter(lead =>
+        (lead.name && lead.name.toLowerCase().includes(searchTerm)) ||
+        (lead.company && lead.company.toLowerCase().includes(searchTerm)) ||
+        (lead.email && lead.email.toLowerCase().includes(searchTerm))
+      )
+      .map(lead => ({
+        id: lead.id,
+        name: lead.name,
+        company: lead.company,
+        status: lead.status,
+        type: lead.type
+      }))
+      .slice(0, 10);
 
     // Recherche dans les projets
-    const projectsPromise = new Promise((resolve, reject) => {
-      db.all(
-        `SELECT id, name, status, start_date, end_date
-         FROM projects
-         WHERE LOWER(name) LIKE ? OR LOWER(description) LIKE ?
-         LIMIT 10`,
-        [searchTerm, searchTerm],
-        (err, rows) => {
-          if (err) reject(err);
-          else resolve(rows || []);
-        }
-      );
-    });
+    const projects = allProjects
+      .filter(project =>
+        (project.name && project.name.toLowerCase().includes(searchTerm)) ||
+        (project.description && project.description.toLowerCase().includes(searchTerm))
+      )
+      .map(project => ({
+        id: project.id,
+        name: project.name,
+        status: project.status,
+        start_date: project.start_date,
+        end_date: project.end_date
+      }))
+      .slice(0, 10);
 
     // Recherche dans les objectifs
-    const goalsPromise = new Promise((resolve, reject) => {
-      db.all(
-        `SELECT id, name, category, current_value, target_value
-         FROM goals
-         WHERE LOWER(name) LIKE ? OR LOWER(description) LIKE ? OR LOWER(category) LIKE ?
-         LIMIT 10`,
-        [searchTerm, searchTerm, searchTerm],
-        (err, rows) => {
-          if (err) reject(err);
-          else resolve(rows || []);
-        }
-      );
-    });
+    const goals = allGoals
+      .filter(goal =>
+        (goal.name && goal.name.toLowerCase().includes(searchTerm)) ||
+        (goal.description && goal.description.toLowerCase().includes(searchTerm)) ||
+        (goal.category && goal.category.toLowerCase().includes(searchTerm))
+      )
+      .map(goal => ({
+        id: goal.id,
+        name: goal.name,
+        category: goal.category,
+        current_value: goal.current_value,
+        target_value: goal.target_value
+      }))
+      .slice(0, 10);
 
     // Recherche dans les activités
-    const activitiesPromise = new Promise((resolve, reject) => {
-      db.all(
-        `SELECT id, description, type, date, status
-         FROM activities
-         WHERE LOWER(description) LIKE ? OR LOWER(type) LIKE ?
-         ORDER BY date DESC
-         LIMIT 10`,
-        [searchTerm, searchTerm],
-        (err, rows) => {
-          if (err) reject(err);
-          else resolve(rows || []);
-        }
-      );
-    });
+    const activities = allActivities
+      .filter(activity =>
+        (activity.description && activity.description.toLowerCase().includes(searchTerm)) ||
+        (activity.type && activity.type.toLowerCase().includes(searchTerm))
+      )
+      .map(activity => ({
+        id: activity.id,
+        description: activity.description,
+        type: activity.type,
+        date: activity.date,
+        status: activity.status
+      }))
+      .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
+      .slice(0, 10);
 
-    // Recherche dans les contacts
-    const contactsPromise = new Promise((resolve, reject) => {
-      db.all(
-        `SELECT c.id, c.name, c.email, c.position, c.lead_id, l.name as lead_name
-         FROM contacts c
-         LEFT JOIN leads l ON c.lead_id = l.id
-         WHERE LOWER(c.name) LIKE ? OR LOWER(c.email) LIKE ? OR LOWER(c.position) LIKE ?
-         LIMIT 10`,
-        [searchTerm, searchTerm, searchTerm],
-        (err, rows) => {
-          if (err) reject(err);
-          else resolve(rows || []);
-        }
-      );
-    });
+    // Recherche dans les contacts (via les leads avec leurs contacts)
+    const contacts = [];
+    for (const lead of allLeads) {
+      try {
+        const leadContacts = await leadModel.getLeadContacts(db, lead.id);
+        const matchingContacts = leadContacts
+          .filter(contact =>
+            (contact.name && contact.name.toLowerCase().includes(searchTerm)) ||
+            (contact.email && contact.email.toLowerCase().includes(searchTerm)) ||
+            (contact.position && contact.position.toLowerCase().includes(searchTerm))
+          )
+          .map(contact => ({
+            id: contact.id,
+            name: contact.name,
+            email: contact.email,
+            position: contact.position,
+            lead_id: contact.lead_id,
+            lead_name: lead.name
+          }));
 
-    // Exécuter toutes les recherches en parallèle
-    const [leads, projects, goals, activities, contacts] = await Promise.all([
-      leadsPromise,
-      projectsPromise,
-      goalsPromise,
-      activitiesPromise,
-      contactsPromise
-    ]);
+        contacts.push(...matchingContacts);
+
+        // Limiter à 10 résultats
+        if (contacts.length >= 10) {
+          contacts.splice(10);
+          break;
+        }
+      } catch (error) {
+        // Continuer même en cas d'erreur sur un lead
+        continue;
+      }
+    }
 
     res.json({
       leads,

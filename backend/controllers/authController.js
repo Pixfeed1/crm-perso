@@ -12,9 +12,11 @@ const login = async (req, res) => {
   const { username, password } = req.body;
   
   try {
+    const db = req.app.locals.db;
+
     // Vérifier si l'utilisateur existe
     console.log("[AUTH] Recherche de l'utilisateur dans la base de données:", username);
-    const user = await userModel.getUserByUsername(username);
+    const user = await userModel.getUserByUsername(db, username);
     if (!user) {
       console.log("[AUTH] Utilisateur non trouvé:", username);
       return res.status(401).json({ message: 'Identifiants invalides' });
@@ -95,9 +97,11 @@ const checkAuth = async (req, res) => {
   console.log("[AUTH] Données utilisateur dans la requête:", req.user);
   
   try {
+    const db = req.app.locals.db;
+
     // Le middleware d'authentification a déjà validé le token et ajouté req.user
     console.log("[AUTH] Recherche de l'utilisateur ID:", req.user.id);
-    const userExists = await userModel.getUserById(req.user.id);
+    const userExists = await userModel.getUserById(db, req.user.id);
     
     if (!userExists) {
       console.log("[AUTH] Utilisateur ID non trouvé dans la base:", req.user.id);
@@ -132,6 +136,8 @@ const forgotPassword = async (req, res) => {
   const { email } = req.body;
 
   try {
+    const db = req.app.locals.db;
+
     // Vérifier si l'email est fourni
     if (!email) {
       console.log("[AUTH] Email manquant");
@@ -140,7 +146,7 @@ const forgotPassword = async (req, res) => {
 
     // Vérifier si l'utilisateur existe
     console.log("[AUTH] Recherche de l'utilisateur par email:", email);
-    const user = await userModel.getUserByEmail(email);
+    const user = await userModel.getUserByEmail(db, email);
 
     // Pour des raisons de sécurité, renvoyer toujours un message de succès
     // même si l'utilisateur n'existe pas
@@ -158,7 +164,7 @@ const forgotPassword = async (req, res) => {
     const resetTokenExpires = Date.now() + 3600000; // 1 heure
 
     // Sauvegarder le token dans la base de données
-    await userModel.saveResetToken(user.id, resetToken, resetTokenExpires);
+    await userModel.saveResetToken(db, user.id, resetToken, resetTokenExpires);
     console.log("[AUTH] Token de réinitialisation sauvegardé pour l'utilisateur:", user.id);
 
     // En production, envoyer un email ici
@@ -187,6 +193,8 @@ const resetPassword = async (req, res) => {
   const { token, password } = req.body;
 
   try {
+    const db = req.app.locals.db;
+
     // Vérifier si le token et le mot de passe sont fournis
     if (!token || !password) {
       console.log("[AUTH] Token ou mot de passe manquant");
@@ -200,7 +208,7 @@ const resetPassword = async (req, res) => {
 
     // Trouver l'utilisateur avec ce token valide
     console.log("[AUTH] Recherche de l'utilisateur avec le token");
-    const user = await userModel.getUserByResetToken(token);
+    const user = await userModel.getUserByResetToken(db, token);
 
     if (!user) {
       console.log("[AUTH] Token invalide ou expiré");
@@ -214,11 +222,11 @@ const resetPassword = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Mettre à jour le mot de passe
-    await userModel.updatePassword(user.id, hashedPassword);
+    await userModel.updatePassword(db, user.id, hashedPassword);
     console.log("[AUTH] Mot de passe mis à jour");
 
     // Effacer le token de réinitialisation
-    await userModel.clearResetToken(user.id);
+    await userModel.clearResetToken(db, user.id);
     console.log("[AUTH] Token de réinitialisation effacé");
 
     res.status(200).json({ message: 'Mot de passe réinitialisé avec succès' });

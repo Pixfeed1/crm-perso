@@ -1,5 +1,12 @@
 // backend/controllers/exportController.js
 
+const leadModel = require('../models/leadModel');
+const projectModel = require('../models/projectModel');
+const goalModel = require('../models/goalModel');
+const revenueModel = require('../models/revenueModel');
+const activityModel = require('../models/activityModel');
+const clientModel = require('../models/clientModel');
+
 /**
  * Convertit un tableau d'objets en CSV
  */
@@ -37,21 +44,7 @@ const arrayToCSV = (data, headers) => {
 const exportLeads = async (req, res) => {
   try {
     const db = req.app.locals.db;
-
-    const leads = await new Promise((resolve, reject) => {
-      db.all(
-        `SELECT
-          id, name, company, email, phone, status, type,
-          budget, source, notes, created_at
-         FROM leads
-         ORDER BY created_at DESC`,
-        [],
-        (err, rows) => {
-          if (err) reject(err);
-          else resolve(rows || []);
-        }
-      );
-    });
+    const leads = await leadModel.getAllLeads(db);
 
     const headers = ['id', 'name', 'company', 'email', 'phone', 'status', 'type', 'budget', 'source', 'notes', 'created_at'];
     const csv = arrayToCSV(leads, headers);
@@ -71,23 +64,9 @@ const exportLeads = async (req, res) => {
 const exportProjects = async (req, res) => {
   try {
     const db = req.app.locals.db;
+    const projects = await projectModel.getAllProjects(db);
 
-    const projects = await new Promise((resolve, reject) => {
-      db.all(
-        `SELECT
-          id, name, description, status, start_date, end_date,
-          budget, progress, created_at
-         FROM projects
-         ORDER BY created_at DESC`,
-        [],
-        (err, rows) => {
-          if (err) reject(err);
-          else resolve(rows || []);
-        }
-      );
-    });
-
-    const headers = ['id', 'name', 'description', 'status', 'start_date', 'end_date', 'budget', 'progress', 'created_at'];
+    const headers = ['id', 'name', 'description', 'status', 'start_date', 'end_date', 'amount', 'progress', 'created_at'];
     const csv = arrayToCSV(projects, headers);
 
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
@@ -105,21 +84,7 @@ const exportProjects = async (req, res) => {
 const exportGoals = async (req, res) => {
   try {
     const db = req.app.locals.db;
-
-    const goals = await new Promise((resolve, reject) => {
-      db.all(
-        `SELECT
-          id, name, description, category, period, target_value,
-          current_value, start_date, end_date, created_at
-         FROM goals
-         ORDER BY created_at DESC`,
-        [],
-        (err, rows) => {
-          if (err) reject(err);
-          else resolve(rows || []);
-        }
-      );
-    });
+    const goals = await goalModel.getAllGoals(db);
 
     const headers = ['id', 'name', 'description', 'category', 'period', 'target_value', 'current_value', 'start_date', 'end_date', 'created_at'];
     const csv = arrayToCSV(goals, headers);
@@ -139,24 +104,9 @@ const exportGoals = async (req, res) => {
 const exportRevenues = async (req, res) => {
   try {
     const db = req.app.locals.db;
+    const revenues = await revenueModel.getAllRevenues(db, {});
 
-    const revenues = await new Promise((resolve, reject) => {
-      db.all(
-        `SELECT
-          r.id, r.description, r.amount, r.date, r.type, r.status,
-          p.name as project_name, r.created_at
-         FROM revenues r
-         LEFT JOIN projects p ON r.project_id = p.id
-         ORDER BY r.date DESC`,
-        [],
-        (err, rows) => {
-          if (err) reject(err);
-          else resolve(rows || []);
-        }
-      );
-    });
-
-    const headers = ['id', 'description', 'amount', 'date', 'type', 'status', 'project_name', 'created_at'];
+    const headers = ['id', 'description', 'amount', 'date', 'type', 'status', 'project_id', 'created_at'];
     const csv = arrayToCSV(revenues, headers);
 
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
@@ -174,24 +124,7 @@ const exportRevenues = async (req, res) => {
 const exportActivities = async (req, res) => {
   try {
     const db = req.app.locals.db;
-
-    const activities = await new Promise((resolve, reject) => {
-      db.all(
-        `SELECT
-          a.id, a.description, a.type, a.date, a.planned_time,
-          a.actual_time, a.status, a.priority,
-          p.name as project_name, l.name as lead_name, a.created_at
-         FROM activities a
-         LEFT JOIN projects p ON a.project_id = p.id
-         LEFT JOIN leads l ON a.lead_id = l.id
-         ORDER BY a.date DESC`,
-        [],
-        (err, rows) => {
-          if (err) reject(err);
-          else resolve(rows || []);
-        }
-      );
-    });
+    const activities = await activityModel.getAllActivities(db);
 
     const headers = ['id', 'description', 'type', 'date', 'planned_time', 'actual_time', 'status', 'priority', 'project_name', 'lead_name', 'created_at'];
     const csv = arrayToCSV(activities, headers);
@@ -212,25 +145,23 @@ const exportContacts = async (req, res) => {
   try {
     const db = req.app.locals.db;
 
-    const contacts = await new Promise((resolve, reject) => {
-      db.all(
-        `SELECT
-          c.id, c.name, c.email, c.phone, c.position,
-          c.is_primary, c.notes, l.name as lead_name,
-          l.company as lead_company, c.created_at
-         FROM contacts c
-         LEFT JOIN leads l ON c.lead_id = l.id
-         ORDER BY c.created_at DESC`,
-        [],
-        (err, rows) => {
-          if (err) reject(err);
-          else resolve(rows || []);
-        }
-      );
-    });
+    // Récupérer tous les contacts via les leads
+    const allLeads = await leadModel.getAllLeads(db);
+    const allContacts = [];
+
+    for (const lead of allLeads) {
+      const leadContacts = await leadModel.getLeadContacts(db, lead.id);
+      leadContacts.forEach(contact => {
+        allContacts.push({
+          ...contact,
+          lead_name: lead.name,
+          lead_company: lead.company
+        });
+      });
+    }
 
     const headers = ['id', 'name', 'email', 'phone', 'position', 'is_primary', 'notes', 'lead_name', 'lead_company', 'created_at'];
-    const csv = arrayToCSV(contacts, headers);
+    const csv = arrayToCSV(allContacts, headers);
 
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="contacts_${Date.now()}.csv"`);
@@ -247,22 +178,7 @@ const exportContacts = async (req, res) => {
 const exportClients = async (req, res) => {
   try {
     const db = req.app.locals.db;
-
-    const clients = await new Promise((resolve, reject) => {
-      db.all(
-        `SELECT
-          id, name, company, type, email, phone, address,
-          website, industry, source, contract_start_date,
-          lifetime_value, status, tags, notes, created_at, updated_at
-         FROM crm_clients
-         ORDER BY created_at DESC`,
-        [],
-        (err, rows) => {
-          if (err) reject(err);
-          else resolve(rows || []);
-        }
-      );
-    });
+    const clients = await clientModel.getAllClients(db);
 
     const headers = ['id', 'name', 'company', 'type', 'email', 'phone', 'address', 'website', 'industry', 'source', 'contract_start_date', 'lifetime_value', 'status', 'tags', 'notes', 'created_at', 'updated_at'];
     const csv = arrayToCSV(clients, headers);
@@ -277,8 +193,7 @@ const exportClients = async (req, res) => {
 };
 
 /**
- * Export complet (toutes les données) en ZIP
- * Note: Pour simplifier, on retourne un objet JSON avec toutes les données
+ * Export complet (toutes les données) en JSON
  * Le frontend pourra télécharger plusieurs fichiers CSV
  */
 const exportAll = async (req, res) => {
@@ -286,44 +201,25 @@ const exportAll = async (req, res) => {
     const db = req.app.locals.db;
 
     // Récupérer toutes les entités en parallèle
-    const [leads, projects, goals, revenues, activities, contacts] = await Promise.all([
-      new Promise((resolve, reject) => {
-        db.all('SELECT * FROM leads ORDER BY created_at DESC', [], (err, rows) => {
-          if (err) reject(err);
-          else resolve(rows || []);
-        });
-      }),
-      new Promise((resolve, reject) => {
-        db.all('SELECT * FROM projects ORDER BY created_at DESC', [], (err, rows) => {
-          if (err) reject(err);
-          else resolve(rows || []);
-        });
-      }),
-      new Promise((resolve, reject) => {
-        db.all('SELECT * FROM goals ORDER BY created_at DESC', [], (err, rows) => {
-          if (err) reject(err);
-          else resolve(rows || []);
-        });
-      }),
-      new Promise((resolve, reject) => {
-        db.all('SELECT * FROM revenues ORDER BY date DESC', [], (err, rows) => {
-          if (err) reject(err);
-          else resolve(rows || []);
-        });
-      }),
-      new Promise((resolve, reject) => {
-        db.all('SELECT * FROM activities ORDER BY date DESC', [], (err, rows) => {
-          if (err) reject(err);
-          else resolve(rows || []);
-        });
-      }),
-      new Promise((resolve, reject) => {
-        db.all('SELECT * FROM contacts ORDER BY created_at DESC', [], (err, rows) => {
-          if (err) reject(err);
-          else resolve(rows || []);
-        });
-      })
+    const [leads, projects, goals, revenues, activities, clients] = await Promise.all([
+      leadModel.getAllLeads(db).catch(() => []),
+      projectModel.getAllProjects(db).catch(() => []),
+      goalModel.getAllGoals(db).catch(() => []),
+      revenueModel.getAllRevenues(db, {}).catch(() => []),
+      activityModel.getAllActivities(db).catch(() => []),
+      clientModel.getAllClients(db).catch(() => [])
     ]);
+
+    // Récupérer tous les contacts
+    const allContacts = [];
+    for (const lead of leads) {
+      try {
+        const leadContacts = await leadModel.getLeadContacts(db, lead.id);
+        allContacts.push(...leadContacts);
+      } catch (error) {
+        // Continuer même en cas d'erreur
+      }
+    }
 
     // Retourner un JSON avec toutes les données
     res.json({
@@ -333,14 +229,16 @@ const exportAll = async (req, res) => {
       goals,
       revenues,
       activities,
-      contacts,
+      clients,
+      contacts: allContacts,
       totals: {
         leads: leads.length,
         projects: projects.length,
         goals: goals.length,
         revenues: revenues.length,
         activities: activities.length,
-        contacts: contacts.length
+        clients: clients.length,
+        contacts: allContacts.length
       }
     });
   } catch (error) {
