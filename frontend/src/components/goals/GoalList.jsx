@@ -1,7 +1,7 @@
 // src/components/goals/GoalList.jsx
 import React from 'react';
 import { motion } from 'framer-motion';
-import { FiUsers, FiDollarSign, FiSettings, FiMegaphone, FiStar, FiCheckCircle, FiClock, FiZap, FiAlertCircle, FiMinusCircle, FiTarget, FiMapPin } from 'react-icons/fi';
+import { FiUsers, FiDollarSign, FiSettings, FiRadio, FiStar, FiCheckCircle, FiClock, FiZap, FiAlertCircle, FiMinusCircle, FiTarget, FiMapPin } from 'react-icons/fi';
 
 const GoalList = ({ goals, selectedGoal, onSelectGoal }) => {
   // Fonction pour calculer le pourcentage de progression
@@ -23,7 +23,7 @@ const GoalList = ({ goals, selectedGoal, onSelectGoal }) => {
     'leads': { icon: <FiUsers />, label: 'Leads', color: 'text-blue-300' },
     'revenue': { icon: <FiDollarSign />, label: 'Revenus', color: 'text-emerald-300' },
     'productivity': { icon: <FiSettings />, label: 'Productivité', color: 'text-purple-300' },
-    'marketing': { icon: <FiMegaphone />, label: 'Marketing', color: 'text-amber-300' },
+    'marketing': { icon: <FiRadio />, label: 'Marketing', color: 'text-amber-300' },
     'personal': { icon: <FiStar />, label: 'Personnel', color: 'text-rose-300' }
   };
 

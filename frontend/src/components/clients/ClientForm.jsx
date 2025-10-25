@@ -1,7 +1,7 @@
 // src/components/clients/ClientForm.jsx
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { FiBuilding, FiUser, FiX } from 'react-icons/fi';
+import { FiBriefcase, FiUser, FiX } from 'react-icons/fi';
 
 const ClientForm = ({ client = {}, onSave, onCancel }) => {
   // État du formulaire avec valeurs par défaut ou existantes
@@ -141,7 +141,7 @@ const ClientForm = ({ client = {}, onSave, onCancel }) => {
                   : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-600'
               }`}
             >
-              <FiBuilding />
+              <FiBriefcase />
               <span>Entreprise</span>
             </motion.button>
             <motion.button

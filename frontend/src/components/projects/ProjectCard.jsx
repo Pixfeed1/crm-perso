@@ -1,7 +1,7 @@
 // src/components/projects/ProjectCard.jsx
 import React from 'react';
 import { motion } from 'framer-motion';
-import { FiGlobe, FiSmartphone, FiMonitor, FiEdit2, FiMegaphone, FiTool, FiPackage, FiClipboard } from 'react-icons/fi';
+import { FiGlobe, FiSmartphone, FiMonitor, FiEdit2, FiRadio, FiTool, FiPackage, FiClipboard } from 'react-icons/fi';
 
 const ProjectCard = ({ project, isSelected, onClick }) => {
   // S'assurer que le projet a une valeur progress
@@ -47,7 +47,7 @@ const ProjectCard = ({ project, isSelected, onClick }) => {
     'application-mobile': { icon: <FiSmartphone />, label: 'App Mobile' },
     'application-bureau': { icon: <FiMonitor />, label: 'App Bureau' },
     'design': { icon: <FiEdit2 />, label: 'Design' },
-    'marketing': { icon: <FiMegaphone />, label: 'Marketing' },
+    'marketing': { icon: <FiRadio />, label: 'Marketing' },
     'maintenance': { icon: <FiTool />, label: 'Maintenance' },
     'autre': { icon: <FiPackage />, label: 'Autre' }
   };

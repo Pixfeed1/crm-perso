@@ -1,7 +1,7 @@
 // src/components/dashboard/ActivityStream.jsx
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiMonitor, FiEdit2, FiUsers, FiPhone, FiMegaphone, FiTool, FiClipboard, FiRocket, FiUser } from 'react-icons/fi';
+import { FiMonitor, FiEdit2, FiUsers, FiPhone, FiRadio, FiTool, FiClipboard, FiZap, FiUser } from 'react-icons/fi';
 
 const ActivityStream = ({ activities = [], projects = [], showTitle = true, maxItems = 7 }) => {
   const [expanded, setExpanded] = useState(false);
@@ -12,7 +12,7 @@ const ActivityStream = ({ activities = [], projects = [], showTitle = true, maxI
     'design': { icon: <FiEdit2 />, label: 'Design', bg: 'bg-purple-900/20', text: 'text-purple-300' },
     'meeting': { icon: <FiUsers />, label: 'Réunion', bg: 'bg-indigo-900/20', text: 'text-indigo-300' },
     'call': { icon: <FiPhone />, label: 'Appel', bg: 'bg-green-900/20', text: 'text-green-300' },
-    'marketing': { icon: <FiMegaphone />, label: 'Marketing', bg: 'bg-amber-900/20', text: 'text-amber-300' },
+    'marketing': { icon: <FiRadio />, label: 'Marketing', bg: 'bg-amber-900/20', text: 'text-amber-300' },
     'maintenance': { icon: <FiTool />, label: 'Maintenance', bg: 'bg-teal-900/20', text: 'text-teal-300' }
   };
   
@@ -136,7 +136,7 @@ const ActivityStream = ({ activities = [], projects = [], showTitle = true, maxI
                           {/* Projet associé */}
                           {projectInfo && (
                             <span className="text-xs text-indigo-300 truncate flex items-center gap-1">
-                              <FiRocket /> {projectInfo.name}
+                              <FiZap /> {projectInfo.name}
                             </span>
                           )}
                           

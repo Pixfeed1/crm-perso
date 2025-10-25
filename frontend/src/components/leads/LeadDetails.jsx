@@ -1,7 +1,7 @@
 // src/components/leads/LeadDetails.jsx
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiStar, FiEye, FiCheckCircle, FiMessageCircle, FiAward, FiXCircle, FiHelpCircle, FiClipboard, FiBuilding, FiUser, FiFileText, FiUsers, FiEdit2, FiTrash2, FiClock, FiUserCheck } from 'react-icons/fi';
+import { FiStar, FiEye, FiCheckCircle, FiMessageCircle, FiAward, FiXCircle, FiHelpCircle, FiClipboard, FiBriefcase, FiUser, FiFileText, FiUsers, FiEdit2, FiTrash2, FiClock, FiUserCheck } from 'react-icons/fi';
 import { leadsAPI, clientsAPI } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
 import { useConfirm } from '../../hooks/useConfirm';
@@ -273,7 +273,7 @@ const LeadDetails = ({ lead, onUpdate, onDelete, onAddContact, onUpdateContact, 
             <div className="flex justify-between items-center">
               <span className="text-gray-400 text-sm sm:text-base">Type</span>
               <span className="font-medium text-white flex items-center gap-1 sm:gap-2 text-sm sm:text-base">
-                {lead.type === 'company' ? <><FiBuilding className="text-sm sm:text-base" /> Entreprise</> : <><FiUser className="text-sm sm:text-base" /> Particulier</>}
+                {lead.type === 'company' ? <><FiBriefcase className="text-sm sm:text-base" /> Entreprise</> : <><FiUser className="text-sm sm:text-base" /> Particulier</>}
               </span>
             </div>
             

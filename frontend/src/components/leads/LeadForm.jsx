@@ -1,7 +1,7 @@
 // src/components/leads/LeadForm.jsx
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { FiBuilding, FiUser } from 'react-icons/fi';
+import { FiBriefcase, FiUser } from 'react-icons/fi';
 
 const LeadForm = ({ lead = {}, onSave, onCancel }) => {
   // État du formulaire avec valeurs par défaut ou existantes
@@ -113,7 +113,7 @@ const LeadForm = ({ lead = {}, onSave, onCancel }) => {
                 onChange={handleInputChange}
                 className="sr-only"
               />
-              <FiBuilding className="text-base sm:text-lg mr-2" />
+              <FiBriefcase className="text-base sm:text-lg mr-2" />
               <span className="text-sm sm:text-base">Entreprise</span>
             </label>
 

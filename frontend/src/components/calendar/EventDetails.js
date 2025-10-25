@@ -1,7 +1,7 @@
 // src/components/calendar/EventDetails.jsx
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiUsers, FiPhone, FiClock, FiCheck, FiHome, FiClipboard, FiEdit2, FiTrash2, FiCalendar, FiFileText, FiUser, FiRocket } from 'react-icons/fi';
+import { FiUsers, FiPhone, FiClock, FiCheck, FiHome, FiClipboard, FiEdit2, FiTrash2, FiCalendar, FiFileText, FiUser, FiZap } from 'react-icons/fi';
 
 const EventDetails = ({ event, onUpdate, onDelete }) => {
   const [isEditing, setIsEditing] = useState(false);
@@ -359,7 +359,7 @@ const EventDetails = ({ event, onUpdate, onDelete }) => {
               <div className="flex justify-between items-center">
                 <span className="text-gray-400">Associé à</span>
                 <span className="px-3 py-1 rounded-full bg-gray-700/50 text-gray-300 text-sm flex items-center gap-1">
-                  {event.related_to.type === 'lead' ? <FiUser /> : <FiRocket />}
+                  {event.related_to.type === 'lead' ? <FiUser /> : <FiZap />}
                   {event.related_to.name}
                 </span>
               </div>
