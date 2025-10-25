@@ -38,12 +38,9 @@ const CompanyAutocomplete = ({
       searchTimeoutRef.current = setTimeout(async () => {
         setIsLoading(true);
         const results = await searchCompanies(value);
-        console.log('🎯 CompanyAutocomplete - Résultats reçus:', results);
-        console.log('🎯 CompanyAutocomplete - Nombre:', results.length);
         setSuggestions(results);
         setShowDropdown(true);
         setIsLoading(false);
-        console.log('🎯 CompanyAutocomplete - Dropdown affiché:', true);
       }, 300);
     } else {
       setSuggestions([]);
