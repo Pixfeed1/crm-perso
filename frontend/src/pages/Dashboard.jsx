@@ -6,7 +6,7 @@ import { FiCalendar as FiCalendarIcon, FiTrendingUp as FiTrendingUpIcon } from '
 import KPIOrb from '../components/dashboard/KPIOrb';
 import ActivityStream from '../components/dashboard/ActivityStream';
 import GoalProgress from '../components/dashboard/GoalProgress';
-import api from '../services/api';
+import { dashboardAPI } from '../services/api';
 
 const Dashboard = () => {
   const [dashboardData, setDashboardData] = useState({
@@ -25,8 +25,8 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const response = await api.get('/dashboard');
-        setDashboardData(response.data);
+        const data = await dashboardAPI.getData();
+        setDashboardData(data);
       } catch (error) {
         console.error('Erreur lors de la récupération des données du tableau de bord:', error);
       } finally {
