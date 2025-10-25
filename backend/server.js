@@ -7,6 +7,7 @@ const dotenv = require('dotenv');
 const cookieParser = require('cookie-parser');
 const fs = require('fs');
 const db = require('./config/pgConfig'); // Changé pour utiliser PostgreSQL
+const { createRemindersTable } = require('./scripts/createRemindersTable');
 
 // Charger les variables d'environnement
 dotenv.config();
@@ -159,22 +160,54 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Démarrer le serveur
-const server = app.listen(PORT, () => {
-  console.log('===========================================');
-  console.log(`Serveur démarré sur le port ${PORT} en mode ${process.env.NODE_ENV}`);
-  console.log(`Base de données: PostgreSQL sur ${process.env.DB_HOST || 'localhost'}`);
-  console.log(`Version: ${new Date().toISOString()}`);
-  
-  if (!fs.existsSync(indexPath)) {
-    console.log('');
-    console.log('⚠️ AVERTISSEMENT: index.html non trouvé!');
-    console.log('L\'application React ne pourra pas être servie correctement.');
-    console.log('Exécutez "npm run build" dans le dossier frontend.');
-    console.log('');
+// Fonction pour initialiser la base de données
+async function initializeDatabase() {
+  try {
+    console.log('🔄 Initialisation de la base de données...');
+    await createRemindersTable();
+    console.log('✅ Base de données initialisée avec succès.');
+  } catch (error) {
+    console.error('⚠️ Erreur lors de l\'initialisation de la base de données:', error.message);
+    // Ne pas bloquer le démarrage du serveur si la table existe déjà
+    if (!error.message.includes('existe déjà')) {
+      console.error('❌ Erreur critique lors de l\'initialisation de la base de données');
+    }
   }
-  
-  console.log('===========================================');
+}
+
+// Démarrer le serveur après l'initialisation de la base de données
+async function startServer() {
+  // Initialiser la base de données
+  await initializeDatabase();
+
+  // Démarrer le serveur HTTP
+  const server = app.listen(PORT, () => {
+    console.log('===========================================');
+    console.log(`Serveur démarré sur le port ${PORT} en mode ${process.env.NODE_ENV}`);
+    console.log(`Base de données: PostgreSQL sur ${process.env.DB_HOST || 'localhost'}`);
+    console.log(`Version: ${new Date().toISOString()}`);
+
+    if (!fs.existsSync(indexPath)) {
+      console.log('');
+      console.log('⚠️ AVERTISSEMENT: index.html non trouvé!');
+      console.log('L\'application React ne pourra pas être servie correctement.');
+      console.log('Exécutez "npm run build" dans le dossier frontend.');
+      console.log('');
+    }
+
+    console.log('===========================================');
+  });
+
+  return server;
+}
+
+// Lancer le serveur
+let server;
+startServer().then(s => {
+  server = s;
+}).catch(error => {
+  console.error('❌ Erreur fatale lors du démarrage du serveur:', error);
+  process.exit(1);
 });
 
 // Gestion de la fermeture propre de la base de données et du serveur

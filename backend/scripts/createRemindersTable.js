@@ -36,7 +36,7 @@ async function createRemindersTable() {
     const tableExistsResult = await client.query(tableExistsQuery);
 
     if (tableExistsResult.rows[0].exists) {
-      console.log('La table reminders existe déjà dans PostgreSQL.');
+      console.log('✅ La table reminders existe déjà dans PostgreSQL.');
       return;
     }
 
@@ -82,8 +82,11 @@ async function createRemindersTable() {
     throw error;
   } finally {
     client.release();
-    await pgPool.end();
-    console.log('Connexion PostgreSQL fermée.');
+    // Ne fermer le pool que si le script est exécuté directement (pas en tant que module)
+    if (require.main === module) {
+      await pgPool.end();
+      console.log('Connexion PostgreSQL fermée.');
+    }
   }
 }
 
