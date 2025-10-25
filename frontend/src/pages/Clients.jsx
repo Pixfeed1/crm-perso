@@ -10,6 +10,7 @@ import { useConfirm } from '../hooks/useConfirm';
 import ClientCard from '../components/clients/ClientCard';
 import ClientDetails from '../components/clients/ClientDetails';
 import ClientForm from '../components/clients/ClientForm';
+import ClientFilter from '../components/clients/ClientFilter';
 import EmptyState from '../components/common/EmptyState';
 import ConfirmModal from '../components/common/ConfirmModal';
 
@@ -23,8 +24,16 @@ const Clients = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [showDetails, setShowDetails] = useState(false);
   const [stats, setStats] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [filters, setFilters] = useState({
+    search: '',
+    status: 'all',
+    type: 'all',
+    source: 'all',
+    dateFrom: '',
+    dateTo: ''
+  });
+  const [sortField, setSortField] = useState('created_at');
+  const [sortDirection, setSortDirection] = useState('desc');
 
   // Récupération des clients depuis l'API
   useEffect(() => {
@@ -59,21 +68,73 @@ const Clients = () => {
     }
   };
 
-  // Filtrage des clients
+  // Filtrage et tri des clients
   useEffect(() => {
-    const result = clients.filter(client => {
-      const searchMatch = searchTerm === '' ||
-        client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (client.company && client.company.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (client.email && client.email.toLowerCase().includes(searchTerm.toLowerCase()));
+    let result = clients.filter(client => {
+      // Filtre par recherche
+      const searchMatch = filters.search === '' ||
+        client.name.toLowerCase().includes(filters.search.toLowerCase()) ||
+        (client.company && client.company.toLowerCase().includes(filters.search.toLowerCase())) ||
+        (client.email && client.email.toLowerCase().includes(filters.search.toLowerCase()));
 
-      const statusMatch = statusFilter === 'all' || client.status === statusFilter;
+      // Filtre par statut
+      const statusMatch = filters.status === 'all' || client.status === filters.status;
 
-      return searchMatch && statusMatch;
+      // Filtre par type
+      const typeMatch = filters.type === 'all' || client.type === filters.type;
+
+      // Filtre par source
+      const sourceMatch = filters.source === 'all' || client.source === filters.source;
+
+      // Filtre par date de création (range)
+      const dateMatch =
+        (!filters.dateFrom || new Date(client.created_at) >= new Date(filters.dateFrom)) &&
+        (!filters.dateTo || new Date(client.created_at) <= new Date(filters.dateTo + 'T23:59:59'));
+
+      return searchMatch && statusMatch && typeMatch && sourceMatch && dateMatch;
+    });
+
+    // Tri des résultats
+    result.sort((a, b) => {
+      let aValue, bValue;
+
+      switch (sortField) {
+        case 'name':
+          aValue = a.name.toLowerCase();
+          bValue = b.name.toLowerCase();
+          break;
+        case 'company':
+          aValue = (a.company || '').toLowerCase();
+          bValue = (b.company || '').toLowerCase();
+          break;
+        case 'created_at':
+        case 'updated_at':
+          aValue = new Date(a[sortField]);
+          bValue = new Date(b[sortField]);
+          break;
+        default:
+          return 0;
+      }
+
+      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
     });
 
     setFilteredClients(result);
-  }, [clients, searchTerm, statusFilter]);
+  }, [clients, filters, sortField, sortDirection]);
+
+  // Gestion du tri
+  const handleSort = (field) => {
+    if (sortField === field) {
+      // Toggle entre asc et desc si c'est déjà le champ actif
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      // Nouveau champ de tri: définir à 'asc' par défaut
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
 
   // Sélection d'un client
   const handleSelectClient = async (client) => {
@@ -248,23 +309,14 @@ const Clients = () => {
         </div>
 
         {/* Filtres */}
-        <div className="mb-4 flex flex-col sm:flex-row gap-3">
-          <input
-            type="text"
-            placeholder="Rechercher un client..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="flex-1 px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+        <div className="mb-4">
+          <ClientFilter
+            filters={filters}
+            setFilters={setFilters}
+            onSort={handleSort}
+            sortField={sortField}
+            sortDirection={sortDirection}
           />
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
-          >
-            <option value="all">Tous les statuts</option>
-            <option value="active">Actif</option>
-            <option value="inactive">Inactif</option>
-          </select>
         </div>
 
         {/* Contenu principal */}
