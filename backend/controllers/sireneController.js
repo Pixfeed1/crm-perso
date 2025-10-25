@@ -6,7 +6,9 @@
 
 const axios = require('axios');
 
-const SIRENE_API_URL = 'https://entreprise.data.gouv.fr/api/sirene/v3';
+// NOUVELLE API OFFICIELLE (entreprise.data.gouv.fr a été fermée en septembre 2022)
+// Documentation: https://annuaire-entreprises.data.gouv.fr/donnees/api-entreprises
+const SIRENE_API_URL = 'https://recherche-entreprises.api.gouv.fr';
 
 /**
  * Recherche d'entreprises dans la base Sirene
@@ -20,26 +22,33 @@ exports.searchCompanies = async (req, res) => {
       return res.json([]);
     }
 
-    // Encoder la requête pour l'URL
-    const encodedQuery = encodeURIComponent(q);
-
-    // Appel à l'API Sirene avec timeout de 5 secondes
-    const response = await axios.get(
-      `${SIRENE_API_URL}/unites_legales?q=${encodedQuery}&nombre=10&champs=siren,denominationUniteLegale,categorieJuridiqueUniteLegale,activitePrincipaleUniteLegale,nomenclatureActivitePrincipaleUniteLegale,trancheEffectifsUniteLegale`,
-      { timeout: 5000 }
-    );
+    // Appel à la NOUVELLE API officielle (recherche-entreprises.api.gouv.fr)
+    // Format: https://recherche-entreprises.api.gouv.fr/search?q=nom&per_page=10
+    const response = await axios.get(`${SIRENE_API_URL}/search`, {
+      params: {
+        q: q,
+        page: 1,
+        per_page: 10
+      },
+      headers: {
+        'User-Agent': 'CRM-App/1.0',
+        'Accept': 'application/json'
+      },
+      timeout: 5000
+    });
 
     const data = response.data;
 
-    // Formater les résultats
-    if (data.unite_legale && data.unite_legale.length > 0) {
-      const results = data.unite_legale.map(company => ({
+    // Formater les résultats selon la nouvelle structure API
+    if (data.results && data.results.length > 0) {
+      const results = data.results.map(company => ({
         siren: company.siren,
-        name: company.denomination_unite_legale || company.denomination_usuelle_unite_legale_1 || 'Nom non disponible',
-        legalForm: getCategorieJuridiqueLabel(company.categorie_juridique_unite_legale),
-        activity: company.activite_principale_unite_legale,
-        activityLabel: getNafLabel(company.activite_principale_unite_legale),
-        employees: getTrancheEffectifsLabel(company.tranche_effectifs_unite_legale)
+        name: company.nom_complet || company.nom_raison_sociale || 'Nom non disponible',
+        legalForm: company.nature_juridique || 'Non spécifié',
+        activity: company.activite_principale,
+        activityLabel: company.libelle_activite_principale || `Code NAF ${company.activite_principale}`,
+        employees: company.tranche_effectif_salarie ? getTrancheEffectifsLabel(company.tranche_effectif_salarie) : 'Non communiqué',
+        address: company.siege ? formatAddress(company.siege) : null
       }));
 
       return res.json(results);
@@ -60,6 +69,26 @@ exports.searchCompanies = async (req, res) => {
 };
 
 /**
+ * Formate l'adresse depuis les données de siège
+ */
+const formatAddress = (siege) => {
+  if (!siege) return null;
+
+  const parts = [];
+  if (siege.numero_voie && siege.type_voie && siege.libelle_voie) {
+    parts.push(`${siege.numero_voie} ${siege.type_voie} ${siege.libelle_voie}`);
+  } else if (siege.libelle_voie) {
+    parts.push(siege.libelle_voie);
+  }
+
+  if (siege.code_postal && siege.libelle_commune) {
+    parts.push(`${siege.code_postal} ${siege.libelle_commune}`);
+  }
+
+  return parts.length > 0 ? parts.join(', ') : null;
+};
+
+/**
  * Récupère les détails complets d'une entreprise par son SIREN
  * GET /api/sirene/details/:siren
  */
@@ -71,26 +100,35 @@ exports.getCompanyDetails = async (req, res) => {
       return res.status(400).json({ error: 'SIREN invalide (doit contenir 9 chiffres)' });
     }
 
-    const response = await axios.get(
-      `${SIRENE_API_URL}/unites_legales/${siren}`,
-      { timeout: 5000 }
-    );
+    // Recherche par SIREN sur la nouvelle API
+    const response = await axios.get(`${SIRENE_API_URL}/search`, {
+      params: {
+        q: siren,
+        page: 1,
+        per_page: 1
+      },
+      headers: {
+        'User-Agent': 'CRM-App/1.0',
+        'Accept': 'application/json'
+      },
+      timeout: 5000
+    });
 
     const data = response.data;
 
-    if (data.unite_legale) {
-      const company = data.unite_legale;
+    if (data.results && data.results.length > 0) {
+      const company = data.results[0];
 
       const details = {
         siren: company.siren,
-        siret: company.etablissements?.[0]?.siret || null,
-        name: company.denomination_unite_legale || company.denomination_usuelle_unite_legale_1,
-        legalForm: getCategorieJuridiqueLabel(company.categorie_juridique_unite_legale),
-        activity: company.activite_principale_unite_legale,
-        activityLabel: getNafLabel(company.activite_principale_unite_legale),
-        employees: getTrancheEffectifsLabel(company.tranche_effectifs_unite_legale),
-        address: company.etablissements?.[0] ? formatSireneAddress(company.etablissements[0]) : null,
-        creationDate: company.date_creation_unite_legale
+        siret: company.siege?.siret || null,
+        name: company.nom_complet || company.nom_raison_sociale,
+        legalForm: company.nature_juridique || 'Non spécifié',
+        activity: company.activite_principale,
+        activityLabel: company.libelle_activite_principale || `Code NAF ${company.activite_principale}`,
+        employees: company.tranche_effectif_salarie ? getTrancheEffectifsLabel(company.tranche_effectif_salarie) : 'Non communiqué',
+        address: company.siege ? formatAddress(company.siege) : null,
+        creationDate: company.date_creation || null
       };
 
       return res.json(details);
@@ -113,62 +151,8 @@ exports.getCompanyDetails = async (req, res) => {
 };
 
 // ===== HELPERS =====
-
-/**
- * Formate l'adresse depuis les données Sirene
- */
-const formatSireneAddress = (etablissement) => {
-  const parts = [];
-
-  if (etablissement.geo_l4) parts.push(etablissement.geo_l4);
-  if (etablissement.geo_l5) parts.push(etablissement.geo_l5);
-
-  const cityParts = [];
-  if (etablissement.code_postal_etablissement) cityParts.push(etablissement.code_postal_etablissement);
-  if (etablissement.libelle_commune_etablissement) cityParts.push(etablissement.libelle_commune_etablissement);
-
-  if (cityParts.length > 0) parts.push(cityParts.join(' '));
-
-  return parts.join(', ');
-};
-
-/**
- * Convertit le code catégorie juridique en libellé lisible
- */
-const getCategorieJuridiqueLabel = (code) => {
-  const categories = {
-    '5499': 'SA',
-    '5710': 'SAS',
-    '5720': 'SASU',
-    '5498': 'SARL',
-    '5505': 'EURL',
-    '1000': 'Entrepreneur individuel',
-    '6540': 'Auto-entrepreneur',
-    '9220': 'Association',
-    '7210': 'EPIC'
-  };
-
-  return categories[code] || code || 'Non spécifié';
-};
-
-/**
- * Obtient le libellé d'un code NAF/APE
- */
-const getNafLabel = (code) => {
-  if (!code) return 'Non spécifié';
-
-  const nafCodes = {
-    '62.01Z': 'Programmation informatique',
-    '62.02A': 'Conseil en systèmes et logiciels informatiques',
-    '70.22Z': 'Conseil pour les affaires et autres conseils de gestion',
-    '47.91A': 'Vente à distance sur catalogue général',
-    '47.91B': 'Vente à distance sur catalogue spécialisé',
-    '73.11Z': 'Activités des agences de publicité',
-    '82.11Z': 'Services administratifs combinés de bureau'
-  };
-
-  return nafCodes[code] || `Code NAF ${code}`;
-};
+// Note: La nouvelle API recherche-entreprises.api.gouv.fr fournit déjà
+// les libellés formatés, donc nous n'avons besoin que de helpers simples
 
 /**
  * Convertit la tranche d'effectifs en libellé
