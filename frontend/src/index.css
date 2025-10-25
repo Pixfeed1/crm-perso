@@ -15,3 +15,26 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+/* ============================================================
+   CORRECTION TEXTES BLANCS SUR BLANC
+   Force le texte blanc dans TOUS les champs de saisie
+   ============================================================ */
+
+/* Tous les inputs sauf checkbox et radio */
+input:not([type="checkbox"]):not([type="radio"]),
+textarea,
+select {
+  color: white !important;
+}
+
+/* Placeholders en gris */
+input::placeholder,
+textarea::placeholder {
+  color: rgb(107, 114, 128) !important; /* gray-500 */
+}
+
+/* Labels en gris clair */
+label {
+  color: rgb(209, 213, 219) !important; /* gray-300 */
+}
