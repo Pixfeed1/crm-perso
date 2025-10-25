@@ -36,6 +36,12 @@ const Leads = () => {
   });
   const [sortField, setSortField] = useState('created_at');
   const [sortDirection, setSortDirection] = useState('desc');
+  const [stats, setStats] = useState({
+    total: 0,
+    newThisMonth: 0,
+    byStatus: {},
+    conversionRate: 0
+  });
 
   // Récupération des leads depuis l'API
   useEffect(() => {
@@ -48,6 +54,7 @@ const Leads = () => {
 
         setLeads(leadsData);
         setFilteredLeads(leadsData);
+        calculateStats(leadsData);
       } catch (error) {
         console.error('Erreur lors du chargement des leads:', error);
         setLeads([]);
@@ -59,6 +66,36 @@ const Leads = () => {
 
     fetchLeads();
   }, []);
+
+  // Calcul des statistiques
+  const calculateStats = (leadsData) => {
+    const total = leadsData.length;
+
+    // Leads créés ce mois
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const newThisMonth = leadsData.filter(lead =>
+      new Date(lead.created_at) >= startOfMonth
+    ).length;
+
+    // Comptage par statut
+    const byStatus = {};
+    leadsData.forEach(lead => {
+      const status = lead.status || 'unknown';
+      byStatus[status] = (byStatus[status] || 0) + 1;
+    });
+
+    // Taux de conversion (leads won / total leads)
+    const wonLeads = byStatus['won'] || 0;
+    const conversionRate = total > 0 ? Math.round((wonLeads / total) * 100) : 0;
+
+    setStats({
+      total,
+      newThisMonth,
+      byStatus,
+      conversionRate
+    });
+  };
 
   // Filtrage et tri des leads
   useEffect(() => {
@@ -432,6 +469,28 @@ const Leads = () => {
           Gérez vos prospects et opportunités
         </motion.p>
       </header>
+
+      {/* Statistiques */}
+      {stats && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6 px-2 sm:px-0">
+          <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-4">
+            <div className="text-gray-400 text-xs mb-1">Total Leads</div>
+            <div className="text-white text-2xl font-bold">{stats.total || 0}</div>
+          </div>
+          <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4">
+            <div className="text-green-400 text-xs mb-1">Nouveaux ce mois</div>
+            <div className="text-white text-2xl font-bold">{stats.newThisMonth || 0}</div>
+          </div>
+          <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4">
+            <div className="text-blue-400 text-xs mb-1">Gagnés</div>
+            <div className="text-white text-2xl font-bold">{stats.byStatus?.won || 0}</div>
+          </div>
+          <div className="bg-purple-500/10 border border-purple-500/30 rounded-xl p-4">
+            <div className="text-purple-400 text-xs mb-1">Taux de conversion</div>
+            <div className="text-white text-2xl font-bold">{stats.conversionRate || 0}%</div>
+          </div>
+        </div>
+      )}
 
       {/* Toggle de vue et actions */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3 px-2 sm:px-0">

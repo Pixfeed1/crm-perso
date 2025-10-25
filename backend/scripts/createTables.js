@@ -41,7 +41,8 @@ const tables = [
   'events',
   'revenues',
   'goals',
-  'milestones'
+  'milestones',
+  'reminders'
 ];
 
 // Fonction principale

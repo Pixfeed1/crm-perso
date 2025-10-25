@@ -32,6 +32,12 @@ const Projects = () => {
   });
   const [sortField, setSortField] = useState('created_at');
   const [sortDirection, setSortDirection] = useState('desc');
+  const [stats, setStats] = useState({
+    total: 0,
+    active: 0,
+    completed: 0,
+    totalBudget: 0
+  });
 
   // Récupération des projets depuis l'API
   useEffect(() => {
@@ -51,6 +57,7 @@ const Projects = () => {
 
         setProjects(projectsWithProgress);
         setFilteredProjects(projectsWithProgress);
+        calculateStats(projectsWithProgress);
       } catch (error) {
         console.error('Erreur lors du chargement des projets:', error);
         setError('Impossible de charger les projets. Veuillez réessayer ultérieurement.');
@@ -63,6 +70,32 @@ const Projects = () => {
 
     fetchProjects();
   }, []);
+
+  // Calcul des statistiques
+  const calculateStats = (projectsData) => {
+    const total = projectsData.length;
+
+    // Projets actifs (en-cours ou planifié)
+    const active = projectsData.filter(p =>
+      p.status === 'en-cours' || p.status === 'planifié'
+    ).length;
+
+    // Projets terminés
+    const completed = projectsData.filter(p => p.status === 'terminé').length;
+
+    // Budget total (somme des budgets de tous les projets)
+    const totalBudget = projectsData.reduce((sum, p) => {
+      const budget = parseFloat(p.budget) || 0;
+      return sum + budget;
+    }, 0);
+
+    setStats({
+      total,
+      active,
+      completed,
+      totalBudget: Math.round(totalBudget)
+    });
+  };
 
   // Filtrage et tri des projets
   useEffect(() => {
@@ -437,6 +470,28 @@ const Projects = () => {
           Gérez vos projets et suivez leur avancement
         </motion.p>
       </header>
+
+      {/* Statistiques */}
+      {stats && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6 px-2 sm:px-0">
+          <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-4">
+            <div className="text-gray-400 text-xs mb-1">Total Projets</div>
+            <div className="text-white text-2xl font-bold">{stats.total || 0}</div>
+          </div>
+          <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4">
+            <div className="text-green-400 text-xs mb-1">Actifs</div>
+            <div className="text-white text-2xl font-bold">{stats.active || 0}</div>
+          </div>
+          <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4">
+            <div className="text-blue-400 text-xs mb-1">Terminés</div>
+            <div className="text-white text-2xl font-bold">{stats.completed || 0}</div>
+          </div>
+          <div className="bg-purple-500/10 border border-purple-500/30 rounded-xl p-4">
+            <div className="text-purple-400 text-xs mb-1">Budget Total</div>
+            <div className="text-white text-2xl font-bold">{stats.totalBudget || 0}€</div>
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-col lg:flex-row flex-grow overflow-hidden gap-4">
         {/* Panneau de gauche: Liste des projets */}
