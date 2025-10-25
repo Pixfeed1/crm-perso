@@ -1,9 +1,7 @@
 // backend/controllers/searchController.js
 
-const leadModel = require('../models/leadModel');
-const projectModel = require('../models/projectModel');
-const goalModel = require('../models/goalModel');
-const activityModel = require('../models/activityModel');
+// Note: projectModel et activityModel existent mais ne sont pas utilisés dans ce fichier
+// La recherche utilise des requêtes SQL directes pour l'instant
 
 /**
  * Recherche globale dans toutes les entités
