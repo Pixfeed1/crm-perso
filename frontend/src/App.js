@@ -22,6 +22,8 @@ import Revenues from './pages/Revenues';
 import Activities from './pages/Activities';
 import Goals from './pages/Goals';
 import Reports from './pages/Reports';
+import Quotes from './pages/Quotes';
+import Invoices from './pages/Invoices';
 
 // Composant ProtectedRoute pour protéger les routes
 const ProtectedRoute = ({ children }) => {
@@ -136,6 +138,22 @@ const App = () => {
             <ProtectedRoute>
               <Layout>
                 <Reports />
+              </Layout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/quotes" element={
+            <ProtectedRoute>
+              <Layout>
+                <Quotes />
+              </Layout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/invoices" element={
+            <ProtectedRoute>
+              <Layout>
+                <Invoices />
               </Layout>
             </ProtectedRoute>
           } />
