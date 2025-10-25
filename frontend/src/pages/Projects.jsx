@@ -30,6 +30,8 @@ const Projects = () => {
     type: 'all',
     timeframe: 'all'
   });
+  const [sortField, setSortField] = useState('created_at');
+  const [sortDirection, setSortDirection] = useState('desc');
 
   // Récupération des projets depuis l'API
   useEffect(() => {
@@ -62,9 +64,9 @@ const Projects = () => {
     fetchProjects();
   }, []);
 
-  // Filtrage des projets
+  // Filtrage et tri des projets
   useEffect(() => {
-    const result = projects.filter(project => {
+    let result = projects.filter(project => {
       // Filtre par recherche
       const searchMatch = filters.search === '' ||
         project.name.toLowerCase().includes(filters.search.toLowerCase()) ||
@@ -93,8 +95,50 @@ const Projects = () => {
       return searchMatch && statusMatch && typeMatch && timeframeMatch;
     });
 
+    // Tri des résultats
+    result.sort((a, b) => {
+      let aValue, bValue;
+
+      switch (sortField) {
+        case 'name':
+          aValue = a.name.toLowerCase();
+          bValue = b.name.toLowerCase();
+          break;
+        case 'status':
+          aValue = a.status || '';
+          bValue = b.status || '';
+          break;
+        case 'created_at':
+          aValue = new Date(a.created_at);
+          bValue = new Date(b.created_at);
+          break;
+        case 'end_date':
+          aValue = a.end_date ? new Date(a.end_date) : new Date(0);
+          bValue = b.end_date ? new Date(b.end_date) : new Date(0);
+          break;
+        default:
+          return 0;
+      }
+
+      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+
     setFilteredProjects(result);
-  }, [projects, filters]);
+  }, [projects, filters, sortField, sortDirection]);
+
+  // Gestion du tri
+  const handleSort = (field) => {
+    if (sortField === field) {
+      // Toggle entre asc et desc si c'est déjà le champ actif
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      // Nouveau champ de tri: définir à 'asc' par défaut
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
 
   // Sélection d'un projet
   const handleSelectProject = async (project) => {
@@ -426,7 +470,13 @@ const Projects = () => {
           </div>
 
           <div className="px-2 sm:px-0">
-            <ProjectFilter filters={filters} setFilters={setFilters} />
+            <ProjectFilter
+              filters={filters}
+              setFilters={setFilters}
+              onSort={handleSort}
+              sortField={sortField}
+              sortDirection={sortDirection}
+            />
           </div>
 
           <div className="flex-grow overflow-y-auto px-2 sm:px-0 space-y-3 mt-4">

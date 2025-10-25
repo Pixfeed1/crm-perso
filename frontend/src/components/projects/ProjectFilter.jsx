@@ -1,9 +1,9 @@
 // src/components/projects/ProjectFilter.jsx
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiSearch, FiX } from 'react-icons/fi';
+import { FiSearch, FiX, FiFilter, FiArrowUp, FiArrowDown } from 'react-icons/fi';
 
-const ProjectFilter = ({ filters, setFilters }) => {
+const ProjectFilter = ({ filters, setFilters, onSort, sortField, sortDirection }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   
   // Options de statut
@@ -35,7 +35,15 @@ const ProjectFilter = ({ filters, setFilters }) => {
     { value: 'upcoming', label: 'Projets à venir' },
     { value: 'past', label: 'Projets passés' }
   ];
-  
+
+  // Options de tri
+  const sortOptions = [
+    { field: 'name', label: 'Nom' },
+    { field: 'created_at', label: 'Date de création' },
+    { field: 'end_date', label: 'Date de fin' },
+    { field: 'status', label: 'Statut' }
+  ];
+
   // Mise à jour des filtres
   const handleFilterChange = (field, value) => {
     setFilters(prev => ({
@@ -59,40 +67,68 @@ const ProjectFilter = ({ filters, setFilters }) => {
 
   return (
     <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl overflow-hidden">
-      {/* Barre de recherche toujours visible */}
-      <div className="p-3">
-        <div className="relative">
-          <input
-            type="text"
-            placeholder="Rechercher un projet..."
-            value={filters.search}
-            onChange={(e) => handleFilterChange('search', e.target.value)}
-            className="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-4 py-2 pl-10 text-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-          />
-          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-            <FiSearch />
-          </span>
-          {filters.search && (
-            <motion.button
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={() => handleFilterChange('search', '')}
-            >
-              <FiX />
-            </motion.button>
+      {/* Barre de recherche et tri toujours visible */}
+      <div className="p-3 space-y-3">
+        <div className="flex gap-2">
+          {/* Recherche */}
+          <div className="flex-1 relative">
+            <input
+              type="text"
+              placeholder="Rechercher un projet..."
+              value={filters.search}
+              onChange={(e) => handleFilterChange('search', e.target.value)}
+              className="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-4 py-2 pl-10 text-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            />
+            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+              <FiSearch />
+            </span>
+            {filters.search && (
+              <motion.button
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={() => handleFilterChange('search', '')}
+              >
+                <FiX />
+              </motion.button>
+            )}
+          </div>
+
+          {/* Tri rapide */}
+          {onSort && (
+            <div className="flex gap-1">
+              {sortOptions.map(option => (
+                <motion.button
+                  key={option.field}
+                  onClick={() => onSort(option.field)}
+                  className={`px-3 py-2 rounded-lg flex items-center gap-1 text-sm ${
+                    sortField === option.field
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-gray-700/50 text-gray-300 hover:bg-gray-700'
+                  }`}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <span className="hidden sm:inline">{option.label}</span>
+                  <span className="sm:hidden">{option.label.substring(0, 3)}</span>
+                  {sortField === option.field && (
+                    sortDirection === 'asc' ? <FiArrowUp size={14} /> : <FiArrowDown size={14} />
+                  )}
+                </motion.button>
+              ))}
+            </div>
           )}
         </div>
       </div>
       
       {/* Bouton d'expansion des filtres */}
-      <div 
-        className="px-3 py-2 flex justify-between items-center cursor-pointer hover:bg-gray-700/30"
+      <div
+        className="px-3 py-2 flex justify-between items-center cursor-pointer hover:bg-gray-700/30 transition-colors"
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <div className="flex items-center text-sm">
-          <span className="mr-2"><FiSearch /></span>
-          <span className="text-white font-medium">Filtres avancés</span>
+          <span className="mr-2"><FiFilter /></span>
+          <span className="text-gray-300 font-medium">Filtres avancés</span>
           {hasActiveFilters && (
             <span className="ml-2 px-1.5 py-0.5 bg-purple-600 rounded-full text-xs text-white">
               {Object.values(filters).filter(val => val !== '' && val !== 'all').length}

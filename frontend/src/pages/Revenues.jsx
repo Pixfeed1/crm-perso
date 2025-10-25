@@ -41,6 +41,8 @@ const Revenues = () => {
     maxAmount: '',
     project: 'all'
   });
+  const [sortField, setSortField] = useState('date');
+  const [sortDirection, setSortDirection] = useState('desc');
   const [projects, setProjects] = useState([]);
   const [error, setError] = useState(null);
 
@@ -150,8 +152,48 @@ const Revenues = () => {
       );
     });
 
+    // Tri des résultats
+    result.sort((a, b) => {
+      let aValue, bValue;
+
+      switch (sortField) {
+        case 'amount':
+          aValue = a.amount || 0;
+          bValue = b.amount || 0;
+          break;
+        case 'date':
+          aValue = new Date(a.date);
+          bValue = new Date(b.date);
+          break;
+        case 'project_name':
+          aValue = (a.project_name || '').toLowerCase();
+          bValue = (b.project_name || '').toLowerCase();
+          break;
+        case 'type':
+          aValue = a.type || '';
+          bValue = b.type || '';
+          break;
+        default:
+          return 0;
+      }
+
+      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+
     setFilteredRevenues(result);
-  }, [revenues, filters]);
+  }, [revenues, filters, sortField, sortDirection]);
+
+  // Gestion du tri
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
 
   // Filtrer par période
   const getRevenuesForPeriod = () => {
@@ -453,6 +495,9 @@ const Revenues = () => {
           filters={filters}
           setFilters={setFilters}
           projects={projects}
+          onSort={handleSort}
+          sortField={sortField}
+          sortDirection={sortDirection}
         />
       </div>
 

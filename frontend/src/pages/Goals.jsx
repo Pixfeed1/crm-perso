@@ -34,6 +34,8 @@ const Goals = () => {
     category: 'all',
     period: 'all'
   });
+  const [sortField, setSortField] = useState('created_at');
+  const [sortDirection, setSortDirection] = useState('desc');
 
   // Récupération des objectifs depuis l'API
   useEffect(() => {
@@ -149,9 +151,49 @@ const Goals = () => {
     if (filters.period !== 'all') {
       result = result.filter(goal => goal.period === filters.period);
     }
-    
+
+    // Tri des résultats
+    result.sort((a, b) => {
+      let aValue, bValue;
+
+      switch (sortField) {
+        case 'name':
+          aValue = (a.title || a.name || '').toLowerCase();
+          bValue = (b.title || b.name || '').toLowerCase();
+          break;
+        case 'deadline':
+          aValue = a.end_date ? new Date(a.end_date) : new Date(0);
+          bValue = b.end_date ? new Date(b.end_date) : new Date(0);
+          break;
+        case 'progress':
+          aValue = a.target_value > 0 ? (a.current_value / a.target_value) : 0;
+          bValue = b.target_value > 0 ? (b.current_value / b.target_value) : 0;
+          break;
+        case 'created_at':
+          aValue = new Date(a.created_at);
+          bValue = new Date(b.created_at);
+          break;
+        default:
+          return 0;
+      }
+
+      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+
     setFilteredGoals(result);
-  }, [goals, view, filters]);
+  }, [goals, view, filters, sortField, sortDirection]);
+
+  // Gestion du tri
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
 
   // Sélection d'un objectif
   const handleSelectGoal = (goal) => {
@@ -488,9 +530,12 @@ const Goals = () => {
       </div>
       
       {/* Filtre de recherche */}
-      <GoalFilter 
-        filters={filters} 
-        setFilters={setFilters} 
+      <GoalFilter
+        filters={filters}
+        setFilters={setFilters}
+        onSort={handleSort}
+        sortField={sortField}
+        sortDirection={sortDirection}
       />
       
       {/* Contenu principal */}

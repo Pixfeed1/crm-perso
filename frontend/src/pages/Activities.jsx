@@ -47,6 +47,8 @@ const Activities = () => {
     status: 'all',
     project: 'all'
   });
+  const [sortField, setSortField] = useState('date');
+  const [sortDirection, setSortDirection] = useState('desc');
   const [projects, setProjects] = useState([]);
 
   // Charger les projets et activités via l'API
@@ -155,10 +157,51 @@ const Activities = () => {
       return matchSearch && matchType && matchPriority && matchStatus && matchProject;
     });
 
-    // Trier par date descendante
-    result = result.sort((a, b) => new Date(b.date) - new Date(a.date));
+    // Tri des résultats
+    result.sort((a, b) => {
+      let aValue, bValue;
+
+      switch (sortField) {
+        case 'name':
+          aValue = (a.description || '').toLowerCase();
+          bValue = (b.description || '').toLowerCase();
+          break;
+        case 'date':
+          aValue = new Date(a.date);
+          bValue = new Date(b.date);
+          break;
+        case 'estimated_time':
+          aValue = a.planned_time || 0;
+          bValue = b.planned_time || 0;
+          break;
+        case 'priority':
+          const priorityOrder = { high: 3, medium: 2, low: 1 };
+          aValue = priorityOrder[a.priority] || 0;
+          bValue = priorityOrder[b.priority] || 0;
+          break;
+        default:
+          return 0;
+      }
+
+      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+
     setFilteredActivities(result);
-  }, [activities, filters, startDate, endDate]);
+  }, [activities, filters, startDate, endDate, sortField, sortDirection]);
+
+  // Gestion du tri
+  const handleSort = (field) => {
+    if (sortField === field) {
+      // Toggle entre asc et desc si c'est déjà le champ actif
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      // Nouveau champ de tri: définir à 'asc' par défaut
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
 
   // Gestion de la période
   const handlePeriodChange = (start, end) => {
@@ -334,6 +377,9 @@ const Activities = () => {
           startDate={startDate}
           endDate={endDate}
           onPeriodChange={handlePeriodChange}
+          onSort={handleSort}
+          sortField={sortField}
+          sortDirection={sortDirection}
         />
         <div className="flex items-center space-x-3">
           {/* Sélecteur de vue : liste / calendrier */}
