@@ -14,6 +14,7 @@ import { FiCalendar as CalendarIcon } from 'react-icons/fi';
 import { FiDollarSign as RevenuesIcon } from 'react-icons/fi';
 import { FiActivity as ActivitiesIcon } from 'react-icons/fi';
 import { FiTarget as GoalsIcon } from 'react-icons/fi';
+import { FiBarChart2 as ReportsIcon } from 'react-icons/fi';
 import { FiLogOut as LogoutIcon } from 'react-icons/fi';
 import { FiBell } from 'react-icons/fi';
 
@@ -89,6 +90,7 @@ const Layout = ({ children }) => {
     { path: '/revenues', label: 'Revenus', icon: <RevenuesIcon /> },
     { path: '/activities', label: 'Activités', icon: <ActivitiesIcon /> },
     { path: '/goals', label: 'Objectifs', icon: <GoalsIcon /> },
+    { path: '/reports', label: 'Rapports', icon: <ReportsIcon /> },
     // Ajouter l'option de déconnexion
     { path: '/logout', label: 'Déconnexion', icon: <LogoutIcon />, isLogout: true }
   ];

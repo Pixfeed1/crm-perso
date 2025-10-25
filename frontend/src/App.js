@@ -21,6 +21,7 @@ import Calendar from './pages/Calendar';
 import Revenues from './pages/Revenues';
 import Activities from './pages/Activities';
 import Goals from './pages/Goals';
+import Reports from './pages/Reports';
 
 // Composant ProtectedRoute pour protéger les routes
 const ProtectedRoute = ({ children }) => {
@@ -127,6 +128,14 @@ const App = () => {
             <ProtectedRoute>
               <Layout>
                 <Goals />
+              </Layout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/reports" element={
+            <ProtectedRoute>
+              <Layout>
+                <Reports />
               </Layout>
             </ProtectedRoute>
           } />
