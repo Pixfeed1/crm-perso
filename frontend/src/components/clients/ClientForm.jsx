@@ -2,6 +2,8 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { FiBriefcase, FiUser, FiX } from 'react-icons/fi';
+import CompanyAutocomplete from '../common/CompanyAutocomplete';
+import AddressAutocomplete from '../common/AddressAutocomplete';
 
 const ClientForm = ({ client = {}, onSave, onCancel }) => {
   // État du formulaire avec valeurs par défaut ou existantes
@@ -181,21 +183,33 @@ const ClientForm = ({ client = {}, onSave, onCancel }) => {
             {errors.name && <p className="mt-1 text-red-400 text-sm">{errors.name}</p>}
           </div>
 
-          {/* Entreprise (si type company) */}
+          {/* Entreprise (si type company) avec auto-complétion */}
           {formData.type === 'company' && (
             <div>
               <label className="block text-gray-300 mb-2 font-medium">Entreprise *</label>
-              <input
-                type="text"
-                name="company"
+              <CompanyAutocomplete
                 value={formData.company}
-                onChange={handleInputChange}
-                className={`w-full px-4 py-2 bg-gray-900/50 border ${
-                  errors.company ? 'border-red-500' : 'border-gray-700'
-                } rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500`}
-                placeholder="Nom de l'entreprise"
+                onChange={(value) => {
+                  setFormData(prev => ({ ...prev, company: value }));
+                  if (errors.company) {
+                    setErrors(prev => ({ ...prev, company: null }));
+                  }
+                }}
+                onSelect={(companyDetails) => {
+                  console.log('Entreprise sélectionnée:', companyDetails);
+                  setFormData(prev => ({
+                    ...prev,
+                    company: companyDetails.name,
+                    address: companyDetails.address || prev.address,
+                    industry: companyDetails.activityLabel || prev.industry,
+                    notes: prev.notes
+                      ? `${prev.notes}\n\nInfos Sirene:\nSIREN: ${companyDetails.siren}${companyDetails.siret ? '\nSIRET: ' + companyDetails.siret : ''}\nForme juridique: ${companyDetails.legalForm}\nActivité: ${companyDetails.activityLabel}\nEffectifs: ${companyDetails.employees}`
+                      : `Infos Sirene:\nSIREN: ${companyDetails.siren}${companyDetails.siret ? '\nSIRET: ' + companyDetails.siret : ''}\nForme juridique: ${companyDetails.legalForm}\nActivité: ${companyDetails.activityLabel}\nEffectifs: ${companyDetails.employees}`
+                  }));
+                }}
+                placeholder="Rechercher une entreprise..."
+                error={errors.company}
               />
-              {errors.company && <p className="mt-1 text-red-400 text-sm">{errors.company}</p>}
             </div>
           )}
         </div>
@@ -234,13 +248,19 @@ const ClientForm = ({ client = {}, onSave, onCancel }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-gray-300 mb-2 font-medium">Adresse</label>
-            <input
-              type="text"
-              name="address"
+            <AddressAutocomplete
               value={formData.address}
-              onChange={handleInputChange}
-              className="w-full px-4 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
-              placeholder="123 Rue Exemple, 75000 Paris"
+              onChange={(value) => {
+                setFormData(prev => ({ ...prev, address: value }));
+              }}
+              onSelect={(addressDetails) => {
+                console.log('Adresse sélectionnée:', addressDetails);
+                setFormData(prev => ({
+                  ...prev,
+                  address: addressDetails.address
+                }));
+              }}
+              placeholder="Rechercher une adresse..."
             />
           </div>
 

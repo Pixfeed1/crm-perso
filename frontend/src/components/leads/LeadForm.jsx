@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { FiBriefcase, FiUser } from 'react-icons/fi';
+import CompanyAutocomplete from '../common/CompanyAutocomplete';
 
 const LeadForm = ({ lead = {}, onSave, onCancel }) => {
   // État du formulaire avec valeurs par défaut ou existantes
@@ -165,32 +166,35 @@ const LeadForm = ({ lead = {}, onSave, onCancel }) => {
             )}
           </div>
 
-          {/* Entreprise (conditionnellement affiché) */}
+          {/* Entreprise (conditionnellement affiché avec auto-complétion) */}
           {formData.type === 'company' && (
             <div>
               <label htmlFor="company" className="block text-xs sm:text-sm font-medium text-gray-300 mb-1">
                 Entreprise<span className="text-rose-500 ml-1">*</span>
               </label>
-              <input
-                type="text"
-                id="company"
-                name="company"
+              <CompanyAutocomplete
                 value={formData.company}
-                onChange={handleInputChange}
-                className={`w-full bg-gray-800/50 border ${
-                  errors.company ? 'border-rose-500' : 'border-gray-700'
-                } rounded-lg px-3 py-2 sm:px-4 sm:py-2 text-white placeholder-gray-400 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent`}
-                placeholder="Acme Inc."
+                onChange={(value) => {
+                  setFormData(prev => ({ ...prev, company: value }));
+                  if (errors.company) {
+                    setErrors(prev => ({ ...prev, company: null }));
+                  }
+                }}
+                onSelect={(companyDetails) => {
+                  // Remplir automatiquement les champs avec les données de l'entreprise
+                  console.log('Entreprise sélectionnée:', companyDetails);
+                  setFormData(prev => ({
+                    ...prev,
+                    company: companyDetails.name,
+                    // On pourrait ajouter d'autres champs si le formulaire les supporte
+                    notes: prev.notes
+                      ? `${prev.notes}\n\nSIREN: ${companyDetails.siren}\nForme juridique: ${companyDetails.legalForm}\nActivité: ${companyDetails.activityLabel}\nEffectifs: ${companyDetails.employees}${companyDetails.address ? '\nAdresse: ' + companyDetails.address : ''}`
+                      : `SIREN: ${companyDetails.siren}\nForme juridique: ${companyDetails.legalForm}\nActivité: ${companyDetails.activityLabel}\nEffectifs: ${companyDetails.employees}${companyDetails.address ? '\nAdresse: ' + companyDetails.address : ''}`
+                  }));
+                }}
+                placeholder="Rechercher une entreprise (nom, SIREN)..."
+                error={errors.company}
               />
-              {errors.company && (
-                <motion.p
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="mt-1 text-xs text-rose-500"
-                >
-                  {errors.company}
-                </motion.p>
-              )}
             </div>
           )}
 
