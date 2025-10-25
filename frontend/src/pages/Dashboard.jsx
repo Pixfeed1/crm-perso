@@ -147,39 +147,39 @@ const Dashboard = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.1 }}
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5"
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5"
           >
             {/* Card Leads */}
             <motion.div
               whileHover={{ y: -4 }}
               onHoverStart={() => setHoveredCard('leads')}
               onHoverEnd={() => setHoveredCard(null)}
-              className="relative bg-gradient-to-br from-slate-800/50 to-slate-800/30 backdrop-blur rounded-2xl p-6 shadow-xl shadow-black/20 overflow-hidden cursor-pointer"
+              className="relative bg-gradient-to-br from-slate-800/50 to-slate-800/30 backdrop-blur rounded-2xl p-4 sm:p-6 shadow-xl shadow-black/20 overflow-hidden cursor-pointer"
             >
               {/* Accent gradient subtil */}
               <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-cyan-500 opacity-60"></div>
               
               <div className="relative z-10">
-                <div className="flex items-start justify-between mb-4">
-                  <div className={`p-2.5 rounded-xl transition-all ${
+                <div className="flex items-start justify-between mb-3 sm:mb-4">
+                  <div className={`p-2 sm:p-2.5 rounded-xl transition-all ${
                     hoveredCard === 'leads' ? 'bg-blue-500/20' : 'bg-slate-700/50'
                   }`}>
-                    <FaUserFriends className="text-xl text-blue-400" />
+                    <FaUserFriends className="text-lg sm:text-xl text-blue-400" />
                   </div>
                   <span className={`text-xs font-medium px-2 py-1 rounded-full transition-all ${
-                    dashboardData.leads.newThisMonth > 0 
-                      ? 'text-emerald-400 bg-emerald-500/10' 
+                    dashboardData.leads.newThisMonth > 0
+                      ? 'text-emerald-400 bg-emerald-500/10'
                       : 'text-gray-400 bg-gray-500/10'
                   }`}>
                     {getVariation(dashboardData.leads.newThisMonth, 10)}%
                   </span>
                 </div>
-                
+
                 <div className="space-y-1">
-                  <p className="text-3xl font-light text-white">
+                  <p className="text-2xl sm:text-3xl font-light text-white">
                     {formatNumber(dashboardData.leads.total)}
                   </p>
-                  <p className="text-sm text-gray-400">Total Leads</p>
+                  <p className="text-xs sm:text-sm text-gray-400">Total Leads</p>
                   <p className="text-xs text-gray-500">
                     +{dashboardData.leads.newThisMonth} ce mois
                   </p>

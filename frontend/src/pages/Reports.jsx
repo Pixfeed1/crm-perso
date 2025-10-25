@@ -452,22 +452,22 @@ const Reports = () => {
         </div>
 
         {/* ========== RÉSUMÉ KPIs ========== */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="relative bg-gradient-to-br from-slate-800/50 to-slate-800/30 backdrop-blur rounded-2xl p-6 shadow-xl shadow-black/20 overflow-hidden"
+            className="relative bg-gradient-to-br from-slate-800/50 to-slate-800/30 backdrop-blur rounded-2xl p-4 sm:p-6 shadow-xl shadow-black/20 overflow-hidden"
           >
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-cyan-500 opacity-60"></div>
             <div className="relative z-10">
-              <div className="flex items-start justify-between mb-4">
-                <div className="p-2.5 rounded-xl bg-slate-700/50">
-                  <FiUsers className="text-xl text-blue-400" />
+              <div className="flex items-start justify-between mb-3 sm:mb-4">
+                <div className="p-2 sm:p-2.5 rounded-xl bg-slate-700/50">
+                  <FiUsers className="text-lg sm:text-xl text-blue-400" />
                 </div>
               </div>
               <div className="space-y-1">
                 <p className="text-xs text-gray-400">Nouveaux Leads</p>
-                <p className="text-3xl font-bold text-white">{reportData.summary.newLeads}</p>
+                <p className="text-2xl sm:text-3xl font-bold text-white">{reportData.summary.newLeads}</p>
               </div>
             </div>
           </motion.div>
@@ -476,18 +476,18 @@ const Reports = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="relative bg-gradient-to-br from-slate-800/50 to-slate-800/30 backdrop-blur rounded-2xl p-6 shadow-xl shadow-black/20 overflow-hidden"
+            className="relative bg-gradient-to-br from-slate-800/50 to-slate-800/30 backdrop-blur rounded-2xl p-4 sm:p-6 shadow-xl shadow-black/20 overflow-hidden"
           >
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 to-teal-500 opacity-60"></div>
             <div className="relative z-10">
-              <div className="flex items-start justify-between mb-4">
-                <div className="p-2.5 rounded-xl bg-slate-700/50">
-                  <FiTrendingUp className="text-xl text-emerald-400" />
+              <div className="flex items-start justify-between mb-3 sm:mb-4">
+                <div className="p-2 sm:p-2.5 rounded-xl bg-slate-700/50">
+                  <FiTrendingUp className="text-lg sm:text-xl text-emerald-400" />
                 </div>
               </div>
               <div className="space-y-1">
                 <p className="text-xs text-gray-400">Taux de Conversion</p>
-                <p className="text-3xl font-bold text-white">{reportData.leadConversion.conversionRate}%</p>
+                <p className="text-2xl sm:text-3xl font-bold text-white">{reportData.leadConversion.conversionRate}%</p>
               </div>
             </div>
           </motion.div>
@@ -496,18 +496,18 @@ const Reports = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="relative bg-gradient-to-br from-slate-800/50 to-slate-800/30 backdrop-blur rounded-2xl p-6 shadow-xl shadow-black/20 overflow-hidden"
+            className="relative bg-gradient-to-br from-slate-800/50 to-slate-800/30 backdrop-blur rounded-2xl p-4 sm:p-6 shadow-xl shadow-black/20 overflow-hidden"
           >
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 to-pink-500 opacity-60"></div>
             <div className="relative z-10">
-              <div className="flex items-start justify-between mb-4">
-                <div className="p-2.5 rounded-xl bg-slate-700/50">
-                  <FiDollarSign className="text-xl text-purple-400" />
+              <div className="flex items-start justify-between mb-3 sm:mb-4">
+                <div className="p-2 sm:p-2.5 rounded-xl bg-slate-700/50">
+                  <FiDollarSign className="text-lg sm:text-xl text-purple-400" />
                 </div>
               </div>
               <div className="space-y-1">
                 <p className="text-xs text-gray-400">Revenus Totaux</p>
-                <p className="text-2xl font-bold text-white">{formatAmount(reportData.summary.totalRevenue)}</p>
+                <p className="text-xl sm:text-2xl font-bold text-white">{formatAmount(reportData.summary.totalRevenue)}</p>
               </div>
             </div>
           </motion.div>
@@ -516,38 +516,39 @@ const Reports = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="relative bg-gradient-to-br from-slate-800/50 to-slate-800/30 backdrop-blur rounded-2xl p-6 shadow-xl shadow-black/20 overflow-hidden"
+            className="relative bg-gradient-to-br from-slate-800/50 to-slate-800/30 backdrop-blur rounded-2xl p-4 sm:p-6 shadow-xl shadow-black/20 overflow-hidden"
           >
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-500 to-orange-500 opacity-60"></div>
             <div className="relative z-10">
-              <div className="flex items-start justify-between mb-4">
-                <div className="p-2.5 rounded-xl bg-slate-700/50">
-                  <FiUsers className="text-xl text-amber-400" />
+              <div className="flex items-start justify-between mb-3 sm:mb-4">
+                <div className="p-2 sm:p-2.5 rounded-xl bg-slate-700/50">
+                  <FiUsers className="text-lg sm:text-xl text-amber-400" />
                 </div>
               </div>
               <div className="space-y-1">
                 <p className="text-xs text-gray-400">Clients Actifs</p>
-                <p className="text-3xl font-bold text-white">{reportData.summary.activeClients}</p>
+                <p className="text-2xl sm:text-3xl font-bold text-white">{reportData.summary.activeClients}</p>
               </div>
             </div>
           </motion.div>
         </div>
 
         {/* ========== GRILLE PRINCIPALE ========== */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
 
           {/* CONVERSION LEAD → CLIENT */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="bg-slate-800/30 backdrop-blur rounded-2xl p-6 shadow-xl shadow-black/20"
+            className="bg-slate-800/30 backdrop-blur rounded-2xl p-4 sm:p-6 shadow-xl shadow-black/20"
           >
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+            <div className="flex items-center justify-between mb-4 sm:mb-6">
+              <h2 className="text-lg sm:text-xl font-semibold text-white flex items-center gap-2">
                 <FiTrendingUp className="text-green-400" />
-                Conversion Leads
+                <span className="hidden sm:inline">Conversion Leads</span>
+                <span className="sm:hidden">Conversion</span>
               </h2>
-              <div className="text-2xl font-bold text-green-400">
+              <div className="text-xl sm:text-2xl font-bold text-green-400">
                 {reportData.leadConversion.conversionRate}%
               </div>
             </div>
@@ -591,11 +592,12 @@ const Reports = () => {
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="bg-slate-800/30 backdrop-blur rounded-2xl p-6 shadow-xl shadow-black/20"
+            className="bg-slate-800/30 backdrop-blur rounded-2xl p-4 sm:p-6 shadow-xl shadow-black/20"
           >
-            <h2 className="text-xl font-semibold text-white mb-6 flex items-center gap-2">
+            <h2 className="text-lg sm:text-xl font-semibold text-white mb-4 sm:mb-6 flex items-center gap-2">
               <FiPieChart className="text-purple-400" />
-              Performance par Source
+              <span className="hidden sm:inline">Performance par Source</span>
+              <span className="sm:hidden">Performance</span>
             </h2>
 
             <div className="space-y-3 max-h-96 overflow-y-auto">
@@ -638,11 +640,12 @@ const Reports = () => {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-slate-800/30 backdrop-blur rounded-2xl p-6 shadow-xl shadow-black/20 lg:col-span-2"
+            className="bg-slate-800/30 backdrop-blur rounded-2xl p-4 sm:p-6 shadow-xl shadow-black/20 lg:col-span-2"
           >
-            <h2 className="text-xl font-semibold text-white mb-6 flex items-center gap-2">
+            <h2 className="text-lg sm:text-xl font-semibold text-white mb-4 sm:mb-6 flex items-center gap-2">
               <FaChartLine className="text-teal-400" />
-              Évolution des Revenus
+              <span className="hidden sm:inline">Évolution des Revenus</span>
+              <span className="sm:hidden">Revenus</span>
             </h2>
 
             {reportData.revenueEvolution && reportData.revenueEvolution.length > 0 ? (
