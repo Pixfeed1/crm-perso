@@ -401,6 +401,101 @@ async function initAllTables() {
       console.log('✓ Table lead_interactions existe déjà');
     }
 
+    // 14. Table quotes (devis)
+    if (!(await tableExists(client, 'quotes'))) {
+      console.log('Création de la table quotes...');
+      await client.query(`
+        CREATE TABLE quotes (
+          id SERIAL PRIMARY KEY,
+          quote_number TEXT NOT NULL UNIQUE,
+          client_id INTEGER,
+          client_name TEXT NOT NULL,
+          client_email TEXT,
+          client_address TEXT,
+          client_siret TEXT,
+          status TEXT DEFAULT 'draft',
+          total_ht NUMERIC DEFAULT 0,
+          total_ttc NUMERIC DEFAULT 0,
+          tva_rate DECIMAL(5,2) DEFAULT 20.00,
+          tva_amount NUMERIC DEFAULT 0,
+          tva_applicable BOOLEAN DEFAULT true,
+          items JSONB DEFAULT '[]',
+          cgv TEXT,
+          acompte_type VARCHAR(10) DEFAULT 'none',
+          acompte_value DECIMAL(10,2) DEFAULT 0,
+          acompte_amount NUMERIC DEFAULT 0,
+          escompte_percent DECIMAL(5,2) DEFAULT 0,
+          escompte_days INT DEFAULT 0,
+          validity_days INT DEFAULT 30,
+          notes TEXT,
+          issue_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          expiry_date TIMESTAMP,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (client_id) REFERENCES crm_clients(id) ON DELETE SET NULL
+        );
+      `);
+      await client.query(`CREATE INDEX idx_quotes_client_id ON quotes(client_id);`);
+      await client.query(`CREATE INDEX idx_quotes_status ON quotes(status);`);
+      await client.query(`CREATE INDEX idx_quotes_issue_date ON quotes(issue_date);`);
+      await client.query(`CREATE UNIQUE INDEX idx_quotes_number ON quotes(quote_number);`);
+      console.log('✅ Table quotes créée');
+    } else {
+      console.log('✓ Table quotes existe déjà');
+    }
+
+    // 15. Table invoices (factures)
+    if (!(await tableExists(client, 'invoices'))) {
+      console.log('Création de la table invoices...');
+      await client.query(`
+        CREATE TABLE invoices (
+          id SERIAL PRIMARY KEY,
+          invoice_number TEXT NOT NULL UNIQUE,
+          quote_id INTEGER,
+          client_id INTEGER,
+          client_name TEXT NOT NULL,
+          client_email TEXT,
+          client_address TEXT,
+          client_siret TEXT,
+          status TEXT DEFAULT 'draft',
+          payment_status TEXT DEFAULT 'pending',
+          total_ht NUMERIC DEFAULT 0,
+          total_ttc NUMERIC DEFAULT 0,
+          tva_rate DECIMAL(5,2) DEFAULT 20.00,
+          tva_amount NUMERIC DEFAULT 0,
+          tva_applicable BOOLEAN DEFAULT true,
+          items JSONB DEFAULT '[]',
+          cgv TEXT,
+          acompte_type VARCHAR(10) DEFAULT 'none',
+          acompte_value DECIMAL(10,2) DEFAULT 0,
+          acompte_amount NUMERIC DEFAULT 0,
+          escompte_percent DECIMAL(5,2) DEFAULT 0,
+          escompte_days INT DEFAULT 0,
+          payment_terms_days INT DEFAULT 30,
+          notes TEXT,
+          issue_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          due_date DATE,
+          paid_date TIMESTAMP,
+          last_reminder_date DATE,
+          reminder_count INT DEFAULT 0,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (quote_id) REFERENCES quotes(id) ON DELETE SET NULL,
+          FOREIGN KEY (client_id) REFERENCES crm_clients(id) ON DELETE SET NULL
+        );
+      `);
+      await client.query(`CREATE INDEX idx_invoices_client_id ON invoices(client_id);`);
+      await client.query(`CREATE INDEX idx_invoices_quote_id ON invoices(quote_id);`);
+      await client.query(`CREATE INDEX idx_invoices_status ON invoices(status);`);
+      await client.query(`CREATE INDEX idx_invoices_payment_status ON invoices(payment_status);`);
+      await client.query(`CREATE INDEX idx_invoices_issue_date ON invoices(issue_date);`);
+      await client.query(`CREATE INDEX idx_invoices_due_date ON invoices(due_date);`);
+      await client.query(`CREATE UNIQUE INDEX idx_invoices_number ON invoices(invoice_number);`);
+      console.log('✅ Table invoices créée');
+    } else {
+      console.log('✓ Table invoices existe déjà');
+    }
+
     console.log('🎉 Toutes les tables ont été initialisées avec succès !');
 
   } catch (error) {
