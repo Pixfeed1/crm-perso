@@ -77,7 +77,7 @@ const ProjectFilter = ({ filters, setFilters, onSort, sortField, sortDirection }
               placeholder="Rechercher un projet..."
               value={filters.search}
               onChange={(e) => handleFilterChange('search', e.target.value)}
-              className="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-4 py-2 pl-10 text-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-4 py-2 pl-10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             />
             <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
               <FiSearch />

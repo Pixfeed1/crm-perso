@@ -83,7 +83,7 @@ const ClientFilter = ({ filters, setFilters, onSort, sortField, sortDirection })
               placeholder="Rechercher un client..."
               value={filters.search}
               onChange={(e) => handleFilterChange('search', e.target.value)}
-              className="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-4 py-2 pl-10 text-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-4 py-2 pl-10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
             />
             <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
               <FiSearch />
@@ -211,7 +211,7 @@ const ClientFilter = ({ filters, setFilters, onSort, sortField, sortDirection })
                 <select
                   value={filters.source || 'all'}
                   onChange={(e) => handleFilterChange('source', e.target.value)}
-                  className="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-3 py-2 text-black text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none cursor-pointer focus:ring-2 focus:ring-indigo-500"
                 >
                   {sourceOptions.map(option => (
                     <option key={option.value} value={option.value}>
@@ -230,7 +230,7 @@ const ClientFilter = ({ filters, setFilters, onSort, sortField, sortDirection })
                       type="date"
                       value={filters.dateFrom || ''}
                       onChange={(e) => handleFilterChange('dateFrom', e.target.value)}
-                      className="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-3 py-2 text-black text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none cursor-pointer focus:ring-2 focus:ring-indigo-500"
                       placeholder="Du"
                     />
                     <span className="text-xs text-gray-500 mt-1 block">Du</span>
@@ -240,7 +240,7 @@ const ClientFilter = ({ filters, setFilters, onSort, sortField, sortDirection })
                       type="date"
                       value={filters.dateTo || ''}
                       onChange={(e) => handleFilterChange('dateTo', e.target.value)}
-                      className="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-3 py-2 text-black text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none cursor-pointer focus:ring-2 focus:ring-indigo-500"
                       placeholder="Au"
                     />
                     <span className="text-xs text-gray-500 mt-1 block">Au</span>
