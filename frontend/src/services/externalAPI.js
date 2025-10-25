@@ -39,6 +39,11 @@ export const searchCompanies = async (query) => {
 
     const data = await response.json();
 
+    // DEBUG: Afficher les données reçues
+    console.log('🔍 Sirene API - Recherche:', query);
+    console.log('✅ Sirene API - Résultats:', data);
+    console.log('📊 Sirene API - Nombre:', data.length);
+
     // Le backend retourne déjà les données formatées
     return data;
 
