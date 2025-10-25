@@ -99,7 +99,7 @@ const ConfirmModal = ({
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={onClose}
-              className="flex-1 px-4 py-2.5 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition-colors"
+              className="flex-1 px-4 py-2.5 border-2 border-white/30 text-white hover:bg-white/10 hover:border-white/40 rounded-lg font-medium transition-all"
             >
               {cancelText}
             </motion.button>
