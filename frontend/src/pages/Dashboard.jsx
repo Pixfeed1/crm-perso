@@ -1,17 +1,12 @@
 // src/pages/Dashboard.jsx
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-// Remplacer executeQuery par la fonction d'API
-import { dashboardAPI } from '../services/api';
-
-// Importation des icônes depuis react-icons
 import { FaUserFriends, FaRocket, FaMoneyBillWave, FaClipboardList, FaBullseye } from 'react-icons/fa';
 import { FiCalendar as FiCalendarIcon, FiTrendingUp as FiTrendingUpIcon } from 'react-icons/fi';
-
-// Composants de visualisation
 import KPIOrb from '../components/dashboard/KPIOrb';
 import ActivityStream from '../components/dashboard/ActivityStream';
 import GoalProgress from '../components/dashboard/GoalProgress';
+import api from '../services/api';
 
 const Dashboard = () => {
   const [dashboardData, setDashboardData] = useState({
@@ -25,43 +20,34 @@ const Dashboard = () => {
     revenueChart: []
   });
 
-  const [isLoading, setIsLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        setIsLoading(true);
-
-        // Utiliser l'API pour récupérer les données du tableau de bord
-        const data = await dashboardAPI.getData();
-        console.log('Données du tableau de bord chargées via API:', data);
-
-        // Mettre à jour l'état avec les données récupérées
-        setDashboardData(data);
-        setIsLoading(false);
+        const response = await api.get('/dashboard');
+        setDashboardData(response.data);
       } catch (error) {
-        console.error('Erreur lors du chargement des données du dashboard:', error);
-        // En cas d'erreur, garder les valeurs par défaut
-        setIsLoading(false);
+        console.error('Erreur lors de la récupération des données du tableau de bord:', error);
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchDashboardData();
   }, []);
 
-  if (isLoading) {
+  if (loading) {
     return (
       <div className="h-full flex items-center justify-center">
-        <motion.div
-          className="w-12 h-12 sm:w-16 sm:h-16 border-4 border-indigo-500 border-t-transparent rounded-full"
-          animate={{ rotate: 360 }}
-          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-        />
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-indigo-500 mx-auto mb-4"></div>
+          <p className="text-indigo-200">Chargement du tableau de bord...</p>
+        </div>
       </div>
     );
   }
 
-  // Formater les montants pour affichage
   const formatAmount = (amount) => {
     return Math.round(amount).toLocaleString('fr-FR');
   };
@@ -87,16 +73,22 @@ const Dashboard = () => {
         </motion.p>
       </header>
 
-      <div className="space-y-4 sm:space-y-6 px-2 sm:px-0">
-        {/* Section KPI principale - Responsive */}
-        <motion.div
-          className="relative overflow-hidden bg-indigo-900/30 backdrop-blur-md rounded-xl sm:rounded-2xl p-4 sm:p-6"
-          initial={{ opacity: 0, scale: 0.9 }}
+      {/* Architecture refactorisée - 4 zones distinctes avec espacement unifié */}
+      <div className="space-y-8 px-2 sm:px-0">
+
+        {/* ========== ZONE 1: KPI PRINCIPALES - Grid 4 colonnes uniforme ========== */}
+        <motion.section
+          className="relative overflow-hidden bg-gradient-to-br from-indigo-900/40 to-purple-900/40 backdrop-blur-md rounded-2xl p-6 border border-white/5"
+          initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.5, delay: 0.3 }}
         >
-          <h2 className="text-lg sm:text-xl font-semibold mb-4 sm:mb-6 text-indigo-200">Performance Générale</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-6 lg:gap-8">
+          <h2 className="text-xl font-semibold mb-6 text-indigo-200 flex items-center gap-2">
+            <span className="w-1 h-6 bg-gradient-to-b from-indigo-400 to-purple-400 rounded-full"></span>
+            Indicateurs Clés
+          </h2>
+
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
             <KPIOrb
               title="Leads"
               value={dashboardData.leads.total}
@@ -114,7 +106,7 @@ const Dashboard = () => {
               size="lg"
             />
             <KPIOrb
-              title="Revenus Mensuels"
+              title="Revenus Mois"
               value={`${formatAmount(dashboardData.revenues.thisMonth)} €`}
               subValue={`Proj: ${formatAmount(dashboardData.revenues.projection)} €`}
               color="from-emerald-500 to-teal-500"
@@ -127,101 +119,52 @@ const Dashboard = () => {
               subValue={`${dashboardData.activities.pending} en attente`}
               color="from-amber-500 to-orange-500"
               icon={<FaClipboardList />}
-              size="md"
-            />
-            <KPIOrb
-              title="Objectifs"
-              value={dashboardData.goals.onTrack}
-              subValue={`${dashboardData.goals.atRisk} à risque`}
-              color="from-rose-500 to-red-500"
-              icon={<FaBullseye />}
-              size="md"
+              size="lg"
             />
           </div>
-        </motion.div>
+        </motion.section>
 
-        {/* Grid adaptatif pour les panneaux latéraux */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-          {/* Projets récents */}
-          <motion.div
-            className="lg:col-span-1 bg-purple-900/30 backdrop-blur-md rounded-xl sm:rounded-2xl p-4 sm:p-6 overflow-hidden"
+        {/* ========== ZONE 2: GRAPHIQUES & STATS - Grid 2 colonnes avec hauteur min ========== */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 min-h-[400px]">
+
+          {/* Revenus - Graphique barres */}
+          <motion.section
+            className="bg-gradient-to-br from-teal-900/40 to-emerald-900/40 backdrop-blur-md rounded-2xl p-6 border border-white/5 flex flex-col"
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, delay: 0.4 }}
           >
-            <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-purple-200 flex items-center gap-2">
-              <FiCalendarIcon />
-              Projets Récents
-            </h3>
-            {dashboardData.projectTimeline && dashboardData.projectTimeline.length > 0 ? (
-              <div className="space-y-3">
-                {dashboardData.projectTimeline.slice(0, 5).map((project, index) => (
-                  <motion.div
-                    key={project.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3, delay: 0.1 * index }}
-                    className="bg-gray-800/30 rounded-lg p-3"
-                  >
-                    <div className="flex justify-between items-start">
-                      <h4 className="text-white font-medium text-sm truncate flex-1">{project.name}</h4>
-                      <span className={`ml-2 text-xs px-2 py-1 rounded-full whitespace-nowrap ${
-                        project.status === 'in_progress'
-                          ? 'bg-blue-900/30 text-blue-300'
-                          : 'bg-purple-900/30 text-purple-300'
-                      }`}>
-                        {project.status === 'in_progress' ? 'En cours' : 'Planifié'}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-xs text-gray-400 mt-2">
-                      <span>Début: {new Date(project.start_date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</span>
-                      <span>Fin: {new Date(project.end_date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</span>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            ) : (
-              <div className="bg-gray-900/30 rounded-lg p-6 text-center">
-                <FiCalendarIcon className="text-4xl text-gray-500 mx-auto mb-3" />
-                <p className="text-gray-400 text-sm">Aucun projet actif</p>
-              </div>
-            )}
-          </motion.div>
-
-          {/* Revenus - Graphique simple */}
-          <motion.div
-            className="lg:col-span-1 bg-teal-900/30 backdrop-blur-md rounded-xl sm:rounded-2xl p-4 sm:p-6 overflow-hidden"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.5 }}
-          >
-            <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-teal-200 flex items-center gap-2">
-              <FiTrendingUpIcon />
+            <h3 className="text-lg font-semibold mb-6 text-teal-200 flex items-center gap-2">
+              <FiTrendingUpIcon className="text-xl" />
               Revenus (6 derniers mois)
             </h3>
+
             {dashboardData.revenueChart && dashboardData.revenueChart.length > 0 ? (
-              <div className="space-y-2">
+              <div className="space-y-3 flex-1">
                 {dashboardData.revenueChart.map((item, index) => {
                   const maxAmount = Math.max(...dashboardData.revenueChart.map(i => i.amount));
-                  const percentage = (item.amount / maxAmount) * 100;
+                  const percentage = maxAmount > 0 ? (item.amount / maxAmount) * 100 : 0;
 
                   return (
                     <motion.div
                       key={index}
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.3, delay: 0.1 * index }}
+                      transition={{ duration: 0.3, delay: 0.5 + index * 0.05 }}
+                      className="space-y-1"
                     >
-                      <div className="flex justify-between text-xs text-gray-300 mb-1">
-                        <span>{new Date(item.month + '-01').toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' })}</span>
-                        <span className="font-medium">{formatAmount(item.amount)} €</span>
+                      <div className="flex justify-between text-sm text-gray-300">
+                        <span className="font-medium">
+                          {new Date(item.month + '-01').toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
+                        </span>
+                        <span className="font-semibold text-teal-300">{formatAmount(item.amount)} €</span>
                       </div>
-                      <div className="h-2 bg-gray-700/50 rounded-full overflow-hidden">
+                      <div className="h-3 bg-gray-800/50 rounded-full overflow-hidden border border-gray-700/30">
                         <motion.div
-                          className="h-full bg-gradient-to-r from-teal-500 to-emerald-500 rounded-full"
+                          className="h-full bg-gradient-to-r from-teal-500 to-emerald-500 rounded-full shadow-lg shadow-teal-500/20"
                           initial={{ width: 0 }}
                           animate={{ width: `${percentage}%` }}
-                          transition={{ duration: 0.5, delay: 0.3 + index * 0.1 }}
+                          transition={{ duration: 0.8, delay: 0.6 + index * 0.05, ease: "easeOut" }}
                         />
                       </div>
                     </motion.div>
@@ -229,64 +172,203 @@ const Dashboard = () => {
                 })}
               </div>
             ) : (
-              <div className="bg-gray-900/30 rounded-lg p-6 text-center">
-                <FiTrendingUpIcon className="text-4xl text-gray-500 mx-auto mb-3" />
-                <p className="text-gray-400 text-sm">Aucun revenu enregistré</p>
+              <div className="flex-1 flex items-center justify-center bg-gray-900/30 rounded-xl border border-gray-800/50">
+                <div className="text-center py-12">
+                  <FiTrendingUpIcon className="text-5xl text-gray-600 mx-auto mb-4" />
+                  <p className="text-gray-400">Aucun revenu enregistré</p>
+                </div>
               </div>
             )}
-          </motion.div>
+          </motion.section>
 
-          {/* Prochaines activités */}
-          <motion.div
-            className="lg:col-span-1 bg-amber-900/30 backdrop-blur-md rounded-xl sm:rounded-2xl p-4 sm:p-6 overflow-hidden"
+          {/* Pipeline / Stats complémentaires */}
+          <motion.section
+            className="bg-gradient-to-br from-purple-900/40 to-pink-900/40 backdrop-blur-md rounded-2xl p-6 border border-white/5 flex flex-col"
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5, delay: 0.5 }}
+          >
+            <h3 className="text-lg font-semibold mb-6 text-purple-200 flex items-center gap-2">
+              <FaBullseye className="text-xl" />
+              Progression Objectifs
+            </h3>
+
+            <div className="flex-1 flex flex-col justify-center space-y-6">
+              {/* Objectif Leads */}
+              <div className="bg-gray-900/30 rounded-xl p-4 border border-gray-800/50">
+                <div className="flex justify-between items-center mb-3">
+                  <span className="text-sm font-medium text-gray-300">Nouveaux Leads</span>
+                  <span className="text-lg font-bold text-blue-300">
+                    {dashboardData.leads.newThisMonth} / 10
+                  </span>
+                </div>
+                <div className="h-2.5 bg-gray-800 rounded-full overflow-hidden">
+                  <motion.div
+                    className="h-full bg-gradient-to-r from-blue-500 to-indigo-500"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${Math.min((dashboardData.leads.newThisMonth / 10) * 100, 100)}%` }}
+                    transition={{ duration: 1, delay: 0.7 }}
+                  />
+                </div>
+              </div>
+
+              {/* Objectif Projets */}
+              <div className="bg-gray-900/30 rounded-xl p-4 border border-gray-800/50">
+                <div className="flex justify-between items-center mb-3">
+                  <span className="text-sm font-medium text-gray-300">Projets Terminés</span>
+                  <span className="text-lg font-bold text-purple-300">
+                    {dashboardData.projects.completed} / 5
+                  </span>
+                </div>
+                <div className="h-2.5 bg-gray-800 rounded-full overflow-hidden">
+                  <motion.div
+                    className="h-full bg-gradient-to-r from-purple-500 to-pink-500"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${Math.min((dashboardData.projects.completed / 5) * 100, 100)}%` }}
+                    transition={{ duration: 1, delay: 0.8 }}
+                  />
+                </div>
+              </div>
+
+              {/* Objectif Revenus */}
+              <div className="bg-gray-900/30 rounded-xl p-4 border border-gray-800/50">
+                <div className="flex justify-between items-center mb-3">
+                  <span className="text-sm font-medium text-gray-300">Revenus Mensuels</span>
+                  <span className="text-lg font-bold text-emerald-300">
+                    {formatAmount(dashboardData.revenues.thisMonth)} / 8 000 €
+                  </span>
+                </div>
+                <div className="h-2.5 bg-gray-800 rounded-full overflow-hidden">
+                  <motion.div
+                    className="h-full bg-gradient-to-r from-emerald-500 to-teal-500"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${Math.min((dashboardData.revenues.thisMonth / 8000) * 100, 100)}%` }}
+                    transition={{ duration: 1, delay: 0.9 }}
+                  />
+                </div>
+              </div>
+            </div>
+          </motion.section>
+        </div>
+
+        {/* ========== ZONE 3: ACTIVITÉS & PROJETS - Grid 2 colonnes avec hauteur min ========== */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 min-h-[500px]">
+
+          {/* Activités Récentes */}
+          <motion.section
+            className="bg-gradient-to-br from-amber-900/40 to-orange-900/40 backdrop-blur-md rounded-2xl p-6 border border-white/5 flex flex-col"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.6 }}
           >
-            <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-amber-200">Activités Récentes</h3>
-            <div className="max-h-80 overflow-y-auto">
+            <h3 className="text-lg font-semibold mb-6 text-amber-200 flex items-center gap-2">
+              <FaClipboardList className="text-xl" />
+              Activités Récentes
+            </h3>
+
+            <div className="flex-1 overflow-y-auto">
               <ActivityStream
                 activities={dashboardData.recentActivities || []}
                 showTitle={false}
                 maxItems={5}
               />
             </div>
-          </motion.div>
+          </motion.section>
+
+          {/* Projets en Cours */}
+          <motion.section
+            className="bg-gradient-to-br from-indigo-900/40 to-blue-900/40 backdrop-blur-md rounded-2xl p-6 border border-white/5 flex flex-col"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.7 }}
+          >
+            <h3 className="text-lg font-semibold mb-6 text-indigo-200 flex items-center gap-2">
+              <FiCalendarIcon className="text-xl" />
+              Projets en Cours
+            </h3>
+
+            {dashboardData.projectTimeline && dashboardData.projectTimeline.length > 0 ? (
+              <div className="space-y-3 flex-1 overflow-y-auto">
+                {dashboardData.projectTimeline.slice(0, 5).map((project, index) => (
+                  <motion.div
+                    key={project.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: 0.7 + index * 0.05 }}
+                    className="bg-gray-900/40 rounded-xl p-4 border border-gray-800/50 hover:border-indigo-500/30 transition-all"
+                  >
+                    <div className="flex justify-between items-start mb-3">
+                      <h4 className="text-white font-semibold text-sm flex-1 pr-2">{project.name}</h4>
+                      <span className={`text-xs px-3 py-1 rounded-full whitespace-nowrap font-medium ${
+                        project.status === 'in_progress'
+                          ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                          : 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                      }`}>
+                        {project.status === 'in_progress' ? 'En cours' : 'Planifié'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-xs text-gray-400">
+                      <span className="flex items-center gap-1">
+                        <span className="text-gray-500">Début:</span>
+                        {new Date(project.start_date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <span className="text-gray-500">Fin:</span>
+                        {new Date(project.end_date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                      </span>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex-1 flex items-center justify-center bg-gray-900/30 rounded-xl border border-gray-800/50">
+                <div className="text-center py-12">
+                  <FiCalendarIcon className="text-5xl text-gray-600 mx-auto mb-4" />
+                  <p className="text-gray-400">Aucun projet actif</p>
+                </div>
+              </div>
+            )}
+          </motion.section>
         </div>
 
-        {/* Section inférieure avec progression des objectifs */}
-        <motion.div
-          className="bg-rose-900/30 backdrop-blur-md rounded-xl sm:rounded-2xl p-4 sm:p-6"
+        {/* ========== ZONE 4: OBJECTIFS DÉTAILLÉS - Grid 3 colonnes ========== */}
+        <motion.section
+          className="bg-gradient-to-br from-rose-900/40 to-red-900/40 backdrop-blur-md rounded-2xl p-6 border border-white/5"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.7 }}
+          transition={{ duration: 0.5, delay: 0.8 }}
         >
-          <h2 className="text-lg sm:text-xl font-semibold mb-4 sm:mb-6 text-rose-200">Progression des Objectifs</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          <h2 className="text-xl font-semibold mb-6 text-rose-200 flex items-center gap-2">
+            <span className="w-1 h-6 bg-gradient-to-b from-rose-400 to-red-400 rounded-full"></span>
+            Objectifs du Mois
+          </h2>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             <GoalProgress
               title="Nouveaux Leads"
               current={dashboardData.leads.newThisMonth}
               target={10}
-              period="Mars 2025"
+              period="Ce mois"
               color="blue"
             />
             <GoalProgress
               title="Projets Terminés"
               current={dashboardData.projects.completed}
               target={5}
-              period="Mars 2025"
+              period="Ce mois"
               color="purple"
             />
             <GoalProgress
               title="Revenus"
               current={dashboardData.revenues.thisMonth}
               target={8000}
-              period="Mars 2025"
+              period="Ce mois"
               color="emerald"
               format="currency"
             />
           </div>
-        </motion.div>
+        </motion.section>
+
       </div>
     </div>
   );
