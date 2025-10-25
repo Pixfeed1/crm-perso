@@ -13,6 +13,8 @@ import {
 } from 'react-icons/fi';
 import { FaFileExport, FaChartLine } from 'react-icons/fa';
 import { dashboardAPI, leadsAPI, clientsAPI, revenuesAPI } from '../services/api';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 const Reports = () => {
   const [period, setPeriod] = useState('month'); // month, quarter, year
@@ -118,9 +120,231 @@ const Reports = () => {
   };
 
   const handleExportPDF = () => {
-    // Pour l'instant, simuler l'export
-    // Dans une vraie application, utiliser une lib comme jsPDF ou html2pdf
-    alert(`Export PDF du rapport ${getPeriodLabel()} en cours...\n\nFonctionnalité à implémenter avec jsPDF ou une API backend.`);
+    try {
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+
+      // En-tête du document
+      doc.setFillColor(139, 92, 246); // Purple
+      doc.rect(0, 0, pageWidth, 40, 'F');
+
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(24);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Rapport Analytics', pageWidth / 2, 20, { align: 'center' });
+
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Période: ${getPeriodLabel()}`, pageWidth / 2, 30, { align: 'center' });
+
+      // Date de génération
+      doc.setTextColor(100, 100, 100);
+      doc.setFontSize(10);
+      const today = new Date().toLocaleDateString('fr-FR', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric'
+      });
+      doc.text(`Généré le ${today}`, pageWidth / 2, 37, { align: 'center' });
+
+      let yPos = 50;
+
+      // Section 1: Résumé KPIs
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Résumé des Indicateurs Clés', 14, yPos);
+      yPos += 10;
+
+      const kpiData = [
+        ['Indicateur', 'Valeur'],
+        ['Nouveaux Leads', reportData.summary.newLeads.toString()],
+        ['Taux de Conversion', `${reportData.leadConversion.conversionRate}%`],
+        ['Revenus Totaux', formatAmount(reportData.summary.totalRevenue)],
+        ['Clients Actifs', reportData.summary.activeClients.toString()]
+      ];
+
+      doc.autoTable({
+        startY: yPos,
+        head: [kpiData[0]],
+        body: kpiData.slice(1),
+        theme: 'grid',
+        headStyles: {
+          fillColor: [139, 92, 246],
+          textColor: [255, 255, 255],
+          fontStyle: 'bold'
+        },
+        styles: {
+          fontSize: 10,
+          cellPadding: 5
+        },
+        columnStyles: {
+          0: { fontStyle: 'bold', cellWidth: 100 },
+          1: { halign: 'right', cellWidth: 80 }
+        }
+      });
+
+      yPos = doc.lastAutoTable.finalY + 15;
+
+      // Section 2: Conversion Leads
+      if (yPos > pageHeight - 60) {
+        doc.addPage();
+        yPos = 20;
+      }
+
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Analyse de Conversion des Leads', 14, yPos);
+      yPos += 10;
+
+      const conversionData = [
+        ['Statut', 'Nombre', 'Pourcentage'],
+        ...reportData.leadConversion.byStatus.map(item => [
+          getStatusLabel(item.status),
+          item.count.toString(),
+          `${item.percentage}%`
+        ])
+      ];
+
+      if (conversionData.length > 1) {
+        doc.autoTable({
+          startY: yPos,
+          head: [conversionData[0]],
+          body: conversionData.slice(1),
+          theme: 'striped',
+          headStyles: {
+            fillColor: [16, 185, 129],
+            textColor: [255, 255, 255],
+            fontStyle: 'bold'
+          },
+          styles: {
+            fontSize: 10,
+            cellPadding: 5
+          },
+          columnStyles: {
+            0: { cellWidth: 80 },
+            1: { halign: 'center', cellWidth: 50 },
+            2: { halign: 'center', cellWidth: 50 }
+          }
+        });
+
+        yPos = doc.lastAutoTable.finalY + 15;
+      }
+
+      // Section 3: Performance par Source
+      if (yPos > pageHeight - 60) {
+        doc.addPage();
+        yPos = 20;
+      }
+
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Performance par Source', 14, yPos);
+      yPos += 10;
+
+      const sourceData = [
+        ['Source', 'Total', 'Convertis', 'Taux'],
+        ...reportData.sourcePerformance.map(source => [
+          source.source,
+          source.total.toString(),
+          source.converted.toString(),
+          `${source.conversionRate}%`
+        ])
+      ];
+
+      if (sourceData.length > 1) {
+        doc.autoTable({
+          startY: yPos,
+          head: [sourceData[0]],
+          body: sourceData.slice(1),
+          theme: 'striped',
+          headStyles: {
+            fillColor: [168, 85, 247],
+            textColor: [255, 255, 255],
+            fontStyle: 'bold'
+          },
+          styles: {
+            fontSize: 10,
+            cellPadding: 5
+          },
+          columnStyles: {
+            0: { cellWidth: 70 },
+            1: { halign: 'center', cellWidth: 35 },
+            2: { halign: 'center', cellWidth: 40 },
+            3: { halign: 'center', cellWidth: 35 }
+          }
+        });
+
+        yPos = doc.lastAutoTable.finalY + 15;
+      }
+
+      // Section 4: Évolution des Revenus
+      if (reportData.revenueEvolution && reportData.revenueEvolution.length > 0) {
+        if (yPos > pageHeight - 60) {
+          doc.addPage();
+          yPos = 20;
+        }
+
+        doc.setFontSize(16);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Évolution des Revenus (6 derniers mois)', 14, yPos);
+        yPos += 10;
+
+        const revenueData = [
+          ['Mois', 'Montant'],
+          ...reportData.revenueEvolution.map(item => [
+            new Date(item.month + '-01').toLocaleDateString('fr-FR', {
+              month: 'long',
+              year: 'numeric'
+            }),
+            formatAmount(item.amount)
+          ])
+        ];
+
+        doc.autoTable({
+          startY: yPos,
+          head: [revenueData[0]],
+          body: revenueData.slice(1),
+          theme: 'grid',
+          headStyles: {
+            fillColor: [20, 184, 166],
+            textColor: [255, 255, 255],
+            fontStyle: 'bold'
+          },
+          styles: {
+            fontSize: 10,
+            cellPadding: 5
+          },
+          columnStyles: {
+            0: { cellWidth: 100 },
+            1: { halign: 'right', cellWidth: 80 }
+          }
+        });
+      }
+
+      // Pied de page sur toutes les pages
+      const totalPages = doc.internal.getNumberOfPages();
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+        doc.setFontSize(9);
+        doc.setTextColor(150, 150, 150);
+        doc.text(
+          `Page ${i} sur ${totalPages} - CRM Analytics`,
+          pageWidth / 2,
+          pageHeight - 10,
+          { align: 'center' }
+        );
+      }
+
+      // Sauvegarder le PDF
+      const fileName = `Rapport_${getPeriodLabel()}_${new Date().toLocaleDateString('fr-FR').replace(/\//g, '-')}.pdf`;
+      doc.save(fileName);
+
+    } catch (error) {
+      console.error('Erreur lors de la génération du PDF:', error);
+      alert('Erreur lors de la génération du PDF. Veuillez réessayer.');
+    }
   };
 
   const getPeriodLabel = () => {
