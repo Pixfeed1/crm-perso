@@ -1,38 +1,137 @@
 # 📋 Améliorations Module Devis
 
-## 🎯 Fonctionnalités à ajouter
+## ✅ Validation de l'Utilisateur
 
-### 1. TVA Flexible
-**Actuellement** : TVA fixée à 20%
-
-**Amélioration** :
-- ✅ Permettre de changer le taux de TVA par devis
-- ✅ Sélecteur avec taux prédéfinis : 0%, 5.5%, 10%, 20%
-- ✅ Option "TVA personnalisée" pour saisir un taux manuel
-- ✅ Sauvegarde du taux TVA dans la base de données
-
-**Champs à ajouter** :
-```sql
-ALTER TABLE quotes ADD COLUMN tva_rate DECIMAL(5,2) DEFAULT 20.00;
-```
-
-**Interface** :
-```jsx
-<select name="tva_rate" value={formData.tva_rate} onChange={handleChange}>
-  <option value="0">TVA 0% (export, formation)</option>
-  <option value="5.5">TVA 5.5% (livres, spectacles)</option>
-  <option value="10">TVA 10% (restauration, transport)</option>
-  <option value="20">TVA 20% (taux normal)</option>
-  <option value="custom">Personnalisé...</option>
-</select>
-```
+**TVA** : ✅ **CORRIGÉ** - Basé sur le régime fiscal (Franchise / Régime réel) selon ton statut juridique
+**CGV** : ✅ **CONFIRMÉ** - Tu peux mettre ce que tu veux (texte libre personnalisable)
+**Acompte** : ✅ **CONFIRMÉ** - Tu peux mettre ce que tu veux (% ou montant)
+**Escompte** : ✅ **CONFIRMÉ** - Tu peux mettre ce que tu veux (% et délai)
+**Relances** : ✅ **PARFAIT** - Système automatique avec 3 niveaux
 
 ---
 
-### 2. Conditions Générales de Vente (CGV)
+## 🎯 Fonctionnalités à ajouter
+
+### 1. TVA selon Statut Juridique (MEILLEURE APPROCHE)
+**Actuellement** : TVA fixée à 20%
+
+**TA REMARQUE EST JUSTE !** 👍
+
+En France, la TVA dépend du **régime fiscal** de ton entreprise :
+
+**Cas 1 : Franchise de TVA (Auto-entrepreneur / Micro-entreprise)**
+- ❌ **PAS de TVA** facturée
+- ✅ Mention obligatoire sur facture : "TVA non applicable, art. 293 B du CGI"
+- ✅ Concerne : Auto-entrepreneurs, certaines petites entreprises
+
+**Cas 2 : Régime Réel (EURL, SASU, SARL, SAS, SA...)**
+- ✅ **TVA facturée** selon le type de bien/service
+- Taux : 20% (normal), 10% (intermédiaire), 5.5% (réduit), 0% (export)
+
+**Solution proposée** :
+
+**Étape 1 : Configuration du profil utilisateur**
+```sql
+ALTER TABLE users ADD COLUMN vat_regime VARCHAR(20) DEFAULT 'normal';
+-- Valeurs : 'franchise' (pas de TVA) ou 'normal' (avec TVA)
+
+ALTER TABLE users ADD COLUMN default_vat_rate DECIMAL(5,2) DEFAULT 20.00;
+-- Taux par défaut si régime normal
+```
+
+**Étape 2 : Configuration dans Paramètres utilisateur**
+```jsx
+<div className="vat-regime-section">
+  <h3>Régime TVA</h3>
+
+  <select name="vat_regime" value={userProfile.vat_regime}>
+    <option value="franchise">
+      Franchise en base de TVA (Auto-entrepreneur, Micro-entreprise)
+    </option>
+    <option value="normal">
+      Régime réel (EURL, SASU, SARL, SAS...)
+    </option>
+  </select>
+
+  {userProfile.vat_regime === 'normal' && (
+    <>
+      <label>Taux de TVA par défaut</label>
+      <select name="default_vat_rate">
+        <option value="20">20% - Taux normal (la plupart des services)</option>
+        <option value="10">10% - Taux intermédiaire (restauration, transport)</option>
+        <option value="5.5">5.5% - Taux réduit (livres, spectacles)</option>
+        <option value="0">0% - Exonéré (export, formation pro)</option>
+      </select>
+    </>
+  )}
+</div>
+```
+
+**Étape 3 : Comportement sur les devis**
+
+**Si franchise de TVA** :
+```jsx
+// Calcul automatique
+const totalHT = calculateTotal(items);
+const totalTTC = totalHT; // Pas de TVA
+const tvaAmount = 0;
+
+// Affichage sur le devis/facture
+<div className="totals">
+  <p>Total HT : {totalHT}€</p>
+  <p className="text-sm italic">TVA non applicable, art. 293 B du CGI</p>
+  <p className="font-bold">Total TTC : {totalTTC}€</p>
+</div>
+```
+
+**Si régime normal** :
+```jsx
+// Interface avec sélecteur
+<select name="tva_rate" value={formData.tva_rate}>
+  <option value="20">TVA 20% (taux normal)</option>
+  <option value="10">TVA 10% (restauration, hébergement)</option>
+  <option value="5.5">TVA 5.5% (livres, produits alimentaires)</option>
+  <option value="0">TVA 0% (export, intracommunautaire)</option>
+</select>
+
+// Calcul
+const totalHT = calculateTotal(items);
+const tvaAmount = totalHT * (tvaRate / 100);
+const totalTTC = totalHT + tvaAmount;
+
+// Affichage
+<div className="totals">
+  <p>Total HT : {totalHT}€</p>
+  <p>TVA {tvaRate}% : {tvaAmount}€</p>
+  <p className="font-bold">Total TTC : {totalTTC}€</p>
+</div>
+```
+
+**Champs DB mis à jour** :
+```sql
+-- Table users (profil global)
+ALTER TABLE users ADD COLUMN vat_regime VARCHAR(20) DEFAULT 'normal';
+ALTER TABLE users ADD COLUMN default_vat_rate DECIMAL(5,2) DEFAULT 20.00;
+
+-- Table quotes (par devis)
+ALTER TABLE quotes ADD COLUMN tva_rate DECIMAL(5,2);
+ALTER TABLE quotes ADD COLUMN tva_applicable BOOLEAN DEFAULT true;
+```
+
+**Avantages de cette approche** :
+✅ Respecte la législation française
+✅ Configuration une seule fois dans le profil
+✅ Automatique pour tous les devis/factures
+✅ Possibilité de modifier au cas par cas si besoin
+✅ Mention légale automatique pour franchise TVA
+
+---
+
+### 2. Conditions Générales de Vente (CGV) - Totalement Personnalisables
 **Amélioration** :
 - ✅ Ajouter un champ texte multiligne "Conditions Générales"
-- ✅ Option "Utiliser les CGV par défaut" (pré-remplies)
+- ✅ **TU PEUX METTRE CE QUE TU VEUX** - Texte libre 100% personnalisable
+- ✅ Option "Utiliser mes CGV par défaut" (pré-remplies depuis ton profil)
 - ✅ CGV affichées au bas du devis PDF
 - ✅ Sauvegarde dans les paramètres utilisateur
 
@@ -56,9 +155,10 @@ CONDITIONS GÉNÉRALES DE VENTE
 
 ---
 
-### 3. Acompte
+### 3. Acompte - Totalement Personnalisable
 **Amélioration** :
 - ✅ Ajouter un champ "Acompte demandé" (en % ou montant fixe)
+- ✅ **TU METS CE QUE TU VEUX** : 10%, 30%, 50%, 500€, 1000€, etc.
 - ✅ Calcul automatique du montant de l'acompte
 - ✅ Affichage sur le devis : "Acompte à la commande : X€ TTC"
 - ✅ Reste à payer = Total TTC - Acompte
@@ -99,9 +199,10 @@ ALTER TABLE quotes ADD COLUMN acompte_value DECIMAL(10,2) DEFAULT 0;
 
 ---
 
-### 4. Escompte (Remise pour paiement anticipé)
+### 4. Escompte - Totalement Personnalisable
 **Amélioration** :
 - ✅ Ajouter un champ "Escompte si paiement sous X jours"
+- ✅ **TU METS CE QUE TU VEUX** : 1%, 2%, 5% - 7j, 8j, 15j, 30j, etc.
 - ✅ Exemple : "Escompte de 2% si paiement sous 8 jours"
 - ✅ Affichage sur le devis
 - ✅ Calcul automatique du montant avec escompte
