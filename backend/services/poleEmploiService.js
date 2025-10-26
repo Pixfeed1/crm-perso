@@ -1,8 +1,8 @@
 const axios = require('axios');
 
 /**
- * Service pour l'API Pôle Emploi
- * Documentation: https://pole-emploi.io/data/documentation
+ * Service pour l'API France Travail (anciennement France Travail)
+ * Documentation: https://francetravail.io/produits-partages/catalogue/offres-emploi/documentation
  *
  * Gère automatiquement:
  * - L'authentification OAuth2
@@ -13,8 +13,8 @@ class PoleEmploiService {
   constructor() {
     this.accessToken = null;
     this.tokenExpiry = null;
-    this.baseUrl = 'https://api.emploi-store.fr/partenaire';
-    this.authUrl = 'https://entreprise.pole-emploi.fr/connexion/oauth2/access_token?realm=/partenaire';
+    this.baseUrl = 'https://api.francetravail.io/partenaire';
+    this.authUrl = 'https://entreprise.francetravail.fr/connexion/oauth2/access_token?realm=/partenaire';
 
     // Configuration depuis .env
     this.clientId = process.env.POLE_EMPLOI_CLIENT_ID;
@@ -35,14 +35,14 @@ class PoleEmploiService {
   async getAccessToken() {
     // Si le token existe et n'est pas expiré, le réutiliser
     if (this.accessToken && this.tokenExpiry && this.tokenExpiry > Date.now()) {
-      console.log('[Pôle Emploi] Utilisation du token en cache');
+      console.log('[France Travail] Utilisation du token en cache');
       return this.accessToken;
     }
 
-    console.log('[Pôle Emploi] Demande d\'un nouveau token...');
+    console.log('[France Travail] Demande d\'un nouveau token...');
 
     if (!this.isConfigured()) {
-      throw new Error('Credentials Pôle Emploi non configurés dans .env');
+      throw new Error('Credentials France Travail (France Travail) non configurés dans .env');
     }
 
     try {
@@ -64,11 +64,11 @@ class PoleEmploiService {
       const expiresIn = (response.data.expires_in || 1499) - 60;
       this.tokenExpiry = Date.now() + (expiresIn * 1000);
 
-      console.log(`[Pôle Emploi] ✓ Token obtenu (expire dans ${expiresIn}s)`);
+      console.log(`[France Travail] ✓ Token obtenu (expire dans ${expiresIn}s)`);
       return this.accessToken;
     } catch (error) {
-      console.error('[Pôle Emploi] Erreur lors de l\'obtention du token:', error.response?.data || error.message);
-      throw new Error('Impossible d\'obtenir le token Pôle Emploi: ' + (error.response?.data?.error_description || error.message));
+      console.error('[France Travail] Erreur lors de l\'obtention du token:', error.response?.data || error.message);
+      throw new Error('Impossible d\'obtenir le token France Travail: ' + (error.response?.data?.error_description || error.message));
     }
   }
 
@@ -90,7 +90,7 @@ class PoleEmploiService {
     } catch (error) {
       // Si le token a expiré pendant la requête, réessayer une fois
       if (error.response?.status === 401) {
-        console.log('[Pôle Emploi] Token expiré, renouvellement...');
+        console.log('[France Travail] Token expiré, renouvellement...');
         this.accessToken = null;
         this.tokenExpiry = null;
 
@@ -126,7 +126,7 @@ class PoleEmploiService {
    */
   async searchOffers(searchParams = {}) {
     if (!this.isConfigured()) {
-      console.warn('[Pôle Emploi] Service non configuré, retour résultats vides');
+      console.warn('[France Travail] Service non configuré, retour résultats vides');
       return { resultats: [], filtresPossibles: [] };
     }
 
@@ -143,12 +143,12 @@ class PoleEmploiService {
       }
     });
 
-    console.log('[Pôle Emploi] Recherche avec params:', params);
+    console.log('[France Travail] Recherche avec params:', params);
 
     try {
       const data = await this.makeRequest('/offresdemploi/v2/offres/search', params);
 
-      console.log(`[Pôle Emploi] ✓ ${data.resultats?.length || 0} offres trouvées`);
+      console.log(`[France Travail] ✓ ${data.resultats?.length || 0} offres trouvées`);
 
       return {
         offers: data.resultats || [],
@@ -156,8 +156,8 @@ class PoleEmploiService {
         filters: data.filtresPossibles || []
       };
     } catch (error) {
-      console.error('[Pôle Emploi] Erreur lors de la recherche:', error.response?.data || error.message);
-      throw new Error('Erreur lors de la recherche Pôle Emploi: ' + (error.response?.data?.message || error.message));
+      console.error('[France Travail] Erreur lors de la recherche:', error.response?.data || error.message);
+      throw new Error('Erreur lors de la recherche France Travail: ' + (error.response?.data?.message || error.message));
     }
   }
 
@@ -169,27 +169,27 @@ class PoleEmploiService {
    */
   async getOfferDetails(offerId) {
     if (!this.isConfigured()) {
-      throw new Error('Service Pôle Emploi non configuré');
+      throw new Error('Service France Travail non configuré');
     }
 
-    console.log(`[Pôle Emploi] Récupération de l'offre ${offerId}...`);
+    console.log(`[France Travail] Récupération de l'offre ${offerId}...`);
 
     try {
       const data = await this.makeRequest(`/offresdemploi/v2/offres/${offerId}`);
 
-      console.log(`[Pôle Emploi] ✓ Offre ${offerId} récupérée`);
+      console.log(`[France Travail] ✓ Offre ${offerId} récupérée`);
 
       return data;
     } catch (error) {
-      console.error(`[Pôle Emploi] Erreur lors de la récupération de l'offre ${offerId}:`, error.response?.data || error.message);
+      console.error(`[France Travail] Erreur lors de la récupération de l'offre ${offerId}:`, error.response?.data || error.message);
       throw new Error('Erreur lors de la récupération de l\'offre: ' + (error.response?.data?.message || error.message));
     }
   }
 
   /**
-   * Transforme une offre Pôle Emploi en format CRM (lead potentiel)
+   * Transforme une offre France Travail en format CRM (lead potentiel)
    *
-   * @param {Object} offer - Offre Pôle Emploi brute
+   * @param {Object} offer - Offre France Travail brute
    * @returns {Object} Lead formaté pour le CRM
    */
   transformOfferToLead(offer) {
@@ -227,7 +227,7 @@ ${description.substring(0, 500)}${description.length > 500 ? '...' : ''}
 
 ${skills ? `**Compétences recherchées:** ${skills}` : ''}
 
-**Source:** Pôle Emploi (${offer.id})
+**Source:** France Travail (${offer.id})
 **Date de publication:** ${offer.dateCreation || 'Non spécifiée'}
 **URL:** https://candidat.pole-emploi.fr/offres/recherche/detail/${offer.id}
     `.trim();
@@ -281,7 +281,7 @@ ${skills ? `**Compétences recherchées:** ${skills}` : ''}
     // Transformer les offres en leads
     const leads = offers.map(offer => this.transformOfferToLead(offer));
 
-    console.log(`[Pôle Emploi] ${leads.length} opportunités détectées pour "${keywords}"`);
+    console.log(`[France Travail] ${leads.length} opportunités détectées pour "${keywords}"`);
 
     return leads;
   }
@@ -320,16 +320,16 @@ ${skills ? `**Compétences recherchées:** ${skills}` : ''}
    */
   async testConnection() {
     if (!this.isConfigured()) {
-      console.error('[Pôle Emploi] Credentials non configurés');
+      console.error('[France Travail] Credentials non configurés');
       return false;
     }
 
     try {
       await this.getAccessToken();
-      console.log('[Pôle Emploi] ✓ Connexion réussie');
+      console.log('[France Travail] ✓ Connexion réussie');
       return true;
     } catch (error) {
-      console.error('[Pôle Emploi] ✗ Échec de connexion:', error.message);
+      console.error('[France Travail] ✗ Échec de connexion:', error.message);
       return false;
     }
   }
