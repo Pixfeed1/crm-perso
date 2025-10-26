@@ -410,4 +410,4 @@ if (require.main === module) {
     });
 }
 
-module.exports = runMigration;
+module.exports = { runMigration };
