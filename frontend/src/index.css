@@ -26,15 +26,34 @@ input:not([type="checkbox"]):not([type="radio"]),
 textarea,
 select {
   color: white !important;
+  -webkit-text-fill-color: white !important;
+}
+
+/* Correction spéciale pour l'autocomplete des navigateurs */
+input:not([type="checkbox"]):not([type="radio"]):-webkit-autofill,
+input:not([type="checkbox"]):not([type="radio"]):-webkit-autofill:hover,
+input:not([type="checkbox"]):not([type="radio"]):-webkit-autofill:focus,
+input:not([type="checkbox"]):not([type="radio"]):-webkit-autofill:active {
+  -webkit-text-fill-color: white !important;
+  -webkit-box-shadow: 0 0 0 1000px rgb(17 24 39 / 0.5) inset !important;
+  box-shadow: 0 0 0 1000px rgb(17 24 39 / 0.5) inset !important;
+  transition: background-color 5000s ease-in-out 0s;
 }
 
 /* Placeholders en gris */
 input::placeholder,
 textarea::placeholder {
-  color: rgb(107, 114, 128) !important; /* gray-500 */
+  color: rgb(156, 163, 175) !important; /* gray-400 - plus clair que gray-500 */
+  opacity: 1 !important;
 }
 
 /* Labels en gris clair */
 label {
   color: rgb(209, 213, 219) !important; /* gray-300 */
+}
+
+/* Options dans les select */
+select option {
+  background-color: rgb(17 24 39) !important; /* gray-900 */
+  color: white !important;
 }
