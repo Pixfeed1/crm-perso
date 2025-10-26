@@ -1,7 +1,7 @@
 // src/pages/Settings.jsx
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FiSave, FiBuilding, FiMail } from 'react-icons/fi';
+import { FiSave, FiBriefcase, FiMail } from 'react-icons/fi';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { settingsAPI } from '../services/settingsAPI';
@@ -139,7 +139,7 @@ const Settings = () => {
               : 'border-transparent text-gray-400 hover:text-gray-300'
           }`}
         >
-          <FiBuilding />
+          <FiBriefcase />
           <span>Informations entreprise</span>
         </button>
         <button
