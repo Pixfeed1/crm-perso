@@ -1,8 +1,9 @@
 const poleEmploiService = require('../services/poleEmploiService');
+const googleJobsService = require('../services/googleJobsService');
 
 /**
  * Controller pour les fonctionnalités de prospection
- * Intègre : Pôle Emploi, Data.gouv, BOAMP, etc.
+ * Intègre : France Travail (Pôle Emploi), Google Jobs, Data.gouv, BOAMP, etc.
  */
 
 /**
@@ -32,6 +33,37 @@ exports.testPoleEmploi = async (req, res) => {
       success: false,
       message: error.message,
       configured: poleEmploiService.isConfigured()
+    });
+  }
+};
+
+/**
+ * Test de connexion à Google Jobs
+ * Utile pour vérifier que la clé API JSearch est valide
+ */
+exports.testGoogleJobs = async (req, res) => {
+  try {
+    const isConnected = await googleJobsService.testConnection();
+
+    if (isConnected) {
+      res.json({
+        success: true,
+        message: 'Connexion à Google Jobs réussie',
+        configured: googleJobsService.isConfigured()
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        message: 'Impossible de se connecter à Google Jobs',
+        configured: googleJobsService.isConfigured()
+      });
+    }
+  } catch (error) {
+    console.error('[Prospection] Erreur test Google Jobs:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+      configured: googleJobsService.isConfigured()
     });
   }
 };
@@ -158,11 +190,42 @@ exports.searchOpportunities = async (req, res) => {
       }
     }
 
-    // Google Jobs (à implémenter)
-    if (requestedSources.includes('google-jobs')) {
+    // Google Jobs
+    if (requestedSources.includes('google-jobs') && googleJobsService.isConfigured()) {
+      try {
+        const searchOptions = {};
+
+        // Construire la localisation pour Google Jobs
+        if (location) {
+          // Si c'est un code département ou postal français, ajouter "France"
+          if (/^\d{2,5}$/.test(location)) {
+            searchOptions.location = `France, ${location}`;
+          } else {
+            searchOptions.location = location;
+          }
+        }
+
+        const opportunities = await googleJobsService.searchOpportunities(keywords, searchOptions);
+
+        results.push({
+          source: 'google-jobs',
+          count: opportunities.length,
+          opportunities: opportunities
+        });
+
+        console.log(`[Prospection] ✓ Google Jobs: ${opportunities.length} résultats`);
+
+      } catch (error) {
+        console.error('[Prospection] Erreur Google Jobs:', error);
+        errors.push({
+          source: 'google-jobs',
+          error: error.message
+        });
+      }
+    } else if (requestedSources.includes('google-jobs') && !googleJobsService.isConfigured()) {
       errors.push({
         source: 'google-jobs',
-        error: 'Service Google Jobs pas encore implémenté'
+        error: 'Service Google Jobs non configuré. Ajoutez JSEARCH_API_KEY dans .env'
       });
     }
 

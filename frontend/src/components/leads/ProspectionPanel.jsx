@@ -10,11 +10,20 @@ const ProspectionPanel = ({ onLeadCreated }) => {
   const [searchParams, setSearchParams] = useState({
     keywords: '',
     location: '',
-    sources: 'pole-emploi'
+    sources: ['pole-emploi'] // Array de sources
   });
   const [results, setResults] = useState([]);
   const [selectedOffer, setSelectedOffer] = useState(null);
   const [importingId, setImportingId] = useState(null);
+
+  // Gérer le toggle des sources
+  const handleSourceToggle = (source) => {
+    const newSources = searchParams.sources.includes(source)
+      ? searchParams.sources.filter(s => s !== source)
+      : [...searchParams.sources, source];
+
+    setSearchParams({ ...searchParams, sources: newSources });
+  };
 
   // Rechercher des opportunités
   const handleSearch = async (e) => {
@@ -25,6 +34,11 @@ const ProspectionPanel = ({ onLeadCreated }) => {
       return;
     }
 
+    if (searchParams.sources.length === 0) {
+      toast.error('Veuillez sélectionner au moins une source');
+      return;
+    }
+
     setIsSearching(true);
     setResults([]);
 
@@ -32,12 +46,27 @@ const ProspectionPanel = ({ onLeadCreated }) => {
       const response = await prospectionAPI.search(
         searchParams.keywords,
         searchParams.location,
-        searchParams.sources
+        searchParams.sources.join(',') // Joindre les sources avec virgule
       );
 
       if (response.success) {
         setResults(response.opportunities || []);
-        toast.success(`${response.total || 0} opportunité(s) trouvée(s)`);
+
+        // Message avec détail par source
+        let message = `${response.total || 0} opportunité(s) trouvée(s)`;
+        if (response.sources && response.sources.length > 0) {
+          const details = response.sources.map(s => `${s.source}: ${s.count}`).join(', ');
+          message += ` (${details})`;
+        }
+
+        toast.success(message);
+
+        // Afficher les erreurs s'il y en a
+        if (response.errors && response.errors.length > 0) {
+          response.errors.forEach(err => {
+            toast.warning(`${err.source}: ${err.error}`);
+          });
+        }
       } else {
         toast.error(response.message || 'Erreur lors de la recherche');
       }
@@ -114,7 +143,7 @@ const ProspectionPanel = ({ onLeadCreated }) => {
           </div>
 
           {/* Localisation */}
-          <div>
+          <div className="md:col-span-2">
             <label className="block text-sm font-medium text-gray-300 mb-2">
               Localisation (optionnel)
             </label>
@@ -133,8 +162,38 @@ const ProspectionPanel = ({ onLeadCreated }) => {
             </p>
           </div>
 
+          {/* Sources */}
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Sources <span className="text-red-500">*</span>
+            </label>
+            <div className="flex flex-wrap gap-3">
+              <label className="flex items-center gap-2 p-3 bg-gray-700/30 rounded-lg cursor-pointer hover:bg-gray-700/50 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={searchParams.sources.includes('pole-emploi')}
+                  onChange={() => handleSourceToggle('pole-emploi')}
+                  className="w-4 h-4 text-indigo-600 bg-gray-800 border-gray-700 rounded focus:ring-indigo-500"
+                />
+                <span className="text-sm text-gray-300">France Travail</span>
+              </label>
+              <label className="flex items-center gap-2 p-3 bg-gray-700/30 rounded-lg cursor-pointer hover:bg-gray-700/50 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={searchParams.sources.includes('google-jobs')}
+                  onChange={() => handleSourceToggle('google-jobs')}
+                  className="w-4 h-4 text-indigo-600 bg-gray-800 border-gray-700 rounded focus:ring-indigo-500"
+                />
+                <span className="text-sm text-gray-300">Google Jobs</span>
+              </label>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              Sélectionnez au moins une source de recherche
+            </p>
+          </div>
+
           {/* Bouton recherche */}
-          <div className="flex items-end">
+          <div className="md:col-span-2">
             <button
               type="submit"
               disabled={isSearching}

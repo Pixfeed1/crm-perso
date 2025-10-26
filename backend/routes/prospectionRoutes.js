@@ -15,6 +15,13 @@ const prospectionController = require('../controllers/prospectionController');
 router.get('/test/pole-emploi', prospectionController.testPoleEmploi);
 
 /**
+ * @route   GET /api/prospection/test/google-jobs
+ * @desc    Test de connexion à l'API Google Jobs (JSearch)
+ * @access  Private (authentifié)
+ */
+router.get('/test/google-jobs', prospectionController.testGoogleJobs);
+
+/**
  * @route   GET /api/prospection/pole-emploi/search
  * @desc    Recherche d'opportunités via Pôle Emploi uniquement
  * @query   keywords - Mots-clés de recherche (requis)
