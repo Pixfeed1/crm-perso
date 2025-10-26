@@ -167,13 +167,48 @@ app.use((err, req, res, next) => {
 // Fonction pour initialiser la base de données
 async function initializeDatabase() {
   try {
-    console.log('🔄 Initialisation de la base de données...');
+    console.log('');
+    console.log('===========================================');
+    console.log('🔄 INITIALISATION DE LA BASE DE DONNÉES');
+    console.log('===========================================');
+    console.log('Vérification et création automatique des tables...');
+    console.log('');
+
     await initAllTables();
-    console.log('✅ Base de données initialisée avec succès.');
+
+    console.log('');
+    console.log('✅ Base de données initialisée avec succès !');
+    console.log('   Toutes les tables sont créées et prêtes.');
+    console.log('===========================================');
+    console.log('');
   } catch (error) {
-    console.error('⚠️ Erreur lors de l\'initialisation de la base de données:', error.message);
-    // Ne pas bloquer le démarrage du serveur
-    console.error('❌ Erreur lors de l\'initialisation, mais le serveur va démarrer quand même');
+    console.log('');
+    console.log('===========================================');
+    console.log('⚠️  ERREUR D\'INITIALISATION DE LA BDD');
+    console.log('===========================================');
+
+    if (error.code === 'ECONNREFUSED') {
+      console.error('❌ PostgreSQL n\'est pas accessible');
+      console.error('   Port:', error.port || 5432);
+      console.error('   Host:', error.address || 'localhost');
+      console.error('');
+      console.error('💡 SOLUTION:');
+      console.error('   1. Vérifiez que PostgreSQL est installé');
+      console.error('   2. Démarrez PostgreSQL :');
+      console.error('      - Linux: sudo service postgresql start');
+      console.error('      - Mac: brew services start postgresql');
+      console.error('      - Windows: Démarrer le service PostgreSQL');
+      console.error('   3. Vérifiez vos variables .env (DB_HOST, DB_PORT, etc.)');
+    } else {
+      console.error('❌ Erreur:', error.message);
+      console.error('   Code:', error.code);
+    }
+
+    console.error('');
+    console.error('⚠️  Le serveur va démarrer SANS base de données');
+    console.error('   Les routes API ne fonctionneront pas correctement');
+    console.log('===========================================');
+    console.log('');
   }
 }
 
