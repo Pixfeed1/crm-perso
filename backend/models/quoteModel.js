@@ -92,6 +92,7 @@ const getQuoteById = (db, id) => {
  */
 const createQuote = async (db, quoteData) => {
   const {
+    // Champs existants
     client_id,
     client_name,
     client_email,
@@ -106,7 +107,16 @@ const createQuote = async (db, quoteData) => {
     escompte_percent = 0,
     escompte_days = 0,
     validity_days = 30,
-    notes
+    notes,
+    // Nouveaux champs
+    title = '',
+    project_id = null,
+    discount_type = 'none',
+    discount_value = 0,
+    payment_methods = [],
+    tva_regime = 'NORMAL',
+    additional_info = '',
+    additional_files = []
   } = quoteData;
 
   try {
@@ -119,8 +129,20 @@ const createQuote = async (db, quoteData) => {
       total_ht += (item.quantity || 0) * (item.unit_price || 0);
     });
 
-    const tva_amount = tva_applicable ? (total_ht * (tva_rate / 100)) : 0;
-    const total_ttc = total_ht + tva_amount;
+    // Calculer la remise
+    let discount_amount = 0;
+    if (discount_type === 'percent') {
+      discount_amount = total_ht * (discount_value / 100);
+    } else if (discount_type === 'fixed') {
+      discount_amount = discount_value;
+    }
+
+    // Appliquer la remise au total HT
+    const total_ht_after_discount = total_ht - discount_amount;
+
+    // Calculer la TVA sur le montant après remise
+    const tva_amount = tva_applicable ? (total_ht_after_discount * (tva_rate / 100)) : 0;
+    const total_ttc = total_ht_after_discount + tva_amount;
 
     // Calculer l'acompte
     let acompte_amount = 0;
@@ -142,9 +164,12 @@ const createQuote = async (db, quoteData) => {
           status, total_ht, total_ttc, tva_rate, tva_amount, tva_applicable,
           items, cgv, acompte_type, acompte_value, acompte_amount,
           escompte_percent, escompte_days, validity_days, notes,
-          issue_date, expiry_date
+          issue_date, expiry_date,
+          title, project_id, discount_type, discount_value, discount_amount,
+          payment_methods, tva_regime, additional_info, additional_files
         ) VALUES (
-          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23,
+          $24, $25, $26, $27, $28, $29, $30, $31, $32
         ) RETURNING id
       `;
 
@@ -153,7 +178,9 @@ const createQuote = async (db, quoteData) => {
         'draft', total_ht, total_ttc, tva_rate, tva_amount, tva_applicable,
         JSON.stringify(items), cgv, acompte_type, acompte_value, acompte_amount,
         escompte_percent, escompte_days, validity_days, notes,
-        issue_date, expiry_date
+        issue_date, expiry_date,
+        title, project_id, discount_type, discount_value, discount_amount,
+        JSON.stringify(payment_methods), tva_regime, additional_info, JSON.stringify(additional_files)
       ];
 
       db.pool.query(query, params, (err, result) => {
@@ -175,6 +202,7 @@ const createQuote = async (db, quoteData) => {
 const updateQuote = (db, id, quoteData) => {
   return new Promise((resolve, reject) => {
     const {
+      // Champs existants
       client_id,
       client_name,
       client_email,
@@ -190,7 +218,16 @@ const updateQuote = (db, id, quoteData) => {
       escompte_percent = 0,
       escompte_days = 0,
       validity_days = 30,
-      notes
+      notes,
+      // Nouveaux champs
+      title = '',
+      project_id = null,
+      discount_type = 'none',
+      discount_value = 0,
+      payment_methods = [],
+      tva_regime = 'NORMAL',
+      additional_info = '',
+      additional_files = []
     } = quoteData;
 
     // Calculer les totaux
@@ -199,8 +236,20 @@ const updateQuote = (db, id, quoteData) => {
       total_ht += (item.quantity || 0) * (item.unit_price || 0);
     });
 
-    const tva_amount = tva_applicable ? (total_ht * (tva_rate / 100)) : 0;
-    const total_ttc = total_ht + tva_amount;
+    // Calculer la remise
+    let discount_amount = 0;
+    if (discount_type === 'percent') {
+      discount_amount = total_ht * (discount_value / 100);
+    } else if (discount_type === 'fixed') {
+      discount_amount = discount_value;
+    }
+
+    // Appliquer la remise au total HT
+    const total_ht_after_discount = total_ht - discount_amount;
+
+    // Calculer la TVA sur le montant après remise
+    const tva_amount = tva_applicable ? (total_ht_after_discount * (tva_rate / 100)) : 0;
+    const total_ttc = total_ht_after_discount + tva_amount;
 
     // Calculer l'acompte
     let acompte_amount = 0;
@@ -216,8 +265,10 @@ const updateQuote = (db, id, quoteData) => {
         status = $6, total_ht = $7, total_ttc = $8, tva_rate = $9, tva_amount = $10, tva_applicable = $11,
         items = $12, cgv = $13, acompte_type = $14, acompte_value = $15, acompte_amount = $16,
         escompte_percent = $17, escompte_days = $18, validity_days = $19, notes = $20,
+        title = $21, project_id = $22, discount_type = $23, discount_value = $24, discount_amount = $25,
+        payment_methods = $26, tva_regime = $27, additional_info = $28, additional_files = $29,
         updated_at = CURRENT_TIMESTAMP
-      WHERE id = $21
+      WHERE id = $30
     `;
 
     const params = [
@@ -225,6 +276,8 @@ const updateQuote = (db, id, quoteData) => {
       status, total_ht, total_ttc, tva_rate, tva_amount, tva_applicable,
       JSON.stringify(items), cgv, acompte_type, acompte_value, acompte_amount,
       escompte_percent, escompte_days, validity_days, notes,
+      title, project_id, discount_type, discount_value, discount_amount,
+      JSON.stringify(payment_methods), tva_regime, additional_info, JSON.stringify(additional_files),
       id
     ];
 

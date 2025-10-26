@@ -124,6 +124,7 @@ const getUnpaidInvoices = (db) => {
  */
 const createInvoice = async (db, invoiceData) => {
   const {
+    // Champs existants
     quote_id,
     client_id,
     client_name,
@@ -139,7 +140,16 @@ const createInvoice = async (db, invoiceData) => {
     escompte_percent = 0,
     escompte_days = 0,
     payment_terms_days = 30,
-    notes
+    notes,
+    // Nouveaux champs
+    title = '',
+    project_id = null,
+    discount_type = 'none',
+    discount_value = 0,
+    payment_methods = [],
+    tva_regime = 'NORMAL',
+    additional_info = '',
+    additional_files = []
   } = invoiceData;
 
   try {
@@ -152,8 +162,20 @@ const createInvoice = async (db, invoiceData) => {
       total_ht += (item.quantity || 0) * (item.unit_price || 0);
     });
 
-    const tva_amount = tva_applicable ? (total_ht * (tva_rate / 100)) : 0;
-    const total_ttc = total_ht + tva_amount;
+    // Calculer la remise
+    let discount_amount = 0;
+    if (discount_type === 'percent') {
+      discount_amount = total_ht * (discount_value / 100);
+    } else if (discount_type === 'fixed') {
+      discount_amount = discount_value;
+    }
+
+    // Appliquer la remise au total HT
+    const total_ht_after_discount = total_ht - discount_amount;
+
+    // Calculer la TVA sur le montant après remise
+    const tva_amount = tva_applicable ? (total_ht_after_discount * (tva_rate / 100)) : 0;
+    const total_ttc = total_ht_after_discount + tva_amount;
 
     // Calculer l'acompte
     let acompte_amount = 0;
@@ -175,9 +197,12 @@ const createInvoice = async (db, invoiceData) => {
           status, payment_status, total_ht, total_ttc, tva_rate, tva_amount, tva_applicable,
           items, cgv, acompte_type, acompte_value, acompte_amount,
           escompte_percent, escompte_days, payment_terms_days, notes,
-          issue_date, due_date
+          issue_date, due_date,
+          title, project_id, discount_type, discount_value, discount_amount,
+          payment_methods, tva_regime, additional_info, additional_files
         ) VALUES (
-          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25,
+          $26, $27, $28, $29, $30, $31, $32, $33, $34
         ) RETURNING id
       `;
 
@@ -186,7 +211,9 @@ const createInvoice = async (db, invoiceData) => {
         'draft', 'pending', total_ht, total_ttc, tva_rate, tva_amount, tva_applicable,
         JSON.stringify(items), cgv, acompte_type, acompte_value, acompte_amount,
         escompte_percent, escompte_days, payment_terms_days, notes,
-        issue_date, due_date
+        issue_date, due_date,
+        title, project_id, discount_type, discount_value, discount_amount,
+        JSON.stringify(payment_methods), tva_regime, additional_info, JSON.stringify(additional_files)
       ];
 
       db.pool.query(query, params, (err, result) => {
@@ -216,6 +243,7 @@ const createInvoiceFromQuote = async (db, quoteId) => {
 
       // Créer la facture avec les données du devis
       const invoiceData = {
+        // Champs existants
         quote_id: quote.id,
         client_id: quote.client_id,
         client_name: quote.client_name,
@@ -231,7 +259,16 @@ const createInvoiceFromQuote = async (db, quoteId) => {
         escompte_percent: quote.escompte_percent,
         escompte_days: quote.escompte_days,
         payment_terms_days: 30,
-        notes: quote.notes
+        notes: quote.notes,
+        // Nouveaux champs copiés depuis le devis
+        title: quote.title,
+        project_id: quote.project_id,
+        discount_type: quote.discount_type || 'none',
+        discount_value: quote.discount_value || 0,
+        payment_methods: typeof quote.payment_methods === 'string' ? JSON.parse(quote.payment_methods) : (quote.payment_methods || []),
+        tva_regime: quote.tva_regime || 'NORMAL',
+        additional_info: quote.additional_info || '',
+        additional_files: typeof quote.additional_files === 'string' ? JSON.parse(quote.additional_files) : (quote.additional_files || [])
       };
 
       const result = await createInvoice(db, invoiceData);
@@ -260,6 +297,7 @@ const getQuoteById = (db, id) => {
 const updateInvoice = (db, id, invoiceData) => {
   return new Promise((resolve, reject) => {
     const {
+      // Champs existants
       client_id,
       client_name,
       client_email,
@@ -276,7 +314,16 @@ const updateInvoice = (db, id, invoiceData) => {
       escompte_percent = 0,
       escompte_days = 0,
       payment_terms_days = 30,
-      notes
+      notes,
+      // Nouveaux champs
+      title = '',
+      project_id = null,
+      discount_type = 'none',
+      discount_value = 0,
+      payment_methods = [],
+      tva_regime = 'NORMAL',
+      additional_info = '',
+      additional_files = []
     } = invoiceData;
 
     // Calculer les totaux
@@ -285,8 +332,20 @@ const updateInvoice = (db, id, invoiceData) => {
       total_ht += (item.quantity || 0) * (item.unit_price || 0);
     });
 
-    const tva_amount = tva_applicable ? (total_ht * (tva_rate / 100)) : 0;
-    const total_ttc = total_ht + tva_amount;
+    // Calculer la remise
+    let discount_amount = 0;
+    if (discount_type === 'percent') {
+      discount_amount = total_ht * (discount_value / 100);
+    } else if (discount_type === 'fixed') {
+      discount_amount = discount_value;
+    }
+
+    // Appliquer la remise au total HT
+    const total_ht_after_discount = total_ht - discount_amount;
+
+    // Calculer la TVA sur le montant après remise
+    const tva_amount = tva_applicable ? (total_ht_after_discount * (tva_rate / 100)) : 0;
+    const total_ttc = total_ht_after_discount + tva_amount;
 
     // Calculer l'acompte
     let acompte_amount = 0;
@@ -302,8 +361,10 @@ const updateInvoice = (db, id, invoiceData) => {
         status = $6, payment_status = $7, total_ht = $8, total_ttc = $9, tva_rate = $10, tva_amount = $11, tva_applicable = $12,
         items = $13, cgv = $14, acompte_type = $15, acompte_value = $16, acompte_amount = $17,
         escompte_percent = $18, escompte_days = $19, payment_terms_days = $20, notes = $21,
+        title = $22, project_id = $23, discount_type = $24, discount_value = $25, discount_amount = $26,
+        payment_methods = $27, tva_regime = $28, additional_info = $29, additional_files = $30,
         updated_at = CURRENT_TIMESTAMP
-      WHERE id = $22
+      WHERE id = $31
     `;
 
     const params = [
@@ -311,6 +372,8 @@ const updateInvoice = (db, id, invoiceData) => {
       status, payment_status, total_ht, total_ttc, tva_rate, tva_amount, tva_applicable,
       JSON.stringify(items), cgv, acompte_type, acompte_value, acompte_amount,
       escompte_percent, escompte_days, payment_terms_days, notes,
+      title, project_id, discount_type, discount_value, discount_amount,
+      JSON.stringify(payment_methods), tva_regime, additional_info, JSON.stringify(additional_files),
       id
     ];
 
