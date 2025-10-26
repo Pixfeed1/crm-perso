@@ -18,7 +18,7 @@ import { FiBarChart2 as ReportsIcon } from 'react-icons/fi';
 import { FiFileText as QuotesIcon } from 'react-icons/fi';
 import { FiFile as InvoicesIcon } from 'react-icons/fi';
 import { FiLogOut as LogoutIcon } from 'react-icons/fi';
-import { FiBell } from 'react-icons/fi';
+import { FiBell, FiSettings } from 'react-icons/fi';
 
 // Import des modals
 import RemindersModal from './reminders/RemindersModal';
@@ -163,6 +163,17 @@ const Layout = ({ children }) => {
         <kbd className="hidden sm:inline px-2 py-1 bg-gray-900/50 border border-gray-700 rounded text-xs text-gray-500">
           Ctrl+K
         </kbd>
+      </motion.button>
+
+      {/* Bouton Paramètres en haut à droite */}
+      <motion.button
+        className="fixed top-4 right-20 z-50 w-12 h-12 sm:w-14 sm:h-14 bg-gray-700 rounded-full flex items-center justify-center shadow-xl hover:bg-gray-600 transition-all"
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.95 }}
+        onClick={() => navigate('/settings')}
+        title="Paramètres"
+      >
+        <FiSettings className="text-xl sm:text-2xl" />
       </motion.button>
 
       {/* Badge de notifications en haut à droite - Position fixe pour visibilité constante */}

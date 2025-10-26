@@ -496,6 +496,36 @@ async function initAllTables() {
       console.log('✓ Table invoices existe déjà');
     }
 
+    // 16. Table company_settings (paramètres entreprise)
+    if (!(await tableExists(client, 'company_settings'))) {
+      console.log('Création de la table company_settings...');
+      await client.query(`
+        CREATE TABLE company_settings (
+          id SERIAL PRIMARY KEY,
+          company_name TEXT,
+          address TEXT,
+          postal_code TEXT,
+          city TEXT,
+          country TEXT DEFAULT 'France',
+          siret TEXT,
+          email TEXT,
+          phone TEXT,
+          logo_url TEXT,
+          email_signature TEXT,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+      // Insérer un enregistrement par défaut
+      await client.query(`
+        INSERT INTO company_settings (company_name, country)
+        VALUES ('Mon Entreprise', 'France');
+      `);
+      console.log('✅ Table company_settings créée avec enregistrement par défaut');
+    } else {
+      console.log('✓ Table company_settings existe déjà');
+    }
+
     console.log('🎉 Toutes les tables ont été initialisées avec succès !');
 
   } catch (error) {
