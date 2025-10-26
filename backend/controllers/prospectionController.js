@@ -135,16 +135,20 @@ exports.searchPoleEmploi = async (req, res) => {
 
 /**
  * Recherche d'opportunités multi-sources
- * (Pour l'instant uniquement Pôle Emploi, sera étendu avec Google Jobs, BOAMP, etc.)
  *
  * @route GET /api/prospection/search
  * @query keywords - Mots-clés de recherche
  * @query location - Localisation (département ou ville)
  * @query sources - Sources à interroger (séparées par virgules: pole-emploi,google-jobs,boamp)
+ * @query contractType - Type de contrat (CDI,CDD,MIS,SAI,FRA,LIB) - séparés par virgules
+ * @query experience - Niveau d'expérience (D=débutant,E=expérimenté,S=senior)
+ * @query datePosted - Date de publication (all,today,3days,week,month) - pour Google Jobs
+ * @query minSalary - Salaire minimum (en euros annuels)
+ * @query maxSalary - Salaire maximum (en euros annuels)
  */
 exports.searchOpportunities = async (req, res) => {
   try {
-    const { keywords, location, sources } = req.query;
+    const { keywords, location, sources, contractType, experience, datePosted, minSalary, maxSalary } = req.query;
 
     if (!keywords) {
       return res.status(400).json({
@@ -154,6 +158,9 @@ exports.searchOpportunities = async (req, res) => {
     }
 
     console.log(`[Prospection] Recherche multi-sources: "${keywords}" (${location || 'France'})`);
+    if (contractType || experience || datePosted || minSalary || maxSalary) {
+      console.log(`[Prospection] Filtres: contrat=${contractType}, exp=${experience}, date=${datePosted}, salaire=${minSalary}-${maxSalary}`);
+    }
 
     const requestedSources = sources ? sources.split(',') : ['pole-emploi'];
     const results = [];
@@ -164,13 +171,23 @@ exports.searchOpportunities = async (req, res) => {
       try {
         const searchOptions = {};
 
-        // Si location est un code département (2 chiffres)
+        // Localisation
         if (location && /^\d{2}$/.test(location)) {
           searchOptions.departement = location;
         }
-        // Si location est un code postal (5 chiffres), extraire le département
         else if (location && /^\d{5}$/.test(location)) {
           searchOptions.departement = location.substring(0, 2);
+        }
+
+        // Filtres avancés
+        if (contractType) {
+          searchOptions.typeContrat = contractType;
+        }
+        if (experience) {
+          searchOptions.experience = experience;
+        }
+        if (minSalary) {
+          searchOptions.salaireMin = minSalary;
         }
 
         const opportunities = await poleEmploiService.searchOpportunities(keywords, searchOptions);
@@ -205,6 +222,11 @@ exports.searchOpportunities = async (req, res) => {
           } else {
             searchOptions.location = location;
           }
+        }
+
+        // Filtre de date pour Google Jobs
+        if (datePosted) {
+          searchOptions.datePosted = datePosted; // all, today, 3days, week, month
         }
 
         const opportunities = await googleJobsService.searchOpportunities(keywords, searchOptions);

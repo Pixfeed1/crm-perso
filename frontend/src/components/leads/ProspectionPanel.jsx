@@ -15,7 +15,12 @@ const ProspectionPanel = ({ onLeadCreated }) => {
   const [jobSearchParams, setJobSearchParams] = useState({
     keywords: '',
     location: '',
-    sources: ['pole-emploi']
+    sources: ['pole-emploi'],
+    contractType: '',
+    experience: '',
+    datePosted: 'all',
+    minSalary: '',
+    maxSalary: ''
   });
   const [jobResults, setJobResults] = useState([]);
 
@@ -83,10 +88,18 @@ const ProspectionPanel = ({ onLeadCreated }) => {
     setJobResults([]);
 
     try {
+      const filters = {};
+      if (jobSearchParams.contractType) filters.contractType = jobSearchParams.contractType;
+      if (jobSearchParams.experience) filters.experience = jobSearchParams.experience;
+      if (jobSearchParams.datePosted && jobSearchParams.datePosted !== 'all') filters.datePosted = jobSearchParams.datePosted;
+      if (jobSearchParams.minSalary) filters.minSalary = jobSearchParams.minSalary;
+      if (jobSearchParams.maxSalary) filters.maxSalary = jobSearchParams.maxSalary;
+
       const response = await prospectionAPI.search(
         jobSearchParams.keywords,
         jobSearchParams.location,
-        jobSearchParams.sources.join(',')
+        jobSearchParams.sources.join(','),
+        filters
       );
 
       if (response.success) {
@@ -381,6 +394,96 @@ const ProspectionPanel = ({ onLeadCreated }) => {
                     />
                     <span className="text-sm text-gray-300">Google Jobs</span>
                   </label>
+                </div>
+              </div>
+
+              {/* Filtres avancés */}
+              <div className="md:col-span-2 pt-2 border-t border-gray-700">
+                <h4 className="text-sm font-medium text-gray-300 mb-3">Filtres avancés</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                  {/* Type de contrat */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Type de contrat
+                    </label>
+                    <select
+                      value={jobSearchParams.contractType}
+                      onChange={(e) => setJobSearchParams({ ...jobSearchParams, contractType: e.target.value })}
+                      className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+                    >
+                      <option value="">Tous les types</option>
+                      <option value="CDI">CDI</option>
+                      <option value="CDD">CDD</option>
+                      <option value="MIS">Mission intérim</option>
+                      <option value="SAI">Saisonnier</option>
+                      <option value="FRA">Franchise</option>
+                      <option value="LIB">Libéral</option>
+                    </select>
+                  </div>
+
+                  {/* Expérience */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Niveau d'expérience
+                    </label>
+                    <select
+                      value={jobSearchParams.experience}
+                      onChange={(e) => setJobSearchParams({ ...jobSearchParams, experience: e.target.value })}
+                      className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+                    >
+                      <option value="">Tous les niveaux</option>
+                      <option value="D">Débutant</option>
+                      <option value="E">Expérimenté</option>
+                      <option value="S">Senior</option>
+                    </select>
+                  </div>
+
+                  {/* Date de publication */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Date de publication
+                    </label>
+                    <select
+                      value={jobSearchParams.datePosted}
+                      onChange={(e) => setJobSearchParams({ ...jobSearchParams, datePosted: e.target.value })}
+                      className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+                    >
+                      <option value="all">Toutes les dates</option>
+                      <option value="today">Aujourd'hui</option>
+                      <option value="3days">3 derniers jours</option>
+                      <option value="week">Cette semaine</option>
+                      <option value="month">Ce mois</option>
+                    </select>
+                  </div>
+
+                  {/* Salaire */}
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Salaire min (€/an)
+                      </label>
+                      <input
+                        type="number"
+                        value={jobSearchParams.minSalary}
+                        onChange={(e) => setJobSearchParams({ ...jobSearchParams, minSalary: e.target.value })}
+                        placeholder="Ex: 30000"
+                        className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Salaire max (€/an)
+                      </label>
+                      <input
+                        type="number"
+                        value={jobSearchParams.maxSalary}
+                        onChange={(e) => setJobSearchParams({ ...jobSearchParams, maxSalary: e.target.value })}
+                        placeholder="Ex: 50000"
+                        className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
 

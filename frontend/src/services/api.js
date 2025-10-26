@@ -584,13 +584,21 @@ export const prospectionAPI = {
   },
 
   // Recherche multi-sources
-  search: (keywords, location = '', sources = 'pole-emploi') => {
+  search: (keywords, location = '', sources = 'pole-emploi', filters = {}) => {
     console.log(`Appel API: recherche prospection "${keywords}" (${location || 'France'})`);
     const params = new URLSearchParams({
       keywords,
       ...(location && { location }),
       sources
     });
+
+    // Ajouter les filtres avancés si présents
+    if (filters.contractType) params.append('contractType', filters.contractType);
+    if (filters.experience) params.append('experience', filters.experience);
+    if (filters.datePosted) params.append('datePosted', filters.datePosted);
+    if (filters.minSalary) params.append('minSalary', filters.minSalary);
+    if (filters.maxSalary) params.append('maxSalary', filters.maxSalary);
+
     return apiRequest(`/prospection/search?${params}`);
   },
 
