@@ -617,5 +617,59 @@ export const prospectionAPI = {
       method: 'POST',
       body: JSON.stringify({ opportunity })
     });
+  },
+
+  // Test de connexion SIRENE (INSEE)
+  testSirene: () => {
+    console.log('Appel API: test connexion SIRENE');
+    return apiRequest('/prospection/test/sirene');
+  },
+
+  // Recherche d'entreprises via SIRENE
+  searchSirene: (criteria) => {
+    console.log('Appel API: recherche SIRENE', criteria);
+    const params = new URLSearchParams();
+
+    if (criteria.nafCode) params.append('nafCode', criteria.nafCode);
+    if (criteria.city) params.append('city', criteria.city);
+    if (criteria.postalCode) params.append('postalCode', criteria.postalCode);
+    if (criteria.department) params.append('department', criteria.department);
+    if (criteria.region) params.append('region', criteria.region);
+    if (criteria.companyName) params.append('companyName', criteria.companyName);
+    if (criteria.minEmployees) params.append('minEmployees', criteria.minEmployees);
+    if (criteria.maxEmployees) params.append('maxEmployees', criteria.maxEmployees);
+    if (criteria.limit) params.append('limit', criteria.limit);
+
+    return apiRequest(`/prospection/sirene/search?${params}`);
+  },
+
+  // Test de connexion Pappers
+  testPappers: () => {
+    console.log('Appel API: test connexion Pappers');
+    return apiRequest('/prospection/test/pappers');
+  },
+
+  // Obtenir le statut des crédits Pappers
+  getPappersCredits: () => {
+    console.log('Appel API: récupération crédits Pappers');
+    return apiRequest('/prospection/pappers/credits');
+  },
+
+  // Enrichir une entreprise avec Pappers
+  enrichWithPappers: (siren) => {
+    console.log(`Appel API: enrichissement Pappers SIREN ${siren}`);
+    return apiRequest('/prospection/pappers/enrich', {
+      method: 'POST',
+      body: JSON.stringify({ siren })
+    });
+  },
+
+  // Enrichir plusieurs entreprises avec Pappers
+  enrichMultipleWithPappers: (sirens, maxEnrich = 10) => {
+    console.log(`Appel API: enrichissement multiple Pappers (${sirens.length} entreprises)`);
+    return apiRequest('/prospection/pappers/enrich-multiple', {
+      method: 'POST',
+      body: JSON.stringify({ sirens, maxEnrich })
+    });
   }
 };

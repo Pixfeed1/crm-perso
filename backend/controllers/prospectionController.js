@@ -1,9 +1,11 @@
 const poleEmploiService = require('../services/poleEmploiService');
 const googleJobsService = require('../services/googleJobsService');
+const sireneService = require('../services/sireneService');
+const pappersService = require('../services/pappersService');
 
 /**
  * Controller pour les fonctionnalités de prospection
- * Intègre : France Travail (Pôle Emploi), Google Jobs, Data.gouv, BOAMP, etc.
+ * Intègre : France Travail (Pôle Emploi), Google Jobs, SIRENE (INSEE), Pappers, Data.gouv, BOAMP, etc.
  */
 
 /**
@@ -440,6 +442,256 @@ exports.importOpportunityAsLead = async (req, res) => {
 
   } catch (error) {
     console.error('[Prospection] Erreur import lead:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+/**
+ * Test de connexion à SIRENE (INSEE)
+ * Utile pour vérifier que les credentials API INSEE sont valides
+ */
+exports.testSirene = async (req, res) => {
+  try {
+    const isConnected = await sireneService.testConnection();
+
+    if (isConnected) {
+      res.json({
+        success: true,
+        message: 'Connexion à l\'API SIRENE réussie',
+        configured: sireneService.isConfigured()
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        message: 'Impossible de se connecter à l\'API SIRENE',
+        configured: sireneService.isConfigured()
+      });
+    }
+  } catch (error) {
+    console.error('[Prospection] Erreur test SIRENE:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+      configured: sireneService.isConfigured()
+    });
+  }
+};
+
+/**
+ * Test de connexion à Pappers
+ * Utile pour vérifier que le token API Pappers est valide
+ */
+exports.testPappers = async (req, res) => {
+  try {
+    const isConnected = await pappersService.testConnection();
+
+    if (isConnected) {
+      const creditsStatus = await pappersService.getCreditsStatus();
+      res.json({
+        success: true,
+        message: 'Connexion à l\'API Pappers réussie',
+        configured: pappersService.isConfigured(),
+        credits: creditsStatus
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        message: 'Impossible de se connecter à l\'API Pappers',
+        configured: pappersService.isConfigured()
+      });
+    }
+  } catch (error) {
+    console.error('[Prospection] Erreur test Pappers:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+      configured: pappersService.isConfigured()
+    });
+  }
+};
+
+/**
+ * Obtient le statut des crédits Pappers
+ *
+ * @route GET /api/prospection/pappers/credits
+ */
+exports.getPappersCredits = async (req, res) => {
+  try {
+    const creditsStatus = await pappersService.getCreditsStatus();
+
+    res.json({
+      success: true,
+      credits: creditsStatus
+    });
+
+  } catch (error) {
+    console.error('[Prospection] Erreur récupération crédits Pappers:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+/**
+ * Recherche d'entreprises via SIRENE (INSEE)
+ *
+ * @route GET /api/prospection/sirene/search
+ * @query nafCode - Code NAF/APE (ex: "43.21A" pour plomberie)
+ * @query city - Ville (ex: "Clichy")
+ * @query postalCode - Code postal (ex: "92110")
+ * @query department - Département (ex: "92", "2A", "971")
+ * @query region - Région (ex: "11" pour Île-de-France)
+ * @query companyName - Raison sociale (recherche partielle)
+ * @query minEmployees - Effectif minimum
+ * @query maxEmployees - Effectif maximum
+ * @query limit - Nombre max de résultats (défaut: 100, max: 1000)
+ */
+exports.searchSirene = async (req, res) => {
+  try {
+    const {
+      nafCode,
+      city,
+      postalCode,
+      department,
+      region,
+      companyName,
+      minEmployees,
+      maxEmployees,
+      limit
+    } = req.query;
+
+    // Validation: au moins un critère requis
+    if (!nafCode && !city && !postalCode && !department && !region && !companyName) {
+      return res.status(400).json({
+        success: false,
+        message: 'Au moins un critère de recherche est requis (nafCode, city, postalCode, department, region, ou companyName)'
+      });
+    }
+
+    console.log(`[Prospection] Recherche SIRENE:`, req.query);
+
+    const criteria = {
+      nafCode,
+      city,
+      postalCode,
+      department,
+      region,
+      companyName,
+      minEmployees: minEmployees ? parseInt(minEmployees) : undefined,
+      maxEmployees: maxEmployees ? parseInt(maxEmployees) : undefined,
+      limit: limit ? parseInt(limit) : 100
+    };
+
+    const companies = await sireneService.searchCompanies(criteria);
+
+    res.json({
+      success: true,
+      source: 'sirene',
+      total: companies.length,
+      companies: companies
+    });
+
+  } catch (error) {
+    console.error('[Prospection] Erreur recherche SIRENE:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+/**
+ * Enrichit une entreprise avec Pappers (consomme 1 crédit)
+ *
+ * @route POST /api/prospection/pappers/enrich
+ * @body siren - Numéro SIREN (9 chiffres)
+ */
+exports.enrichWithPappers = async (req, res) => {
+  try {
+    const { siren } = req.body;
+
+    if (!siren) {
+      return res.status(400).json({
+        success: false,
+        message: 'Le numéro SIREN est requis'
+      });
+    }
+
+    // Validation format SIREN (9 chiffres)
+    if (!/^\d{9}$/.test(siren)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Format SIREN invalide (doit être 9 chiffres)'
+      });
+    }
+
+    console.log(`[Prospection] Enrichissement Pappers: SIREN ${siren}`);
+
+    // Vérifier les crédits avant enrichissement
+    const creditsBefore = await pappersService.getCreditsStatus();
+
+    const enrichedData = await pappersService.enrichBySiren(siren);
+
+    const creditsAfter = await pappersService.getCreditsStatus();
+
+    res.json({
+      success: true,
+      data: enrichedData,
+      credits: creditsAfter
+    });
+
+  } catch (error) {
+    console.error('[Prospection] Erreur enrichissement Pappers:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+/**
+ * Enrichit plusieurs entreprises avec Pappers
+ *
+ * @route POST /api/prospection/pappers/enrich-multiple
+ * @body sirens - Array de numéros SIREN
+ * @body maxEnrich - Nombre max à enrichir (optionnel, défaut: 10)
+ */
+exports.enrichMultipleWithPappers = async (req, res) => {
+  try {
+    const { sirens, maxEnrich } = req.body;
+
+    if (!sirens || !Array.isArray(sirens)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Un tableau de numéros SIREN est requis'
+      });
+    }
+
+    if (sirens.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Le tableau de SIREN ne peut pas être vide'
+      });
+    }
+
+    console.log(`[Prospection] Enrichissement multiple Pappers: ${sirens.length} entreprises`);
+
+    const result = await pappersService.enrichMultiple(sirens, maxEnrich || 10);
+
+    res.json({
+      success: true,
+      enriched: result.enriched,
+      errors: result.errors,
+      credits_remaining: result.credits_remaining,
+      skipped: result.skipped
+    });
+
+  } catch (error) {
+    console.error('[Prospection] Erreur enrichissement multiple Pappers:', error);
     res.status(500).json({
       success: false,
       message: error.message
