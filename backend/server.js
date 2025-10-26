@@ -8,6 +8,7 @@ const cookieParser = require('cookie-parser');
 const fs = require('fs');
 const db = require('./config/pgConfig'); // Changé pour utiliser PostgreSQL
 const { initAllTables } = require('./scripts/initAllTables');
+const { runMigrations } = require('./config/migrationRunner');
 
 // Charger les variables d'environnement
 dotenv.config();
@@ -186,8 +187,15 @@ async function initializeDatabase() {
     await initAllTables();
 
     console.log('');
-    console.log('✅ Base de données initialisée avec succès !');
-    console.log('   Toutes les tables sont créées et prêtes.');
+    console.log('✅ Tables de base créées avec succès !');
+    console.log('');
+
+    // Exécuter les migrations automatiquement
+    await runMigrations();
+
+    console.log('');
+    console.log('✅ Base de données complètement initialisée !');
+    console.log('   Toutes les tables et migrations sont à jour.');
     console.log('===========================================');
     console.log('');
   } catch (error) {
