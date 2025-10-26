@@ -1,6 +1,7 @@
 // src/components/common/FileUpload.jsx
 import React, { useState } from 'react';
 import { FiUpload, FiTrash2, FiFile, FiDownload, FiX } from 'react-icons/fi';
+import { uploadAPI } from '../../services/uploadAPI';
 
 const FileUpload = ({
   entityType = 'quote', // 'quote' ou 'invoice'
@@ -42,26 +43,11 @@ const FileUpload = ({
     setUploadProgress(0);
 
     try {
-      const formData = new FormData();
-      files.forEach(file => {
-        formData.append('files', file);
-      });
+      // Utiliser uploadAPI
+      const data = entityType === 'quote'
+        ? await uploadAPI.uploadQuoteFiles(entityId, files)
+        : await uploadAPI.uploadInvoiceFiles(entityId, files);
 
-      const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/upload/${entityType}s/${entityId}`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        body: formData
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Erreur lors de l\'upload');
-      }
-
-      const data = await response.json();
       console.log('Upload réussi:', data);
 
       // Notifier le parent
@@ -88,21 +74,10 @@ const FileUpload = ({
     }
 
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(
-        `http://localhost:5000/api/upload/${entityType}s/${entityId}/files/${filename}`,
-        {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Erreur lors de la suppression');
-      }
+      // Utiliser uploadAPI
+      entityType === 'quote'
+        ? await uploadAPI.deleteQuoteFile(entityId, filename)
+        : await uploadAPI.deleteInvoiceFile(entityId, filename);
 
       // Notifier le parent
       if (onFilesUpdated) {
@@ -116,7 +91,7 @@ const FileUpload = ({
 
   // Télécharger un fichier
   const handleDownloadFile = (filename) => {
-    const url = `http://localhost:5000/uploads/${filename}`;
+    const url = uploadAPI.getFileUrl(filename);
     window.open(url, '_blank');
   };
 

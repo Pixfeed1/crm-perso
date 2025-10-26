@@ -52,6 +52,13 @@ export const quotesAPI = {
    */
   sendEmail: async (id, emailData) => {
     return apiRequest('POST', `/quotes/${id}/send`, emailData);
+  },
+
+  /**
+   * Signe un devis électroniquement
+   */
+  signQuote: async (id, signatureData) => {
+    return apiRequest('POST', `/quotes/${id}/sign`, signatureData);
   }
 };
 

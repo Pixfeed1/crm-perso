@@ -1,8 +1,9 @@
 // src/components/quotes/QuoteForm.jsx
 import React, { useState, useEffect } from 'react';
-import { FiPlus, FiTrash2, FiSave, FiX } from 'react-icons/fi';
+import { FiPlus, FiTrash2, FiSave, FiX, FiEdit } from 'react-icons/fi';
 import { clientsAPI, projectsAPI, tvaRegimesAPI, paymentMethodsAPI } from '../../services/api';
 import FileUpload from '../common/FileUpload';
+import SignaturePad from '../common/SignaturePad';
 
 const QuoteForm = ({ quote = null, onSave, onCancel }) => {
   const [clients, setClients] = useState([]);
@@ -10,6 +11,7 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
   const [tvaRegimes, setTvaRegimes] = useState([]);
   const [paymentMethods, setPaymentMethods] = useState([]);
   const [uploadedFiles, setUploadedFiles] = useState([]);
+  const [showSignature, setShowSignature] = useState(false);
   const [formData, setFormData] = useState({
     title: quote?.title || '',
     client_id: quote?.client_id || '',
@@ -654,6 +656,61 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
         </div>
       )}
 
+      {/* Signature électronique */}
+      {quote && quote.id && (
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold text-white">Signature électronique</h3>
+
+          {quote.signed_at ? (
+            // Afficher la signature existante
+            <div className="bg-green-600/10 border border-green-500/30 rounded-lg p-4 space-y-3">
+              <div className="flex items-center gap-2 text-green-400">
+                <FiEdit className="w-5 h-5" />
+                <span className="font-medium">Devis signé</span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="text-gray-400">Signé par :</span>
+                  <p className="text-white font-medium">{quote.signed_by}</p>
+                </div>
+                <div>
+                  <span className="text-gray-400">Date :</span>
+                  <p className="text-white font-medium">
+                    {new Date(quote.signed_at).toLocaleDateString('fr-FR', {
+                      day: 'numeric',
+                      month: 'long',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </p>
+                </div>
+              </div>
+              {quote.signature_data && (
+                <div className="mt-3 pt-3 border-t border-green-500/30">
+                  <p className="text-xs text-gray-400 mb-2">Signature :</p>
+                  <img
+                    src={quote.signature_data}
+                    alt="Signature"
+                    className="max-w-xs bg-white rounded p-2 border border-gray-600"
+                  />
+                </div>
+              )}
+            </div>
+          ) : (
+            // Bouton pour signer
+            <button
+              type="button"
+              onClick={() => setShowSignature(true)}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
+            >
+              <FiEdit className="w-5 h-5" />
+              <span>Signer le devis électroniquement</span>
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Totaux */}
       <div className="bg-indigo-600/10 border border-indigo-500/30 rounded-lg p-4 space-y-2">
         <div className="flex justify-between text-sm">
@@ -727,6 +784,21 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
           <span>{quote ? 'Modifier' : 'Créer'} le devis</span>
         </button>
       </div>
+
+      {/* Modal de signature */}
+      {showSignature && quote && quote.id && (
+        <SignaturePad
+          quoteId={quote.id}
+          autoCreateInvoice={false}
+          onSave={(data) => {
+            console.log('Signature sauvegardée:', data);
+            setShowSignature(false);
+            // Recharger le quote pour afficher la signature
+            window.location.reload();
+          }}
+          onCancel={() => setShowSignature(false)}
+        />
+      )}
     </form>
   );
 };

@@ -2,6 +2,7 @@
 import React, { useRef, useState } from 'react';
 import SignatureCanvas from 'react-signature-canvas';
 import { FiTrash2, FiCheck, FiX } from 'react-icons/fi';
+import { quotesAPI } from '../../services/quotesAPI';
 
 const SignaturePad = ({ onSave, onCancel, quoteId, autoCreateInvoice = false }) => {
   const sigCanvas = useRef();
@@ -34,27 +35,13 @@ const SignaturePad = ({ onSave, onCancel, quoteId, autoCreateInvoice = false }) 
       // Convertir la signature en base64
       const signatureData = sigCanvas.current.toDataURL('image/png');
 
-      // Envoyer au backend
-      const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/quotes/${quoteId}/sign`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          signed_by: signerName,
-          signature_data: signatureData,
-          create_invoice: autoCreateInvoice
-        })
+      // Envoyer au backend via quotesAPI
+      const data = await quotesAPI.signQuote(quoteId, {
+        signed_by: signerName,
+        signature_data: signatureData,
+        create_invoice: autoCreateInvoice
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Erreur lors de la signature');
-      }
-
-      const data = await response.json();
       console.log('Signature réussie:', data);
 
       // Notifier le parent
