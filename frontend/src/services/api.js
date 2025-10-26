@@ -537,3 +537,27 @@ export const exportAPI = {
     return apiRequest('/export/all');
   }
 };
+
+// ===== RÉGIMES TVA =====
+export const tvaRegimesAPI = {
+  getAll: () => {
+    console.log('Appel API: récupération de tous les régimes TVA');
+    return apiRequest('/tva-regimes');
+  },
+  getByCode: (code) => {
+    console.log(`Appel API: récupération du régime TVA avec code ${code}`);
+    return apiRequest(`/tva-regimes/${code}`);
+  }
+};
+
+// ===== MOYENS DE PAIEMENT =====
+export const paymentMethodsAPI = {
+  getAll: () => {
+    console.log('Appel API: récupération de tous les moyens de paiement');
+    return apiRequest('/payment-methods');
+  },
+  getByCode: (code) => {
+    console.log(`Appel API: récupération du moyen de paiement avec code ${code}`);
+    return apiRequest(`/payment-methods/${code}`);
+  }
+};
