@@ -386,6 +386,31 @@ const deleteInvoice = (db, id) => {
   });
 };
 
+/**
+ * Met à jour l'historique d'envoi d'une facture
+ */
+const updateSendHistory = (db, id, sentTo) => {
+  return new Promise((resolve, reject) => {
+    const query = `
+      UPDATE invoices
+      SET
+        sent_at = CURRENT_TIMESTAMP,
+        sent_to = $1,
+        sent_count = COALESCE(sent_count, 0) + 1,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $2
+    `;
+
+    db.pool.query(query, [sentTo, id], (err, result) => {
+      if (err) {
+        console.error('[InvoiceModel] Erreur lors de la mise à jour de l\'historique d\'envoi:', err);
+        return reject(err);
+      }
+      resolve({ id, changes: result.rowCount });
+    });
+  });
+};
+
 module.exports = {
   generateInvoiceNumber,
   getAllInvoices,
@@ -396,5 +421,6 @@ module.exports = {
   updateInvoice,
   markInvoiceAsPaid,
   updatePaymentStatus,
-  deleteInvoice
+  deleteInvoice,
+  updateSendHistory
 };

@@ -1,5 +1,8 @@
 // backend/controllers/invoiceController.js
 const invoiceModel = require('../models/invoiceModel');
+const emailService = require('../services/emailService');
+const pdfService = require('../services/pdfService');
+const SettingsModel = require('../models/settingsModel');
 
 /**
  * Contrôleur pour la gestion des factures
@@ -295,6 +298,57 @@ const invoiceController = {
     } catch (error) {
       console.error('Erreur lors de la suppression de la facture:', error);
       res.status(500).json({ message: 'Erreur serveur' });
+    }
+  },
+
+  /**
+   * Envoyer une facture par email
+   */
+  sendInvoice: async (req, res) => {
+    const db = req.app.locals.db;
+    const { id } = req.params;
+    const { recipientEmail, customMessage, ccToSelf } = req.body;
+
+    try {
+      // Récupérer la facture
+      const invoice = await invoiceModel.getInvoiceById(db, id);
+      if (!invoice) {
+        return res.status(404).json({ message: 'Facture non trouvée' });
+      }
+
+      // Récupérer les paramètres entreprise pour le PDF et la signature
+      const settingsModel = new SettingsModel(db);
+      const companySettings = await settingsModel.getSettings();
+
+      // Générer le PDF
+      const pdfBuffer = await pdfService.generateInvoicePDF(invoice, companySettings);
+
+      // Récupérer la signature email depuis les paramètres
+      const signature = companySettings.email_signature || '';
+
+      // Envoyer l'email
+      const result = await emailService.sendInvoiceEmail(invoice, pdfBuffer, {
+        recipientEmail,
+        customMessage,
+        ccToSelf,
+        signature
+      });
+
+      // Mettre à jour l'historique d'envoi
+      await invoiceModel.updateSendHistory(db, id, result.sentTo);
+
+      res.json({
+        success: true,
+        message: `Facture envoyée avec succès à ${result.sentTo}`,
+        sentAt: result.sentAt,
+        messageId: result.messageId
+      });
+    } catch (error) {
+      console.error('Erreur lors de l\'envoi de la facture:', error);
+      res.status(500).json({
+        message: 'Erreur lors de l\'envoi de l\'email',
+        error: error.message
+      });
     }
   }
 };

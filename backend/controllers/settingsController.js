@@ -1,5 +1,6 @@
 // backend/controllers/settingsController.js
 const SettingsModel = require('../models/settingsModel');
+const emailService = require('../services/emailService');
 
 /**
  * Contrôleur pour les paramètres de l'entreprise
@@ -67,6 +68,24 @@ const settingsController = {
       console.error('[SettingsController] Erreur lors de la mise à jour du logo:', error);
       res.status(500).json({
         error: 'Erreur lors de la mise à jour du logo',
+        details: error.message
+      });
+    }
+  },
+
+  /**
+   * POST /api/settings/test-email
+   * Teste la configuration email
+   */
+  testEmailConfig: async (req, res) => {
+    try {
+      const result = await emailService.testConnection();
+      res.status(200).json(result);
+    } catch (error) {
+      console.error('[SettingsController] Erreur lors du test email:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Erreur lors du test de la configuration email',
         details: error.message
       });
     }

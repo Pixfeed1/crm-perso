@@ -16,4 +16,7 @@ router.put('/', settingsController.updateSettings);
 // POST /api/settings/logo - Mettre à jour le logo
 router.post('/logo', settingsController.updateLogo);
 
+// POST /api/settings/test-email - Tester la configuration email
+router.post('/test-email', settingsController.testEmailConfig);
+
 module.exports = router;

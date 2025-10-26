@@ -1,5 +1,8 @@
 // backend/controllers/quoteController.js
 const quoteModel = require('../models/quoteModel');
+const emailService = require('../services/emailService');
+const pdfService = require('../services/pdfService');
+const SettingsModel = require('../models/settingsModel');
 
 /**
  * Contrôleur pour la gestion des devis
@@ -226,6 +229,62 @@ const quoteController = {
     } catch (error) {
       console.error('Erreur lors du changement de statut:', error);
       res.status(500).json({ message: 'Erreur serveur' });
+    }
+  },
+
+  /**
+   * Envoyer un devis par email
+   */
+  sendQuote: async (req, res) => {
+    const db = req.app.locals.db;
+    const { id } = req.params;
+    const { recipientEmail, customMessage, ccToSelf } = req.body;
+
+    try {
+      // Récupérer le devis
+      const quote = await quoteModel.getQuoteById(db, id);
+      if (!quote) {
+        return res.status(404).json({ message: 'Devis non trouvé' });
+      }
+
+      // Récupérer les paramètres entreprise
+      const settingsModel = new SettingsModel(db);
+      const companySettings = await settingsModel.getSettings();
+
+      // Générer le PDF
+      const pdfBuffer = await pdfService.generateQuotePDF(quote, companySettings);
+
+      // Récupérer la signature email
+      const signature = companySettings.email_signature || '';
+
+      // Envoyer l'email
+      const result = await emailService.sendQuoteEmail(quote, pdfBuffer, {
+        recipientEmail,
+        customMessage,
+        ccToSelf,
+        signature
+      });
+
+      // Mettre à jour l'historique d'envoi
+      await quoteModel.updateSendHistory(db, id, result.sentTo);
+
+      // Mettre à jour le statut si c'était 'draft'
+      if (quote.status === 'draft') {
+        await quoteModel.updateQuoteStatus(db, id, 'sent');
+      }
+
+      res.json({
+        success: true,
+        message: `Devis envoyé avec succès à ${result.sentTo}`,
+        sentAt: result.sentAt,
+        messageId: result.messageId
+      });
+    } catch (error) {
+      console.error('Erreur lors de l\'envoi du devis:', error);
+      res.status(500).json({
+        message: 'Erreur lors de l\'envoi de l\'email',
+        error: error.message
+      });
     }
   }
 };

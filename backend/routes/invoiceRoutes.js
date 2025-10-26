@@ -31,6 +31,9 @@ router.patch('/:id/paid', invoiceController.markAsPaid);
 // PATCH /api/invoices/:id/payment-status - Mettre à jour le statut de paiement
 router.patch('/:id/payment-status', invoiceController.updatePaymentStatus);
 
+// POST /api/invoices/:id/send - Envoyer une facture par email
+router.post('/:id/send', invoiceController.sendInvoice);
+
 // DELETE /api/invoices/:id - Supprimer une facture
 router.delete('/:id', invoiceController.deleteInvoice);
 

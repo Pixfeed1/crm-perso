@@ -22,6 +22,9 @@ router.put('/:id', quoteController.updateQuote);
 // PATCH /api/quotes/:id/status - Changer le statut d'un devis
 router.patch('/:id/status', quoteController.updateQuoteStatus);
 
+// POST /api/quotes/:id/send - Envoyer un devis par email
+router.post('/:id/send', quoteController.sendQuote);
+
 // DELETE /api/quotes/:id - Supprimer un devis
 router.delete('/:id', quoteController.deleteQuote);
 
