@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { FiUser, FiLink, FiX } from 'react-icons/fi';
-import api from '../../services/api';
+import { clientsAPI, leadsAPI } from '../../services/api';
 
 const ContactClientModal = ({ contact, leadId, onClose, onCreateClient, onLinkClient }) => {
   const [mode, setMode] = useState('create'); // 'create' ou 'link'
@@ -22,9 +22,9 @@ const ContactClientModal = ({ contact, leadId, onClose, onCreateClient, onLinkCl
   useEffect(() => {
     const fetchClients = async () => {
       try {
-        const response = await api.get('/clients');
+        const clients = await clientsAPI.getAll();
         // Filtrer uniquement les clients particuliers
-        const individualClients = response.data.filter(client => client.type === 'individual');
+        const individualClients = clients.filter(client => client.type === 'individual');
         setExistingClients(individualClients);
       } catch (error) {
         console.error('Erreur lors de la récupération des clients:', error);
@@ -43,13 +43,14 @@ const ContactClientModal = ({ contact, leadId, onClose, onCreateClient, onLinkCl
     try {
       if (mode === 'create') {
         // Créer un nouveau client depuis le contact
-        const response = await api.post(
-          `/leads/${leadId}/contacts/${contact.id}/create-client`,
+        const response = await leadsAPI.createClientFromContact(
+          leadId,
+          contact.id,
           formData
         );
 
         if (onCreateClient) {
-          onCreateClient(response.data);
+          onCreateClient(response);
         }
 
         alert('Client créé et lié au contact avec succès !');
@@ -62,13 +63,14 @@ const ContactClientModal = ({ contact, leadId, onClose, onCreateClient, onLinkCl
           return;
         }
 
-        const response = await api.post(
-          `/leads/${leadId}/contacts/${contact.id}/link-client`,
-          { clientId: parseInt(selectedClientId) }
+        const response = await leadsAPI.linkContactToClient(
+          leadId,
+          contact.id,
+          parseInt(selectedClientId)
         );
 
         if (onLinkClient) {
-          onLinkClient(response.data);
+          onLinkClient(response);
         }
 
         alert('Contact lié au client avec succès !');
@@ -76,7 +78,7 @@ const ContactClientModal = ({ contact, leadId, onClose, onCreateClient, onLinkCl
       }
     } catch (error) {
       console.error('Erreur:', error);
-      alert(error.response?.data?.message || 'Une erreur est survenue');
+      alert(error.message || 'Une erreur est survenue');
     } finally {
       setLoading(false);
     }
