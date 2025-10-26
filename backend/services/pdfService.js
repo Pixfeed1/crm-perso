@@ -10,9 +10,10 @@ class PDFService {
    * Génère un PDF de devis
    * @param {Object} quote - Données du devis
    * @param {Object} companySettings - Paramètres entreprise
+   * @param {Object} tvaRegime - Détails du régime TVA (optionnel)
    * @returns {Promise<Buffer>} - Buffer du PDF généré
    */
-  async generateQuotePDF(quote, companySettings = {}) {
+  async generateQuotePDF(quote, companySettings = {}, tvaRegime = null) {
     return new Promise((resolve, reject) => {
       try {
         const doc = new PDFDocument({ margin: 50 });
@@ -173,8 +174,15 @@ class PDFService {
         doc.text(this.formatAmount(quote.total_ht || 0), { align: 'right' });
         yPosition += 20;
 
-        // TVA
-        const tvaLabel = quote.tva_applicable === false ? 'TVA (non applicable)' : `TVA (${quote.tva_rate || 20}%)`;
+        // TVA avec mention légale si disponible
+        let tvaLabel = '';
+        if (tvaRegime && tvaRegime.mention_legale) {
+          tvaLabel = tvaRegime.mention_legale;
+        } else if (quote.tva_applicable === false) {
+          tvaLabel = 'TVA (non applicable)';
+        } else {
+          tvaLabel = `TVA (${quote.tva_rate || 20}%)`;
+        }
         doc.text(tvaLabel, totalsX, yPosition, { continued: true, width: 90 });
         doc.text(this.formatAmount(quote.tva_amount || 0), { align: 'right' });
         yPosition += 20;
@@ -203,6 +211,84 @@ class PDFService {
         }
 
         yPosition += 30;
+
+        // === MODALITÉS DE PAIEMENT ===
+        if (quote.payment_details) {
+          let paymentDetails = null;
+          try {
+            paymentDetails = typeof quote.payment_details === 'string'
+              ? JSON.parse(quote.payment_details)
+              : quote.payment_details;
+          } catch (e) {
+            paymentDetails = null;
+          }
+
+          if (paymentDetails && Object.keys(paymentDetails).length > 0) {
+            doc.fontSize(9)
+               .fillColor('#000000')
+               .font('Helvetica-Bold')
+               .text('Modalités de paiement', 50, yPosition);
+            yPosition += 15;
+
+            doc.font('Helvetica')
+               .fontSize(8)
+               .fillColor('#333333');
+
+            // VIREMENT
+            if (paymentDetails.iban) {
+              doc.text('Paiement par virement bancaire :', 50, yPosition);
+              yPosition += 12;
+              doc.text(`  IBAN: ${paymentDetails.iban}`, 50, yPosition);
+              yPosition += 10;
+              if (paymentDetails.bic) {
+                doc.text(`  BIC: ${paymentDetails.bic}`, 50, yPosition);
+                yPosition += 10;
+              }
+              if (paymentDetails.titulaire) {
+                doc.text(`  Titulaire: ${paymentDetails.titulaire}`, 50, yPosition);
+                yPosition += 10;
+              }
+              if (paymentDetails.banque) {
+                doc.text(`  Banque: ${paymentDetails.banque}`, 50, yPosition);
+                yPosition += 10;
+              }
+            }
+
+            // PAYPAL
+            if (paymentDetails.paypal_email) {
+              doc.text('Paiement par PayPal :', 50, yPosition);
+              yPosition += 12;
+              doc.text(`  Email: ${paymentDetails.paypal_email}`, 50, yPosition);
+              yPosition += 10;
+              if (paymentDetails.paypal_lien) {
+                doc.fillColor('#6366F1')
+                   .text(`  Lien: ${paymentDetails.paypal_lien}`, 50, yPosition, { link: paymentDetails.paypal_lien });
+                doc.fillColor('#333333');
+                yPosition += 10;
+              }
+            }
+
+            // STRIPE
+            if (paymentDetails.stripe_lien) {
+              doc.text('Paiement par carte bancaire (Stripe) :', 50, yPosition);
+              yPosition += 12;
+              doc.fillColor('#6366F1')
+                 .text(`  ${paymentDetails.stripe_lien}`, 50, yPosition, { link: paymentDetails.stripe_lien });
+              doc.fillColor('#333333');
+              yPosition += 10;
+            }
+
+            // CARTE BANCAIRE (autre)
+            if (paymentDetails.cb_instructions) {
+              doc.text('Paiement par carte bancaire :', 50, yPosition);
+              yPosition += 12;
+              doc.text(`  ${paymentDetails.cb_instructions}`, 50, yPosition);
+              yPosition += 10;
+            }
+
+            yPosition += 10;
+          }
+        }
 
         // === CGV ===
         if (quote.cgv) {
@@ -243,9 +329,10 @@ class PDFService {
    * Génère un PDF de facture
    * @param {Object} invoice - Données de la facture
    * @param {Object} companySettings - Paramètres entreprise
+   * @param {Object} tvaRegime - Détails du régime TVA (optionnel)
    * @returns {Promise<Buffer>} - Buffer du PDF généré
    */
-  async generateInvoicePDF(invoice, companySettings = {}) {
+  async generateInvoicePDF(invoice, companySettings = {}, tvaRegime = null) {
     return new Promise((resolve, reject) => {
       try {
         const doc = new PDFDocument({ margin: 50 });
@@ -379,7 +466,15 @@ class PDFService {
         doc.text(this.formatAmount(invoice.total_ht || 0), { align: 'right' });
         yPosition += 20;
 
-        const tvaLabel = invoice.tva_applicable === false ? 'TVA (non applicable)' : `TVA (${invoice.tva_rate || 20}%)`;
+        // TVA avec mention légale si disponible
+        let tvaLabel = '';
+        if (tvaRegime && tvaRegime.mention_legale) {
+          tvaLabel = tvaRegime.mention_legale;
+        } else if (invoice.tva_applicable === false) {
+          tvaLabel = 'TVA (non applicable)';
+        } else {
+          tvaLabel = `TVA (${invoice.tva_rate || 20}%)`;
+        }
         doc.text(tvaLabel, totalsX, yPosition, { continued: true, width: 90 });
         doc.text(this.formatAmount(invoice.tva_amount || 0), { align: 'right' });
         yPosition += 20;
@@ -388,6 +483,84 @@ class PDFService {
         doc.text('Total TTC :', totalsX, yPosition, { continued: true, width: 90 });
         doc.text(this.formatAmount(invoice.total_ttc || 0), { align: 'right' });
         yPosition += 30;
+
+        // === MODALITÉS DE PAIEMENT ===
+        if (invoice.payment_details) {
+          let paymentDetails = null;
+          try {
+            paymentDetails = typeof invoice.payment_details === 'string'
+              ? JSON.parse(invoice.payment_details)
+              : invoice.payment_details;
+          } catch (e) {
+            paymentDetails = null;
+          }
+
+          if (paymentDetails && Object.keys(paymentDetails).length > 0) {
+            doc.fontSize(9)
+               .fillColor('#000000')
+               .font('Helvetica-Bold')
+               .text('Modalités de paiement', 50, yPosition);
+            yPosition += 15;
+
+            doc.font('Helvetica')
+               .fontSize(8)
+               .fillColor('#333333');
+
+            // VIREMENT
+            if (paymentDetails.iban) {
+              doc.text('Paiement par virement bancaire :', 50, yPosition);
+              yPosition += 12;
+              doc.text(`  IBAN: ${paymentDetails.iban}`, 50, yPosition);
+              yPosition += 10;
+              if (paymentDetails.bic) {
+                doc.text(`  BIC: ${paymentDetails.bic}`, 50, yPosition);
+                yPosition += 10;
+              }
+              if (paymentDetails.titulaire) {
+                doc.text(`  Titulaire: ${paymentDetails.titulaire}`, 50, yPosition);
+                yPosition += 10;
+              }
+              if (paymentDetails.banque) {
+                doc.text(`  Banque: ${paymentDetails.banque}`, 50, yPosition);
+                yPosition += 10;
+              }
+            }
+
+            // PAYPAL
+            if (paymentDetails.paypal_email) {
+              doc.text('Paiement par PayPal :', 50, yPosition);
+              yPosition += 12;
+              doc.text(`  Email: ${paymentDetails.paypal_email}`, 50, yPosition);
+              yPosition += 10;
+              if (paymentDetails.paypal_lien) {
+                doc.fillColor('#6366F1')
+                   .text(`  Lien: ${paymentDetails.paypal_lien}`, 50, yPosition, { link: paymentDetails.paypal_lien });
+                doc.fillColor('#333333');
+                yPosition += 10;
+              }
+            }
+
+            // STRIPE
+            if (paymentDetails.stripe_lien) {
+              doc.text('Paiement par carte bancaire (Stripe) :', 50, yPosition);
+              yPosition += 12;
+              doc.fillColor('#6366F1')
+                 .text(`  ${paymentDetails.stripe_lien}`, 50, yPosition, { link: paymentDetails.stripe_lien });
+              doc.fillColor('#333333');
+              yPosition += 10;
+            }
+
+            // CARTE BANCAIRE (autre)
+            if (paymentDetails.cb_instructions) {
+              doc.text('Paiement par carte bancaire :', 50, yPosition);
+              yPosition += 12;
+              doc.text(`  ${paymentDetails.cb_instructions}`, 50, yPosition);
+              yPosition += 10;
+            }
+
+            yPosition += 10;
+          }
+        }
 
         // === CGV et NOTES ===
         if (invoice.cgv) {

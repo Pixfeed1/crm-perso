@@ -332,8 +332,21 @@ const invoiceController = {
       const settingsModel = new SettingsModel(db);
       const companySettings = await settingsModel.getSettings();
 
+      // Récupérer les détails du régime TVA si présent
+      let tvaRegime = null;
+      if (invoice.tva_regime) {
+        const tvaQuery = 'SELECT * FROM tva_regimes WHERE code = $1';
+        const tvaResult = await new Promise((resolve, reject) => {
+          db.pool.query(tvaQuery, [invoice.tva_regime], (err, result) => {
+            if (err) reject(err);
+            else resolve(result);
+          });
+        });
+        tvaRegime = tvaResult.rows[0] || null;
+      }
+
       // Générer le PDF
-      const pdfBuffer = await pdfService.generateInvoicePDF(invoice, companySettings);
+      const pdfBuffer = await pdfService.generateInvoicePDF(invoice, companySettings, tvaRegime);
 
       // Récupérer la signature email depuis les paramètres
       const signature = companySettings.email_signature || '';
