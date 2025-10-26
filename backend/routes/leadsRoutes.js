@@ -318,4 +318,143 @@ router.delete('/:leadId/contacts/:contactId/unlink-client', async (req, res) => 
   }
 });
 
+// ========================================
+// Routes d'import de leads
+// ========================================
+
+const multer = require('multer');
+const LeadImportService = require('../services/leadImportService');
+const path = require('path');
+const fs = require('fs');
+
+// Configuration multer pour l'upload de fichiers
+const upload = multer({
+  dest: 'uploads/imports/',
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB max
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedMimes = [
+      'text/csv',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    ];
+
+    if (allowedMimes.includes(file.mimetype) ||
+        file.originalname.endsWith('.csv') ||
+        file.originalname.endsWith('.xlsx') ||
+        file.originalname.endsWith('.xls')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Format de fichier non supporté. Utilisez CSV ou Excel (.xlsx, .xls)'));
+    }
+  }
+});
+
+// Upload et analyse du fichier
+router.post('/import/upload', upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'Aucun fichier fourni' });
+    }
+
+    console.log('Fichier reçu:', req.file.originalname);
+
+    // Parser le fichier
+    const { headers, data } = await LeadImportService.parseFile(
+      req.file.path,
+      req.file.mimetype
+    );
+
+    // Mapping intelligent
+    const suggestedMapping = LeadImportService.intelligentMapping(headers);
+
+    // Prévisualisation (5 premières lignes)
+    const preview = data.slice(0, 5);
+
+    // Supprimer le fichier temporaire après parsing
+    fs.unlinkSync(req.file.path);
+
+    res.json({
+      success: true,
+      headers,
+      suggestedMapping,
+      preview,
+      totalRows: data.length,
+      // Sauvegarder les données en session pour l'import
+      sessionId: Date.now().toString()
+    });
+
+  } catch (error) {
+    console.error('Erreur lors de l\'upload:', error);
+
+    // Nettoyer le fichier en cas d'erreur
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Erreur lors du traitement du fichier'
+    });
+  }
+});
+
+// Exécuter l'import avec le mapping fourni
+router.post('/import/execute', upload.single('file'), async (req, res) => {
+  const db = req.app.locals.db;
+
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'Aucun fichier fourni' });
+    }
+
+    const { mapping, checkDuplicates } = req.body;
+
+    if (!mapping) {
+      return res.status(400).json({ message: 'Mapping requis' });
+    }
+
+    console.log('Démarrage de l\'import...');
+    console.log('Mapping:', mapping);
+
+    // Parser le mapping (vient en JSON string du frontend)
+    const parsedMapping = typeof mapping === 'string' ? JSON.parse(mapping) : mapping;
+
+    // Parser le fichier
+    const { data } = await LeadImportService.parseFile(
+      req.file.path,
+      req.file.mimetype
+    );
+
+    console.log(`${data.length} lignes à importer`);
+
+    // Exécuter l'import
+    const results = await LeadImportService.importLeads(db, data, parsedMapping, {
+      checkDuplicates: checkDuplicates !== 'false'
+    });
+
+    // Supprimer le fichier temporaire
+    fs.unlinkSync(req.file.path);
+
+    res.json({
+      success: true,
+      results
+    });
+
+  } catch (error) {
+    console.error('Erreur lors de l\'import:', error);
+
+    // Nettoyer le fichier en cas d'erreur
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Erreur lors de l\'import'
+    });
+  }
+});
+
 module.exports = router;
