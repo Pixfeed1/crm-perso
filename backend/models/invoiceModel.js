@@ -133,6 +133,8 @@ const createInvoice = async (db, invoiceData) => {
     client_siret,
     items = [],
     cgv,
+    cgv_type = 'text',
+    cgv_pdf = null,
     tva_rate = 20.00,
     tva_applicable = true,
     acompte_type = 'none',
@@ -147,6 +149,7 @@ const createInvoice = async (db, invoiceData) => {
     discount_type = 'none',
     discount_value = 0,
     payment_methods = [],
+    payment_details = {},
     tva_regime = 'NORMAL',
     additional_info = '',
     additional_files = []
@@ -195,25 +198,25 @@ const createInvoice = async (db, invoiceData) => {
         INSERT INTO invoices (
           invoice_number, quote_id, client_id, client_name, client_email, client_address, client_siret,
           status, payment_status, total_ht, total_ttc, tva_rate, tva_amount, tva_applicable,
-          items, cgv, acompte_type, acompte_value, acompte_amount,
+          items, cgv, cgv_type, cgv_pdf, acompte_type, acompte_value, acompte_amount,
           escompte_percent, escompte_days, payment_terms_days, notes,
           issue_date, due_date,
           title, project_id, discount_type, discount_value, discount_amount,
-          payment_methods, tva_regime, additional_info, additional_files
+          payment_methods, payment_details, tva_regime, additional_info, additional_files
         ) VALUES (
-          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25,
-          $26, $27, $28, $29, $30, $31, $32, $33, $34
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27,
+          $28, $29, $30, $31, $32, $33, $34, $35, $36, $37
         ) RETURNING id
       `;
 
       const params = [
         invoice_number, quote_id, client_id, client_name, client_email, client_address, client_siret,
         'draft', 'pending', total_ht, total_ttc, tva_rate, tva_amount, tva_applicable,
-        JSON.stringify(items), cgv, acompte_type, acompte_value, acompte_amount,
+        JSON.stringify(items), cgv, cgv_type, cgv_pdf, acompte_type, acompte_value, acompte_amount,
         escompte_percent, escompte_days, payment_terms_days, notes,
         issue_date, due_date,
         title, project_id, discount_type, discount_value, discount_amount,
-        JSON.stringify(payment_methods), tva_regime, additional_info, JSON.stringify(additional_files)
+        JSON.stringify(payment_methods), JSON.stringify(payment_details), tva_regime, additional_info, JSON.stringify(additional_files)
       ];
 
       db.pool.query(query, params, (err, result) => {
@@ -307,6 +310,8 @@ const updateInvoice = (db, id, invoiceData) => {
       payment_status,
       items = [],
       cgv,
+      cgv_type = 'text',
+      cgv_pdf = null,
       tva_rate = 20.00,
       tva_applicable = true,
       acompte_type = 'none',
@@ -321,6 +326,7 @@ const updateInvoice = (db, id, invoiceData) => {
       discount_type = 'none',
       discount_value = 0,
       payment_methods = [],
+      payment_details = {},
       tva_regime = 'NORMAL',
       additional_info = '',
       additional_files = []
@@ -359,21 +365,21 @@ const updateInvoice = (db, id, invoiceData) => {
       UPDATE invoices SET
         client_id = $1, client_name = $2, client_email = $3, client_address = $4, client_siret = $5,
         status = $6, payment_status = $7, total_ht = $8, total_ttc = $9, tva_rate = $10, tva_amount = $11, tva_applicable = $12,
-        items = $13, cgv = $14, acompte_type = $15, acompte_value = $16, acompte_amount = $17,
-        escompte_percent = $18, escompte_days = $19, payment_terms_days = $20, notes = $21,
-        title = $22, project_id = $23, discount_type = $24, discount_value = $25, discount_amount = $26,
-        payment_methods = $27, tva_regime = $28, additional_info = $29, additional_files = $30,
+        items = $13, cgv = $14, cgv_type = $15, cgv_pdf = $16, acompte_type = $17, acompte_value = $18, acompte_amount = $19,
+        escompte_percent = $20, escompte_days = $21, payment_terms_days = $22, notes = $23,
+        title = $24, project_id = $25, discount_type = $26, discount_value = $27, discount_amount = $28,
+        payment_methods = $29, payment_details = $30, tva_regime = $31, additional_info = $32, additional_files = $33,
         updated_at = CURRENT_TIMESTAMP
-      WHERE id = $31
+      WHERE id = $34
     `;
 
     const params = [
       client_id, client_name, client_email, client_address, client_siret,
       status, payment_status, total_ht, total_ttc, tva_rate, tva_amount, tva_applicable,
-      JSON.stringify(items), cgv, acompte_type, acompte_value, acompte_amount,
+      JSON.stringify(items), cgv, cgv_type, cgv_pdf, acompte_type, acompte_value, acompte_amount,
       escompte_percent, escompte_days, payment_terms_days, notes,
       title, project_id, discount_type, discount_value, discount_amount,
-      JSON.stringify(payment_methods), tva_regime, additional_info, JSON.stringify(additional_files),
+      JSON.stringify(payment_methods), JSON.stringify(payment_details), tva_regime, additional_info, JSON.stringify(additional_files),
       id
     ];
 

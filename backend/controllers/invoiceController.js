@@ -78,6 +78,8 @@ const invoiceController = {
       client_siret,
       items,
       cgv,
+      cgv_type,
+      cgv_pdf,
       tva_rate,
       tva_applicable,
       acompte_type,
@@ -85,7 +87,8 @@ const invoiceController = {
       escompte_percent,
       escompte_days,
       payment_terms_days,
-      notes
+      notes,
+      payment_details
     } = req.body;
 
     // Validation
@@ -107,6 +110,8 @@ const invoiceController = {
         client_siret,
         items,
         cgv,
+        cgv_type,
+        cgv_pdf,
         tva_rate,
         tva_applicable,
         acompte_type,
@@ -114,7 +119,8 @@ const invoiceController = {
         escompte_percent,
         escompte_days,
         payment_terms_days,
-        notes
+        notes,
+        payment_details
       });
 
       res.status(201).json({
@@ -168,6 +174,8 @@ const invoiceController = {
       payment_status,
       items,
       cgv,
+      cgv_type,
+      cgv_pdf,
       tva_rate,
       tva_applicable,
       acompte_type,
@@ -175,7 +183,8 @@ const invoiceController = {
       escompte_percent,
       escompte_days,
       payment_terms_days,
-      notes
+      notes,
+      payment_details
     } = req.body;
 
     // Validation
@@ -198,6 +207,8 @@ const invoiceController = {
         payment_status,
         items,
         cgv,
+        cgv_type,
+        cgv_pdf,
         tva_rate,
         tva_applicable,
         acompte_type,
@@ -205,7 +216,8 @@ const invoiceController = {
         escompte_percent,
         escompte_days,
         payment_terms_days,
-        notes
+        notes,
+        payment_details
       });
 
       if (result.changes === 0) {

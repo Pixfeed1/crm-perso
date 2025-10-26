@@ -62,6 +62,8 @@ const quoteController = {
       client_siret,
       items,
       cgv,
+      cgv_type,
+      cgv_pdf,
       tva_rate,
       tva_applicable,
       acompte_type,
@@ -69,7 +71,8 @@ const quoteController = {
       escompte_percent,
       escompte_days,
       validity_days,
-      notes
+      notes,
+      payment_details
     } = req.body;
 
     // Validation
@@ -90,6 +93,8 @@ const quoteController = {
         client_siret,
         items,
         cgv,
+        cgv_type,
+        cgv_pdf,
         tva_rate,
         tva_applicable,
         acompte_type,
@@ -97,7 +102,8 @@ const quoteController = {
         escompte_percent,
         escompte_days,
         validity_days,
-        notes
+        notes,
+        payment_details
       });
 
       res.status(201).json({
@@ -126,6 +132,8 @@ const quoteController = {
       status,
       items,
       cgv,
+      cgv_type,
+      cgv_pdf,
       tva_rate,
       tva_applicable,
       acompte_type,
@@ -133,7 +141,8 @@ const quoteController = {
       escompte_percent,
       escompte_days,
       validity_days,
-      notes
+      notes,
+      payment_details
     } = req.body;
 
     // Validation
@@ -155,6 +164,8 @@ const quoteController = {
         status,
         items,
         cgv,
+        cgv_type,
+        cgv_pdf,
         tva_rate,
         tva_applicable,
         acompte_type,
@@ -162,7 +173,8 @@ const quoteController = {
         escompte_percent,
         escompte_days,
         validity_days,
-        notes
+        notes,
+        payment_details
       });
 
       if (result.changes === 0) {
