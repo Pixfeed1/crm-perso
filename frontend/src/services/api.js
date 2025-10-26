@@ -574,3 +574,48 @@ export const paymentMethodsAPI = {
     return apiRequest(`/payment-methods/${code}`);
   }
 };
+
+// ===== PROSPECTION (France Travail, etc.) =====
+export const prospectionAPI = {
+  // Test de connexion à France Travail
+  testConnection: () => {
+    console.log('Appel API: test connexion France Travail');
+    return apiRequest('/prospection/test/pole-emploi');
+  },
+
+  // Recherche multi-sources
+  search: (keywords, location = '', sources = 'pole-emploi') => {
+    console.log(`Appel API: recherche prospection "${keywords}" (${location || 'France'})`);
+    const params = new URLSearchParams({
+      keywords,
+      ...(location && { location }),
+      sources
+    });
+    return apiRequest(`/prospection/search?${params}`);
+  },
+
+  // Recherche France Travail uniquement
+  searchFranceTravail: (keywords, options = {}) => {
+    console.log(`Appel API: recherche France Travail "${keywords}"`);
+    const params = new URLSearchParams({
+      keywords,
+      ...options
+    });
+    return apiRequest(`/prospection/pole-emploi/search?${params}`);
+  },
+
+  // Détails d'une offre France Travail
+  getOfferDetails: (offerId) => {
+    console.log(`Appel API: détails offre France Travail ${offerId}`);
+    return apiRequest(`/prospection/pole-emploi/offer/${offerId}`);
+  },
+
+  // Importer une opportunité comme lead
+  importLead: (opportunity) => {
+    console.log(`Appel API: import opportunité comme lead`);
+    return apiRequest('/prospection/import-lead', {
+      method: 'POST',
+      body: JSON.stringify({ opportunity })
+    });
+  }
+};

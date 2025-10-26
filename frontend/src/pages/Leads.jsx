@@ -1,7 +1,7 @@
 // src/pages/Leads.jsx
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiUsers, FiStar, FiArrowLeft, FiDownload, FiList, FiTrello } from 'react-icons/fi';
+import { FiUsers, FiStar, FiArrowLeft, FiDownload, FiList, FiTrello, FiSearch } from 'react-icons/fi';
 // Remplacer executeQuery par la fonction d'API
 import { leadsAPI, exportAPI } from '../services/api';
 import { useToast } from '../hooks/useToast';
@@ -13,6 +13,7 @@ import LeadDetails from '../components/leads/LeadDetails';
 import LeadForm from '../components/leads/LeadForm';
 import LeadFilter from '../components/leads/LeadFilter';
 import KanbanView from '../components/kanban/KanbanView';
+import ProspectionPanel from '../components/leads/ProspectionPanel';
 import EmptyState from '../components/common/EmptyState';
 import ConfirmModal from '../components/common/ConfirmModal';
 
@@ -25,7 +26,7 @@ const Leads = () => {
   const [isAddingLead, setIsAddingLead] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [showDetails, setShowDetails] = useState(false); // Pour toggle mobile
-  const [view, setView] = useState('list'); // 'list' ou 'kanban'
+  const [view, setView] = useState('list'); // 'list', 'kanban' ou 'prospection'
   const [filters, setFilters] = useState({
     search: '',
     status: 'all',
@@ -497,7 +498,7 @@ const Leads = () => {
         <div className="flex items-center gap-3">
           <h2 className="text-lg sm:text-xl font-semibold text-white">Vos Leads</h2>
 
-          {/* Toggle Liste / Kanban */}
+          {/* Toggle Liste / Kanban / Prospection */}
           <div className="bg-gray-800/50 rounded-lg p-1 flex">
             <motion.button
               className={`px-3 py-1 rounded-lg text-sm flex items-center gap-1 ${
@@ -524,6 +525,19 @@ const Leads = () => {
             >
               <FiTrello />
               Kanban
+            </motion.button>
+            <motion.button
+              className={`px-3 py-1 rounded-lg text-sm flex items-center gap-1 ${
+                view === 'prospection'
+                  ? 'bg-indigo-600 text-white'
+                  : 'text-gray-300 hover:bg-gray-700/50'
+              }`}
+              whileHover={{ scale: view === 'prospection' ? 1 : 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setView('prospection')}
+            >
+              <FiSearch />
+              Prospection
             </motion.button>
           </div>
         </div>
@@ -570,6 +584,20 @@ const Leads = () => {
             onLeadUpdate={handleUpdateLead}
             onLeadSelect={handleSelectLead}
           />
+        </div>
+      ) : view === 'prospection' ? (
+        /* Vue Prospection - prend toute la largeur */
+        <div className="flex-grow overflow-hidden px-2 sm:px-0">
+          <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl sm:rounded-2xl p-4 sm:p-6 h-full overflow-y-auto">
+            <ProspectionPanel
+              onLeadCreated={(newLead) => {
+                setLeads([...leads, newLead]);
+                setView('list');
+                setSelectedLead(newLead);
+                toast.success('Lead créé avec succès depuis la prospection');
+              }}
+            />
+          </div>
         </div>
       ) : (
         /* Vue Liste - layout original */
