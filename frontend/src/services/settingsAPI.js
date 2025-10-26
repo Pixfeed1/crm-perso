@@ -66,6 +66,13 @@ export const settingsAPI = {
   updateLogo: async (logoUrl) => {
     return apiRequest('POST', '/api/settings/logo', { logo_url: logoUrl });
   },
+
+  /**
+   * Teste la configuration email SMTP
+   */
+  testEmail: async () => {
+    return apiRequest('POST', '/api/settings/test-email');
+  },
 };
 
 export default settingsAPI;

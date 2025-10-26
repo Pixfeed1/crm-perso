@@ -1,7 +1,7 @@
 // src/pages/Settings.jsx
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FiSave, FiBriefcase, FiMail } from 'react-icons/fi';
+import { FiSave, FiBriefcase, FiMail, FiCheckCircle, FiXCircle, FiAlertCircle } from 'react-icons/fi';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { settingsAPI } from '../services/settingsAPI';
@@ -12,6 +12,8 @@ const Settings = () => {
   const [activeTab, setActiveTab] = useState('company');
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isTestingEmail, setIsTestingEmail] = useState(false);
+  const [emailTestResult, setEmailTestResult] = useState(null);
 
   const [formData, setFormData] = useState({
     company_name: '',
@@ -71,6 +73,29 @@ const Settings = () => {
       toast.error('Erreur lors de l\'enregistrement des paramètres');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleTestEmail = async () => {
+    setIsTestingEmail(true);
+    setEmailTestResult(null);
+    try {
+      const result = await settingsAPI.testEmail();
+      setEmailTestResult(result);
+      if (result.success) {
+        toast.success('Configuration email validée avec succès');
+      } else {
+        toast.error('Échec du test de configuration email');
+      }
+    } catch (error) {
+      console.error('Erreur lors du test email:', error);
+      setEmailTestResult({
+        success: false,
+        error: error.message || 'Erreur inconnue'
+      });
+      toast.error('Erreur lors du test de configuration');
+    } finally {
+      setIsTestingEmail(false);
     }
   };
 
@@ -307,12 +332,86 @@ const Settings = () => {
         )}
 
         {activeTab === 'email' && (
-          <div className="bg-gray-800/30 rounded-lg border border-gray-700/50 p-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Signature email
-              </label>
-              <p className="text-xs text-gray-500 mb-4">
+          <div className="space-y-6">
+            {/* Configuration SMTP */}
+            <div className="bg-gray-800/30 rounded-lg border border-gray-700/50 p-6">
+              <h3 className="text-lg font-semibold text-white mb-4">Configuration SMTP</h3>
+              <p className="text-sm text-gray-400 mb-4">
+                La configuration SMTP se fait via le fichier <code className="bg-gray-900 px-2 py-1 rounded">.env</code> du backend.
+                <br />
+                Référez-vous au fichier <code className="bg-gray-900 px-2 py-1 rounded">.env.example</code> pour les détails de configuration.
+              </p>
+
+              <div className="bg-gray-900/50 rounded-lg p-4 mb-4">
+                <h4 className="text-sm font-medium text-gray-300 mb-3">Variables requises :</h4>
+                <div className="space-y-2 font-mono text-xs text-gray-400">
+                  <div>• EMAIL_HOST (ex: mail.votre-domaine.com)</div>
+                  <div>• EMAIL_PORT (ex: 587)</div>
+                  <div>• EMAIL_USER (ex: contact@votre-domaine.com)</div>
+                  <div>• EMAIL_PASSWORD</div>
+                  <div>• EMAIL_FROM_NAME (ex: Mon Entreprise)</div>
+                </div>
+              </div>
+
+              {/* Bouton test */}
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={handleTestEmail}
+                  disabled={isTestingEmail}
+                  className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-600 text-white rounded-lg transition-colors"
+                >
+                  <FiMail />
+                  <span>{isTestingEmail ? 'Test en cours...' : 'Tester la connexion SMTP'}</span>
+                </button>
+
+                {/* Résultat du test */}
+                {emailTestResult && (
+                  <motion.div
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg ${
+                      emailTestResult.success
+                        ? 'bg-green-500/20 text-green-300'
+                        : 'bg-red-500/20 text-red-300'
+                    }`}
+                  >
+                    {emailTestResult.success ? (
+                      <>
+                        <FiCheckCircle />
+                        <span className="text-sm font-medium">Connexion réussie</span>
+                      </>
+                    ) : (
+                      <>
+                        <FiXCircle />
+                        <span className="text-sm font-medium">Échec de la connexion</span>
+                      </>
+                    )}
+                  </motion.div>
+                )}
+              </div>
+
+              {/* Détails de l'erreur */}
+              {emailTestResult && !emailTestResult.success && emailTestResult.error && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mt-4 p-4 bg-red-500/10 border border-red-500/30 rounded-lg"
+                >
+                  <div className="flex items-start gap-2">
+                    <FiAlertCircle className="text-red-400 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium text-red-300 mb-1">Erreur de configuration</p>
+                      <p className="text-xs text-red-200">{emailTestResult.error}</p>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </div>
+
+            {/* Signature email */}
+            <div className="bg-gray-800/30 rounded-lg border border-gray-700/50 p-6">
+              <h3 className="text-lg font-semibold text-white mb-2">Signature email</h3>
+              <p className="text-sm text-gray-400 mb-4">
                 Personnalisez votre signature pour les emails envoyés depuis l'application
               </p>
               <div className="bg-white rounded-lg">

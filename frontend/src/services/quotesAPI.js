@@ -45,6 +45,13 @@ export const quotesAPI = {
    */
   delete: async (id) => {
     return apiRequest('DELETE', `/quotes/${id}`);
+  },
+
+  /**
+   * Envoie un devis par email
+   */
+  sendEmail: async (id, emailData) => {
+    return apiRequest('POST', `/quotes/${id}/send`, emailData);
   }
 };
 
@@ -116,5 +123,12 @@ export const invoicesAPI = {
    */
   delete: async (id) => {
     return apiRequest('DELETE', `/invoices/${id}`);
+  },
+
+  /**
+   * Envoie une facture par email
+   */
+  sendEmail: async (id, emailData) => {
+    return apiRequest('POST', `/invoices/${id}/send`, emailData);
   }
 };

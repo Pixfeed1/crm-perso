@@ -7,6 +7,7 @@ import { useToast } from '../hooks/useToast';
 import { useConfirm } from '../hooks/useConfirm';
 import QuoteForm from '../components/quotes/QuoteForm';
 import ConfirmModal from '../components/common/ConfirmModal';
+import SendEmailModal from '../components/common/SendEmailModal';
 import { exportQuoteToPDF } from '../services/exportPDF';
 
 const Quotes = () => {
@@ -19,6 +20,8 @@ const Quotes = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [quoteToSend, setQuoteToSend] = useState(null);
 
   // Chargement des devis
   useEffect(() => {
@@ -146,6 +149,23 @@ const Quotes = () => {
     }).format(amount || 0);
   };
 
+  // Envoyer devis par email
+  const handleSendEmail = (quote) => {
+    setQuoteToSend(quote);
+    setEmailModalOpen(true);
+  };
+
+  const handleEmailSend = async (emailData) => {
+    try {
+      await quotesAPI.sendEmail(quoteToSend.id, emailData);
+      toast.success('Devis envoyé avec succès');
+      fetchQuotes(); // Rafraîchir pour mettre à jour le statut
+    } catch (error) {
+      console.error('Erreur lors de l\'envoi:', error);
+      throw new Error(error.message || 'Erreur lors de l\'envoi de l\'email');
+    }
+  };
+
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       {/* En-tête */}
@@ -245,6 +265,13 @@ const Quotes = () => {
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <button
+                          onClick={() => handleSendEmail(quote)}
+                          className="p-2 text-indigo-400 hover:bg-indigo-500/20 rounded transition-colors"
+                          title="Envoyer par email"
+                        >
+                          <FiSend className="w-4 h-4" />
+                        </button>
+                        <button
                           onClick={() => exportQuoteToPDF(quote)}
                           className="p-2 text-green-400 hover:bg-green-500/20 rounded transition-colors"
                           title="Télécharger PDF"
@@ -313,6 +340,20 @@ const Quotes = () => {
 
       {/* Modal de confirmation */}
       <ConfirmModal {...confirmState} />
+
+      {/* Modal d'envoi email */}
+      <SendEmailModal
+        isOpen={emailModalOpen}
+        onClose={() => {
+          setEmailModalOpen(false);
+          setQuoteToSend(null);
+        }}
+        onSend={handleEmailSend}
+        defaultEmail={quoteToSend?.client_email || ''}
+        documentType="devis"
+        documentNumber={quoteToSend?.quote_number || ''}
+        clientName={quoteToSend?.client_name || ''}
+      />
     </div>
   );
 };

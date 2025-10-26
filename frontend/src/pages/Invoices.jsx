@@ -1,12 +1,13 @@
 // src/pages/Invoices.jsx
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiFileText, FiPlus, FiEdit2, FiTrash2, FiDollarSign, FiAlertCircle, FiDownload } from 'react-icons/fi';
+import { FiFileText, FiPlus, FiEdit2, FiTrash2, FiDollarSign, FiAlertCircle, FiDownload, FiSend } from 'react-icons/fi';
 import { invoicesAPI } from '../services/quotesAPI';
 import { useToast } from '../hooks/useToast';
 import { useConfirm } from '../hooks/useConfirm';
 import InvoiceForm from '../components/invoices/InvoiceForm';
 import ConfirmModal from '../components/common/ConfirmModal';
+import SendEmailModal from '../components/common/SendEmailModal';
 import { exportInvoiceToPDF } from '../services/exportPDF';
 
 const Invoices = () => {
@@ -19,6 +20,8 @@ const Invoices = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [invoiceToSend, setInvoiceToSend] = useState(null);
 
   useEffect(() => {
     fetchInvoices();
@@ -129,6 +132,23 @@ const Invoices = () => {
     }).format(amount || 0);
   };
 
+  // Envoyer facture par email
+  const handleSendEmail = (invoice) => {
+    setInvoiceToSend(invoice);
+    setEmailModalOpen(true);
+  };
+
+  const handleEmailSend = async (emailData) => {
+    try {
+      await invoicesAPI.sendEmail(invoiceToSend.id, emailData);
+      toast.success('Facture envoyée avec succès');
+      fetchInvoices(); // Rafraîchir
+    } catch (error) {
+      console.error('Erreur lors de l\'envoi:', error);
+      throw new Error(error.message || 'Erreur lors de l\'envoi de l\'email');
+    }
+  };
+
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
@@ -221,6 +241,13 @@ const Invoices = () => {
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <button
+                          onClick={() => handleSendEmail(invoice)}
+                          className="p-2 text-indigo-400 hover:bg-indigo-500/20 rounded transition-colors"
+                          title="Envoyer par email"
+                        >
+                          <FiSend className="w-4 h-4" />
+                        </button>
+                        <button
                           onClick={() => exportInvoiceToPDF(invoice)}
                           className="p-2 text-purple-400 hover:bg-purple-500/20 rounded transition-colors"
                           title="Télécharger PDF"
@@ -297,6 +324,20 @@ const Invoices = () => {
       </AnimatePresence>
 
       <ConfirmModal {...confirmState} />
+
+      {/* Modal d'envoi email */}
+      <SendEmailModal
+        isOpen={emailModalOpen}
+        onClose={() => {
+          setEmailModalOpen(false);
+          setInvoiceToSend(null);
+        }}
+        onSend={handleEmailSend}
+        defaultEmail={invoiceToSend?.client_email || ''}
+        documentType="facture"
+        documentNumber={invoiceToSend?.invoice_number || ''}
+        clientName={invoiceToSend?.client_name || ''}
+      />
     </div>
   );
 };
