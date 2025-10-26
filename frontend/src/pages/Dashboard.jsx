@@ -1,11 +1,12 @@
 // src/pages/Dashboard.jsx - Version Clean UX sans bordures
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  FaUserFriends, 
-  FaRocket, 
-  FaMoneyBillWave, 
-  FaClipboardList, 
+import { useNavigate } from 'react-router-dom';
+import {
+  FaUserFriends,
+  FaRocket,
+  FaMoneyBillWave,
+  FaClipboardList,
   FaBullseye,
   FaChartLine,
   FaArrowUp,
@@ -14,10 +15,12 @@ import {
   FaCheckCircle,
   FaEllipsisV,
   FaPlus,
-  FaFilter
+  FaFilter,
+  FaFileInvoice,
+  FaUser
 } from 'react-icons/fa';
-import { 
-  FiCalendar as FiCalendarIcon, 
+import {
+  FiCalendar as FiCalendarIcon,
   FiTrendingUp as FiTrendingUpIcon,
   FiMoreHorizontal,
   FiActivity,
@@ -31,6 +34,7 @@ import GoalProgress from '../components/dashboard/GoalProgress';
 import { dashboardAPI } from '../services/api';
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   const [dashboardData, setDashboardData] = useState({
     leads: { total: 0, newThisMonth: 0 },
     projects: { active: 0, completed: 0, upcoming: 0 },
@@ -45,21 +49,61 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [selectedView, setSelectedView] = useState('overview');
   const [hoveredCard, setHoveredCard] = useState(null);
+  const [showNewMenu, setShowNewMenu] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const newMenuRef = useRef(null);
 
+  // Fermer le menu si on clique en dehors
   useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        const data = await dashboardAPI.getData();
-        setDashboardData(data);
-      } catch (error) {
-        console.error('Erreur lors de la récupération des données du tableau de bord:', error);
-      } finally {
-        setLoading(false);
+    const handleClickOutside = (event) => {
+      if (newMenuRef.current && !newMenuRef.current.contains(event.target)) {
+        setShowNewMenu(false);
       }
     };
 
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  useEffect(() => {
     fetchDashboardData();
   }, []);
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      const data = await dashboardAPI.getData();
+      setDashboardData(data);
+    } catch (error) {
+      console.error('Erreur lors de la récupération des données du tableau de bord:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRefresh = () => {
+    fetchDashboardData();
+  };
+
+  const handleNewAction = (action) => {
+    setShowNewMenu(false);
+    switch (action) {
+      case 'project':
+        navigate('/projects');
+        break;
+      case 'client':
+        navigate('/clients');
+        break;
+      case 'quote':
+        navigate('/quotes');
+        break;
+      case 'invoice':
+        navigate('/invoices');
+        break;
+      default:
+        break;
+    }
+  };
 
   if (loading) {
     return (
@@ -123,16 +167,72 @@ const Dashboard = () => {
             
             {/* Actions rapides */}
             <div className="flex items-center gap-3">
-              <button className="p-2 text-gray-400 hover:text-white transition-colors">
-                <FiRefreshCw className="w-5 h-5" />
+              <button
+                onClick={handleRefresh}
+                disabled={loading}
+                className="p-2 text-gray-400 hover:text-white transition-colors disabled:opacity-50"
+                title="Actualiser"
+              >
+                <FiRefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
               </button>
-              <button className="p-2 text-gray-400 hover:text-white transition-colors">
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className={`p-2 transition-colors ${showFilters ? 'text-indigo-400' : 'text-gray-400 hover:text-white'}`}
+                title="Filtres"
+              >
                 <FaFilter className="w-5 h-5" />
               </button>
-              <button className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors flex items-center gap-2">
-                <FaPlus className="w-4 h-4" />
-                <span className="text-sm font-medium text-white">Nouveau</span>
-              </button>
+
+              {/* Menu "Nouveau" avec dropdown */}
+              <div className="relative" ref={newMenuRef}>
+                <button
+                  onClick={() => setShowNewMenu(!showNewMenu)}
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors flex items-center gap-2"
+                >
+                  <FaPlus className="w-4 h-4" />
+                  <span className="text-sm font-medium text-white">Nouveau</span>
+                </button>
+
+                <AnimatePresence>
+                  {showNewMenu && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="absolute right-0 mt-2 w-56 bg-gray-800 border border-gray-700 rounded-lg shadow-xl overflow-hidden z-50"
+                    >
+                      <button
+                        onClick={() => handleNewAction('project')}
+                        className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
+                      >
+                        <FaRocket className="w-4 h-4 text-purple-400" />
+                        <span>Nouveau projet</span>
+                      </button>
+                      <button
+                        onClick={() => handleNewAction('client')}
+                        className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
+                      >
+                        <FaUser className="w-4 h-4 text-blue-400" />
+                        <span>Nouveau client</span>
+                      </button>
+                      <button
+                        onClick={() => handleNewAction('quote')}
+                        className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
+                      >
+                        <FaClipboardList className="w-4 h-4 text-amber-400" />
+                        <span>Nouveau devis</span>
+                      </button>
+                      <button
+                        onClick={() => handleNewAction('invoice')}
+                        className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
+                      >
+                        <FaFileInvoice className="w-4 h-4 text-emerald-400" />
+                        <span>Nouvelle facture</span>
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             </div>
           </div>
         </div>

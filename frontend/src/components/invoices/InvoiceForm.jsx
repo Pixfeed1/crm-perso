@@ -1,9 +1,10 @@
-// src/components/invoices/InvoiceForm.jsx
+// src/components/invoices/InvoiceForm.jsx - Version avec Stepper UX
 import React, { useState, useEffect } from 'react';
-import { FiPlus, FiTrash2, FiSave, FiX } from 'react-icons/fi';
+import { FiPlus, FiTrash2, FiSave, FiX, FiChevronRight, FiChevronLeft, FiChevronDown, FiChevronUp } from 'react-icons/fi';
 import { clientsAPI, projectsAPI, tvaRegimesAPI, paymentMethodsAPI } from '../../services/api';
 import { quotesAPI } from '../../services/quotesAPI';
 import FileUpload from '../common/FileUpload';
+import Stepper from '../common/Stepper';
 
 const InvoiceForm = ({ invoice = null, onSave, onCancel }) => {
   const [clients, setClients] = useState([]);
@@ -12,6 +13,9 @@ const InvoiceForm = ({ invoice = null, onSave, onCancel }) => {
   const [tvaRegimes, setTvaRegimes] = useState([]);
   const [paymentMethods, setPaymentMethods] = useState([]);
   const [uploadedFiles, setUploadedFiles] = useState([]);
+  const [currentStep, setCurrentStep] = useState(0);
+  const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
+
   const [formData, setFormData] = useState({
     title: invoice?.title || '',
     quote_id: invoice?.quote_id || '',
@@ -37,6 +41,14 @@ const InvoiceForm = ({ invoice = null, onSave, onCancel }) => {
     additional_info: invoice?.additional_info || '',
     notes: invoice?.notes || ''
   });
+
+  const steps = [
+    { label: 'Informations' },
+    { label: 'Articles & Prix' },
+    { label: 'Conditions' },
+    { label: 'Documents' },
+    { label: 'Récapitulatif' }
+  ];
 
   // Charger les données de référence
   useEffect(() => {
@@ -80,7 +92,6 @@ const InvoiceForm = ({ invoice = null, onSave, onCancel }) => {
   const handleFilesUpdated = async () => {
     if (invoice && invoice.id) {
       try {
-        // Recharger la facture pour avoir les fichiers à jour
         const response = await fetch(`http://localhost:5000/api/invoices/${invoice.id}`, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -101,7 +112,6 @@ const InvoiceForm = ({ invoice = null, onSave, onCancel }) => {
   const handleQuoteChange = async (e) => {
     const quoteId = e.target.value;
     if (!quoteId) {
-      // Réinitialiser
       setFormData({
         ...formData,
         quote_id: '',
@@ -110,10 +120,14 @@ const InvoiceForm = ({ invoice = null, onSave, onCancel }) => {
         client_email: '',
         client_address: '',
         client_siret: '',
+        project_id: null,
         items: [{ description: '', quantity: 1, unit_price: 0 }],
         cgv: '',
         tva_rate: 20,
         tva_applicable: true,
+        tva_regime: 'NORMAL',
+        discount_type: 'none',
+        discount_value: 0,
         acompte_type: 'none',
         acompte_value: 0,
         escompte_percent: 0,
@@ -126,8 +140,8 @@ const InvoiceForm = ({ invoice = null, onSave, onCancel }) => {
       const quote = await quotesAPI.getById(quoteId);
       setFormData({
         ...formData,
-        title: quote.title || '',
         quote_id: quote.id,
+        title: quote.title || '',
         client_id: quote.client_id,
         client_name: quote.client_name,
         client_email: quote.client_email || '',
@@ -135,18 +149,17 @@ const InvoiceForm = ({ invoice = null, onSave, onCancel }) => {
         client_siret: quote.client_siret || '',
         project_id: quote.project_id || null,
         items: quote.items || [{ description: '', quantity: 1, unit_price: 0 }],
-        discount_type: quote.discount_type || 'none',
-        discount_value: quote.discount_value || 0,
         cgv: quote.cgv || '',
         tva_rate: quote.tva_rate || 20,
         tva_applicable: quote.tva_applicable !== undefined ? quote.tva_applicable : true,
         tva_regime: quote.tva_regime || 'NORMAL',
+        discount_type: quote.discount_type || 'none',
+        discount_value: quote.discount_value || 0,
         payment_methods: quote.payment_methods || [],
         acompte_type: quote.acompte_type || 'none',
         acompte_value: quote.acompte_value || 0,
         escompte_percent: quote.escompte_percent || 0,
-        escompte_days: quote.escompte_days || 0,
-        additional_info: quote.additional_info || ''
+        escompte_days: quote.escompte_days || 0
       });
     } catch (error) {
       console.error('Erreur chargement devis:', error);
@@ -198,20 +211,36 @@ const InvoiceForm = ({ invoice = null, onSave, onCancel }) => {
     setFormData({ ...formData, items: newItems });
   };
 
-  // Gestion des moyens de paiement
-  const handlePaymentMethodToggle = (code) => {
-    const currentMethods = formData.payment_methods || [];
-    if (currentMethods.includes(code)) {
-      setFormData({
-        ...formData,
-        payment_methods: currentMethods.filter(m => m !== code)
-      });
-    } else {
-      setFormData({
-        ...formData,
-        payment_methods: [...currentMethods, code]
-      });
+  // Calculs
+  const calculateTotals = () => {
+    // Total des items
+    const subtotal = formData.items.reduce((sum, item) => {
+      return sum + (parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0);
+    }, 0);
+
+    // Remise
+    let discount_amount = 0;
+    if (formData.discount_type === 'percent') {
+      discount_amount = subtotal * (formData.discount_value / 100);
+    } else if (formData.discount_type === 'fixed') {
+      discount_amount = parseFloat(formData.discount_value) || 0;
     }
+
+    const total_ht = subtotal - discount_amount;
+    const tva_amount = formData.tva_applicable ? (total_ht * (formData.tva_rate / 100)) : 0;
+    const total_ttc = total_ht + tva_amount;
+
+    // Acompte
+    let acompte_amount = 0;
+    if (formData.acompte_type === 'percent') {
+      acompte_amount = total_ttc * (formData.acompte_value / 100);
+    } else if (formData.acompte_type === 'fixed') {
+      acompte_amount = parseFloat(formData.acompte_value) || 0;
+    }
+
+    const reste_a_payer = total_ttc - acompte_amount;
+
+    return { subtotal, discount_amount, total_ht, tva_amount, total_ttc, acompte_amount, reste_a_payer };
   };
 
   // Gérer le changement de régime TVA
@@ -228,48 +257,58 @@ const InvoiceForm = ({ invoice = null, onSave, onCancel }) => {
     }
   };
 
-  // Calculs avec remise
-  const calculateTotals = () => {
-    const total_ht = formData.items.reduce((sum, item) => {
-      return sum + (parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0);
-    }, 0);
+  // Gérer les moyens de paiement
+  const handlePaymentMethodToggle = (methodId) => {
+    const current = formData.payment_methods || [];
+    const exists = current.includes(methodId);
 
-    // Calcul de la remise
-    let discount_amount = 0;
-    if (formData.discount_type === 'percent') {
-      discount_amount = total_ht * (parseFloat(formData.discount_value) / 100);
-    } else if (formData.discount_type === 'fixed') {
-      discount_amount = parseFloat(formData.discount_value) || 0;
-    }
-
-    // Application de la remise AVANT TVA
-    const total_ht_after_discount = total_ht - discount_amount;
-
-    // Calcul TVA sur montant après remise
-    const tva_amount = formData.tva_applicable ? (total_ht_after_discount * (formData.tva_rate / 100)) : 0;
-    const total_ttc = total_ht_after_discount + tva_amount;
-
-    let acompte_amount = 0;
-    if (formData.acompte_type === 'percent') {
-      acompte_amount = total_ttc * (formData.acompte_value / 100);
-    } else if (formData.acompte_type === 'fixed') {
-      acompte_amount = parseFloat(formData.acompte_value) || 0;
-    }
-
-    const reste_a_payer = total_ttc - acompte_amount;
-
-    return {
-      total_ht,
-      discount_amount,
-      total_ht_after_discount,
-      tva_amount,
-      total_ttc,
-      acompte_amount,
-      reste_a_payer
-    };
+    setFormData({
+      ...formData,
+      payment_methods: exists
+        ? current.filter(id => id !== methodId)
+        : [...current, methodId]
+    });
   };
 
-  const totals = calculateTotals();
+  // Validation par étape
+  const validateStep = (step) => {
+    switch (step) {
+      case 0: // Informations
+        if (!formData.client_name.trim()) {
+          alert('Le nom du client est requis');
+          return false;
+        }
+        return true;
+      case 1: // Articles
+        if (formData.items.length === 0 || !formData.items.some(item => item.description.trim())) {
+          alert('Au moins un article est requis');
+          return false;
+        }
+        return true;
+      case 2: // Conditions
+      case 3: // Documents
+      case 4: // Récapitulatif
+        return true;
+      default:
+        return true;
+    }
+  };
+
+  const nextStep = () => {
+    if (validateStep(currentStep)) {
+      setCurrentStep(prev => Math.min(prev + 1, steps.length - 1));
+    }
+  };
+
+  const prevStep = () => {
+    setCurrentStep(prev => Math.max(prev - 1, 0));
+  };
+
+  const handleStepClick = (step) => {
+    if (step < currentStep || validateStep(currentStep)) {
+      setCurrentStep(step);
+    }
+  };
 
   // Soumission
   const handleSubmit = (e) => {
@@ -288,97 +327,100 @@ const InvoiceForm = ({ invoice = null, onSave, onCancel }) => {
     onSave(formData);
   };
 
-  return (
-    <form onSubmit={handleSubmit} className="p-6 space-y-6">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-300 to-purple-300">
-          {invoice ? 'Modifier la facture' : 'Nouvelle facture'}
-        </h2>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-colors"
-        >
-          <FiX className="w-5 h-5" />
-        </button>
-      </div>
+  // Render step content
+  const renderStepContent = () => {
+    switch (currentStep) {
+      case 0:
+        return renderInfoStep();
+      case 1:
+        return renderItemsStep();
+      case 2:
+        return renderConditionsStep();
+      case 3:
+        return renderDocumentsStep();
+      case 4:
+        return renderSummaryStep();
+      default:
+        return null;
+    }
+  };
 
-      {/* Sélection devis (optionnel) */}
+  const renderInfoStep = () => (
+    <div className="space-y-6 animate-fadeIn">
+      <h3 className="text-lg font-semibold text-white mb-4">Informations générales</h3>
+
+      {/* Option: Créer depuis un devis */}
       {!invoice && (
-        <div className="space-y-4 bg-indigo-900/20 border border-indigo-500/30 rounded-lg p-4">
-          <h3 className="text-lg font-semibold text-white">Créer depuis un devis (optionnel)</h3>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">
-              Sélectionner un devis accepté
-            </label>
-            <select
-              value={formData.quote_id}
-              onChange={handleQuoteChange}
-              className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
-            >
-              <option value="">-- Nouveau (sans devis) --</option>
-              {quotes.map(quote => (
-                <option key={quote.id} value={quote.id}>
-                  {quote.quote_number} - {quote.client_name} ({parseFloat(quote.total_ttc).toFixed(2)} €)
-                </option>
-              ))}
-            </select>
-          </div>
+        <div className="bg-indigo-900/20 border border-indigo-500/30 rounded-lg p-4 mb-6">
+          <label className="block text-sm font-medium text-gray-300 mb-2">
+            Créer depuis un devis accepté (optionnel)
+          </label>
+          <select
+            value={formData.quote_id}
+            onChange={handleQuoteChange}
+            className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+          >
+            <option value="">-- Nouvelle facture --</option>
+            {quotes.map(quote => (
+              <option key={quote.id} value={quote.id}>
+                {quote.quote_number} - {quote.client_name} ({parseFloat(quote.total_ttc).toFixed(2)} €)
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-gray-500 mt-2">
+            Sélectionnez un devis pour pré-remplir les informations
+          </p>
         </div>
       )}
 
       {/* Titre et Projet */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-white">Informations générales</h3>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-1">
+            Titre de la facture
+          </label>
+          <input
+            type="text"
+            value={formData.title}
+            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+            placeholder="Ex: Facture site web e-commerce..."
+            className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+          />
+        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">
-              Titre de la facture
-            </label>
-            <input
-              type="text"
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              placeholder="Ex: Facture site web e-commerce, Refonte graphique..."
-              className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">
-              Projet associé
-            </label>
-            <select
-              value={formData.project_id || ''}
-              onChange={(e) => setFormData({ ...formData, project_id: e.target.value ? parseInt(e.target.value) : null })}
-              className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
-            >
-              <option value="">-- Aucun projet --</option>
-              {projects.map(project => (
-                <option key={project.id} value={project.id}>
-                  {project.name}
-                </option>
-              ))}
-            </select>
-          </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-1">
+            Projet associé
+          </label>
+          <select
+            value={formData.project_id || ''}
+            onChange={(e) => setFormData({ ...formData, project_id: e.target.value ? parseInt(e.target.value) : null })}
+            className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+          >
+            <option value="">-- Aucun projet --</option>
+            {projects.map(project => (
+              <option key={project.id} value={project.id}>
+                {project.name}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
       {/* Informations client */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-white">Informations client</h3>
+      <div className="space-y-4 mt-6">
+        <h4 className="text-md font-semibold text-white">Informations client</h4>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
+          <div className="md:col-span-2">
             <label className="block text-sm font-medium text-gray-300 mb-1">
               Sélectionner un client
             </label>
             <select
               value={formData.client_id}
               onChange={handleClientChange}
-              className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
               disabled={formData.quote_id !== ''}
+              className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <option value="">-- Nouveau client --</option>
               {clients.map(client => (
@@ -397,6 +439,7 @@ const InvoiceForm = ({ invoice = null, onSave, onCancel }) => {
               type="text"
               value={formData.client_name}
               onChange={(e) => setFormData({ ...formData, client_name: e.target.value })}
+              placeholder="Nom ou raison sociale"
               className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
               required
             />
@@ -410,6 +453,7 @@ const InvoiceForm = ({ invoice = null, onSave, onCancel }) => {
               type="email"
               value={formData.client_email}
               onChange={(e) => setFormData({ ...formData, client_email: e.target.value })}
+              placeholder="email@example.com"
               className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
             />
           </div>
@@ -422,6 +466,7 @@ const InvoiceForm = ({ invoice = null, onSave, onCancel }) => {
               type="text"
               value={formData.client_siret}
               onChange={(e) => setFormData({ ...formData, client_siret: e.target.value })}
+              placeholder="123 456 789 00010"
               className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
             />
           </div>
@@ -433,21 +478,27 @@ const InvoiceForm = ({ invoice = null, onSave, onCancel }) => {
             <textarea
               value={formData.client_address}
               onChange={(e) => setFormData({ ...formData, client_address: e.target.value })}
-              rows={2}
+              rows={3}
+              placeholder="Adresse complète du client"
               className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
             />
           </div>
         </div>
       </div>
+    </div>
+  );
 
-      {/* Articles */}
-      <div className="space-y-4">
+  const renderItemsStep = () => {
+    const totals = calculateTotals();
+
+    return (
+      <div className="space-y-6 animate-fadeIn">
         <div className="flex justify-between items-center">
-          <h3 className="text-lg font-semibold text-white">Articles</h3>
+          <h3 className="text-lg font-semibold text-white">Articles / Services</h3>
           <button
             type="button"
             onClick={addItem}
-            className="flex items-center gap-2 px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors text-sm"
+            className="flex items-center gap-2 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors text-sm"
           >
             <FiPlus className="w-4 h-4" />
             Ajouter
@@ -456,11 +507,12 @@ const InvoiceForm = ({ invoice = null, onSave, onCancel }) => {
 
         <div className="space-y-3">
           {formData.items.map((item, index) => (
-            <div key={index} className="grid grid-cols-12 gap-3 items-start bg-gray-800/30 p-3 rounded-lg">
+            <div key={index} className="grid grid-cols-12 gap-3 items-start bg-gray-800/30 p-4 rounded-lg border border-gray-700/50">
               <div className="col-span-12 sm:col-span-5">
+                <label className="block text-xs font-medium text-gray-400 mb-1">Description</label>
                 <input
                   type="text"
-                  placeholder="Description"
+                  placeholder="Ex: Développement site web"
                   value={item.description}
                   onChange={(e) => handleItemChange(index, 'description', e.target.value)}
                   className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-white text-sm focus:outline-none focus:border-indigo-500"
@@ -468,9 +520,10 @@ const InvoiceForm = ({ invoice = null, onSave, onCancel }) => {
                 />
               </div>
               <div className="col-span-5 sm:col-span-3">
+                <label className="block text-xs font-medium text-gray-400 mb-1">Quantité</label>
                 <input
                   type="number"
-                  placeholder="Quantité"
+                  placeholder="1"
                   value={item.quantity}
                   onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
                   min="0"
@@ -480,9 +533,10 @@ const InvoiceForm = ({ invoice = null, onSave, onCancel }) => {
                 />
               </div>
               <div className="col-span-5 sm:col-span-3">
+                <label className="block text-xs font-medium text-gray-400 mb-1">Prix unitaire (€)</label>
                 <input
                   type="number"
-                  placeholder="Prix unitaire"
+                  placeholder="0.00"
                   value={item.unit_price}
                   onChange={(e) => handleItemChange(index, 'unit_price', e.target.value)}
                   min="0"
@@ -491,94 +545,151 @@ const InvoiceForm = ({ invoice = null, onSave, onCancel }) => {
                   required
                 />
               </div>
-              <div className="col-span-2 sm:col-span-1 flex justify-center">
+              <div className="col-span-2 sm:col-span-1 flex items-end justify-center">
                 {formData.items.length > 1 && (
                   <button
                     type="button"
                     onClick={() => removeItem(index)}
                     className="p-2 text-red-400 hover:bg-red-500/20 rounded transition-colors"
+                    title="Supprimer"
                   >
                     <FiTrash2 className="w-4 h-4" />
                   </button>
                 )}
               </div>
+              <div className="col-span-12 text-right text-sm text-gray-400">
+                Total: <span className="text-white font-semibold">{((item.quantity || 0) * (item.unit_price || 0)).toFixed(2)} €</span>
+              </div>
             </div>
           ))}
         </div>
-      </div>
 
-      {/* Remise */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-white">Remise</h3>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">
-              Type de remise
-            </label>
-            <select
-              value={formData.discount_type}
-              onChange={(e) => setFormData({ ...formData, discount_type: e.target.value })}
-              className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
-            >
-              <option value="none">Aucune</option>
-              <option value="percent">Pourcentage</option>
-              <option value="fixed">Montant fixe</option>
-            </select>
-          </div>
-
-          {formData.discount_type !== 'none' && (
+        {/* Remise */}
+        <div className="bg-gray-800/30 border border-gray-700/50 rounded-lg p-4 space-y-4">
+          <h4 className="text-md font-medium text-white">Remise</h4>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-1">
-                {formData.discount_type === 'percent' ? 'Pourcentage (%)' : 'Montant (€)'}
+                Type de remise
               </label>
-              <input
-                type="number"
-                value={formData.discount_value}
-                onChange={(e) => setFormData({ ...formData, discount_value: parseFloat(e.target.value) || 0 })}
-                min="0"
-                step="0.01"
+              <select
+                value={formData.discount_type}
+                onChange={(e) => setFormData({ ...formData, discount_type: e.target.value })}
                 className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
-              />
+              >
+                <option value="none">Aucune</option>
+                <option value="percent">Pourcentage</option>
+                <option value="fixed">Montant fixe</option>
+              </select>
+            </div>
+
+            {formData.discount_type !== 'none' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">
+                  {formData.discount_type === 'percent' ? 'Pourcentage (%)' : 'Montant (€)'}
+                </label>
+                <input
+                  type="number"
+                  value={formData.discount_value}
+                  onChange={(e) => setFormData({ ...formData, discount_value: parseFloat(e.target.value) || 0 })}
+                  min="0"
+                  step="0.01"
+                  className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* TVA */}
+        <div className="bg-gray-800/30 border border-gray-700/50 rounded-lg p-4 space-y-4">
+          <h4 className="text-md font-medium text-white">TVA</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1">
+                Régime TVA
+              </label>
+              <select
+                value={formData.tva_regime}
+                onChange={handleTvaRegimeChange}
+                className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+              >
+                {tvaRegimes.map(regime => (
+                  <option key={regime.code} value={regime.code}>
+                    {regime.name} ({regime.rate}%)
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {formData.tva_applicable && (
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">
+                  Taux TVA
+                </label>
+                <div className="px-4 py-2 bg-gray-700/50 border border-gray-600 rounded-lg text-white">
+                  {formData.tva_rate}%
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Mini récapitulatif */}
+        <div className="bg-indigo-900/20 border border-indigo-500/30 rounded-lg p-4 space-y-2">
+          <div className="flex justify-between text-sm">
+            <span className="text-gray-300">Sous-total</span>
+            <span className="text-white">{totals.subtotal.toFixed(2)} €</span>
+          </div>
+          {formData.discount_type !== 'none' && totals.discount_amount > 0 && (
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-300">Remise</span>
+              <span className="text-red-400">- {totals.discount_amount.toFixed(2)} €</span>
             </div>
           )}
+          <div className="flex justify-between text-sm font-semibold border-t border-indigo-500/30 pt-2">
+            <span className="text-gray-200">Total HT</span>
+            <span className="text-white">{totals.total_ht.toFixed(2)} €</span>
+          </div>
+          {formData.tva_applicable && (
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-300">TVA ({formData.tva_rate}%)</span>
+              <span className="text-white">{totals.tva_amount.toFixed(2)} €</span>
+            </div>
+          )}
+          <div className="flex justify-between text-lg font-bold border-t border-indigo-500/30 pt-2">
+            <span className="text-white">Total TTC</span>
+            <span className="text-indigo-300">{totals.total_ttc.toFixed(2)} €</span>
+          </div>
         </div>
       </div>
+    );
+  };
 
-      {/* TVA */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-white">TVA</h3>
+  const renderConditionsStep = () => (
+    <div className="space-y-6 animate-fadeIn">
+      <h3 className="text-lg font-semibold text-white mb-4">Conditions commerciales</h3>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">
-              Régime TVA
-            </label>
-            <select
-              value={formData.tva_regime}
-              onChange={handleTvaRegimeChange}
-              className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
-            >
-              {tvaRegimes.map(regime => (
-                <option key={regime.code} value={regime.code}>
-                  {regime.label} ({regime.rate}%)
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex items-center">
-            <div className="text-sm text-gray-400">
-              {tvaRegimes.find(r => r.code === formData.tva_regime)?.description || ''}
-            </div>
-          </div>
-        </div>
+      {/* Délai de paiement */}
+      <div className="bg-gray-800/30 border border-gray-700/50 rounded-lg p-4">
+        <label className="block text-sm font-medium text-gray-300 mb-2">
+          Délai de paiement (jours)
+        </label>
+        <input
+          type="number"
+          value={formData.payment_terms_days}
+          onChange={(e) => setFormData({ ...formData, payment_terms_days: parseInt(e.target.value) || 30 })}
+          min="1"
+          className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+        />
+        <p className="text-xs text-gray-500 mt-2">
+          Délai standard: 30 jours
+        </p>
       </div>
 
       {/* Acompte */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-white">Acompte</h3>
-
+      <div className="bg-gray-800/30 border border-gray-700/50 rounded-lg p-4 space-y-4">
+        <h4 className="text-md font-medium text-white">Acompte</h4>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1">
@@ -613,207 +724,328 @@ const InvoiceForm = ({ invoice = null, onSave, onCancel }) => {
         </div>
       </div>
 
-      {/* Escompte */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-white">Escompte</h3>
+      {/* Options avancées - Collapsible */}
+      <div className="bg-gray-800/30 border border-gray-700/50 rounded-lg overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setShowAdvancedOptions(!showAdvancedOptions)}
+          className="w-full flex items-center justify-between p-4 hover:bg-gray-800/50 transition-colors"
+        >
+          <h4 className="text-md font-medium text-white">Escompte (optionnel)</h4>
+          {showAdvancedOptions ? (
+            <FiChevronUp className="w-5 h-5 text-gray-400" />
+          ) : (
+            <FiChevronDown className="w-5 h-5 text-gray-400" />
+          )}
+        </button>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">
-              Pourcentage (%)
-            </label>
-            <input
-              type="number"
-              value={formData.escompte_percent}
-              onChange={(e) => setFormData({ ...formData, escompte_percent: parseFloat(e.target.value) || 0 })}
-              min="0"
-              step="0.1"
-              className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
-            />
+        {showAdvancedOptions && (
+          <div className="p-4 pt-0 space-y-4 border-t border-gray-700/50">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">
+                  Pourcentage (%)
+                </label>
+                <input
+                  type="number"
+                  value={formData.escompte_percent}
+                  onChange={(e) => setFormData({ ...formData, escompte_percent: parseFloat(e.target.value) || 0 })}
+                  min="0"
+                  step="0.1"
+                  className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">
+                  Si paiement sous (jours)
+                </label>
+                <input
+                  type="number"
+                  value={formData.escompte_days}
+                  onChange={(e) => setFormData({ ...formData, escompte_days: parseInt(e.target.value) || 0 })}
+                  min="0"
+                  className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+            </div>
           </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">
-              Si paiement sous (jours)
-            </label>
-            <input
-              type="number"
-              value={formData.escompte_days}
-              onChange={(e) => setFormData({ ...formData, escompte_days: parseInt(e.target.value) || 0 })}
-              min="0"
-              className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Délai de paiement */}
-      <div>
-        <label className="block text-sm font-medium text-gray-300 mb-1">
-          Délai de paiement (jours)
-        </label>
-        <input
-          type="number"
-          value={formData.payment_terms_days}
-          onChange={(e) => setFormData({ ...formData, payment_terms_days: parseInt(e.target.value) || 30 })}
-          min="1"
-          className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
-        />
+        )}
       </div>
 
       {/* Moyens de paiement */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-white">Moyens de paiement acceptés</h3>
-
+      <div className="bg-gray-800/30 border border-gray-700/50 rounded-lg p-4 space-y-4">
+        <h4 className="text-md font-medium text-white">Moyens de paiement acceptés</h4>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
           {paymentMethods.map(method => (
-            <label
-              key={method.code}
-              className={`flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-colors ${
-                formData.payment_methods.includes(method.code)
-                  ? 'bg-indigo-600/20 border-indigo-500'
-                  : 'bg-gray-800/30 border-gray-700 hover:border-gray-600'
-              }`}
-            >
+            <label key={method.id} className="flex items-center gap-2 p-3 bg-gray-700/30 rounded-lg cursor-pointer hover:bg-gray-700/50 transition-colors">
               <input
                 type="checkbox"
-                checked={formData.payment_methods.includes(method.code)}
-                onChange={() => handlePaymentMethodToggle(method.code)}
+                checked={(formData.payment_methods || []).includes(method.id)}
+                onChange={() => handlePaymentMethodToggle(method.id)}
                 className="w-4 h-4 text-indigo-600 bg-gray-800 border-gray-700 rounded focus:ring-indigo-500"
               />
-              <span className="text-sm text-gray-300">{method.label}</span>
+              <span className="text-sm text-gray-300">{method.name}</span>
             </label>
           ))}
         </div>
       </div>
+    </div>
+  );
 
-      {/* CGV et Notes */}
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-1">
-            Conditions Générales de Vente (CGV)
-          </label>
-          <textarea
-            value={formData.cgv}
-            onChange={(e) => setFormData({ ...formData, cgv: e.target.value })}
-            rows={4}
-            placeholder="Conditions générales..."
-            className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
-          />
-        </div>
+  const renderDocumentsStep = () => (
+    <div className="space-y-6 animate-fadeIn">
+      <h3 className="text-lg font-semibold text-white mb-4">Documents et informations complémentaires</h3>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-1">
-            Informations complémentaires
-          </label>
-          <textarea
-            value={formData.additional_info}
-            onChange={(e) => setFormData({ ...formData, additional_info: e.target.value })}
-            rows={3}
-            placeholder="Informations complémentaires pour le client..."
-            className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-1">
-            Notes
-          </label>
-          <textarea
-            value={formData.notes}
-            onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-            rows={3}
-            placeholder="Notes additionnelles..."
-            className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
-          />
-        </div>
-      </div>
-
-      {/* Pièces jointes */}
+      {/* Upload fichiers */}
       {invoice && invoice.id && (
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-white">Pièces jointes</h3>
+        <div className="bg-gray-800/30 border border-gray-700/50 rounded-lg p-4 space-y-4">
+          <h4 className="text-md font-medium text-white">Fichiers joints</h4>
           <FileUpload
             entityType="invoice"
             entityId={invoice.id}
-            existingFiles={uploadedFiles}
+            uploadedFiles={uploadedFiles}
             onFilesUpdated={handleFilesUpdated}
           />
         </div>
       )}
 
-      {/* Totaux */}
-      <div className="bg-indigo-600/10 border border-indigo-500/30 rounded-lg p-4 space-y-2">
-        <div className="flex justify-between text-sm">
-          <span className="text-gray-300">Total HT</span>
-          <span className="font-semibold text-white">
-            {totals.total_ht.toFixed(2)} €
-          </span>
-        </div>
-        {formData.discount_type !== 'none' && totals.discount_amount > 0 && (
-          <>
-            <div className="flex justify-between text-sm text-green-400">
-              <span>Remise ({formData.discount_type === 'percent' ? `${formData.discount_value}%` : 'fixe'})</span>
-              <span>
-                - {totals.discount_amount.toFixed(2)} €
-              </span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-300">Total HT après remise</span>
-              <span className="font-semibold text-white">
-                {totals.total_ht_after_discount.toFixed(2)} €
-              </span>
-            </div>
-          </>
-        )}
-        {formData.tva_applicable && (
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-300">TVA ({formData.tva_rate}%)</span>
-            <span className="font-semibold text-white">
-              {totals.tva_amount.toFixed(2)} €
-            </span>
-          </div>
-        )}
-        <div className="flex justify-between text-lg border-t border-indigo-500/30 pt-2">
-          <span className="font-semibold text-white">Total TTC</span>
-          <span className="font-bold text-indigo-300">
-            {totals.total_ttc.toFixed(2)} €
-          </span>
-        </div>
-        {formData.acompte_type !== 'none' && totals.acompte_amount > 0 && (
-          <>
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-300">Acompte</span>
-              <span className="font-semibold text-white">
-                {totals.acompte_amount.toFixed(2)} €
-              </span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-300">Reste à payer</span>
-              <span className="font-semibold text-white">
-                {totals.reste_a_payer.toFixed(2)} €
-              </span>
-            </div>
-          </>
-        )}
+      {/* CGV */}
+      <div>
+        <label className="block text-sm font-medium text-gray-300 mb-1">
+          Conditions Générales de Vente (CGV)
+        </label>
+        <textarea
+          value={formData.cgv}
+          onChange={(e) => setFormData({ ...formData, cgv: e.target.value })}
+          rows={5}
+          placeholder="Vos conditions générales de vente..."
+          className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500 text-sm"
+        />
       </div>
 
-      {/* Actions */}
-      <div className="flex justify-end gap-3 pt-4 border-t border-gray-700">
+      {/* Informations complémentaires */}
+      <div>
+        <label className="block text-sm font-medium text-gray-300 mb-1">
+          Informations complémentaires
+        </label>
+        <textarea
+          value={formData.additional_info}
+          onChange={(e) => setFormData({ ...formData, additional_info: e.target.value })}
+          rows={3}
+          placeholder="Informations supplémentaires à afficher sur la facture..."
+          className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500 text-sm"
+        />
+      </div>
+
+      {/* Notes internes */}
+      <div>
+        <label className="block text-sm font-medium text-gray-300 mb-1">
+          Notes internes (non visibles sur la facture)
+        </label>
+        <textarea
+          value={formData.notes}
+          onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+          rows={3}
+          placeholder="Notes pour usage interne..."
+          className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500 text-sm"
+        />
+      </div>
+    </div>
+  );
+
+  const renderSummaryStep = () => {
+    const totals = calculateTotals();
+
+    return (
+      <div className="space-y-6 animate-fadeIn">
+        <h3 className="text-lg font-semibold text-white mb-4">Récapitulatif de la facture</h3>
+
+        {/* Informations générales */}
+        <div className="bg-gray-800/30 border border-gray-700/50 rounded-lg p-4">
+          <h4 className="text-sm font-medium text-gray-300 mb-3">Informations générales</h4>
+          <div className="space-y-2 text-sm">
+            {formData.title && (
+              <div className="flex justify-between">
+                <span className="text-gray-400">Titre:</span>
+                <span className="text-white font-medium">{formData.title}</span>
+              </div>
+            )}
+            {formData.project_id && (
+              <div className="flex justify-between">
+                <span className="text-gray-400">Projet:</span>
+                <span className="text-white">
+                  {projects.find(p => p.id === formData.project_id)?.name || 'N/A'}
+                </span>
+              </div>
+            )}
+            <div className="flex justify-between">
+              <span className="text-gray-400">Délai de paiement:</span>
+              <span className="text-white">{formData.payment_terms_days} jours</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Client */}
+        <div className="bg-gray-800/30 border border-gray-700/50 rounded-lg p-4">
+          <h4 className="text-sm font-medium text-gray-300 mb-3">Client</h4>
+          <div className="text-sm text-gray-400 space-y-1">
+            <p className="text-white font-medium">{formData.client_name}</p>
+            {formData.client_email && <p>{formData.client_email}</p>}
+            {formData.client_siret && <p>SIRET: {formData.client_siret}</p>}
+            {formData.client_address && <p className="text-xs">{formData.client_address}</p>}
+          </div>
+        </div>
+
+        {/* Articles */}
+        <div className="bg-gray-800/30 border border-gray-700/50 rounded-lg p-4">
+          <h4 className="text-sm font-medium text-gray-300 mb-3">Articles ({formData.items.length})</h4>
+          <div className="space-y-2">
+            {formData.items.map((item, index) => (
+              <div key={index} className="flex justify-between text-sm">
+                <span className="text-gray-400">
+                  {item.description} <span className="text-xs">({item.quantity} × {parseFloat(item.unit_price).toFixed(2)}€)</span>
+                </span>
+                <span className="text-white font-medium">
+                  {((item.quantity || 0) * (item.unit_price || 0)).toFixed(2)} €
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Totaux */}
+        <div className="bg-indigo-600/10 border border-indigo-500/30 rounded-lg p-4 space-y-2">
+          <div className="flex justify-between text-sm">
+            <span className="text-gray-300">Sous-total</span>
+            <span className="text-white">{totals.subtotal.toFixed(2)} €</span>
+          </div>
+          {formData.discount_type !== 'none' && totals.discount_amount > 0 && (
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-300">Remise</span>
+              <span className="text-red-400">- {totals.discount_amount.toFixed(2)} €</span>
+            </div>
+          )}
+          <div className="flex justify-between text-sm font-semibold">
+            <span className="text-gray-200">Total HT</span>
+            <span className="text-white">{totals.total_ht.toFixed(2)} €</span>
+          </div>
+          {formData.tva_applicable && (
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-300">TVA ({formData.tva_rate}%)</span>
+              <span className="text-white">{totals.tva_amount.toFixed(2)} €</span>
+            </div>
+          )}
+          <div className="flex justify-between text-lg border-t border-indigo-500/30 pt-2 font-bold">
+            <span className="text-white">Total TTC</span>
+            <span className="text-indigo-300">{totals.total_ttc.toFixed(2)} €</span>
+          </div>
+          {formData.acompte_type !== 'none' && totals.acompte_amount > 0 && (
+            <>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-300">Acompte</span>
+                <span className="text-white">{totals.acompte_amount.toFixed(2)} €</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-300">Reste à payer</span>
+                <span className="text-white font-semibold">{totals.reste_a_payer.toFixed(2)} €</span>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Moyens de paiement */}
+        {formData.payment_methods && formData.payment_methods.length > 0 && (
+          <div className="bg-gray-800/30 border border-gray-700/50 rounded-lg p-4">
+            <h4 className="text-sm font-medium text-gray-300 mb-2">Moyens de paiement acceptés</h4>
+            <div className="flex flex-wrap gap-2">
+              {formData.payment_methods.map(methodId => {
+                const method = paymentMethods.find(m => m.id === methodId);
+                return method ? (
+                  <span key={methodId} className="px-3 py-1 bg-indigo-500/20 text-indigo-300 text-xs rounded-full">
+                    {method.name}
+                  </span>
+                ) : null;
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="p-6 space-y-6 max-w-5xl mx-auto">
+      {/* Header */}
+      <div className="flex justify-between items-center mb-2">
+        <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-300 to-purple-300">
+          {invoice ? 'Modifier la facture' : 'Nouvelle facture'}
+        </h2>
         <button
           type="button"
           onClick={onCancel}
-          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+          className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-colors"
         >
-          Annuler
+          <FiX className="w-5 h-5" />
         </button>
+      </div>
+
+      {/* Stepper */}
+      <Stepper
+        steps={steps}
+        currentStep={currentStep}
+        onStepClick={handleStepClick}
+      />
+
+      {/* Step Content */}
+      <div className="min-h-[400px]">
+        {renderStepContent()}
+      </div>
+
+      {/* Navigation buttons */}
+      <div className="flex justify-between items-center pt-6 border-t border-gray-700">
         <button
-          type="submit"
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
+          type="button"
+          onClick={prevStep}
+          disabled={currentStep === 0}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+            currentStep === 0
+              ? 'bg-gray-700/50 text-gray-500 cursor-not-allowed'
+              : 'bg-gray-700 hover:bg-gray-600 text-white'
+          }`}
         >
-          <FiSave />
-          <span>{invoice ? 'Modifier' : 'Créer'} la facture</span>
+          <FiChevronLeft className="w-4 h-4" />
+          <span>Précédent</span>
         </button>
+
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+          >
+            Annuler
+          </button>
+
+          {currentStep === steps.length - 1 ? (
+            <button
+              type="submit"
+              className="flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-lg transition-all shadow-lg shadow-indigo-500/30"
+            >
+              <FiSave />
+              <span>{invoice ? 'Enregistrer' : 'Créer la facture'}</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={nextStep}
+              className="flex items-center gap-2 px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
+            >
+              <span>Suivant</span>
+              <FiChevronRight className="w-4 h-4" />
+            </button>
+          )}
+        </div>
       </div>
     </form>
   );
