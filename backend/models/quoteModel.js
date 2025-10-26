@@ -348,6 +348,39 @@ const updateSendHistory = (db, id, sentTo) => {
   });
 };
 
+/**
+ * Signer un devis
+ */
+const signQuote = (db, id, signatureData) => {
+  return new Promise((resolve, reject) => {
+    const query = `
+      UPDATE quotes
+      SET
+        signed_at = $1,
+        signed_by = $2,
+        signature_data = $3,
+        status = 'signed',
+        updated_at = NOW()
+      WHERE id = $4
+      RETURNING *
+    `;
+
+    const { signed_by, signature_data } = signatureData;
+    const signed_at = new Date().toISOString();
+
+    db.pool.query(query, [signed_at, signed_by, signature_data, id], (err, result) => {
+      if (err) {
+        console.error('Erreur signature devis:', err);
+        return reject(err);
+      }
+      if (result.rows.length === 0) {
+        return reject(new Error('Devis non trouvé'));
+      }
+      resolve(result.rows[0]);
+    });
+  });
+};
+
 module.exports = {
   generateQuoteNumber,
   getAllQuotes,
@@ -356,5 +389,6 @@ module.exports = {
   updateQuote,
   deleteQuote,
   updateQuoteStatus,
-  updateSendHistory
+  updateSendHistory,
+  signQuote
 };

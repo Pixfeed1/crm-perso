@@ -286,6 +286,65 @@ const quoteController = {
         error: error.message
       });
     }
+  },
+
+  /**
+   * Signer un devis et optionnellement créer une facture
+   * POST /api/quotes/:id/sign
+   */
+  signQuote: async (req, res) => {
+    const db = req.app.locals.db;
+    const { id } = req.params;
+    const { signed_by, signature_data, create_invoice = false } = req.body;
+
+    try {
+      // Valider les données
+      if (!signed_by || !signature_data) {
+        return res.status(400).json({
+          message: 'Le nom du signataire et la signature sont requis'
+        });
+      }
+
+      // Récupérer le devis
+      const quote = await quoteModel.getQuoteById(db, id);
+      if (!quote) {
+        return res.status(404).json({ message: 'Devis non trouvé' });
+      }
+
+      // Vérifier que le devis n'est pas déjà signé
+      if (quote.signed_at) {
+        return res.status(400).json({
+          message: 'Ce devis a déjà été signé',
+          signed_at: quote.signed_at,
+          signed_by: quote.signed_by
+        });
+      }
+
+      // Signer le devis
+      const signedQuote = await quoteModel.signQuote(db, id, {
+        signed_by,
+        signature_data
+      });
+
+      // Créer une facture si demandé
+      let invoice = null;
+      if (create_invoice) {
+        const invoiceModel = require('../models/invoiceModel');
+        invoice = await invoiceModel.createInvoiceFromQuote(db, id);
+      }
+
+      res.status(200).json({
+        message: 'Devis signé avec succès',
+        quote: signedQuote,
+        invoice: invoice || undefined
+      });
+    } catch (error) {
+      console.error('Erreur signature devis:', error);
+      res.status(500).json({
+        message: 'Erreur lors de la signature du devis',
+        error: error.message
+      });
+    }
   }
 };
 
