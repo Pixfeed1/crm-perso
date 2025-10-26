@@ -1,6 +1,6 @@
 // src/components/quotes/QuoteForm.jsx - Version avec Stepper UX
 import React, { useState, useEffect } from 'react';
-import { FiPlus, FiTrash2, FiSave, FiX, FiEdit, FiChevronRight, FiChevronLeft, FiChevronDown, FiChevronUp } from 'react-icons/fi';
+import { FiPlus, FiTrash2, FiSave, FiX, FiEdit, FiChevronRight, FiChevronLeft, FiChevronDown, FiChevronUp, FiUpload } from 'react-icons/fi';
 import { clientsAPI, projectsAPI, tvaRegimesAPI, paymentMethodsAPI } from '../../services/api';
 import FileUpload from '../common/FileUpload';
 import SignaturePad from '../common/SignaturePad';
@@ -31,7 +31,15 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
     tva_applicable: quote?.tva_applicable !== undefined ? quote.tva_applicable : true,
     tva_regime: quote?.tva_regime || 'NORMAL',
     payment_methods: quote?.payment_methods || [],
+    payment_details: quote?.payment_details || {
+      VIREMENT: { iban: '', bic: '', titulaire: '', banque: '' },
+      PAYPAL: { email: '', lien: '' },
+      STRIPE: { lien: '' },
+      CARTE: { instructions: '' }
+    },
     cgv: quote?.cgv || '',
+    cgv_type: quote?.cgv_type || 'text',
+    cgv_pdf: null,
     acompte_type: quote?.acompte_type || 'none',
     acompte_value: quote?.acompte_value || 0,
     escompte_percent: quote?.escompte_percent || 0,
@@ -196,16 +204,44 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
   };
 
   // Gérer les moyens de paiement
-  const handlePaymentMethodToggle = (methodId) => {
+  const handlePaymentMethodToggle = (methodCode) => {
     const current = formData.payment_methods || [];
-    const exists = current.includes(methodId);
+    const exists = current.includes(methodCode);
 
     setFormData({
       ...formData,
       payment_methods: exists
-        ? current.filter(id => id !== methodId)
-        : [...current, methodId]
+        ? current.filter(code => code !== methodCode)
+        : [...current, methodCode]
     });
+  };
+
+  // Gérer les détails de paiement
+  const handlePaymentDetailChange = (methodCode, field, value) => {
+    setFormData({
+      ...formData,
+      payment_details: {
+        ...formData.payment_details,
+        [methodCode]: {
+          ...formData.payment_details[methodCode],
+          [field]: value
+        }
+      }
+    });
+  };
+
+  // Gérer l'upload du PDF CGV
+  const handleCgvPdfUpload = (e) => {
+    const file = e.target.files[0];
+    if (file && file.type === 'application/pdf') {
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Le fichier ne doit pas dépasser 5MB');
+        return;
+      }
+      setFormData({ ...formData, cgv_pdf: file });
+    } else {
+      alert('Veuillez sélectionner un fichier PDF');
+    }
   };
 
   // Validation par étape
@@ -686,19 +722,133 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
       {/* Moyens de paiement */}
       <div className="bg-gray-800/30 border border-gray-700/50 rounded-lg p-4 space-y-4">
         <h4 className="text-md font-medium text-white">Moyens de paiement acceptés</h4>
+
+        {/* Checkboxes */}
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
           {paymentMethods.map(method => (
             <label key={method.id} className="flex items-center gap-2 p-3 bg-gray-700/30 rounded-lg cursor-pointer hover:bg-gray-700/50 transition-colors">
               <input
                 type="checkbox"
-                checked={(formData.payment_methods || []).includes(method.id)}
-                onChange={() => handlePaymentMethodToggle(method.id)}
+                checked={(formData.payment_methods || []).includes(method.code)}
+                onChange={() => handlePaymentMethodToggle(method.code)}
                 className="w-4 h-4 text-indigo-600 bg-gray-800 border-gray-700 rounded focus:ring-indigo-500"
               />
-              <span className="text-sm text-gray-300">{method.name}</span>
+              <span className="text-sm text-gray-300">{method.label}</span>
             </label>
           ))}
         </div>
+
+        {/* Champs conditionnels - Virement */}
+        {(formData.payment_methods || []).includes('VIREMENT') && (
+          <div className="bg-gray-700/30 rounded-lg p-4 space-y-3">
+            <h5 className="text-sm font-medium text-indigo-300">Informations Virement Bancaire</h5>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">IBAN *</label>
+                <input
+                  type="text"
+                  value={formData.payment_details?.VIREMENT?.iban || ''}
+                  onChange={(e) => handlePaymentDetailChange('VIREMENT', 'iban', e.target.value)}
+                  placeholder="FR76 1234 5678 9012 3456 7890 123"
+                  className="w-full px-3 py-2 bg-gray-800/50 border border-gray-700 rounded text-white text-sm focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">BIC</label>
+                <input
+                  type="text"
+                  value={formData.payment_details?.VIREMENT?.bic || ''}
+                  onChange={(e) => handlePaymentDetailChange('VIREMENT', 'bic', e.target.value)}
+                  placeholder="BNPAFRPPXXX"
+                  className="w-full px-3 py-2 bg-gray-800/50 border border-gray-700 rounded text-white text-sm focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Titulaire du compte *</label>
+                <input
+                  type="text"
+                  value={formData.payment_details?.VIREMENT?.titulaire || ''}
+                  onChange={(e) => handlePaymentDetailChange('VIREMENT', 'titulaire', e.target.value)}
+                  placeholder="Nom de l'entreprise"
+                  className="w-full px-3 py-2 bg-gray-800/50 border border-gray-700 rounded text-white text-sm focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Banque</label>
+                <input
+                  type="text"
+                  value={formData.payment_details?.VIREMENT?.banque || ''}
+                  onChange={(e) => handlePaymentDetailChange('VIREMENT', 'banque', e.target.value)}
+                  placeholder="BNP Paribas"
+                  className="w-full px-3 py-2 bg-gray-800/50 border border-gray-700 rounded text-white text-sm focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Champs conditionnels - PayPal */}
+        {(formData.payment_methods || []).includes('PAYPAL') && (
+          <div className="bg-gray-700/30 rounded-lg p-4 space-y-3">
+            <h5 className="text-sm font-medium text-indigo-300">Informations PayPal</h5>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Email PayPal *</label>
+                <input
+                  type="email"
+                  value={formData.payment_details?.PAYPAL?.email || ''}
+                  onChange={(e) => handlePaymentDetailChange('PAYPAL', 'email', e.target.value)}
+                  placeholder="votre@email.com"
+                  className="w-full px-3 py-2 bg-gray-800/50 border border-gray-700 rounded text-white text-sm focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Lien de paiement PayPal</label>
+                <input
+                  type="url"
+                  value={formData.payment_details?.PAYPAL?.lien || ''}
+                  onChange={(e) => handlePaymentDetailChange('PAYPAL', 'lien', e.target.value)}
+                  placeholder="https://paypal.me/votrecompte"
+                  className="w-full px-3 py-2 bg-gray-800/50 border border-gray-700 rounded text-white text-sm focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Champs conditionnels - Stripe */}
+        {(formData.payment_methods || []).includes('STRIPE') && (
+          <div className="bg-gray-700/30 rounded-lg p-4 space-y-3">
+            <h5 className="text-sm font-medium text-indigo-300">Informations Stripe</h5>
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Lien de paiement Stripe *</label>
+              <input
+                type="url"
+                value={formData.payment_details?.STRIPE?.lien || ''}
+                onChange={(e) => handlePaymentDetailChange('STRIPE', 'lien', e.target.value)}
+                placeholder="https://buy.stripe.com/..."
+                className="w-full px-3 py-2 bg-gray-800/50 border border-gray-700 rounded text-white text-sm focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Champs conditionnels - Carte */}
+        {(formData.payment_methods || []).includes('CARTE') && (
+          <div className="bg-gray-700/30 rounded-lg p-4 space-y-3">
+            <h5 className="text-sm font-medium text-indigo-300">Informations Carte Bancaire</h5>
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Instructions</label>
+              <textarea
+                value={formData.payment_details?.CARTE?.instructions || ''}
+                onChange={(e) => handlePaymentDetailChange('CARTE', 'instructions', e.target.value)}
+                placeholder="Ex: Paiement sur place ou lien TPE..."
+                rows="2"
+                className="w-full px-3 py-2 bg-gray-800/50 border border-gray-700 rounded text-white text-sm focus:outline-none focus:border-indigo-500 resize-none"
+              />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -721,17 +871,84 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
       )}
 
       {/* CGV */}
-      <div>
-        <label className="block text-sm font-medium text-gray-300 mb-1">
-          Conditions Générales de Vente (CGV)
-        </label>
-        <textarea
-          value={formData.cgv}
-          onChange={(e) => setFormData({ ...formData, cgv: e.target.value })}
-          rows={5}
-          placeholder="Vos conditions générales de vente..."
-          className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500 text-sm"
-        />
+      <div className="bg-gray-800/30 border border-gray-700/50 rounded-lg p-4 space-y-4">
+        <h4 className="text-md font-medium text-white">Conditions Générales de Vente (CGV)</h4>
+
+        {/* Toggle : Texte ou PDF */}
+        <div className="flex gap-4 items-center">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="radio"
+              name="cgv_type"
+              value="text"
+              checked={formData.cgv_type === 'text' || !formData.cgv_type}
+              onChange={(e) => setFormData({ ...formData, cgv_type: e.target.value })}
+              className="w-4 h-4 text-indigo-600"
+            />
+            <span className="text-sm text-gray-300">Saisir le texte</span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="radio"
+              name="cgv_type"
+              value="pdf"
+              checked={formData.cgv_type === 'pdf'}
+              onChange={(e) => setFormData({ ...formData, cgv_type: e.target.value })}
+              className="w-4 h-4 text-indigo-600"
+            />
+            <span className="text-sm text-gray-300">Uploader un PDF</span>
+          </label>
+        </div>
+
+        {/* Textarea pour texte */}
+        {(!formData.cgv_type || formData.cgv_type === 'text') && (
+          <div>
+            <textarea
+              value={formData.cgv}
+              onChange={(e) => setFormData({ ...formData, cgv: e.target.value })}
+              rows={8}
+              className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500 resize-none text-sm"
+              placeholder="Vos conditions générales de vente..."
+            />
+          </div>
+        )}
+
+        {/* Upload PDF */}
+        {formData.cgv_type === 'pdf' && (
+          <div className="border-2 border-dashed border-gray-600 rounded-lg p-6">
+            <input
+              type="file"
+              id="cgv-pdf-upload"
+              accept=".pdf"
+              onChange={handleCgvPdfUpload}
+              className="hidden"
+            />
+            <label
+              htmlFor="cgv-pdf-upload"
+              className="cursor-pointer flex flex-col items-center"
+            >
+              <FiUpload className="w-10 h-10 text-gray-400 mb-2" />
+              <p className="text-gray-300 font-medium">Cliquez pour sélectionner un fichier PDF</p>
+              <p className="text-sm text-gray-500 mt-1">Format accepté : PDF uniquement (max 5MB)</p>
+            </label>
+
+            {formData.cgv_pdf && (
+              <div className="mt-4 flex items-center justify-between p-3 bg-gray-700/30 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl">📄</span>
+                  <span className="text-sm text-white">{formData.cgv_pdf.name}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, cgv_pdf: null })}
+                  className="text-red-400 hover:text-red-300"
+                >
+                  <FiTrash2 />
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Informations complémentaires */}
