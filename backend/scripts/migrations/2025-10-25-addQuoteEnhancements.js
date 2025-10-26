@@ -66,6 +66,26 @@ async function runMigration() {
       console.log('  ✓ Table projects créée');
     } else {
       console.log('  ✓ Table projects existe déjà');
+
+      // Vérifier si la colonne client_id existe, sinon l'ajouter
+      const clientIdExists = await client.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.columns
+          WHERE table_name = 'projects'
+          AND column_name = 'client_id'
+        );
+      `);
+
+      if (!clientIdExists.rows[0].exists) {
+        console.log('  → Ajout de la colonne client_id...');
+        await client.query(`ALTER TABLE projects ADD COLUMN client_id INTEGER;`);
+        await client.query(`
+          ALTER TABLE projects
+          ADD CONSTRAINT fk_projects_client
+          FOREIGN KEY (client_id) REFERENCES crm_clients(id) ON DELETE SET NULL;
+        `);
+        console.log('  ✓ Colonne client_id ajoutée');
+      }
     }
 
     // Créer les index seulement s'ils n'existent pas
