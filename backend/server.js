@@ -112,6 +112,8 @@ app.use('/api/sirene', require('./routes/sireneRoutes'));
 app.use('/api/quotes', require('./routes/quoteRoutes'));
 app.use('/api/invoices', require('./routes/invoiceRoutes'));
 app.use('/api/settings', require('./routes/settingsRoutes'));
+app.use('/api/tva-regimes', require('./routes/tvaRegimeRoutes'));
+app.use('/api/payment-methods', require('./routes/paymentMethodRoutes'));
 
 // 2. Servir les fichiers statiques du dossier public
 app.use(express.static(publicPath));
