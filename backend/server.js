@@ -95,6 +95,9 @@ app.get('/api/debug', (req, res) => {
 });
 
 // 1. Routes d'API - /api/*
+// Routes publiques (AVANT authMiddleware)
+app.use('/api/public', require('./routes/publicRoutes'));
+
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/activities', require('./routes/activitiesRoutes'));
 app.use('/api/leads', require('./routes/leadsRoutes'));
