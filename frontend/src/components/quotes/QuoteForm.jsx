@@ -192,13 +192,14 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
   // Gérer le changement de régime TVA
   const handleTvaRegimeChange = (e) => {
     const regimeCode = e.target.value;
-    const regime = tvaRegimes.find(r => r.code === regimeCode);
+    const regime = tvaRegimes.regimes?.find(r => r.code === regimeCode) ||
+                   tvaRegimes.find(r => r.code === regimeCode);
     if (regime) {
       setFormData({
         ...formData,
         tva_regime: regimeCode,
-        tva_rate: regime.rate,
-        tva_applicable: regime.rate > 0
+        tva_rate: regime.taux || 0,
+        tva_applicable: regime.calcul_type === 'normal' || regime.calcul_type === 'marge'
       });
     }
   };
@@ -554,7 +555,7 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
         <div className="bg-gray-800/30 border border-gray-700/50 rounded-lg p-4 space-y-4">
           <h4 className="text-md font-medium text-white">TVA</h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
+            <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-300 mb-1">
                 Régime TVA
               </label>
@@ -563,12 +564,90 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
                 onChange={handleTvaRegimeChange}
                 className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
               >
-                {tvaRegimes.map(regime => (
+                {tvaRegimes.grouped && (
+                  <>
+                    <optgroup label="Taux normal et réduits">
+                      {tvaRegimes.grouped.taux_normal?.map(regime => (
+                        <option key={regime.code} value={regime.code}>
+                          {regime.label}
+                        </option>
+                      ))}
+                      {tvaRegimes.grouped.taux_reduit?.map(regime => (
+                        <option key={regime.code} value={regime.code}>
+                          {regime.label}
+                        </option>
+                      ))}
+                    </optgroup>
+
+                    {tvaRegimes.grouped.taux_reduit_specifique?.length > 0 && (
+                      <optgroup label="Taux réduits spécifiques">
+                        {tvaRegimes.grouped.taux_reduit_specifique.map(regime => (
+                          <option key={regime.code} value={regime.code}>
+                            {regime.label}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+
+                    {tvaRegimes.grouped.non_application?.length > 0 && (
+                      <optgroup label="Non-application de TVA">
+                        {tvaRegimes.grouped.non_application.map(regime => (
+                          <option key={regime.code} value={regime.code}>
+                            {regime.label}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+
+                    {tvaRegimes.grouped.exoneration?.length > 0 && (
+                      <optgroup label="Exonération de TVA">
+                        {tvaRegimes.grouped.exoneration.map(regime => (
+                          <option key={regime.code} value={regime.code}>
+                            {regime.label}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+
+                    {tvaRegimes.grouped.autoliquidation?.length > 0 && (
+                      <optgroup label="Autoliquidation de TVA">
+                        {tvaRegimes.grouped.autoliquidation.map(regime => (
+                          <option key={regime.code} value={regime.code}>
+                            {regime.label}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+
+                    {tvaRegimes.grouped.regime_particulier?.length > 0 && (
+                      <optgroup label="Régimes particuliers">
+                        {tvaRegimes.grouped.regime_particulier.map(regime => (
+                          <option key={regime.code} value={regime.code}>
+                            {regime.label}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+                  </>
+                )}
+
+                {!tvaRegimes.grouped && tvaRegimes.length > 0 && tvaRegimes.map(regime => (
                   <option key={regime.code} value={regime.code}>
-                    {regime.name} ({regime.rate}%)
+                    {regime.label}
                   </option>
                 ))}
               </select>
+
+              {/* Afficher la mention légale si elle existe */}
+              {formData.tva_regime && (() => {
+                const currentRegime = tvaRegimes.regimes?.find(r => r.code === formData.tva_regime) ||
+                                    tvaRegimes.find(r => r.code === formData.tva_regime);
+                return currentRegime?.mention_legale && (
+                  <p className="text-xs text-gray-400 mt-1 italic">
+                    Mention légale : {currentRegime.mention_legale}
+                  </p>
+                );
+              })()}
             </div>
 
             {formData.tva_applicable && (
