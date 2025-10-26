@@ -2,12 +2,14 @@
 import React, { useState, useEffect } from 'react';
 import { FiPlus, FiTrash2, FiSave, FiX } from 'react-icons/fi';
 import { clientsAPI, projectsAPI, tvaRegimesAPI, paymentMethodsAPI } from '../../services/api';
+import FileUpload from '../common/FileUpload';
 
 const QuoteForm = ({ quote = null, onSave, onCancel }) => {
   const [clients, setClients] = useState([]);
   const [projects, setProjects] = useState([]);
   const [tvaRegimes, setTvaRegimes] = useState([]);
   const [paymentMethods, setPaymentMethods] = useState([]);
+  const [uploadedFiles, setUploadedFiles] = useState([]);
   const [formData, setFormData] = useState({
     title: quote?.title || '',
     client_id: quote?.client_id || '',
@@ -53,6 +55,41 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
     };
     fetchData();
   }, []);
+
+  // Charger les fichiers du quote
+  useEffect(() => {
+    if (quote && quote.additional_files) {
+      try {
+        const files = typeof quote.additional_files === 'string'
+          ? JSON.parse(quote.additional_files)
+          : quote.additional_files;
+        setUploadedFiles(files || []);
+      } catch (e) {
+        setUploadedFiles([]);
+      }
+    }
+  }, [quote]);
+
+  // Recharger les fichiers après upload/suppression
+  const handleFilesUpdated = async () => {
+    if (quote && quote.id) {
+      try {
+        // Recharger le quote pour avoir les fichiers à jour
+        const response = await fetch(`http://localhost:5000/api/quotes/${quote.id}`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        const updatedQuote = await response.json();
+        const files = typeof updatedQuote.additional_files === 'string'
+          ? JSON.parse(updatedQuote.additional_files)
+          : (updatedQuote.additional_files || []);
+        setUploadedFiles(files);
+      } catch (error) {
+        console.error('Erreur rechargement fichiers:', error);
+      }
+    }
+  };
 
   // Sélection d'un client
   const handleClientChange = (e) => {
@@ -603,6 +640,19 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
           />
         </div>
       </div>
+
+      {/* Pièces jointes */}
+      {quote && quote.id && (
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold text-white">Pièces jointes</h3>
+          <FileUpload
+            entityType="quote"
+            entityId={quote.id}
+            existingFiles={uploadedFiles}
+            onFilesUpdated={handleFilesUpdated}
+          />
+        </div>
+      )}
 
       {/* Totaux */}
       <div className="bg-indigo-600/10 border border-indigo-500/30 rounded-lg p-4 space-y-2">

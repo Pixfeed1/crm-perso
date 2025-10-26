@@ -114,6 +114,10 @@ app.use('/api/invoices', require('./routes/invoiceRoutes'));
 app.use('/api/settings', require('./routes/settingsRoutes'));
 app.use('/api/tva-regimes', require('./routes/tvaRegimeRoutes'));
 app.use('/api/payment-methods', require('./routes/paymentMethodRoutes'));
+app.use('/api/upload', require('./routes/uploadRoutes'));
+
+// Servir les fichiers uploadés en statique (protégés par auth si nécessaire)
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // 2. Servir les fichiers statiques du dossier public
 app.use(express.static(publicPath));

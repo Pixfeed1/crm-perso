@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { FiPlus, FiTrash2, FiSave, FiX } from 'react-icons/fi';
 import { clientsAPI, projectsAPI, tvaRegimesAPI, paymentMethodsAPI } from '../../services/api';
 import { quotesAPI } from '../../services/quotesAPI';
+import FileUpload from '../common/FileUpload';
 
 const InvoiceForm = ({ invoice = null, onSave, onCancel }) => {
   const [clients, setClients] = useState([]);
@@ -10,6 +11,7 @@ const InvoiceForm = ({ invoice = null, onSave, onCancel }) => {
   const [projects, setProjects] = useState([]);
   const [tvaRegimes, setTvaRegimes] = useState([]);
   const [paymentMethods, setPaymentMethods] = useState([]);
+  const [uploadedFiles, setUploadedFiles] = useState([]);
   const [formData, setFormData] = useState({
     title: invoice?.title || '',
     quote_id: invoice?.quote_id || '',
@@ -59,6 +61,41 @@ const InvoiceForm = ({ invoice = null, onSave, onCancel }) => {
     };
     fetchData();
   }, []);
+
+  // Charger les fichiers de la facture
+  useEffect(() => {
+    if (invoice && invoice.additional_files) {
+      try {
+        const files = typeof invoice.additional_files === 'string'
+          ? JSON.parse(invoice.additional_files)
+          : invoice.additional_files;
+        setUploadedFiles(files || []);
+      } catch (e) {
+        setUploadedFiles([]);
+      }
+    }
+  }, [invoice]);
+
+  // Recharger les fichiers après upload/suppression
+  const handleFilesUpdated = async () => {
+    if (invoice && invoice.id) {
+      try {
+        // Recharger la facture pour avoir les fichiers à jour
+        const response = await fetch(`http://localhost:5000/api/invoices/${invoice.id}`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        const updatedInvoice = await response.json();
+        const files = typeof updatedInvoice.additional_files === 'string'
+          ? JSON.parse(updatedInvoice.additional_files)
+          : (updatedInvoice.additional_files || []);
+        setUploadedFiles(files);
+      } catch (error) {
+        console.error('Erreur rechargement fichiers:', error);
+      }
+    }
+  };
 
   // Sélection d'un devis (pré-remplissage)
   const handleQuoteChange = async (e) => {
@@ -691,6 +728,19 @@ const InvoiceForm = ({ invoice = null, onSave, onCancel }) => {
           />
         </div>
       </div>
+
+      {/* Pièces jointes */}
+      {invoice && invoice.id && (
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold text-white">Pièces jointes</h3>
+          <FileUpload
+            entityType="invoice"
+            entityId={invoice.id}
+            existingFiles={uploadedFiles}
+            onFilesUpdated={handleFilesUpdated}
+          />
+        </div>
+      )}
 
       {/* Totaux */}
       <div className="bg-indigo-600/10 border border-indigo-500/30 rounded-lg p-4 space-y-2">
