@@ -211,6 +211,60 @@ const LeadDetails = ({ lead, onUpdate, onDelete, onAddContact, onUpdateContact, 
     }
   };
 
+  // Créer un client particulier depuis un contact
+  const handleCreateClient = async (result) => {
+    try {
+      toast.success('Client créé et lié au contact avec succès !');
+      // Recharger les contacts pour afficher le nouveau lien
+      if (onUpdate) {
+        await onUpdate({});
+      }
+    } catch (error) {
+      console.error('Erreur lors de la création du client:', error);
+      toast.error('Échec de la création du client');
+    }
+  };
+
+  // Lier un contact à un client existant
+  const handleLinkClient = async (result) => {
+    try {
+      toast.success('Contact lié au client avec succès !');
+      // Recharger les contacts pour afficher le nouveau lien
+      if (onUpdate) {
+        await onUpdate({});
+      }
+    } catch (error) {
+      console.error('Erreur lors de la liaison:', error);
+      toast.error('Échec de la liaison');
+    }
+  };
+
+  // Délier un contact de son client
+  const handleUnlinkClient = async (contactId) => {
+    const confirmed = await confirm({
+      title: "Délier le contact du client ?",
+      message: "Le contact ne sera plus associé à son profil client particulier. Le client ne sera pas supprimé.",
+      confirmText: "Délier",
+      cancelText: "Annuler",
+      variant: "warning"
+    });
+
+    if (!confirmed) return;
+
+    try {
+      await leadsAPI.unlinkContactFromClient(lead.id, contactId);
+      toast.success('Contact délié du client avec succès !');
+
+      // Recharger les contacts
+      if (onUpdate) {
+        await onUpdate({});
+      }
+    } catch (error) {
+      console.error('Erreur lors du déliaison:', error);
+      toast.error(error.response?.data?.message || 'Échec du déliaison');
+    }
+  };
+
   return (
     <div>
       {/* En-tête avec actions */}
@@ -378,8 +432,12 @@ const LeadDetails = ({ lead, onUpdate, onDelete, onAddContact, onUpdateContact, 
               <ContactList
                 contacts={lead.contacts || []}
                 leadType={lead.type}
+                leadId={lead.id}
                 onUpdateContact={onUpdateContact}
                 onDeleteContact={onDeleteContact}
+                onCreateClient={handleCreateClient}
+                onLinkClient={handleLinkClient}
+                onUnlinkClient={handleUnlinkClient}
               />
             </motion.div>
           )}

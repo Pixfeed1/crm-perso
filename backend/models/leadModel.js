@@ -37,8 +37,21 @@ const getLeadById = (db, id) => {
         return resolve(null);
       }
 
-      // Récupérer les contacts associés
-      db.all('SELECT * FROM contacts WHERE lead_id = ? ORDER BY name', [id], (contactErr, contacts) => {
+      // Récupérer les contacts associés avec leurs informations de client
+      const contactsQuery = `
+        SELECT
+          c.*,
+          cl.id as client_id,
+          cl.name as client_name,
+          cl.status as client_status,
+          cl.type as client_type
+        FROM contacts c
+        LEFT JOIN crm_clients cl ON c.client_id = cl.id
+        WHERE c.lead_id = ?
+        ORDER BY c.name
+      `;
+
+      db.all(contactsQuery, [id], (contactErr, contacts) => {
         if (contactErr) {
           console.error('[LeadModel] Erreur lors de la récupération des contacts:', contactErr);
           lead.contacts = [];
@@ -187,11 +200,22 @@ const deleteLead = (db, id) => {
 };
 
 /**
- * Récupère tous les contacts d'un lead
+ * Récupère tous les contacts d'un lead avec leurs informations de client si liés
  */
 const getLeadContacts = (db, leadId) => {
   return new Promise((resolve, reject) => {
-    const query = 'SELECT * FROM contacts WHERE lead_id = ? ORDER BY name';
+    const query = `
+      SELECT
+        c.*,
+        cl.id as client_id,
+        cl.name as client_name,
+        cl.status as client_status,
+        cl.type as client_type
+      FROM contacts c
+      LEFT JOIN crm_clients cl ON c.client_id = cl.id
+      WHERE c.lead_id = ?
+      ORDER BY c.name
+    `;
 
     db.all(query, [leadId], (err, contacts) => {
       if (err) {
@@ -476,6 +500,194 @@ const getKanbanStats = (db) => {
   });
 };
 
+/**
+ * Lie un contact existant à un client existant
+ * Permet à un contact (personne dans une entreprise) d'avoir aussi un profil client particulier
+ */
+const linkContactToClient = (db, contactId, clientId) => {
+  return new Promise((resolve, reject) => {
+    // Vérifier que le client existe
+    db.get('SELECT * FROM crm_clients WHERE id = ?', [clientId], (err, client) => {
+      if (err) {
+        console.error('[LeadModel] Erreur lors de la vérification du client:', err);
+        return reject(err);
+      }
+
+      if (!client) {
+        return reject(new Error('Client introuvable'));
+      }
+
+      // Mettre à jour le contact
+      db.run(
+        'UPDATE contacts SET client_id = ? WHERE id = ?',
+        [clientId, contactId],
+        function(err) {
+          if (err) {
+            console.error('[LeadModel] Erreur lors de la liaison contact-client:', err);
+            reject(err);
+          } else {
+            // Récupérer le contact mis à jour avec les infos du client
+            db.get(
+              `SELECT c.*, cl.name as client_name, cl.status as client_status
+               FROM contacts c
+               LEFT JOIN crm_clients cl ON c.client_id = cl.id
+               WHERE c.id = ?`,
+              [contactId],
+              (err, contact) => {
+                if (err) {
+                  console.error('[LeadModel] Erreur lors de la récupération du contact:', err);
+                  reject(err);
+                } else {
+                  resolve(contact);
+                }
+              }
+            );
+          }
+        }
+      );
+    });
+  });
+};
+
+/**
+ * Crée un nouveau client à partir d'un contact existant
+ * Pré-remplit les informations du client avec celles du contact
+ */
+const createClientFromContact = (db, contactId, additionalData = {}) => {
+  return new Promise((resolve, reject) => {
+    // Récupérer le contact
+    db.get('SELECT * FROM contacts WHERE id = ?', [contactId], (err, contact) => {
+      if (err) {
+        console.error('[LeadModel] Erreur lors de la récupération du contact:', err);
+        return reject(err);
+      }
+
+      if (!contact) {
+        return reject(new Error('Contact introuvable'));
+      }
+
+      // Créer le client avec les données du contact
+      const now = new Date().toISOString();
+      const query = `
+        INSERT INTO crm_clients (
+          name, email, phone, type, status, notes, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `;
+
+      const clientData = {
+        name: additionalData.name || contact.name,
+        email: additionalData.email || contact.email,
+        phone: additionalData.phone || contact.phone,
+        type: 'individual', // Un contact devient toujours un client particulier
+        status: 'active',
+        notes: additionalData.notes || `Créé depuis le contact: ${contact.name}${contact.position ? ' (' + contact.position + ')' : ''}`
+      };
+
+      db.run(
+        query,
+        [clientData.name, clientData.email, clientData.phone, clientData.type, clientData.status, clientData.notes, now, now],
+        function(err) {
+          if (err) {
+            console.error('[LeadModel] Erreur lors de la création du client:', err);
+            return reject(err);
+          }
+
+          const newClientId = this.lastID;
+
+          // Lier le contact au nouveau client
+          db.run(
+            'UPDATE contacts SET client_id = ? WHERE id = ?',
+            [newClientId, contactId],
+            (err) => {
+              if (err) {
+                console.error('[LeadModel] Erreur lors de la liaison contact-client:', err);
+                return reject(err);
+              }
+
+              // Récupérer le client créé avec le contact lié
+              db.get(
+                `SELECT c.*, cl.name as client_name, cl.status as client_status
+                 FROM contacts c
+                 LEFT JOIN crm_clients cl ON c.client_id = cl.id
+                 WHERE c.id = ?`,
+                [contactId],
+                (err, updatedContact) => {
+                  if (err) {
+                    console.error('[LeadModel] Erreur lors de la récupération du contact:', err);
+                    reject(err);
+                  } else {
+                    resolve({
+                      contact: updatedContact,
+                      client_id: newClientId
+                    });
+                  }
+                }
+              );
+            }
+          );
+        }
+      );
+    });
+  });
+};
+
+/**
+ * Délie un contact de son client
+ */
+const unlinkContactFromClient = (db, contactId) => {
+  return new Promise((resolve, reject) => {
+    db.run(
+      'UPDATE contacts SET client_id = NULL WHERE id = ?',
+      [contactId],
+      function(err) {
+        if (err) {
+          console.error('[LeadModel] Erreur lors du déliaison contact-client:', err);
+          reject(err);
+        } else {
+          db.get('SELECT * FROM contacts WHERE id = ?', [contactId], (err, contact) => {
+            if (err) {
+              console.error('[LeadModel] Erreur lors de la récupération du contact:', err);
+              reject(err);
+            } else {
+              resolve(contact);
+            }
+          });
+        }
+      }
+    );
+  });
+};
+
+/**
+ * Récupère un contact avec les informations de son client associé
+ */
+const getContactWithClient = (db, contactId) => {
+  return new Promise((resolve, reject) => {
+    const query = `
+      SELECT
+        c.*,
+        cl.id as client_id,
+        cl.name as client_name,
+        cl.email as client_email,
+        cl.phone as client_phone,
+        cl.status as client_status,
+        cl.lifetime_value as client_lifetime_value
+      FROM contacts c
+      LEFT JOIN crm_clients cl ON c.client_id = cl.id
+      WHERE c.id = ?
+    `;
+
+    db.get(query, [contactId], (err, contact) => {
+      if (err) {
+        console.error('[LeadModel] Erreur lors de la récupération du contact avec client:', err);
+        reject(err);
+      } else {
+        resolve(contact);
+      }
+    });
+  });
+};
+
 module.exports = {
   getAllLeads,
   getLeadById,
@@ -487,5 +699,9 @@ module.exports = {
   updateContact,
   deleteContact,
   checkContactExists,
-  getKanbanStats
+  getKanbanStats,
+  linkContactToClient,
+  createClientFromContact,
+  unlinkContactFromClient,
+  getContactWithClient
 };

@@ -220,4 +220,102 @@ router.delete('/:leadId/contacts/:contactId', async (req, res) => {
   }
 });
 
+// ========================================
+// Routes de liaison Contact <-> Client
+// ========================================
+
+// Lier un contact existant à un client existant
+router.post('/:leadId/contacts/:contactId/link-client', async (req, res) => {
+  const db = req.app.locals.db;
+  const { leadId, contactId } = req.params;
+  const { clientId } = req.body;
+
+  try {
+    // Vérifier si le contact existe et appartient au lead
+    const existingContact = await leadModel.checkContactExists(db, contactId, leadId);
+    if (!existingContact) {
+      return res.status(404).json({ message: 'Contact non trouvé' });
+    }
+
+    if (!clientId) {
+      return res.status(400).json({ message: 'ID du client requis' });
+    }
+
+    const updatedContact = await leadModel.linkContactToClient(db, contactId, clientId);
+    res.json({
+      message: 'Contact lié au client avec succès',
+      contact: updatedContact
+    });
+  } catch (error) {
+    console.error('Erreur lors de la liaison contact-client:', error);
+    res.status(500).json({
+      message: error.message || 'Erreur serveur'
+    });
+  }
+});
+
+// Créer un nouveau client particulier depuis un contact
+router.post('/:leadId/contacts/:contactId/create-client', async (req, res) => {
+  const db = req.app.locals.db;
+  const { leadId, contactId } = req.params;
+  const additionalData = req.body || {};
+
+  try {
+    // Vérifier si le contact existe et appartient au lead
+    const existingContact = await leadModel.checkContactExists(db, contactId, leadId);
+    if (!existingContact) {
+      return res.status(404).json({ message: 'Contact non trouvé' });
+    }
+
+    // Vérifier si le contact n'est pas déjà lié à un client
+    if (existingContact.client_id) {
+      return res.status(400).json({
+        message: 'Ce contact est déjà lié à un client',
+        client_id: existingContact.client_id
+      });
+    }
+
+    const result = await leadModel.createClientFromContact(db, contactId, additionalData);
+    res.status(201).json({
+      message: 'Client créé et lié au contact avec succès',
+      contact: result.contact,
+      client_id: result.client_id
+    });
+  } catch (error) {
+    console.error('Erreur lors de la création du client depuis le contact:', error);
+    res.status(500).json({
+      message: error.message || 'Erreur serveur'
+    });
+  }
+});
+
+// Délier un contact de son client
+router.delete('/:leadId/contacts/:contactId/unlink-client', async (req, res) => {
+  const db = req.app.locals.db;
+  const { leadId, contactId } = req.params;
+
+  try {
+    // Vérifier si le contact existe et appartient au lead
+    const existingContact = await leadModel.checkContactExists(db, contactId, leadId);
+    if (!existingContact) {
+      return res.status(404).json({ message: 'Contact non trouvé' });
+    }
+
+    if (!existingContact.client_id) {
+      return res.status(400).json({ message: 'Ce contact n\'est pas lié à un client' });
+    }
+
+    const updatedContact = await leadModel.unlinkContactFromClient(db, contactId);
+    res.json({
+      message: 'Contact délié du client avec succès',
+      contact: updatedContact
+    });
+  } catch (error) {
+    console.error('Erreur lors du déliaison contact-client:', error);
+    res.status(500).json({
+      message: error.message || 'Erreur serveur'
+    });
+  }
+});
+
 module.exports = router;

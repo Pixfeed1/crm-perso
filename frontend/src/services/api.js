@@ -201,6 +201,19 @@ export const leadsAPI = {
     console.log(`Appel API: suppression du contact ID ${contactId} du lead ID ${leadId}`);
     return apiRequest(`/leads/${leadId}/contacts/${contactId}`, 'DELETE');
   },
+  // Liaison contact-client
+  createClientFromContact: (leadId, contactId, data) => {
+    console.log(`Appel API: création d'un client depuis le contact ID ${contactId} du lead ID ${leadId}`, data);
+    return apiRequest(`/leads/${leadId}/contacts/${contactId}/create-client`, 'POST', data);
+  },
+  linkContactToClient: (leadId, contactId, clientId) => {
+    console.log(`Appel API: liaison du contact ID ${contactId} au client ID ${clientId}`);
+    return apiRequest(`/leads/${leadId}/contacts/${contactId}/link-client`, 'POST', { clientId });
+  },
+  unlinkContactFromClient: (leadId, contactId) => {
+    console.log(`Appel API: déliaison du contact ID ${contactId} de son client`);
+    return apiRequest(`/leads/${leadId}/contacts/${contactId}/unlink-client`, 'DELETE');
+  },
   // Interactions
   getInteractions: (leadId) => {
     console.log(`Appel API: récupération des interactions du lead ID ${leadId}`);

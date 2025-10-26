@@ -1,13 +1,26 @@
 // src/components/leads/ContactList.jsx
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiUser, FiMail, FiPhone, FiFileText, FiChevronDown, FiEdit2, FiTrash2 } from 'react-icons/fi';
+import { FiUser, FiMail, FiPhone, FiFileText, FiChevronDown, FiEdit2, FiTrash2, FiUserCheck, FiLink, FiExternalLink, FiX } from 'react-icons/fi';
+import { useNavigate } from 'react-router-dom';
 import ContactForm from './ContactForm';
+import ContactClientModal from './ContactClientModal';
 
-const ContactList = ({ contacts = [], leadType, onUpdateContact, onDeleteContact }) => {
+const ContactList = ({
+  contacts = [],
+  leadType,
+  leadId,
+  onUpdateContact,
+  onDeleteContact,
+  onCreateClient,
+  onLinkClient,
+  onUnlinkClient
+}) => {
+  const navigate = useNavigate();
   const [expandedContact, setExpandedContact] = useState(null);
   const [editingContact, setEditingContact] = useState(null);
   const [deletingContact, setDeletingContact] = useState(null);
+  const [clientModalContact, setClientModalContact] = useState(null);
 
   // Bascule de l'expansion d'un contact
   const toggleExpand = (contactId) => {
@@ -65,7 +78,22 @@ const ContactList = ({ contacts = [], leadType, onUpdateContact, onDeleteContact
                   {contact.name.charAt(0)}
                 </div>
                 <div className="ml-2 sm:ml-3 min-w-0 flex-1">
-                  <h4 className="font-medium text-gray-200 text-sm sm:text-base truncate">{contact.name}</h4>
+                  <div className="flex items-center gap-2">
+                    <h4 className="font-medium text-gray-200 text-sm sm:text-base truncate">{contact.name}</h4>
+                    {contact.client_id && (
+                      <span
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-xs font-medium"
+                        title="Ce contact est aussi client particulier"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/clients?id=${contact.client_id}`);
+                        }}
+                      >
+                        <FiUserCheck className="text-xs" />
+                        Client
+                      </span>
+                    )}
+                  </div>
                   {contact.position && (
                     <p className="text-xs sm:text-sm text-indigo-300 truncate">{contact.position}</p>
                   )}
@@ -141,32 +169,95 @@ const ContactList = ({ contacts = [], leadType, onUpdateContact, onDeleteContact
                       </div>
                     )}
 
+                    {/* Statut Client */}
+                    {contact.client_id && (
+                      <div className="bg-emerald-900/20 border border-emerald-500/30 rounded-lg p-3">
+                        <div className="flex items-center gap-2 mb-2">
+                          <FiUserCheck className="text-emerald-400" />
+                          <span className="text-sm font-medium text-emerald-300">Client particulier</span>
+                        </div>
+                        <p className="text-xs text-gray-400">
+                          Ce contact a aussi un profil client pour ses besoins personnels
+                        </p>
+                      </div>
+                    )}
+
                     {/* Actions */}
-                    <div className="flex flex-col sm:flex-row justify-end gap-2 mt-2 pt-2 border-t border-gray-700/30">
-                      <motion.button
-                        className="text-xs sm:text-sm text-indigo-300 hover:text-indigo-200 px-3 py-1.5 sm:py-1 rounded-lg hover:bg-indigo-900/30 flex items-center justify-center gap-1"
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setEditingContact(contact);
-                        }}
-                      >
-                        <FiEdit2 className="text-xs" />
-                        Éditer
-                      </motion.button>
-                      <motion.button
-                        className="text-xs sm:text-sm text-rose-300 hover:text-rose-200 px-3 py-1.5 sm:py-1 rounded-lg hover:bg-rose-900/30 flex items-center justify-center gap-1"
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDeletingContact(contact);
-                        }}
-                      >
-                        <FiTrash2 className="text-xs" />
-                        Supprimer
-                      </motion.button>
+                    <div className="flex flex-col sm:flex-row justify-between gap-2 mt-2 pt-2 border-t border-gray-700/30">
+                      {/* Actions principales */}
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <motion.button
+                          className="text-xs sm:text-sm text-indigo-300 hover:text-indigo-200 px-3 py-1.5 sm:py-1 rounded-lg hover:bg-indigo-900/30 flex items-center justify-center gap-1"
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingContact(contact);
+                          }}
+                        >
+                          <FiEdit2 className="text-xs" />
+                          Éditer
+                        </motion.button>
+                        <motion.button
+                          className="text-xs sm:text-sm text-rose-300 hover:text-rose-200 px-3 py-1.5 sm:py-1 rounded-lg hover:bg-rose-900/30 flex items-center justify-center gap-1"
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeletingContact(contact);
+                          }}
+                        >
+                          <FiTrash2 className="text-xs" />
+                          Supprimer
+                        </motion.button>
+                      </div>
+
+                      {/* Actions client */}
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        {contact.client_id ? (
+                          <>
+                            <motion.button
+                              className="text-xs sm:text-sm text-emerald-300 hover:text-emerald-200 px-3 py-1.5 sm:py-1 rounded-lg hover:bg-emerald-900/30 flex items-center justify-center gap-1"
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/clients?id=${contact.client_id}`);
+                              }}
+                            >
+                              <FiExternalLink className="text-xs" />
+                              Voir le client
+                            </motion.button>
+                            <motion.button
+                              className="text-xs sm:text-sm text-amber-300 hover:text-amber-200 px-3 py-1.5 sm:py-1 rounded-lg hover:bg-amber-900/30 flex items-center justify-center gap-1"
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (onUnlinkClient) {
+                                  onUnlinkClient(contact.id);
+                                }
+                              }}
+                            >
+                              <FiX className="text-xs" />
+                              Délier du client
+                            </motion.button>
+                          </>
+                        ) : (
+                          <motion.button
+                            className="text-xs sm:text-sm text-emerald-300 hover:text-emerald-200 px-3 py-1.5 sm:py-1 rounded-lg hover:bg-emerald-900/30 flex items-center justify-center gap-1"
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setClientModalContact(contact);
+                            }}
+                          >
+                            <FiLink className="text-xs" />
+                            Créer profil client
+                          </motion.button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </motion.div>
@@ -245,6 +336,19 @@ const ContactList = ({ contacts = [], leadType, onUpdateContact, onDeleteContact
               </div>
             </motion.div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal de création/liaison client */}
+      <AnimatePresence>
+        {clientModalContact && (
+          <ContactClientModal
+            contact={clientModalContact}
+            leadId={leadId}
+            onClose={() => setClientModalContact(null)}
+            onCreateClient={onCreateClient}
+            onLinkClient={onLinkClient}
+          />
         )}
       </AnimatePresence>
     </>
