@@ -2,31 +2,54 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+@layer base {
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+      'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+      sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
 
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+  code {
+    font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+      monospace;
+  }
 }
 
 /* ============================================================
    CORRECTION TEXTES BLANCS SUR BLANC
    Force le texte blanc dans TOUS les champs de saisie
+   Ces styles sont APRÈS @tailwind pour avoir la priorité
+   SPÉCIFICITÉ MAXIMALE avec répétition du sélecteur
    ============================================================ */
 
-/* Tous les inputs sauf checkbox et radio */
-input:not([type="checkbox"]):not([type="radio"]),
+/* Tous les inputs sauf checkbox et radio - TRIPLE SPÉCIFICITÉ */
+input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([disabled]),
 textarea,
-select {
-  color: white !important;
-  -webkit-text-fill-color: white !important;
+textarea:not([disabled]),
+select,
+select:not([disabled]) {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  caret-color: #ffffff !important;
+}
+
+/* États focus, hover, active */
+input:not([type="checkbox"]):not([type="radio"]):focus,
+input:not([type="checkbox"]):not([type="radio"]):hover,
+input:not([type="checkbox"]):not([type="radio"]):active,
+textarea:focus,
+textarea:hover,
+textarea:active,
+select:focus,
+select:hover,
+select:active {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  caret-color: #ffffff !important;
 }
 
 /* Correction spéciale pour l'autocomplete des navigateurs */
@@ -34,26 +57,53 @@ input:not([type="checkbox"]):not([type="radio"]):-webkit-autofill,
 input:not([type="checkbox"]):not([type="radio"]):-webkit-autofill:hover,
 input:not([type="checkbox"]):not([type="radio"]):-webkit-autofill:focus,
 input:not([type="checkbox"]):not([type="radio"]):-webkit-autofill:active {
-  -webkit-text-fill-color: white !important;
+  -webkit-text-fill-color: #ffffff !important;
   -webkit-box-shadow: 0 0 0 1000px rgb(17 24 39 / 0.5) inset !important;
   box-shadow: 0 0 0 1000px rgb(17 24 39 / 0.5) inset !important;
   transition: background-color 5000s ease-in-out 0s;
 }
 
-/* Placeholders en gris */
+/* Placeholders en gris clair */
 input::placeholder,
-textarea::placeholder {
-  color: rgb(156, 163, 175) !important; /* gray-400 - plus clair que gray-500 */
+input::-webkit-input-placeholder,
+input::-moz-placeholder,
+input:-ms-input-placeholder,
+input::-ms-input-placeholder,
+textarea::placeholder,
+textarea::-webkit-input-placeholder,
+textarea::-moz-placeholder,
+textarea:-ms-input-placeholder,
+textarea::-ms-input-placeholder {
+  color: rgb(156, 163, 175) !important; /* gray-400 */
   opacity: 1 !important;
 }
 
 /* Labels en gris clair */
-label {
+label,
+label:not([disabled]) {
   color: rgb(209, 213, 219) !important; /* gray-300 */
 }
 
 /* Options dans les select */
 select option {
   background-color: rgb(17 24 39) !important; /* gray-900 */
-  color: white !important;
+  color: #ffffff !important;
+}
+
+/* SPÉCIFICITÉ ENCORE PLUS FORTE - Cibler tous les éléments avec des classes spécifiques */
+.bg-gray-900\/50 input:not([type="checkbox"]):not([type="radio"]),
+.bg-gray-800\/50 input:not([type="checkbox"]):not([type="radio"]),
+div input[type="text"],
+div input[type="email"],
+div input[type="tel"],
+div input[type="password"],
+div input[type="search"],
+div input[type="url"],
+div input[type="number"],
+div input[type="date"],
+div textarea,
+div select {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  caret-color: #ffffff !important;
 }
