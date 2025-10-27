@@ -120,6 +120,7 @@ app.use('/api/tva-regimes', require('./routes/tvaRegimeRoutes'));
 app.use('/api/payment-methods', require('./routes/paymentMethodRoutes'));
 app.use('/api/upload', require('./routes/uploadRoutes'));
 app.use('/api/prospection', require('./routes/prospectionRoutes'));
+app.use('/api/calendar-sync', require('./routes/calendarSyncRoutes'));
 
 // Servir les fichiers uploadés en statique (protégés par auth si nécessaire)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));

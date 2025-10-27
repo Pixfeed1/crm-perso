@@ -1,7 +1,7 @@
 // src/pages/Calendar.jsx
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiCalendar } from 'react-icons/fi';
+import { FiCalendar, FiRefreshCw } from 'react-icons/fi';
 import { useToast } from '../hooks/useToast';
 // Remplacer executeQuery par la fonction d'API
 import { eventsAPI } from '../services/api';
@@ -13,6 +13,7 @@ import WeekView from '../components/calendar/WeekView';
 import DayView from '../components/calendar/DayView';
 import EventDetails from '../components/calendar/EventDetails';
 import EventForm from '../components/calendar/EventForm';
+import CalendarSync from '../components/calendar/CalendarSync';
 import EmptyState from '../components/common/EmptyState';
 
 const Calendar = () => {
@@ -24,6 +25,7 @@ const Calendar = () => {
   const [filteredEvents, setFilteredEvents] = useState([]);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [isAddingEvent, setIsAddingEvent] = useState(false);
+  const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [filters, setFilters] = useState({
     search: '',
@@ -326,22 +328,38 @@ const Calendar = () => {
   return (
     <div className="h-screen flex flex-col overflow-hidden">
       <header className="mb-4 flex-shrink-0 pt-16 sm:pt-0">
-        <motion.h1
-          className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-teal-300 to-indigo-300"
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          Calendrier
-        </motion.h1>
-        <motion.p
-          className="text-indigo-200 mt-2"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-        >
-          Planifiez vos rendez-vous et suivez vos échéances
-        </motion.p>
+        <div className="flex items-center justify-between">
+          <div>
+            <motion.h1
+              className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-teal-300 to-indigo-300"
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+            >
+              Calendrier
+            </motion.h1>
+            <motion.p
+              className="text-indigo-200 mt-2"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+            >
+              Planifiez vos rendez-vous et suivez vos échéances
+            </motion.p>
+          </div>
+          <motion.button
+            onClick={() => setIsSyncModalOpen(true)}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold transition-colors"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+          >
+            <FiRefreshCw />
+            <span className="hidden sm:inline">Synchroniser</span>
+          </motion.button>
+        </div>
       </header>
 
       <CalendarHeader
@@ -474,6 +492,12 @@ const Calendar = () => {
           </div>
         </motion.div>
       </div>
+
+      {/* Modal de synchronisation */}
+      <CalendarSync
+        isOpen={isSyncModalOpen}
+        onClose={() => setIsSyncModalOpen(false)}
+      />
     </div>
   );
 };
