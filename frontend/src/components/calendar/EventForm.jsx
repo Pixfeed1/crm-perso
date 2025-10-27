@@ -1,10 +1,13 @@
 // src/components/calendar/EventForm.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
+import axios from 'axios';
 import AddressAutocomplete from '../common/AddressAutocomplete';
 import RecurrenceForm from './RecurrenceForm';
+import ConflictAlert from './ConflictAlert';
+import AlternativeSlots from './AlternativeSlots';
 
 const EventForm = ({ event = {}, selectedDate, onSave, onCancel }) => {
   // Déterminer la date de début et de fin par défaut
@@ -54,9 +57,13 @@ const EventForm = ({ event = {}, selectedDate, onSave, onCancel }) => {
     recurrence_end_date: event.recurrence_end_date || null,
     recurrence_count: event.recurrence_count || 10
   });
-  
+
   const [errors, setErrors] = useState({});
-  
+  const [conflicts, setConflicts] = useState(null);
+  const [showAlternativeSlots, setShowAlternativeSlots] = useState(false);
+  const [alternativeSlots, setAlternativeSlots] = useState([]);
+  const [isCheckingConflicts, setIsCheckingConflicts] = useState(false);
+
   // Options de catégorie
   const categoryOptions = [
     { value: 'meeting', label: 'Réunion' },
@@ -119,7 +126,59 @@ const EventForm = ({ event = {}, selectedDate, onSave, onCancel }) => {
       ...recurrenceData
     }));
   };
-  
+
+  // Vérifier les conflits
+  const checkConflicts = async () => {
+    if (!formData.start_date || !formData.end_date) {
+      return;
+    }
+
+    setIsCheckingConflicts(true);
+
+    try {
+      const response = await axios.post('/api/events/check-conflicts', {
+        id: event.id, // Pour exclure l'événement lui-même si modification
+        title: formData.title,
+        start_datetime: formData.start_date.toISOString(),
+        end_datetime: formData.end_date.toISOString(),
+        location: formData.location
+      });
+
+      if (response.data.hasConflicts) {
+        setConflicts(response.data);
+        setAlternativeSlots(response.data.suggestions || []);
+      } else {
+        setConflicts(null);
+        setAlternativeSlots([]);
+      }
+    } catch (error) {
+      console.error('Erreur lors de la vérification des conflits:', error);
+    } finally {
+      setIsCheckingConflicts(false);
+    }
+  };
+
+  // Vérifier les conflits quand les dates changent
+  useEffect(() => {
+    // Debounce pour éviter trop de requêtes
+    const timeoutId = setTimeout(() => {
+      checkConflicts();
+    }, 1000);
+
+    return () => clearTimeout(timeoutId);
+  }, [formData.start_date, formData.end_date, formData.location]);
+
+  // Gérer la sélection d'un créneau alternatif
+  const handleSelectAlternativeSlot = (slot) => {
+    setFormData(prev => ({
+      ...prev,
+      start_date: new Date(slot.start),
+      end_date: new Date(slot.end)
+    }));
+    setShowAlternativeSlots(false);
+    setConflicts(null);
+  };
+
   // Valider le formulaire avant soumission
   const validateForm = () => {
     const newErrors = {};
@@ -160,7 +219,26 @@ const EventForm = ({ event = {}, selectedDate, onSave, onCancel }) => {
       <h2 className="text-2xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-teal-300 to-indigo-300">
         {event.id ? 'Modifier l\'événement' : 'Nouvel événement'}
       </h2>
-      
+
+      {/* Alerte de conflits */}
+      {conflicts && conflicts.hasConflicts && (
+        <ConflictAlert
+          conflicts={conflicts.conflicts}
+          onClose={() => setConflicts(null)}
+          onViewAlternatives={() => setShowAlternativeSlots(true)}
+        />
+      )}
+
+      {/* Modal de créneaux alternatifs */}
+      {showAlternativeSlots && (
+        <AlternativeSlots
+          slots={alternativeSlots}
+          onSelectSlot={handleSelectAlternativeSlot}
+          onClose={() => setShowAlternativeSlots(false)}
+          isLoading={isCheckingConflicts}
+        />
+      )}
+
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Titre */}
         <div>

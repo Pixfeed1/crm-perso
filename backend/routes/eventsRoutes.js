@@ -4,6 +4,7 @@ const router = express.Router();
 const authMiddleware = require('../middleware/authMiddleware');
 const eventModel = require('../models/eventModel');
 const recurrenceService = require('../services/recurrenceService');
+const conflictDetectionService = require('../services/conflictDetectionService');
 
 // Appliquer le middleware d'authentification à toutes les routes
 router.use(authMiddleware);
@@ -387,6 +388,46 @@ router.get('/:id/modified-occurrences', async (req, res) => {
     res.json(modifiedOccurrences);
   } catch (error) {
     console.error('Erreur lors de la récupération des occurrences modifiées:', error);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
+});
+
+// ============= DÉTECTION DE CONFLITS =============
+
+// Vérifier les conflits pour un événement
+router.post('/check-conflicts', async (req, res) => {
+  const db = req.app.locals.db;
+  const eventData = req.body;
+
+  try {
+    const analysis = await conflictDetectionService.analyzeConflicts(
+      db,
+      eventData,
+      eventData.id // Exclure l'événement lui-même si c'est une modification
+    );
+
+    res.json(analysis);
+  } catch (error) {
+    console.error('Erreur lors de la vérification des conflits:', error);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
+});
+
+// Suggérer des créneaux alternatifs
+router.post('/suggest-slots', async (req, res) => {
+  const db = req.app.locals.db;
+  const { eventData, options } = req.body;
+
+  try {
+    const suggestions = await conflictDetectionService.suggestAlternativeSlots(
+      db,
+      eventData,
+      options || {}
+    );
+
+    res.json({ suggestions });
+  } catch (error) {
+    console.error('Erreur lors de la suggestion de créneaux:', error);
     res.status(500).json({ message: 'Erreur serveur' });
   }
 });
