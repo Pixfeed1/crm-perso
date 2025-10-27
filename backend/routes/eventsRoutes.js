@@ -6,6 +6,7 @@ const eventModel = require('../models/eventModel');
 const recurrenceService = require('../services/recurrenceService');
 const conflictDetectionService = require('../services/conflictDetectionService');
 const icalExportService = require('../services/icalExportService');
+const eventDependencyModel = require('../models/eventDependencyModel');
 
 // Appliquer le middleware d'authentification à toutes les routes
 router.use(authMiddleware);
@@ -511,6 +512,162 @@ router.get('/export/category/:category', async (req, res) => {
   } catch (error) {
     console.error('Erreur lors de l\'export par catégorie:', error);
     res.status(500).json({ message: 'Erreur lors de l\'export par catégorie' });
+  }
+});
+
+// ============================================================================
+// TIMELINE / GANTT - DÉPENDANCES ET MÉTADONNÉES
+// ============================================================================
+
+// Récupérer les événements pour la vue timeline
+router.get('/timeline', async (req, res) => {
+  const db = req.app.locals.db;
+  const { start_date, end_date, project_id, swimlane } = req.query;
+
+  try {
+    const events = await eventDependencyModel.getTimelineEvents(db, {
+      start_date,
+      end_date,
+      project_id,
+      swimlane
+    });
+
+    res.json(events);
+  } catch (error) {
+    console.error('Erreur lors de la récupération des événements timeline:', error);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
+});
+
+// Récupérer toutes les dépendances
+router.get('/dependencies', async (req, res) => {
+  const db = req.app.locals.db;
+  const { event_ids } = req.query;
+
+  try {
+    const eventIds = event_ids ? event_ids.split(',').map(Number) : null;
+    const dependencies = await eventDependencyModel.getAllDependencies(db, eventIds);
+
+    res.json(dependencies);
+  } catch (error) {
+    console.error('Erreur lors de la récupération des dépendances:', error);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
+});
+
+// Récupérer les dépendances d'un événement spécifique
+router.get('/:id/dependencies', async (req, res) => {
+  const db = req.app.locals.db;
+  const { id } = req.params;
+
+  try {
+    const dependencies = await eventDependencyModel.getEventDependencies(db, id);
+    res.json(dependencies);
+  } catch (error) {
+    console.error('Erreur lors de la récupération des dépendances:', error);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
+});
+
+// Créer une dépendance entre deux événements
+router.post('/:id/dependencies', async (req, res) => {
+  const db = req.app.locals.db;
+  const { id } = req.params;
+  const { target_event_id, dependency_type, lag_days } = req.body;
+
+  try {
+    // Vérifier les dépendances circulaires
+    const hasCircular = await eventDependencyModel.checkCircularDependency(
+      db,
+      id,
+      target_event_id
+    );
+
+    if (hasCircular) {
+      return res.status(400).json({
+        message: 'Impossible de créer cette dépendance : cela créerait une dépendance circulaire'
+      });
+    }
+
+    const dependency = await eventDependencyModel.createDependency(
+      db,
+      id,
+      target_event_id,
+      dependency_type || 'finish_to_start',
+      lag_days || 0
+    );
+
+    res.status(201).json(dependency);
+  } catch (error) {
+    console.error('Erreur lors de la création de la dépendance:', error);
+
+    if (error.code === '23505') { // Violation de contrainte unique
+      return res.status(400).json({ message: 'Cette dépendance existe déjà' });
+    }
+
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
+});
+
+// Mettre à jour une dépendance
+router.put('/dependencies/:dependencyId', async (req, res) => {
+  const db = req.app.locals.db;
+  const { dependencyId } = req.params;
+  const updates = req.body;
+
+  try {
+    const dependency = await eventDependencyModel.updateDependency(db, dependencyId, updates);
+    res.json(dependency);
+  } catch (error) {
+    console.error('Erreur lors de la mise à jour de la dépendance:', error);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
+});
+
+// Supprimer une dépendance
+router.delete('/dependencies/:dependencyId', async (req, res) => {
+  const db = req.app.locals.db;
+  const { dependencyId } = req.params;
+
+  try {
+    await eventDependencyModel.deleteDependency(db, dependencyId);
+    res.json({ message: 'Dépendance supprimée avec succès' });
+  } catch (error) {
+    console.error('Erreur lors de la suppression de la dépendance:', error);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
+});
+
+// Mettre à jour les métadonnées timeline d'un événement
+router.put('/:id/timeline-data', async (req, res) => {
+  const db = req.app.locals.db;
+  const { id } = req.params;
+  const timelineData = req.body;
+
+  try {
+    const event = await eventDependencyModel.updateEventTimelineData(db, id, timelineData);
+    res.json(event);
+  } catch (error) {
+    console.error('Erreur lors de la mise à jour des données timeline:', error);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
+});
+
+// Calculer l'ordre topologique des événements
+router.post('/topological-order', async (req, res) => {
+  const db = req.app.locals.db;
+  const { event_ids } = req.body;
+
+  try {
+    if (!event_ids || !Array.isArray(event_ids)) {
+      return res.status(400).json({ message: 'event_ids requis (tableau)' });
+    }
+
+    const order = await eventDependencyModel.getTopologicalOrder(db, event_ids);
+    res.json(order);
+  } catch (error) {
+    console.error('Erreur lors du calcul de l\'ordre topologique:', error);
+    res.status(500).json({ message: 'Erreur serveur' });
   }
 });
 

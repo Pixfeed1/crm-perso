@@ -11,6 +11,7 @@ import CalendarHeader from '../components/calendar/CalendarHeader';
 import MonthView from '../components/calendar/MonthView';
 import WeekView from '../components/calendar/WeekView';
 import DayView from '../components/calendar/DayView';
+import TimelineView from '../components/calendar/TimelineView';
 import EventDetails from '../components/calendar/EventDetails';
 import EventForm from '../components/calendar/EventForm';
 import CalendarSync from '../components/calendar/CalendarSync';
@@ -19,7 +20,7 @@ import EmptyState from '../components/common/EmptyState';
 
 const Calendar = () => {
   const { toast } = useToast();
-  const [view, setView] = useState('month'); // 'month', 'week', 'day'
+  const [view, setView] = useState('month'); // 'month', 'week', 'day', 'timeline'
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [events, setEvents] = useState([]);
@@ -126,6 +127,8 @@ const Calendar = () => {
       newDate.setDate(newDate.getDate() - 1);
       setCurrentDate(newDate);
       setSelectedDate(newDate);
+    } else if (view === 'timeline') {
+      setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
     }
   };
 
@@ -141,6 +144,8 @@ const Calendar = () => {
       newDate.setDate(newDate.getDate() + 1);
       setCurrentDate(newDate);
       setSelectedDate(newDate);
+    } else if (view === 'timeline') {
+      setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
     }
   };
 
@@ -427,6 +432,16 @@ const Calendar = () => {
                 <DayView
                   key="day-view"
                   currentDate={selectedDate}
+                  events={filteredEvents}
+                  onSelectEvent={handleSelectEvent}
+                  selectedEvent={selectedEvent}
+                  onAddEvent={handleAddEvent}
+                />
+              )}
+              {view === 'timeline' && (
+                <TimelineView
+                  key="timeline-view"
+                  currentDate={currentDate}
                   events={filteredEvents}
                   onSelectEvent={handleSelectEvent}
                   selectedEvent={selectedEvent}

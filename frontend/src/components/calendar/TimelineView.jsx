@@ -1,0 +1,356 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { motion } from 'framer-motion';
+import { FiChevronLeft, FiChevronRight, FiZoomIn, FiZoomOut, FiMaximize2 } from 'react-icons/fi';
+
+const TimelineView = ({
+  currentDate,
+  events,
+  onSelectEvent,
+  selectedEvent,
+  onAddEvent
+}) => {
+  const [dependencies, setDependencies] = useState([]);
+  const [zoom, setZoom] = useState(1); // 1 = jour, 2 = semaine, 3 = mois
+  const [visibleDateRange, setVisibleDateRange] = useState({ start: null, end: null });
+  const [swimlanes, setSwimlanes] = useState([]);
+  const timelineRef = useRef(null);
+
+  // Calculer la plage de dates visible
+  useEffect(() => {
+    const start = new Date(currentDate);
+    start.setDate(1); // Premier jour du mois
+
+    const end = new Date(currentDate);
+    end.setMonth(end.getMonth() + 1);
+    end.setDate(0); // Dernier jour du mois
+
+    setVisibleDateRange({ start, end });
+  }, [currentDate]);
+
+  // Charger les dépendances
+  useEffect(() => {
+    if (events.length > 0) {
+      loadDependencies();
+    }
+  }, [events]);
+
+  // Organiser les événements par swimlane
+  useEffect(() => {
+    const lanes = new Map();
+
+    events.forEach(event => {
+      const lane = event.swimlane || 'Défaut';
+      if (!lanes.has(lane)) {
+        lanes.set(lane, []);
+      }
+      lanes.get(lane).push(event);
+    });
+
+    const swimlaneArray = Array.from(lanes.entries()).map(([name, evts]) => ({
+      name,
+      events: evts.sort((a, b) => new Date(a.start_datetime) - new Date(b.start_datetime))
+    }));
+
+    setSwimlanes(swimlaneArray);
+  }, [events]);
+
+  const loadDependencies = async () => {
+    try {
+      const eventIds = events.map(e => e.id).join(',');
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/events/dependencies?event_ids=${eventIds}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setDependencies(data);
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des dépendances:', error);
+    }
+  };
+
+  // Calculer la position X d'une date
+  const getDatePosition = (date) => {
+    if (!visibleDateRange.start || !visibleDateRange.end) return 0;
+
+    const totalDays = Math.ceil(
+      (visibleDateRange.end - visibleDateRange.start) / (1000 * 60 * 60 * 24)
+    );
+
+    const daysPassed = Math.ceil(
+      (new Date(date) - visibleDateRange.start) / (1000 * 60 * 60 * 24)
+    );
+
+    const containerWidth = timelineRef.current?.offsetWidth - 200 || 800; // -200 pour la colonne des noms
+    return (daysPassed / totalDays) * containerWidth;
+  };
+
+  // Calculer la largeur d'un événement
+  const getEventWidth = (startDate, endDate) => {
+    const startPos = getDatePosition(startDate);
+    const endPos = getDatePosition(endDate);
+    return Math.max(endPos - startPos, 20); // Min 20px
+  };
+
+  // Générer les colonnes de dates
+  const generateDateColumns = () => {
+    if (!visibleDateRange.start || !visibleDateRange.end) return [];
+
+    const columns = [];
+    const current = new Date(visibleDateRange.start);
+
+    while (current <= visibleDateRange.end) {
+      columns.push(new Date(current));
+      current.setDate(current.getDate() + 1);
+    }
+
+    return columns;
+  };
+
+  // Dessiner une ligne de dépendance
+  const renderDependencyLine = (dependency) => {
+    const sourceEvent = events.find(e => e.id === dependency.source_event_id);
+    const targetEvent = events.find(e => e.id === dependency.target_event_id);
+
+    if (!sourceEvent || !targetEvent) return null;
+
+    // Simplification : ligne droite entre fin de source et début de target
+    const sourceX = getDatePosition(sourceEvent.end_datetime) + 200;
+    const targetX = getDatePosition(targetEvent.start_datetime) + 200;
+
+    // Trouver les positions Y (approximation)
+    const sourceY = swimlanes.findIndex(sl =>
+      sl.events.some(e => e.id === sourceEvent.id)
+    ) * 60 + 30;
+
+    const targetY = swimlanes.findIndex(sl =>
+      sl.events.some(e => e.id === targetEvent.id)
+    ) * 60 + 30;
+
+    return (
+      <line
+        key={dependency.id}
+        x1={sourceX}
+        y1={sourceY}
+        x2={targetX}
+        y2={targetY}
+        stroke="#3B82F6"
+        strokeWidth="2"
+        markerEnd="url(#arrowhead)"
+        opacity="0.6"
+      />
+    );
+  };
+
+  const dateColumns = generateDateColumns();
+
+  return (
+    <div className="h-full flex flex-col bg-gray-900" ref={timelineRef}>
+      {/* Header avec contrôles */}
+      <div className="flex items-center justify-between p-4 bg-gray-800 border-b border-gray-700">
+        <div className="flex items-center space-x-2">
+          <button
+            className="p-2 hover:bg-gray-700 rounded"
+            onClick={() => setZoom(Math.max(1, zoom - 1))}
+          >
+            <FiZoomOut className="text-white" />
+          </button>
+          <span className="text-white text-sm">
+            {zoom === 1 ? 'Jour' : zoom === 2 ? 'Semaine' : 'Mois'}
+          </span>
+          <button
+            className="p-2 hover:bg-gray-700 rounded"
+            onClick={() => setZoom(Math.min(3, zoom + 1))}
+          >
+            <FiZoomIn className="text-white" />
+          </button>
+        </div>
+
+        <div className="flex items-center space-x-4">
+          <button
+            className="p-2 hover:bg-gray-700 rounded"
+            onClick={() => {
+              const newDate = new Date(currentDate);
+              newDate.setMonth(newDate.getMonth() - 1);
+              // Appeler onPrevious si disponible via props
+            }}
+          >
+            <FiChevronLeft className="text-white" />
+          </button>
+          <span className="text-white font-medium">
+            {currentDate.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
+          </span>
+          <button
+            className="p-2 hover:bg-gray-700 rounded"
+            onClick={() => {
+              const newDate = new Date(currentDate);
+              newDate.setMonth(newDate.getMonth() + 1);
+              // Appeler onNext si disponible via props
+            }}
+          >
+            <FiChevronRight className="text-white" />
+          </button>
+        </div>
+
+        <button className="p-2 hover:bg-gray-700 rounded">
+          <FiMaximize2 className="text-white" />
+        </button>
+      </div>
+
+      {/* Grille Timeline */}
+      <div className="flex-1 overflow-auto relative">
+        {/* En-tête des dates */}
+        <div className="sticky top-0 z-10 flex bg-gray-800 border-b border-gray-700">
+          <div className="w-48 flex-shrink-0 p-2 border-r border-gray-700">
+            <span className="text-white font-medium">Tâches</span>
+          </div>
+          <div className="flex-1 flex">
+            {dateColumns.map((date, index) => (
+              <div
+                key={index}
+                className="flex-1 min-w-[40px] p-2 border-r border-gray-700 text-center"
+              >
+                <div className="text-white text-xs">
+                  {date.getDate()}
+                </div>
+                <div className="text-gray-400 text-xs">
+                  {date.toLocaleDateString('fr-FR', { weekday: 'short' })}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Lignes des swimlanes */}
+        <div className="relative">
+          {swimlanes.map((swimlane, laneIndex) => (
+            <div
+              key={laneIndex}
+              className="flex border-b border-gray-700"
+              style={{ minHeight: '60px' }}
+            >
+              {/* Nom du swimlane */}
+              <div className="w-48 flex-shrink-0 p-3 border-r border-gray-700 bg-gray-800/50">
+                <span className="text-white text-sm font-medium">{swimlane.name}</span>
+                <div className="text-gray-400 text-xs mt-1">
+                  {swimlane.events.length} tâche{swimlane.events.length > 1 ? 's' : ''}
+                </div>
+              </div>
+
+              {/* Grille de fond */}
+              <div className="flex-1 flex">
+                {dateColumns.map((date, index) => (
+                  <div
+                    key={index}
+                    className="flex-1 min-w-[40px] border-r border-gray-700/30"
+                  />
+                ))}
+              </div>
+
+              {/* Barres d'événements */}
+              <div className="absolute left-48 right-0 top-0 h-full pointer-events-none">
+                {swimlane.events.map((event) => {
+                  const startPos = getDatePosition(event.start_datetime);
+                  const width = getEventWidth(event.start_datetime, event.end_datetime);
+                  const isSelected = selectedEvent?.id === event.id;
+
+                  return (
+                    <motion.div
+                      key={event.id}
+                      className={`absolute top-2 rounded pointer-events-auto cursor-pointer ${
+                        isSelected ? 'ring-2 ring-white' : ''
+                      }`}
+                      style={{
+                        left: `${startPos}px`,
+                        width: `${width}px`,
+                        height: '40px',
+                        backgroundColor: event.timeline_color || event.color || '#3B82F6'
+                      }}
+                      onClick={() => onSelectEvent(event)}
+                      whileHover={{ scale: 1.02, y: -2 }}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                    >
+                      <div className="p-2 h-full flex flex-col justify-between">
+                        <div className="text-white text-xs font-medium truncate">
+                          {event.title}
+                        </div>
+                        {event.completion_percentage > 0 && (
+                          <div className="w-full bg-gray-700/50 rounded-full h-1">
+                            <div
+                              className="bg-green-400 h-1 rounded-full"
+                              style={{ width: `${event.completion_percentage}%` }}
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Icône jalon */}
+                      {event.is_milestone && (
+                        <div className="absolute -right-2 top-1/2 -translate-y-1/2 w-4 h-4 bg-yellow-400 rotate-45" />
+                      )}
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+
+          {/* SVG pour les liens de dépendances */}
+          <svg
+            className="absolute top-0 left-0 w-full h-full pointer-events-none"
+            style={{ zIndex: 1 }}
+          >
+            <defs>
+              <marker
+                id="arrowhead"
+                markerWidth="10"
+                markerHeight="7"
+                refX="9"
+                refY="3.5"
+                orient="auto"
+              >
+                <polygon
+                  points="0 0, 10 3.5, 0 7"
+                  fill="#3B82F6"
+                />
+              </marker>
+            </defs>
+            {dependencies.map(dep => renderDependencyLine(dep))}
+          </svg>
+        </div>
+      </div>
+
+      {/* Légende */}
+      <div className="p-3 bg-gray-800 border-t border-gray-700 flex items-center justify-between text-xs text-gray-400">
+        <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2">
+            <div className="w-3 h-3 bg-blue-500 rounded" />
+            <span>Tâche</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="w-3 h-3 bg-yellow-400 rotate-45" />
+            <span>Jalon</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <svg width="20" height="10">
+              <line x1="0" y1="5" x2="15" y2="5" stroke="#3B82F6" strokeWidth="2" />
+              <polygon points="15,2 20,5 15,8" fill="#3B82F6" />
+            </svg>
+            <span>Dépendance</span>
+          </div>
+        </div>
+
+        <div className="text-gray-500">
+          {events.length} événement{events.length > 1 ? 's' : ''}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default TimelineView;
