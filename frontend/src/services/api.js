@@ -714,3 +714,49 @@ export const prospectionAPI = {
     });
   }
 };
+
+// ===== PAIEMENTS =====
+export const paymentsAPI = {
+  getAll: () => {
+    console.log('Appel API: récupération de tous les paiements');
+    return apiRequest('/payments');
+  },
+  getById: (id) => {
+    console.log(`Appel API: récupération du paiement ID ${id}`);
+    return apiRequest(`/payments/${id}`);
+  },
+  getByInvoice: (invoiceId) => {
+    console.log(`Appel API: récupération des paiements de la facture ID ${invoiceId}`);
+    return apiRequest(`/payments/invoice/${invoiceId}`);
+  },
+  getByClient: (clientId) => {
+    console.log(`Appel API: récupération des paiements du client ID ${clientId}`);
+    return apiRequest(`/payments/client/${clientId}`);
+  },
+  create: (data) => {
+    console.log('Appel API: création d\'un nouveau paiement', data);
+    return apiRequest('/payments', 'POST', data);
+  },
+  update: (id, data) => {
+    console.log(`Appel API: mise à jour du paiement ID ${id}`, data);
+    return apiRequest(`/payments/${id}`, 'PUT', data);
+  },
+  delete: (id) => {
+    console.log(`Appel API: suppression du paiement ID ${id}`);
+    return apiRequest(`/payments/${id}`, 'DELETE');
+  },
+  getTreasuryStats: (startDate, endDate) => {
+    console.log('Appel API: récupération statistiques trésorerie', { startDate, endDate });
+    const params = new URLSearchParams();
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    return apiRequest(`/payments/stats/treasury?${params}`);
+  },
+  getChartData: (startDate, endDate) => {
+    console.log('Appel API: récupération données graphique trésorerie', { startDate, endDate });
+    const params = new URLSearchParams();
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    return apiRequest(`/payments/stats/chart?${params}`);
+  }
+};

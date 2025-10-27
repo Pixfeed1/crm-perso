@@ -114,6 +114,7 @@ app.use('/api/dashboard', require('./routes/dashboardRoutes'));
 app.use('/api/sirene', require('./routes/sireneRoutes'));
 app.use('/api/quotes', require('./routes/quoteRoutes'));
 app.use('/api/invoices', require('./routes/invoiceRoutes'));
+app.use('/api/payments', require('./routes/paymentRoutes'));
 app.use('/api/settings', require('./routes/settingsRoutes'));
 app.use('/api/tva-regimes', require('./routes/tvaRegimeRoutes'));
 app.use('/api/payment-methods', require('./routes/paymentMethodRoutes'));

@@ -195,6 +195,8 @@ const DATABASE_SCHEMA = {
       project_id: 'INTEGER REFERENCES projects(id) ON DELETE SET NULL',
       status: "VARCHAR(50) DEFAULT 'draft'",
       payment_status: "VARCHAR(50) DEFAULT 'pending'",
+      amount_paid: 'NUMERIC DEFAULT 0',
+      amount_remaining: 'NUMERIC DEFAULT 0',
       total_ht: 'NUMERIC DEFAULT 0',
       total_ttc: 'NUMERIC DEFAULT 0',
       tva_rate: 'DECIMAL(5,2) DEFAULT 20.00',
@@ -229,6 +231,28 @@ const DATABASE_SCHEMA = {
       'CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status)',
       'CREATE INDEX IF NOT EXISTS idx_invoices_payment_status ON invoices(payment_status)',
       'CREATE INDEX IF NOT EXISTS idx_invoices_project_id ON invoices(project_id)'
+    ]
+  },
+
+  // Table payments (paiements des factures)
+  payments: {
+    columns: {
+      id: 'SERIAL PRIMARY KEY',
+      invoice_id: 'INTEGER REFERENCES invoices(id) ON DELETE CASCADE',
+      amount: 'NUMERIC NOT NULL CHECK (amount > 0)',
+      payment_date: 'DATE NOT NULL DEFAULT CURRENT_DATE',
+      payment_method: 'VARCHAR(50)',
+      reference: 'VARCHAR(255)',
+      status: "VARCHAR(50) DEFAULT 'completed'",
+      notes: 'TEXT',
+      created_by: 'INTEGER',
+      created_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP',
+      updated_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'
+    },
+    indexes: [
+      'CREATE INDEX IF NOT EXISTS idx_payments_invoice_id ON payments(invoice_id)',
+      'CREATE INDEX IF NOT EXISTS idx_payments_payment_date ON payments(payment_date)',
+      'CREATE INDEX IF NOT EXISTS idx_payments_status ON payments(status)'
     ]
   },
 
