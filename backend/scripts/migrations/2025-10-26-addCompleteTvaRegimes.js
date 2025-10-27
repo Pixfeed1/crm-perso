@@ -29,7 +29,6 @@ async function runMigration() {
         id SERIAL PRIMARY KEY,
         code VARCHAR(50) UNIQUE NOT NULL,
         label TEXT NOT NULL,
-        category VARCHAR(50) NOT NULL,
         taux DECIMAL(5,2),
         article_cgi TEXT,
         description TEXT,
@@ -40,7 +39,21 @@ async function runMigration() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
-    console.log('✓ Table tva_regimes créée\n');
+    console.log('✓ Table tva_regimes créée');
+
+    // Ajouter la colonne category si elle n'existe pas
+    await client.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_name = 'tva_regimes' AND column_name = 'category'
+        ) THEN
+          ALTER TABLE tva_regimes ADD COLUMN category VARCHAR(50) NOT NULL DEFAULT 'taux_normal';
+        END IF;
+      END $$;
+    `);
+    console.log('✓ Colonne category vérifiée\n');
 
     // 2. Vider la table si elle existe déjà
     await client.query('DELETE FROM tva_regimes;');
