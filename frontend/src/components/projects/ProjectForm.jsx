@@ -1,8 +1,12 @@
 // src/components/projects/ProjectForm.jsx
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { useToast } from '../../hooks/useToast';
+import TemplateSelector from '../common/TemplateSelector';
+import { templateCategories } from '../../services/templates';
 
 const ProjectForm = ({ project = {}, onSave, onCancel }) => {
+  const { toast } = useToast();
   // État du formulaire avec valeurs par défaut ou existantes
   const [formData, setFormData] = useState({
     name: project.name || '',
@@ -15,7 +19,7 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
     status: project.status || 'planifié',
     amount: project.amount || 0
   });
-  
+
   const [leads, setLeads] = useState([]);
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
@@ -48,13 +52,13 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
 
   // Options de type
   const typeOptions = [
-    { value: 'site-web', label: 'Site Web', icon: '🌐' },
-    { value: 'application-mobile', label: 'Application Mobile', icon: '📱' },
-    { value: 'application-bureau', label: 'Application Bureau', icon: '💻' },
-    { value: 'design', label: 'Design', icon: '🎨' },
-    { value: 'marketing', label: 'Marketing', icon: '📢' },
-    { value: 'maintenance', label: 'Maintenance', icon: '🔧' },
-    { value: 'autre', label: 'Autre', icon: '📦' }
+    { value: 'site-web', label: 'Site Web' },
+    { value: 'application-mobile', label: 'Application Mobile' },
+    { value: 'application-bureau', label: 'Application Bureau' },
+    { value: 'design', label: 'Design' },
+    { value: 'marketing', label: 'Marketing' },
+    { value: 'maintenance', label: 'Maintenance' },
+    { value: 'autre', label: 'Autre' }
   ];
   
   // Options de statut
@@ -176,7 +180,7 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
       await onSave(projectData);
     } catch (error) {
       console.error('Erreur lors de la sauvegarde:', error);
-      alert("Erreur lors de la sauvegarde du projet: " + (error.message || "Erreur inconnue"));
+      toast.error("Erreur lors de la sauvegarde du projet: " + (error.message || "Erreur inconnue"));
     } finally {
       setSubmitting(false);
     }
@@ -231,7 +235,7 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
             >
               {typeOptions.map(option => (
                 <option key={option.value} value={option.value}>
-                  {option.icon} {option.label}
+                  {option.label}
                 </option>
               ))}
             </select>
@@ -273,9 +277,17 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
         
         {/* Description */}
         <div>
-          <label htmlFor="description" className="block text-sm font-medium text-gray-300 mb-1">
-            Description
-          </label>
+          <div className="flex items-center justify-between mb-1">
+            <label htmlFor="description" className="block text-sm font-medium text-gray-300">
+              Description
+            </label>
+            <TemplateSelector
+              category={templateCategories.PROJECT}
+              currentValue={formData.description}
+              onSelect={(content) => setFormData(prev => ({ ...prev, description: content }))}
+              buttonText="Template"
+            />
+          </div>
           <textarea
             id="description"
             name="description"
@@ -399,7 +411,7 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
           <motion.button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 rounded-lg border border-gray-600 text-gray-300 hover:bg-gray-700"
+            className="px-4 py-2 rounded-lg border-2 border-white/30 text-white hover:bg-white/10 hover:border-white/40 font-medium transition-all"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             disabled={submitting}

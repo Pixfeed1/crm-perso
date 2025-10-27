@@ -1,18 +1,19 @@
 // src/components/dashboard/ActivityStream.jsx
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { FiMonitor, FiEdit2, FiUsers, FiPhone, FiRadio, FiTool, FiClipboard, FiZap, FiUser } from 'react-icons/fi';
 
 const ActivityStream = ({ activities = [], projects = [], showTitle = true, maxItems = 7 }) => {
   const [expanded, setExpanded] = useState(false);
-  
+
   // Configuration des couleurs de type
   const typeConfig = {
-    'development': { icon: '💻', label: 'Développement', bg: 'bg-blue-900/20', text: 'text-blue-300' },
-    'design': { icon: '🎨', label: 'Design', bg: 'bg-purple-900/20', text: 'text-purple-300' },
-    'meeting': { icon: '👥', label: 'Réunion', bg: 'bg-indigo-900/20', text: 'text-indigo-300' },
-    'call': { icon: '📞', label: 'Appel', bg: 'bg-green-900/20', text: 'text-green-300' },
-    'marketing': { icon: '📢', label: 'Marketing', bg: 'bg-amber-900/20', text: 'text-amber-300' },
-    'maintenance': { icon: '🔧', label: 'Maintenance', bg: 'bg-teal-900/20', text: 'text-teal-300' }
+    'development': { icon: <FiMonitor />, label: 'Développement', bg: 'bg-blue-900/20', text: 'text-blue-300' },
+    'design': { icon: <FiEdit2 />, label: 'Design', bg: 'bg-purple-900/20', text: 'text-purple-300' },
+    'meeting': { icon: <FiUsers />, label: 'Réunion', bg: 'bg-indigo-900/20', text: 'text-indigo-300' },
+    'call': { icon: <FiPhone />, label: 'Appel', bg: 'bg-green-900/20', text: 'text-green-300' },
+    'marketing': { icon: <FiRadio />, label: 'Marketing', bg: 'bg-amber-900/20', text: 'text-amber-300' },
+    'maintenance': { icon: <FiTool />, label: 'Maintenance', bg: 'bg-teal-900/20', text: 'text-teal-300' }
   };
   
   // Configuration des couleurs de priorité
@@ -78,18 +79,18 @@ const ActivityStream = ({ activities = [], projects = [], showTitle = true, maxI
   return (
     <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl p-5">
       {showTitle && (
-        <h3 className="text-lg font-medium text-white mb-4 flex items-center">
-          <span className="mr-2">📋</span>
+        <h3 className="text-lg font-medium text-white mb-4 flex items-center gap-2">
+          <FiClipboard />
           Flux d'activités récentes
         </h3>
       )}
-      
+
       <div className="space-y-4">
         {displayedActivities.length > 0 ? (
           <>
             <AnimatePresence initial={false}>
               {displayedActivities.map((activity, index) => {
-                const typeInfo = typeConfig[activity.type] || { icon: '📋', label: activity.type, bg: 'bg-gray-900/20', text: 'text-gray-300' };
+                const typeInfo = typeConfig[activity.type] || { icon: <FiClipboard />, label: activity.type, bg: 'bg-gray-900/20', text: 'text-gray-300' };
                 const priorityInfo = priorityConfig[activity.priority] || { color: 'text-gray-300', label: activity.priority };
                 const projectInfo = getProjectInfo(activity);
                 
@@ -134,15 +135,15 @@ const ActivityStream = ({ activities = [], projects = [], showTitle = true, maxI
                           
                           {/* Projet associé */}
                           {projectInfo && (
-                            <span className="text-xs text-indigo-300 truncate">
-                              🚀 {projectInfo.name}
+                            <span className="text-xs text-indigo-300 truncate flex items-center gap-1">
+                              <FiZap /> {projectInfo.name}
                             </span>
                           )}
                           
                           {/* Lead associé */}
                           {activity.lead_name && (
-                            <span className="text-xs text-purple-300 truncate">
-                              👤 {activity.lead_name}
+                            <span className="text-xs text-purple-300 truncate flex items-center gap-1">
+                              <FiUser /> {activity.lead_name}
                             </span>
                           )}
                         </div>
@@ -167,7 +168,7 @@ const ActivityStream = ({ activities = [], projects = [], showTitle = true, maxI
           </>
         ) : (
           <div className="py-8 text-center">
-            <div className="text-4xl mb-3">📋</div>
+            <div className="text-4xl mb-3"><FiClipboard /></div>
             <h4 className="text-lg font-medium text-gray-300 mb-2">Aucune activité récente</h4>
             <p className="text-gray-400 text-sm">
               Les activités récentes apparaîtront ici lorsque vous en ajouterez.

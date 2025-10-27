@@ -1,6 +1,8 @@
 // src/pages/Calendar.jsx
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { FiCalendar } from 'react-icons/fi';
+import { useToast } from '../hooks/useToast';
 // Remplacer executeQuery par la fonction d'API
 import { eventsAPI } from '../services/api';
 
@@ -14,6 +16,7 @@ import EventForm from '../components/calendar/EventForm';
 import EmptyState from '../components/common/EmptyState';
 
 const Calendar = () => {
+  const { toast } = useToast();
   const [view, setView] = useState('month'); // 'month', 'week', 'day'
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -33,10 +36,35 @@ const Calendar = () => {
     const fetchEvents = async () => {
       setIsLoading(true);
       try {
-        // Récupérer les événements via l'API
-        const eventsData = await eventsAPI.getAll();
-        console.log('Événements chargés via API:', eventsData);
-        
+        // Calculer la plage de dates pour la vue actuelle
+        let startDate, endDate;
+
+        if (view === 'month') {
+          startDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+          endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0, 23, 59, 59);
+        } else if (view === 'week') {
+          const currentDay = currentDate.getDay();
+          startDate = new Date(currentDate);
+          startDate.setDate(currentDate.getDate() - currentDay);
+          startDate.setHours(0, 0, 0, 0);
+          endDate = new Date(startDate);
+          endDate.setDate(startDate.getDate() + 6);
+          endDate.setHours(23, 59, 59);
+        } else {
+          // day view
+          startDate = new Date(currentDate);
+          startDate.setHours(0, 0, 0, 0);
+          endDate = new Date(currentDate);
+          endDate.setHours(23, 59, 59);
+        }
+
+        // Récupérer les événements via l'API avec plage de dates pour inclure les récurrences
+        const eventsData = await eventsAPI.getAll({
+          start_date: startDate.toISOString(),
+          end_date: endDate.toISOString()
+        });
+        console.log('Événements chargés via API (avec récurrences):', eventsData);
+
         setEvents(eventsData);
         setFilteredEvents(eventsData);
       } catch (error) {
@@ -48,9 +76,9 @@ const Calendar = () => {
         setIsLoading(false);
       }
     };
-    
+
     fetchEvents();
-  }, []);
+  }, [currentDate, view]);
 
   // Filtrage des événements en fonction des critères
   useEffect(() => {
@@ -138,13 +166,13 @@ const Calendar = () => {
       // Validation des dates
       const startDate = eventData.start_date instanceof Date ? eventData.start_date : new Date(eventData.start_date);
       const endDate = eventData.end_date instanceof Date ? eventData.end_date : new Date(eventData.end_date);
-      
+
       if (!isValidDate(startDate) || !isValidDate(endDate)) {
         console.error("Dates invalides:", eventData.start_date, eventData.end_date);
-        alert("Erreur: Les dates saisies sont invalides.");
+        toast.error("Erreur: Les dates saisies sont invalides.");
         return;
       }
-      
+
       // Préparation des données pour l'insertion
       const eventToSave = {
         title: eventData.title,
@@ -157,20 +185,52 @@ const Calendar = () => {
         priority: eventData.priority || 'medium',
         color: eventData.color || '#3B82F6'
       };
-      
-      // Utiliser l'API pour créer l'événement
-      const newEvent = await eventsAPI.create(eventToSave);
-      console.log('Événement créé via API:', newEvent);
-      
-      // Mettre à jour l'état
-      setEvents(prevEvents => [...prevEvents, newEvent]);
-      setIsAddingEvent(false);
-      setSelectedEvent(newEvent);
-      
-      console.log("Événement créé avec succès:", newEvent);
+
+      // Ajouter les champs de récurrence si l'événement est récurrent
+      if (eventData.recurrence_type && eventData.recurrence_type !== 'NONE') {
+        eventToSave.recurrence_type = eventData.recurrence_type;
+        eventToSave.recurrence_interval = eventData.recurrence_interval || 1;
+        eventToSave.recurrence_days = eventData.recurrence_days || null;
+        eventToSave.recurrence_end_type = eventData.recurrence_end_type || 'NEVER';
+
+        if (eventData.recurrence_end_type === 'DATE' && eventData.recurrence_end_date) {
+          const endRecurrenceDate = eventData.recurrence_end_date instanceof Date
+            ? eventData.recurrence_end_date
+            : new Date(eventData.recurrence_end_date);
+          eventToSave.recurrence_end_date = endRecurrenceDate.toISOString();
+        }
+
+        if (eventData.recurrence_end_type === 'COUNT') {
+          eventToSave.recurrence_count = eventData.recurrence_count || 10;
+        }
+
+        // Utiliser l'API pour créer l'événement récurrent
+        const newEvent = await eventsAPI.createRecurring(eventToSave);
+        console.log('Événement récurrent créé via API:', newEvent);
+
+        // Mettre à jour l'état
+        setEvents(prevEvents => [...prevEvents, newEvent]);
+        setIsAddingEvent(false);
+        setSelectedEvent(newEvent);
+
+        toast.success("Événement récurrent créé avec succès!");
+      } else {
+        // Utiliser l'API pour créer l'événement simple
+        const newEvent = await eventsAPI.create(eventToSave);
+        console.log('Événement créé via API:', newEvent);
+
+        // Mettre à jour l'état
+        setEvents(prevEvents => [...prevEvents, newEvent]);
+        setIsAddingEvent(false);
+        setSelectedEvent(newEvent);
+
+        toast.success("Événement créé avec succès!");
+      }
+
+      console.log("Événement créé avec succès");
     } catch (error) {
       console.error("Erreur lors de la sauvegarde de l'événement:", error);
-      alert("Une erreur est survenue lors de la création de l'événement.");
+      toast.error("Une erreur est survenue lors de la création de l'événement.");
     }
   };
 
@@ -192,7 +252,7 @@ const Calendar = () => {
           formattedData.start_datetime = startDate.toISOString();
         } else {
           console.error("Date de début invalide:", updatedData.start_date);
-          alert("Erreur: La date de début est invalide.");
+          toast.error("Erreur: La date de début est invalide.");
           return;
         }
       }
@@ -206,7 +266,7 @@ const Calendar = () => {
           formattedData.end_datetime = endDate.toISOString();
         } else {
           console.error("Date de fin invalide:", updatedData.end_date);
-          alert("Erreur: La date de fin est invalide.");
+          toast.error("Erreur: La date de fin est invalide.");
           return;
         }
       }
@@ -226,7 +286,7 @@ const Calendar = () => {
       console.log("Événement mis à jour avec succès:", updatedEvent);
     } catch (error) {
       console.error("Erreur lors de la mise à jour de l'événement:", error);
-      alert("Une erreur est survenue lors de la mise à jour de l'événement.");
+      toast.error("Une erreur est survenue lors de la mise à jour de l'événement.");
     }
   };
 
@@ -247,7 +307,7 @@ const Calendar = () => {
       console.log("Événement supprimé avec succès, ID:", id);
     } catch (error) {
       console.error("Erreur lors de la suppression de l'événement:", error);
-      alert("Une erreur est survenue lors de la suppression de l'événement.");
+      toast.error("Une erreur est survenue lors de la suppression de l'événement.");
     }
   };
 
@@ -265,7 +325,7 @@ const Calendar = () => {
 
   return (
     <div className="h-screen flex flex-col overflow-hidden">
-      <header className="mb-4 flex-shrink-0">
+      <header className="mb-4 flex-shrink-0 pt-16 sm:pt-0">
         <motion.h1
           className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-teal-300 to-indigo-300"
           initial={{ opacity: 0, y: -20 }}
@@ -389,7 +449,7 @@ const Calendar = () => {
                   className="h-full flex items-center justify-center"
                 >
                   <EmptyState
-                    icon="📅"
+                    icon={<FiCalendar />}
                     title={view === 'day' ? 'Sélectionnez un événement' : 'Calendrier'}
                     description={
                       view === 'day'

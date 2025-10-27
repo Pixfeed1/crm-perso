@@ -1,6 +1,7 @@
 // src/components/activities/ActivityCalendar.jsx
 import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
+import { FiCheck } from 'react-icons/fi';
 
 const ActivityCalendar = ({ activities, startDate, endDate, onSelectActivity, onAddActivity }) => {
   // Noms des jours de la semaine
@@ -138,7 +139,7 @@ const ActivityCalendar = ({ activities, startDate, endDate, onSelectActivity, on
                             key={activity.id}
                             className={`px-2 py-1 text-xs rounded truncate cursor-pointer border-l-2 ${typeStyle.bg} ${priorityStyle} text-white ${
                               activity.status === 'completed' ? 'opacity-70' : ''
-                            }`}
+                            } flex items-center gap-1`}
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
                             onClick={(e) => {
@@ -146,8 +147,8 @@ const ActivityCalendar = ({ activities, startDate, endDate, onSelectActivity, on
                               onSelectActivity(activity);
                             }}
                           >
-                            {activity.status === 'completed' && '✓ '}
-                            {activity.description}
+                            {activity.status === 'completed' && <FiCheck className="flex-shrink-0" />}
+                            <span className="truncate">{activity.description}</span>
                           </motion.div>
                         );
                       })}

@@ -7,6 +7,8 @@ const dotenv = require('dotenv');
 const cookieParser = require('cookie-parser');
 const fs = require('fs');
 const db = require('./config/pgConfig'); // Changé pour utiliser PostgreSQL
+const { initAllTables } = require('./scripts/initAllTables');
+const { runMigrations } = require('./config/migrationRunner');
 
 // Charger les variables d'environnement
 dotenv.config();
@@ -94,14 +96,33 @@ app.get('/api/debug', (req, res) => {
 });
 
 // 1. Routes d'API - /api/*
+// Routes publiques (AVANT authMiddleware)
+app.use('/api/public', require('./routes/publicRoutes'));
+
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/activities', require('./routes/activitiesRoutes'));
 app.use('/api/leads', require('./routes/leadsRoutes'));
+app.use('/api/leads', require('./routes/leadInteractionRoutes'));
+app.use('/api/clients', require('./routes/clientsRoutes'));
 app.use('/api/projects', require('./routes/projectsRoutes'));
 app.use('/api/events', require('./routes/eventsRoutes'));
 app.use('/api/goals', require('./routes/goalsRoutes'));
 app.use('/api/revenues', require('./routes/revenuesRoutes'));
+app.use('/api/reminders', require('./routes/reminderRoutes'));
+app.use('/api/search', require('./routes/searchRoutes'));
+app.use('/api/export', require('./routes/exportRoutes'));
 app.use('/api/dashboard', require('./routes/dashboardRoutes'));
+app.use('/api/sirene', require('./routes/sireneRoutes'));
+app.use('/api/quotes', require('./routes/quoteRoutes'));
+app.use('/api/invoices', require('./routes/invoiceRoutes'));
+app.use('/api/settings', require('./routes/settingsRoutes'));
+app.use('/api/tva-regimes', require('./routes/tvaRegimeRoutes'));
+app.use('/api/payment-methods', require('./routes/paymentMethodRoutes'));
+app.use('/api/upload', require('./routes/uploadRoutes'));
+app.use('/api/prospection', require('./routes/prospectionRoutes'));
+
+// Servir les fichiers uploadés en statique (protégés par auth si nécessaire)
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // 2. Servir les fichiers statiques du dossier public
 app.use(express.static(publicPath));
@@ -154,22 +175,94 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Démarrer le serveur
-const server = app.listen(PORT, () => {
-  console.log('===========================================');
-  console.log(`Serveur démarré sur le port ${PORT} en mode ${process.env.NODE_ENV}`);
-  console.log(`Base de données: PostgreSQL sur ${process.env.DB_HOST || 'localhost'}`);
-  console.log(`Version: ${new Date().toISOString()}`);
-  
-  if (!fs.existsSync(indexPath)) {
+// Fonction pour initialiser la base de données
+async function initializeDatabase() {
+  try {
     console.log('');
-    console.log('⚠️ AVERTISSEMENT: index.html non trouvé!');
-    console.log('L\'application React ne pourra pas être servie correctement.');
-    console.log('Exécutez "npm run build" dans le dossier frontend.');
+    console.log('===========================================');
+    console.log('🔄 INITIALISATION DE LA BASE DE DONNÉES');
+    console.log('===========================================');
+    console.log('Vérification et création automatique des tables...');
+    console.log('');
+
+    await initAllTables();
+
+    console.log('');
+    console.log('✅ Tables de base créées avec succès !');
+    console.log('');
+
+    // Exécuter les migrations automatiquement
+    await runMigrations();
+
+    console.log('');
+    console.log('✅ Base de données complètement initialisée !');
+    console.log('   Toutes les tables et migrations sont à jour.');
+    console.log('===========================================');
+    console.log('');
+  } catch (error) {
+    console.log('');
+    console.log('===========================================');
+    console.log('⚠️  ERREUR D\'INITIALISATION DE LA BDD');
+    console.log('===========================================');
+
+    if (error.code === 'ECONNREFUSED') {
+      console.error('❌ PostgreSQL n\'est pas accessible');
+      console.error('   Port:', error.port || 5432);
+      console.error('   Host:', error.address || 'localhost');
+      console.error('');
+      console.error('💡 SOLUTION:');
+      console.error('   1. Vérifiez que PostgreSQL est installé');
+      console.error('   2. Démarrez PostgreSQL :');
+      console.error('      - Linux: sudo service postgresql start');
+      console.error('      - Mac: brew services start postgresql');
+      console.error('      - Windows: Démarrer le service PostgreSQL');
+      console.error('   3. Vérifiez vos variables .env (DB_HOST, DB_PORT, etc.)');
+    } else {
+      console.error('❌ Erreur:', error.message);
+      console.error('   Code:', error.code);
+    }
+
+    console.error('');
+    console.error('⚠️  Le serveur va démarrer SANS base de données');
+    console.error('   Les routes API ne fonctionneront pas correctement');
+    console.log('===========================================');
     console.log('');
   }
-  
-  console.log('===========================================');
+}
+
+// Démarrer le serveur après l'initialisation de la base de données
+async function startServer() {
+  // Initialiser la base de données
+  await initializeDatabase();
+
+  // Démarrer le serveur HTTP
+  const server = app.listen(PORT, () => {
+    console.log('===========================================');
+    console.log(`Serveur démarré sur le port ${PORT} en mode ${process.env.NODE_ENV}`);
+    console.log(`Base de données: PostgreSQL sur ${process.env.DB_HOST || 'localhost'}`);
+    console.log(`Version: ${new Date().toISOString()}`);
+
+    if (!fs.existsSync(indexPath)) {
+      console.log('');
+      console.log('⚠️ AVERTISSEMENT: index.html non trouvé!');
+      console.log('L\'application React ne pourra pas être servie correctement.');
+      console.log('Exécutez "npm run build" dans le dossier frontend.');
+      console.log('');
+    }
+
+    console.log('===========================================');
+  });
+
+  return server;
+}
+
+// Lancer le serveur
+let server;
+startServer().then(s => {
+  server = s;
+}).catch(error => {
+  console.error('❌ Erreur fatale lors du démarrage du serveur:', error);
+  process.exit(1);
 });
 
 // Gestion de la fermeture propre de la base de données et du serveur

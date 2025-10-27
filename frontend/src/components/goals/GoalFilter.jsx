@@ -1,28 +1,37 @@
 // src/components/goals/GoalFilter.jsx
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { FiSearch, FiX, FiFilter, FiArrowUp, FiArrowDown } from 'react-icons/fi';
 
-const GoalFilter = ({ filters, setFilters }) => {
+const GoalFilter = ({ filters, setFilters, onSort, sortField, sortDirection }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   
   // Options de catégorie
   const categoryOptions = [
     { value: 'all', label: 'Toutes les catégories' },
-    { value: 'leads', label: 'Leads', icon: '👥' },
-    { value: 'revenue', label: 'Revenus', icon: '💰' },
-    { value: 'productivity', label: 'Productivité', icon: '⚙️' },
-    { value: 'marketing', label: 'Marketing', icon: '📢' },
-    { value: 'personal', label: 'Personnel', icon: '🌱' }
+    { value: 'leads', label: 'Leads' },
+    { value: 'revenue', label: 'Revenus' },
+    { value: 'productivity', label: 'Productivité' },
+    { value: 'marketing', label: 'Marketing' },
+    { value: 'personal', label: 'Personnel' }
   ];
-  
+
   // Options de période
   const periodOptions = [
     { value: 'all', label: 'Toutes les périodes' },
-    { value: 'monthly', label: 'Mensuel', icon: '📅' },
-    { value: 'quarterly', label: 'Trimestriel', icon: '🗓️' },
-    { value: 'yearly', label: 'Annuel', icon: '📆' }
+    { value: 'monthly', label: 'Mensuel' },
+    { value: 'quarterly', label: 'Trimestriel' },
+    { value: 'yearly', label: 'Annuel' }
   ];
-  
+
+  // Options de tri
+  const sortOptions = [
+    { field: 'name', label: 'Nom' },
+    { field: 'deadline', label: 'Échéance' },
+    { field: 'progress', label: 'Progression' },
+    { field: 'created_at', label: 'Date de création' }
+  ];
+
   // Mise à jour des filtres
   const handleFilterChange = (field, value) => {
     setFilters(prev => ({
@@ -47,39 +56,67 @@ const GoalFilter = ({ filters, setFilters }) => {
 
   return (
     <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl mb-6 shadow-md relative z-30">
-      {/* Barre de recherche toujours visible */}
-      <div className="p-3 relative z-20">
-        <div className="relative">
-          <input
-            type="text"
-            placeholder="Rechercher un objectif..."
-            value={filters.search}
-            onChange={(e) => handleFilterChange('search', e.target.value)}
-            className="w-full bg-white text-gray-800 border border-gray-400 rounded-lg px-4 py-2 pl-10 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent relative z-10"
-          />
-          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 z-[15]">
-            🔍
-          </span>
-          {filters.search && (
-            <motion.button
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 z-[15]"
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={() => handleFilterChange('search', '')}
-            >
-              ✕
-            </motion.button>
+      {/* Barre de recherche et tri toujours visible */}
+      <div className="p-3 space-y-3 relative z-20">
+        <div className="flex gap-2">
+          {/* Recherche */}
+          <div className="flex-1 relative">
+            <input
+              type="text"
+              placeholder="Rechercher un objectif..."
+              value={filters.search}
+              onChange={(e) => handleFilterChange('search', e.target.value)}
+              className="w-full bg-white text-gray-800 border border-gray-400 rounded-lg px-4 py-2 pl-10 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent relative z-10"
+            />
+            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 z-[15]">
+              <FiSearch />
+            </span>
+            {filters.search && (
+              <motion.button
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 z-[15]"
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={() => handleFilterChange('search', '')}
+              >
+                <FiX />
+              </motion.button>
+            )}
+          </div>
+
+          {/* Tri rapide */}
+          {onSort && (
+            <div className="flex gap-1">
+              {sortOptions.map(option => (
+                <motion.button
+                  key={option.field}
+                  onClick={() => onSort(option.field)}
+                  className={`px-3 py-2 rounded-lg flex items-center gap-1 text-sm ${
+                    sortField === option.field
+                      ? 'bg-amber-600 text-white'
+                      : 'bg-gray-700/50 text-gray-300 hover:bg-gray-700'
+                  }`}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <span className="hidden sm:inline">{option.label}</span>
+                  <span className="sm:hidden">{option.label.substring(0, 3)}</span>
+                  {sortField === option.field && (
+                    sortDirection === 'asc' ? <FiArrowUp size={14} /> : <FiArrowDown size={14} />
+                  )}
+                </motion.button>
+              ))}
+            </div>
           )}
         </div>
       </div>
       
       {/* Bouton d'expansion des filtres */}
-      <div 
-        className="px-3 py-2 flex justify-between items-center cursor-pointer hover:bg-gray-700/30 relative z-10"
+      <div
+        className="px-3 py-2 flex justify-between items-center cursor-pointer hover:bg-gray-700/30 transition-colors relative z-10"
         onClick={() => setIsExpanded(!isExpanded)}
       >
-        <div className="flex items-center text-sm">
-          <span className="mr-2">🔍</span>
+        <div className="flex items-center text-sm gap-2">
+          <FiFilter />
           <span className="text-gray-300 font-medium">Filtres avancés</span>
           {hasActiveFilters && (
             <span className="ml-2 px-1.5 py-0.5 bg-amber-600 rounded-full text-xs text-white">

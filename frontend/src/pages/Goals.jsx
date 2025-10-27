@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { goalsAPI } from '../services/api';
+import { goalsAPI, exportAPI } from '../services/api';
+import { FiTarget, FiZap, FiCheckCircle, FiClock, FiDownload } from 'react-icons/fi';
+import { useToast } from '../hooks/useToast';
+import { useConfirm } from '../hooks/useConfirm';
+import ConfirmModal from '../components/common/ConfirmModal';
 
 // Composants
 import GoalStats from '../components/goals/GoalStats';
@@ -10,6 +14,8 @@ import GoalFilter from '../components/goals/GoalFilter';
 import EmptyState from '../components/common/EmptyState';
 
 const Goals = () => {
+  const { toast } = useToast();
+  const { confirm, confirmState } = useConfirm();
   const [goals, setGoals] = useState([]);
   const [filteredGoals, setFilteredGoals] = useState([]);
   const [selectedGoal, setSelectedGoal] = useState(null);
@@ -28,6 +34,8 @@ const Goals = () => {
     category: 'all',
     period: 'all'
   });
+  const [sortField, setSortField] = useState('created_at');
+  const [sortDirection, setSortDirection] = useState('desc');
 
   // Récupération des objectifs depuis l'API
   useEffect(() => {
@@ -143,9 +151,49 @@ const Goals = () => {
     if (filters.period !== 'all') {
       result = result.filter(goal => goal.period === filters.period);
     }
-    
+
+    // Tri des résultats
+    result.sort((a, b) => {
+      let aValue, bValue;
+
+      switch (sortField) {
+        case 'name':
+          aValue = (a.title || a.name || '').toLowerCase();
+          bValue = (b.title || b.name || '').toLowerCase();
+          break;
+        case 'deadline':
+          aValue = a.end_date ? new Date(a.end_date) : new Date(0);
+          bValue = b.end_date ? new Date(b.end_date) : new Date(0);
+          break;
+        case 'progress':
+          aValue = a.target_value > 0 ? (a.current_value / a.target_value) : 0;
+          bValue = b.target_value > 0 ? (b.current_value / b.target_value) : 0;
+          break;
+        case 'created_at':
+          aValue = new Date(a.created_at);
+          bValue = new Date(b.created_at);
+          break;
+        default:
+          return 0;
+      }
+
+      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+
     setFilteredGoals(result);
-  }, [goals, view, filters]);
+  }, [goals, view, filters, sortField, sortDirection]);
+
+  // Gestion du tri
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
 
   // Sélection d'un objectif
   const handleSelectGoal = (goal) => {
@@ -193,12 +241,12 @@ const Goals = () => {
       calculateStats(updatedGoals);
       setIsAddingGoal(false);
       setSelectedGoal(newGoal);
-      
+
       // Notification de succès
-      alert("Objectif créé avec succès!");
+      toast.success("Objectif créé avec succès!");
     } catch (error) {
       console.error('Erreur lors de la sauvegarde de l\'objectif:', error);
-      alert(`Erreur lors de la création de l'objectif: ${error.message || 'Une erreur est survenue'}`);
+      toast.error(`Erreur lors de la création de l'objectif: ${error.message || 'Une erreur est survenue'}`);
     }
   };
 
@@ -276,32 +324,48 @@ const Goals = () => {
       setGoals(updatedGoals);
       calculateStats(updatedGoals);
       setSelectedGoal(updatedGoals.find(goal => goal.id === id));
-      
+
       // Notification de succès
-      alert("Objectif mis à jour avec succès!");
+      toast.success("Objectif mis à jour avec succès!");
     } catch (error) {
       console.error('Erreur lors de la mise à jour de l\'objectif:', error);
-      alert(`Erreur lors de la mise à jour de l'objectif: ${error.message || 'Une erreur est survenue'}`);
+      toast.error(`Erreur lors de la mise à jour de l'objectif: ${error.message || 'Une erreur est survenue'}`);
     }
   };
 
   // Suppression d'un objectif via l'API
   const handleDeleteGoal = async (id) => {
     try {
+      // Trouver l'objectif à supprimer
+      const goalToDelete = goals.find(goal => goal.id === id);
+      if (!goalToDelete) return;
+
+      // Demander confirmation
+      const confirmed = await confirm({
+        title: "Supprimer cet objectif ?",
+        message: "Cette action est irréversible. Toutes les étapes associées seront également supprimées.",
+        confirmText: "Supprimer",
+        cancelText: "Annuler",
+        variant: "danger",
+        itemName: goalToDelete.title || goalToDelete.name
+      });
+
+      if (!confirmed) return;
+
       // Utiliser l'API pour supprimer l'objectif
       await goalsAPI.delete(id);
       console.log('Objectif supprimé via API');
-      
+
       // Mettre à jour l'état local
       const remainingGoals = goals.filter(goal => goal.id !== id);
       setGoals(remainingGoals);
       calculateStats(remainingGoals);
       setSelectedGoal(null);
-      
-      alert("Objectif supprimé avec succès");
+
+      toast.success("Objectif supprimé avec succès");
     } catch (error) {
       console.error('Erreur lors de la suppression de l\'objectif:', error);
-      alert(`Erreur lors de la suppression de l'objectif: ${error.message || 'Une erreur est survenue'}`);
+      toast.error(`Erreur lors de la suppression de l'objectif: ${error.message || 'Une erreur est survenue'}`);
     }
   };
 
@@ -327,7 +391,7 @@ const Goals = () => {
       setSelectedGoal(updatedGoals.find(goal => goal.id === goalId));
     } catch (error) {
       console.error('Erreur lors de l\'ajout de l\'étape:', error);
-      alert(`Erreur lors de l'ajout de l'étape: ${error.message || 'Une erreur est survenue'}`);
+      toast.error(`Erreur lors de l'ajout de l'étape: ${error.message || 'Une erreur est survenue'}`);
     }
   };
 
@@ -360,7 +424,7 @@ const Goals = () => {
       setSelectedGoal(updatedGoals.find(goal => goal.id === goalId));
     } catch (error) {
       console.error('Erreur lors de la mise à jour de l\'étape:', error);
-      alert(`Erreur lors de la mise à jour de l'étape: ${error.message || 'Une erreur est survenue'}`);
+      toast.error(`Erreur lors de la mise à jour de l'étape: ${error.message || 'Une erreur est survenue'}`);
     }
   };
 
@@ -382,14 +446,14 @@ const Goals = () => {
 
   return (
     <div className="h-full flex flex-col">
-      <header className="mb-6">
-        <h1 
-          className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-amber-300 to-orange-300"
+      <header className="mb-4 sm:mb-6 px-2 sm:px-0 pt-16 sm:pt-0">
+        <h1
+          className="text-3xl sm:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-amber-300 to-orange-300"
         >
           Objectifs
         </h1>
-        <p 
-          className="text-amber-200 mt-2"
+        <p
+          className="text-amber-200 mt-2 text-sm sm:text-base"
         >
           Définissez vos objectifs et suivez votre progression vers le succès
         </p>
@@ -399,57 +463,64 @@ const Goals = () => {
       <GoalStats stats={stats} />
       
       {/* Filtres et contrôles */}
-      <div className="flex flex-wrap justify-between items-center mb-6 gap-3">
+      <div className="flex flex-col sm:flex-row flex-wrap justify-between items-stretch sm:items-center mb-4 sm:mb-6 gap-3 px-2 sm:px-0">
         <div className="flex flex-wrap gap-2">
           <button
-            className={`px-3 py-2 rounded-lg text-sm flex items-center ${
+            className={`px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm flex items-center justify-center ${
               view === 'all'
                 ? 'bg-amber-600 text-white'
                 : 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50'
             }`}
             onClick={() => setView('all')}
           >
-            <span className="mr-1">🎯</span>
-            Tous
+            <FiTarget className="mr-1 text-xs sm:text-base" />
+            <span className="hidden xs:inline">Tous</span>
           </button>
           <button
-            className={`px-3 py-2 rounded-lg text-sm flex items-center ${
+            className={`px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm flex items-center justify-center ${
               view === 'active'
                 ? 'bg-amber-600 text-white'
                 : 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50'
             }`}
             onClick={() => setView('active')}
           >
-            <span className="mr-1">⚡</span>
-            En cours
+            <FiZap className="mr-1 text-xs sm:text-base" />
+            <span className="hidden xs:inline">En cours</span>
           </button>
           <button
-            className={`px-3 py-2 rounded-lg text-sm flex items-center ${
+            className={`px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm flex items-center justify-center ${
               view === 'completed'
                 ? 'bg-amber-600 text-white'
                 : 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50'
             }`}
             onClick={() => setView('completed')}
           >
-            <span className="mr-1">✅</span>
-            Complétés
+            <FiCheckCircle className="mr-1 text-xs sm:text-base" />
+            <span className="hidden xs:inline">Complétés</span>
           </button>
           <button
-            className={`px-3 py-2 rounded-lg text-sm flex items-center ${
+            className={`px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm flex items-center justify-center ${
               view === 'upcoming'
                 ? 'bg-amber-600 text-white'
                 : 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50'
             }`}
             onClick={() => setView('upcoming')}
           >
-            <span className="mr-1">🔮</span>
-            À venir
+            <FiClock className="mr-1 text-xs sm:text-base" />
+            <span className="hidden xs:inline">À venir</span>
           </button>
         </div>
-        
-        <div className="flex items-center space-x-3">
+
+        <div className="flex items-center gap-2">
           <button
-            className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg flex items-center shadow-md hover:scale-105 active:scale-95 transition-transform"
+            className="px-3 py-2 sm:px-4 sm:py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg flex items-center justify-center shadow-md hover:scale-105 active:scale-95 transition-transform text-sm sm:text-base"
+            onClick={() => exportAPI.goals()}
+            title="Exporter les objectifs en CSV"
+          >
+            <FiDownload className="mr-1" /> Exporter
+          </button>
+          <button
+            className="w-full sm:w-auto px-3 py-2 sm:px-4 sm:py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg flex items-center justify-center shadow-md hover:scale-105 active:scale-95 transition-transform text-sm sm:text-base"
             onClick={handleAddGoal}
           >
             <span className="mr-2">+</span>
@@ -459,25 +530,28 @@ const Goals = () => {
       </div>
       
       {/* Filtre de recherche */}
-      <GoalFilter 
-        filters={filters} 
-        setFilters={setFilters} 
+      <GoalFilter
+        filters={filters}
+        setFilters={setFilters}
+        onSort={handleSort}
+        sortField={sortField}
+        sortDirection={sortDirection}
       />
       
       {/* Contenu principal */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 flex-grow">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6 flex-grow overflow-hidden px-2 sm:px-0">
         {/* Liste des objectifs */}
-        <div className="md:col-span-2 bg-gray-800/30 backdrop-blur-sm rounded-2xl p-6">
-          <h3 className="text-xl font-semibold text-white mb-4">Liste des objectifs</h3>
-          <GoalList 
+        <div className="lg:col-span-2 bg-gray-800/30 backdrop-blur-sm rounded-xl sm:rounded-2xl p-4 sm:p-6 overflow-y-auto">
+          <h3 className="text-lg sm:text-xl font-semibold text-white mb-3 sm:mb-4">Liste des objectifs</h3>
+          <GoalList
             goals={filteredGoals}
             selectedGoal={selectedGoal}
             onSelectGoal={handleSelectGoal}
           />
         </div>
-        
+
         {/* Panneau de détails ou formulaire */}
-        <div className="bg-gray-800/30 backdrop-blur-sm rounded-2xl p-6">
+        <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl sm:rounded-2xl p-4 sm:p-6 overflow-y-auto">
           {isAddingGoal ? (
             <div key="add-form">
               <GoalForm 
@@ -502,8 +576,8 @@ const Goals = () => {
               key="empty-state"
               className="h-full flex items-center justify-center"
             >
-              <EmptyState 
-                icon="🎯"
+              <EmptyState
+                icon={<FiTarget />}
                 title="Objectifs"
                 description="Sélectionnez un objectif dans la liste ou créez-en un nouveau."
               />
@@ -511,6 +585,9 @@ const Goals = () => {
           )}
         </div>
       </div>
+
+      {/* Modal de confirmation */}
+      <ConfirmModal {...confirmState.config} isOpen={confirmState.isOpen} />
     </div>
   );
 };

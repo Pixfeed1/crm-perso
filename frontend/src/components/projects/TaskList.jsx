@@ -1,13 +1,14 @@
 // src/components/projects/TaskList.jsx
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { FiClipboard, FiBarChart2 } from 'react-icons/fi';
 
 const TaskList = ({ tasks = [], onToggleStatus }) => {
   // Si aucune tâche n'est disponible
   if (tasks.length === 0) {
     return (
       <div className="bg-gray-900/30 rounded-lg p-6 text-center">
-        <div className="text-4xl mb-3">📋</div>
+        <div className="text-4xl mb-3"><FiClipboard /></div>
         <h4 className="text-lg font-medium text-gray-300 mb-2">Aucune tâche</h4>
         <p className="text-gray-400 text-sm">
           Ajoutez des tâches pour suivre l'avancement de ce projet.
@@ -15,17 +16,17 @@ const TaskList = ({ tasks = [], onToggleStatus }) => {
       </div>
     );
   }
-  
+
   // Calcul des statistiques de tâches
   const completedTasks = tasks.filter(task => task.completed).length;
   const completionPercentage = Math.round((completedTasks / tasks.length) * 100);
-  
+
   return (
     <div>
       {/* Résumé des tâches */}
       <div className="mb-4 bg-gray-900/30 p-4 rounded-lg flex flex-wrap gap-4 justify-between items-center">
         <div className="flex items-center">
-          <div className="text-2xl mr-3">📊</div>
+          <div className="text-2xl mr-3"><FiBarChart2 /></div>
           <div>
             <h4 className="font-medium text-white">{completedTasks} sur {tasks.length} tâches complétées</h4>
             <div className="text-sm text-gray-400">{completionPercentage}% terminé</div>

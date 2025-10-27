@@ -1,13 +1,14 @@
 // src/components/revenues/RevenueList.jsx
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import { FiFileText, FiRefreshCw, FiPackage, FiDollarSign, FiArrowUp, FiArrowDown } from 'react-icons/fi';
 
 const RevenueList = ({ revenues, selectedRevenue, onSelectRevenue }) => {
   const [sortConfig, setSortConfig] = useState({
     key: 'date',
     direction: 'desc'
   });
-  
+
   // Gestion du tri
   const requestSort = (key) => {
     let direction = 'asc';
@@ -16,13 +17,13 @@ const RevenueList = ({ revenues, selectedRevenue, onSelectRevenue }) => {
     }
     setSortConfig({ key, direction });
   };
-  
+
   // Obtenir le class name pour l'indicateur de tri
   const getSortDirectionIcon = (key) => {
     if (sortConfig.key !== key) {
-      return '⇅';
+      return <FiRefreshCw />;
     }
-    return sortConfig.direction === 'asc' ? '↑' : '↓';
+    return sortConfig.direction === 'asc' ? <FiArrowUp /> : <FiArrowDown />;
   };
   
   // Trier les revenus
@@ -78,24 +79,24 @@ const RevenueList = ({ revenues, selectedRevenue, onSelectRevenue }) => {
   // Configuration des types
   const typeConfig = {
     'invoice': {
-      icon: '📄',
+      icon: <FiFileText />,
       label: 'Facture'
     },
     'recurring': {
-      icon: '🔄',
+      icon: <FiRefreshCw />,
       label: 'Récurrent'
     },
     'other': {
-      icon: '📦',
+      icon: <FiPackage />,
       label: 'Autre'
     }
   };
-  
+
   if (revenues.length === 0) {
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="bg-gray-900/30 rounded-lg p-6 text-center">
-          <div className="text-4xl mb-3">💰</div>
+          <div className="text-4xl mb-3"><FiDollarSign /></div>
           <h4 className="text-lg font-medium text-gray-300 mb-2">Aucun revenu</h4>
           <p className="text-gray-400 text-sm">
             Ajoutez vos premiers revenus pour commencer à suivre vos finances.
@@ -165,7 +166,7 @@ const RevenueList = ({ revenues, selectedRevenue, onSelectRevenue }) => {
               label: revenue.status
             };
             const typeInfo = typeConfig[revenue.type] || {
-              icon: '📦',
+              icon: <FiPackage />,
               label: revenue.type
             };
             
