@@ -294,6 +294,61 @@ const DATABASE_SCHEMA = {
       'CREATE INDEX IF NOT EXISTS idx_events_related ON events(related_to_type, related_to_id)',
       'CREATE INDEX IF NOT EXISTS idx_events_project_id ON events(project_id)'
     ]
+  },
+
+  // Table settings (paramètres système)
+  settings: {
+    columns: {
+      id: 'SERIAL PRIMARY KEY',
+      key: 'VARCHAR(100) UNIQUE NOT NULL',
+      value: 'JSONB NOT NULL',
+      description: 'TEXT',
+      created_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP',
+      updated_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'
+    },
+    indexes: [
+      'CREATE INDEX IF NOT EXISTS idx_settings_key ON settings(key)'
+    ],
+    data: [
+      {
+        key: 'reminders_enabled',
+        value: JSON.stringify(false),
+        description: 'Activer/désactiver le système de relances automatiques'
+      },
+      {
+        key: 'reminder_config',
+        value: JSON.stringify({
+          reminder_1_days: 7,
+          reminder_2_days: 14,
+          reminder_3_days: 21,
+          email_subject_1: 'Rappel - Facture {invoice_number} en attente de paiement',
+          email_subject_2: '2ème rappel - Facture {invoice_number} en retard',
+          email_subject_3: 'Dernier rappel - Facture {invoice_number} impayée'
+        }),
+        description: 'Configuration des intervalles et templates de relances'
+      }
+    ]
+  },
+
+  // Table invoice_reminders (historique des relances)
+  invoice_reminders: {
+    columns: {
+      id: 'SERIAL PRIMARY KEY',
+      invoice_id: 'INTEGER REFERENCES invoices(id) ON DELETE CASCADE',
+      reminder_level: 'INTEGER NOT NULL CHECK (reminder_level >= 1 AND reminder_level <= 3)',
+      sent_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP',
+      email_sent_to: 'VARCHAR(255)',
+      days_overdue: 'INTEGER',
+      status: "VARCHAR(50) DEFAULT 'sent'",
+      error_message: 'TEXT',
+      notes: 'TEXT',
+      created_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'
+    },
+    indexes: [
+      'CREATE INDEX IF NOT EXISTS idx_invoice_reminders_invoice_id ON invoice_reminders(invoice_id)',
+      'CREATE INDEX IF NOT EXISTS idx_invoice_reminders_sent_at ON invoice_reminders(sent_at)',
+      'CREATE INDEX IF NOT EXISTS idx_invoice_reminders_status ON invoice_reminders(status)'
+    ]
   }
 };
 
@@ -459,6 +514,7 @@ async function autoInitDatabase(pool) {
     // Insérer les données de référence
     await ensureTvaRegimes(client);
     await ensureReferenceData(client, 'payment_methods', DATABASE_SCHEMA.payment_methods.data);
+    await ensureReferenceData(client, 'settings', DATABASE_SCHEMA.settings.data);
 
     await client.query('COMMIT');
 

@@ -4,25 +4,25 @@ const express = require('express');
 const router = express.Router();
 const reminderController = require('../controllers/reminderController');
 
-// Routes de statistiques
-router.get('/count', reminderController.getRemindersCount);
+/**
+ * ROUTES DES RELANCES AUTOMATIQUES DE FACTURES
+ *
+ * Base: /api/reminders
+ */
 
-// Routes de récupération globales
-router.get('/active', reminderController.getActiveReminders);
-router.get('/overdue', reminderController.getOverdueReminders);
-router.get('/upcoming', reminderController.getUpcomingReminders);
+// Configuration du système de relances
+router.get('/settings', reminderController.getSettings);
+router.put('/settings', reminderController.updateSettings);
 
-// Routes pour une entité spécifique
-router.get('/entity/:entityType/:entityId', reminderController.getRemindersByEntity);
+// Détection et envoi
+router.get('/detect', reminderController.detectInvoicesNeedingReminder);
+router.post('/send/:invoiceId', reminderController.sendReminder);
+router.post('/send-batch', reminderController.sendBatchReminders);
 
-// Routes CRUD standard
-router.get('/:id', reminderController.getReminderById);
-router.post('/', reminderController.createReminder);
-router.put('/:id', reminderController.updateReminder);
-router.delete('/:id', reminderController.deleteReminder);
-
-// Actions spécifiques
-router.patch('/:id/complete', reminderController.completeReminder);
-router.patch('/:id/dismiss', reminderController.dismissReminder);
+// Historique et statistiques
+router.get('/stats', reminderController.getStats);
+router.get('/history', reminderController.getAllReminders);
+router.get('/invoice/:invoiceId', reminderController.getRemindersByInvoice);
+router.delete('/invoice/:invoiceId', reminderController.deleteRemindersByInvoice);
 
 module.exports = router;

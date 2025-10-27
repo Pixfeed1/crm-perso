@@ -1,12 +1,13 @@
 // src/pages/Settings.jsx
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FiSave, FiBriefcase, FiMail, FiCheckCircle, FiXCircle, FiAlertCircle, FiVideo } from 'react-icons/fi';
+import { FiSave, FiBriefcase, FiMail, FiCheckCircle, FiXCircle, FiAlertCircle, FiVideo, FiBell } from 'react-icons/fi';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { settingsAPI } from '../services/settingsAPI';
 import { useToast } from '../hooks/useToast';
 import VideoConferenceSettings from '../components/settings/VideoConferenceSettings';
+import ReminderSettings from '../components/settings/ReminderSettings';
 
 const Settings = () => {
   const { toast } = useToast();
@@ -189,6 +190,17 @@ const Settings = () => {
         >
           <FiVideo />
           <span>Visioconférence</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('reminders')}
+          className={`px-4 py-2 flex items-center gap-2 border-b-2 transition-colors whitespace-nowrap ${
+            activeTab === 'reminders'
+              ? 'border-indigo-500 text-indigo-300'
+              : 'border-transparent text-gray-400 hover:text-gray-300'
+          }`}
+        >
+          <FiBell />
+          <span>Relances automatiques</span>
         </button>
       </div>
 
@@ -443,6 +455,10 @@ const Settings = () => {
 
         {activeTab === 'video' && (
           <VideoConferenceSettings />
+        )}
+
+        {activeTab === 'reminders' && (
+          <ReminderSettings />
         )}
       </motion.div>
     </div>
