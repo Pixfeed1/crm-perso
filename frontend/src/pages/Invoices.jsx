@@ -1,11 +1,15 @@
 // src/pages/Invoices.jsx
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiFileText, FiPlus, FiEdit2, FiTrash2, FiDollarSign, FiAlertCircle, FiDownload, FiSend } from 'react-icons/fi';
+import { FiFileText, FiPlus, FiEdit2, FiTrash2, FiDollarSign, FiAlertCircle, FiDownload, FiSend, FiX, FiCreditCard } from 'react-icons/fi';
 import { invoicesAPI } from '../services/quotesAPI';
+import { paymentsAPI } from '../services/api';
 import { useToast } from '../hooks/useToast';
 import { useConfirm } from '../hooks/useConfirm';
 import InvoiceForm from '../components/invoices/InvoiceForm';
+import PaymentBadge from '../components/payments/PaymentBadge';
+import PaymentForm from '../components/payments/PaymentForm';
+import PaymentList from '../components/payments/PaymentList';
 import ConfirmModal from '../components/common/ConfirmModal';
 import SendEmailModal from '../components/common/SendEmailModal';
 import { exportInvoiceToPDF } from '../services/exportPDF';
@@ -22,6 +26,10 @@ const Invoices = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [emailModalOpen, setEmailModalOpen] = useState(false);
   const [invoiceToSend, setInvoiceToSend] = useState(null);
+  const [viewingPayments, setViewingPayments] = useState(false);
+  const [paymentsInvoice, setPaymentsInvoice] = useState(null);
+  const [payments, setPayments] = useState([]);
+  const [showPaymentForm, setShowPaymentForm] = useState(false);
 
   useEffect(() => {
     fetchInvoices();
@@ -91,33 +99,35 @@ const Invoices = () => {
     }
   };
 
-  const handleMarkAsPaid = async (id) => {
+  const handleViewPayments = async (invoice) => {
+    setPaymentsInvoice(invoice);
+    setViewingPayments(true);
+    setShowPaymentForm(false);
+    await fetchPaymentsForInvoice(invoice.id);
+  };
+
+  const fetchPaymentsForInvoice = async (invoiceId) => {
     try {
-      await invoicesAPI.markAsPaid(id);
-      toast.success('Facture marquée comme payée');
-      fetchInvoices();
+      const data = await paymentsAPI.getByInvoice(invoiceId);
+      setPayments(data);
     } catch (error) {
-      toast.error('Erreur');
+      console.error('Erreur lors du chargement des paiements:', error);
+      toast.error('Erreur lors du chargement des paiements');
     }
   };
 
-  const getPaymentStatusBadge = (status) => {
-    const badges = {
-      pending: { color: 'bg-yellow-500/20 text-yellow-300', icon: FiAlertCircle, label: 'En attente' },
-      paid: { color: 'bg-green-500/20 text-green-300', icon: FiDollarSign, label: 'Payée' },
-      overdue: { color: 'bg-red-500/20 text-red-300', icon: FiAlertCircle, label: 'En retard' },
-      relance1: { color: 'bg-orange-500/20 text-orange-300', icon: FiAlertCircle, label: 'Relance 1' },
-      relance2: { color: 'bg-orange-600/20 text-orange-400', icon: FiAlertCircle, label: 'Relance 2' },
-      relance3: { color: 'bg-red-600/20 text-red-400', icon: FiAlertCircle, label: 'Mise en demeure' }
-    };
-    const badge = badges[status] || badges.pending;
-    const Icon = badge.icon;
-    return (
-      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs ${badge.color}`}>
-        <Icon className="w-3 h-3" />
-        {badge.label}
-      </span>
-    );
+  const handlePaymentsUpdate = async () => {
+    if (paymentsInvoice) {
+      await fetchPaymentsForInvoice(paymentsInvoice.id);
+      await fetchInvoices(); // Rafraîchir la liste pour mettre à jour les statuts
+    }
+  };
+
+  const handleClosePayments = () => {
+    setViewingPayments(false);
+    setPaymentsInvoice(null);
+    setPayments([]);
+    setShowPaymentForm(false);
   };
 
   const formatDate = (dateString) => {
@@ -236,7 +246,7 @@ const Invoices = () => {
                       {formatAmount(invoice.total_ttc)}
                     </td>
                     <td className="px-4 py-3">
-                      {getPaymentStatusBadge(invoice.payment_status)}
+                      <PaymentBadge invoice={invoice} showAmount={false} />
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
@@ -255,6 +265,13 @@ const Invoices = () => {
                           <FiDownload className="w-4 h-4" />
                         </button>
                         <button
+                          onClick={() => handleViewPayments(invoice)}
+                          className="p-2 text-green-400 hover:bg-green-500/20 rounded transition-colors"
+                          title="Gérer les paiements"
+                        >
+                          <FiCreditCard className="w-4 h-4" />
+                        </button>
+                        <button
                           onClick={() => {
                             setSelectedInvoice(invoice);
                             setIsFormOpen(true);
@@ -264,15 +281,6 @@ const Invoices = () => {
                         >
                           <FiEdit2 className="w-4 h-4" />
                         </button>
-                        {invoice.payment_status !== 'paid' && (
-                          <button
-                            onClick={() => handleMarkAsPaid(invoice.id)}
-                            className="p-2 text-green-400 hover:bg-green-500/20 rounded transition-colors"
-                            title="Marquer comme payée"
-                          >
-                            <FiDollarSign className="w-4 h-4" />
-                          </button>
-                        )}
                         <button
                           onClick={() => handleDelete(invoice.id)}
                           className="p-2 text-red-400 hover:bg-red-500/20 rounded transition-colors"
@@ -324,6 +332,117 @@ const Invoices = () => {
       </AnimatePresence>
 
       <ConfirmModal {...confirmState} />
+
+      {/* Modal gestion des paiements */}
+      <AnimatePresence>
+        {viewingPayments && paymentsInvoice && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={handleClosePayments}
+          >
+            <motion.div
+              initial={{ scale: 0.95 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.95 }}
+              className="bg-gray-900 rounded-lg border border-gray-700 max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* En-tête */}
+              <div className="sticky top-0 bg-gray-900 border-b border-gray-700 px-6 py-4 flex justify-between items-center">
+                <div>
+                  <h2 className="text-xl font-bold text-white">
+                    Gestion des paiements
+                  </h2>
+                  <p className="text-sm text-gray-400 mt-1">
+                    Facture {paymentsInvoice.invoice_number} - {paymentsInvoice.client_name}
+                  </p>
+                </div>
+                <button
+                  onClick={handleClosePayments}
+                  className="text-gray-400 hover:text-white transition-colors"
+                >
+                  <FiX size={24} />
+                </button>
+              </div>
+
+              {/* Contenu */}
+              <div className="p-6">
+                {/* Résumé facture */}
+                <div className="bg-gray-800/50 rounded-lg p-4 mb-6">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div>
+                      <span className="text-gray-400 text-sm">Montant total</span>
+                      <p className="text-white font-semibold text-lg">
+                        {formatAmount(paymentsInvoice.total_ttc)}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-gray-400 text-sm">Déjà payé</span>
+                      <p className="text-green-400 font-semibold text-lg">
+                        {formatAmount(paymentsInvoice.amount_paid || 0)}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-gray-400 text-sm">Reste à payer</span>
+                      <p className="text-purple-400 font-semibold text-lg">
+                        {formatAmount(paymentsInvoice.amount_remaining || paymentsInvoice.total_ttc)}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-gray-400 text-sm">Statut</span>
+                      <div className="mt-1">
+                        <PaymentBadge invoice={paymentsInvoice} showAmount={false} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Bouton ajouter paiement */}
+                {!showPaymentForm && paymentsInvoice.payment_status !== 'paid' && (
+                  <div className="mb-6">
+                    <button
+                      onClick={() => setShowPaymentForm(true)}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+                    >
+                      <FiPlus />
+                      <span>Enregistrer un paiement</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* Formulaire paiement */}
+                {showPaymentForm && (
+                  <div className="mb-6">
+                    <PaymentForm
+                      invoice={paymentsInvoice}
+                      onSuccess={() => {
+                        setShowPaymentForm(false);
+                        handlePaymentsUpdate();
+                      }}
+                      onCancel={() => setShowPaymentForm(false)}
+                    />
+                  </div>
+                )}
+
+                {/* Liste des paiements */}
+                <div>
+                  <h3 className="text-lg font-semibold text-white mb-4">
+                    Historique des paiements ({payments.length})
+                  </h3>
+                  <PaymentList
+                    invoice={paymentsInvoice}
+                    payments={payments}
+                    onPaymentsUpdate={handlePaymentsUpdate}
+                  />
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Modal d'envoi email */}
       <SendEmailModal
