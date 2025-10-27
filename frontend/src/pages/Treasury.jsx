@@ -10,7 +10,8 @@ import {
   FiRefreshCw,
   FiCalendar
 } from 'react-icons/fi';
-import { paymentsAPI, invoicesAPI } from '../services/api';
+import { paymentsAPI } from '../services/api';
+import { invoicesAPI } from '../services/quotesAPI';
 import { useToast } from '../hooks/useToast';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
