@@ -9,56 +9,56 @@ export const quotesAPI = {
    * Récupère tous les devis
    */
   getAll: async () => {
-    return apiRequest('GET', '/quotes');
+    return apiRequest('/quotes');
   },
 
   /**
    * Récupère un devis par son ID
    */
   getById: async (id) => {
-    return apiRequest('GET', `/quotes/${id}`);
+    return apiRequest(`/quotes/${id}`);
   },
 
   /**
    * Crée un nouveau devis
    */
   create: async (quoteData) => {
-    return apiRequest('POST', '/quotes', quoteData);
+    return apiRequest('/quotes', 'POST', quoteData);
   },
 
   /**
    * Met à jour un devis
    */
   update: async (id, quoteData) => {
-    return apiRequest('PUT', `/quotes/${id}`, quoteData);
+    return apiRequest(`/quotes/${id}`, 'PUT', quoteData);
   },
 
   /**
    * Change le statut d'un devis
    */
   updateStatus: async (id, status) => {
-    return apiRequest('PATCH', `/quotes/${id}/status`, { status });
+    return apiRequest(`/quotes/${id}/status`, 'PATCH', { status });
   },
 
   /**
    * Supprime un devis
    */
   delete: async (id) => {
-    return apiRequest('DELETE', `/quotes/${id}`);
+    return apiRequest(`/quotes/${id}`, 'DELETE');
   },
 
   /**
    * Envoie un devis par email
    */
   sendEmail: async (id, emailData) => {
-    return apiRequest('POST', `/quotes/${id}/send`, emailData);
+    return apiRequest(`/quotes/${id}/send`, 'POST', emailData);
   },
 
   /**
    * Signe un devis électroniquement
    */
   signQuote: async (id, signatureData) => {
-    return apiRequest('POST', `/quotes/${id}/sign`, signatureData);
+    return apiRequest(`/quotes/${id}/sign`, 'POST', signatureData);
   }
 };
 
@@ -70,56 +70,56 @@ export const invoicesAPI = {
    * Récupère toutes les factures
    */
   getAll: async () => {
-    return apiRequest('GET', '/invoices');
+    return apiRequest('/invoices');
   },
 
   /**
    * Récupère une facture par son ID
    */
   getById: async (id) => {
-    return apiRequest('GET', `/invoices/${id}`);
+    return apiRequest(`/invoices/${id}`);
   },
 
   /**
    * Récupère les factures impayées
    */
   getUnpaid: async () => {
-    return apiRequest('GET', '/invoices/unpaid');
+    return apiRequest('/invoices/unpaid');
   },
 
   /**
    * Crée une nouvelle facture
    */
   create: async (invoiceData) => {
-    return apiRequest('POST', '/invoices', invoiceData);
+    return apiRequest('/invoices', 'POST', invoiceData);
   },
 
   /**
    * Crée une facture à partir d'un devis
    */
   createFromQuote: async (quoteId) => {
-    return apiRequest('POST', `/invoices/from-quote/${quoteId}`);
+    return apiRequest(`/invoices/from-quote/${quoteId}`, 'POST');
   },
 
   /**
    * Met à jour une facture
    */
   update: async (id, invoiceData) => {
-    return apiRequest('PUT', `/invoices/${id}`, invoiceData);
+    return apiRequest(`/invoices/${id}`, 'PUT', invoiceData);
   },
 
   /**
    * Marque une facture comme payée
    */
   markAsPaid: async (id) => {
-    return apiRequest('PATCH', `/invoices/${id}/paid`);
+    return apiRequest(`/invoices/${id}/paid`, 'PATCH');
   },
 
   /**
    * Met à jour le statut de paiement
    */
   updatePaymentStatus: async (id, payment_status, reminder_count) => {
-    return apiRequest('PATCH', `/invoices/${id}/payment-status`, {
+    return apiRequest(`/invoices/${id}/payment-status`, 'PATCH', {
       payment_status,
       reminder_count
     });
@@ -129,13 +129,13 @@ export const invoicesAPI = {
    * Supprime une facture
    */
   delete: async (id) => {
-    return apiRequest('DELETE', `/invoices/${id}`);
+    return apiRequest(`/invoices/${id}`, 'DELETE');
   },
 
   /**
    * Envoie une facture par email
    */
   sendEmail: async (id, emailData) => {
-    return apiRequest('POST', `/invoices/${id}/send`, emailData);
+    return apiRequest(`/invoices/${id}/send`, 'POST', emailData);
   }
 };
