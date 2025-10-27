@@ -5,6 +5,7 @@ const authMiddleware = require('../middleware/authMiddleware');
 const eventModel = require('../models/eventModel');
 const recurrenceService = require('../services/recurrenceService');
 const conflictDetectionService = require('../services/conflictDetectionService');
+const icalExportService = require('../services/icalExportService');
 
 // Appliquer le middleware d'authentification à toutes les routes
 router.use(authMiddleware);
@@ -429,6 +430,87 @@ router.post('/suggest-slots', async (req, res) => {
   } catch (error) {
     console.error('Erreur lors de la suggestion de créneaux:', error);
     res.status(500).json({ message: 'Erreur serveur' });
+  }
+});
+
+// ============================================================================
+// EXPORT iCAL (.ics)
+// ============================================================================
+
+// Exporter un seul événement au format .ics
+router.get('/:id/export', async (req, res) => {
+  const db = req.app.locals.db;
+  const { id } = req.params;
+
+  try {
+    const icalContent = await icalExportService.exportEvent(db, id);
+
+    // Récupérer le titre de l'événement pour le nom de fichier
+    const eventResult = await db.query('SELECT title FROM events WHERE id = $1', [id]);
+    const fileName = eventResult.rows[0]?.title
+      ? `${eventResult.rows[0].title.replace(/[^a-z0-9]/gi, '_')}.ics`
+      : `event_${id}.ics`;
+
+    res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    res.send(icalContent);
+  } catch (error) {
+    console.error('Erreur lors de l\'export de l\'événement:', error);
+    res.status(500).json({ message: 'Erreur lors de l\'export de l\'événement' });
+  }
+});
+
+// Exporter tous les événements de l'utilisateur
+router.get('/export/calendar', async (req, res) => {
+  const db = req.app.locals.db;
+  const userId = req.user.id;
+  const { start_date, end_date, calendar_name } = req.query;
+
+  try {
+    const icalContent = await icalExportService.exportCalendar(
+      db,
+      userId,
+      start_date || null,
+      end_date || null,
+      calendar_name || 'Calendrier CRM'
+    );
+
+    const fileName = calendar_name
+      ? `${calendar_name.replace(/[^a-z0-9]/gi, '_')}.ics`
+      : 'calendar.ics';
+
+    res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    res.send(icalContent);
+  } catch (error) {
+    console.error('Erreur lors de l\'export du calendrier:', error);
+    res.status(500).json({ message: 'Erreur lors de l\'export du calendrier' });
+  }
+});
+
+// Exporter les événements par catégorie
+router.get('/export/category/:category', async (req, res) => {
+  const db = req.app.locals.db;
+  const userId = req.user.id;
+  const { category } = req.params;
+  const { calendar_name } = req.query;
+
+  try {
+    const icalContent = await icalExportService.exportByCategory(
+      db,
+      userId,
+      category,
+      calendar_name || `Calendrier CRM - ${category}`
+    );
+
+    const fileName = `calendar_${category}.ics`.replace(/[^a-z0-9_.]/gi, '_');
+
+    res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    res.send(icalContent);
+  } catch (error) {
+    console.error('Erreur lors de l\'export par catégorie:', error);
+    res.status(500).json({ message: 'Erreur lors de l\'export par catégorie' });
   }
 });
 

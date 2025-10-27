@@ -1,7 +1,7 @@
 // src/pages/Calendar.jsx
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiCalendar, FiRefreshCw } from 'react-icons/fi';
+import { FiCalendar, FiRefreshCw, FiDownload } from 'react-icons/fi';
 import { useToast } from '../hooks/useToast';
 // Remplacer executeQuery par la fonction d'API
 import { eventsAPI } from '../services/api';
@@ -14,6 +14,7 @@ import DayView from '../components/calendar/DayView';
 import EventDetails from '../components/calendar/EventDetails';
 import EventForm from '../components/calendar/EventForm';
 import CalendarSync from '../components/calendar/CalendarSync';
+import ICalExport from '../components/calendar/ICalExport';
 import EmptyState from '../components/common/EmptyState';
 
 const Calendar = () => {
@@ -26,6 +27,7 @@ const Calendar = () => {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [isAddingEvent, setIsAddingEvent] = useState(false);
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [filters, setFilters] = useState({
     search: '',
@@ -347,18 +349,32 @@ const Calendar = () => {
               Planifiez vos rendez-vous et suivez vos échéances
             </motion.p>
           </div>
-          <motion.button
-            onClick={() => setIsSyncModalOpen(true)}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold transition-colors"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, delay: 0.3 }}
-          >
-            <FiRefreshCw />
-            <span className="hidden sm:inline">Synchroniser</span>
-          </motion.button>
+          <div className="flex items-center gap-2">
+            <motion.button
+              onClick={() => setIsExportModalOpen(true)}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition-colors"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5, delay: 0.3 }}
+            >
+              <FiDownload />
+              <span className="hidden sm:inline">Exporter</span>
+            </motion.button>
+            <motion.button
+              onClick={() => setIsSyncModalOpen(true)}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold transition-colors"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5, delay: 0.4 }}
+            >
+              <FiRefreshCw />
+              <span className="hidden sm:inline">Synchroniser</span>
+            </motion.button>
+          </div>
         </div>
       </header>
 
@@ -498,6 +514,14 @@ const Calendar = () => {
         isOpen={isSyncModalOpen}
         onClose={() => setIsSyncModalOpen(false)}
       />
+
+      {/* Modal d'export iCal */}
+      {isExportModalOpen && (
+        <ICalExport
+          onClose={() => setIsExportModalOpen(false)}
+          currentView={view}
+        />
+      )}
     </div>
   );
 };
