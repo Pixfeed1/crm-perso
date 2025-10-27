@@ -10,6 +10,7 @@ const GoalStats = ({ stats }) => {
       value: `${stats.progress}%`,
       icon: <FiTrendingUp />,
       color: 'from-amber-500 to-orange-500',
+      borderColor: 'border-orange-500',
       delay: 0.1
     },
     {
@@ -17,6 +18,7 @@ const GoalStats = ({ stats }) => {
       value: stats.active.toString(),
       icon: <FiZap />,
       color: 'from-blue-500 to-indigo-500',
+      borderColor: 'border-indigo-500',
       detail: `sur ${stats.total} total`,
       delay: 0.2
     },
@@ -25,6 +27,7 @@ const GoalStats = ({ stats }) => {
       value: stats.completed.toString(),
       icon: <FiCheckCircle />,
       color: 'from-emerald-500 to-teal-500',
+      borderColor: 'border-teal-500',
       detail: `${stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0}% de complétion`,
       delay: 0.3
     },
@@ -33,6 +36,7 @@ const GoalStats = ({ stats }) => {
       value: stats.upcoming.toString(),
       icon: <FiClock />,
       color: 'from-purple-500 to-indigo-500',
+      borderColor: 'border-indigo-500',
       delay: 0.4
     }
   ];
@@ -42,7 +46,7 @@ const GoalStats = ({ stats }) => {
       {statItems.map((item, index) => (
         <motion.div
           key={index}
-          className={`bg-gray-800/30 backdrop-blur-sm rounded-xl p-4 border-l-4 border-${item.color.split(' ')[1]}`}
+          className={`bg-gray-800/30 backdrop-blur-sm rounded-xl p-4 border-l-4 ${item.borderColor}`}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: item.delay }}

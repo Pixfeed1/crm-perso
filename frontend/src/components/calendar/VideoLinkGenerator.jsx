@@ -24,9 +24,13 @@ const VideoLinkGenerator = ({ value, onChange, eventData }) => {
 
       if (response.ok) {
         const data = await response.json();
-        setProviders(data.providers.filter(p => p.enabled));
-        setSelectedProvider(data.default_provider);
-        setAutoGenerate(data.auto_generate);
+        if (data && data.providers && Array.isArray(data.providers)) {
+          setProviders(data.providers.filter(p => p.enabled));
+        } else {
+          setProviders([]);
+        }
+        setSelectedProvider(data?.default_provider || null);
+        setAutoGenerate(data?.auto_generate || false);
       }
     } catch (error) {
       console.error('Erreur lors du chargement des providers:', error);

@@ -111,7 +111,7 @@ const AlternativeSlots = ({ slots, onSelectSlot, onClose, isLoading }) => {
                 {Object.entries(groupedSlots).map(([date, dateSlots], dateIndex) => (
                   <div key={date}>
                     <h3 className="text-lg font-semibold text-gray-200 mb-3 sticky top-0 bg-gray-900/90 backdrop-blur-sm py-2 -mx-6 px-6 z-10">
-                      {formatDate(dateSlots[0].start)}
+                      {dateSlots && dateSlots.length > 0 ? formatDate(dateSlots[0].start) : date}
                     </h3>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

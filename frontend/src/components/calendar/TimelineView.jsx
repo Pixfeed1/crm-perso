@@ -36,6 +36,11 @@ const TimelineView = ({
 
   // Organiser les événements par swimlane
   useEffect(() => {
+    if (!events || !Array.isArray(events)) {
+      setSwimlanes([]);
+      return;
+    }
+
     const lanes = new Map();
 
     events.forEach(event => {
@@ -48,7 +53,11 @@ const TimelineView = ({
 
     const swimlaneArray = Array.from(lanes.entries()).map(([name, evts]) => ({
       name,
-      events: evts.sort((a, b) => new Date(a.start_datetime) - new Date(b.start_datetime))
+      events: evts.sort((a, b) => {
+        const dateA = a.start_datetime ? new Date(a.start_datetime) : new Date(0);
+        const dateB = b.start_datetime ? new Date(b.start_datetime) : new Date(0);
+        return dateA - dateB;
+      })
     }));
 
     setSwimlanes(swimlaneArray);
@@ -56,6 +65,11 @@ const TimelineView = ({
 
   const loadDependencies = async () => {
     try {
+      if (!events || !Array.isArray(events) || events.length === 0) {
+        setDependencies([]);
+        return;
+      }
+
       const eventIds = events.map(e => e.id).join(',');
       const token = localStorage.getItem('token');
       const response = await fetch(`/api/events/dependencies?event_ids=${eventIds}`, {

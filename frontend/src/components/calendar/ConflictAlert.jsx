@@ -93,12 +93,14 @@ const ConflictAlert = ({ conflicts, onClose, onViewAlternatives }) => {
                   </div>
 
                   <div className="space-y-1 text-sm">
-                    <div className="flex items-center gap-2 text-gray-300">
-                      <FiClock className="flex-shrink-0" />
-                      <span>
-                        {formatDateTime(conflict.eventStart)} - {formatDateTime(conflict.eventEnd).split(' ').pop()}
-                      </span>
-                    </div>
+                    {conflict.eventStart && conflict.eventEnd && (
+                      <div className="flex items-center gap-2 text-gray-300">
+                        <FiClock className="flex-shrink-0" />
+                        <span>
+                          {formatDateTime(conflict.eventStart)} - {formatDateTime(conflict.eventEnd).split(' ').pop()}
+                        </span>
+                      </div>
+                    )}
 
                     {conflict.eventLocation && (
                       <div className="flex items-center gap-2 text-gray-300">
@@ -107,12 +109,13 @@ const ConflictAlert = ({ conflicts, onClose, onViewAlternatives }) => {
                       </div>
                     )}
 
-                    <div className="mt-2 pt-2 border-t border-gray-600">
-                      <span className="text-xs text-gray-400">
-                        Chevauchement :{' '}
-                        <span className="font-semibold text-white">
-                          {formatDuration(conflict.overlapDuration)}
-                        </span>
+                    {conflict.overlapDuration && (
+                      <div className="mt-2 pt-2 border-t border-gray-600">
+                        <span className="text-xs text-gray-400">
+                          Chevauchement :{' '}
+                          <span className="font-semibold text-white">
+                            {formatDuration(conflict.overlapDuration)}
+                          </span>
                         {conflict.conflictType === 'location' && (
                           <span className="ml-2 px-2 py-0.5 bg-purple-500/20 text-purple-300 rounded text-xs">
                             Même lieu
@@ -120,6 +123,7 @@ const ConflictAlert = ({ conflicts, onClose, onViewAlternatives }) => {
                         )}
                       </span>
                     </div>
+                    )}
                   </div>
                 </div>
               </div>

@@ -355,7 +355,7 @@ const EventDetails = ({ event, onUpdate, onDelete }) => {
             )}
             
             {/* Élément relié */}
-            {event.related_to && (
+            {event.related_to && event.related_to.name && (
               <div className="flex justify-between items-center">
                 <span className="text-gray-400">Associé à</span>
                 <span className="px-3 py-1 rounded-full bg-gray-700/50 text-gray-300 text-sm flex items-center gap-1">

@@ -225,10 +225,10 @@ const DependencyManager = ({ eventId, allEvents }) => {
               className="bg-gray-800 rounded p-3 flex items-center justify-between"
             >
               <div className="flex-1">
-                <div className="text-white text-sm">{dep.target_title}</div>
+                <div className="text-white text-sm">{dep.target_title || 'Événement sans titre'}</div>
                 <div className="text-gray-400 text-xs mt-1">
-                  {dependencyTypeLabels[dep.dependency_type]}
-                  {dep.lag_days !== 0 && ` (${dep.lag_days > 0 ? '+' : ''}${dep.lag_days} jours)`}
+                  {dep.dependency_type ? dependencyTypeLabels[dep.dependency_type] : 'Type non défini'}
+                  {dep.lag_days && dep.lag_days !== 0 && ` (${dep.lag_days > 0 ? '+' : ''}${dep.lag_days} jours)`}
                 </div>
               </div>
               <button
@@ -253,10 +253,10 @@ const DependencyManager = ({ eventId, allEvents }) => {
               animate={{ opacity: 1, x: 0 }}
               className="bg-gray-800 rounded p-3"
             >
-              <div className="text-white text-sm">{dep.source_title}</div>
+              <div className="text-white text-sm">{dep.source_title || 'Événement sans titre'}</div>
               <div className="text-gray-400 text-xs mt-1">
-                {dependencyTypeLabels[dep.dependency_type]}
-                {dep.lag_days !== 0 && ` (${dep.lag_days > 0 ? '+' : ''}${dep.lag_days} jours)`}
+                {dep.dependency_type ? dependencyTypeLabels[dep.dependency_type] : 'Type non défini'}
+                {dep.lag_days && dep.lag_days !== 0 && ` (${dep.lag_days > 0 ? '+' : ''}${dep.lag_days} jours)`}
               </div>
             </motion.div>
           ))}

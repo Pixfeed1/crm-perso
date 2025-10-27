@@ -17,6 +17,7 @@ const ActivityStats = ({ stats }) => {
       value: `${Math.round(stats.completion_rate)}%`,
       icon: <FiCheckCircle />,
       color: 'from-indigo-500 to-purple-500',
+      borderColor: 'border-purple-500',
       detail: `${stats.completed}/${stats.total} activités`,
       delay: 0.1
     },
@@ -25,6 +26,7 @@ const ActivityStats = ({ stats }) => {
       value: stats.pending.toString(),
       icon: <FiClipboard />,
       color: 'from-amber-500 to-orange-500',
+      borderColor: 'border-orange-500',
       detail: 'En attente',
       delay: 0.2
     },
@@ -33,6 +35,7 @@ const ActivityStats = ({ stats }) => {
       value: formatTime(stats.planned_time),
       icon: <FiClock />,
       color: 'from-blue-500 to-indigo-500',
+      borderColor: 'border-indigo-500',
       delay: 0.3
     },
     {
@@ -40,6 +43,7 @@ const ActivityStats = ({ stats }) => {
       value: formatTime(stats.actual_time),
       icon: <FiWatch />,
       color: 'from-emerald-500 to-teal-500',
+      borderColor: 'border-teal-500',
       detail: `${Math.round(stats.time_efficiency)}% d'efficacité`,
       delay: 0.4
     }
@@ -50,7 +54,7 @@ const ActivityStats = ({ stats }) => {
       {statItems.map((item, index) => (
         <motion.div
           key={index}
-          className={`bg-gray-800/30 backdrop-blur-sm rounded-xl p-4 border-l-4 border-${item.color.split(' ')[1]}`}
+          className={`bg-gray-800/30 backdrop-blur-sm rounded-xl p-4 border-l-4 ${item.borderColor}`}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: item.delay }}

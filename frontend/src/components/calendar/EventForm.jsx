@@ -149,9 +149,14 @@ const EventForm = ({ event = {}, selectedDate, onSave, onCancel }) => {
         location: formData.location
       });
 
-      if (response.data.hasConflicts) {
-        setConflicts(response.data);
-        setAlternativeSlots(response.data.suggestions || []);
+      if (response && response.data) {
+        if (response.data.hasConflicts) {
+          setConflicts(response.data);
+          setAlternativeSlots(response.data.suggestions || []);
+        } else {
+          setConflicts(null);
+          setAlternativeSlots([]);
+        }
       } else {
         setConflicts(null);
         setAlternativeSlots([]);
