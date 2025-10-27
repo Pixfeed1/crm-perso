@@ -504,6 +504,51 @@ export const remindersAPI = {
   delete: (id) => {
     console.log(`Appel API: suppression du rappel ID ${id}`);
     return apiRequest(`/reminders/${id}`, 'DELETE');
+  },
+
+  // Configuration (relances factures)
+  getSettings: () => {
+    console.log('Appel API: récupération paramètres relances');
+    return apiRequest('/reminders/settings');
+  },
+  updateSettings: (data) => {
+    console.log('Appel API: mise à jour paramètres relances', data);
+    return apiRequest('/reminders/settings', 'PUT', data);
+  },
+
+  // Détection et envoi
+  detectInvoices: () => {
+    console.log('Appel API: détection factures nécessitant relance');
+    return apiRequest('/reminders/detect');
+  },
+  sendReminder: (invoiceId, reminderLevel) => {
+    console.log(`Appel API: envoi relance pour facture ID ${invoiceId}, niveau ${reminderLevel}`);
+    return apiRequest(`/reminders/send/${invoiceId}`, 'POST', { reminder_level: reminderLevel });
+  },
+  sendBatch: () => {
+    console.log('Appel API: envoi relances en batch');
+    return apiRequest('/reminders/send-batch', 'POST');
+  },
+
+  // Historique et statistiques
+  getStats: () => {
+    console.log('Appel API: récupération statistiques relances');
+    return apiRequest('/reminders/stats');
+  },
+  getHistory: (limit = 50, offset = 0) => {
+    console.log('Appel API: récupération historique relances', { limit, offset });
+    const params = new URLSearchParams();
+    params.append('limit', limit);
+    params.append('offset', offset);
+    return apiRequest(`/reminders/history?${params}`);
+  },
+  getByInvoice: (invoiceId) => {
+    console.log(`Appel API: récupération historique relances pour facture ID ${invoiceId}`);
+    return apiRequest(`/reminders/invoice/${invoiceId}`);
+  },
+  deleteByInvoice: (invoiceId) => {
+    console.log(`Appel API: suppression historique relances pour facture ID ${invoiceId}`);
+    return apiRequest(`/reminders/invoice/${invoiceId}`, 'DELETE');
   }
 };
 
@@ -761,50 +806,3 @@ export const paymentsAPI = {
   }
 };
 
-// ===== RELANCES AUTOMATIQUES =====
-export const remindersAPI = {
-  // Configuration
-  getSettings: () => {
-    console.log('Appel API: récupération paramètres relances');
-    return apiRequest('/reminders/settings');
-  },
-  updateSettings: (data) => {
-    console.log('Appel API: mise à jour paramètres relances', data);
-    return apiRequest('/reminders/settings', 'PUT', data);
-  },
-
-  // Détection et envoi
-  detectInvoices: () => {
-    console.log('Appel API: détection factures nécessitant relance');
-    return apiRequest('/reminders/detect');
-  },
-  sendReminder: (invoiceId, reminderLevel) => {
-    console.log(`Appel API: envoi relance pour facture ID ${invoiceId}, niveau ${reminderLevel}`);
-    return apiRequest(`/reminders/send/${invoiceId}`, 'POST', { reminder_level: reminderLevel });
-  },
-  sendBatch: () => {
-    console.log('Appel API: envoi relances en batch');
-    return apiRequest('/reminders/send-batch', 'POST');
-  },
-
-  // Historique et statistiques
-  getStats: () => {
-    console.log('Appel API: récupération statistiques relances');
-    return apiRequest('/reminders/stats');
-  },
-  getHistory: (limit = 50, offset = 0) => {
-    console.log('Appel API: récupération historique relances', { limit, offset });
-    const params = new URLSearchParams();
-    params.append('limit', limit);
-    params.append('offset', offset);
-    return apiRequest(`/reminders/history?${params}`);
-  },
-  getByInvoice: (invoiceId) => {
-    console.log(`Appel API: récupération historique relances pour facture ID ${invoiceId}`);
-    return apiRequest(`/reminders/invoice/${invoiceId}`);
-  },
-  deleteByInvoice: (invoiceId) => {
-    console.log(`Appel API: suppression historique relances pour facture ID ${invoiceId}`);
-    return apiRequest(`/reminders/invoice/${invoiceId}`, 'DELETE');
-  }
-};
