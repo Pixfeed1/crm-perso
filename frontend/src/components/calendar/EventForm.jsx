@@ -8,6 +8,7 @@ import AddressAutocomplete from '../common/AddressAutocomplete';
 import RecurrenceForm from './RecurrenceForm';
 import ConflictAlert from './ConflictAlert';
 import AlternativeSlots from './AlternativeSlots';
+import VideoLinkGenerator from './VideoLinkGenerator';
 
 const EventForm = ({ event = {}, selectedDate, onSave, onCancel }) => {
   // Déterminer la date de début et de fin par défaut
@@ -55,7 +56,11 @@ const EventForm = ({ event = {}, selectedDate, onSave, onCancel }) => {
     recurrence_days: event.recurrence_days || '',
     recurrence_end_type: event.recurrence_end_type || 'NEVER',
     recurrence_end_date: event.recurrence_end_date || null,
-    recurrence_count: event.recurrence_count || 10
+    recurrence_count: event.recurrence_count || 10,
+    // Champs de visioconférence
+    video_link: event.video_link || '',
+    video_provider: event.video_provider || null,
+    video_meeting_id: event.video_meeting_id || null
   });
 
   const [errors, setErrors] = useState({});
@@ -389,7 +394,26 @@ const EventForm = ({ event = {}, selectedDate, onSave, onCancel }) => {
             placeholder="Ex: 10 rue de Rivoli, Paris ou Salle de réunion..."
           />
         </div>
-        
+
+        {/* Lien de visioconférence */}
+        <VideoLinkGenerator
+          value={formData.video_link}
+          onChange={(link, provider, meetingId) => {
+            setFormData(prev => ({
+              ...prev,
+              video_link: link,
+              video_provider: provider,
+              video_meeting_id: meetingId
+            }));
+          }}
+          eventData={{
+            title: formData.title,
+            start_datetime: formData.start_date.toISOString(),
+            end_datetime: formData.end_date.toISOString(),
+            description: formData.description
+          }}
+        />
+
         {/* Couleur */}
         <div>
           <label className="block text-sm font-medium text-gray-300 mb-2">
