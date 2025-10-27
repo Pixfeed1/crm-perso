@@ -403,9 +403,34 @@ async function ensureTable(client, tableName, schema) {
       // Nettoyer la définition pour ALTER TABLE
       let cleanDef = columnDef.replace(/REFERENCES[^,)]+/g, '');
 
+      // Pour les colonnes NOT NULL, on enlève NOT NULL lors de l'ajout initial
+      // car la table peut avoir des données existantes
+      const hasNotNull = cleanDef.includes('NOT NULL');
+      let alterDef = cleanDef.replace(/NOT NULL/g, '');
+
       try {
-        await client.query(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${cleanDef};`);
+        await client.query(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${alterDef};`);
         console.log(`  ✓ Colonne ${columnName} ajoutée`);
+
+        // Si la colonne a DEFAULT, mettre à jour les lignes existantes NULL
+        if (alterDef.includes('DEFAULT')) {
+          const defaultMatch = alterDef.match(/DEFAULT\s+([^,\s]+(?:\s+'[^']*')?)/i);
+          if (defaultMatch) {
+            const defaultValue = defaultMatch[1];
+            await client.query(`UPDATE ${tableName} SET ${columnName} = ${defaultValue} WHERE ${columnName} IS NULL;`);
+            console.log(`  ✓ Valeurs par défaut appliquées pour ${columnName}`);
+          }
+        }
+
+        // Ajouter NOT NULL après si c'était dans la définition originale
+        if (hasNotNull) {
+          try {
+            await client.query(`ALTER TABLE ${tableName} ALTER COLUMN ${columnName} SET NOT NULL;`);
+            console.log(`  ✓ Contrainte NOT NULL ajoutée pour ${columnName}`);
+          } catch (err) {
+            console.log(`  ⚠ Impossible d'ajouter NOT NULL pour ${columnName}: ${err.message}`);
+          }
+        }
       } catch (err) {
         console.log(`  ⚠ Colonne ${columnName} : ${err.message}`);
       }
