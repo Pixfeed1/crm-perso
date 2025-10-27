@@ -10,6 +10,11 @@ const reminderController = require('../controllers/reminderController');
  * Base: /api/reminders
  */
 
+// Compteur de rappels (temporaire - retourne 0 pour compatibilité frontend)
+router.get('/count', (req, res) => {
+  res.json({ count: 0, active: 0, overdue: 0 });
+});
+
 // Configuration du système de relances
 router.get('/settings', reminderController.getSettings);
 router.put('/settings', reminderController.updateSettings);
