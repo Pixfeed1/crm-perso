@@ -401,12 +401,15 @@ async function ensureTable(client, tableName, schema) {
       console.log(`  → Ajout colonne ${columnName}...`);
 
       // Nettoyer la définition pour ALTER TABLE
-      let cleanDef = columnDef.replace(/REFERENCES[^,)]+/g, '');
+      // Supprimer complètement les clauses REFERENCES avec leurs parenthèses et clauses ON DELETE/UPDATE
+      let cleanDef = columnDef
+        .replace(/REFERENCES\s+\w+\([^)]+\)(\s+ON\s+(DELETE|UPDATE)\s+\w+(\s+\w+)?)?/gi, '')
+        .trim();
 
       // Pour les colonnes NOT NULL, on enlève NOT NULL lors de l'ajout initial
       // car la table peut avoir des données existantes
       const hasNotNull = cleanDef.includes('NOT NULL');
-      let alterDef = cleanDef.replace(/NOT NULL/g, '');
+      let alterDef = cleanDef.replace(/NOT NULL/g, '').trim();
 
       try {
         await client.query(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${alterDef};`);
