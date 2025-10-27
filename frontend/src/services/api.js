@@ -272,9 +272,10 @@ export const clientsAPI = {
 
 // ===== ÉVÉNEMENTS =====
 export const eventsAPI = {
-  getAll: () => {
-    console.log('Appel API: récupération de tous les événements');
-    return apiRequest('/events');
+  getAll: (params = {}) => {
+    console.log('Appel API: récupération de tous les événements', params);
+    const queryString = new URLSearchParams(params).toString();
+    return apiRequest(`/events${queryString ? `?${queryString}` : ''}`);
   },
   getById: (id) => {
     console.log(`Appel API: récupération de l'événement ID ${id}`);
@@ -284,6 +285,10 @@ export const eventsAPI = {
     console.log('Appel API: création d\'un nouvel événement', data);
     return apiRequest('/events', 'POST', data);
   },
+  createRecurring: (data) => {
+    console.log('Appel API: création d\'un événement récurrent', data);
+    return apiRequest('/events/recurring', 'POST', data);
+  },
   update: (id, data) => {
     console.log(`Appel API: mise à jour de l'événement ID ${id}`, data);
     return apiRequest(`/events/${id}`, 'PUT', data);
@@ -291,6 +296,34 @@ export const eventsAPI = {
   delete: (id) => {
     console.log(`Appel API: suppression de l'événement ID ${id}`);
     return apiRequest(`/events/${id}`, 'DELETE');
+  },
+  // Routes pour les événements récurrents
+  getOccurrences: (id, startDate, endDate) => {
+    console.log(`Appel API: récupération des occurrences de l'événement ID ${id}`);
+    return apiRequest(`/events/${id}/occurrences?start_date=${startDate}&end_date=${endDate}`);
+  },
+  addException: (id, exceptionDate) => {
+    console.log(`Appel API: ajout d'une exception à l'événement ID ${id}`);
+    return apiRequest(`/events/${id}/exceptions`, 'POST', { exception_date: exceptionDate });
+  },
+  removeException: (id, exceptionDate) => {
+    console.log(`Appel API: suppression d'une exception de l'événement ID ${id}`);
+    return apiRequest(`/events/${id}/exceptions`, 'DELETE', { exception_date: exceptionDate });
+  },
+  modifyOccurrence: (id, exceptionDate, modifiedData) => {
+    console.log(`Appel API: modification d'une occurrence de l'événement ID ${id}`);
+    return apiRequest(`/events/${id}/modify-occurrence`, 'POST', {
+      exception_date: exceptionDate,
+      ...modifiedData
+    });
+  },
+  getExceptions: (id) => {
+    console.log(`Appel API: récupération des exceptions de l'événement ID ${id}`);
+    return apiRequest(`/events/${id}/exceptions`);
+  },
+  getModifiedOccurrences: (id) => {
+    console.log(`Appel API: récupération des occurrences modifiées de l'événement ID ${id}`);
+    return apiRequest(`/events/${id}/modified-occurrences`);
   }
 };
 

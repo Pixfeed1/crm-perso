@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import AddressAutocomplete from '../common/AddressAutocomplete';
+import RecurrenceForm from './RecurrenceForm';
 
 const EventForm = ({ event = {}, selectedDate, onSave, onCancel }) => {
   // Déterminer la date de début et de fin par défaut
@@ -44,7 +45,14 @@ const EventForm = ({ event = {}, selectedDate, onSave, onCancel }) => {
     location: event.location || '',
     category: event.category || 'meeting',
     priority: event.priority || 'medium',
-    color: event.color || '#3B82F6' // Bleu
+    color: event.color || '#3B82F6', // Bleu
+    // Champs de récurrence
+    recurrence_type: event.recurrence_type || 'NONE',
+    recurrence_interval: event.recurrence_interval || 1,
+    recurrence_days: event.recurrence_days || '',
+    recurrence_end_type: event.recurrence_end_type || 'NEVER',
+    recurrence_end_date: event.recurrence_end_date || null,
+    recurrence_count: event.recurrence_count || 10
   });
   
   const [errors, setErrors] = useState({});
@@ -97,11 +105,19 @@ const EventForm = ({ event = {}, selectedDate, onSave, onCancel }) => {
   // Gérer les changements de date
   const handleDateChange = (date, field) => {
     setFormData(prev => ({ ...prev, [field]: date }));
-    
+
     // Effacer les erreurs lors de la saisie
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: null }));
     }
+  };
+
+  // Gérer les changements de récurrence
+  const handleRecurrenceChange = (recurrenceData) => {
+    setFormData(prev => ({
+      ...prev,
+      ...recurrenceData
+    }));
   };
   
   // Valider le formulaire avant soumission
@@ -344,7 +360,20 @@ const EventForm = ({ event = {}, selectedDate, onSave, onCancel }) => {
             placeholder="Détails de l'événement..."
           />
         </div>
-        
+
+        {/* Récurrence */}
+        <RecurrenceForm
+          recurrenceData={{
+            recurrence_type: formData.recurrence_type,
+            recurrence_interval: formData.recurrence_interval,
+            recurrence_days: formData.recurrence_days,
+            recurrence_end_type: formData.recurrence_end_type,
+            recurrence_end_date: formData.recurrence_end_date,
+            recurrence_count: formData.recurrence_count
+          }}
+          onChange={handleRecurrenceChange}
+        />
+
 {/* Boutons d'action */}
 <div className="flex justify-end space-x-3 pt-4">
           <motion.button

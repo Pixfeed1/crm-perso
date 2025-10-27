@@ -3,18 +3,66 @@ const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middleware/authMiddleware');
 const eventModel = require('../models/eventModel');
+const recurrenceService = require('../services/recurrenceService');
 
 // Appliquer le middleware d'authentification à toutes les routes
 router.use(authMiddleware);
 
-// Obtenir tous les événements
+// Obtenir tous les événements (incluant les occurrences récurrentes)
 router.get('/', async (req, res) => {
   const db = req.app.locals.db;
   const { start_date, end_date } = req.query;
 
   try {
     const events = await eventModel.getAllEvents(db, { start_date, end_date });
-    res.json(events);
+
+    // Si une plage de dates est spécifiée, générer les occurrences récurrentes
+    if (start_date && end_date) {
+      const allOccurrences = [];
+
+      for (const event of events) {
+        if (event.recurrence_type && event.recurrence_type !== 'NONE') {
+          // Récupérer les exceptions (occurrences supprimées)
+          const exceptions = await eventModel.getEventExceptions(db, event.id);
+
+          // Générer les occurrences
+          const occurrences = recurrenceService.generateOccurrences(
+            {
+              ...event,
+              start_date: event.start_datetime,
+              end_date: event.end_datetime
+            },
+            new Date(start_date),
+            new Date(end_date),
+            exceptions
+          );
+
+          allOccurrences.push(...occurrences);
+        } else {
+          // Événement non récurrent
+          allOccurrences.push(event);
+        }
+      }
+
+      // Récupérer aussi les occurrences modifiées (exceptions)
+      const modifiedOccurrences = events
+        .filter(e => e.is_exception)
+        .map(e => ({
+          ...e,
+          start_date: e.start_datetime,
+          end_date: e.end_datetime
+        }));
+
+      allOccurrences.push(...modifiedOccurrences);
+
+      // Trier par date de début
+      allOccurrences.sort((a, b) => new Date(a.start_date || a.start_datetime) - new Date(b.start_date || b.start_datetime));
+
+      res.json(allOccurrences);
+    } else {
+      // Sans plage de dates, retourner seulement les événements de base
+      res.json(events);
+    }
   } catch (error) {
     console.error('Erreur lors de la récupération des événements:', error);
     res.status(500).json({ message: 'Erreur serveur' });
@@ -145,6 +193,200 @@ router.delete('/:id', async (req, res) => {
     res.json({ message: 'Événement supprimé avec succès' });
   } catch (error) {
     console.error('Erreur lors de la suppression de l\'événement:', error);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
+});
+
+// ============= ROUTES POUR LES ÉVÉNEMENTS RÉCURRENTS =============
+
+// Créer un événement récurrent
+router.post('/recurring', async (req, res) => {
+  const db = req.app.locals.db;
+  const eventData = req.body;
+
+  // Valider les données de récurrence
+  const validation = recurrenceService.validateRecurrence(eventData);
+  if (!validation.isValid) {
+    return res.status(400).json({
+      message: 'Données de récurrence invalides',
+      errors: validation.errors
+    });
+  }
+
+  try {
+    const event = await eventModel.createRecurringEvent(db, eventData);
+    res.status(201).json(event);
+  } catch (error) {
+    console.error('Erreur lors de la création de l\'événement récurrent:', error);
+    res.status(500).json({ message: 'Erreur serveur', error: error.message });
+  }
+});
+
+// Obtenir les occurrences d'un événement récurrent dans une plage
+router.get('/:id/occurrences', async (req, res) => {
+  const db = req.app.locals.db;
+  const { id } = req.params;
+  const { start_date, end_date } = req.query;
+
+  if (!start_date || !end_date) {
+    return res.status(400).json({
+      message: 'Les paramètres start_date et end_date sont requis'
+    });
+  }
+
+  try {
+    const event = await eventModel.getEventById(db, id);
+    if (!event) {
+      return res.status(404).json({ message: 'Événement non trouvé' });
+    }
+
+    if (!event.recurrence_type || event.recurrence_type === 'NONE') {
+      return res.status(400).json({ message: 'Cet événement n\'est pas récurrent' });
+    }
+
+    // Récupérer les exceptions
+    const exceptions = await eventModel.getEventExceptions(db, id);
+
+    // Générer les occurrences
+    const occurrences = recurrenceService.generateOccurrences(
+      {
+        ...event,
+        start_date: event.start_datetime,
+        end_date: event.end_datetime
+      },
+      new Date(start_date),
+      new Date(end_date),
+      exceptions
+    );
+
+    res.json(occurrences);
+  } catch (error) {
+    console.error('Erreur lors de la génération des occurrences:', error);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
+});
+
+// Supprimer une occurrence spécifique (ajouter une exception)
+router.post('/:id/exceptions', async (req, res) => {
+  const db = req.app.locals.db;
+  const { id } = req.params;
+  const { exception_date } = req.body;
+
+  if (!exception_date) {
+    return res.status(400).json({ message: 'La date de l\'exception est requise' });
+  }
+
+  try {
+    const event = await eventModel.getEventById(db, id);
+    if (!event) {
+      return res.status(404).json({ message: 'Événement non trouvé' });
+    }
+
+    if (!event.recurrence_type || event.recurrence_type === 'NONE') {
+      return res.status(400).json({ message: 'Cet événement n\'est pas récurrent' });
+    }
+
+    await eventModel.addEventException(db, id, exception_date);
+    res.json({ message: 'Occurrence supprimée avec succès' });
+  } catch (error) {
+    console.error('Erreur lors de l\'ajout de l\'exception:', error);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
+});
+
+// Restaurer une occurrence supprimée (retirer une exception)
+router.delete('/:id/exceptions', async (req, res) => {
+  const db = req.app.locals.db;
+  const { id } = req.params;
+  const { exception_date } = req.body;
+
+  if (!exception_date) {
+    return res.status(400).json({ message: 'La date de l\'exception est requise' });
+  }
+
+  try {
+    const event = await eventModel.getEventById(db, id);
+    if (!event) {
+      return res.status(404).json({ message: 'Événement non trouvé' });
+    }
+
+    await eventModel.removeEventException(db, id, exception_date);
+    res.json({ message: 'Occurrence restaurée avec succès' });
+  } catch (error) {
+    console.error('Erreur lors de la suppression de l\'exception:', error);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
+});
+
+// Modifier une occurrence spécifique d'un événement récurrent
+router.post('/:id/modify-occurrence', async (req, res) => {
+  const db = req.app.locals.db;
+  const { id } = req.params;
+  const { exception_date, ...modifiedData } = req.body;
+
+  if (!exception_date) {
+    return res.status(400).json({ message: 'La date originale de l\'occurrence est requise' });
+  }
+
+  try {
+    const event = await eventModel.getEventById(db, id);
+    if (!event) {
+      return res.status(404).json({ message: 'Événement parent non trouvé' });
+    }
+
+    if (!event.recurrence_type || event.recurrence_type === 'NONE') {
+      return res.status(400).json({ message: 'Cet événement n\'est pas récurrent' });
+    }
+
+    // Créer l'exception modifiée
+    const modifiedEvent = await eventModel.createEventException(
+      db,
+      id,
+      exception_date,
+      modifiedData
+    );
+
+    res.status(201).json(modifiedEvent);
+  } catch (error) {
+    console.error('Erreur lors de la modification de l\'occurrence:', error);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
+});
+
+// Obtenir toutes les exceptions (suppressions) d'un événement récurrent
+router.get('/:id/exceptions', async (req, res) => {
+  const db = req.app.locals.db;
+  const { id } = req.params;
+
+  try {
+    const event = await eventModel.getEventById(db, id);
+    if (!event) {
+      return res.status(404).json({ message: 'Événement non trouvé' });
+    }
+
+    const exceptions = await eventModel.getEventExceptions(db, id);
+    res.json({ exceptions });
+  } catch (error) {
+    console.error('Erreur lors de la récupération des exceptions:', error);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
+});
+
+// Obtenir toutes les occurrences modifiées d'un événement récurrent
+router.get('/:id/modified-occurrences', async (req, res) => {
+  const db = req.app.locals.db;
+  const { id } = req.params;
+
+  try {
+    const event = await eventModel.getEventById(db, id);
+    if (!event) {
+      return res.status(404).json({ message: 'Événement non trouvé' });
+    }
+
+    const modifiedOccurrences = await eventModel.getModifiedOccurrences(db, id);
+    res.json(modifiedOccurrences);
+  } catch (error) {
+    console.error('Erreur lors de la récupération des occurrences modifiées:', error);
     res.status(500).json({ message: 'Erreur serveur' });
   }
 });

@@ -36,10 +36,35 @@ const Calendar = () => {
     const fetchEvents = async () => {
       setIsLoading(true);
       try {
-        // Récupérer les événements via l'API
-        const eventsData = await eventsAPI.getAll();
-        console.log('Événements chargés via API:', eventsData);
-        
+        // Calculer la plage de dates pour la vue actuelle
+        let startDate, endDate;
+
+        if (view === 'month') {
+          startDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+          endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0, 23, 59, 59);
+        } else if (view === 'week') {
+          const currentDay = currentDate.getDay();
+          startDate = new Date(currentDate);
+          startDate.setDate(currentDate.getDate() - currentDay);
+          startDate.setHours(0, 0, 0, 0);
+          endDate = new Date(startDate);
+          endDate.setDate(startDate.getDate() + 6);
+          endDate.setHours(23, 59, 59);
+        } else {
+          // day view
+          startDate = new Date(currentDate);
+          startDate.setHours(0, 0, 0, 0);
+          endDate = new Date(currentDate);
+          endDate.setHours(23, 59, 59);
+        }
+
+        // Récupérer les événements via l'API avec plage de dates pour inclure les récurrences
+        const eventsData = await eventsAPI.getAll({
+          start_date: startDate.toISOString(),
+          end_date: endDate.toISOString()
+        });
+        console.log('Événements chargés via API (avec récurrences):', eventsData);
+
         setEvents(eventsData);
         setFilteredEvents(eventsData);
       } catch (error) {
@@ -51,9 +76,9 @@ const Calendar = () => {
         setIsLoading(false);
       }
     };
-    
+
     fetchEvents();
-  }, []);
+  }, [currentDate, view]);
 
   // Filtrage des événements en fonction des critères
   useEffect(() => {
@@ -141,13 +166,13 @@ const Calendar = () => {
       // Validation des dates
       const startDate = eventData.start_date instanceof Date ? eventData.start_date : new Date(eventData.start_date);
       const endDate = eventData.end_date instanceof Date ? eventData.end_date : new Date(eventData.end_date);
-      
+
       if (!isValidDate(startDate) || !isValidDate(endDate)) {
         console.error("Dates invalides:", eventData.start_date, eventData.end_date);
         toast.error("Erreur: Les dates saisies sont invalides.");
         return;
       }
-      
+
       // Préparation des données pour l'insertion
       const eventToSave = {
         title: eventData.title,
@@ -160,17 +185,49 @@ const Calendar = () => {
         priority: eventData.priority || 'medium',
         color: eventData.color || '#3B82F6'
       };
-      
-      // Utiliser l'API pour créer l'événement
-      const newEvent = await eventsAPI.create(eventToSave);
-      console.log('Événement créé via API:', newEvent);
-      
-      // Mettre à jour l'état
-      setEvents(prevEvents => [...prevEvents, newEvent]);
-      setIsAddingEvent(false);
-      setSelectedEvent(newEvent);
-      
-      console.log("Événement créé avec succès:", newEvent);
+
+      // Ajouter les champs de récurrence si l'événement est récurrent
+      if (eventData.recurrence_type && eventData.recurrence_type !== 'NONE') {
+        eventToSave.recurrence_type = eventData.recurrence_type;
+        eventToSave.recurrence_interval = eventData.recurrence_interval || 1;
+        eventToSave.recurrence_days = eventData.recurrence_days || null;
+        eventToSave.recurrence_end_type = eventData.recurrence_end_type || 'NEVER';
+
+        if (eventData.recurrence_end_type === 'DATE' && eventData.recurrence_end_date) {
+          const endRecurrenceDate = eventData.recurrence_end_date instanceof Date
+            ? eventData.recurrence_end_date
+            : new Date(eventData.recurrence_end_date);
+          eventToSave.recurrence_end_date = endRecurrenceDate.toISOString();
+        }
+
+        if (eventData.recurrence_end_type === 'COUNT') {
+          eventToSave.recurrence_count = eventData.recurrence_count || 10;
+        }
+
+        // Utiliser l'API pour créer l'événement récurrent
+        const newEvent = await eventsAPI.createRecurring(eventToSave);
+        console.log('Événement récurrent créé via API:', newEvent);
+
+        // Mettre à jour l'état
+        setEvents(prevEvents => [...prevEvents, newEvent]);
+        setIsAddingEvent(false);
+        setSelectedEvent(newEvent);
+
+        toast.success("Événement récurrent créé avec succès!");
+      } else {
+        // Utiliser l'API pour créer l'événement simple
+        const newEvent = await eventsAPI.create(eventToSave);
+        console.log('Événement créé via API:', newEvent);
+
+        // Mettre à jour l'état
+        setEvents(prevEvents => [...prevEvents, newEvent]);
+        setIsAddingEvent(false);
+        setSelectedEvent(newEvent);
+
+        toast.success("Événement créé avec succès!");
+      }
+
+      console.log("Événement créé avec succès");
     } catch (error) {
       console.error("Erreur lors de la sauvegarde de l'événement:", error);
       toast.error("Une erreur est survenue lors de la création de l'événement.");

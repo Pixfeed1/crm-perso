@@ -266,6 +266,228 @@ const getUpcomingEvents = (db, limit = 10) => {
   });
 };
 
+/**
+ * Crée un événement récurrent avec ses paramètres de récurrence
+ */
+const createRecurringEvent = (db, eventData) => {
+  return new Promise((resolve, reject) => {
+    const {
+      title,
+      description,
+      start_datetime,
+      end_datetime,
+      all_day = false,
+      location,
+      category,
+      priority,
+      color,
+      reminder_time,
+      activity_id,
+      recurrence_type,
+      recurrence_interval,
+      recurrence_days,
+      recurrence_end_type,
+      recurrence_end_date,
+      recurrence_count
+    } = eventData;
+
+    if (!title || !start_datetime) {
+      return reject(new Error('Titre et date de début sont requis'));
+    }
+
+    if (!recurrence_type || recurrence_type === 'NONE') {
+      return reject(new Error('Type de récurrence requis pour un événement récurrent'));
+    }
+
+    const query = `
+      INSERT INTO events (
+        title, description, start_datetime, end_datetime, all_day,
+        location, category, priority, color, reminder_time, activity_id,
+        recurrence_type, recurrence_interval, recurrence_days,
+        recurrence_end_type, recurrence_end_date, recurrence_count,
+        created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+
+    const now = new Date().toISOString();
+
+    db.run(
+      query,
+      [
+        title,
+        description || null,
+        start_datetime,
+        end_datetime || start_datetime,
+        all_day ? 1 : 0,
+        location || null,
+        category || null,
+        priority || null,
+        color || null,
+        reminder_time || null,
+        activity_id || null,
+        recurrence_type,
+        recurrence_interval || 1,
+        recurrence_days || null,
+        recurrence_end_type || 'NEVER',
+        recurrence_end_date || null,
+        recurrence_count || null,
+        now
+      ],
+      function(err) {
+        if (err) {
+          console.error('[EventModel] Erreur lors de la création de l\'événement récurrent:', err);
+          reject(err);
+        } else {
+          getEventById(db, this.lastID)
+            .then(event => resolve(event))
+            .catch(err => reject(err));
+        }
+      }
+    );
+  });
+};
+
+/**
+ * Récupère les exceptions (occurrences supprimées) d'un événement récurrent
+ */
+const getEventExceptions = (db, eventId) => {
+  return new Promise((resolve, reject) => {
+    const query = 'SELECT exception_date FROM event_exceptions WHERE parent_event_id = ?';
+
+    db.all(query, [eventId], (err, exceptions) => {
+      if (err) {
+        console.error('[EventModel] Erreur lors de la récupération des exceptions:', err);
+        reject(err);
+      } else {
+        resolve((exceptions || []).map(e => e.exception_date));
+      }
+    });
+  });
+};
+
+/**
+ * Ajoute une exception (supprime une occurrence spécifique d'un événement récurrent)
+ */
+const addEventException = (db, eventId, exceptionDate) => {
+  return new Promise((resolve, reject) => {
+    const query = `
+      INSERT INTO event_exceptions (parent_event_id, exception_date, created_at)
+      VALUES (?, ?, ?)
+    `;
+
+    const now = new Date().toISOString();
+
+    db.run(query, [eventId, exceptionDate, now], function(err) {
+      if (err) {
+        console.error('[EventModel] Erreur lors de l\'ajout de l\'exception:', err);
+        reject(err);
+      } else {
+        resolve({ success: true, id: this.lastID });
+      }
+    });
+  });
+};
+
+/**
+ * Supprime une exception (restaure une occurrence supprimée)
+ */
+const removeEventException = (db, eventId, exceptionDate) => {
+  return new Promise((resolve, reject) => {
+    const query = 'DELETE FROM event_exceptions WHERE parent_event_id = ? AND exception_date = ?';
+
+    db.run(query, [eventId, exceptionDate], function(err) {
+      if (err) {
+        console.error('[EventModel] Erreur lors de la suppression de l\'exception:', err);
+        reject(err);
+      } else {
+        resolve({ success: true, changes: this.changes });
+      }
+    });
+  });
+};
+
+/**
+ * Crée une modification spécifique d'une occurrence (événement exception)
+ */
+const createEventException = (db, parentEventId, exceptionDate, modifiedData) => {
+  return new Promise((resolve, reject) => {
+    const {
+      title,
+      description,
+      start_datetime,
+      end_datetime,
+      all_day,
+      location,
+      category,
+      priority,
+      color,
+      reminder_time
+    } = modifiedData;
+
+    const query = `
+      INSERT INTO events (
+        title, description, start_datetime, end_datetime, all_day,
+        location, category, priority, color, reminder_time,
+        parent_event_id, is_exception, exception_date, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+
+    const now = new Date().toISOString();
+
+    db.run(
+      query,
+      [
+        title,
+        description || null,
+        start_datetime,
+        end_datetime || start_datetime,
+        all_day ? 1 : 0,
+        location || null,
+        category || null,
+        priority || null,
+        color || null,
+        reminder_time || null,
+        parentEventId,
+        1, // is_exception = true
+        exceptionDate,
+        now
+      ],
+      function(err) {
+        if (err) {
+          console.error('[EventModel] Erreur lors de la création de l\'exception modifiée:', err);
+          reject(err);
+        } else {
+          getEventById(db, this.lastID)
+            .then(event => resolve(event))
+            .catch(err => reject(err));
+        }
+      }
+    );
+  });
+};
+
+/**
+ * Récupère toutes les occurrences modifiées (exceptions) d'un événement récurrent
+ */
+const getModifiedOccurrences = (db, eventId) => {
+  return new Promise((resolve, reject) => {
+    const query = `
+      SELECT * FROM events
+      WHERE parent_event_id = ? AND is_exception = 1
+      ORDER BY exception_date ASC
+    `;
+
+    db.all(query, [eventId], (err, events) => {
+      if (err) {
+        console.error('[EventModel] Erreur lors de la récupération des occurrences modifiées:', err);
+        reject(err);
+      } else {
+        resolve(events || []);
+      }
+    });
+  });
+};
+
 module.exports = {
   getAllEvents,
   getEventById,
@@ -274,5 +496,11 @@ module.exports = {
   deleteEvent,
   getEventsByActivity,
   getEventsInRange,
-  getUpcomingEvents
+  getUpcomingEvents,
+  createRecurringEvent,
+  getEventExceptions,
+  addEventException,
+  removeEventException,
+  createEventException,
+  getModifiedOccurrences
 };
