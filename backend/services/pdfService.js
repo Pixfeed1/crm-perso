@@ -36,6 +36,14 @@ class PDFService {
            .fillColor('#666666')
            .text(quote.quote_number || '', { align: 'center' });
 
+        // Titre du devis (si présent)
+        if (quote.title) {
+          doc.fontSize(14)
+             .fillColor('#000000')
+             .font('Helvetica-Bold')
+             .text(quote.title, { align: 'center' });
+        }
+
         doc.moveDown(2);
 
         // === INFORMATIONS ENTREPRISE ===
@@ -74,7 +82,7 @@ class PDFService {
 
         doc.moveDown(3);
 
-        // === DATES ===
+        // === DATES ET PROJET ===
         doc.fontSize(9)
            .fillColor('#666666');
 
@@ -83,6 +91,11 @@ class PDFService {
 
         doc.text(`Date d'émission : ${issueDate}`, 50);
         if (expiryDate) doc.text(`Date d'expiration : ${expiryDate}`, 50);
+
+        // Projet associé (si présent)
+        if (quote.project_name) {
+          doc.text(`Projet : ${quote.project_name}`, 50);
+        }
 
         doc.moveDown(1.5);
 
@@ -169,19 +182,40 @@ class PDFService {
         doc.fontSize(10)
            .fillColor('#000000');
 
-        // Total HT
+        // Total HT avant remise
         doc.text('Total HT :', totalsX, yPosition, { continued: true, width: 90 });
         doc.text(this.formatAmount(quote.total_ht || 0), { align: 'right' });
         yPosition += 20;
 
-        // TVA avec mention légale si disponible
+        // Remise (si présente)
+        if (quote.discount_amount && quote.discount_amount > 0) {
+          let discountLabel = 'Remise';
+          if (quote.discount_type === 'percent') {
+            discountLabel += ` (${quote.discount_value}%)`;
+          }
+          doc.text(`${discountLabel} :`, totalsX, yPosition, { continued: true, width: 90 });
+          doc.fillColor('#16A34A')
+             .text(`-${this.formatAmount(quote.discount_amount)}`, { align: 'right' });
+          doc.fillColor('#000000');
+          yPosition += 20;
+
+          // Total HT après remise
+          const totalHtAfterDiscount = (quote.total_ht || 0) - (quote.discount_amount || 0);
+          doc.font('Helvetica')
+             .text('Total HT net :', totalsX, yPosition, { continued: true, width: 90 });
+          doc.text(this.formatAmount(totalHtAfterDiscount), { align: 'right' });
+          yPosition += 20;
+        }
+
+        // TVA avec mention du régime si disponible
         let tvaLabel = '';
         if (tvaRegime && tvaRegime.mention_legale) {
           tvaLabel = tvaRegime.mention_legale;
         } else if (quote.tva_applicable === false) {
           tvaLabel = 'TVA (non applicable)';
         } else {
-          tvaLabel = `TVA (${quote.tva_rate || 20}%)`;
+          const regimeLabel = quote.tva_regime ? ` - ${quote.tva_regime}` : '';
+          tvaLabel = `TVA (${quote.tva_rate || 20}%${regimeLabel})`;
         }
         doc.text(tvaLabel, totalsX, yPosition, { continued: true, width: 90 });
         doc.text(this.formatAmount(quote.tva_amount || 0), { align: 'right' });
@@ -210,7 +244,61 @@ class PDFService {
           doc.text(this.formatAmount(reste), { align: 'right' });
         }
 
+        // Escompte si présent
+        if (quote.escompte_percent && quote.escompte_percent > 0 && quote.escompte_days && quote.escompte_days > 0) {
+          yPosition += 15;
+          doc.font('Helvetica')
+             .fontSize(9)
+             .fillColor('#16A34A');
+          const montantEscompte = (quote.total_ttc || 0) * (quote.escompte_percent / 100);
+          const totalAvecEscompte = (quote.total_ttc || 0) - montantEscompte;
+          doc.text(`💡 Escompte de ${quote.escompte_percent}% si paiement sous ${quote.escompte_days} jours`, 50, yPosition);
+          yPosition += 12;
+          doc.text(`   Montant avec escompte : ${this.formatAmount(totalAvecEscompte)}`, 50, yPosition);
+          doc.fillColor('#000000');
+        }
+
         yPosition += 30;
+
+        // === MOYENS DE PAIEMENT ACCEPTÉS ===
+        if (quote.payment_methods) {
+          let paymentMethods = [];
+          try {
+            paymentMethods = typeof quote.payment_methods === 'string'
+              ? JSON.parse(quote.payment_methods)
+              : (quote.payment_methods || []);
+          } catch (e) {
+            paymentMethods = [];
+          }
+
+          if (paymentMethods.length > 0) {
+            doc.fontSize(9)
+               .fillColor('#000000')
+               .font('Helvetica-Bold')
+               .text('Moyens de paiement acceptés', 50, yPosition);
+            yPosition += 15;
+
+            doc.font('Helvetica')
+               .fontSize(9)
+               .fillColor('#333333');
+
+            const methodLabels = {
+              'VIREMENT': 'Virement bancaire',
+              'CHEQUE': 'Chèque',
+              'CARTE': 'Carte bancaire',
+              'ESPECES': 'Espèces',
+              'PRELEVEMENT': 'Prélèvement automatique',
+              'PAYPAL': 'PayPal',
+              'STRIPE': 'Stripe',
+              'TRAITE': 'Lettre de change',
+              'AUTRE': 'Autre moyen'
+            };
+
+            const methodsList = paymentMethods.map(m => methodLabels[m] || m).join(', ');
+            doc.text(methodsList, 50, yPosition, { width: 510 });
+            yPosition += 25;
+          }
+        }
 
         // === MODALITÉS DE PAIEMENT ===
         if (quote.payment_details) {
@@ -317,6 +405,53 @@ class PDFService {
              .text(quote.notes, 50, yPosition, { width: 510 });
         }
 
+        // === INFORMATIONS COMPLÉMENTAIRES ===
+        if (quote.additional_info) {
+          yPosition = doc.y + 15;
+          doc.fontSize(8)
+             .fillColor('#666666')
+             .font('Helvetica-Bold')
+             .text('Informations complémentaires', 50, yPosition);
+          yPosition += 15;
+
+          doc.font('Helvetica')
+             .fontSize(8)
+             .fillColor('#333333')
+             .text(quote.additional_info, 50, yPosition, { width: 510 });
+        }
+
+        // === FICHIERS JOINTS ===
+        if (quote.additional_files) {
+          let files = [];
+          try {
+            files = typeof quote.additional_files === 'string'
+              ? JSON.parse(quote.additional_files)
+              : (quote.additional_files || []);
+          } catch (e) {
+            files = [];
+          }
+
+          if (files.length > 0) {
+            yPosition = doc.y + 15;
+            doc.fontSize(8)
+               .fillColor('#666666')
+               .font('Helvetica-Bold')
+               .text('Fichiers joints', 50, yPosition);
+            yPosition += 15;
+
+            doc.font('Helvetica')
+               .fontSize(8)
+               .fillColor('#333333');
+
+            files.forEach((file, index) => {
+              const fileName = file.filename || file.name || `Document ${index + 1}`;
+              const fileSize = file.size ? `(${(file.size / 1024).toFixed(2)} Ko)` : '';
+              doc.text(`• ${fileName} ${fileSize}`, 50, yPosition);
+              yPosition += 12;
+            });
+          }
+        }
+
         // Finaliser le PDF
         doc.end();
       } catch (error) {
@@ -353,6 +488,14 @@ class PDFService {
         doc.fontSize(12)
            .fillColor('#666666')
            .text(invoice.invoice_number || '', { align: 'center' });
+
+        // Titre de la facture (si présent)
+        if (invoice.title) {
+          doc.fontSize(14)
+             .fillColor('#000000')
+             .font('Helvetica-Bold')
+             .text(invoice.title, { align: 'center' });
+        }
 
         doc.moveDown(2);
 
@@ -392,7 +535,7 @@ class PDFService {
 
         doc.moveDown(3);
 
-        // === DATES ===
+        // === DATES ET PROJET ===
         doc.fontSize(9)
            .fillColor('#666666');
 
@@ -401,6 +544,11 @@ class PDFService {
 
         doc.text(`Date d'émission : ${issueDate}`, 50);
         if (dueDate) doc.text(`Date d'échéance : ${dueDate}`, 50);
+
+        // Projet associé (si présent)
+        if (invoice.project_name) {
+          doc.text(`Projet : ${invoice.project_name}`, 50);
+        }
 
         doc.moveDown(1.5);
 
@@ -466,14 +614,34 @@ class PDFService {
         doc.text(this.formatAmount(invoice.total_ht || 0), { align: 'right' });
         yPosition += 20;
 
-        // TVA avec mention légale si disponible
+        // Remise (si présente)
+        if (invoice.discount_amount && invoice.discount_amount > 0) {
+          let discountLabel = 'Remise';
+          if (invoice.discount_type === 'percent') {
+            discountLabel += ` (${invoice.discount_value}%)`;
+          }
+          doc.text(`${discountLabel} :`, totalsX, yPosition, { continued: true, width: 90 });
+          doc.fillColor('#16A34A')
+             .text(`-${this.formatAmount(invoice.discount_amount)}`, { align: 'right' });
+          doc.fillColor('#000000');
+          yPosition += 20;
+
+          const totalHtAfterDiscount = (invoice.total_ht || 0) - (invoice.discount_amount || 0);
+          doc.font('Helvetica')
+             .text('Total HT net :', totalsX, yPosition, { continued: true, width: 90 });
+          doc.text(this.formatAmount(totalHtAfterDiscount), { align: 'right' });
+          yPosition += 20;
+        }
+
+        // TVA avec mention du régime si disponible
         let tvaLabel = '';
         if (tvaRegime && tvaRegime.mention_legale) {
           tvaLabel = tvaRegime.mention_legale;
         } else if (invoice.tva_applicable === false) {
           tvaLabel = 'TVA (non applicable)';
         } else {
-          tvaLabel = `TVA (${invoice.tva_rate || 20}%)`;
+          const regimeLabel = invoice.tva_regime ? ` - ${invoice.tva_regime}` : '';
+          tvaLabel = `TVA (${invoice.tva_rate || 20}%${regimeLabel})`;
         }
         doc.text(tvaLabel, totalsX, yPosition, { continued: true, width: 90 });
         doc.text(this.formatAmount(invoice.tva_amount || 0), { align: 'right' });
@@ -483,6 +651,46 @@ class PDFService {
         doc.text('Total TTC :', totalsX, yPosition, { continued: true, width: 90 });
         doc.text(this.formatAmount(invoice.total_ttc || 0), { align: 'right' });
         yPosition += 30;
+
+        // === MOYENS DE PAIEMENT ACCEPTÉS ===
+        if (invoice.payment_methods) {
+          let paymentMethods = [];
+          try {
+            paymentMethods = typeof invoice.payment_methods === 'string'
+              ? JSON.parse(invoice.payment_methods)
+              : (invoice.payment_methods || []);
+          } catch (e) {
+            paymentMethods = [];
+          }
+
+          if (paymentMethods.length > 0) {
+            doc.fontSize(9)
+               .fillColor('#000000')
+               .font('Helvetica-Bold')
+               .text('Moyens de paiement acceptés', 50, yPosition);
+            yPosition += 15;
+
+            doc.font('Helvetica')
+               .fontSize(9)
+               .fillColor('#333333');
+
+            const methodLabels = {
+              'VIREMENT': 'Virement bancaire',
+              'CHEQUE': 'Chèque',
+              'CARTE': 'Carte bancaire',
+              'ESPECES': 'Espèces',
+              'PRELEVEMENT': 'Prélèvement automatique',
+              'PAYPAL': 'PayPal',
+              'STRIPE': 'Stripe',
+              'TRAITE': 'Lettre de change',
+              'AUTRE': 'Autre moyen'
+            };
+
+            const methodsList = paymentMethods.map(m => methodLabels[m] || m).join(', ');
+            doc.text(methodsList, 50, yPosition, { width: 510 });
+            yPosition += 25;
+          }
+        }
 
         // === MODALITÉS DE PAIEMENT ===
         if (invoice.payment_details) {
@@ -574,6 +782,53 @@ class PDFService {
           doc.fontSize(8).fillColor('#666666').font('Helvetica-Bold').text('Notes', 50, yPosition);
           yPosition += 15;
           doc.font('Helvetica').text(invoice.notes, 50, yPosition, { width: 510 });
+        }
+
+        // === INFORMATIONS COMPLÉMENTAIRES ===
+        if (invoice.additional_info) {
+          yPosition = doc.y + 15;
+          doc.fontSize(8)
+             .fillColor('#666666')
+             .font('Helvetica-Bold')
+             .text('Informations complémentaires', 50, yPosition);
+          yPosition += 15;
+
+          doc.font('Helvetica')
+             .fontSize(8)
+             .fillColor('#333333')
+             .text(invoice.additional_info, 50, yPosition, { width: 510 });
+        }
+
+        // === FICHIERS JOINTS ===
+        if (invoice.additional_files) {
+          let files = [];
+          try {
+            files = typeof invoice.additional_files === 'string'
+              ? JSON.parse(invoice.additional_files)
+              : (invoice.additional_files || []);
+          } catch (e) {
+            files = [];
+          }
+
+          if (files.length > 0) {
+            yPosition = doc.y + 15;
+            doc.fontSize(8)
+               .fillColor('#666666')
+               .font('Helvetica-Bold')
+               .text('Fichiers joints', 50, yPosition);
+            yPosition += 15;
+
+            doc.font('Helvetica')
+               .fontSize(8)
+               .fillColor('#333333');
+
+            files.forEach((file, index) => {
+              const fileName = file.filename || file.name || `Document ${index + 1}`;
+              const fileSize = file.size ? `(${(file.size / 1024).toFixed(2)} Ko)` : '';
+              doc.text(`• ${fileName} ${fileSize}`, 50, yPosition);
+              yPosition += 12;
+            });
+          }
         }
 
         doc.end();
