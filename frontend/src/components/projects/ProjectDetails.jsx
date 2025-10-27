@@ -222,7 +222,7 @@ const ProjectDetails = ({ project, onUpdate, onDelete, onAddTask, onToggleTaskSt
                   {Object.keys(statusConfig).map(status => (
                     <button
                       key={status}
-                      className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-800 flex items-center ${
+                      className={`w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-800 flex items-center ${
                         project.status === status ? 'bg-gray-800' : ''
                       }`}
                       onClick={() => handleStatusChange(status)}
@@ -299,7 +299,7 @@ const ProjectDetails = ({ project, onUpdate, onDelete, onAddTask, onToggleTaskSt
             </div>
             
             {/* Visualisation de la période écoulée */}
-            <div className="mt-3 flex justify-between text-xs text-gray-500">
+            <div className="mt-3 flex justify-between text-xs text-gray-400">
               <span>{formatDate(project.start_date)}</span>
               <span>{formatDate(project.end_date)}</span>
             </div>
