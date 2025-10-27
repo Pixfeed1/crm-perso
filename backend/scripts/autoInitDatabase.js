@@ -466,10 +466,14 @@ async function ensureReferenceData(client, tableName, data) {
     const values = Object.values(row);
     const placeholders = values.map((_, i) => `$${i + 1}`).join(', ');
 
+    // Déterminer la colonne unique pour le ON CONFLICT
+    // settings utilise "key", les autres tables utilisent "code"
+    const uniqueColumn = tableName === 'settings' ? 'key' : 'code';
+
     const query = `
       INSERT INTO ${tableName} (${columns.join(', ')})
       VALUES (${placeholders})
-      ON CONFLICT (code) DO NOTHING;
+      ON CONFLICT (${uniqueColumn}) DO NOTHING;
     `;
 
     await client.query(query, values);
