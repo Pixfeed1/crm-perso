@@ -29,19 +29,30 @@ async function runMigration() {
         id SERIAL PRIMARY KEY,
         code VARCHAR(50) UNIQUE NOT NULL,
         label TEXT NOT NULL,
-        taux DECIMAL(5,2),
-        article_cgi TEXT,
-        description TEXT,
-        mention_legale TEXT,
-        calcul_type VARCHAR(20) DEFAULT 'normal',
-        ordre INTEGER DEFAULT 0,
-        active BOOLEAN DEFAULT true,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
-    console.log('✓ Table tva_regimes créée');
+    console.log('✓ Table tva_regimes créée ou existe déjà');
 
-    // Ajouter la colonne category si elle n'existe pas
+    // Ajouter TOUTES les colonnes nécessaires si elles n'existent pas
+    console.log('✓ Vérification et ajout des colonnes...');
+
+    // Colonne taux (ou renommer rate en taux si rate existe)
+    await client.query(`
+      DO $$
+      BEGIN
+        -- Si rate existe et pas taux, renommer rate en taux
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'tva_regimes' AND column_name = 'rate')
+           AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'tva_regimes' AND column_name = 'taux') THEN
+          ALTER TABLE tva_regimes RENAME COLUMN rate TO taux;
+        -- Si ni rate ni taux n'existe, créer taux
+        ELSIF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'tva_regimes' AND column_name = 'taux') THEN
+          ALTER TABLE tva_regimes ADD COLUMN taux DECIMAL(5,2);
+        END IF;
+      END $$;
+    `);
+
+    // Colonne category
     await client.query(`
       DO $$
       BEGIN
@@ -53,7 +64,75 @@ async function runMigration() {
         END IF;
       END $$;
     `);
-    console.log('✓ Colonne category vérifiée\n');
+
+    // Colonne article_cgi
+    await client.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_name = 'tva_regimes' AND column_name = 'article_cgi'
+        ) THEN
+          ALTER TABLE tva_regimes ADD COLUMN article_cgi TEXT;
+        END IF;
+      END $$;
+    `);
+
+    // Colonne mention_legale
+    await client.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_name = 'tva_regimes' AND column_name = 'mention_legale'
+        ) THEN
+          ALTER TABLE tva_regimes ADD COLUMN mention_legale TEXT;
+        END IF;
+      END $$;
+    `);
+
+    // Colonne calcul_type
+    await client.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_name = 'tva_regimes' AND column_name = 'calcul_type'
+        ) THEN
+          ALTER TABLE tva_regimes ADD COLUMN calcul_type VARCHAR(20) DEFAULT 'normal';
+        END IF;
+      END $$;
+    `);
+
+    // Colonne ordre
+    await client.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_name = 'tva_regimes' AND column_name = 'ordre'
+        ) THEN
+          ALTER TABLE tva_regimes ADD COLUMN ordre INTEGER DEFAULT 0;
+        END IF;
+      END $$;
+    `);
+
+    // Colonne active (ou renommer is_active en active)
+    await client.query(`
+      DO $$
+      BEGIN
+        -- Si is_active existe et pas active, renommer
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'tva_regimes' AND column_name = 'is_active')
+           AND NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'tva_regimes' AND column_name = 'active') THEN
+          ALTER TABLE tva_regimes RENAME COLUMN is_active TO active;
+        -- Si ni is_active ni active n'existe, créer active
+        ELSIF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'tva_regimes' AND column_name = 'active') THEN
+          ALTER TABLE tva_regimes ADD COLUMN active BOOLEAN DEFAULT true;
+        END IF;
+      END $$;
+    `);
+
+    console.log('✓ Toutes les colonnes vérifiées et ajoutées si nécessaire\n');
 
     // 2. Vider la table si elle existe déjà
     await client.query('DELETE FROM tva_regimes;');
