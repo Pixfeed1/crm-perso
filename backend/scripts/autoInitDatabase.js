@@ -86,7 +86,7 @@ const DATABASE_SCHEMA = {
       id: 'SERIAL PRIMARY KEY',
       code: 'VARCHAR(50) UNIQUE NOT NULL',
       label: 'TEXT NOT NULL',
-      taux: 'DECIMAL(5,2)',
+      rate: 'DECIMAL(5,2)',
       category: "VARCHAR(50) NOT NULL DEFAULT 'taux_normal'",
       article_cgi: 'TEXT',
       description: 'TEXT',
@@ -485,21 +485,21 @@ async function ensureTvaRegimes(client) {
   console.log(`\n📊 Vérification régimes de TVA...`);
 
   const regimes = [
-    { code: 'NORMAL', label: 'TVA normale à 20%', category: 'taux_normal', taux: 20.00, article_cgi: 'Article 278 du CGI', description: 'Taux normal de TVA applicable à la plupart des biens et services', calcul_type: 'normal', ordre: 1 },
-    { code: 'INTERMEDIAIRE', label: 'TVA intermédiaire à 10%', category: 'taux_reduit', taux: 10.00, article_cgi: 'Article 278 bis du CGI', description: 'Restauration, travaux de rénovation, transport de voyageurs, etc.', calcul_type: 'normal', ordre: 2 },
-    { code: 'REDUIT', label: 'TVA réduite à 5,5%', category: 'taux_reduit', taux: 5.50, article_cgi: 'Article 278-0 bis du CGI', description: 'Produits alimentaires, abonnements gaz/électricité, livres, etc.', calcul_type: 'normal', ordre: 3 },
-    { code: 'SUPER_REDUIT', label: 'TVA super réduite à 2,1%', category: 'taux_reduit', taux: 2.10, article_cgi: 'Article 281 quater du CGI', description: 'Médicaments remboursables, publications de presse, certains spectacles', calcul_type: 'normal', ordre: 4 },
-    { code: 'NON_APPLICABLE_293B', label: 'TVA non applicable, art. 293 B du CGI', category: 'non_application', taux: 0.00, article_cgi: 'Article 293 B du CGI', description: 'Franchise en base de TVA (micro-entreprise, CA < seuils)', mention_legale: 'TVA non applicable, art. 293 B du CGI', calcul_type: 'non_applicable', ordre: 10 }
+    { code: 'NORMAL', label: 'TVA normale à 20%', category: 'taux_normal', rate: 20.00, article_cgi: 'Article 278 du CGI', description: 'Taux normal de TVA applicable à la plupart des biens et services', calcul_type: 'normal', ordre: 1 },
+    { code: 'INTERMEDIAIRE', label: 'TVA intermédiaire à 10%', category: 'taux_reduit', rate: 10.00, article_cgi: 'Article 278 bis du CGI', description: 'Restauration, travaux de rénovation, transport de voyageurs, etc.', calcul_type: 'normal', ordre: 2 },
+    { code: 'REDUIT', label: 'TVA réduite à 5,5%', category: 'taux_reduit', rate: 5.50, article_cgi: 'Article 278-0 bis du CGI', description: 'Produits alimentaires, abonnements gaz/électricité, livres, etc.', calcul_type: 'normal', ordre: 3 },
+    { code: 'SUPER_REDUIT', label: 'TVA super réduite à 2,1%', category: 'taux_reduit', rate: 2.10, article_cgi: 'Article 281 quater du CGI', description: 'Médicaments remboursables, publications de presse, certains spectacles', calcul_type: 'normal', ordre: 4 },
+    { code: 'NON_APPLICABLE_293B', label: 'TVA non applicable, art. 293 B du CGI', category: 'non_application', rate: 0.00, article_cgi: 'Article 293 B du CGI', description: 'Franchise en base de TVA (micro-entreprise, CA < seuils)', mention_legale: 'TVA non applicable, art. 293 B du CGI', calcul_type: 'non_applicable', ordre: 10 }
   ];
 
   for (const regime of regimes) {
     await client.query(`
-      INSERT INTO tva_regimes (code, label, category, taux, article_cgi, description, mention_legale, calcul_type, ordre, active)
+      INSERT INTO tva_regimes (code, label, category, rate, article_cgi, description, mention_legale, calcul_type, ordre, active)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, true)
       ON CONFLICT (code) DO UPDATE SET
         label = EXCLUDED.label,
         category = EXCLUDED.category,
-        taux = EXCLUDED.taux,
+        rate = EXCLUDED.rate,
         article_cgi = EXCLUDED.article_cgi,
         description = EXCLUDED.description,
         mention_legale = EXCLUDED.mention_legale,
@@ -509,7 +509,7 @@ async function ensureTvaRegimes(client) {
       regime.code,
       regime.label,
       regime.category,
-      regime.taux,
+      regime.rate,
       regime.article_cgi,
       regime.description,
       regime.mention_legale || null,
