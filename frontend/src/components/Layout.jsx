@@ -17,6 +17,7 @@ import { FiTarget as GoalsIcon } from 'react-icons/fi';
 import { FiBarChart2 as ReportsIcon } from 'react-icons/fi';
 import { FiFileText as QuotesIcon } from 'react-icons/fi';
 import { FiFile as InvoicesIcon } from 'react-icons/fi';
+import { FiTrendingUp as TreasuryIcon } from 'react-icons/fi';
 import { FiLogOut as LogoutIcon } from 'react-icons/fi';
 import { FiBell, FiSettings } from 'react-icons/fi';
 
@@ -90,6 +91,7 @@ const Layout = ({ children }) => {
     { path: '/projects', label: 'Projets', icon: <ProjectsIcon /> },
     { path: '/quotes', label: 'Devis', icon: <QuotesIcon /> },
     { path: '/invoices', label: 'Factures', icon: <InvoicesIcon /> },
+    { path: '/treasury', label: 'Trésorerie', icon: <TreasuryIcon /> },
     { path: '/calendar', label: 'Calendrier', icon: <CalendarIcon /> },
     { path: '/revenues', label: 'Revenus', icon: <RevenuesIcon /> },
     { path: '/activities', label: 'Activités', icon: <ActivitiesIcon /> },

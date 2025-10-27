@@ -24,6 +24,7 @@ import Goals from './pages/Goals';
 import Reports from './pages/Reports';
 import Quotes from './pages/Quotes';
 import Invoices from './pages/Invoices';
+import Treasury from './pages/Treasury';
 import Settings from './pages/Settings';
 
 // Composant ProtectedRoute pour protéger les routes
@@ -155,6 +156,14 @@ const App = () => {
             <ProtectedRoute>
               <Layout>
                 <Invoices />
+              </Layout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/treasury" element={
+            <ProtectedRoute>
+              <Layout>
+                <Treasury />
               </Layout>
             </ProtectedRoute>
           } />
