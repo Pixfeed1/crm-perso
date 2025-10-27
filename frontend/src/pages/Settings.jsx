@@ -1,11 +1,12 @@
 // src/pages/Settings.jsx
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FiSave, FiBriefcase, FiMail, FiCheckCircle, FiXCircle, FiAlertCircle } from 'react-icons/fi';
+import { FiSave, FiBriefcase, FiMail, FiCheckCircle, FiXCircle, FiAlertCircle, FiVideo } from 'react-icons/fi';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { settingsAPI } from '../services/settingsAPI';
 import { useToast } from '../hooks/useToast';
+import VideoConferenceSettings from '../components/settings/VideoConferenceSettings';
 
 const Settings = () => {
   const { toast } = useToast();
@@ -155,10 +156,10 @@ const Settings = () => {
       </div>
 
       {/* Onglets */}
-      <div className="flex gap-2 mb-6 border-b border-gray-700">
+      <div className="flex gap-2 mb-6 border-b border-gray-700 overflow-x-auto">
         <button
           onClick={() => setActiveTab('company')}
-          className={`px-4 py-2 flex items-center gap-2 border-b-2 transition-colors ${
+          className={`px-4 py-2 flex items-center gap-2 border-b-2 transition-colors whitespace-nowrap ${
             activeTab === 'company'
               ? 'border-indigo-500 text-indigo-300'
               : 'border-transparent text-gray-400 hover:text-gray-300'
@@ -169,7 +170,7 @@ const Settings = () => {
         </button>
         <button
           onClick={() => setActiveTab('email')}
-          className={`px-4 py-2 flex items-center gap-2 border-b-2 transition-colors ${
+          className={`px-4 py-2 flex items-center gap-2 border-b-2 transition-colors whitespace-nowrap ${
             activeTab === 'email'
               ? 'border-indigo-500 text-indigo-300'
               : 'border-transparent text-gray-400 hover:text-gray-300'
@@ -177,6 +178,17 @@ const Settings = () => {
         >
           <FiMail />
           <span>Configuration emails</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('video')}
+          className={`px-4 py-2 flex items-center gap-2 border-b-2 transition-colors whitespace-nowrap ${
+            activeTab === 'video'
+              ? 'border-indigo-500 text-indigo-300'
+              : 'border-transparent text-gray-400 hover:text-gray-300'
+          }`}
+        >
+          <FiVideo />
+          <span>Visioconférence</span>
         </button>
       </div>
 
@@ -427,6 +439,10 @@ const Settings = () => {
               </div>
             </div>
           </div>
+        )}
+
+        {activeTab === 'video' && (
+          <VideoConferenceSettings />
         )}
       </motion.div>
     </div>
