@@ -7,8 +7,7 @@ const dotenv = require('dotenv');
 const cookieParser = require('cookie-parser');
 const fs = require('fs');
 const db = require('./config/pgConfig'); // Changé pour utiliser PostgreSQL
-const { initAllTables } = require('./scripts/initAllTables');
-const { runMigrations } = require('./config/migrationRunner');
+const { autoInitDatabase } = require('./scripts/autoInitDatabase');
 
 // Charger les variables d'environnement
 dotenv.config();
@@ -180,27 +179,8 @@ app.use((err, req, res, next) => {
 // Fonction pour initialiser la base de données
 async function initializeDatabase() {
   try {
-    console.log('');
-    console.log('===========================================');
-    console.log('🔄 INITIALISATION DE LA BASE DE DONNÉES');
-    console.log('===========================================');
-    console.log('Vérification et création automatique des tables...');
-    console.log('');
-
-    await initAllTables();
-
-    console.log('');
-    console.log('✅ Tables de base créées avec succès !');
-    console.log('');
-
-    // Exécuter les migrations automatiquement
-    await runMigrations();
-
-    console.log('');
-    console.log('✅ Base de données complètement initialisée !');
-    console.log('   Toutes les tables et migrations sont à jour.');
-    console.log('===========================================');
-    console.log('');
+    // Utiliser le système d'auto-initialisation qui vérifie et crée tout automatiquement
+    await autoInitDatabase(db.pool);
   } catch (error) {
     console.log('');
     console.log('===========================================');
