@@ -323,55 +323,57 @@ class PDFService {
                .fillColor('#333333');
 
             // VIREMENT
-            if (paymentDetails.iban) {
+            if (paymentDetails.VIREMENT?.iban) {
               doc.text('Paiement par virement bancaire :', 50, yPosition);
               yPosition += 12;
-              doc.text(`  IBAN: ${paymentDetails.iban}`, 50, yPosition);
+              doc.text(`  IBAN: ${paymentDetails.VIREMENT.iban}`, 50, yPosition);
               yPosition += 10;
-              if (paymentDetails.bic) {
-                doc.text(`  BIC: ${paymentDetails.bic}`, 50, yPosition);
+              if (paymentDetails.VIREMENT.bic) {
+                doc.text(`  BIC: ${paymentDetails.VIREMENT.bic}`, 50, yPosition);
                 yPosition += 10;
               }
-              if (paymentDetails.titulaire) {
-                doc.text(`  Titulaire: ${paymentDetails.titulaire}`, 50, yPosition);
+              if (paymentDetails.VIREMENT.titulaire) {
+                doc.text(`  Titulaire: ${paymentDetails.VIREMENT.titulaire}`, 50, yPosition);
                 yPosition += 10;
               }
-              if (paymentDetails.banque) {
-                doc.text(`  Banque: ${paymentDetails.banque}`, 50, yPosition);
+              if (paymentDetails.VIREMENT.banque) {
+                doc.text(`  Banque: ${paymentDetails.VIREMENT.banque}`, 50, yPosition);
                 yPosition += 10;
               }
+              yPosition += 5;
             }
 
             // PAYPAL
-            if (paymentDetails.paypal_email) {
+            if (paymentDetails.PAYPAL?.email) {
               doc.text('Paiement par PayPal :', 50, yPosition);
               yPosition += 12;
-              doc.text(`  Email: ${paymentDetails.paypal_email}`, 50, yPosition);
+              doc.text(`  Email: ${paymentDetails.PAYPAL.email}`, 50, yPosition);
               yPosition += 10;
-              if (paymentDetails.paypal_lien) {
+              if (paymentDetails.PAYPAL.lien) {
                 doc.fillColor('#6366F1')
-                   .text(`  Lien: ${paymentDetails.paypal_lien}`, 50, yPosition, { link: paymentDetails.paypal_lien });
+                   .text(`  Lien: ${paymentDetails.PAYPAL.lien}`, 50, yPosition, { link: paymentDetails.PAYPAL.lien });
                 doc.fillColor('#333333');
                 yPosition += 10;
               }
+              yPosition += 5;
             }
 
             // STRIPE
-            if (paymentDetails.stripe_lien) {
+            if (paymentDetails.STRIPE?.lien) {
               doc.text('Paiement par carte bancaire (Stripe) :', 50, yPosition);
               yPosition += 12;
               doc.fillColor('#6366F1')
-                 .text(`  ${paymentDetails.stripe_lien}`, 50, yPosition, { link: paymentDetails.stripe_lien });
+                 .text(`  ${paymentDetails.STRIPE.lien}`, 50, yPosition, { link: paymentDetails.STRIPE.lien });
               doc.fillColor('#333333');
-              yPosition += 10;
+              yPosition += 15;
             }
 
             // CARTE BANCAIRE (autre)
-            if (paymentDetails.cb_instructions) {
+            if (paymentDetails.CARTE?.instructions) {
               doc.text('Paiement par carte bancaire :', 50, yPosition);
               yPosition += 12;
-              doc.text(`  ${paymentDetails.cb_instructions}`, 50, yPosition);
-              yPosition += 10;
+              doc.text(`  ${paymentDetails.CARTE.instructions}`, 50, yPosition);
+              yPosition += 15;
             }
 
             yPosition += 10;
@@ -715,55 +717,57 @@ class PDFService {
                .fillColor('#333333');
 
             // VIREMENT
-            if (paymentDetails.iban) {
+            if (paymentDetails.VIREMENT?.iban) {
               doc.text('Paiement par virement bancaire :', 50, yPosition);
               yPosition += 12;
-              doc.text(`  IBAN: ${paymentDetails.iban}`, 50, yPosition);
+              doc.text(`  IBAN: ${paymentDetails.VIREMENT.iban}`, 50, yPosition);
               yPosition += 10;
-              if (paymentDetails.bic) {
-                doc.text(`  BIC: ${paymentDetails.bic}`, 50, yPosition);
+              if (paymentDetails.VIREMENT.bic) {
+                doc.text(`  BIC: ${paymentDetails.VIREMENT.bic}`, 50, yPosition);
                 yPosition += 10;
               }
-              if (paymentDetails.titulaire) {
-                doc.text(`  Titulaire: ${paymentDetails.titulaire}`, 50, yPosition);
+              if (paymentDetails.VIREMENT.titulaire) {
+                doc.text(`  Titulaire: ${paymentDetails.VIREMENT.titulaire}`, 50, yPosition);
                 yPosition += 10;
               }
-              if (paymentDetails.banque) {
-                doc.text(`  Banque: ${paymentDetails.banque}`, 50, yPosition);
+              if (paymentDetails.VIREMENT.banque) {
+                doc.text(`  Banque: ${paymentDetails.VIREMENT.banque}`, 50, yPosition);
                 yPosition += 10;
               }
+              yPosition += 5;
             }
 
             // PAYPAL
-            if (paymentDetails.paypal_email) {
+            if (paymentDetails.PAYPAL?.email) {
               doc.text('Paiement par PayPal :', 50, yPosition);
               yPosition += 12;
-              doc.text(`  Email: ${paymentDetails.paypal_email}`, 50, yPosition);
+              doc.text(`  Email: ${paymentDetails.PAYPAL.email}`, 50, yPosition);
               yPosition += 10;
-              if (paymentDetails.paypal_lien) {
+              if (paymentDetails.PAYPAL.lien) {
                 doc.fillColor('#6366F1')
-                   .text(`  Lien: ${paymentDetails.paypal_lien}`, 50, yPosition, { link: paymentDetails.paypal_lien });
+                   .text(`  Lien: ${paymentDetails.PAYPAL.lien}`, 50, yPosition, { link: paymentDetails.PAYPAL.lien });
                 doc.fillColor('#333333');
                 yPosition += 10;
               }
+              yPosition += 5;
             }
 
             // STRIPE
-            if (paymentDetails.stripe_lien) {
+            if (paymentDetails.STRIPE?.lien) {
               doc.text('Paiement par carte bancaire (Stripe) :', 50, yPosition);
               yPosition += 12;
               doc.fillColor('#6366F1')
-                 .text(`  ${paymentDetails.stripe_lien}`, 50, yPosition, { link: paymentDetails.stripe_lien });
+                 .text(`  ${paymentDetails.STRIPE.lien}`, 50, yPosition, { link: paymentDetails.STRIPE.lien });
               doc.fillColor('#333333');
-              yPosition += 10;
+              yPosition += 15;
             }
 
             // CARTE BANCAIRE (autre)
-            if (paymentDetails.cb_instructions) {
+            if (paymentDetails.CARTE?.instructions) {
               doc.text('Paiement par carte bancaire :', 50, yPosition);
               yPosition += 12;
-              doc.text(`  ${paymentDetails.cb_instructions}`, 50, yPosition);
-              yPosition += 10;
+              doc.text(`  ${paymentDetails.CARTE.instructions}`, 50, yPosition);
+              yPosition += 15;
             }
 
             yPosition += 10;
