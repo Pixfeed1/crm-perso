@@ -91,6 +91,17 @@ const VideoLinkGenerator = ({ value, onChange, eventData }) => {
     return info[providerId] || { name: providerId, icon: '🔗', color: 'gray' };
   };
 
+  // Mapping statique pour les classes Tailwind (nécessaire pour le JIT compiler)
+  const getProviderClasses = (color) => {
+    const colorClasses = {
+      green: 'border-green-500 bg-green-500/10',
+      blue: 'border-blue-500 bg-blue-500/10',
+      purple: 'border-purple-500 bg-purple-500/10',
+      gray: 'border-gray-500 bg-gray-500/10'
+    };
+    return colorClasses[color] || colorClasses.gray;
+  };
+
   const currentProviderInfo = selectedProvider ? getProviderInfo(selectedProvider) : null;
 
   return (
@@ -177,7 +188,7 @@ const VideoLinkGenerator = ({ value, onChange, eventData }) => {
                       key={provider.id}
                       className={`flex items-center p-3 border-2 rounded-lg cursor-pointer transition-all ${
                         selectedProvider === provider.id
-                          ? `border-${info.color}-500 bg-${info.color}-500/10`
+                          ? getProviderClasses(info.color)
                           : 'border-gray-700 hover:border-gray-600'
                       }`}
                     >

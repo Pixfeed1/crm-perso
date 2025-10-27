@@ -138,6 +138,16 @@ const VideoConferenceSettings = () => {
     return colors[providerId] || 'gray';
   };
 
+  // Mapping statique pour les classes Tailwind (nécessaire pour le JIT compiler)
+  const getProviderClasses = (providerId) => {
+    const colorClasses = {
+      google_meet: 'border-green-500 bg-green-50',
+      zoom: 'border-blue-500 bg-blue-50',
+      teams: 'border-purple-500 bg-purple-50'
+    };
+    return colorClasses[providerId] || 'border-gray-500 bg-gray-50';
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -221,9 +231,7 @@ const VideoConferenceSettings = () => {
               whileHover={{ scale: 1.01 }}
               className={`p-4 border-2 rounded-lg transition-all ${
                 settings.default_provider === provider.id
-                  ? `border-${getProviderColor(provider.id)}-500 bg-${getProviderColor(
-                      provider.id
-                    )}-50`
+                  ? getProviderClasses(provider.id)
                   : 'border-gray-200 hover:border-gray-300'
               }`}
             >

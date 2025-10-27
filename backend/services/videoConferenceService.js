@@ -326,6 +326,20 @@ async function generateVideoLink(db, userId, event, provider = null, accessToken
 
 /**
  * Génère un lien simple sans API (pour démo/développement)
+ *
+ * ⚠️ ATTENTION : Cette fonction génère des liens de démonstration NON FONCTIONNELS
+ * Elle est utilisée pour les tests et le développement uniquement.
+ *
+ * Les liens générés :
+ * - NE créent PAS de vraies réunions dans Google Meet, Zoom ou Teams
+ * - Utilisent des IDs aléatoires qui ne correspondent à aucune réunion réelle
+ * - Sont destinés UNIQUEMENT à tester l'interface utilisateur
+ *
+ * Pour des liens fonctionnels, utilisez generateVideoLink() avec les credentials API appropriés.
+ *
+ * @param {Object} event - L'événement pour lequel générer un lien
+ * @param {string} provider - Le provider (google_meet, zoom, teams)
+ * @returns {Object} Objet avec video_link, video_provider, video_meeting_id
  */
 function generateSimpleLink(event, provider) {
   const meetingId = crypto.randomBytes(10).toString('hex');
