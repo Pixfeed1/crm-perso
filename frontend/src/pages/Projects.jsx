@@ -495,6 +495,54 @@ const Projects = () => {
         </div>
       )}
 
+      {/* Barre d'outils avec boutons vue et actions */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3 px-2 sm:px-0">
+        <div className="flex items-center gap-4">
+          <h2 className="text-lg sm:text-xl font-semibold text-white">Vos Projets</h2>
+          <div className="bg-gray-800/50 rounded-lg p-1 flex">
+            <motion.button
+              className={`px-3 py-1 rounded-lg text-sm flex items-center gap-1 transition-colors ${
+                view === 'list' ? 'bg-purple-600 text-white' : 'text-gray-300 hover:bg-gray-700/50'
+              }`}
+              onClick={() => setView('list')}
+              whileTap={{ scale: 0.95 }}
+            >
+              <FiList size={14} /> Liste
+            </motion.button>
+            <motion.button
+              className={`px-3 py-1 rounded-lg text-sm flex items-center gap-1 transition-colors ${
+                view === 'timeline' ? 'bg-purple-600 text-white' : 'text-gray-300 hover:bg-gray-700/50'
+              }`}
+              onClick={() => setView('timeline')}
+              whileTap={{ scale: 0.95 }}
+            >
+              <FiCalendar size={14} /> Timeline
+            </motion.button>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => exportAPI.projects()}
+            title="Exporter les projets en CSV"
+            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg flex items-center gap-2 transition-colors"
+          >
+            <FiDownload />
+            <span className="hidden sm:inline">Exporter</span>
+          </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={handleAddProject}
+            className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-lg flex items-center gap-2 transition-colors"
+          >
+            <FiPlus />
+            <span>Nouveau projet</span>
+          </motion.button>
+        </div>
+      </div>
+
       {view === 'timeline' ? (
         /* Vue Timeline/Gantt */
         <motion.div
@@ -518,53 +566,6 @@ const Projects = () => {
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.3 }}
           >
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3 px-2 sm:px-0">
-            <div className="flex items-center gap-4">
-              <h2 className="text-lg sm:text-xl font-semibold text-white">Vos Projets</h2>
-              <div className="bg-gray-800/50 rounded-lg p-1 flex">
-                <motion.button
-                  className={`px-3 py-1 rounded-lg text-sm flex items-center gap-1 transition-colors ${
-                    view === 'list' ? 'bg-purple-600 text-white' : 'text-gray-300 hover:bg-gray-700/50'
-                  }`}
-                  onClick={() => setView('list')}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <FiList size={14} /> Liste
-                </motion.button>
-                <motion.button
-                  className={`px-3 py-1 rounded-lg text-sm flex items-center gap-1 transition-colors ${
-                    view === 'timeline' ? 'bg-purple-600 text-white' : 'text-gray-300 hover:bg-gray-700/50'
-                  }`}
-                  onClick={() => setView('timeline')}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <FiCalendar size={14} /> Timeline
-                </motion.button>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => exportAPI.projects()}
-                title="Exporter les projets en CSV"
-                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg flex items-center gap-2 transition-colors"
-              >
-                <FiDownload />
-                <span className="hidden sm:inline">Exporter</span>
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={handleAddProject}
-                className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-lg flex items-center gap-2 transition-colors"
-              >
-                <FiPlus />
-                <span>Nouveau projet</span>
-              </motion.button>
-            </div>
-          </div>
-
           <div className="px-2 sm:px-0">
             <ProjectFilter
               filters={filters}
