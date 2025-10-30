@@ -1,7 +1,7 @@
 // src/pages/Leads.jsx
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiUsers, FiPlus, FiDownload, FiGrid, FiList, FiTrello } from 'react-icons/fi';
+import { FiUsers, FiPlus, FiDownload, FiGrid, FiList, FiTrello, FiSearch } from 'react-icons/fi';
 import { leadsAPI, exportAPI } from '../services/api';
 import { useToast } from '../hooks/useToast';
 import { useConfirm } from '../hooks/useConfirm';
@@ -13,6 +13,7 @@ import LeadDetails from '../components/leads/LeadDetails';
 import LeadForm from '../components/leads/LeadForm';
 import LeadFilter from '../components/leads/LeadFilter';
 import KanbanView from '../components/kanban/KanbanView';
+import ProspectionPanel from '../components/leads/ProspectionPanel';
 import EmptyState from '../components/common/EmptyState';
 import ConfirmModal from '../components/common/ConfirmModal';
 
@@ -481,7 +482,7 @@ const Leads = () => {
             </div>
 
             <div className="flex gap-2">
-              {/* Toggle vue cartes/table/kanban */}
+              {/* Toggle vue cartes/table/kanban/prospection */}
               <div className="flex bg-gray-700 rounded-lg p-1">
                 <button
                   onClick={() => setView('cards')}
@@ -515,6 +516,17 @@ const Leads = () => {
                   title="Vue Kanban"
                 >
                   <FiTrello />
+                </button>
+                <button
+                  onClick={() => setView('prospection')}
+                  className={`p-2 rounded transition-colors ${
+                    view === 'prospection'
+                      ? 'bg-indigo-600 text-white'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                  title="Prospection"
+                >
+                  <FiSearch />
                 </button>
               </div>
 
@@ -573,8 +585,16 @@ const Leads = () => {
           />
         </div>
 
-        {/* Vue Kanban */}
-        {view === 'kanban' ? (
+        {/* Vue Prospection */}
+        {view === 'prospection' ? (
+          <ProspectionPanel
+            onLeadCreated={(newLead) => {
+              setLeads([...leads, newLead]);
+              toast.success('Lead créé avec succès depuis la prospection');
+            }}
+          />
+        ) : view === 'kanban' ? (
+          /* Vue Kanban */
           <KanbanView
             leads={filteredLeads}
             onLeadClick={handleSelectLead}
