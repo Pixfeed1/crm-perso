@@ -19,8 +19,8 @@ const dashboardController = {
     try {
       // Structure des données du tableau de bord
       const dashboardData = {
-        leads: { total: 0, newThisMonth: 0 },
-        projects: { active: 0, completed: 0, upcoming: 0 },
+        leads: { total: 0, newThisMonth: 0, monthlyTarget: 10 },
+        projects: { active: 0, completed: 0, upcoming: 0, monthlyTarget: 5 },
         revenues: { thisMonth: 0, projection: 0, total: 0, monthlyTarget: 8000 },
         activities: { completed: 0, pending: 0 },
         goals: { onTrack: 0, atRisk: 0 },
@@ -96,13 +96,27 @@ const dashboardController = {
       );
       dashboardData.revenues.projection = totalLastThreeMonths / 3;
 
-      // Récupérer l'objectif de revenus pour le mois en cours
-      const currentMonthGoal = allGoals.find(goal =>
+      // Récupérer les objectifs pour le mois en cours
+      const revenueGoal = allGoals.find(goal =>
         goal.category === 'revenue' &&
         goal.start_date <= endOfMonth &&
         goal.end_date >= startOfMonth
       );
-      dashboardData.revenues.monthlyTarget = currentMonthGoal ? parseFloat(currentMonthGoal.target_value) : 8000;
+      dashboardData.revenues.monthlyTarget = revenueGoal ? parseFloat(revenueGoal.target_value) : 8000;
+
+      const leadsGoal = allGoals.find(goal =>
+        goal.category === 'leads' &&
+        goal.start_date <= endOfMonth &&
+        goal.end_date >= startOfMonth
+      );
+      dashboardData.leads.monthlyTarget = leadsGoal ? parseInt(leadsGoal.target_value) : 10;
+
+      const projectsGoal = allGoals.find(goal =>
+        goal.category === 'projects' &&
+        goal.start_date <= endOfMonth &&
+        goal.end_date >= startOfMonth
+      );
+      dashboardData.projects.monthlyTarget = projectsGoal ? parseInt(projectsGoal.target_value) : 5;
 
       // Calculer les statistiques des activités
       dashboardData.activities.completed = allActivities.filter(a => a.status === 'completed').length;

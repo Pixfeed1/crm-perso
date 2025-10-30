@@ -511,14 +511,14 @@ const Dashboard = () => {
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-sm text-gray-400">Nouveaux Leads</span>
                     <span className="text-sm font-medium text-white">
-                      {dashboardData.leads.newThisMonth}/10
+                      {dashboardData.leads.newThisMonth}/{dashboardData.leads.monthlyTarget || 10}
                     </span>
                   </div>
                   <div className="h-2 bg-slate-700/50 rounded-full overflow-hidden">
                     <motion.div
                       className="h-full bg-gradient-to-r from-blue-500 to-cyan-500"
                       initial={{ width: 0 }}
-                      animate={{ width: `${Math.min((dashboardData.leads.newThisMonth / 10) * 100, 100)}%` }}
+                      animate={{ width: `${Math.min((dashboardData.leads.newThisMonth / (dashboardData.leads.monthlyTarget || 10)) * 100, 100)}%` }}
                       transition={{ duration: 1, delay: 0.4 }}
                     />
                   </div>
@@ -529,14 +529,14 @@ const Dashboard = () => {
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-sm text-gray-400">Projets terminés</span>
                     <span className="text-sm font-medium text-white">
-                      {dashboardData.projects.completed}/5
+                      {dashboardData.projects.completed}/{dashboardData.projects.monthlyTarget || 5}
                     </span>
                   </div>
                   <div className="h-2 bg-slate-700/50 rounded-full overflow-hidden">
                     <motion.div
                       className="h-full bg-gradient-to-r from-purple-500 to-pink-500"
                       initial={{ width: 0 }}
-                      animate={{ width: `${Math.min((dashboardData.projects.completed / 5) * 100, 100)}%` }}
+                      animate={{ width: `${Math.min((dashboardData.projects.completed / (dashboardData.projects.monthlyTarget || 5)) * 100, 100)}%` }}
                       transition={{ duration: 1, delay: 0.5 }}
                     />
                   </div>
@@ -566,9 +566,48 @@ const Dashboard = () => {
                 {/* Indicateur global */}
                 <div className="pt-4 mt-2">
                   <div className="flex items-center gap-3">
-                    <div className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></div>
-                    <span className="text-sm text-gray-400">Performance: </span>
-                    <span className="text-sm font-medium text-emerald-400">Excellente</span>
+                    {(() => {
+                      // Calculer les pourcentages d'atteinte des objectifs
+                      const leadsPercent = (dashboardData.leads.newThisMonth / (dashboardData.leads.monthlyTarget || 10)) * 100;
+                      const projectsPercent = (dashboardData.projects.completed / (dashboardData.projects.monthlyTarget || 5)) * 100;
+                      const revenuePercent = (dashboardData.revenues.thisMonth / (dashboardData.revenues.monthlyTarget || 8000)) * 100;
+
+                      // Moyenne des 3 objectifs
+                      const avgPercent = (leadsPercent + projectsPercent + revenuePercent) / 3;
+
+                      // Déterminer la performance avec classes complètes
+                      let dotClass = 'w-3 h-3 rounded-full bg-gray-500';
+                      let textClass = 'text-sm font-medium text-gray-500';
+                      let label = 'Aucune donnée';
+
+                      if (avgPercent > 0) {
+                        if (avgPercent >= 80) {
+                          dotClass = 'w-3 h-3 rounded-full bg-emerald-500 animate-pulse';
+                          textClass = 'text-sm font-medium text-emerald-400';
+                          label = 'Excellente';
+                        } else if (avgPercent >= 60) {
+                          dotClass = 'w-3 h-3 rounded-full bg-blue-500 animate-pulse';
+                          textClass = 'text-sm font-medium text-blue-400';
+                          label = 'Bonne';
+                        } else if (avgPercent >= 40) {
+                          dotClass = 'w-3 h-3 rounded-full bg-amber-500';
+                          textClass = 'text-sm font-medium text-amber-400';
+                          label = 'Moyenne';
+                        } else {
+                          dotClass = 'w-3 h-3 rounded-full bg-red-500';
+                          textClass = 'text-sm font-medium text-red-400';
+                          label = 'À améliorer';
+                        }
+                      }
+
+                      return (
+                        <>
+                          <div className={dotClass}></div>
+                          <span className="text-sm text-gray-400">Performance: </span>
+                          <span className={textClass}>{label}</span>
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
               </div>
