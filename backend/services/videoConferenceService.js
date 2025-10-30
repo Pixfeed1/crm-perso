@@ -11,7 +11,7 @@ const crypto = require('crypto');
  */
 async function getUserSettings(db, userId) {
   try {
-    const result = await db.query(
+    const result = await db.pool.query(
       'SELECT * FROM video_conference_settings WHERE user_id = $1',
       [userId]
     );
@@ -31,7 +31,7 @@ async function getUserSettings(db, userId) {
         default_recording: false
       };
 
-      const insertResult = await db.query(`
+      const insertResult = await db.pool.query(`
         INSERT INTO video_conference_settings (
           user_id, default_provider, auto_generate, google_meet_enabled,
           zoom_enabled, teams_enabled, default_duration, default_join_before_host,
@@ -88,7 +88,7 @@ async function updateUserSettings(db, userId, settings) {
       RETURNING *
     `;
 
-    const result = await db.query(query, values);
+    const result = await db.pool.query(query, values);
 
     if (result.rows.length === 0) {
       throw new Error('Paramètres introuvables');

@@ -260,7 +260,7 @@ function generateICalFile(events, calendarName = 'Mon Calendrier CRM') {
 async function exportEvent(db, eventId) {
   try {
     // Récupérer l'événement
-    const eventResult = await db.query(
+    const eventResult = await db.pool.query(
       'SELECT * FROM events WHERE id = $1',
       [eventId]
     );
@@ -273,13 +273,13 @@ async function exportEvent(db, eventId) {
 
     // Récupérer les exceptions si l'événement est récurrent
     if (event.recurrence_type && event.recurrence_type !== 'NONE') {
-      const exceptionsResult = await db.query(
+      const exceptionsResult = await db.pool.query(
         'SELECT exception_date FROM event_exceptions WHERE event_id = $1',
         [eventId]
       );
       event.exceptions = exceptionsResult.rows;
 
-      const modifiedResult = await db.query(
+      const modifiedResult = await db.pool.query(
         'SELECT * FROM events WHERE parent_event_id = $1',
         [eventId]
       );
@@ -309,13 +309,13 @@ async function exportCalendar(db, userId, startDate, endDate, calendarName) {
 
     query += ' ORDER BY start_datetime ASC';
 
-    const eventsResult = await db.query(query, params);
+    const eventsResult = await db.pool.query(query, params);
     const events = eventsResult.rows;
 
     // Récupérer les exceptions pour chaque événement récurrent
     for (const event of events) {
       if (event.recurrence_type && event.recurrence_type !== 'NONE') {
-        const exceptionsResult = await db.query(
+        const exceptionsResult = await db.pool.query(
           'SELECT exception_date FROM event_exceptions WHERE event_id = $1',
           [event.id]
         );
@@ -335,7 +335,7 @@ async function exportCalendar(db, userId, startDate, endDate, calendarName) {
  */
 async function exportByCategory(db, userId, category, calendarName) {
   try {
-    const eventsResult = await db.query(
+    const eventsResult = await db.pool.query(
       'SELECT * FROM events WHERE user_id = $1 AND category = $2 ORDER BY start_datetime ASC',
       [userId, category]
     );
@@ -345,7 +345,7 @@ async function exportByCategory(db, userId, category, calendarName) {
     // Récupérer les exceptions pour chaque événement récurrent
     for (const event of events) {
       if (event.recurrence_type && event.recurrence_type !== 'NONE') {
-        const exceptionsResult = await db.query(
+        const exceptionsResult = await db.pool.query(
           'SELECT exception_date FROM event_exceptions WHERE event_id = $1',
           [event.id]
         );

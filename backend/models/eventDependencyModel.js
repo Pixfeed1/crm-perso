@@ -7,7 +7,7 @@
  */
 async function createDependency(db, sourceEventId, targetEventId, dependencyType = 'finish_to_start', lagDays = 0) {
   try {
-    const result = await db.query(
+    const result = await db.pool.query(
       `INSERT INTO event_dependencies (source_event_id, target_event_id, dependency_type, lag_days)
        VALUES ($1, $2, $3, $4)
        RETURNING *`,
@@ -27,7 +27,7 @@ async function createDependency(db, sourceEventId, targetEventId, dependencyType
 async function getEventDependencies(db, eventId) {
   try {
     // Dépendances sortantes (cet événement bloque d'autres)
-    const outgoing = await db.query(
+    const outgoing = await db.pool.query(
       `SELECT ed.*, e.title as target_title, e.start_datetime, e.end_datetime
        FROM event_dependencies ed
        JOIN events e ON ed.target_event_id = e.id
@@ -36,7 +36,7 @@ async function getEventDependencies(db, eventId) {
     );
 
     // Dépendances entrantes (cet événement est bloqué par d'autres)
-    const incoming = await db.query(
+    const incoming = await db.pool.query(
       `SELECT ed.*, e.title as source_title, e.start_datetime, e.end_datetime
        FROM event_dependencies ed
        JOIN events e ON ed.source_event_id = e.id
@@ -75,7 +75,7 @@ async function getAllDependencies(db, eventIds = null) {
       params = [eventIds];
     }
 
-    const result = await db.query(query, params);
+    const result = await db.pool.query(query, params);
     return result.rows;
   } catch (error) {
     console.error('Erreur lors de la récupération de toutes les dépendances:', error);
@@ -107,7 +107,7 @@ async function updateDependency(db, dependencyId, updates) {
       RETURNING *
     `;
 
-    const result = await db.query(query, values);
+    const result = await db.pool.query(query, values);
 
     if (result.rows.length === 0) {
       throw new Error('Dépendance introuvable');
@@ -125,7 +125,7 @@ async function updateDependency(db, dependencyId, updates) {
  */
 async function deleteDependency(db, dependencyId) {
   try {
-    const result = await db.query(
+    const result = await db.pool.query(
       'DELETE FROM event_dependencies WHERE id = $1 RETURNING *',
       [dependencyId]
     );
@@ -147,7 +147,7 @@ async function deleteDependency(db, dependencyId) {
 async function checkCircularDependency(db, sourceEventId, targetEventId) {
   try {
     // Utiliser une requête récursive pour détecter les cycles
-    const result = await db.query(
+    const result = await db.pool.query(
       `WITH RECURSIVE dependency_chain AS (
         -- Départ: la nouvelle dépendance proposée
         SELECT target_event_id as event_id, 1 as depth
@@ -180,7 +180,7 @@ async function checkCircularDependency(db, sourceEventId, targetEventId) {
 async function getTopologicalOrder(db, eventIds) {
   try {
     // Algorithme de tri topologique (Kahn's algorithm)
-    const result = await db.query(
+    const result = await db.pool.query(
       `WITH RECURSIVE topological_sort AS (
         -- Trouver les événements sans dépendances entrantes
         SELECT e.id, e.title, e.start_datetime, 0 as level
@@ -250,7 +250,7 @@ async function getTimelineEvents(db, filters = {}) {
 
     query += ' ORDER BY start_datetime ASC';
 
-    const result = await db.query(query, params);
+    const result = await db.pool.query(query, params);
     return result.rows;
   } catch (error) {
     console.error('Erreur lors de la récupération des événements timeline:', error);
@@ -290,7 +290,7 @@ async function updateEventTimelineData(db, eventId, timelineData) {
       RETURNING *
     `;
 
-    const result = await db.query(query, values);
+    const result = await db.pool.query(query, values);
 
     if (result.rows.length === 0) {
       throw new Error('Événement introuvable');

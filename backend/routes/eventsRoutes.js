@@ -447,7 +447,7 @@ router.get('/:id/export', async (req, res) => {
     const icalContent = await icalExportService.exportEvent(db, id);
 
     // Récupérer le titre de l'événement pour le nom de fichier
-    const eventResult = await db.query('SELECT title FROM events WHERE id = $1', [id]);
+    const eventResult = await db.pool.query('SELECT title FROM events WHERE id = $1', [id]);
     const fileName = eventResult.rows[0]?.title
       ? `${eventResult.rows[0].title.replace(/[^a-z0-9]/gi, '_')}.ics`
       : `event_${id}.ics`;
