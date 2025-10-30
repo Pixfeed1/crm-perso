@@ -72,28 +72,28 @@ export const settingsAPI = {
    * Récupère les paramètres de l'entreprise
    */
   getSettings: async () => {
-    return apiRequest('GET', '/settings');
+    return apiRequest('GET', '/api/settings');
   },
 
   /**
    * Met à jour les paramètres de l'entreprise
    */
   updateSettings: async (settingsData) => {
-    return apiRequest('PUT', '/settings', settingsData);
+    return apiRequest('PUT', '/api/settings', settingsData);
   },
 
   /**
    * Met à jour le logo de l'entreprise
    */
   updateLogo: async (logoUrl) => {
-    return apiRequest('POST', '/settings/logo', { logo_url: logoUrl });
+    return apiRequest('POST', '/api/settings/logo', { logo_url: logoUrl });
   },
 
   /**
    * Teste la configuration email SMTP
    */
   testEmail: async () => {
-    return apiRequest('POST', '/settings/test-email');
+    return apiRequest('POST', '/api/settings/test-email');
   },
 };
 

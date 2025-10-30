@@ -149,7 +149,7 @@ const VideoConferenceSettings = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="bg-gray-800/30 rounded-lg border border-gray-700/50 p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
@@ -194,7 +194,7 @@ const VideoConferenceSettings = () => {
       )}
 
       {/* Auto-génération */}
-      <div className="bg-gray-800/30 border border-gray-700/50 rounded-lg p-6">
+      <div className="bg-gray-900/50 border border-gray-700/50 rounded-lg p-6">
         <div className="flex items-center justify-between">
           <div>
             <h4 className="font-medium text-gray-300">
@@ -219,7 +219,7 @@ const VideoConferenceSettings = () => {
       </div>
 
       {/* Providers disponibles */}
-      <div className="bg-gray-800/30 border border-gray-700/50 rounded-lg p-6">
+      <div className="bg-gray-900/50 border border-gray-700/50 rounded-lg p-6">
         <h4 className="font-medium text-gray-300 mb-4">
           Plateformes disponibles
         </h4>
@@ -408,7 +408,7 @@ const VideoConferenceSettings = () => {
       </div>
 
       {/* Paramètres par défaut */}
-      <div className="bg-gray-800/30 border border-gray-700/50 rounded-lg p-6">
+      <div className="bg-gray-900/50 border border-gray-700/50 rounded-lg p-6">
         <h4 className="font-medium text-gray-300 mb-4">
           Paramètres par défaut des réunions
         </h4>
