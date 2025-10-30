@@ -1,5 +1,16 @@
 // backend/controllers/clientController.js
 const clientModel = require('../models/clientModel');
+const multer = require('multer');
+
+// Configuration multer pour les pièces jointes email
+const storage = multer.memoryStorage();
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB par fichier
+    files: 10 // Max 10 fichiers
+  }
+});
 
 /**
  * Contrôleur pour la gestion des clients (leads convertis)
@@ -277,14 +288,33 @@ const clientController = {
         </html>
       `;
 
+      // Préparer les pièces jointes
+      const attachments = [];
+      if (req.files && req.files.length > 0) {
+        req.files.forEach(file => {
+          attachments.push({
+            filename: file.originalname,
+            content: file.buffer,
+            contentType: file.mimetype
+          });
+        });
+      }
+
       // Envoyer l'email
-      await transporter.sendMail({
+      const mailOptions = {
         from: `"${settings.smtp_from_name || 'CRM'}" <${settings.smtp_from_email || settings.smtp_user}>`,
         to: to,
         subject: subject,
         text: message,
         html: htmlContent
-      });
+      };
+
+      // Ajouter les pièces jointes si elles existent
+      if (attachments.length > 0) {
+        mailOptions.attachments = attachments;
+      }
+
+      await transporter.sendMail(mailOptions);
 
       res.json({
         success: true,
@@ -300,4 +330,7 @@ const clientController = {
   }
 };
 
-module.exports = clientController;
+module.exports = {
+  ...clientController,
+  upload // Export du middleware multer
+};
