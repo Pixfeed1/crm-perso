@@ -283,116 +283,142 @@ const ProspectionPanel = ({ onLeadCreated }) => {
   // ============================================================================
 
   return (
-    <div className="space-y-6">
-      {/* Header avec onglets */}
-      <div>
-        <div className="bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border border-indigo-500/20 rounded-t-lg p-4">
-          <h3 className="text-lg font-semibold text-white mb-1">
-            Prospection Multi-Sources
-          </h3>
-          <p className="text-sm text-gray-400">
-            Recherchez des opportunités via France Travail, Google Jobs ou l'API SIRENE
-          </p>
+    <div className="space-y-4">
+      {/* Header moderne */}
+      <div className="bg-gradient-to-br from-indigo-900/40 via-purple-900/30 to-indigo-900/40 border border-indigo-500/30 rounded-xl p-6 backdrop-blur-sm">
+        <div className="flex items-center gap-4 mb-2">
+          <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center flex-shrink-0">
+            <FiSearch className="text-white text-xl" />
+          </div>
+          <div className="flex-1">
+            <h3 className="text-xl font-bold text-white mb-1">
+              Prospection Multi-Sources
+            </h3>
+            <p className="text-sm text-indigo-200">
+              Trouvez de nouveaux leads via France Travail, Google Jobs et l'API SIRENE
+            </p>
+          </div>
         </div>
 
-        {/* Onglets */}
-        <div className="flex border-b border-gray-700">
+        {/* Onglets modernes */}
+        <div className="flex gap-2 mt-4">
           <button
             onClick={() => setActiveTab('jobs')}
-            className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+            className={`flex-1 px-6 py-3 rounded-lg text-sm font-medium transition-all ${
               activeTab === 'jobs'
-                ? 'bg-indigo-600 text-white border-b-2 border-indigo-500'
-                : 'bg-gray-800/30 text-gray-400 hover:text-white hover:bg-gray-800/50'
+                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/30'
+                : 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50 hover:text-white'
             }`}
           >
-            Offres d'emploi
+            <div className="flex items-center justify-center gap-2">
+              <FiSearch className="text-sm" />
+              <span>Offres d'emploi</span>
+            </div>
           </button>
           <button
             onClick={() => setActiveTab('companies')}
-            className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+            className={`flex-1 px-6 py-3 rounded-lg text-sm font-medium transition-all ${
               activeTab === 'companies'
-                ? 'bg-indigo-600 text-white border-b-2 border-indigo-500'
-                : 'bg-gray-800/30 text-gray-400 hover:text-white hover:bg-gray-800/50'
+                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/30'
+                : 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50 hover:text-white'
             }`}
           >
-            Entreprises SIRENE
-            {pappersCredits && (
-              <span className={`ml-2 px-2 py-0.5 text-xs rounded ${
-                pappersCredits.is_depleted
-                  ? 'bg-red-500/20 text-red-300'
-                  : pappersCredits.is_low
-                  ? 'bg-yellow-500/20 text-yellow-300'
-                  : 'bg-green-500/20 text-green-300'
-              }`}>
-                {pappersCredits.remaining}/{pappersCredits.total}
-              </span>
-            )}
+            <div className="flex items-center justify-center gap-2">
+              <FiMapPin className="text-sm" />
+              <span>Entreprises SIRENE</span>
+              {pappersCredits && (
+                <span className={`ml-1 px-2 py-0.5 text-xs rounded-full font-semibold ${
+                  pappersCredits.is_depleted
+                    ? 'bg-red-500/30 text-red-200'
+                    : pappersCredits.is_low
+                    ? 'bg-yellow-500/30 text-yellow-200'
+                    : 'bg-green-500/30 text-green-200'
+                }`}>
+                  {pappersCredits.remaining}
+                </span>
+              )}
+            </div>
           </button>
         </div>
       </div>
 
       {/* Contenu onglet Offres d'emploi */}
       {activeTab === 'jobs' && (
-        <div className="space-y-6">
-          <form onSubmit={handleJobSearch} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Mots-clés <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+        <div className="space-y-4">
+          <form onSubmit={handleJobSearch} className="bg-gray-800/30 border border-gray-700 rounded-xl p-6 space-y-6">
+            <div className="space-y-4">
+              {/* Champs principaux */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div className="lg:col-span-2">
+                  <label className="block text-sm font-semibold text-white mb-2 flex items-center gap-2">
+                    <FiSearch className="text-indigo-400" />
+                    Mots-clés <span className="text-rose-400">*</span>
+                  </label>
                   <input
                     type="text"
                     value={jobSearchParams.keywords}
                     onChange={(e) => setJobSearchParams({ ...jobSearchParams, keywords: e.target.value })}
-                    placeholder="Ex: refonte site, développeur web, graphiste..."
-                    className="w-full pl-10 pr-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                    placeholder="Ex: refonte site web, développeur, designer UX/UI..."
+                    className="w-full px-4 py-3 bg-gray-900/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
                   />
                 </div>
-              </div>
 
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Localisation (optionnel)
-                </label>
-                <div className="relative">
-                  <FiMapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <div className="lg:col-span-2">
+                  <label className="block text-sm font-semibold text-white mb-2 flex items-center gap-2">
+                    <FiMapPin className="text-indigo-400" />
+                    Localisation
+                  </label>
                   <input
                     type="text"
                     value={jobSearchParams.location}
                     onChange={(e) => setJobSearchParams({ ...jobSearchParams, location: e.target.value })}
-                    placeholder="Ex: 75 (Paris), 69 (Rhône)..."
-                    className="w-full pl-10 pr-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                    placeholder="Code département (75) ou code postal (75001)"
+                    className="w-full px-4 py-3 bg-gray-900/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
                   />
+                  <p className="text-xs text-gray-400 mt-1.5 flex items-center gap-1">
+                    <FiAlertCircle className="w-3 h-3" />
+                    Optionnel - Laissez vide pour rechercher partout en France
+                  </p>
                 </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  Code département (2 chiffres) ou code postal (5 chiffres)
-                </p>
               </div>
 
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Sources <span className="text-red-500">*</span>
+              {/* Sources */}
+              <div>
+                <label className="block text-sm font-semibold text-white mb-3">
+                  Sources de recherche <span className="text-rose-400">*</span>
                 </label>
-                <div className="flex flex-wrap gap-3">
-                  <label className="flex items-center gap-2 p-3 bg-gray-700/30 rounded-lg cursor-pointer hover:bg-gray-700/50 transition-colors">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <label className={`flex items-center gap-3 p-4 border-2 rounded-xl cursor-pointer transition-all ${
+                    jobSearchParams.sources.includes('pole-emploi')
+                      ? 'bg-indigo-500/20 border-indigo-500 shadow-lg shadow-indigo-500/20'
+                      : 'bg-gray-800/50 border-gray-600 hover:border-gray-500'
+                  }`}>
                     <input
                       type="checkbox"
                       checked={jobSearchParams.sources.includes('pole-emploi')}
                       onChange={() => handleJobSourceToggle('pole-emploi')}
-                      className="w-4 h-4 text-indigo-600 bg-gray-800 border-gray-700 rounded focus:ring-indigo-500"
+                      className="w-5 h-5 text-indigo-600 bg-gray-700 border-gray-600 rounded focus:ring-2 focus:ring-indigo-500"
                     />
-                    <span className="text-sm text-gray-300">France Travail</span>
+                    <div className="flex-1">
+                      <span className="text-sm font-medium text-white">France Travail</span>
+                      <p className="text-xs text-gray-400 mt-0.5">Offres officielles Pôle Emploi</p>
+                    </div>
                   </label>
-                  <label className="flex items-center gap-2 p-3 bg-gray-700/30 rounded-lg cursor-pointer hover:bg-gray-700/50 transition-colors">
+                  <label className={`flex items-center gap-3 p-4 border-2 rounded-xl cursor-pointer transition-all ${
+                    jobSearchParams.sources.includes('google-jobs')
+                      ? 'bg-indigo-500/20 border-indigo-500 shadow-lg shadow-indigo-500/20'
+                      : 'bg-gray-800/50 border-gray-600 hover:border-gray-500'
+                  }`}>
                     <input
                       type="checkbox"
                       checked={jobSearchParams.sources.includes('google-jobs')}
                       onChange={() => handleJobSourceToggle('google-jobs')}
-                      className="w-4 h-4 text-indigo-600 bg-gray-800 border-gray-700 rounded focus:ring-indigo-500"
+                      className="w-5 h-5 text-indigo-600 bg-gray-700 border-gray-600 rounded focus:ring-2 focus:ring-indigo-500"
                     />
-                    <span className="text-sm text-gray-300">Google Jobs</span>
+                    <div className="flex-1">
+                      <span className="text-sm font-medium text-white">Google Jobs</span>
+                      <p className="text-xs text-gray-400 mt-0.5">Agrégateur multi-sources</p>
+                    </div>
                   </label>
                 </div>
               </div>
@@ -487,30 +513,43 @@ const ProspectionPanel = ({ onLeadCreated }) => {
                 </div>
               </div>
 
-              <div className="md:col-span-2">
-                <button
-                  type="submit"
-                  disabled={isSearchingJobs}
-                  className={`w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
-                    isSearchingJobs
-                      ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
-                      : 'bg-indigo-600 hover:bg-indigo-700 text-white'
-                  }`}
-                >
-                  <FiSearch className="w-4 h-4" />
-                  {isSearchingJobs ? 'Recherche...' : 'Rechercher'}
-                </button>
-              </div>
+            </div>
+
+            {/* Bouton de recherche */}
+            <div className="flex justify-end pt-4 border-t border-gray-700">
+              <button
+                type="submit"
+                disabled={isSearchingJobs}
+                className="px-8 py-3.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:from-gray-700 disabled:to-gray-700 disabled:cursor-not-allowed text-white rounded-xl font-semibold transition-all flex items-center gap-3 shadow-lg shadow-indigo-500/30 hover:shadow-xl hover:shadow-indigo-500/50 hover:scale-105"
+              >
+                {isSearchingJobs ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Recherche en cours...</span>
+                  </>
+                ) : (
+                  <>
+                    <FiSearch className="w-5 h-5" />
+                    <span>Lancer la recherche</span>
+                  </>
+                )}
+              </button>
             </div>
           </form>
 
           {/* Résultats offres d'emploi */}
           {jobResults.length > 0 && (
-            <div className="space-y-3">
-              <h4 className="text-md font-semibold text-white">
-                {jobResults.length} opportunité(s) trouvée(s)
-              </h4>
-              <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2">
+            <div className="bg-gray-800/30 border border-gray-700 rounded-xl p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <h4 className="text-lg font-bold text-white flex items-center gap-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                  {jobResults.length} opportunité{jobResults.length > 1 ? 's' : ''} trouvée{jobResults.length > 1 ? 's' : ''}
+                </h4>
+                <span className="text-sm text-gray-400">
+                  Cliquez sur une carte pour importer
+                </span>
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 max-h-[700px] overflow-y-auto pr-2">
                 {jobResults.map((opportunity, index) => (
                   <OpportunityCard
                     key={opportunity.id || index}
