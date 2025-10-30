@@ -1,5 +1,7 @@
 // src/services/settingsAPI.js
 
+import { getAuthToken, clearAuth, isTokenExpired } from './authService';
+
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 /**
@@ -7,15 +9,27 @@ const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
  */
 
 /**
- * Requête générique avec gestion d'erreurs
+ * Requête générique avec gestion d'erreurs et authentification
  */
 const apiRequest = async (method, endpoint, data = null) => {
+  // Récupérer le token d'authentification
+  const token = getAuthToken();
+
+  // Vérifier si le token est expiré
+  if (token && isTokenExpired(token)) {
+    console.log('Token expiré détecté avant la requête');
+    clearAuth();
+    window.location.href = '/login?session=expired';
+    throw new Error('Session expirée. Redirection vers la page de connexion...');
+  }
+
   const options = {
     method,
     headers: {
       'Content-Type': 'application/json',
+      'Authorization': token ? `Bearer ${token}` : '',
     },
-    credentials: 'include', // Pour inclure les cookies
+    credentials: 'include',
   };
 
   if (data && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
@@ -26,6 +40,14 @@ const apiRequest = async (method, endpoint, data = null) => {
     const response = await fetch(`${API_URL}${endpoint}`, options);
 
     if (!response.ok) {
+      // Gestion spéciale des erreurs d'authentification (401)
+      if (response.status === 401) {
+        console.log('Erreur 401 détecté, redirection vers la page de login');
+        clearAuth();
+        window.location.href = '/login?session=expired';
+        throw new Error('Session expirée. Redirection vers la page de connexion...');
+      }
+
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.error || errorData.message || `Erreur ${response.status}`);
     }

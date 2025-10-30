@@ -23,8 +23,8 @@ const ReminderSettings = () => {
     reminder_2_days: 14,
     reminder_3_days: 21,
     email_subject_1: 'Rappel - Facture {invoice_number} en attente de paiement',
-    email_subject_2: '2ème rappel - Facture {invoice_number} en retard',
-    email_subject_3: 'Dernier rappel - Facture {invoice_number} impayée'
+    email_subject_2: '2Ã¨me rappel - Facture {invoice_number} en retard',
+    email_subject_3: 'Dernier rappel - Facture {invoice_number} impayÃ©e'
   });
   const [stats, setStats] = useState(null);
   const [pendingInvoices, setPendingInvoices] = useState([]);
@@ -41,8 +41,8 @@ const ReminderSettings = () => {
       setEnabled(data.enabled || false);
       setConfig(data.config || config);
     } catch (error) {
-      console.error('Erreur lors du chargement des paramètres:', error);
-      toast.error('Erreur lors du chargement des paramètres');
+      console.error('Erreur lors du chargement des paramÃ¨tres:', error);
+      toast.error('Erreur lors du chargement des paramÃ¨tres');
     } finally {
       setLoading(false);
     }
@@ -73,12 +73,12 @@ const ReminderSettings = () => {
         enabled,
         config
       });
-      toast.success('Paramètres enregistrés avec succès');
+      toast.success('ParamÃ¨tres enregistrÃ©s avec succÃ¨s');
       await loadStats();
       await loadPendingInvoices();
     } catch (error) {
       console.error('Erreur lors de l\'enregistrement:', error);
-      toast.error('Erreur lors de l\'enregistrement des paramètres');
+      toast.error('Erreur lors de l\'enregistrement des paramÃ¨tres');
     } finally {
       setSaving(false);
     }
@@ -91,7 +91,7 @@ const ReminderSettings = () => {
 
     try {
       const result = await remindersAPI.sendBatch();
-      toast.success(`${result.sent} relance(s) envoyée(s) avec succès`);
+      toast.success(`${result.sent} relance(s) envoyÃ©e(s) avec succÃ¨s`);
       await loadStats();
       await loadPendingInvoices();
     } catch (error) {
@@ -110,7 +110,7 @@ const ReminderSettings = () => {
 
   return (
     <div className="space-y-6">
-      {/* En-tête */}
+      {/* En-tï¿½te */}
       <div className="flex items-center gap-3">
         <div className="p-3 bg-purple-500/20 rounded-lg">
           <FiBell className="text-purple-400 text-2xl" />
@@ -118,12 +118,12 @@ const ReminderSettings = () => {
         <div>
           <h2 className="text-2xl font-bold text-white">Relances automatiques</h2>
           <p className="text-gray-400 text-sm">
-            Configurez l'envoi automatique de relances pour les factures impayées
+            Configurez l'envoi automatique de relances pour les factures impayÃ©es
           </p>
         </div>
       </div>
 
-      {/* Activation du système */}
+      {/* Activation du systï¿½me */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -140,10 +140,10 @@ const ReminderSettings = () => {
             </div>
             <div>
               <h3 className="text-lg font-semibold text-white">
-                Système de relances
+                SystÃ¨me de relances
               </h3>
               <p className="text-sm text-gray-400">
-                {enabled ? 'Activé - Les relances seront envoyées automatiquement' : 'Désactivé - Aucune relance ne sera envoyée'}
+                {enabled ? 'ActivÃ© - Les relances seront envoyÃ©es automatiquement' : 'DÃ©sactivÃ© - Aucune relance ne sera envoyÃ©e'}
               </p>
             </div>
           </div>
@@ -173,14 +173,14 @@ const ReminderSettings = () => {
         </div>
 
         <p className="text-sm text-gray-400 mb-4">
-          Définissez le nombre de jours après l'échéance pour chaque niveau de relance
+          DÃ©finissez le nombre de jours aprÃ¨s l'Ã©chÃ©ance pour chaque niveau de relance
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* 1ère relance */}
+          {/* 1Ã¨re relance */}
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
-              1ère relance (jours)
+              1Ã¨re relance (jours)
             </label>
             <input
               type="number"
@@ -190,14 +190,14 @@ const ReminderSettings = () => {
               className="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
             />
             <p className="mt-1 text-xs text-gray-500">
-              Rappel cordial après {config.reminder_1_days} jours de retard
+              Rappel cordial aprÃ¨s {config.reminder_1_days} jours de retard
             </p>
           </div>
 
-          {/* 2ème relance */}
+          {/* 2Ã¨me relance */}
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
-              2ème relance (jours)
+              2Ã¨me relance (jours)
             </label>
             <input
               type="number"
@@ -207,14 +207,14 @@ const ReminderSettings = () => {
               className="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
             />
             <p className="mt-1 text-xs text-gray-500">
-              Rappel ferme après {config.reminder_2_days} jours de retard
+              Rappel ferme aprÃ¨s {config.reminder_2_days} jours de retard
             </p>
           </div>
 
-          {/* 3ème relance */}
+          {/* 3Ã¨me relance */}
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
-              3ème relance (jours)
+              3Ã¨me relance (jours)
             </label>
             <input
               type="number"
@@ -224,7 +224,7 @@ const ReminderSettings = () => {
               className="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
             />
             <p className="mt-1 text-xs text-gray-500">
-              Dernier rappel après {config.reminder_3_days} jours de retard
+              Dernier rappel aprÃ¨s {config.reminder_3_days} jours de retard
             </p>
           </div>
         </div>
@@ -243,13 +243,13 @@ const ReminderSettings = () => {
         </div>
 
         <p className="text-sm text-gray-400 mb-4">
-          Personnalisez les sujets des emails de relance. Utilisez <code className="bg-gray-900 px-1 rounded">{'{invoice_number}'}</code> pour le numéro de facture.
+          Personnalisez les sujets des emails de relance. Utilisez <code className="bg-gray-900 px-1 rounded">{'{invoice_number}'}</code> pour le numÃ©ro de facture.
         </p>
 
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
-              Sujet 1ère relance
+              Sujet 1Ã¨re relance
             </label>
             <input
               type="text"
@@ -262,20 +262,20 @@ const ReminderSettings = () => {
 
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
-              Sujet 2ème relance
+              Sujet 2Ã¨me relance
             </label>
             <input
               type="text"
               value={config.email_subject_2}
               onChange={(e) => setConfig(prev => ({ ...prev, email_subject_2: e.target.value }))}
               className="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-              placeholder="2ème rappel - Facture {invoice_number}"
+              placeholder="2Ã¨me rappel - Facture {invoice_number}"
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
-              Sujet 3ème relance
+              Sujet 3Ã¨me relance
             </label>
             <input
               type="text"
@@ -303,7 +303,7 @@ const ReminderSettings = () => {
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
-              <p className="text-sm text-gray-400">Relances envoyées</p>
+              <p className="text-sm text-gray-400">Relances envoyÃ©es</p>
               <p className="text-2xl font-bold text-blue-400">{stats.total_reminders_sent || 0}</p>
             </div>
             <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
@@ -390,7 +390,7 @@ const ReminderSettings = () => {
           whileHover={!saving ? { scale: 1.05 } : {}}
           whileTap={!saving ? { scale: 0.95 } : {}}
         >
-          {saving ? 'Enregistrement...' : 'Enregistrer les paramètres'}
+          {saving ? 'Enregistrement...' : 'Enregistrer les paramÃ¨tres'}
         </motion.button>
       </div>
     </div>

@@ -330,6 +330,33 @@ const DATABASE_SCHEMA = {
     ]
   },
 
+  // Table company_settings (paramètres de l'entreprise)
+  company_settings: {
+    columns: {
+      id: 'SERIAL PRIMARY KEY',
+      company_name: 'VARCHAR(255)',
+      address: 'TEXT',
+      postal_code: 'VARCHAR(20)',
+      city: 'VARCHAR(100)',
+      country: 'VARCHAR(100) DEFAULT \'France\'',
+      siret: 'VARCHAR(14)',
+      email: 'VARCHAR(255)',
+      phone: 'VARCHAR(20)',
+      logo_url: 'TEXT',
+      email_signature: 'TEXT',
+      created_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP',
+      updated_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'
+    },
+    indexes: [],
+    data: [
+      {
+        id: 1,
+        company_name: 'Mon Entreprise',
+        country: 'France'
+      }
+    ]
+  },
+
   // Table invoice_reminders (historique des relances)
   invoice_reminders: {
     columns: {
