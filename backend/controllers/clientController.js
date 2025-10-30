@@ -68,7 +68,8 @@ const clientController = {
     }
 
     try {
-      const client = await clientModel.createClient(db, {
+      // Convertir les chaînes vides en NULL pour les champs de date (PostgreSQL)
+      const sanitizedData = {
         lead_id,
         name,
         company,
@@ -79,12 +80,14 @@ const clientController = {
         website,
         industry,
         source,
-        contract_start_date,
+        contract_start_date: contract_start_date === '' ? null : contract_start_date,
         lifetime_value,
         notes,
         tags,
         status
-      });
+      };
+
+      const client = await clientModel.createClient(db, sanitizedData);
 
       res.status(201).json(client);
     } catch (error) {
@@ -146,7 +149,8 @@ const clientController = {
         return res.status(404).json({ message: 'Client non trouvé' });
       }
 
-      const updatedClient = await clientModel.updateClient(db, id, {
+      // Convertir les chaînes vides en NULL pour les champs de date (PostgreSQL)
+      const sanitizedData = {
         name,
         company,
         type,
@@ -156,12 +160,14 @@ const clientController = {
         website,
         industry,
         source,
-        contract_start_date,
+        contract_start_date: contract_start_date === '' ? null : contract_start_date,
         lifetime_value,
         notes,
         tags,
         status
-      });
+      };
+
+      const updatedClient = await clientModel.updateClient(db, id, sanitizedData);
 
       res.json(updatedClient);
     } catch (error) {

@@ -100,7 +100,14 @@ const ClientForm = ({ client = {}, onSave, onCancel }) => {
 
     try {
       setSubmitting(true);
-      await onSave(formData);
+
+      // Convertir les chaînes vides en null pour les champs de date (PostgreSQL)
+      const sanitizedData = {
+        ...formData,
+        contract_start_date: formData.contract_start_date === '' ? null : formData.contract_start_date
+      };
+
+      await onSave(sanitizedData);
     } catch (error) {
       console.error('Erreur lors de la sauvegarde:', error);
     } finally {

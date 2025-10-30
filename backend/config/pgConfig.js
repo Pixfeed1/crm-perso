@@ -221,11 +221,15 @@ class DatabaseConfig {
     // Remplacer les comportements SQLite de LIKE (case sensitive/insensitive)
     pgQuery = pgQuery.replace(/LIKE/g, 'ILIKE');
     
-    // Gérer les INSERTS avec RETURNING
+    // Gérer les INSERTS et UPDATES avec RETURNING
     if (pgQuery.toLowerCase().includes('insert into') && !pgQuery.toLowerCase().includes('returning')) {
       pgQuery += ' RETURNING id';
     }
-    
+
+    if (pgQuery.toLowerCase().includes('update ') && !pgQuery.toLowerCase().includes('returning')) {
+      pgQuery += ' RETURNING id';
+    }
+
     // Adapter les expressions booléennes (0/1 à false/true)
     pgQuery = pgQuery.replace(/= 0/g, '= false');
     pgQuery = pgQuery.replace(/= 1/g, '= true');
