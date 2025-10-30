@@ -814,3 +814,40 @@ export const paymentsAPI = {
   }
 };
 
+// ===== DEMANDES D'AVIS =====
+export const reviewRequestsAPI = {
+  // Envoyer une demande d'avis
+  send: (data) => {
+    console.log('Appel API: envoi demande d\'avis', data);
+    return apiRequest('/review-requests', 'POST', data);
+  },
+
+  // Récupérer toutes les demandes d'avis
+  getAll: () => {
+    console.log('Appel API: récupération de toutes les demandes d\'avis');
+    return apiRequest('/review-requests');
+  },
+
+  // Récupérer les demandes d'avis d'un client
+  getByClient: (clientId) => {
+    console.log(`Appel API: récupération des demandes d'avis du client ID ${clientId}`);
+    return apiRequest(`/review-requests/client/${clientId}`);
+  },
+
+  // Obtenir le template par défaut
+  getTemplate: (platforms, clientName, contactName) => {
+    console.log('Appel API: récupération du template d\'avis');
+    const params = new URLSearchParams();
+    if (platforms) params.append('platforms', platforms.join(','));
+    if (clientName) params.append('client_name', clientName);
+    if (contactName) params.append('contact_name', contactName);
+    return apiRequest(`/review-requests/template?${params}`);
+  },
+
+  // Obtenir les statistiques
+  getStats: () => {
+    console.log('Appel API: récupération des statistiques d\'avis');
+    return apiRequest('/review-requests/stats');
+  }
+};
+

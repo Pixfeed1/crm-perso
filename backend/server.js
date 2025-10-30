@@ -122,6 +122,7 @@ app.use('/api/upload', require('./routes/uploadRoutes'));
 app.use('/api/prospection', require('./routes/prospectionRoutes'));
 app.use('/api/calendar-sync', require('./routes/calendarSyncRoutes'));
 app.use('/api/video-conference', require('./routes/videoConferenceRoutes'));
+app.use('/api/review-requests', require('./routes/reviewRequestRoutes'));
 
 // Servir les fichiers uploadés en statique (protégés par auth si nécessaire)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));

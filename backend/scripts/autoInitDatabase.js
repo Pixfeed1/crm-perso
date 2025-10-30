@@ -404,6 +404,34 @@ const DATABASE_SCHEMA = {
     indexes: [
       'CREATE INDEX IF NOT EXISTS idx_video_conference_settings_user_id ON video_conference_settings(user_id)'
     ]
+  },
+
+  // Table review_requests
+  review_requests: {
+    columns: {
+      id: 'SERIAL PRIMARY KEY',
+      client_id: 'INTEGER REFERENCES crm_clients(id) ON DELETE CASCADE',
+      contact_name: 'VARCHAR(255)',
+      contact_email: 'VARCHAR(255) NOT NULL',
+      platforms: 'TEXT[]', // ['google', 'facebook', 'instagram']
+      email_subject: 'TEXT NOT NULL',
+      email_body: 'TEXT NOT NULL',
+      sent_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP',
+      status: "VARCHAR(50) DEFAULT 'sent'", // 'sent', 'opened', 'clicked', 'reviewed'
+      google_url: 'TEXT',
+      facebook_url: 'TEXT',
+      instagram_url: 'TEXT',
+      notes: 'TEXT',
+      user_id: 'INTEGER REFERENCES users(id)',
+      created_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP',
+      updated_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'
+    },
+    indexes: [
+      'CREATE INDEX IF NOT EXISTS idx_review_requests_client_id ON review_requests(client_id)',
+      'CREATE INDEX IF NOT EXISTS idx_review_requests_user_id ON review_requests(user_id)',
+      'CREATE INDEX IF NOT EXISTS idx_review_requests_status ON review_requests(status)',
+      'CREATE INDEX IF NOT EXISTS idx_review_requests_sent_at ON review_requests(sent_at)'
+    ]
   }
 };
 
