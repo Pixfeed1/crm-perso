@@ -324,6 +324,14 @@ export const eventsAPI = {
   getModifiedOccurrences: (id) => {
     console.log(`Appel API: récupération des occurrences modifiées de l'événement ID ${id}`);
     return apiRequest(`/events/${id}/modified-occurrences`);
+  },
+  checkConflicts: (eventData) => {
+    console.log('Appel API: vérification des conflits', eventData);
+    return apiRequest('/events/check-conflicts', 'POST', eventData);
+  },
+  suggestSlots: (eventData, options = {}) => {
+    console.log('Appel API: suggestion de créneaux alternatifs', eventData, options);
+    return apiRequest('/events/suggest-slots', 'POST', { eventData, options });
   }
 };
 

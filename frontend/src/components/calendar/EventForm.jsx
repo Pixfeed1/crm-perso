@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import axios from 'axios';
+import { eventsAPI } from '../../services/api';
 import AddressAutocomplete from '../common/AddressAutocomplete';
 import RecurrenceForm from './RecurrenceForm';
 import ConflictAlert from './ConflictAlert';
@@ -141,7 +142,7 @@ const EventForm = ({ event = {}, selectedDate, onSave, onCancel }) => {
     setIsCheckingConflicts(true);
 
     try {
-      const response = await axios.post('/api/events/check-conflicts', {
+      const response = await eventsAPI.checkConflicts({
         id: event.id, // Pour exclure l'événement lui-même si modification
         title: formData.title,
         start_datetime: formData.start_date.toISOString(),

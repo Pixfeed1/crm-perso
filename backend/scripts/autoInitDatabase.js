@@ -349,6 +349,34 @@ const DATABASE_SCHEMA = {
       'CREATE INDEX IF NOT EXISTS idx_invoice_reminders_sent_at ON invoice_reminders(sent_at)',
       'CREATE INDEX IF NOT EXISTS idx_invoice_reminders_status ON invoice_reminders(status)'
     ]
+  },
+
+  // Table video_conference_settings
+  video_conference_settings: {
+    columns: {
+      id: 'SERIAL PRIMARY KEY',
+      user_id: 'INTEGER REFERENCES users(id) ON DELETE CASCADE',
+      default_provider: "VARCHAR(50) DEFAULT 'google_meet'",
+      auto_generate: 'BOOLEAN DEFAULT false',
+      google_meet_enabled: 'BOOLEAN DEFAULT false',
+      google_calendar_id: 'VARCHAR(255)',
+      zoom_enabled: 'BOOLEAN DEFAULT false',
+      zoom_api_key: 'VARCHAR(255)',
+      zoom_api_secret: 'VARCHAR(255)',
+      zoom_user_id: 'VARCHAR(255)',
+      teams_enabled: 'BOOLEAN DEFAULT false',
+      teams_tenant_id: 'VARCHAR(255)',
+      teams_user_id: 'VARCHAR(255)',
+      default_duration: 'INTEGER DEFAULT 60',
+      default_join_before_host: 'BOOLEAN DEFAULT true',
+      default_waiting_room: 'BOOLEAN DEFAULT false',
+      default_recording: 'BOOLEAN DEFAULT false',
+      created_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP',
+      updated_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'
+    },
+    indexes: [
+      'CREATE INDEX IF NOT EXISTS idx_video_conference_settings_user_id ON video_conference_settings(user_id)'
+    ]
   }
 };
 
