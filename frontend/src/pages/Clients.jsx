@@ -371,9 +371,21 @@ const Clients = () => {
         </div>
 
         {/* Contenu principal */}
-        <div className={`grid gap-6 ${viewMode === 'table' ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-3'}`}>
+        <div className={`grid gap-6 ${
+          viewMode === 'table'
+            ? 'grid-cols-1'
+            : selectedClient && showDetails
+              ? 'grid-cols-1 lg:grid-cols-3'
+              : 'grid-cols-1'
+        }`}>
           {/* Liste des clients */}
-          <div className={`${viewMode === 'table' ? '' : 'lg:col-span-1'} ${showDetails && viewMode === 'cards' ? 'hidden lg:block' : ''}`}>
+          <div className={`${
+            viewMode === 'table'
+              ? ''
+              : selectedClient && showDetails
+                ? 'lg:col-span-1'
+                : ''
+          } ${showDetails && viewMode === 'cards' ? 'hidden lg:block' : ''}`}>
             {isLoading ? (
               <div className="text-center text-gray-400 py-8">Chargement...</div>
             ) : filteredClients.length === 0 ? (
@@ -388,7 +400,11 @@ const Clients = () => {
               <>
                 {/* Vue cartes */}
                 {viewMode === 'cards' && (
-                  <div className="space-y-3">
+                  <div className={`grid gap-4 ${
+                    selectedClient && showDetails
+                      ? 'grid-cols-1'
+                      : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+                  }`}>
                     <AnimatePresence>
                       {paginatedClients.map((client) => (
                         <ClientCard
@@ -464,7 +480,8 @@ const Clients = () => {
           </div>
 
           {/* Détails du client / Formulaire (seulement en mode cartes) */}
-          <div className={`${viewMode === 'table' ? 'hidden' : 'lg:col-span-2'} ${!showDetails && !isAddingClient && viewMode === 'cards' ? 'hidden lg:block' : ''}`}>
+          {viewMode === 'cards' && (selectedClient || isAddingClient) && (
+          <div className={`lg:col-span-2 ${!showDetails && !isAddingClient ? 'hidden' : ''}`}>
             {showDetails && (
               <motion.button
                 initial={{ opacity: 0 }}
@@ -505,6 +522,7 @@ const Clients = () => {
               </div>
             )}
           </div>
+          )}
         </div>
       </div>
 

@@ -34,74 +34,77 @@ const ClientCard = ({ client, isSelected, onClick }) => {
 
   return (
     <motion.div
-      className={`rounded-xl p-4 cursor-pointer transition-colors relative overflow-hidden ${
-        isSelected ? 'bg-indigo-900/40 border-indigo-500/50 z-10' : 'bg-gray-800/20 hover:bg-gray-800/40 border-transparent hover:z-20'
-      } border`}
-      whileHover={{ scale: 1.01 }}
+      className={`rounded-xl p-5 cursor-pointer transition-all relative overflow-hidden h-full flex flex-col ${
+        isSelected
+          ? 'bg-indigo-900/40 border-indigo-500/50 shadow-lg shadow-indigo-500/20 z-10'
+          : 'bg-gray-800/40 hover:bg-gray-800/60 border-gray-700/50 hover:border-gray-600/50 hover:shadow-xl hover:shadow-black/20 hover:z-20'
+      } border backdrop-blur-sm`}
+      whileHover={{ scale: 1.02, y: -4 }}
       whileTap={{ scale: 0.98 }}
       onClick={onClick}
       layout
     >
       {/* Effet de brillance au survol */}
       <motion.div
-        className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent"
-        initial={{ x: '-100%' }}
-        whileHover={{ x: '100%' }}
-        transition={{ duration: 0.6 }}
+        className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 via-transparent to-purple-500/10 opacity-0 group-hover:opacity-100"
+        initial={{ opacity: 0 }}
+        whileHover={{ opacity: 1 }}
+        transition={{ duration: 0.3 }}
       />
 
-      <div className="relative z-10">
+      <div className="relative z-10 flex flex-col h-full">
         {/* En-tête avec type et statut */}
-        <div className="flex justify-between items-start mb-3">
+        <div className="flex justify-between items-start mb-4">
           <div className="flex items-center gap-2">
-            <TypeIcon className="text-indigo-400 text-sm" />
-            <span className="text-xs text-gray-400">{typeInfo.label}</span>
+            <div className="w-8 h-8 rounded-lg bg-indigo-500/20 flex items-center justify-center">
+              <TypeIcon className="text-indigo-400 text-sm" />
+            </div>
           </div>
-          <div className={`text-xs px-2 py-1 rounded-full ${statusStyle.bg} ${statusStyle.text} font-medium`}>
+          <div className={`text-xs px-2.5 py-1 rounded-full ${statusStyle.bg} ${statusStyle.text} ${statusStyle.border} border font-medium`}>
             {statusStyle.label}
           </div>
         </div>
 
         {/* Nom et entreprise */}
-        <div className="mb-3">
-          <h3 className="font-semibold text-white text-lg">{client.name}</h3>
+        <div className="mb-4 flex-grow">
+          <h3 className="font-bold text-white text-base leading-tight mb-1 line-clamp-1">{client.name}</h3>
           {client.company && (
-            <p className="text-sm text-indigo-300 mt-1">{client.company}</p>
+            <p className="text-sm text-indigo-300 font-medium line-clamp-1">{client.company}</p>
           )}
         </div>
 
         {/* Informations de contact */}
-        <div className="space-y-2 mb-3">
+        <div className="space-y-2 mb-4">
           {client.email && (
             <div className="flex items-center gap-2 text-xs text-gray-400">
-              <FiMail className="text-gray-500" />
+              <FiMail className="text-gray-500 flex-shrink-0" />
               <span className="truncate">{client.email}</span>
             </div>
           )}
           {client.phone && (
             <div className="flex items-center gap-2 text-xs text-gray-400">
-              <FiPhone className="text-gray-500" />
-              <span>{client.phone}</span>
+              <FiPhone className="text-gray-500 flex-shrink-0" />
+              <span className="truncate">{client.phone}</span>
             </div>
           )}
         </div>
 
         {/* Valeur et date */}
-        <div className="flex justify-between items-center pt-3 border-t border-gray-700/50">
+        <div className="flex justify-between items-center pt-4 border-t border-gray-700/50 mt-auto">
           {client.lifetime_value > 0 ? (
             <div>
-              <div className="text-xs text-gray-500">Valeur</div>
-              <div className="text-sm font-semibold text-green-400">
+              <div className="text-xs text-gray-500 mb-0.5">Valeur</div>
+              <div className="text-base font-bold text-green-400">
                 {formatValue(client.lifetime_value)}
               </div>
             </div>
           ) : (
-            <div className="text-xs text-gray-500">Pas de valeur</div>
+            <div className="text-xs text-gray-500">Nouveau client</div>
           )}
 
           <div className="text-right">
-            <div className="text-xs text-gray-500">Depuis</div>
-            <div className="text-xs text-gray-400">
+            <div className="text-xs text-gray-500 mb-0.5">Client depuis</div>
+            <div className="text-xs font-medium text-gray-300">
               {client.contract_start_date ? formatDate(client.contract_start_date) : formatDate(client.created_at)}
             </div>
           </div>
