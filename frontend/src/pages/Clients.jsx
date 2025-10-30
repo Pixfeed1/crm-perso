@@ -1,13 +1,14 @@
 // src/pages/Clients.jsx
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiUsers, FiPlus, FiArrowLeft, FiDownload } from 'react-icons/fi';
+import { FiUsers, FiPlus, FiArrowLeft, FiDownload, FiGrid, FiList } from 'react-icons/fi';
 import { clientsAPI, exportAPI } from '../services/api';
 import { useToast } from '../hooks/useToast';
 import { useConfirm } from '../hooks/useConfirm';
 
 // Composants
 import ClientCard from '../components/clients/ClientCard';
+import ClientTable from '../components/clients/ClientTable';
 import ClientDetails from '../components/clients/ClientDetails';
 import ClientForm from '../components/clients/ClientForm';
 import ClientFilter from '../components/clients/ClientFilter';
@@ -24,6 +25,7 @@ const Clients = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [showDetails, setShowDetails] = useState(false);
   const [stats, setStats] = useState(null);
+  const [viewMode, setViewMode] = useState('cards'); // 'cards' ou 'table'
   const [filters, setFilters] = useState({
     search: '',
     status: 'all',
@@ -283,6 +285,32 @@ const Clients = () => {
             </div>
 
             <div className="flex gap-2">
+              {/* Toggle vue cartes/liste */}
+              <div className="flex bg-gray-700 rounded-lg p-1">
+                <button
+                  onClick={() => setViewMode('cards')}
+                  className={`p-2 rounded transition-colors ${
+                    viewMode === 'cards'
+                      ? 'bg-indigo-600 text-white'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                  title="Vue cartes"
+                >
+                  <FiGrid />
+                </button>
+                <button
+                  onClick={() => setViewMode('table')}
+                  className={`p-2 rounded transition-colors ${
+                    viewMode === 'table'
+                      ? 'bg-indigo-600 text-white'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                  title="Vue liste"
+                >
+                  <FiList />
+                </button>
+              </div>
+
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
@@ -343,9 +371,9 @@ const Clients = () => {
         </div>
 
         {/* Contenu principal */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Liste des clients (cachée sur mobile si détails affichés) */}
-          <div className={`lg:col-span-1 space-y-3 ${showDetails ? 'hidden lg:block' : ''}`}>
+        <div className={`grid gap-6 ${viewMode === 'table' ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-3'}`}>
+          {/* Liste des clients */}
+          <div className={`${viewMode === 'table' ? '' : 'lg:col-span-1'} ${showDetails && viewMode === 'cards' ? 'hidden lg:block' : ''}`}>
             {isLoading ? (
               <div className="text-center text-gray-400 py-8">Chargement...</div>
             ) : filteredClients.length === 0 ? (
@@ -358,29 +386,42 @@ const Clients = () => {
               />
             ) : (
               <>
-                <AnimatePresence>
-                  {paginatedClients.map((client) => (
-                    <ClientCard
-                      key={client.id}
-                      client={client}
-                      isSelected={selectedClient && selectedClient.id === client.id}
-                      onClick={() => handleSelectClient(client)}
-                    />
-                  ))}
-                </AnimatePresence>
+                {/* Vue cartes */}
+                {viewMode === 'cards' && (
+                  <div className="space-y-3">
+                    <AnimatePresence>
+                      {paginatedClients.map((client) => (
+                        <ClientCard
+                          key={client.id}
+                          client={client}
+                          isSelected={selectedClient && selectedClient.id === client.id}
+                          onClick={() => handleSelectClient(client)}
+                        />
+                      ))}
+                    </AnimatePresence>
+                  </div>
+                )}
+
+                {/* Vue tableau */}
+                {viewMode === 'table' && (
+                  <ClientTable
+                    clients={paginatedClients}
+                    selectedClient={selectedClient}
+                    onSelectClient={handleSelectClient}
+                  />
+                )}
 
                 {/* Pagination */}
                 {filteredClients.length > 0 && (
-                  <div className="mt-6 space-y-4">
-                    {/* Contrôles de pagination */}
-                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-gray-800/30 backdrop-blur-sm rounded-xl p-4">
+                  <div className="mt-6">
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-gray-800/30 backdrop-blur-sm rounded-xl p-3 sm:p-4">
                       {/* Sélecteur nombre d'items */}
-                      <div className="flex items-center gap-2 text-sm">
+                      <div className="flex items-center gap-2 text-xs sm:text-sm w-full sm:w-auto justify-center sm:justify-start">
                         <span className="text-gray-400">Afficher</span>
                         <select
                           value={itemsPerPage}
                           onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
-                          className="px-3 py-1 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          className="px-2 sm:px-3 py-1 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs sm:text-sm"
                         >
                           <option value={10}>10</option>
                           <option value={20}>20</option>
@@ -391,28 +432,28 @@ const Clients = () => {
                       </div>
 
                       {/* Info pagination */}
-                      <div className="text-sm text-gray-400">
+                      <div className="text-xs sm:text-sm text-gray-400 order-3 sm:order-2">
                         {startIndex + 1}-{Math.min(endIndex, filteredClients.length)} sur {filteredClients.length}
                       </div>
 
                       {/* Boutons navigation */}
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1 sm:gap-2 w-full sm:w-auto justify-center sm:justify-end order-2 sm:order-3">
                         <button
                           onClick={() => handlePageChange(currentPage - 1)}
                           disabled={currentPage === 1}
-                          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm font-medium disabled:opacity-50"
+                          className="px-3 sm:px-4 py-2 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-xs sm:text-sm font-medium disabled:opacity-50"
                         >
-                          Précédent
+                          Préc.
                         </button>
-                        <span className="px-4 py-2 text-sm text-gray-300">
-                          Page {currentPage} sur {totalPages}
+                        <span className="px-2 sm:px-4 py-2 text-xs sm:text-sm text-gray-300 whitespace-nowrap">
+                          {currentPage}/{totalPages}
                         </span>
                         <button
                           onClick={() => handlePageChange(currentPage + 1)}
                           disabled={currentPage === totalPages}
-                          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm font-medium disabled:opacity-50"
+                          className="px-3 sm:px-4 py-2 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-xs sm:text-sm font-medium disabled:opacity-50"
                         >
-                          Suivant
+                          Suiv.
                         </button>
                       </div>
                     </div>
@@ -422,8 +463,8 @@ const Clients = () => {
             )}
           </div>
 
-          {/* Détails du client / Formulaire */}
-          <div className={`lg:col-span-2 ${!showDetails && !isAddingClient ? 'hidden lg:block' : ''}`}>
+          {/* Détails du client / Formulaire (seulement en mode cartes) */}
+          <div className={`${viewMode === 'table' ? 'hidden' : 'lg:col-span-2'} ${!showDetails && !isAddingClient && viewMode === 'cards' ? 'hidden lg:block' : ''}`}>
             {showDetails && (
               <motion.button
                 initial={{ opacity: 0 }}
@@ -469,6 +510,30 @@ const Clients = () => {
 
       {/* Modal de confirmation */}
       <ConfirmModal {...confirmState.config} isOpen={confirmState.isOpen} />
+
+      {/* Modal détails client en mode table */}
+      {viewMode === 'table' && selectedClient && showDetails && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center p-4 overflow-y-auto">
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => {
+              setSelectedClient(null);
+              setShowDetails(false);
+            }}
+          />
+          <div className="relative w-full max-w-4xl my-8">
+            <ClientDetails
+              client={selectedClient}
+              onUpdate={handleUpdateClient}
+              onDelete={handleDeleteClient}
+              onClose={() => {
+                setSelectedClient(null);
+                setShowDetails(false);
+              }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
