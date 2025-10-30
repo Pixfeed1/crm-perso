@@ -34,6 +34,8 @@ const Clients = () => {
   });
   const [sortField, setSortField] = useState('created_at');
   const [sortDirection, setSortDirection] = useState('desc');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(20);
 
   // Récupération des clients depuis l'API
   useEffect(() => {
@@ -122,7 +124,28 @@ const Clients = () => {
     });
 
     setFilteredClients(result);
+    // Réinitialiser à la page 1 quand les filtres changent
+    setCurrentPage(1);
   }, [clients, filters, sortField, sortDirection]);
+
+  // Calculer les clients pour la page actuelle
+  const totalPages = Math.ceil(filteredClients.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedClients = filteredClients.slice(startIndex, endIndex);
+
+  // Changer de page
+  const handlePageChange = (newPage) => {
+    setCurrentPage(newPage);
+    // Scroll en haut de la liste
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Changer le nombre d'items par page
+  const handleItemsPerPageChange = (newItemsPerPage) => {
+    setItemsPerPage(newItemsPerPage);
+    setCurrentPage(1);
+  };
 
   // Gestion du tri
   const handleSort = (field) => {
@@ -334,16 +357,68 @@ const Clients = () => {
                 onAction={handleAddClient}
               />
             ) : (
-              <AnimatePresence>
-                {filteredClients.map((client) => (
-                  <ClientCard
-                    key={client.id}
-                    client={client}
-                    isSelected={selectedClient && selectedClient.id === client.id}
-                    onClick={() => handleSelectClient(client)}
-                  />
-                ))}
-              </AnimatePresence>
+              <>
+                <AnimatePresence>
+                  {paginatedClients.map((client) => (
+                    <ClientCard
+                      key={client.id}
+                      client={client}
+                      isSelected={selectedClient && selectedClient.id === client.id}
+                      onClick={() => handleSelectClient(client)}
+                    />
+                  ))}
+                </AnimatePresence>
+
+                {/* Pagination */}
+                {filteredClients.length > 0 && (
+                  <div className="mt-6 space-y-4">
+                    {/* Contrôles de pagination */}
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-gray-800/30 backdrop-blur-sm rounded-xl p-4">
+                      {/* Sélecteur nombre d'items */}
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="text-gray-400">Afficher</span>
+                        <select
+                          value={itemsPerPage}
+                          onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
+                          className="px-3 py-1 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        >
+                          <option value={10}>10</option>
+                          <option value={20}>20</option>
+                          <option value={50}>50</option>
+                          <option value={100}>100</option>
+                        </select>
+                        <span className="text-gray-400">par page</span>
+                      </div>
+
+                      {/* Info pagination */}
+                      <div className="text-sm text-gray-400">
+                        {startIndex + 1}-{Math.min(endIndex, filteredClients.length)} sur {filteredClients.length}
+                      </div>
+
+                      {/* Boutons navigation */}
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handlePageChange(currentPage - 1)}
+                          disabled={currentPage === 1}
+                          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm font-medium disabled:opacity-50"
+                        >
+                          Précédent
+                        </button>
+                        <span className="px-4 py-2 text-sm text-gray-300">
+                          Page {currentPage} sur {totalPages}
+                        </span>
+                        <button
+                          onClick={() => handlePageChange(currentPage + 1)}
+                          disabled={currentPage === totalPages}
+                          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm font-medium disabled:opacity-50"
+                        >
+                          Suivant
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
 
