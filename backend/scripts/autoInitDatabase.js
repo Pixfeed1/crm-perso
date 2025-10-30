@@ -522,8 +522,14 @@ async function ensureReferenceData(client, tableName, data) {
     const placeholders = values.map((_, i) => `$${i + 1}`).join(', ');
 
     // Déterminer la colonne unique pour le ON CONFLICT
-    // settings utilise "key", les autres tables utilisent "code"
-    const uniqueColumn = tableName === 'settings' ? 'key' : 'code';
+    let uniqueColumn;
+    if (tableName === 'settings') {
+      uniqueColumn = 'key';
+    } else if (tableName === 'company_settings') {
+      uniqueColumn = 'id';
+    } else {
+      uniqueColumn = 'code';
+    }
 
     const query = `
       INSERT INTO ${tableName} (${columns.join(', ')})

@@ -1,11 +1,16 @@
 // backend/routes/settingsRoutes.js
 const express = require('express');
 const router = express.Router();
+const authMiddleware = require('../middleware/authMiddleware');
 const settingsController = require('../controllers/settingsController');
 
 /**
  * Routes pour les paramètres de l'entreprise
+ * Toutes les routes nécessitent une authentification
  */
+
+// Appliquer le middleware d'authentification à toutes les routes
+router.use(authMiddleware);
 
 // GET /api/settings - Récupérer les paramètres
 router.get('/', settingsController.getSettings);
