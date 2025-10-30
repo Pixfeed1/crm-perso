@@ -11,6 +11,7 @@ import ContactList from './ContactList';
 import ContactForm from './ContactForm';
 import InteractionTimeline from './InteractionTimeline';
 import InteractionForm from './InteractionForm';
+import LeadForm from './LeadForm';
 import ConfirmModal from '../common/ConfirmModal';
 
 const LeadDetails = ({ lead, onUpdate, onDelete, onAddContact, onUpdateContact, onDeleteContact, onAddInteraction, onUpdateInteraction, onDeleteInteraction }) => {
@@ -264,6 +265,17 @@ const LeadDetails = ({ lead, onUpdate, onDelete, onAddContact, onUpdateContact, 
       toast.error(error.response?.data?.message || 'Échec du déliaison');
     }
   };
+
+  // Si en mode édition, afficher le formulaire
+  if (isEditing) {
+    return (
+      <LeadForm
+        lead={lead}
+        onSave={handleSaveEdit}
+        onCancel={() => setIsEditing(false)}
+      />
+    );
+  }
 
   return (
     <div>
