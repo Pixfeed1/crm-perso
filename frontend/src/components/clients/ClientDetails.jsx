@@ -8,12 +8,16 @@ import {
 import ClientForm from './ClientForm';
 import ReviewRequestModal from './ReviewRequestModal';
 import EmailModal from './EmailModal';
+import QuickQuoteModal from './QuickQuoteModal';
+import QuickInvoiceModal from './QuickInvoiceModal';
 import { formatLongDate, formatValue } from '../../utils/formatters';
 
 const ClientDetails = ({ client, onUpdate, onDelete, onClose }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [isQuoteModalOpen, setIsQuoteModalOpen] = useState(false);
+  const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
 
   // Format de la valeur avec texte par défaut
   const formatClientValue = (value) => {
@@ -99,6 +103,24 @@ const ClientDetails = ({ client, onUpdate, onDelete, onClose }) => {
               <FiMail />
             </motion.button>
           )}
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setIsQuoteModalOpen(true)}
+            className="p-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+            title="Envoyer un devis"
+          >
+            <FiFileText />
+          </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setIsInvoiceModalOpen(true)}
+            className="p-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors"
+            title="Envoyer une facture"
+          >
+            <FiFileText />
+          </motion.button>
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -331,6 +353,20 @@ const ClientDetails = ({ client, onUpdate, onDelete, onClose }) => {
       <EmailModal
         isOpen={isEmailModalOpen}
         onClose={() => setIsEmailModalOpen(false)}
+        client={client}
+      />
+
+      {/* Modal devis */}
+      <QuickQuoteModal
+        isOpen={isQuoteModalOpen}
+        onClose={() => setIsQuoteModalOpen(false)}
+        client={client}
+      />
+
+      {/* Modal facture */}
+      <QuickInvoiceModal
+        isOpen={isInvoiceModalOpen}
+        onClose={() => setIsInvoiceModalOpen(false)}
         client={client}
       />
     </motion.div>
