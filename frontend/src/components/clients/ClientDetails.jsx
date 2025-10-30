@@ -3,13 +3,15 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   FiEdit2, FiTrash2, FiBriefcase, FiUser, FiMail, FiPhone,
-  FiMapPin, FiGlobe, FiCalendar, FiDollarSign, FiTag, FiFileText
+  FiMapPin, FiGlobe, FiCalendar, FiDollarSign, FiTag, FiFileText, FiStar
 } from 'react-icons/fi';
 import ClientForm from './ClientForm';
+import ReviewRequestModal from './ReviewRequestModal';
 import { formatLongDate, formatValue } from '../../utils/formatters';
 
 const ClientDetails = ({ client, onUpdate, onDelete, onClose }) => {
   const [isEditing, setIsEditing] = useState(false);
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
 
   // Format de la valeur avec texte par défaut
   const formatClientValue = (value) => {
@@ -84,6 +86,15 @@ const ClientDetails = ({ client, onUpdate, onDelete, onClose }) => {
         </div>
 
         <div className="flex gap-2">
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setIsReviewModalOpen(true)}
+            className="p-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+            title="Demander un avis"
+          >
+            <FiStar />
+          </motion.button>
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -294,6 +305,14 @@ const ClientDetails = ({ client, onUpdate, onDelete, onClose }) => {
           </div>
         </div>
       )}
+
+      {/* Modal de demande d'avis */}
+      <ReviewRequestModal
+        isOpen={isReviewModalOpen}
+        onClose={() => setIsReviewModalOpen(false)}
+        client={client}
+        contact={null}
+      />
     </motion.div>
   );
 };

@@ -17,7 +17,8 @@ import {
   FaPlus,
   FaFilter,
   FaFileInvoice,
-  FaUser
+  FaUser,
+  FaStar
 } from 'react-icons/fa';
 import {
   FiCalendar as FiCalendarIcon,
@@ -31,7 +32,7 @@ import {
 import KPIOrb from '../components/dashboard/KPIOrb';
 import ActivityStream from '../components/dashboard/ActivityStream';
 import GoalProgress from '../components/dashboard/GoalProgress';
-import { dashboardAPI } from '../services/api';
+import { dashboardAPI, reviewRequestsAPI } from '../services/api';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -51,6 +52,7 @@ const Dashboard = () => {
   const [hoveredCard, setHoveredCard] = useState(null);
   const [showNewMenu, setShowNewMenu] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [reviewStats, setReviewStats] = useState(null);
   const newMenuRef = useRef(null);
 
   // Fermer le menu si on clique en dehors
@@ -74,6 +76,14 @@ const Dashboard = () => {
       setLoading(true);
       const data = await dashboardAPI.getData();
       setDashboardData(data);
+
+      // Fetch review stats
+      try {
+        const stats = await reviewRequestsAPI.getStats();
+        setReviewStats(stats);
+      } catch (error) {
+        console.error('Erreur lors de la récupération des stats d\'avis:', error);
+      }
     } catch (error) {
       console.error('Erreur lors de la récupération des données du tableau de bord:', error);
     } finally {
@@ -715,6 +725,109 @@ const Dashboard = () => {
               </div>
             </motion.section>
           </div>
+
+          {/* ========== STATISTIQUES DES AVIS CLIENTS ========== */}
+          {reviewStats && (
+            <motion.section
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.6 }}
+              className="bg-slate-800/30 backdrop-blur rounded-2xl p-6 shadow-xl shadow-black/20"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-yellow-500/10 rounded-xl">
+                    <FaStar className="text-xl text-yellow-400" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-medium text-white">Demandes d'avis</h2>
+                    <p className="text-sm text-gray-500">Performance des demandes d'avis clients</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => navigate('/clients')}
+                  className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors"
+                >
+                  Demander un avis
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {/* Total */}
+                <div className="bg-slate-700/20 backdrop-blur rounded-xl p-4">
+                  <div className="flex items-center gap-2 text-gray-400 text-xs mb-2">
+                    <FaStar />
+                    <span>Total</span>
+                  </div>
+                  <p className="text-2xl font-light text-white mb-1">
+                    {reviewStats.total || 0}
+                  </p>
+                  <p className="text-xs text-gray-500">demandes</p>
+                </div>
+
+                {/* Envoyées */}
+                <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-4">
+                  <div className="flex items-center gap-2 text-green-400 text-xs mb-2">
+                    <FaCheckCircle />
+                    <span>Envoyées</span>
+                  </div>
+                  <p className="text-2xl font-light text-white mb-1">
+                    {reviewStats.sent || 0}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {reviewStats.total > 0
+                      ? Math.round((reviewStats.sent / reviewStats.total) * 100)
+                      : 0}%
+                  </p>
+                </div>
+
+                {/* Cliquées */}
+                <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4">
+                  <div className="flex items-center gap-2 text-blue-400 text-xs mb-2">
+                    <FiActivity />
+                    <span>Cliquées</span>
+                  </div>
+                  <p className="text-2xl font-light text-white mb-1">
+                    {reviewStats.clicked || 0}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {reviewStats.sent > 0
+                      ? Math.round((reviewStats.clicked / reviewStats.sent) * 100)
+                      : 0}% taux
+                  </p>
+                </div>
+
+                {/* Avis laissés */}
+                <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4">
+                  <div className="flex items-center gap-2 text-yellow-400 text-xs mb-2">
+                    <FaStar />
+                    <span>Avis reçus</span>
+                  </div>
+                  <p className="text-2xl font-light text-white mb-1">
+                    {reviewStats.reviewed || 0}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {reviewStats.sent > 0
+                      ? Math.round((reviewStats.reviewed / reviewStats.sent) * 100)
+                      : 0}% conversion
+                  </p>
+                </div>
+              </div>
+
+              {/* Performance 30 derniers jours */}
+              <div className="mt-6 pt-6 border-t border-gray-700/50">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <FiTrendingUpIcon className="text-indigo-400" />
+                    <span className="text-sm text-gray-400">30 derniers jours</span>
+                  </div>
+                  <span className="text-sm font-medium text-white">
+                    {reviewStats.last_30_days || 0} demandes
+                  </span>
+                </div>
+              </div>
+            </motion.section>
+          )}
 
         </div>
       </div>
