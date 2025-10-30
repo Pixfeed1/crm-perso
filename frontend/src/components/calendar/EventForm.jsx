@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-import axios from 'axios';
 import { eventsAPI } from '../../services/api';
 import AddressAutocomplete from '../common/AddressAutocomplete';
 import RecurrenceForm from './RecurrenceForm';
@@ -150,10 +149,10 @@ const EventForm = ({ event = {}, selectedDate, onSave, onCancel }) => {
         location: formData.location
       });
 
-      if (response && response.data) {
-        if (response.data.hasConflicts) {
-          setConflicts(response.data);
-          setAlternativeSlots(response.data.suggestions || []);
+      if (response) {
+        if (response.hasConflicts) {
+          setConflicts(response);
+          setAlternativeSlots(response.suggestions || []);
         } else {
           setConflicts(null);
           setAlternativeSlots([]);
