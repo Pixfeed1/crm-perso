@@ -347,12 +347,12 @@ const Dashboard = () => {
                     <FaMoneyBillWave className="text-xl text-emerald-400" />
                   </div>
                   <span className={`text-xs font-medium px-2 py-1 rounded-full transition-all ${
-                    dashboardData.revenues.thisMonth >= 8000 
-                      ? 'text-emerald-400 bg-emerald-500/10' 
+                    dashboardData.revenues.thisMonth >= (dashboardData.revenues.monthlyTarget || 8000)
+                      ? 'text-emerald-400 bg-emerald-500/10'
                       : 'text-amber-400 bg-amber-500/10'
                   }`}>
                     <FaChartLine className="inline w-3 h-3 mr-1" />
-                    {Math.round((dashboardData.revenues.thisMonth / 8000) * 100)}%
+                    {Math.round((dashboardData.revenues.thisMonth / (dashboardData.revenues.monthlyTarget || 8000)) * 100)}%
                   </span>
                 </div>
                 
@@ -362,7 +362,7 @@ const Dashboard = () => {
                   </p>
                   <p className="text-sm text-gray-400">Revenus du mois</p>
                   <p className="text-xs text-gray-500">
-                    Objectif: {formatAmount(8000)}
+                    Objectif: {formatAmount(dashboardData.revenues.monthlyTarget || 8000)}
                   </p>
                 </div>
               </div>
@@ -547,19 +547,19 @@ const Dashboard = () => {
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-sm text-gray-400">Chiffre d'affaires</span>
                     <span className="text-sm font-medium text-white">
-                      {Math.round((dashboardData.revenues.thisMonth / 8000) * 100)}%
+                      {Math.round((dashboardData.revenues.thisMonth / (dashboardData.revenues.monthlyTarget || 8000)) * 100)}%
                     </span>
                   </div>
                   <div className="h-2 bg-slate-700/50 rounded-full overflow-hidden">
                     <motion.div
                       className="h-full bg-gradient-to-r from-emerald-500 to-teal-500"
                       initial={{ width: 0 }}
-                      animate={{ width: `${Math.min((dashboardData.revenues.thisMonth / 8000) * 100, 100)}%` }}
+                      animate={{ width: `${Math.min((dashboardData.revenues.thisMonth / (dashboardData.revenues.monthlyTarget || 8000)) * 100, 100)}%` }}
                       transition={{ duration: 1, delay: 0.6 }}
                     />
                   </div>
                   <p className="text-xs text-gray-500 mt-2">
-                    {formatAmount(dashboardData.revenues.thisMonth)} sur {formatAmount(8000)}
+                    {formatAmount(dashboardData.revenues.thisMonth)} sur {formatAmount(dashboardData.revenues.monthlyTarget || 8000)}
                   </p>
                 </div>
 

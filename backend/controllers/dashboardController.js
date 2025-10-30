@@ -21,7 +21,7 @@ const dashboardController = {
       const dashboardData = {
         leads: { total: 0, newThisMonth: 0 },
         projects: { active: 0, completed: 0, upcoming: 0 },
-        revenues: { thisMonth: 0, projection: 0, total: 0 },
+        revenues: { thisMonth: 0, projection: 0, total: 0, monthlyTarget: 8000 },
         activities: { completed: 0, pending: 0 },
         goals: { onTrack: 0, atRisk: 0 },
         recentActivities: [],
@@ -95,6 +95,14 @@ const dashboardController = {
         0
       );
       dashboardData.revenues.projection = totalLastThreeMonths / 3;
+
+      // Récupérer l'objectif de revenus pour le mois en cours
+      const currentMonthGoal = allGoals.find(goal =>
+        goal.category === 'revenue' &&
+        goal.start_date <= endOfMonth &&
+        goal.end_date >= startOfMonth
+      );
+      dashboardData.revenues.monthlyTarget = currentMonthGoal ? parseFloat(currentMonthGoal.target_value) : 8000;
 
       // Calculer les statistiques des activités
       dashboardData.activities.completed = allActivities.filter(a => a.status === 'completed').length;
