@@ -15,7 +15,7 @@ exports.getAllRegimes = async (req, res) => {
 
     const query = `
       SELECT
-        id, code, label, category, taux, article_cgi,
+        id, code, label, category, rate, article_cgi,
         description, mention_legale, calcul_type, ordre
       FROM tva_regimes
       WHERE active = true
@@ -80,7 +80,7 @@ exports.getRegimeByCode = async (req, res) => {
 
     const query = `
       SELECT
-        id, code, label, category, taux, article_cgi,
+        id, code, label, category, rate, article_cgi,
         description, mention_legale, calcul_type, ordre
       FROM tva_regimes
       WHERE code = $1 AND active = true
@@ -132,7 +132,7 @@ exports.getRegimesByCategory = async (req, res) => {
 
     const query = `
       SELECT
-        id, code, label, category, taux, article_cgi,
+        id, code, label, category, rate, article_cgi,
         description, mention_legale, calcul_type, ordre
       FROM tva_regimes
       WHERE category = $1 AND active = true
