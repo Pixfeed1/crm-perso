@@ -1,7 +1,6 @@
 // src/App.jsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
-import { initDB } from './database/dbConfig';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 
 // Importation du composant Login
@@ -53,40 +52,6 @@ const ProtectedRoute = ({ children }) => {
 };
 
 const App = () => {
-  const [loading, setLoading] = useState(true);
-
-  // Initialisation de la base de données
-  useEffect(() => {
-    const setupDB = async () => {
-      try {
-        console.log("Initialisation de la base de données...");
-        await initDB();
-        console.log("Base de données initialisée avec succès");
-      } catch (error) {
-        console.error("Erreur lors de l'initialisation de la base de données:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    // Ajouter un léger délai pour éviter les problèmes de quota
-    const timeoutId = setTimeout(() => {
-      setupDB();
-    }, 500);
-    
-    return () => clearTimeout(timeoutId);
-  }, []);
-
-  // Afficher un indicateur de chargement
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
-        <p className="ml-2 text-white">Chargement de l'application...</p>
-      </div>
-    );
-  }
-
   return (
     <AuthProvider>
       <Router>
