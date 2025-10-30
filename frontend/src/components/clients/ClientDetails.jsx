@@ -7,11 +7,13 @@ import {
 } from 'react-icons/fi';
 import ClientForm from './ClientForm';
 import ReviewRequestModal from './ReviewRequestModal';
+import EmailModal from './EmailModal';
 import { formatLongDate, formatValue } from '../../utils/formatters';
 
 const ClientDetails = ({ client, onUpdate, onDelete, onClose }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
 
   // Format de la valeur avec texte par défaut
   const formatClientValue = (value) => {
@@ -86,6 +88,17 @@ const ClientDetails = ({ client, onUpdate, onDelete, onClose }) => {
         </div>
 
         <div className="flex gap-2">
+          {client.email && (
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setIsEmailModalOpen(true)}
+              className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+              title="Envoyer un email"
+            >
+              <FiMail />
+            </motion.button>
+          )}
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -312,6 +325,13 @@ const ClientDetails = ({ client, onUpdate, onDelete, onClose }) => {
         onClose={() => setIsReviewModalOpen(false)}
         client={client}
         contact={null}
+      />
+
+      {/* Modal d'envoi d'email */}
+      <EmailModal
+        isOpen={isEmailModalOpen}
+        onClose={() => setIsEmailModalOpen(false)}
+        client={client}
       />
     </motion.div>
   );

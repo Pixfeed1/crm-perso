@@ -28,4 +28,7 @@ router.put('/:id', clientController.updateClient);
 // DELETE /api/clients/:id - Supprimer un client
 router.delete('/:id', clientController.deleteClient);
 
+// POST /api/clients/:id/send-email - Envoyer un email à un client
+router.post('/:id/send-email', clientController.sendEmail);
+
 module.exports = router;
