@@ -188,15 +188,15 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
 
   return (
     <div className="w-full max-w-full">
-      <h2 className="text-2xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-purple-300 to-indigo-300">
+      <h2 className="text-2xl font-bold mb-6 text-white">
         {project.id ? 'Modifier le projet' : 'Nouveau projet'}
       </h2>
-      
+
       <form onSubmit={handleSubmit} className="space-y-4 w-full">
         {/* Nom du projet */}
         <div>
           <label htmlFor="name" className="block text-sm font-medium text-gray-300 mb-1">
-            Nom du projet<span className="text-rose-500 ml-1">*</span>
+            Nom du projet<span className="text-rose-400 ml-1">*</span>
           </label>
           <input
             type="text"
@@ -204,9 +204,9 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
             name="name"
             value={formData.name}
             onChange={handleInputChange}
-            className={`w-full bg-white/90 border ${
-              errors.name ? 'border-rose-500' : 'border-gray-300'
-            } rounded-lg px-4 py-2 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
+            className={`w-full bg-gray-700 border ${
+              errors.name ? 'border-rose-500' : 'border-gray-600'
+            } rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
             placeholder="Site E-commerce 2025"
           />
           {errors.name && (
@@ -231,7 +231,7 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
               name="type"
               value={formData.type}
               onChange={handleInputChange}
-              className="w-full bg-white/90 border border-gray-300 rounded-lg px-4 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             >
               {typeOptions.map(option => (
                 <option key={option.value} value={option.value}>
@@ -251,9 +251,9 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
               name="lead_id"
               value={formData.lead_id}
               onChange={handleLeadChange}
-              className={`w-full bg-white/90 border ${
-                errors.lead_id ? 'border-rose-500' : 'border-gray-300'
-              } rounded-lg px-4 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
+              className={`w-full bg-gray-700 border ${
+                errors.lead_id ? 'border-rose-500' : 'border-gray-600'
+              } rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
               disabled={loadingLeads}
             >
               <option value="">Sélectionner un client</option>
@@ -294,7 +294,7 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
             value={formData.description}
             onChange={handleInputChange}
             rows={4}
-            className="w-full bg-white/90 border border-gray-300 rounded-lg px-4 py-2 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             placeholder="Description détaillée du projet..."
           />
         </div>
@@ -303,7 +303,7 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
           {/* Date de début */}
           <div>
             <label htmlFor="start_date" className="block text-sm font-medium text-gray-300 mb-1">
-              Date de début<span className="text-rose-500 ml-1">*</span>
+              Date de début<span className="text-rose-400 ml-1">*</span>
             </label>
             <input
               type="date"
@@ -311,9 +311,9 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
               name="start_date"
               value={formData.start_date}
               onChange={handleInputChange}
-              className={`w-full bg-white/90 border ${
-                errors.start_date ? 'border-rose-500' : 'border-gray-300'
-              } rounded-lg px-4 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
+              className={`w-full bg-gray-700 border ${
+                errors.start_date ? 'border-rose-500' : 'border-gray-600'
+              } rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
             />
             {errors.start_date && (
               <motion.p 
@@ -329,7 +329,7 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
           {/* Date de fin */}
           <div>
             <label htmlFor="end_date" className="block text-sm font-medium text-gray-300 mb-1">
-              Date de fin<span className="text-rose-500 ml-1">*</span>
+              Date de fin<span className="text-rose-400 ml-1">*</span>
             </label>
             <input
               type="date"
@@ -337,9 +337,9 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
               name="end_date"
               value={formData.end_date}
               onChange={handleInputChange}
-              className={`w-full bg-white/90 border ${
-                errors.end_date ? 'border-rose-500' : 'border-gray-300'
-              } rounded-lg px-4 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
+              className={`w-full bg-gray-700 border ${
+                errors.end_date ? 'border-rose-500' : 'border-gray-600'
+              } rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
             />
             {errors.end_date && (
               <motion.p 
@@ -362,7 +362,7 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
               name="status"
               value={formData.status}
               onChange={handleInputChange}
-              className="w-full bg-white/90 border border-gray-300 rounded-lg px-4 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             >
               {statusOptions.map(option => (
                 <option key={option.value} value={option.value}>
@@ -387,11 +387,11 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
               onChange={handleInputChange}
               step="0.01"
               min="0"
-              className={`w-full bg-white/90 border ${
-                errors.amount ? 'border-rose-500' : 'border-gray-300'
-              } rounded-lg px-4 py-2 pl-10 text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
+              className={`w-full bg-gray-700 border ${
+                errors.amount ? 'border-rose-500' : 'border-gray-600'
+              } rounded-lg px-4 py-2 pl-10 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
             />
-            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-600">
+            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
               €
             </span>
           </div>

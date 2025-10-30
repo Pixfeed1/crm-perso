@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { projectsAPI, exportAPI } from '../services/api';
-import { FiAlertTriangle, FiZap, FiTarget, FiArrowLeft, FiDownload, FiList, FiCalendar } from 'react-icons/fi';
+import { FiAlertTriangle, FiZap, FiTarget, FiArrowLeft, FiDownload, FiList, FiCalendar, FiPlus } from 'react-icons/fi';
 import { useToast } from '../hooks/useToast';
 import { useConfirm } from '../hooks/useConfirm';
 import ConfirmModal from '../components/common/ConfirmModal';
@@ -544,21 +544,23 @@ const Projects = () => {
             </div>
             <div className="flex gap-2">
               <motion.button
-                className="bg-gray-700 hover:bg-gray-600 text-white px-3 py-2 sm:px-4 sm:py-2 rounded-full flex items-center text-sm sm:text-base"
+                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg flex items-center gap-2 transition-colors"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => exportAPI.projects()}
                 title="Exporter les projets en CSV"
               >
-                <FiDownload className="mr-1" /> Exporter
+                <FiDownload />
+                <span className="hidden sm:inline">Exporter</span>
               </motion.button>
               <motion.button
-                className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 sm:px-4 sm:py-2 rounded-full flex items-center text-sm sm:text-base"
+                className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-lg flex items-center gap-2 transition-colors"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={handleAddProject}
               >
-                <span className="mr-1">+</span> Nouveau Projet
+                <FiPlus />
+                <span>Nouveau projet</span>
               </motion.button>
             </div>
           </div>
