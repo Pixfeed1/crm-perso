@@ -11,11 +11,8 @@
 const getInteractionsByLeadId = (db, leadId) => {
   return new Promise((resolve, reject) => {
     const query = `
-      SELECT
-        li.*,
-        c.name as contact_name
+      SELECT li.*
       FROM lead_interactions li
-      LEFT JOIN contacts c ON li.contact_id = c.id
       WHERE li.lead_id = ?
       ORDER BY li.date DESC, li.created_at DESC
     `;
@@ -37,11 +34,8 @@ const getInteractionsByLeadId = (db, leadId) => {
 const getInteractionById = (db, interactionId) => {
   return new Promise((resolve, reject) => {
     const query = `
-      SELECT
-        li.*,
-        c.name as contact_name
+      SELECT li.*
       FROM lead_interactions li
-      LEFT JOIN contacts c ON li.contact_id = c.id
       WHERE li.id = ?
     `;
 
