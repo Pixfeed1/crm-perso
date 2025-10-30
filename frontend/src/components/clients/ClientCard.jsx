@@ -35,9 +35,9 @@ const ClientCard = ({ client, isSelected, onClick }) => {
   return (
     <motion.div
       className={`rounded-xl p-4 cursor-pointer transition-colors relative overflow-hidden ${
-        isSelected ? 'bg-indigo-900/40 border-indigo-500/50' : 'bg-gray-800/20 hover:bg-gray-800/40 border-transparent'
+        isSelected ? 'bg-indigo-900/40 border-indigo-500/50 z-10' : 'bg-gray-800/20 hover:bg-gray-800/40 border-transparent hover:z-20'
       } border`}
-      whileHover={{ scale: 1.02 }}
+      whileHover={{ scale: 1.01 }}
       whileTap={{ scale: 0.98 }}
       onClick={onClick}
       layout
