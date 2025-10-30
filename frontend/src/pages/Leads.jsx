@@ -463,282 +463,267 @@ const Leads = () => {
   }
 
   return (
-    <div className="h-full flex flex-col">
-      <header className="mb-4 sm:mb-6 px-2 sm:px-0 pt-16 sm:pt-0">
-        <motion.h1
-          className="text-3xl sm:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-300 to-purple-300"
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          Leads & Contacts
-        </motion.h1>
-        <motion.p
-          className="text-indigo-200 mt-2 text-sm sm:text-base"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-        >
-          Gérez vos prospects et opportunités
-        </motion.p>
-      </header>
+    <div className="h-full flex flex-col overflow-y-auto p-4 sm:p-6">
+      <div className="max-w-7xl mx-auto w-full">
+        {/* En-tête avec statistiques */}
+        <div className="mb-6 pt-16 sm:pt-0">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center">
+                <FiUsers className="text-white text-2xl" />
+              </div>
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-bold text-white">Leads</h1>
+                <p className="text-gray-400 text-sm">
+                  {filteredLeads.length} lead{filteredLeads.length !== 1 ? 's' : ''}
+                </p>
+              </div>
+            </div>
 
-      {/* Statistiques */}
-      {stats && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6 px-2 sm:px-0">
-          <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-4">
-            <div className="text-gray-400 text-xs mb-1">Total Leads</div>
-            <div className="text-white text-2xl font-bold">{stats.total || 0}</div>
+            <div className="flex gap-2">
+              {/* Toggle vue cartes/table/kanban */}
+              <div className="flex bg-gray-700 rounded-lg p-1">
+                <button
+                  onClick={() => setView('cards')}
+                  className={`p-2 rounded transition-colors ${
+                    view === 'cards'
+                      ? 'bg-indigo-600 text-white'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                  title="Vue cartes"
+                >
+                  <FiGrid />
+                </button>
+                <button
+                  onClick={() => setView('table')}
+                  className={`p-2 rounded transition-colors ${
+                    view === 'table'
+                      ? 'bg-indigo-600 text-white'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                  title="Vue liste"
+                >
+                  <FiList />
+                </button>
+                <button
+                  onClick={() => setView('kanban')}
+                  className={`p-2 rounded transition-colors ${
+                    view === 'kanban'
+                      ? 'bg-indigo-600 text-white'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                  title="Vue Kanban"
+                >
+                  <FiTrello />
+                </button>
+              </div>
+
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => exportAPI.leads()}
+                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg flex items-center gap-2 transition-colors"
+              >
+                <FiDownload />
+                <span className="hidden sm:inline">Exporter</span>
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={handleAddLead}
+                className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-lg flex items-center gap-2 transition-colors"
+              >
+                <FiPlus />
+                <span>Nouveau lead</span>
+              </motion.button>
+            </div>
           </div>
-          <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4">
-            <div className="text-green-400 text-xs mb-1">Nouveaux ce mois</div>
-            <div className="text-white text-2xl font-bold">{stats.newThisMonth || 0}</div>
-          </div>
-          <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4">
-            <div className="text-blue-400 text-xs mb-1">Gagnés</div>
-            <div className="text-white text-2xl font-bold">{stats.byStatus?.won || 0}</div>
-          </div>
-          <div className="bg-purple-500/10 border border-purple-500/30 rounded-xl p-4">
-            <div className="text-purple-400 text-xs mb-1">Taux de conversion</div>
-            <div className="text-white text-2xl font-bold">{stats.conversionRate || 0}%</div>
-          </div>
+
+          {/* Statistiques */}
+          {stats && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-4">
+                <div className="text-gray-400 text-xs mb-1">Total</div>
+                <div className="text-white text-2xl font-bold">{stats.total || 0}</div>
+              </div>
+              <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4">
+                <div className="text-green-400 text-xs mb-1">Nouveaux</div>
+                <div className="text-white text-2xl font-bold">{stats.newThisMonth || 0}</div>
+              </div>
+              <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4">
+                <div className="text-blue-400 text-xs mb-1">Gagnés</div>
+                <div className="text-white text-2xl font-bold">{stats.byStatus?.won || 0}</div>
+              </div>
+              <div className="bg-purple-500/10 border border-purple-500/30 rounded-xl p-4">
+                <div className="text-purple-400 text-xs mb-1">Taux conversion</div>
+                <div className="text-white text-2xl font-bold">{stats.conversionRate || 0}%</div>
+              </div>
+            </div>
+          )}
         </div>
-      )}
 
-      {/* Toggle de vue et actions */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3 px-2 sm:px-0">
-        <div className="flex items-center gap-3">
-          <h2 className="text-lg sm:text-xl font-semibold text-white">Vos Leads</h2>
-
-          {/* Toggle Liste / Kanban / Prospection */}
-          <div className="bg-gray-800/50 rounded-lg p-1 flex">
-            <motion.button
-              className={`px-3 py-1 rounded-lg text-sm flex items-center gap-1 ${
-                view === 'list'
-                  ? 'bg-indigo-600 text-white'
-                  : 'text-gray-300 hover:bg-gray-700/50'
-              }`}
-              whileHover={{ scale: view === 'list' ? 1 : 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setView('list')}
-            >
-              <FiList />
-              Liste
-            </motion.button>
-            <motion.button
-              className={`px-3 py-1 rounded-lg text-sm flex items-center gap-1 ${
-                view === 'kanban'
-                  ? 'bg-indigo-600 text-white'
-                  : 'text-gray-300 hover:bg-gray-700/50'
-              }`}
-              whileHover={{ scale: view === 'kanban' ? 1 : 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setView('kanban')}
-            >
-              <FiTrello />
-              Kanban
-            </motion.button>
-            <motion.button
-              className={`px-3 py-1 rounded-lg text-sm flex items-center gap-1 ${
-                view === 'prospection'
-                  ? 'bg-indigo-600 text-white'
-                  : 'text-gray-300 hover:bg-gray-700/50'
-              }`}
-              whileHover={{ scale: view === 'prospection' ? 1 : 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setView('prospection')}
-            >
-              <FiSearch />
-              Prospection
-            </motion.button>
-          </div>
-        </div>
-
-        <div className="flex gap-2">
-          <motion.button
-            className="bg-gray-700 hover:bg-gray-600 text-white px-3 py-2 sm:px-4 sm:py-2 rounded-full flex items-center text-sm sm:text-base"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => exportAPI.leads()}
-            title="Exporter les leads en CSV"
-          >
-            <FiDownload className="mr-1" /> Exporter
-          </motion.button>
-          <motion.button
-            className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 sm:px-4 sm:py-2 rounded-full flex items-center text-sm sm:text-base"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={handleAddLead}
-          >
-            <span className="mr-1">+</span> Nouveau Lead
-          </motion.button>
-        </div>
-      </div>
-
-      {/* Filtres (affichés dans les deux vues) */}
-      <div className="mb-4 px-2 sm:px-0">
-        <LeadFilter
-          filters={filters}
-          setFilters={setFilters}
-          onSort={handleSort}
-          sortField={sortField}
-          sortDirection={sortDirection}
-          isKanbanView={view === 'kanban'}
-        />
-      </div>
-
-      {/* Vue conditionnelle */}
-      {view === 'kanban' ? (
-        /* Vue Kanban - prend toute la largeur */
-        <div className="flex-grow overflow-hidden">
-          <KanbanView
-            leads={filteredLeads}
-            onLeadUpdate={handleUpdateLead}
-            onLeadSelect={handleSelectLead}
+        {/* Filtres */}
+        <div className="mb-4">
+          <LeadFilter
+            filters={filters}
+            setFilters={setFilters}
+            onSort={handleSort}
+            sortField={sortField}
+            sortDirection={sortDirection}
           />
         </div>
-      ) : view === 'prospection' ? (
-        /* Vue Prospection - prend toute la largeur */
-        <div className="flex-grow overflow-hidden px-2 sm:px-0">
-          <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl sm:rounded-2xl p-4 sm:p-6 h-full overflow-y-auto">
-            <ProspectionPanel
-              onLeadCreated={(newLead) => {
-                setLeads([...leads, newLead]);
-                setView('list');
-                setSelectedLead(newLead);
-                toast.success('Lead créé avec succès depuis la prospection');
+
+        {/* Vue Kanban */}
+        {view === 'kanban' ? (
+          <KanbanView
+            leads={filteredLeads}
+            onLeadClick={handleSelectLead}
+            onLeadUpdate={handleUpdateLead}
+          />
+        ) : (
+          <>
+            {/* Contenu principal */}
+            {isLoading ? (
+              <div className="text-center text-gray-400 py-8">Chargement...</div>
+            ) : filteredLeads.length === 0 ? (
+              <EmptyState
+                icon={FiUsers}
+                title="Aucun lead"
+                message="Commencez par ajouter votre premier lead"
+                actionLabel="Ajouter un lead"
+                onAction={handleAddLead}
+              />
+            ) : (
+              <>
+                {/* Vue cartes */}
+                {view === 'cards' && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    <AnimatePresence>
+                      {paginatedLeads.map((lead) => (
+                        <LeadCard
+                          key={lead.id}
+                          lead={lead}
+                          isSelected={selectedLead && selectedLead.id === lead.id}
+                          onClick={() => handleSelectLead(lead)}
+                        />
+                      ))}
+                    </AnimatePresence>
+                  </div>
+                )}
+
+                {/* Vue tableau */}
+                {view === 'table' && (
+                  <LeadTable
+                    leads={paginatedLeads}
+                    selectedLead={selectedLead}
+                    onSelectLead={handleSelectLead}
+                  />
+                )}
+
+                {/* Pagination */}
+                {filteredLeads.length > itemsPerPage && (
+                  <div className="mt-6">
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-gray-800/40 backdrop-blur-sm rounded-xl p-4 border border-gray-700/50">
+                      {/* Sélecteur nombre d'items */}
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="text-gray-400">Afficher</span>
+                        <select
+                          value={itemsPerPage}
+                          onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
+                          className="px-3 py-1.5 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        >
+                          <option value={10}>10</option>
+                          <option value={20}>20</option>
+                          <option value={50}>50</option>
+                          <option value={100}>100</option>
+                        </select>
+                        <span className="text-gray-400">par page</span>
+                      </div>
+
+                      {/* Info pagination */}
+                      <div className="text-sm text-gray-400">
+                        {startIndex + 1}-{Math.min(endIndex, filteredLeads.length)} sur {filteredLeads.length}
+                      </div>
+
+                      {/* Boutons navigation */}
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handlePageChange(currentPage - 1)}
+                          disabled={currentPage === 1}
+                          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm font-medium disabled:opacity-50"
+                        >
+                          Précédent
+                        </button>
+                        <span className="px-4 py-2 text-sm text-white font-medium min-w-[80px] text-center">
+                          Page {currentPage} / {totalPages}
+                        </span>
+                        <button
+                          onClick={() => handlePageChange(currentPage + 1)}
+                          disabled={currentPage === totalPages}
+                          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm font-medium disabled:opacity-50"
+                        >
+                          Suivant
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Modal de confirmation */}
+      <ConfirmModal {...confirmState.config} isOpen={confirmState.isOpen} />
+
+      {/* Modal d'ajout de lead */}
+      {isAddingLead && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center p-4 overflow-y-auto bg-black/60 backdrop-blur-sm">
+          <div className="relative w-full max-w-4xl my-8">
+            <LeadForm
+              onSave={handleSaveLead}
+              onCancel={() => {
+                setIsAddingLead(false);
+                setShowDetails(false);
               }}
             />
           </div>
         </div>
-      ) : (
-        /* Vue Liste - layout original */
-        <div className="flex flex-col lg:flex-row flex-grow overflow-hidden gap-4">
-          {/* Panneau de gauche: Liste des leads */}
-          <motion.div
-            className={`${showDetails ? 'hidden lg:flex' : 'flex'} w-full lg:w-1/3 overflow-hidden flex-col`}
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-
-          <div className="flex-grow overflow-y-auto px-2 sm:px-0 space-y-3 mt-4">
-            <AnimatePresence>
-              {filteredLeads.length > 0 ? (
-                filteredLeads.map((lead) => (
-                  <motion.div
-                    key={lead.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.2 }}
-                    layout
-                  >
-                    <LeadCard
-                      lead={lead}
-                      isSelected={selectedLead && selectedLead.id === lead.id}
-                      onClick={() => handleSelectLead(lead)}
-                    />
-                  </motion.div>
-                ))
-              ) : (
-                <EmptyState
-                  icon={<FiUsers />}
-                  title="Aucun lead trouvé"
-                  description="Ajoutez de nouveaux leads ou modifiez vos filtres."
-                />
-              )}
-            </AnimatePresence>
-          </div>
-        </motion.div>
-
-        {/* Panneau de droite: Détails du lead ou formulaire d'ajout */}
-        <motion.div
-          className={`${showDetails ? 'flex' : 'hidden lg:flex'} w-full lg:w-2/3 overflow-hidden flex-col`}
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.3, delay: 0.1 }}
-        >
-          {/* Bouton retour mobile */}
-          {showDetails && (
-            <motion.button
-              className="lg:hidden mb-3 flex items-center text-indigo-300 hover:text-indigo-200 px-2"
-              onClick={handleBackToList}
-              whileTap={{ scale: 0.95 }}
-            >
-              <FiArrowLeft className="mr-2" />
-              <span className="text-sm text-white">Retour à la liste</span>
-            </motion.button>
-          )}
-
-          <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl sm:rounded-2xl p-4 sm:p-6 h-full overflow-y-auto">
-            <AnimatePresence mode="wait">
-              {isAddingLead ? (
-                <motion.div
-                  key="add-form"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <LeadForm
-                    onSave={handleSaveLead}
-                    onCancel={handleBackToList}
-                  />
-                </motion.div>
-              ) : selectedLead ? (
-                <motion.div
-                  key={`lead-${selectedLead.id}`}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <LeadDetails
-                    lead={selectedLead}
-                    onUpdate={(updatedData) => handleUpdateLead(selectedLead.id, updatedData)}
-                    onDelete={() => handleDeleteLead(selectedLead.id)}
-                    onAddContact={(contactData) => handleAddContact(selectedLead.id, contactData)}
-                    onUpdateContact={(contactId, updatedData) =>
-                      handleUpdateContact(selectedLead.id, contactId, updatedData)
-                    }
-                    onDeleteContact={(contactId) =>
-                      handleDeleteContact(selectedLead.id, contactId)
-                    }
-                    onAddInteraction={(interactionData) => handleAddInteraction(selectedLead.id, interactionData)}
-                    onUpdateInteraction={(interactionId, updatedData) =>
-                      handleUpdateInteraction(interactionId, updatedData)
-                    }
-                    onDeleteInteraction={(interactionId) =>
-                      handleDeleteInteraction(interactionId)
-                    }
-                  />
-                </motion.div>
-              ) : (
-                <motion.div
-                  key="empty-state"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="h-full flex items-center justify-center"
-                >
-                  <EmptyState
-                    icon={<FiStar />}
-                    title="Sélectionnez un lead"
-                    description="Choisissez un lead dans la liste ou créez-en un nouveau."
-                  />
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        </motion.div>
-        </div>
       )}
 
-      {/* Modal de confirmation */}
-      <ConfirmModal {...confirmState.config} isOpen={confirmState.isOpen} />
+      {/* Modal détails lead (mode cartes et table) */}
+      {!isAddingLead && selectedLead && showDetails && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center p-4 overflow-y-auto">
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => {
+              setSelectedLead(null);
+              setShowDetails(false);
+            }}
+          />
+          <div className="relative w-full max-w-4xl my-8">
+            <LeadDetails
+              lead={selectedLead}
+              onUpdate={handleUpdateLead}
+              onDelete={handleDeleteLead}
+              onAddContact={handleAddContact}
+              onUpdateContact={handleUpdateContact}
+              onDeleteContact={handleDeleteContact}
+              onAddInteraction={handleAddInteraction}
+              onUpdateInteraction={handleUpdateInteraction}
+              onDeleteInteraction={handleDeleteInteraction}
+              onClose={() => {
+                setSelectedLead(null);
+                setShowDetails(false);
+              }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
+
 
 export default Leads;
