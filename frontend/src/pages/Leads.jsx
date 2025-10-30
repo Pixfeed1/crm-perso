@@ -1,19 +1,18 @@
 // src/pages/Leads.jsx
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiUsers, FiStar, FiArrowLeft, FiDownload, FiList, FiTrello, FiSearch } from 'react-icons/fi';
-// Remplacer executeQuery par la fonction d'API
+import { FiUsers, FiPlus, FiDownload, FiGrid, FiList, FiTrello } from 'react-icons/fi';
 import { leadsAPI, exportAPI } from '../services/api';
 import { useToast } from '../hooks/useToast';
 import { useConfirm } from '../hooks/useConfirm';
 
 // Composants
 import LeadCard from '../components/leads/LeadCard';
+import LeadTable from '../components/leads/LeadTable';
 import LeadDetails from '../components/leads/LeadDetails';
 import LeadForm from '../components/leads/LeadForm';
 import LeadFilter from '../components/leads/LeadFilter';
 import KanbanView from '../components/kanban/KanbanView';
-import ProspectionPanel from '../components/leads/ProspectionPanel';
 import EmptyState from '../components/common/EmptyState';
 import ConfirmModal from '../components/common/ConfirmModal';
 
@@ -25,8 +24,8 @@ const Leads = () => {
   const [selectedLead, setSelectedLead] = useState(null);
   const [isAddingLead, setIsAddingLead] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [showDetails, setShowDetails] = useState(false); // Pour toggle mobile
-  const [view, setView] = useState('list'); // 'list', 'kanban' ou 'prospection'
+  const [showDetails, setShowDetails] = useState(false);
+  const [view, setView] = useState('cards'); // 'cards', 'table' ou 'kanban'
   const [filters, setFilters] = useState({
     search: '',
     status: 'all',
@@ -37,6 +36,8 @@ const Leads = () => {
   });
   const [sortField, setSortField] = useState('created_at');
   const [sortDirection, setSortDirection] = useState('desc');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(20);
   const [stats, setStats] = useState({
     total: 0,
     newThisMonth: 0,
@@ -151,7 +152,27 @@ const Leads = () => {
     });
 
     setFilteredLeads(result);
+    // Réinitialiser à la page 1 quand les filtres changent
+    setCurrentPage(1);
   }, [leads, filters, sortField, sortDirection]);
+
+  // Calculer les leads pour la page actuelle
+  const totalPages = Math.ceil(filteredLeads.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedLeads = filteredLeads.slice(startIndex, endIndex);
+
+  // Changer de page
+  const handlePageChange = (newPage) => {
+    setCurrentPage(newPage);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Changer le nombre d'items par page
+  const handleItemsPerPageChange = (newItemsPerPage) => {
+    setItemsPerPage(newItemsPerPage);
+    setCurrentPage(1);
+  };
 
   // Gestion du tri
   const handleSort = (field) => {
@@ -165,15 +186,6 @@ const Leads = () => {
     }
   };
 
-  // Réinitialiser le filtre de statut en mode Kanban (car les colonnes montrent déjà les statuts)
-  useEffect(() => {
-    if (view === 'kanban' && filters.status !== 'all') {
-      setFilters(prev => ({
-        ...prev,
-        status: 'all'
-      }));
-    }
-  }, [view]);
 
   // Sélection d'un lead
   const handleSelectLead = async (lead) => {
