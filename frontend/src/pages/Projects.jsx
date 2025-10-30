@@ -544,20 +544,20 @@ const Projects = () => {
             </div>
             <div className="flex gap-2">
               <motion.button
-                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg flex items-center gap-2 transition-colors"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => exportAPI.projects()}
                 title="Exporter les projets en CSV"
+                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg flex items-center gap-2 transition-colors"
               >
                 <FiDownload />
                 <span className="hidden sm:inline">Exporter</span>
               </motion.button>
               <motion.button
-                className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-lg flex items-center gap-2 transition-colors"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={handleAddProject}
+                className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-lg flex items-center gap-2 transition-colors"
               >
                 <FiPlus />
                 <span>Nouveau projet</span>
