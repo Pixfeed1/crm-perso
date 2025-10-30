@@ -628,7 +628,7 @@ const Projects = () => {
             </motion.button>
           )}
 
-          <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl sm:rounded-2xl p-4 sm:p-6 h-full overflow-y-auto">
+          <div className="h-full overflow-y-auto">
             {isLoading && selectedProject ? (
               <div className="h-full flex items-center justify-center">
                 <motion.div
@@ -640,26 +640,12 @@ const Projects = () => {
             ) : (
               <AnimatePresence mode="wait">
                 {isAddingProject ? (
-                  <motion.div
-                    key="add-form"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <ProjectForm
-                      onSave={handleSaveProject}
-                      onCancel={handleBackToList}
-                    />
-                  </motion.div>
+                  <ProjectForm
+                    onSave={handleSaveProject}
+                    onCancel={handleBackToList}
+                  />
                 ) : selectedProject ? (
-                  <motion.div
-                    key={`project-${selectedProject.id}`}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.3 }}
-                  >
+                  <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-gray-700/50">
                     <ProjectDetails
                       project={selectedProject}
                       onUpdate={(updatedData) => handleUpdateProject(selectedProject.id, updatedData)}
@@ -667,21 +653,15 @@ const Projects = () => {
                       onAddTask={(taskData) => handleAddTask(selectedProject.id, taskData)}
                       onToggleTaskStatus={(taskId) => handleToggleTaskStatus(selectedProject.id, taskId)}
                     />
-                  </motion.div>
+                  </div>
                 ) : (
-                  <motion.div
-                    key="empty-state"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="h-full flex items-center justify-center"
-                  >
+                  <div className="h-full flex items-center justify-center">
                     <EmptyState
                       icon={<FiTarget />}
                       title="Sélectionnez un projet"
                       description="Choisissez un projet dans la liste ou créez-en un nouveau."
                     />
-                  </motion.div>
+                  </div>
                 )}
               </AnimatePresence>
             )}

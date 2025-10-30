@@ -187,10 +187,17 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
   };
 
   return (
-    <div className="w-full max-w-full">
-      <h2 className="text-2xl font-bold mb-6 text-white">
-        {project.id ? 'Modifier le projet' : 'Nouveau projet'}
-      </h2>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 20 }}
+      className="bg-gray-800/30 border border-gray-700 rounded-2xl p-6"
+    >
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold text-white">
+          {project.id ? 'Modifier le projet' : 'Nouveau projet'}
+        </h2>
+      </div>
 
       <form onSubmit={handleSubmit} className="space-y-4 w-full">
         {/* Nom du projet */}
@@ -441,7 +448,7 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
           </motion.button>
         </div>
       </form>
-    </div>
+    </motion.div>
   );
 };
 
