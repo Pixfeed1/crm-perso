@@ -107,7 +107,7 @@ const VideoConferenceSettings = () => {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -131,8 +131,8 @@ const VideoConferenceSettings = () => {
 
   const getProviderColor = (providerId) => {
     const colors = {
-      google_meet: 'green',
-      zoom: 'blue',
+      google_meet: 'indigo',
+      zoom: 'indigo',
       teams: 'purple'
     };
     return colors[providerId] || 'gray';
@@ -141,11 +141,11 @@ const VideoConferenceSettings = () => {
   // Mapping statique pour les classes Tailwind (nécessaire pour le JIT compiler)
   const getProviderClasses = (providerId) => {
     const colorClasses = {
-      google_meet: 'border-green-500 bg-green-50',
-      zoom: 'border-blue-500 bg-blue-50',
-      teams: 'border-purple-500 bg-purple-50'
+      google_meet: 'border-indigo-500 bg-indigo-900/20',
+      zoom: 'border-indigo-500 bg-indigo-900/20',
+      teams: 'border-purple-500 bg-purple-900/20'
     };
-    return colorClasses[providerId] || 'border-gray-500 bg-gray-50';
+    return colorClasses[providerId] || 'border-gray-500 bg-gray-900/20';
   };
 
   return (
@@ -153,14 +153,14 @@ const VideoConferenceSettings = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-            <FiVideo className="text-blue-600 text-xl" />
+          <div className="w-10 h-10 bg-indigo-900/30 rounded-lg flex items-center justify-center">
+            <FiVideo className="text-indigo-400 text-xl" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">
+            <h3 className="text-lg font-semibold text-gray-300">
               Visioconférence
             </h3>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-400">
               Configurez vos liens de visio automatiques
             </p>
           </div>
@@ -174,18 +174,18 @@ const VideoConferenceSettings = () => {
           animate={{ opacity: 1, y: 0 }}
           className={`p-4 rounded-lg flex items-center space-x-3 ${
             message.type === 'success'
-              ? 'bg-green-50 border border-green-200'
-              : 'bg-red-50 border border-red-200'
+              ? 'bg-green-900/20 border border-green-700'
+              : 'bg-red-900/20 border border-red-700'
           }`}
         >
           {message.type === 'success' ? (
-            <FiCheck className="text-green-600" />
+            <FiCheck className="text-green-400" />
           ) : (
-            <FiAlertCircle className="text-red-600" />
+            <FiAlertCircle className="text-red-400" />
           )}
           <span
             className={
-              message.type === 'success' ? 'text-green-800' : 'text-red-800'
+              message.type === 'success' ? 'text-green-300' : 'text-red-300'
             }
           >
             {message.text}
@@ -194,13 +194,13 @@ const VideoConferenceSettings = () => {
       )}
 
       {/* Auto-génération */}
-      <div className="bg-white border border-gray-200 rounded-lg p-6">
+      <div className="bg-gray-800/30 border border-gray-700/50 rounded-lg p-6">
         <div className="flex items-center justify-between">
           <div>
-            <h4 className="font-medium text-gray-900">
+            <h4 className="font-medium text-gray-300">
               Génération automatique
             </h4>
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-gray-400 mt-1">
               Créer automatiquement un lien visio pour chaque nouvel événement
             </p>
           </div>
@@ -213,14 +213,14 @@ const VideoConferenceSettings = () => {
               }
               className="sr-only peer"
             />
-            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+            <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-500/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
           </label>
         </div>
       </div>
 
       {/* Providers disponibles */}
-      <div className="bg-white border border-gray-200 rounded-lg p-6">
-        <h4 className="font-medium text-gray-900 mb-4">
+      <div className="bg-gray-800/30 border border-gray-700/50 rounded-lg p-6">
+        <h4 className="font-medium text-gray-300 mb-4">
           Plateformes disponibles
         </h4>
 
@@ -232,7 +232,7 @@ const VideoConferenceSettings = () => {
               className={`p-4 border-2 rounded-lg transition-all ${
                 settings.default_provider === provider.id
                   ? getProviderClasses(provider.id)
-                  : 'border-gray-200 hover:border-gray-300'
+                  : 'border-gray-700 hover:border-gray-600'
               }`}
             >
               <div className="flex items-start justify-between">
@@ -242,22 +242,22 @@ const VideoConferenceSettings = () => {
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center space-x-2">
-                      <h5 className="font-medium text-gray-900">
+                      <h5 className="font-medium text-gray-300">
                         {provider.name}
                       </h5>
                       {provider.configured && (
-                        <span className="px-2 py-0.5 text-xs bg-green-100 text-green-700 rounded-full">
+                        <span className="px-2 py-0.5 text-xs bg-green-900/30 text-green-400 rounded-full">
                           Configuré
                         </span>
                       )}
                     </div>
-                    <p className="text-sm text-gray-500 mt-1">
+                    <p className="text-sm text-gray-400 mt-1">
                       {provider.description}
                     </p>
 
                     {/* Configuration requise */}
                     {provider.requiresAuth && !provider.configured && (
-                      <div className="mt-2 flex items-center space-x-2 text-xs text-orange-600">
+                      <div className="mt-2 flex items-center space-x-2 text-xs text-orange-400">
                         <FiAlertCircle />
                         <span>Configuration requise</span>
                       </div>
@@ -274,7 +274,7 @@ const VideoConferenceSettings = () => {
                       onChange={() => handleProviderToggle(provider.id)}
                       className="sr-only peer"
                     />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-500/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
                   </label>
 
                   {/* Radio pour provider par défaut */}
@@ -283,8 +283,8 @@ const VideoConferenceSettings = () => {
                     disabled={!provider.enabled}
                     className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
                       settings.default_provider === provider.id
-                        ? 'border-blue-600 bg-blue-600'
-                        : 'border-gray-300 hover:border-blue-400'
+                        ? 'border-indigo-600 bg-indigo-600'
+                        : 'border-gray-600 hover:border-indigo-500'
                     } ${!provider.enabled ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
                     {settings.default_provider === provider.id && (
@@ -299,12 +299,12 @@ const VideoConferenceSettings = () => {
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
-                  className="mt-4 pt-4 border-t border-gray-200"
+                  className="mt-4 pt-4 border-t border-gray-700"
                 >
                   {provider.id === 'google_meet' && (
                     <div className="space-y-3">
                       <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                        <label className="block text-xs font-medium text-gray-300 mb-1">
                           ID du calendrier Google
                         </label>
                         <input
@@ -317,7 +317,7 @@ const VideoConferenceSettings = () => {
                             })
                           }
                           placeholder="primary ou votre-email@gmail.com"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          className="w-full px-3 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-gray-300 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent placeholder-gray-500"
                         />
                       </div>
                     </div>
@@ -326,7 +326,7 @@ const VideoConferenceSettings = () => {
                   {provider.id === 'zoom' && (
                     <div className="space-y-3">
                       <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                        <label className="block text-xs font-medium text-gray-300 mb-1">
                           API Key
                         </label>
                         <input
@@ -339,11 +339,11 @@ const VideoConferenceSettings = () => {
                             })
                           }
                           placeholder="Votre clé API Zoom"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          className="w-full px-3 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-gray-300 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent placeholder-gray-500"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                        <label className="block text-xs font-medium text-gray-300 mb-1">
                           API Secret
                         </label>
                         <input
@@ -356,11 +356,11 @@ const VideoConferenceSettings = () => {
                             })
                           }
                           placeholder="Votre secret API Zoom"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          className="w-full px-3 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-gray-300 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent placeholder-gray-500"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                        <label className="block text-xs font-medium text-gray-300 mb-1">
                           User ID (optionnel)
                         </label>
                         <input
@@ -373,7 +373,7 @@ const VideoConferenceSettings = () => {
                             })
                           }
                           placeholder="me ou votre user ID"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          className="w-full px-3 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-gray-300 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent placeholder-gray-500"
                         />
                       </div>
                     </div>
@@ -382,7 +382,7 @@ const VideoConferenceSettings = () => {
                   {provider.id === 'teams' && (
                     <div className="space-y-3">
                       <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                        <label className="block text-xs font-medium text-gray-300 mb-1">
                           Tenant ID
                         </label>
                         <input
@@ -395,7 +395,7 @@ const VideoConferenceSettings = () => {
                             })
                           }
                           placeholder="Votre Tenant ID Microsoft"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          className="w-full px-3 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-gray-300 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent placeholder-gray-500"
                         />
                       </div>
                     </div>
@@ -408,14 +408,14 @@ const VideoConferenceSettings = () => {
       </div>
 
       {/* Paramètres par défaut */}
-      <div className="bg-white border border-gray-200 rounded-lg p-6">
-        <h4 className="font-medium text-gray-900 mb-4">
+      <div className="bg-gray-800/30 border border-gray-700/50 rounded-lg p-6">
+        <h4 className="font-medium text-gray-300 mb-4">
           Paramètres par défaut des réunions
         </h4>
 
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-300 mb-2">
               Durée par défaut (minutes)
             </label>
             <input
@@ -430,12 +430,12 @@ const VideoConferenceSettings = () => {
               min="15"
               max="480"
               step="15"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
             />
           </div>
 
           <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-700">
+            <span className="text-sm text-gray-300">
               Autoriser l'entrée avant l'hôte
             </span>
             <label className="relative inline-flex items-center cursor-pointer">
@@ -450,12 +450,12 @@ const VideoConferenceSettings = () => {
                 }
                 className="sr-only peer"
               />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-500/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
             </label>
           </div>
 
           <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-700">Salle d'attente</span>
+            <span className="text-sm text-gray-300">Salle d'attente</span>
             <label className="relative inline-flex items-center cursor-pointer">
               <input
                 type="checkbox"
@@ -468,12 +468,12 @@ const VideoConferenceSettings = () => {
                 }
                 className="sr-only peer"
               />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-500/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
             </label>
           </div>
 
           <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-700">
+            <span className="text-sm text-gray-300">
               Enregistrement automatique
             </span>
             <label className="relative inline-flex items-center cursor-pointer">
@@ -488,7 +488,7 @@ const VideoConferenceSettings = () => {
                 }
                 className="sr-only peer"
               />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-500/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
             </label>
           </div>
         </div>
@@ -499,7 +499,7 @@ const VideoConferenceSettings = () => {
         <button
           onClick={handleSaveSettings}
           disabled={isSaving}
-          className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+          className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
         >
           {isSaving ? (
             <>
