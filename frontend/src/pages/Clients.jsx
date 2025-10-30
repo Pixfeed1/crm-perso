@@ -371,166 +371,115 @@ const Clients = () => {
         </div>
 
         {/* Contenu principal */}
-        <div className={`grid gap-6 ${
-          viewMode === 'table'
-            ? 'grid-cols-1'
-            : selectedClient && showDetails
-              ? 'grid-cols-1 lg:grid-cols-3'
-              : 'grid-cols-1'
-        }`}>
-          {/* Liste des clients */}
-          <div className={`${
-            viewMode === 'table'
-              ? ''
-              : selectedClient && showDetails
-                ? 'lg:col-span-1'
-                : ''
-          } ${showDetails && viewMode === 'cards' ? 'hidden lg:block' : ''}`}>
-            {isLoading ? (
-              <div className="text-center text-gray-400 py-8">Chargement...</div>
-            ) : filteredClients.length === 0 ? (
-              <EmptyState
-                icon={FiUsers}
-                title="Aucun client"
-                message="Commencez par ajouter votre premier client"
-                actionLabel="Ajouter un client"
-                onAction={handleAddClient}
-              />
-            ) : (
-              <>
-                {/* Vue cartes */}
-                {viewMode === 'cards' && (
-                  <div className={`grid gap-4 ${
-                    selectedClient && showDetails
-                      ? 'grid-cols-1'
-                      : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
-                  }`}>
-                    <AnimatePresence>
-                      {paginatedClients.map((client) => (
-                        <ClientCard
-                          key={client.id}
-                          client={client}
-                          isSelected={selectedClient && selectedClient.id === client.id}
-                          onClick={() => handleSelectClient(client)}
-                        />
-                      ))}
-                    </AnimatePresence>
-                  </div>
-                )}
-
-                {/* Vue tableau */}
-                {viewMode === 'table' && (
-                  <ClientTable
-                    clients={paginatedClients}
-                    selectedClient={selectedClient}
-                    onSelectClient={handleSelectClient}
-                  />
-                )}
-
-                {/* Pagination */}
-                {filteredClients.length > 0 && (
-                  <div className="mt-6">
-                    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-gray-800/30 backdrop-blur-sm rounded-xl p-3 sm:p-4">
-                      {/* Sélecteur nombre d'items */}
-                      <div className="flex items-center gap-2 text-xs sm:text-sm w-full sm:w-auto justify-center sm:justify-start">
-                        <span className="text-gray-400">Afficher</span>
-                        <select
-                          value={itemsPerPage}
-                          onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
-                          className="px-2 sm:px-3 py-1 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs sm:text-sm"
-                        >
-                          <option value={10}>10</option>
-                          <option value={20}>20</option>
-                          <option value={50}>50</option>
-                          <option value={100}>100</option>
-                        </select>
-                        <span className="text-gray-400">par page</span>
-                      </div>
-
-                      {/* Info pagination */}
-                      <div className="text-xs sm:text-sm text-gray-400 order-3 sm:order-2">
-                        {startIndex + 1}-{Math.min(endIndex, filteredClients.length)} sur {filteredClients.length}
-                      </div>
-
-                      {/* Boutons navigation */}
-                      <div className="flex items-center gap-1 sm:gap-2 w-full sm:w-auto justify-center sm:justify-end order-2 sm:order-3">
-                        <button
-                          onClick={() => handlePageChange(currentPage - 1)}
-                          disabled={currentPage === 1}
-                          className="px-3 sm:px-4 py-2 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-xs sm:text-sm font-medium disabled:opacity-50"
-                        >
-                          Préc.
-                        </button>
-                        <span className="px-2 sm:px-4 py-2 text-xs sm:text-sm text-gray-300 whitespace-nowrap">
-                          {currentPage}/{totalPages}
-                        </span>
-                        <button
-                          onClick={() => handlePageChange(currentPage + 1)}
-                          disabled={currentPage === totalPages}
-                          className="px-3 sm:px-4 py-2 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-xs sm:text-sm font-medium disabled:opacity-50"
-                        >
-                          Suiv.
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-
-          {/* Détails du client / Formulaire (seulement en mode cartes) */}
-          {viewMode === 'cards' && (selectedClient || isAddingClient) && (
-          <div className={`lg:col-span-2 ${!showDetails && !isAddingClient ? 'hidden' : ''}`}>
-            {showDetails && (
-              <motion.button
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                onClick={handleBackToList}
-                className="lg:hidden mb-4 flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
-              >
-                <FiArrowLeft />
-                <span>Retour à la liste</span>
-              </motion.button>
-            )}
-
-            {isAddingClient ? (
-              <ClientForm
-                onSave={handleSaveClient}
-                onCancel={() => {
-                  setIsAddingClient(false);
-                  setShowDetails(false);
-                }}
-              />
-            ) : selectedClient ? (
-              <ClientDetails
-                client={selectedClient}
-                onUpdate={handleUpdateClient}
-                onDelete={handleDeleteClient}
-                onClose={() => {
-                  setSelectedClient(null);
-                  setShowDetails(false);
-                }}
-              />
-            ) : (
-              <div className="hidden lg:flex items-center justify-center h-full">
-                <EmptyState
-                  icon={FiUsers}
-                  title="Sélectionnez un client"
-                  message="Choisissez un client dans la liste pour voir ses détails"
-                />
+        {isLoading ? (
+          <div className="text-center text-gray-400 py-8">Chargement...</div>
+        ) : filteredClients.length === 0 ? (
+          <EmptyState
+            icon={FiUsers}
+            title="Aucun client"
+            message="Commencez par ajouter votre premier client"
+            actionLabel="Ajouter un client"
+            onAction={handleAddClient}
+          />
+        ) : (
+          <>
+            {/* Vue cartes */}
+            {viewMode === 'cards' && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <AnimatePresence>
+                  {paginatedClients.map((client) => (
+                    <ClientCard
+                      key={client.id}
+                      client={client}
+                      isSelected={selectedClient && selectedClient.id === client.id}
+                      onClick={() => handleSelectClient(client)}
+                    />
+                  ))}
+                </AnimatePresence>
               </div>
             )}
-          </div>
-          )}
-        </div>
+
+            {/* Vue tableau */}
+            {viewMode === 'table' && (
+              <ClientTable
+                clients={paginatedClients}
+                selectedClient={selectedClient}
+                onSelectClient={handleSelectClient}
+              />
+            )}
+
+            {/* Pagination */}
+            {filteredClients.length > itemsPerPage && (
+              <div className="mt-6">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-gray-800/40 backdrop-blur-sm rounded-xl p-4 border border-gray-700/50">
+                  {/* Sélecteur nombre d'items */}
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="text-gray-400">Afficher</span>
+                    <select
+                      value={itemsPerPage}
+                      onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
+                      className="px-3 py-1.5 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    >
+                      <option value={10}>10</option>
+                      <option value={20}>20</option>
+                      <option value={50}>50</option>
+                      <option value={100}>100</option>
+                    </select>
+                    <span className="text-gray-400">par page</span>
+                  </div>
+
+                  {/* Info pagination */}
+                  <div className="text-sm text-gray-400">
+                    {startIndex + 1}-{Math.min(endIndex, filteredClients.length)} sur {filteredClients.length}
+                  </div>
+
+                  {/* Boutons navigation */}
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handlePageChange(currentPage - 1)}
+                      disabled={currentPage === 1}
+                      className="px-4 py-2 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm font-medium disabled:opacity-50"
+                    >
+                      Précédent
+                    </button>
+                    <span className="px-4 py-2 text-sm text-white font-medium min-w-[80px] text-center">
+                      Page {currentPage} / {totalPages}
+                    </span>
+                    <button
+                      onClick={() => handlePageChange(currentPage + 1)}
+                      disabled={currentPage === totalPages}
+                      className="px-4 py-2 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm font-medium disabled:opacity-50"
+                    >
+                      Suivant
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
+        )}
       </div>
 
       {/* Modal de confirmation */}
       <ConfirmModal {...confirmState.config} isOpen={confirmState.isOpen} />
 
-      {/* Modal détails client en mode table */}
-      {viewMode === 'table' && selectedClient && showDetails && (
+      {/* Modal d'ajout de client */}
+      {isAddingClient && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center p-4 overflow-y-auto bg-black/60 backdrop-blur-sm">
+          <div className="relative w-full max-w-4xl my-8">
+            <ClientForm
+              onSave={handleSaveClient}
+              onCancel={() => {
+                setIsAddingClient(false);
+                setShowDetails(false);
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Modal détails client (mode cartes et table) */}
+      {!isAddingClient && selectedClient && showDetails && (
         <div className="fixed inset-0 z-50 flex items-start justify-center p-4 overflow-y-auto">
           <div
             className="fixed inset-0 bg-black/60 backdrop-blur-sm"
