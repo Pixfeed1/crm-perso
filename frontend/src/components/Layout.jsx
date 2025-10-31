@@ -218,13 +218,26 @@ const Layout = ({ children }) => {
 
       {/* Navigation innovante circulaire */}
       <motion.div
-        className="absolute bottom-6 right-6 z-40"
+        className="fixed bottom-6 right-6 z-40"
         initial={false}
         animate={menuOpen ? "open" : "closed"}
       >
+        {/* Overlay de fond quand le menu est ouvert */}
+        <AnimatePresence>
+          {menuOpen && (
+            <motion.div
+              className="fixed inset-0 bg-black/30 backdrop-blur-sm"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setMenuOpen(false)}
+              style={{ zIndex: -1 }}
+            />
+          )}
+        </AnimatePresence>
+
         <motion.div
-          className="absolute z-20 flex items-center justify-center shadow-xl bg-indigo-600 rounded-full overflow-hidden"
-          style={{ bottom: 0, right: 0 }} // Position absolue
+          className="relative z-20 flex items-center justify-center shadow-xl bg-indigo-600 rounded-full overflow-hidden cursor-pointer"
           variants={mainButtonVariants}
           animate={menuOpen ? "menuOpen" : "default"}
           transition={{ duration: 0.3, type: "spring", stiffness: 300 }}
@@ -253,13 +266,14 @@ const Layout = ({ children }) => {
         <AnimatePresence>
           {menuOpen && (
             <motion.div
-              className="absolute bottom-8 right-8"
+              className="absolute"
+              style={{ bottom: '4rem', right: '4rem' }}
               variants={menuVariants}
               initial="closed"
               animate="open"
               exit="closed"
             >
-              <motion.div 
+              <motion.div
                 className="relative"
                 style={{ width: '300px', height: '300px' }}
               >
@@ -272,19 +286,19 @@ const Layout = ({ children }) => {
 
                   // Style spécial pour le bouton de déconnexion
                   const isLogoutButton = item.isLogout === true;
-                  const buttonStyle = isLogoutButton 
-                    ? 'bg-rose-600 text-white hover:bg-rose-700' 
-                    : activeModule === item.path 
-                      ? 'bg-white text-indigo-800' 
+                  const buttonStyle = isLogoutButton
+                    ? 'bg-rose-600 text-white hover:bg-rose-700'
+                    : activeModule === item.path
+                      ? 'bg-white text-indigo-800'
                       : 'bg-indigo-700 text-white';
 
                   return (
                     <motion.div
                       key={item.path}
                       className={`absolute w-14 h-14 rounded-full flex items-center justify-center cursor-pointer shadow-lg ${buttonStyle}`}
-                      style={{ 
-                        left: `calc(50% + ${x}px - 28px)`, 
-                        top: `calc(50% + ${y}px - 28px)` 
+                      style={{
+                        left: `calc(50% + ${x}px - 28px)`,
+                        top: `calc(50% + ${y}px - 28px)`
                       }}
                       variants={itemVariants}
                       whileHover={{ scale: 1.1 }}
