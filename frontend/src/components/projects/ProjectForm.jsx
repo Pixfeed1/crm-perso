@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { useToast } from '../../hooks/useToast';
 import TemplateSelector from '../common/TemplateSelector';
 import { templateCategories } from '../../services/templates';
+import { clientsAPI, leadsAPI } from '../../services/api';
 
 const ProjectForm = ({ project = {}, onSave, onCancel }) => {
   const { toast } = useToast();
@@ -25,30 +26,56 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
   const [submitting, setSubmitting] = useState(false);
   const [loadingLeads, setLoadingLeads] = useState(false);
 
-  // Charger les leads pour le sélecteur
+  // Charger les clients et leads depuis l'API
   useEffect(() => {
-    const fetchLeads = async () => {
+    const fetchClientsAndLeads = async () => {
       setLoadingLeads(true);
       try {
-        // Dans un scénario réel, nous récupérerions depuis l'API
-        // Pour l'exemple, utilisons des données fictives
-        setTimeout(() => {
-          const mockLeads = [
-            { id: 1, name: 'Acme Corporation' },
-            { id: 2, name: 'Technologie Future' },
-            { id: 3, name: 'Julie Martin' }
-          ];
-          setLeads(mockLeads);
-          setLoadingLeads(false);
-        }, 500);
+        // Récupérer les clients et les leads en parallèle
+        const [clientsData, leadsData] = await Promise.all([
+          clientsAPI.getAll().catch(err => {
+            console.error('Erreur lors du chargement des clients:', err);
+            return [];
+          }),
+          leadsAPI.getAll().catch(err => {
+            console.error('Erreur lors du chargement des leads:', err);
+            return [];
+          })
+        ]);
+
+        // Combiner clients et leads dans une seule liste
+        // Les clients sont marqués comme type 'client' et les leads comme type 'lead'
+        const combinedList = [
+          ...clientsData.map(client => ({
+            id: `client-${client.id}`,
+            originalId: client.id,
+            name: client.name,
+            type: 'client',
+            displayName: `${client.name} (Client)`
+          })),
+          ...leadsData.map(lead => ({
+            id: `lead-${lead.id}`,
+            originalId: lead.id,
+            name: lead.name,
+            type: 'lead',
+            displayName: `${lead.name} (Lead)`
+          }))
+        ];
+
+        // Trier par nom
+        combinedList.sort((a, b) => a.name.localeCompare(b.name));
+
+        setLeads(combinedList);
       } catch (error) {
-        console.error('Erreur lors du chargement des leads:', error);
+        console.error('Erreur lors du chargement des clients/leads:', error);
+        toast.error('Impossible de charger la liste des clients/leads');
+      } finally {
         setLoadingLeads(false);
       }
     };
-    
-    fetchLeads();
-  }, []);
+
+    fetchClientsAndLeads();
+  }, [toast]);
 
   // Options de type
   const typeOptions = [
@@ -98,16 +125,17 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
     }
   };
   
-  // Mise à jour spécifique pour le sélecteur de lead
+  // Mise à jour spécifique pour le sélecteur de lead/client
   const handleLeadChange = (e) => {
-    const leadId = parseInt(e.target.value);
-    const selectedLead = leads.find(lead => lead.id === leadId);
-    
-    if (selectedLead) {
+    const selectedId = e.target.value;
+    const selectedItem = leads.find(item => item.id === selectedId);
+
+    if (selectedItem) {
+      // Stocker l'ID original (sans préfixe client- ou lead-)
       setFormData(prev => ({
         ...prev,
-        lead_id: leadId,
-        lead_name: selectedLead.name
+        lead_id: selectedItem.originalId,
+        lead_name: selectedItem.name
       }));
     } else {
       setFormData(prev => ({
@@ -116,7 +144,7 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
         lead_name: ''
       }));
     }
-    
+
     // Effacer les erreurs de lead
     if (errors.lead_id) {
       setErrors(prev => ({
@@ -248,30 +276,30 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
             </select>
           </div>
           
-          {/* Client (Lead) */}
+          {/* Client/Lead */}
           <div>
             <label htmlFor="lead_id" className="block text-sm font-medium text-gray-300 mb-1">
-              Client
+              Client / Lead
             </label>
             <select
               id="lead_id"
               name="lead_id"
-              value={formData.lead_id}
+              value={leads.find(item => item.originalId === formData.lead_id)?.id || ''}
               onChange={handleLeadChange}
               className={`w-full bg-gray-700 border ${
                 errors.lead_id ? 'border-rose-500' : 'border-gray-600'
               } rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
               disabled={loadingLeads}
             >
-              <option value="">Sélectionner un client</option>
-              {leads.map(lead => (
-                <option key={lead.id} value={lead.id}>
-                  {lead.name}
+              <option value="">{loadingLeads ? 'Chargement...' : 'Sélectionner un client ou lead'}</option>
+              {leads.map(item => (
+                <option key={item.id} value={item.id}>
+                  {item.displayName}
                 </option>
               ))}
             </select>
             {errors.lead_id && (
-              <motion.p 
+              <motion.p
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="mt-1 text-xs text-rose-500"
