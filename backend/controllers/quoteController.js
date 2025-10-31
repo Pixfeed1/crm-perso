@@ -55,24 +55,32 @@ const quoteController = {
   createQuote: async (req, res) => {
     const db = req.app.locals.db;
     const {
+      title,
       client_id,
       client_name,
       client_email,
       client_address,
       client_siret,
+      project_id,
       items,
+      discount_type,
+      discount_value,
       cgv,
       cgv_type,
       cgv_pdf,
       tva_rate,
       tva_applicable,
+      tva_regime,
+      payment_methods,
+      payment_details,
       acompte_type,
       acompte_value,
       escompte_percent,
       escompte_days,
       validity_days,
-      notes,
-      payment_details
+      additional_info,
+      additional_files,
+      notes
     } = req.body;
 
     // Validation
@@ -86,24 +94,32 @@ const quoteController = {
 
     try {
       const result = await quoteModel.createQuote(db, {
+        title,
         client_id,
         client_name,
         client_email,
         client_address,
         client_siret,
+        project_id,
         items,
+        discount_type,
+        discount_value,
         cgv,
         cgv_type,
         cgv_pdf,
         tva_rate,
         tva_applicable,
+        tva_regime,
+        payment_methods,
+        payment_details,
         acompte_type,
         acompte_value,
         escompte_percent,
         escompte_days,
         validity_days,
-        notes,
-        payment_details
+        additional_info,
+        additional_files,
+        notes
       });
 
       res.status(201).json({
@@ -113,7 +129,11 @@ const quoteController = {
       });
     } catch (error) {
       console.error('Erreur lors de la création du devis:', error);
-      res.status(500).json({ message: 'Erreur serveur' });
+      console.error('Stack:', error.stack);
+      res.status(500).json({
+        message: 'Erreur serveur',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
     }
   },
 
@@ -124,25 +144,33 @@ const quoteController = {
     const db = req.app.locals.db;
     const { id } = req.params;
     const {
+      title,
       client_id,
       client_name,
       client_email,
       client_address,
       client_siret,
+      project_id,
       status,
       items,
+      discount_type,
+      discount_value,
       cgv,
       cgv_type,
       cgv_pdf,
       tva_rate,
       tva_applicable,
+      tva_regime,
+      payment_methods,
+      payment_details,
       acompte_type,
       acompte_value,
       escompte_percent,
       escompte_days,
       validity_days,
-      notes,
-      payment_details
+      additional_info,
+      additional_files,
+      notes
     } = req.body;
 
     // Validation
@@ -156,25 +184,33 @@ const quoteController = {
 
     try {
       const result = await quoteModel.updateQuote(db, id, {
+        title,
         client_id,
         client_name,
         client_email,
         client_address,
         client_siret,
+        project_id,
         status,
         items,
+        discount_type,
+        discount_value,
         cgv,
         cgv_type,
         cgv_pdf,
         tva_rate,
         tva_applicable,
+        tva_regime,
+        payment_methods,
+        payment_details,
         acompte_type,
         acompte_value,
         escompte_percent,
         escompte_days,
         validity_days,
-        notes,
-        payment_details
+        additional_info,
+        additional_files,
+        notes
       });
 
       if (result.changes === 0) {

@@ -173,6 +173,13 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
     });
   };
 
+  // Insérer une ligne de détail après un produit spécifique
+  const insertDetailLineAfter = (index) => {
+    const newItems = [...formData.items];
+    newItems.splice(index + 1, 0, { type: 'detail', description: '', quantity: 0, unit_price: 0 });
+    setFormData({ ...formData, items: newItems });
+  };
+
   const removeItem = (index) => {
     const newItems = formData.items.filter((_, i) => i !== index);
     setFormData({ ...formData, items: newItems });
@@ -471,112 +478,120 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
       <div className="space-y-6 animate-fadeIn">
         <div className="flex justify-between items-center">
           <h3 className="text-lg font-semibold text-white">Articles / Services</h3>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={addDetailLine}
-              className="flex items-center gap-2 px-3 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors text-sm"
-              title="Ajouter une ligne de détail/description"
-            >
-              <FiPlus className="w-4 h-4" />
-              Ligne de détail
-            </button>
-            <button
-              type="button"
-              onClick={addItem}
-              className="flex items-center gap-2 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors text-sm"
-            >
-              <FiPlus className="w-4 h-4" />
-              Ajouter produit
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={addItem}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors text-sm shadow-lg"
+          >
+            <FiPlus className="w-4 h-4" />
+            Ajouter un produit
+          </button>
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-2">
           {formData.items.map((item, index) => (
-            item.type === 'detail' ? (
-              // Ligne de détail (texte libre, pas de calcul)
-              <div key={index} className="bg-amber-900/20 border border-amber-700/50 p-3 rounded-lg">
-                <div className="flex gap-3 items-start">
-                  <div className="flex-1">
-                    <label className="block text-xs font-medium text-amber-400 mb-1">
-                      Ligne de détail (optionnelle)
-                    </label>
-                    <textarea
-                      placeholder="Ex: Description détaillée, notes, conditions particulières..."
-                      value={item.description}
-                      onChange={(e) => handleItemChange(index, 'description', e.target.value)}
-                      className="w-full px-3 py-2 bg-gray-800/50 border border-amber-700/50 rounded text-white text-sm focus:outline-none focus:border-amber-500 min-h-[60px]"
-                      rows={2}
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => removeItem(index)}
-                    className="p-2 text-red-400 hover:bg-red-500/20 rounded transition-colors mt-6"
-                    title="Supprimer"
-                  >
-                    <FiTrash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            ) : (
-              // Ligne produit (avec quantité et prix)
-              <div key={index} className="grid grid-cols-12 gap-3 items-start bg-gray-800/30 p-4 rounded-lg border border-gray-700/50">
-                <div className="col-span-12 sm:col-span-5">
-                  <label className="block text-xs font-medium text-gray-400 mb-1">Description</label>
-                  <input
-                    type="text"
-                    placeholder="Ex: Développement site web"
-                    value={item.description}
-                    onChange={(e) => handleItemChange(index, 'description', e.target.value)}
-                    className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-white text-sm focus:outline-none focus:border-indigo-500"
-                    required
-                  />
-                </div>
-                <div className="col-span-5 sm:col-span-3">
-                  <label className="block text-xs font-medium text-gray-400 mb-1">Quantité</label>
-                  <input
-                    type="number"
-                    placeholder="1"
-                    value={item.quantity}
-                    onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
-                    min="0"
-                    step="0.01"
-                    className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-white text-sm focus:outline-none focus:border-indigo-500"
-                    required
-                  />
-                </div>
-                <div className="col-span-5 sm:col-span-3">
-                  <label className="block text-xs font-medium text-gray-400 mb-1">Prix unitaire (€)</label>
-                  <input
-                    type="number"
-                    placeholder="0.00"
-                    value={item.unit_price}
-                    onChange={(e) => handleItemChange(index, 'unit_price', e.target.value)}
-                    min="0"
-                    step="0.01"
-                    className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-white text-sm focus:outline-none focus:border-indigo-500"
-                    required
-                  />
-                </div>
-                <div className="col-span-2 sm:col-span-1 flex items-end justify-center">
-                  {formData.items.length > 1 && (
+            <div key={index}>
+              {item.type === 'detail' ? (
+                // Ligne de détail (texte libre, pas de calcul)
+                <div className="bg-amber-900/10 border-l-4 border-amber-500 p-3 rounded-r-lg ml-4">
+                  <div className="flex gap-3 items-start">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <FiEdit className="w-3 h-3 text-amber-400" />
+                        <label className="text-xs font-medium text-amber-400">
+                          Note / Détail
+                        </label>
+                      </div>
+                      <textarea
+                        placeholder="Ajoutez des précisions, conditions, notes..."
+                        value={item.description}
+                        onChange={(e) => handleItemChange(index, 'description', e.target.value)}
+                        className="w-full px-3 py-2 bg-gray-800/30 border border-amber-700/30 rounded text-amber-100 text-sm focus:outline-none focus:border-amber-500 min-h-[50px] placeholder-amber-700/50"
+                        rows={2}
+                      />
+                    </div>
                     <button
                       type="button"
                       onClick={() => removeItem(index)}
-                      className="p-2 text-red-400 hover:bg-red-500/20 rounded transition-colors"
+                      className="p-1.5 text-amber-400/60 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors"
                       title="Supprimer"
                     >
-                      <FiTrash2 className="w-4 h-4" />
+                      <FiTrash2 className="w-3.5 h-3.5" />
                     </button>
-                  )}
+                  </div>
                 </div>
-                <div className="col-span-12 text-right text-sm text-gray-400">
-                  Total: <span className="text-white font-semibold">{((item.quantity || 0) * (item.unit_price || 0)).toFixed(2)} €</span>
-                </div>
-              </div>
-            )
+              ) : (
+                // Ligne produit (avec quantité et prix)
+                <>
+                  <div className="grid grid-cols-12 gap-3 items-start bg-gray-800/30 p-4 rounded-lg border border-gray-700/50 hover:border-gray-600 transition-colors">
+                    <div className="col-span-12 sm:col-span-5">
+                      <label className="block text-xs font-medium text-gray-400 mb-1">Description</label>
+                      <input
+                        type="text"
+                        placeholder="Ex: Développement site web"
+                        value={item.description}
+                        onChange={(e) => handleItemChange(index, 'description', e.target.value)}
+                        className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-white text-sm focus:outline-none focus:border-indigo-500"
+                        required
+                      />
+                    </div>
+                    <div className="col-span-5 sm:col-span-3">
+                      <label className="block text-xs font-medium text-gray-400 mb-1">Quantité</label>
+                      <input
+                        type="number"
+                        placeholder="1"
+                        value={item.quantity}
+                        onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
+                        min="0"
+                        step="0.01"
+                        className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-white text-sm focus:outline-none focus:border-indigo-500"
+                        required
+                      />
+                    </div>
+                    <div className="col-span-5 sm:col-span-3">
+                      <label className="block text-xs font-medium text-gray-400 mb-1">Prix unitaire (€)</label>
+                      <input
+                        type="number"
+                        placeholder="0.00"
+                        value={item.unit_price}
+                        onChange={(e) => handleItemChange(index, 'unit_price', e.target.value)}
+                        min="0"
+                        step="0.01"
+                        className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-white text-sm focus:outline-none focus:border-indigo-500"
+                        required
+                      />
+                    </div>
+                    <div className="col-span-2 sm:col-span-1 flex items-end justify-center">
+                      {formData.items.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeItem(index)}
+                          className="p-2 text-red-400 hover:bg-red-500/20 rounded transition-colors"
+                          title="Supprimer"
+                        >
+                          <FiTrash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                    <div className="col-span-12 flex justify-between items-center">
+                      <button
+                        type="button"
+                        onClick={() => insertDetailLineAfter(index)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 border border-amber-600/30 rounded-md transition-colors"
+                        title="Ajouter une note ou détail sous ce produit"
+                      >
+                        <FiPlus className="w-3 h-3" />
+                        <FiEdit className="w-3 h-3" />
+                        <span>Ajouter une note</span>
+                      </button>
+                      <div className="text-sm text-gray-400">
+                        Total: <span className="text-white font-semibold">{((item.quantity || 0) * (item.unit_price || 0)).toFixed(2)} €</span>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
           ))}
         </div>
 
