@@ -185,6 +185,7 @@ const Dashboard = () => {
               >
                 <FiRefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
               </button>
+              {/* TODO: Implémenter le panneau de filtres
               <button
                 onClick={() => setShowFilters(!showFilters)}
                 className={`p-2 transition-colors ${showFilters ? 'text-indigo-400' : 'text-gray-400 hover:text-white'}`}
@@ -192,6 +193,7 @@ const Dashboard = () => {
               >
                 <FaFilter className="w-5 h-5" />
               </button>
+              */}
 
               {/* Menu "Nouveau" avec dropdown */}
               <div className="relative" ref={newMenuRef}>

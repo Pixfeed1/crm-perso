@@ -80,12 +80,16 @@ const settingsController = {
   testEmailConfig: async (req, res) => {
     try {
       const result = await emailService.testConnection();
+
+      // Retourner le résultat du test (succès ou échec) avec status 200
+      // Le frontend déterminera si c'est un succès ou un échec basé sur result.success
       res.status(200).json(result);
     } catch (error) {
+      // Erreur système (pas juste un échec de test)
       console.error('[SettingsController] Erreur lors du test email:', error);
       res.status(500).json({
         success: false,
-        error: 'Erreur lors du test de la configuration email',
+        error: 'Erreur serveur lors du test',
         details: error.message
       });
     }
