@@ -185,11 +185,6 @@ class EmailService {
         <p>Pour toute question, n'hésitez pas à me contacter.</p>
 
         ${options.signature || '<p>Cordialement</p>'}
-
-        <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 30px 0;">
-        <p style="font-size: 12px; color: #6B7280;">
-          Ce message a été envoyé automatiquement depuis notre système de gestion.
-        </p>
       </div>
     `;
 
@@ -245,11 +240,6 @@ class EmailService {
         <p>Pour toute question, n'hésitez pas à me contacter.</p>
 
         ${options.signature || '<p>Cordialement</p>'}
-
-        <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 30px 0;">
-        <p style="font-size: 12px; color: #6B7280;">
-          Ce message a été envoyé automatiquement depuis notre système de gestion.
-        </p>
       </div>
     `;
 

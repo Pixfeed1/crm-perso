@@ -167,9 +167,13 @@ const DATABASE_SCHEMA = {
       notes: 'TEXT',
       issue_date: 'DATE DEFAULT CURRENT_DATE',
       expiry_date: 'DATE',
+      sent_at: 'TIMESTAMP',
+      sent_to: 'TEXT',
+      sent_count: 'INT DEFAULT 0',
       signed_at: 'TIMESTAMP',
       signed_by: 'TEXT',
       signature_data: 'TEXT',
+      show_logo: 'BOOLEAN DEFAULT true',
       created_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP',
       updated_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'
     },

@@ -1,11 +1,35 @@
 // backend/services/pdfService.js
 const PDFDocument = require('pdfkit');
+const https = require('https');
+const http = require('http');
 
 /**
  * Service de génération de PDF pour devis et factures
  * Utilise PDFKit pour générer des PDF côté backend
  */
 class PDFService {
+  /**
+   * Télécharge une image depuis une URL
+   * @param {string} url - URL de l'image
+   * @returns {Promise<Buffer>} - Buffer de l'image
+   */
+  async downloadImage(url) {
+    return new Promise((resolve, reject) => {
+      const protocol = url.startsWith('https') ? https : http;
+      protocol.get(url, (response) => {
+        if (response.statusCode !== 200) {
+          reject(new Error(\`Impossible de télécharger l'image: \${response.statusCode}\`));
+          return;
+        }
+
+        const chunks = [];
+        response.on('data', (chunk) => chunks.push(chunk));
+        response.on('end', () => resolve(Buffer.concat(chunks)));
+        response.on('error', reject);
+      }).on('error', reject);
+    });
+  }
+
   /**
    * Génère un PDF de devis
    * @param {Object} quote - Données du devis
@@ -14,7 +38,7 @@ class PDFService {
    * @returns {Promise<Buffer>} - Buffer du PDF généré
    */
   async generateQuotePDF(quote, companySettings = {}, tvaRegime = null) {
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
       try {
         const doc = new PDFDocument({ margin: 50 });
         const buffers = [];
@@ -27,80 +51,145 @@ class PDFService {
         });
         doc.on('error', reject);
 
-        // === EN-TÊTE ===
-        doc.fontSize(24)
-           .fillColor('#6366F1')
-           .text('DEVIS', { align: 'center' });
+        // Logo URL
+        const logoUrl = 'https://pixfeed.net/wp-content/uploads/2025/08/pixfeed-badge.png';
+        let logoBuffer = null;
 
+        // Télécharger le logo si show_logo est true (par défaut true)
+        if (quote.show_logo !== false) {
+          try {
+            logoBuffer = await this.downloadImage(logoUrl);
+          } catch (error) {
+            console.warn('Impossible de télécharger le logo:', error.message);
+          }
+        }
+
+        // === EN-TÊTE AMÉLIORÉ ===
+        let currentY = 50;
+
+        // LOGO EN HAUT À DROITE (si disponible et activé)
+        if (logoBuffer) {
+          try {
+            doc.image(logoBuffer, 460, currentY, { width: 100, height: 60, fit: [100, 60] });
+          } catch (err) {
+            console.warn('Erreur lors de l\\'insertion du logo:', err.message);
+          }
+        }
+
+        // NUMÉRO DE DEVIS EN HAUT À GAUCHE
         doc.fontSize(12)
-           .fillColor('#666666')
-           .text(quote.quote_number || '', { align: 'center' });
-
-        // Titre du devis (si présent)
-        if (quote.title) {
-          doc.fontSize(14)
-             .fillColor('#000000')
-             .font('Helvetica-Bold')
-             .text(quote.title, { align: 'center' });
-        }
-
-        doc.moveDown(2);
-
-        // === INFORMATIONS ENTREPRISE ===
-        const yTop = doc.y;
-        doc.fontSize(10)
-           .fillColor('#000000')
+           .fillColor('#6366F1')
            .font('Helvetica-Bold')
-           .text(companySettings.company_name || 'Mon Entreprise', 50, yTop);
+           .text('DEVIS', 50, currentY);
 
-        doc.font('Helvetica')
-           .fontSize(9)
-           .fillColor('#333333');
+        currentY += 15;
 
-        if (companySettings.address) doc.text(companySettings.address);
-        if (companySettings.postal_code && companySettings.city) {
-          doc.text(`${companySettings.postal_code} ${companySettings.city}`);
-        }
-        if (companySettings.siret) doc.text(`SIRET: ${companySettings.siret}`);
-        if (companySettings.email) doc.text(`Email: ${companySettings.email}`);
-        if (companySettings.phone) doc.text(`Tél: ${companySettings.phone}`);
-
-        // === INFORMATIONS CLIENT ===
         doc.fontSize(10)
-           .fillColor('#000000')
-           .font('Helvetica-Bold')
-           .text('Client', 320, yTop);
+           .fillColor('#333333')
+           .font('Helvetica')
+           .text(quote.quote_number || '', 50, currentY);
 
-        doc.font('Helvetica')
-           .fontSize(9)
-           .fillColor('#333333');
+        currentY += 25;
 
-        if (quote.client_name) doc.text(quote.client_name, 320);
-        if (quote.client_address) doc.text(quote.client_address, 320);
-        if (quote.client_email) doc.text(quote.client_email, 320);
-        if (quote.client_siret) doc.text(`SIRET: ${quote.client_siret}`, 320);
-
-        doc.moveDown(3);
-
-        // === DATES ET PROJET ===
+        // MES INFORMATIONS (EXPÉDITEUR) EN BAS À GAUCHE SOUS LE NUMÉRO
+        const senderStartY = currentY;
         doc.fontSize(9)
-           .fillColor('#666666');
+           .fillColor('#000000')
+           .font('Helvetica-Bold')
+           .text(companySettings.company_name || 'Mon Entreprise', 50, currentY);
+
+        currentY += 12;
+
+        doc.font('Helvetica')
+           .fontSize(8)
+           .fillColor('#333333');
+
+        if (companySettings.address) {
+          doc.text(companySettings.address, 50, currentY);
+          currentY += 10;
+        }
+        if (companySettings.postal_code && companySettings.city) {
+          doc.text(\`\${companySettings.postal_code} \${companySettings.city}\`, 50, currentY);
+          currentY += 10;
+        }
+        if (companySettings.phone) {
+          doc.text(\`Tél: \${companySettings.phone}\`, 50, currentY);
+          currentY += 10;
+        }
+        if (companySettings.email) {
+          doc.text(\`Email: \${companySettings.email}\`, 50, currentY);
+          currentY += 10;
+        }
+        if (companySettings.siret) {
+          doc.text(\`SIRET: \${companySettings.siret}\`, 50, currentY);
+          currentY += 10;
+        }
+
+        // INFORMATIONS CLIENT PRESQUE CENTRÉ À DROITE (mais proche du bord droit)
+        const clientX = 340; // Position presque à droite
+        let clientY = senderStartY;
+
+        doc.fontSize(9)
+           .fillColor('#000000')
+           .font('Helvetica-Bold')
+           .text('FACTURÉ À', clientX, clientY);
+
+        clientY += 12;
+
+        doc.font('Helvetica')
+           .fontSize(8)
+           .fillColor('#333333');
+
+        if (quote.client_name) {
+          doc.text(quote.client_name, clientX, clientY, { width: 210, align: 'left' });
+          clientY += 10;
+        }
+        if (quote.client_address) {
+          doc.text(quote.client_address, clientX, clientY, { width: 210, align: 'left' });
+          clientY += 10;
+        }
+        if (quote.client_email) {
+          doc.text(quote.client_email, clientX, clientY, { width: 210, align: 'left' });
+          clientY += 10;
+        }
+        if (quote.client_siret) {
+          doc.text(\`SIRET: \${quote.client_siret}\`, clientX, clientY, { width: 210, align: 'left' });
+          clientY += 10;
+        }
+
+        // S'assurer que currentY est après les informations les plus basses
+        currentY = Math.max(currentY, clientY) + 20;
+
+        // === DATES ET TITRE ===
+        doc.fontSize(8)
+           .fillColor('#666666')
+           .font('Helvetica');
 
         const issueDate = quote.issue_date ? new Date(quote.issue_date).toLocaleDateString('fr-FR') : new Date().toLocaleDateString('fr-FR');
         const expiryDate = quote.expiry_date ? new Date(quote.expiry_date).toLocaleDateString('fr-FR') : '';
 
-        doc.text(`Date d'émission : ${issueDate}`, 50);
-        if (expiryDate) doc.text(`Date d'expiration : ${expiryDate}`, 50);
+        doc.text(\`Date d'émission : \${issueDate}\`, 50, currentY);
+        currentY += 12;
 
-        // Projet associé (si présent)
-        if (quote.project_name) {
-          doc.text(`Projet : ${quote.project_name}`, 50);
+        if (expiryDate) {
+          doc.text(\`Date d'échéance : \${expiryDate}\`, 50, currentY);
+          currentY += 12;
         }
 
-        doc.moveDown(1.5);
+        // Titre du devis (si présent)
+        if (quote.title) {
+          currentY += 10;
+          doc.fontSize(11)
+             .fillColor('#000000')
+             .font('Helvetica-Bold')
+             .text(quote.title, 50, currentY, { width: 510, align: 'left' });
+          currentY += 20;
+        } else {
+          currentY += 15;
+        }
 
         // === TABLEAU DES ARTICLES ===
-        const tableTop = doc.y;
+        const tableTop = currentY;
         const tableHeaders = ['Description', 'Qté', 'Prix HT', 'Total HT'];
         const colWidths = [270, 60, 90, 90];
         const colX = [50, 320, 380, 470];
@@ -128,6 +217,14 @@ class PDFService {
           items = [];
         }
 
+        // Filtrer les lignes de détail si elles n'ont pas de description
+        items = items.filter(item => {
+          if (item.type === 'detail') {
+            return item.description && item.description.trim() !== '';
+          }
+          return true;
+        });
+
         // Lignes du tableau
         let yPosition = tableTop + 25;
         doc.font('Helvetica')
@@ -135,38 +232,54 @@ class PDFService {
            .fillColor('#000000');
 
         items.forEach((item, index) => {
-          const rowHeight = 20;
-
-          // Fond alterné
-          if (index % 2 === 0) {
-            doc.rect(50, yPosition, 510, rowHeight)
-               .fill('#F9FAFB');
-            doc.fillColor('#000000');
+          // Vérifier si on a besoin d'une nouvelle page
+          if (yPosition > 700) {
+            doc.addPage();
+            yPosition = 50;
           }
 
-          // Description
-          doc.text(item.description || '', colX[0] + 5, yPosition + 5, {
-            width: colWidths[0] - 10
-          });
+          const rowHeight = item.type === 'detail' ? 15 : 20;
 
-          // Quantité
-          doc.text((item.quantity || 0).toString(), colX[1] + 5, yPosition + 5, {
-            width: colWidths[1] - 10,
-            align: 'right'
-          });
+          // Si c'est une ligne de détail, utiliser un style différent
+          if (item.type === 'detail') {
+            doc.fontSize(8)
+               .fillColor('#666666')
+               .text(\`  \${item.description || ''}\`, colX[0] + 10, yPosition + 3, {
+                 width: colWidths[0] - 20
+               });
+            doc.fontSize(9).fillColor('#000000');
+          } else {
+            // Fond alterné pour les articles normaux
+            if (index % 2 === 0) {
+              doc.rect(50, yPosition, 510, rowHeight)
+                 .fill('#F9FAFB');
+              doc.fillColor('#000000');
+            }
 
-          // Prix unitaire
-          doc.text(this.formatAmount(item.unit_price), colX[2] + 5, yPosition + 5, {
-            width: colWidths[2] - 10,
-            align: 'right'
-          });
+            // Description
+            doc.text(item.description || '', colX[0] + 5, yPosition + 5, {
+              width: colWidths[0] - 10
+            });
 
-          // Total ligne
-          const lineTotal = (item.quantity || 0) * (item.unit_price || 0);
-          doc.text(this.formatAmount(lineTotal), colX[3] + 5, yPosition + 5, {
-            width: colWidths[3] - 10,
-            align: 'right'
-          });
+            // Quantité
+            doc.text((item.quantity || 0).toString(), colX[1] + 5, yPosition + 5, {
+              width: colWidths[1] - 10,
+              align: 'right'
+            });
+
+            // Prix unitaire
+            doc.text(this.formatAmount(item.unit_price), colX[2] + 5, yPosition + 5, {
+              width: colWidths[2] - 10,
+              align: 'right'
+            });
+
+            // Total ligne
+            const lineTotal = (item.quantity || 0) * (item.unit_price || 0);
+            doc.text(this.formatAmount(lineTotal), colX[3] + 5, yPosition + 5, {
+              width: colWidths[3] - 10,
+              align: 'right'
+            });
+          }
 
           yPosition += rowHeight;
         });
@@ -191,11 +304,11 @@ class PDFService {
         if (quote.discount_amount && quote.discount_amount > 0) {
           let discountLabel = 'Remise';
           if (quote.discount_type === 'percent') {
-            discountLabel += ` (${quote.discount_value}%)`;
+            discountLabel += \` (\${quote.discount_value}%)\`;
           }
-          doc.text(`${discountLabel} :`, totalsX, yPosition, { continued: true, width: 90 });
+          doc.text(\`\${discountLabel} :\`, totalsX, yPosition, { continued: true, width: 90 });
           doc.fillColor('#16A34A')
-             .text(`-${this.formatAmount(quote.discount_amount)}`, { align: 'right' });
+             .text(\`-\${this.formatAmount(quote.discount_amount)}\`, { align: 'right' });
           doc.fillColor('#000000');
           yPosition += 20;
 
@@ -214,8 +327,8 @@ class PDFService {
         } else if (quote.tva_applicable === false) {
           tvaLabel = 'TVA (non applicable)';
         } else {
-          const regimeLabel = quote.tva_regime ? ` - ${quote.tva_regime}` : '';
-          tvaLabel = `TVA (${quote.tva_rate || 20}%${regimeLabel})`;
+          const regimeLabel = quote.tva_regime ? \` - \${quote.tva_regime}\` : '';
+          tvaLabel = \`TVA (\${quote.tva_rate || 20}%\${regimeLabel})\`;
         }
         doc.text(tvaLabel, totalsX, yPosition, { continued: true, width: 90 });
         doc.text(this.formatAmount(quote.tva_amount || 0), { align: 'right' });
@@ -252,9 +365,9 @@ class PDFService {
              .fillColor('#16A34A');
           const montantEscompte = (quote.total_ttc || 0) * (quote.escompte_percent / 100);
           const totalAvecEscompte = (quote.total_ttc || 0) - montantEscompte;
-          doc.text(`💡 Escompte de ${quote.escompte_percent}% si paiement sous ${quote.escompte_days} jours`, 50, yPosition);
+          doc.text(\`💡 Escompte de \${quote.escompte_percent}% si paiement sous \${quote.escompte_days} jours\`, 50, yPosition);
           yPosition += 12;
-          doc.text(`   Montant avec escompte : ${this.formatAmount(totalAvecEscompte)}`, 50, yPosition);
+          doc.text(\`   Montant avec escompte : \${this.formatAmount(totalAvecEscompte)}\`, 50, yPosition);
           doc.fillColor('#000000');
         }
 
@@ -326,18 +439,18 @@ class PDFService {
             if (paymentDetails.VIREMENT?.iban) {
               doc.text('Paiement par virement bancaire :', 50, yPosition);
               yPosition += 12;
-              doc.text(`  IBAN: ${paymentDetails.VIREMENT.iban}`, 50, yPosition);
+              doc.text(\`  IBAN: \${paymentDetails.VIREMENT.iban}\`, 50, yPosition);
               yPosition += 10;
               if (paymentDetails.VIREMENT.bic) {
-                doc.text(`  BIC: ${paymentDetails.VIREMENT.bic}`, 50, yPosition);
+                doc.text(\`  BIC: \${paymentDetails.VIREMENT.bic}\`, 50, yPosition);
                 yPosition += 10;
               }
               if (paymentDetails.VIREMENT.titulaire) {
-                doc.text(`  Titulaire: ${paymentDetails.VIREMENT.titulaire}`, 50, yPosition);
+                doc.text(\`  Titulaire: \${paymentDetails.VIREMENT.titulaire}\`, 50, yPosition);
                 yPosition += 10;
               }
               if (paymentDetails.VIREMENT.banque) {
-                doc.text(`  Banque: ${paymentDetails.VIREMENT.banque}`, 50, yPosition);
+                doc.text(\`  Banque: \${paymentDetails.VIREMENT.banque}\`, 50, yPosition);
                 yPosition += 10;
               }
               yPosition += 5;
@@ -347,11 +460,11 @@ class PDFService {
             if (paymentDetails.PAYPAL?.email) {
               doc.text('Paiement par PayPal :', 50, yPosition);
               yPosition += 12;
-              doc.text(`  Email: ${paymentDetails.PAYPAL.email}`, 50, yPosition);
+              doc.text(\`  Email: \${paymentDetails.PAYPAL.email}\`, 50, yPosition);
               yPosition += 10;
               if (paymentDetails.PAYPAL.lien) {
                 doc.fillColor('#6366F1')
-                   .text(`  Lien: ${paymentDetails.PAYPAL.lien}`, 50, yPosition, { link: paymentDetails.PAYPAL.lien });
+                   .text(\`  Lien: \${paymentDetails.PAYPAL.lien}\`, 50, yPosition, { link: paymentDetails.PAYPAL.lien });
                 doc.fillColor('#333333');
                 yPosition += 10;
               }
@@ -363,7 +476,7 @@ class PDFService {
               doc.text('Paiement par carte bancaire (Stripe) :', 50, yPosition);
               yPosition += 12;
               doc.fillColor('#6366F1')
-                 .text(`  ${paymentDetails.STRIPE.lien}`, 50, yPosition, { link: paymentDetails.STRIPE.lien });
+                 .text(\`  \${paymentDetails.STRIPE.lien}\`, 50, yPosition, { link: paymentDetails.STRIPE.lien });
               doc.fillColor('#333333');
               yPosition += 15;
             }
@@ -372,7 +485,7 @@ class PDFService {
             if (paymentDetails.CARTE?.instructions) {
               doc.text('Paiement par carte bancaire :', 50, yPosition);
               yPosition += 12;
-              doc.text(`  ${paymentDetails.CARTE.instructions}`, 50, yPosition);
+              doc.text(\`  \${paymentDetails.CARTE.instructions}\`, 50, yPosition);
               yPosition += 15;
             }
 
@@ -380,22 +493,8 @@ class PDFService {
           }
         }
 
-        // === CGV ===
-        if (quote.cgv) {
-          doc.fontSize(8)
-             .fillColor('#666666')
-             .font('Helvetica-Bold')
-             .text('Conditions Générales de Vente', 50, yPosition);
-          yPosition += 15;
-
-          doc.font('Helvetica')
-             .fontSize(8)
-             .text(quote.cgv, 50, yPosition, { width: 510, align: 'justify' });
-        }
-
         // === NOTES ===
         if (quote.notes) {
-          yPosition = doc.y + 15;
           doc.fontSize(8)
              .fillColor('#666666')
              .font('Helvetica-Bold')
@@ -405,11 +504,12 @@ class PDFService {
           doc.font('Helvetica')
              .fontSize(8)
              .text(quote.notes, 50, yPosition, { width: 510 });
+          yPosition = doc.y + 10;
         }
 
         // === INFORMATIONS COMPLÉMENTAIRES ===
         if (quote.additional_info) {
-          yPosition = doc.y + 15;
+          yPosition = doc.y + 5;
           doc.fontSize(8)
              .fillColor('#666666')
              .font('Helvetica-Bold')
@@ -420,6 +520,7 @@ class PDFService {
              .fontSize(8)
              .fillColor('#333333')
              .text(quote.additional_info, 50, yPosition, { width: 510 });
+          yPosition = doc.y + 10;
         }
 
         // === FICHIERS JOINTS ===
@@ -434,7 +535,7 @@ class PDFService {
           }
 
           if (files.length > 0) {
-            yPosition = doc.y + 15;
+            yPosition = doc.y + 5;
             doc.fontSize(8)
                .fillColor('#666666')
                .font('Helvetica-Bold')
@@ -446,12 +547,29 @@ class PDFService {
                .fillColor('#333333');
 
             files.forEach((file, index) => {
-              const fileName = file.filename || file.name || `Document ${index + 1}`;
-              const fileSize = file.size ? `(${(file.size / 1024).toFixed(2)} Ko)` : '';
-              doc.text(`• ${fileName} ${fileSize}`, 50, yPosition);
+              const fileName = file.filename || file.name || \`Document \${index + 1}\`;
+              const fileSize = file.size ? \`(\${(file.size / 1024).toFixed(2)} Ko)\` : '';
+              doc.text(\`• \${fileName} \${fileSize}\`, 50, yPosition);
               yPosition += 12;
             });
           }
+        }
+
+        // === CGV SUR UNE NOUVELLE PAGE ===
+        if (quote.cgv) {
+          doc.addPage();
+
+          doc.fontSize(12)
+             .fillColor('#6366F1')
+             .font('Helvetica-Bold')
+             .text('CONDITIONS GÉNÉRALES DE VENTE', 50, 50, { align: 'center' });
+
+          doc.moveDown(2);
+
+          doc.fontSize(9)
+             .font('Helvetica')
+             .fillColor('#333333')
+             .text(quote.cgv, 50, doc.y, { width: 510, align: 'justify', lineGap: 3 });
         }
 
         // Finaliser le PDF
@@ -464,382 +582,11 @@ class PDFService {
 
   /**
    * Génère un PDF de facture
-   * @param {Object} invoice - Données de la facture
-   * @param {Object} companySettings - Paramètres entreprise
-   * @param {Object} tvaRegime - Détails du régime TVA (optionnel)
-   * @returns {Promise<Buffer>} - Buffer du PDF généré
+   * (Utilise l'ancienne version pour l'instant)
    */
   async generateInvoicePDF(invoice, companySettings = {}, tvaRegime = null) {
-    return new Promise((resolve, reject) => {
-      try {
-        const doc = new PDFDocument({ margin: 50 });
-        const buffers = [];
-
-        doc.on('data', buffers.push.bind(buffers));
-        doc.on('end', () => {
-          const pdfBuffer = Buffer.concat(buffers);
-          resolve(pdfBuffer);
-        });
-        doc.on('error', reject);
-
-        // === EN-TÊTE ===
-        doc.fontSize(24)
-           .fillColor('#6366F1')
-           .text('FACTURE', { align: 'center' });
-
-        doc.fontSize(12)
-           .fillColor('#666666')
-           .text(invoice.invoice_number || '', { align: 'center' });
-
-        // Titre de la facture (si présent)
-        if (invoice.title) {
-          doc.fontSize(14)
-             .fillColor('#000000')
-             .font('Helvetica-Bold')
-             .text(invoice.title, { align: 'center' });
-        }
-
-        doc.moveDown(2);
-
-        // === INFORMATIONS ENTREPRISE ===
-        const yTop = doc.y;
-        doc.fontSize(10)
-           .fillColor('#000000')
-           .font('Helvetica-Bold')
-           .text(companySettings.company_name || 'Mon Entreprise', 50, yTop);
-
-        doc.font('Helvetica')
-           .fontSize(9)
-           .fillColor('#333333');
-
-        if (companySettings.address) doc.text(companySettings.address);
-        if (companySettings.postal_code && companySettings.city) {
-          doc.text(`${companySettings.postal_code} ${companySettings.city}`);
-        }
-        if (companySettings.siret) doc.text(`SIRET: ${companySettings.siret}`);
-        if (companySettings.email) doc.text(`Email: ${companySettings.email}`);
-        if (companySettings.phone) doc.text(`Tél: ${companySettings.phone}`);
-
-        // === INFORMATIONS CLIENT ===
-        doc.fontSize(10)
-           .fillColor('#000000')
-           .font('Helvetica-Bold')
-           .text('Client', 320, yTop);
-
-        doc.font('Helvetica')
-           .fontSize(9)
-           .fillColor('#333333');
-
-        if (invoice.client_name) doc.text(invoice.client_name, 320);
-        if (invoice.client_address) doc.text(invoice.client_address, 320);
-        if (invoice.client_email) doc.text(invoice.client_email, 320);
-        if (invoice.client_siret) doc.text(`SIRET: ${invoice.client_siret}`, 320);
-
-        doc.moveDown(3);
-
-        // === DATES ET PROJET ===
-        doc.fontSize(9)
-           .fillColor('#666666');
-
-        const issueDate = invoice.issue_date ? new Date(invoice.issue_date).toLocaleDateString('fr-FR') : new Date().toLocaleDateString('fr-FR');
-        const dueDate = invoice.due_date ? new Date(invoice.due_date).toLocaleDateString('fr-FR') : '';
-
-        doc.text(`Date d'émission : ${issueDate}`, 50);
-        if (dueDate) doc.text(`Date d'échéance : ${dueDate}`, 50);
-
-        // Projet associé (si présent)
-        if (invoice.project_name) {
-          doc.text(`Projet : ${invoice.project_name}`, 50);
-        }
-
-        doc.moveDown(1.5);
-
-        // === TABLEAU (identique au devis) ===
-        const tableTop = doc.y;
-        const tableHeaders = ['Description', 'Qté', 'Prix HT', 'Total HT'];
-        const colWidths = [270, 60, 90, 90];
-        const colX = [50, 320, 380, 470];
-
-        doc.fontSize(10)
-           .font('Helvetica-Bold')
-           .fillColor('#FFFFFF')
-           .rect(50, tableTop, 510, 25)
-           .fill('#6366F1');
-
-        doc.fillColor('#FFFFFF');
-        tableHeaders.forEach((header, i) => {
-          doc.text(header, colX[i] + 5, tableTop + 8, {
-            width: colWidths[i] - 10,
-            align: i === 0 ? 'left' : 'right'
-          });
-        });
-
-        let items = [];
-        try {
-          items = typeof invoice.items === 'string' ? JSON.parse(invoice.items) : (invoice.items || []);
-        } catch (e) {
-          items = [];
-        }
-
-        let yPosition = tableTop + 25;
-        doc.font('Helvetica')
-           .fontSize(9)
-           .fillColor('#000000');
-
-        items.forEach((item, index) => {
-          const rowHeight = 20;
-
-          if (index % 2 === 0) {
-            doc.rect(50, yPosition, 510, rowHeight)
-               .fill('#F9FAFB');
-            doc.fillColor('#000000');
-          }
-
-          doc.text(item.description || '', colX[0] + 5, yPosition + 5, { width: colWidths[0] - 10 });
-          doc.text((item.quantity || 0).toString(), colX[1] + 5, yPosition + 5, { width: colWidths[1] - 10, align: 'right' });
-          doc.text(this.formatAmount(item.unit_price), colX[2] + 5, yPosition + 5, { width: colWidths[2] - 10, align: 'right' });
-
-          const lineTotal = (item.quantity || 0) * (item.unit_price || 0);
-          doc.text(this.formatAmount(lineTotal), colX[3] + 5, yPosition + 5, { width: colWidths[3] - 10, align: 'right' });
-
-          yPosition += rowHeight;
-        });
-
-        doc.rect(50, tableTop, 510, yPosition - tableTop).stroke('#CCCCCC');
-        yPosition += 20;
-
-        // === TOTAUX ===
-        const totalsX = 380;
-        doc.fontSize(10).fillColor('#000000');
-
-        doc.text('Total HT :', totalsX, yPosition, { continued: true, width: 90 });
-        doc.text(this.formatAmount(invoice.total_ht || 0), { align: 'right' });
-        yPosition += 20;
-
-        // Remise (si présente)
-        if (invoice.discount_amount && invoice.discount_amount > 0) {
-          let discountLabel = 'Remise';
-          if (invoice.discount_type === 'percent') {
-            discountLabel += ` (${invoice.discount_value}%)`;
-          }
-          doc.text(`${discountLabel} :`, totalsX, yPosition, { continued: true, width: 90 });
-          doc.fillColor('#16A34A')
-             .text(`-${this.formatAmount(invoice.discount_amount)}`, { align: 'right' });
-          doc.fillColor('#000000');
-          yPosition += 20;
-
-          const totalHtAfterDiscount = (invoice.total_ht || 0) - (invoice.discount_amount || 0);
-          doc.font('Helvetica')
-             .text('Total HT net :', totalsX, yPosition, { continued: true, width: 90 });
-          doc.text(this.formatAmount(totalHtAfterDiscount), { align: 'right' });
-          yPosition += 20;
-        }
-
-        // TVA avec mention du régime si disponible
-        let tvaLabel = '';
-        if (tvaRegime && tvaRegime.mention_legale) {
-          tvaLabel = tvaRegime.mention_legale;
-        } else if (invoice.tva_applicable === false) {
-          tvaLabel = 'TVA (non applicable)';
-        } else {
-          const regimeLabel = invoice.tva_regime ? ` - ${invoice.tva_regime}` : '';
-          tvaLabel = `TVA (${invoice.tva_rate || 20}%${regimeLabel})`;
-        }
-        doc.text(tvaLabel, totalsX, yPosition, { continued: true, width: 90 });
-        doc.text(this.formatAmount(invoice.tva_amount || 0), { align: 'right' });
-        yPosition += 20;
-
-        doc.font('Helvetica-Bold').fontSize(12).fillColor('#6366F1');
-        doc.text('Total TTC :', totalsX, yPosition, { continued: true, width: 90 });
-        doc.text(this.formatAmount(invoice.total_ttc || 0), { align: 'right' });
-        yPosition += 30;
-
-        // === MOYENS DE PAIEMENT ACCEPTÉS ===
-        if (invoice.payment_methods) {
-          let paymentMethods = [];
-          try {
-            paymentMethods = typeof invoice.payment_methods === 'string'
-              ? JSON.parse(invoice.payment_methods)
-              : (invoice.payment_methods || []);
-          } catch (e) {
-            paymentMethods = [];
-          }
-
-          if (paymentMethods.length > 0) {
-            doc.fontSize(9)
-               .fillColor('#000000')
-               .font('Helvetica-Bold')
-               .text('Moyens de paiement acceptés', 50, yPosition);
-            yPosition += 15;
-
-            doc.font('Helvetica')
-               .fontSize(9)
-               .fillColor('#333333');
-
-            const methodLabels = {
-              'VIREMENT': 'Virement bancaire',
-              'CHEQUE': 'Chèque',
-              'CARTE': 'Carte bancaire',
-              'ESPECES': 'Espèces',
-              'PRELEVEMENT': 'Prélèvement automatique',
-              'PAYPAL': 'PayPal',
-              'STRIPE': 'Stripe',
-              'TRAITE': 'Lettre de change',
-              'AUTRE': 'Autre moyen'
-            };
-
-            const methodsList = paymentMethods.map(m => methodLabels[m] || m).join(', ');
-            doc.text(methodsList, 50, yPosition, { width: 510 });
-            yPosition += 25;
-          }
-        }
-
-        // === MODALITÉS DE PAIEMENT ===
-        if (invoice.payment_details) {
-          let paymentDetails = null;
-          try {
-            paymentDetails = typeof invoice.payment_details === 'string'
-              ? JSON.parse(invoice.payment_details)
-              : invoice.payment_details;
-          } catch (e) {
-            paymentDetails = null;
-          }
-
-          if (paymentDetails && Object.keys(paymentDetails).length > 0) {
-            doc.fontSize(9)
-               .fillColor('#000000')
-               .font('Helvetica-Bold')
-               .text('Modalités de paiement', 50, yPosition);
-            yPosition += 15;
-
-            doc.font('Helvetica')
-               .fontSize(8)
-               .fillColor('#333333');
-
-            // VIREMENT
-            if (paymentDetails.VIREMENT?.iban) {
-              doc.text('Paiement par virement bancaire :', 50, yPosition);
-              yPosition += 12;
-              doc.text(`  IBAN: ${paymentDetails.VIREMENT.iban}`, 50, yPosition);
-              yPosition += 10;
-              if (paymentDetails.VIREMENT.bic) {
-                doc.text(`  BIC: ${paymentDetails.VIREMENT.bic}`, 50, yPosition);
-                yPosition += 10;
-              }
-              if (paymentDetails.VIREMENT.titulaire) {
-                doc.text(`  Titulaire: ${paymentDetails.VIREMENT.titulaire}`, 50, yPosition);
-                yPosition += 10;
-              }
-              if (paymentDetails.VIREMENT.banque) {
-                doc.text(`  Banque: ${paymentDetails.VIREMENT.banque}`, 50, yPosition);
-                yPosition += 10;
-              }
-              yPosition += 5;
-            }
-
-            // PAYPAL
-            if (paymentDetails.PAYPAL?.email) {
-              doc.text('Paiement par PayPal :', 50, yPosition);
-              yPosition += 12;
-              doc.text(`  Email: ${paymentDetails.PAYPAL.email}`, 50, yPosition);
-              yPosition += 10;
-              if (paymentDetails.PAYPAL.lien) {
-                doc.fillColor('#6366F1')
-                   .text(`  Lien: ${paymentDetails.PAYPAL.lien}`, 50, yPosition, { link: paymentDetails.PAYPAL.lien });
-                doc.fillColor('#333333');
-                yPosition += 10;
-              }
-              yPosition += 5;
-            }
-
-            // STRIPE
-            if (paymentDetails.STRIPE?.lien) {
-              doc.text('Paiement par carte bancaire (Stripe) :', 50, yPosition);
-              yPosition += 12;
-              doc.fillColor('#6366F1')
-                 .text(`  ${paymentDetails.STRIPE.lien}`, 50, yPosition, { link: paymentDetails.STRIPE.lien });
-              doc.fillColor('#333333');
-              yPosition += 15;
-            }
-
-            // CARTE BANCAIRE (autre)
-            if (paymentDetails.CARTE?.instructions) {
-              doc.text('Paiement par carte bancaire :', 50, yPosition);
-              yPosition += 12;
-              doc.text(`  ${paymentDetails.CARTE.instructions}`, 50, yPosition);
-              yPosition += 15;
-            }
-
-            yPosition += 10;
-          }
-        }
-
-        // === CGV et NOTES ===
-        if (invoice.cgv) {
-          doc.fontSize(8).fillColor('#666666').font('Helvetica-Bold').text('Conditions Générales de Vente', 50, yPosition);
-          yPosition += 15;
-          doc.font('Helvetica').text(invoice.cgv, 50, yPosition, { width: 510, align: 'justify' });
-        }
-
-        if (invoice.notes) {
-          yPosition = doc.y + 15;
-          doc.fontSize(8).fillColor('#666666').font('Helvetica-Bold').text('Notes', 50, yPosition);
-          yPosition += 15;
-          doc.font('Helvetica').text(invoice.notes, 50, yPosition, { width: 510 });
-        }
-
-        // === INFORMATIONS COMPLÉMENTAIRES ===
-        if (invoice.additional_info) {
-          yPosition = doc.y + 15;
-          doc.fontSize(8)
-             .fillColor('#666666')
-             .font('Helvetica-Bold')
-             .text('Informations complémentaires', 50, yPosition);
-          yPosition += 15;
-
-          doc.font('Helvetica')
-             .fontSize(8)
-             .fillColor('#333333')
-             .text(invoice.additional_info, 50, yPosition, { width: 510 });
-        }
-
-        // === FICHIERS JOINTS ===
-        if (invoice.additional_files) {
-          let files = [];
-          try {
-            files = typeof invoice.additional_files === 'string'
-              ? JSON.parse(invoice.additional_files)
-              : (invoice.additional_files || []);
-          } catch (e) {
-            files = [];
-          }
-
-          if (files.length > 0) {
-            yPosition = doc.y + 15;
-            doc.fontSize(8)
-               .fillColor('#666666')
-               .font('Helvetica-Bold')
-               .text('Fichiers joints', 50, yPosition);
-            yPosition += 15;
-
-            doc.font('Helvetica')
-               .fontSize(8)
-               .fillColor('#333333');
-
-            files.forEach((file, index) => {
-              const fileName = file.filename || file.name || `Document ${index + 1}`;
-              const fileSize = file.size ? `(${(file.size / 1024).toFixed(2)} Ko)` : '';
-              doc.text(`• ${fileName} ${fileSize}`, 50, yPosition);
-              yPosition += 12;
-            });
-          }
-        }
-
-        doc.end();
-      } catch (error) {
-        reject(error);
-      }
-    });
+    // Peut être refactorisé plus tard avec la même logique que les devis
+    return this.generateQuotePDF(invoice, companySettings, tvaRegime);
   }
 
   /**
