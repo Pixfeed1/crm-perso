@@ -438,7 +438,7 @@ const Settings = () => {
               <p className="text-sm text-gray-400 mb-4">
                 Personnalisez votre signature pour les emails envoyés depuis l'application
               </p>
-              <div className="bg-white rounded-lg">
+              <div className="bg-white rounded-lg [&_.ql-editor]:text-black [&_.ql-editor]:text-base [&_.ql-editor_*]:text-black">
                 <ReactQuill
                   theme="snow"
                   value={formData.email_signature || ''}
