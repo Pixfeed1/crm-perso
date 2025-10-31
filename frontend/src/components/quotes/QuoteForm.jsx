@@ -316,6 +316,23 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
     }
   };
 
+  // Nettoyage des données avant envoi
+  // Convertit les chaînes vides en null pour les champs numériques/dates
+  // Évite l'erreur PostgreSQL "invalid input syntax for integer: ''"
+  const sanitizeFormData = (data) => {
+    return {
+      ...data,
+      client_id: data.client_id === '' ? null : data.client_id,
+      project_id: data.project_id === '' ? null : data.project_id,
+      validity_days: data.validity_days === '' ? null : data.validity_days,
+      discount_value: data.discount_value === '' ? null : data.discount_value,
+      acompte_value: data.acompte_value === '' ? null : data.acompte_value,
+      escompte_percent: data.escompte_percent === '' ? null : data.escompte_percent,
+      escompte_days: data.escompte_days === '' ? null : data.escompte_days,
+      tva_rate: data.tva_rate === '' ? null : data.tva_rate
+    };
+  };
+
   // Soumission
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -332,7 +349,9 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
       return;
     }
 
-    onSave(formData);
+    // Nettoyer les données avant l'envoi
+    const cleanedData = sanitizeFormData(formData);
+    onSave(cleanedData);
   };
 
   // Render step content

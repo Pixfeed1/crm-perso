@@ -1,6 +1,17 @@
 // backend/models/quoteModel.js
 
 /**
+ * Convertit les chaînes vides en NULL pour les champs numériques/dates
+ * Utilisé pour éviter l'erreur PostgreSQL "invalid input syntax for integer: ''"
+ */
+const sanitizeValue = (value) => {
+  if (value === '' || value === undefined) {
+    return null;
+  }
+  return value;
+};
+
+/**
  * Génère un numéro de devis unique
  */
 const generateQuoteNumber = async (db) => {
@@ -177,13 +188,41 @@ const createQuote = async (db, quoteData) => {
       `;
 
       const params = [
-        quote_number, client_id, client_name, client_email, client_address, client_siret,
-        'draft', total_ht, total_ttc, tva_rate, tva_amount, tva_applicable,
-        JSON.stringify(items), cgv, cgv_type, cgv_pdf, acompte_type, acompte_value, acompte_amount,
-        escompte_percent, escompte_days, validity_days, notes,
-        issue_date, expiry_date,
-        title, project_id, discount_type, discount_value, discount_amount,
-        JSON.stringify(payment_methods), JSON.stringify(payment_details), tva_regime, additional_info, JSON.stringify(additional_files)
+        quote_number,
+        sanitizeValue(client_id),
+        client_name,
+        sanitizeValue(client_email),
+        sanitizeValue(client_address),
+        sanitizeValue(client_siret),
+        'draft',
+        total_ht,
+        total_ttc,
+        tva_rate,
+        tva_amount,
+        tva_applicable,
+        JSON.stringify(items),
+        sanitizeValue(cgv),
+        cgv_type,
+        sanitizeValue(cgv_pdf),
+        acompte_type,
+        sanitizeValue(acompte_value),
+        acompte_amount,
+        sanitizeValue(escompte_percent),
+        sanitizeValue(escompte_days),
+        sanitizeValue(validity_days),
+        sanitizeValue(notes),
+        issue_date,
+        expiry_date,
+        sanitizeValue(title),
+        sanitizeValue(project_id),
+        discount_type,
+        sanitizeValue(discount_value),
+        discount_amount,
+        JSON.stringify(payment_methods),
+        JSON.stringify(payment_details),
+        tva_regime,
+        sanitizeValue(additional_info),
+        JSON.stringify(additional_files)
       ];
 
       db.pool.query(query, params, (err, result) => {
@@ -278,12 +317,38 @@ const updateQuote = (db, id, quoteData) => {
     `;
 
     const params = [
-      client_id, client_name, client_email, client_address, client_siret,
-      status, total_ht, total_ttc, tva_rate, tva_amount, tva_applicable,
-      JSON.stringify(items), cgv, cgv_type, cgv_pdf, acompte_type, acompte_value, acompte_amount,
-      escompte_percent, escompte_days, validity_days, notes,
-      title, project_id, discount_type, discount_value, discount_amount,
-      JSON.stringify(payment_methods), JSON.stringify(payment_details), tva_regime, additional_info, JSON.stringify(additional_files),
+      sanitizeValue(client_id),
+      client_name,
+      sanitizeValue(client_email),
+      sanitizeValue(client_address),
+      sanitizeValue(client_siret),
+      status,
+      total_ht,
+      total_ttc,
+      tva_rate,
+      tva_amount,
+      tva_applicable,
+      JSON.stringify(items),
+      sanitizeValue(cgv),
+      cgv_type,
+      sanitizeValue(cgv_pdf),
+      acompte_type,
+      sanitizeValue(acompte_value),
+      acompte_amount,
+      sanitizeValue(escompte_percent),
+      sanitizeValue(escompte_days),
+      sanitizeValue(validity_days),
+      sanitizeValue(notes),
+      sanitizeValue(title),
+      sanitizeValue(project_id),
+      discount_type,
+      sanitizeValue(discount_value),
+      discount_amount,
+      JSON.stringify(payment_methods),
+      JSON.stringify(payment_details),
+      tva_regime,
+      sanitizeValue(additional_info),
+      JSON.stringify(additional_files),
       id
     ];
 
