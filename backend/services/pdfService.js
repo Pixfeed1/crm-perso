@@ -76,20 +76,13 @@ class PDFService {
           }
         }
 
-        // NUMÉRO DE DEVIS EN HAUT À GAUCHE
-        doc.fontSize(12)
-           .fillColor('#6366F1')
-           .font('Helvetica-Bold')
-           .text('DEVIS', 50, currentY);
-
-        currentY += 15;
-
-        doc.fontSize(10)
+        // DEVIS ET NUMÉRO SUR UNE SEULE LIGNE EN HAUT À GAUCHE
+        doc.fontSize(11)
            .fillColor('#333333')
-           .font('Helvetica')
-           .text(quote.quote_number || '', 50, currentY);
+           .font('Helvetica-Bold')
+           .text(`DEVIS N° ${quote.quote_number || ''}`, 50, currentY);
 
-        currentY += 25;
+        currentY += 20;
 
         // MES INFORMATIONS (EXPÉDITEUR) EN BAS À GAUCHE SOUS LE NUMÉRO
         const senderStartY = currentY;

@@ -172,11 +172,11 @@ class EmailService {
 
         <p>Veuillez trouver ci-joint votre devis n°<strong>${quote.quote_number}</strong>.</p>
 
-        ${customMessage ? `<div style="background: #F3F4F6; padding: 15px; border-radius: 8px; margin: 20px 0;">
+        ${customMessage ? `<div style="margin: 20px 0;">
           ${customMessage.replace(/\n/g, '<br>')}
         </div>` : ''}
 
-        <div style="background: #EEF2FF; padding: 15px; border-radius: 8px; margin: 20px 0;">
+        <div style="margin: 20px 0;">
           <p style="margin: 5px 0;"><strong>Montant total TTC :</strong> ${this.formatAmount(quote.total_ttc)}</p>
           <p style="margin: 5px 0;"><strong>Validité :</strong> ${quote.validity_days || 30} jours</p>
           ${quote.expiry_date ? `<p style="margin: 5px 0;"><strong>Date d'expiration :</strong> ${this.formatDate(quote.expiry_date)}</p>` : ''}
@@ -227,11 +227,11 @@ class EmailService {
 
         <p>Veuillez trouver ci-joint votre facture n°<strong>${invoice.invoice_number}</strong>.</p>
 
-        ${customMessage ? `<div style="background: #F3F4F6; padding: 15px; border-radius: 8px; margin: 20px 0;">
+        ${customMessage ? `<div style="margin: 20px 0;">
           ${customMessage.replace(/\n/g, '<br>')}
         </div>` : ''}
 
-        <div style="background: #EEF2FF; padding: 15px; border-radius: 8px; margin: 20px 0;">
+        <div style="margin: 20px 0;">
           <p style="margin: 5px 0;"><strong>Montant total TTC :</strong> ${this.formatAmount(invoice.total_ttc)}</p>
           ${invoice.due_date ? `<p style="margin: 5px 0;"><strong>Date d'échéance :</strong> ${this.formatDate(invoice.due_date)}</p>` : ''}
           <p style="margin: 5px 0;"><strong>Statut :</strong> ${this.getPaymentStatusLabel(invoice.payment_status)}</p>
