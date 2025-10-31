@@ -1,6 +1,6 @@
 // scripts/createUser.js
 const userModel = require('../models/userModel');
-const bcrypt = require('bcryptjs');
+const bcrypt = require('bcrypt');
 
 async function createTestUser() {
   try {

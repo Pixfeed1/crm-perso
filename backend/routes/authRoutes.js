@@ -69,6 +69,36 @@ try {
         console.log('[AUTH ROUTES] Route GET /check fallback configurée');
     }
 
+    // Route pour demander la réinitialisation du mot de passe
+    if (typeof authController.forgotPassword === 'function') {
+        router.post('/forgot-password', (req, res, next) => {
+            console.log('[AUTH ROUTES] Demande de réinitialisation de mot de passe pour:', req.body.email || 'Email non fourni');
+            next();
+        }, authController.forgotPassword);
+        console.log('[AUTH ROUTES] Route POST /forgot-password configurée');
+    } else {
+        router.post('/forgot-password', (req, res) => {
+            console.error('[AUTH ROUTES] Erreur: La fonction forgotPassword n\'est pas disponible');
+            res.status(500).json({ message: 'Erreur serveur: fonction de réinitialisation non disponible' });
+        });
+        console.log('[AUTH ROUTES] Route POST /forgot-password fallback configurée');
+    }
+
+    // Route pour réinitialiser le mot de passe
+    if (typeof authController.resetPassword === 'function') {
+        router.post('/reset-password', (req, res, next) => {
+            console.log('[AUTH ROUTES] Réinitialisation du mot de passe demandée');
+            next();
+        }, authController.resetPassword);
+        console.log('[AUTH ROUTES] Route POST /reset-password configurée');
+    } else {
+        router.post('/reset-password', (req, res) => {
+            console.error('[AUTH ROUTES] Erreur: La fonction resetPassword n\'est pas disponible');
+            res.status(500).json({ message: 'Erreur serveur: fonction de réinitialisation non disponible' });
+        });
+        console.log('[AUTH ROUTES] Route POST /reset-password fallback configurée');
+    }
+
     // Logs de fin de requête
     router.use((req, res, next) => {
         const oldSend = res.send;

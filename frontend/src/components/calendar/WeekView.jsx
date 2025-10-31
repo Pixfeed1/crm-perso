@@ -1,6 +1,7 @@
 // src/components/calendar/WeekView.jsx
 import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
+import { FiUsers, FiPhone, FiClock, FiCheck, FiHome, FiClipboard, FiCalendar, FiMapPin } from 'react-icons/fi';
 
 const WeekView = ({ 
   currentDate, 
@@ -101,11 +102,11 @@ const WeekView = ({
   
   // Configuration des icônes de catégorie
   const categoryIcons = {
-    'meeting': '👥',
-    'call': '📞',
-    'deadline': '⏰',
-    'task': '✓',
-    'personal': '🏠'
+    'meeting': <FiUsers />,
+    'call': <FiPhone />,
+    'deadline': <FiClock />,
+    'task': <FiCheck />,
+    'personal': <FiHome />
   };
   
   // Configuration des couleurs de priorité
@@ -206,15 +207,15 @@ const WeekView = ({
                       whileTap={{ scale: 0.98 }}
                       onClick={() => onSelectEvent(event)}
                     >
-                      <div className="text-xs font-medium truncate">
-                        {event.all_day ? '📅 Toute la journée' : formatEventTime(event.start_datetime)}
+                      <div className="text-xs font-medium truncate flex items-center gap-1">
+                        {event.all_day ? <><FiCalendar /> Toute la journée</> : formatEventTime(event.start_datetime)}
                       </div>
                       <div className="font-medium truncate text-sm">
                         {event.title}
                       </div>
                       {position.height > 15 && (
-                        <div className="text-xs mt-1 truncate">
-                          {categoryIcons[event.category] || '📋'} {event.location || ''}
+                        <div className="text-xs mt-1 truncate flex items-center gap-1">
+                          {categoryIcons[event.category] || <FiClipboard />} {event.location || ''}
                         </div>
                       )}
                     </motion.div>
@@ -278,12 +279,12 @@ const WeekView = ({
                   </div>
                 </div>
                 {event.location && (
-                  <div className="text-xs mt-1 flex items-center">
-                    <span className="mr-1">📍</span> {event.location}
+                  <div className="text-xs mt-1 flex items-center gap-1">
+                    <FiMapPin /> {event.location}
                   </div>
                 )}
-                <div className="text-xs mt-1 flex items-center">
-                  <span className="mr-1">{categoryIcons[event.category] || '📋'}</span>
+                <div className="text-xs mt-1 flex items-center gap-1">
+                  {categoryIcons[event.category] || <FiClipboard />}
                   {event.category === 'meeting' ? 'Réunion' : 
                    event.category === 'call' ? 'Appel' :
                    event.category === 'deadline' ? 'Échéance' :
@@ -295,7 +296,7 @@ const WeekView = ({
             
             {getEventsForDay(daysInWeek.find(d => d.isToday)?.date || daysInWeek[0].date).length === 0 && (
               <div className="text-center text-gray-400 py-6">
-                <div className="text-3xl mb-2">📅</div>
+                <div className="text-3xl mb-2"><FiCalendar /></div>
                 <p>Aucun événement pour ce jour</p>
               </div>
             )}

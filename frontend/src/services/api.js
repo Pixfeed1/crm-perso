@@ -200,14 +200,82 @@ export const leadsAPI = {
   deleteContact: (leadId, contactId) => {
     console.log(`Appel API: suppression du contact ID ${contactId} du lead ID ${leadId}`);
     return apiRequest(`/leads/${leadId}/contacts/${contactId}`, 'DELETE');
+  },
+  // Liaison contact-client
+  createClientFromContact: (leadId, contactId, data) => {
+    console.log(`Appel API: création d'un client depuis le contact ID ${contactId} du lead ID ${leadId}`, data);
+    return apiRequest(`/leads/${leadId}/contacts/${contactId}/create-client`, 'POST', data);
+  },
+  linkContactToClient: (leadId, contactId, clientId) => {
+    console.log(`Appel API: liaison du contact ID ${contactId} au client ID ${clientId}`);
+    return apiRequest(`/leads/${leadId}/contacts/${contactId}/link-client`, 'POST', { clientId });
+  },
+  unlinkContactFromClient: (leadId, contactId) => {
+    console.log(`Appel API: déliaison du contact ID ${contactId} de son client`);
+    return apiRequest(`/leads/${leadId}/contacts/${contactId}/unlink-client`, 'DELETE');
+  },
+  // Interactions
+  getInteractions: (leadId) => {
+    console.log(`Appel API: récupération des interactions du lead ID ${leadId}`);
+    return apiRequest(`/leads/${leadId}/interactions`);
+  },
+  addInteraction: (leadId, data) => {
+    console.log(`Appel API: ajout d'une interaction au lead ID ${leadId}`, data);
+    return apiRequest(`/leads/${leadId}/interactions`, 'POST', data);
+  },
+  updateInteraction: (interactionId, data) => {
+    console.log(`Appel API: mise à jour de l'interaction ID ${interactionId}`, data);
+    return apiRequest(`/leads/interactions/${interactionId}`, 'PUT', data);
+  },
+  deleteInteraction: (interactionId) => {
+    console.log(`Appel API: suppression de l'interaction ID ${interactionId}`);
+    return apiRequest(`/leads/interactions/${interactionId}`, 'DELETE');
+  },
+  // Kanban
+  getKanbanStats: () => {
+    console.log('Appel API: récupération des statistiques Kanban');
+    return apiRequest('/leads/kanban/stats');
+  }
+};
+
+// ===== CLIENTS =====
+export const clientsAPI = {
+  getAll: () => {
+    console.log('Appel API: récupération de tous les clients');
+    return apiRequest('/clients');
+  },
+  getById: (id) => {
+    console.log(`Appel API: récupération du client ID ${id}`);
+    return apiRequest(`/clients/${id}`);
+  },
+  create: (data) => {
+    console.log('Appel API: création d\'un nouveau client', data);
+    return apiRequest('/clients', 'POST', data);
+  },
+  update: (id, data) => {
+    console.log(`Appel API: mise à jour du client ID ${id}`, data);
+    return apiRequest(`/clients/${id}`, 'PUT', data);
+  },
+  delete: (id) => {
+    console.log(`Appel API: suppression du client ID ${id}`);
+    return apiRequest(`/clients/${id}`, 'DELETE');
+  },
+  convertFromLead: (leadId, data = {}) => {
+    console.log(`Appel API: conversion du lead ID ${leadId} en client`, data);
+    return apiRequest(`/clients/convert/${leadId}`, 'POST', data);
+  },
+  getStats: () => {
+    console.log('Appel API: récupération des statistiques des clients');
+    return apiRequest('/clients/stats');
   }
 };
 
 // ===== ÉVÉNEMENTS =====
 export const eventsAPI = {
-  getAll: () => {
-    console.log('Appel API: récupération de tous les événements');
-    return apiRequest('/events');
+  getAll: (params = {}) => {
+    console.log('Appel API: récupération de tous les événements', params);
+    const queryString = new URLSearchParams(params).toString();
+    return apiRequest(`/events${queryString ? `?${queryString}` : ''}`);
   },
   getById: (id) => {
     console.log(`Appel API: récupération de l'événement ID ${id}`);
@@ -217,6 +285,10 @@ export const eventsAPI = {
     console.log('Appel API: création d\'un nouvel événement', data);
     return apiRequest('/events', 'POST', data);
   },
+  createRecurring: (data) => {
+    console.log('Appel API: création d\'un événement récurrent', data);
+    return apiRequest('/events/recurring', 'POST', data);
+  },
   update: (id, data) => {
     console.log(`Appel API: mise à jour de l'événement ID ${id}`, data);
     return apiRequest(`/events/${id}`, 'PUT', data);
@@ -224,6 +296,42 @@ export const eventsAPI = {
   delete: (id) => {
     console.log(`Appel API: suppression de l'événement ID ${id}`);
     return apiRequest(`/events/${id}`, 'DELETE');
+  },
+  // Routes pour les événements récurrents
+  getOccurrences: (id, startDate, endDate) => {
+    console.log(`Appel API: récupération des occurrences de l'événement ID ${id}`);
+    return apiRequest(`/events/${id}/occurrences?start_date=${startDate}&end_date=${endDate}`);
+  },
+  addException: (id, exceptionDate) => {
+    console.log(`Appel API: ajout d'une exception à l'événement ID ${id}`);
+    return apiRequest(`/events/${id}/exceptions`, 'POST', { exception_date: exceptionDate });
+  },
+  removeException: (id, exceptionDate) => {
+    console.log(`Appel API: suppression d'une exception de l'événement ID ${id}`);
+    return apiRequest(`/events/${id}/exceptions`, 'DELETE', { exception_date: exceptionDate });
+  },
+  modifyOccurrence: (id, exceptionDate, modifiedData) => {
+    console.log(`Appel API: modification d'une occurrence de l'événement ID ${id}`);
+    return apiRequest(`/events/${id}/modify-occurrence`, 'POST', {
+      exception_date: exceptionDate,
+      ...modifiedData
+    });
+  },
+  getExceptions: (id) => {
+    console.log(`Appel API: récupération des exceptions de l'événement ID ${id}`);
+    return apiRequest(`/events/${id}/exceptions`);
+  },
+  getModifiedOccurrences: (id) => {
+    console.log(`Appel API: récupération des occurrences modifiées de l'événement ID ${id}`);
+    return apiRequest(`/events/${id}/modified-occurrences`);
+  },
+  checkConflicts: (eventData) => {
+    console.log('Appel API: vérification des conflits', eventData);
+    return apiRequest('/events/check-conflicts', 'POST', eventData);
+  },
+  suggestSlots: (eventData, options = {}) => {
+    console.log('Appel API: suggestion de créneaux alternatifs', eventData, options);
+    return apiRequest('/events/suggest-slots', 'POST', { eventData, options });
   }
 };
 
@@ -351,3 +459,395 @@ export const dashboardAPI = {
     return apiRequest('/dashboard');
   }
 };
+
+// ===== RAPPELS =====
+export const remindersAPI = {
+  // Récupération
+  getActive: () => {
+    console.log('Appel API: récupération des rappels actifs');
+    return apiRequest('/reminders/active');
+  },
+  getOverdue: () => {
+    console.log('Appel API: récupération des rappels en retard');
+    return apiRequest('/reminders/overdue');
+  },
+  getUpcoming: (days = 7) => {
+    console.log(`Appel API: récupération des rappels à venir (${days} jours)`);
+    return apiRequest(`/reminders/upcoming?days=${days}`);
+  },
+  getByEntity: (entityType, entityId) => {
+    console.log(`Appel API: récupération des rappels pour ${entityType} ID ${entityId}`);
+    return apiRequest(`/reminders/entity/${entityType}/${entityId}`);
+  },
+  getById: (id) => {
+    console.log(`Appel API: récupération du rappel ID ${id}`);
+    return apiRequest(`/reminders/${id}`);
+  },
+  getCount: () => {
+    console.log('Appel API: récupération du nombre de rappels');
+    return apiRequest('/reminders/count');
+  },
+
+  // Création
+  create: (data) => {
+    console.log('Appel API: création d\'un nouveau rappel', data);
+    return apiRequest('/reminders', 'POST', data);
+  },
+
+  // Mise à jour
+  update: (id, data) => {
+    console.log(`Appel API: mise à jour du rappel ID ${id}`, data);
+    return apiRequest(`/reminders/${id}`, 'PUT', data);
+  },
+  complete: (id) => {
+    console.log(`Appel API: marquage du rappel ID ${id} comme complété`);
+    return apiRequest(`/reminders/${id}/complete`, 'PATCH');
+  },
+  dismiss: (id) => {
+    console.log(`Appel API: rejet du rappel ID ${id}`);
+    return apiRequest(`/reminders/${id}/dismiss`, 'PATCH');
+  },
+
+  // Suppression
+  delete: (id) => {
+    console.log(`Appel API: suppression du rappel ID ${id}`);
+    return apiRequest(`/reminders/${id}`, 'DELETE');
+  },
+
+  // Configuration (relances factures)
+  getSettings: () => {
+    console.log('Appel API: récupération paramètres relances');
+    return apiRequest('/reminders/settings');
+  },
+  updateSettings: (data) => {
+    console.log('Appel API: mise à jour paramètres relances', data);
+    return apiRequest('/reminders/settings', 'PUT', data);
+  },
+
+  // Détection et envoi
+  detectInvoices: () => {
+    console.log('Appel API: détection factures nécessitant relance');
+    return apiRequest('/reminders/detect');
+  },
+  sendReminder: (invoiceId, reminderLevel) => {
+    console.log(`Appel API: envoi relance pour facture ID ${invoiceId}, niveau ${reminderLevel}`);
+    return apiRequest(`/reminders/send/${invoiceId}`, 'POST', { reminder_level: reminderLevel });
+  },
+  sendBatch: () => {
+    console.log('Appel API: envoi relances en batch');
+    return apiRequest('/reminders/send-batch', 'POST');
+  },
+
+  // Historique et statistiques
+  getStats: () => {
+    console.log('Appel API: récupération statistiques relances');
+    return apiRequest('/reminders/stats');
+  },
+  getHistory: (limit = 50, offset = 0) => {
+    console.log('Appel API: récupération historique relances', { limit, offset });
+    const params = new URLSearchParams();
+    params.append('limit', limit);
+    params.append('offset', offset);
+    return apiRequest(`/reminders/history?${params}`);
+  },
+  getByInvoice: (invoiceId) => {
+    console.log(`Appel API: récupération historique relances pour facture ID ${invoiceId}`);
+    return apiRequest(`/reminders/invoice/${invoiceId}`);
+  },
+  deleteByInvoice: (invoiceId) => {
+    console.log(`Appel API: suppression historique relances pour facture ID ${invoiceId}`);
+    return apiRequest(`/reminders/invoice/${invoiceId}`, 'DELETE');
+  }
+};
+
+// ===== RECHERCHE =====
+export const searchAPI = {
+  global: (query) => {
+    console.log(`Appel API: recherche globale pour "${query}"`);
+    return apiRequest(`/search?query=${encodeURIComponent(query)}`);
+  }
+};
+
+// ===== EXPORTS =====
+export const exportAPI = {
+  // Fonction utilitaire pour déclencher le téléchargement d'un fichier
+  downloadFile: (url, filename) => {
+    console.log(`Téléchargement de ${filename} depuis ${url}`);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  },
+
+  // Export des leads en CSV
+  leads: () => {
+    console.log('Appel API: export des leads en CSV');
+    const url = `${API_BASE_URL}/export/leads`;
+    window.open(url, '_blank');
+  },
+
+  // Export des projets en CSV
+  projects: () => {
+    console.log('Appel API: export des projets en CSV');
+    const url = `${API_BASE_URL}/export/projects`;
+    window.open(url, '_blank');
+  },
+
+  // Export des objectifs en CSV
+  goals: () => {
+    console.log('Appel API: export des objectifs en CSV');
+    const url = `${API_BASE_URL}/export/goals`;
+    window.open(url, '_blank');
+  },
+
+  // Export des revenus en CSV
+  revenues: () => {
+    console.log('Appel API: export des revenus en CSV');
+    const url = `${API_BASE_URL}/export/revenues`;
+    window.open(url, '_blank');
+  },
+
+  // Export des activités en CSV
+  activities: () => {
+    console.log('Appel API: export des activités en CSV');
+    const url = `${API_BASE_URL}/export/activities`;
+    window.open(url, '_blank');
+  },
+
+  // Export des contacts en CSV
+  contacts: () => {
+    console.log('Appel API: export des contacts en CSV');
+    const url = `${API_BASE_URL}/export/contacts`;
+    window.open(url, '_blank');
+  },
+
+  // Export des clients en CSV
+  clients: () => {
+    console.log('Appel API: export des clients en CSV');
+    const url = `${API_BASE_URL}/export/clients`;
+    window.open(url, '_blank');
+  },
+
+  // Export complet (toutes les données en JSON)
+  all: async () => {
+    console.log('Appel API: export complet de toutes les données');
+    return apiRequest('/export/all');
+  }
+};
+
+// ===== RÉGIMES TVA =====
+export const tvaRegimesAPI = {
+  getAll: () => {
+    console.log('Appel API: récupération de tous les régimes TVA');
+    return apiRequest('/tva-regimes');
+  },
+  getByCode: (code) => {
+    console.log(`Appel API: récupération du régime TVA avec code ${code}`);
+    return apiRequest(`/tva-regimes/${code}`);
+  }
+};
+
+// ===== MOYENS DE PAIEMENT =====
+export const paymentMethodsAPI = {
+  getAll: () => {
+    console.log('Appel API: récupération de tous les moyens de paiement');
+    return apiRequest('/payment-methods');
+  },
+  getByCode: (code) => {
+    console.log(`Appel API: récupération du moyen de paiement avec code ${code}`);
+    return apiRequest(`/payment-methods/${code}`);
+  }
+};
+
+// ===== PROSPECTION (France Travail, etc.) =====
+export const prospectionAPI = {
+  // Test de connexion à France Travail
+  testConnection: () => {
+    console.log('Appel API: test connexion France Travail');
+    return apiRequest('/prospection/test/pole-emploi');
+  },
+
+  // Recherche multi-sources
+  search: (keywords, location = '', sources = 'pole-emploi', filters = {}) => {
+    console.log(`Appel API: recherche prospection "${keywords}" (${location || 'France'})`);
+    const params = new URLSearchParams({
+      keywords,
+      ...(location && { location }),
+      sources
+    });
+
+    // Ajouter les filtres avancés si présents
+    if (filters.contractType) params.append('contractType', filters.contractType);
+    if (filters.experience) params.append('experience', filters.experience);
+    if (filters.datePosted) params.append('datePosted', filters.datePosted);
+    if (filters.minSalary) params.append('minSalary', filters.minSalary);
+    if (filters.maxSalary) params.append('maxSalary', filters.maxSalary);
+
+    return apiRequest(`/prospection/search?${params}`);
+  },
+
+  // Recherche France Travail uniquement
+  searchFranceTravail: (keywords, options = {}) => {
+    console.log(`Appel API: recherche France Travail "${keywords}"`);
+    const params = new URLSearchParams({
+      keywords,
+      ...options
+    });
+    return apiRequest(`/prospection/pole-emploi/search?${params}`);
+  },
+
+  // Détails d'une offre France Travail
+  getOfferDetails: (offerId) => {
+    console.log(`Appel API: détails offre France Travail ${offerId}`);
+    return apiRequest(`/prospection/pole-emploi/offer/${offerId}`);
+  },
+
+  // Importer une opportunité comme lead
+  importLead: (opportunity) => {
+    console.log(`Appel API: import opportunité comme lead`);
+    return apiRequest('/prospection/import-lead', {
+      method: 'POST',
+      body: JSON.stringify({ opportunity })
+    });
+  },
+
+  // Test de connexion SIRENE (INSEE)
+  testSirene: () => {
+    console.log('Appel API: test connexion SIRENE');
+    return apiRequest('/prospection/test/sirene');
+  },
+
+  // Recherche d'entreprises via SIRENE
+  searchSirene: (criteria) => {
+    console.log('Appel API: recherche SIRENE', criteria);
+    const params = new URLSearchParams();
+
+    if (criteria.nafCode) params.append('nafCode', criteria.nafCode);
+    if (criteria.city) params.append('city', criteria.city);
+    if (criteria.postalCode) params.append('postalCode', criteria.postalCode);
+    if (criteria.department) params.append('department', criteria.department);
+    if (criteria.region) params.append('region', criteria.region);
+    if (criteria.companyName) params.append('companyName', criteria.companyName);
+    if (criteria.minEmployees) params.append('minEmployees', criteria.minEmployees);
+    if (criteria.maxEmployees) params.append('maxEmployees', criteria.maxEmployees);
+    if (criteria.limit) params.append('limit', criteria.limit);
+
+    return apiRequest(`/prospection/sirene/search?${params}`);
+  },
+
+  // Test de connexion Pappers
+  testPappers: () => {
+    console.log('Appel API: test connexion Pappers');
+    return apiRequest('/prospection/test/pappers');
+  },
+
+  // Obtenir le statut des crédits Pappers
+  getPappersCredits: () => {
+    console.log('Appel API: récupération crédits Pappers');
+    return apiRequest('/prospection/pappers/credits');
+  },
+
+  // Enrichir une entreprise avec Pappers
+  enrichWithPappers: (siren) => {
+    console.log(`Appel API: enrichissement Pappers SIREN ${siren}`);
+    return apiRequest('/prospection/pappers/enrich', {
+      method: 'POST',
+      body: JSON.stringify({ siren })
+    });
+  },
+
+  // Enrichir plusieurs entreprises avec Pappers
+  enrichMultipleWithPappers: (sirens, maxEnrich = 10) => {
+    console.log(`Appel API: enrichissement multiple Pappers (${sirens.length} entreprises)`);
+    return apiRequest('/prospection/pappers/enrich-multiple', {
+      method: 'POST',
+      body: JSON.stringify({ sirens, maxEnrich })
+    });
+  }
+};
+
+// ===== PAIEMENTS =====
+export const paymentsAPI = {
+  getAll: () => {
+    console.log('Appel API: récupération de tous les paiements');
+    return apiRequest('/payments');
+  },
+  getById: (id) => {
+    console.log(`Appel API: récupération du paiement ID ${id}`);
+    return apiRequest(`/payments/${id}`);
+  },
+  getByInvoice: (invoiceId) => {
+    console.log(`Appel API: récupération des paiements de la facture ID ${invoiceId}`);
+    return apiRequest(`/payments/invoice/${invoiceId}`);
+  },
+  getByClient: (clientId) => {
+    console.log(`Appel API: récupération des paiements du client ID ${clientId}`);
+    return apiRequest(`/payments/client/${clientId}`);
+  },
+  create: (data) => {
+    console.log('Appel API: création d\'un nouveau paiement', data);
+    return apiRequest('/payments', 'POST', data);
+  },
+  update: (id, data) => {
+    console.log(`Appel API: mise à jour du paiement ID ${id}`, data);
+    return apiRequest(`/payments/${id}`, 'PUT', data);
+  },
+  delete: (id) => {
+    console.log(`Appel API: suppression du paiement ID ${id}`);
+    return apiRequest(`/payments/${id}`, 'DELETE');
+  },
+  getTreasuryStats: (startDate, endDate) => {
+    console.log('Appel API: récupération statistiques trésorerie', { startDate, endDate });
+    const params = new URLSearchParams();
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    return apiRequest(`/payments/stats/treasury?${params}`);
+  },
+  getChartData: (startDate, endDate) => {
+    console.log('Appel API: récupération données graphique trésorerie', { startDate, endDate });
+    const params = new URLSearchParams();
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    return apiRequest(`/payments/stats/chart?${params}`);
+  }
+};
+
+// ===== DEMANDES D'AVIS =====
+export const reviewRequestsAPI = {
+  // Envoyer une demande d'avis
+  send: (data) => {
+    console.log('Appel API: envoi demande d\'avis', data);
+    return apiRequest('/review-requests', 'POST', data);
+  },
+
+  // Récupérer toutes les demandes d'avis
+  getAll: () => {
+    console.log('Appel API: récupération de toutes les demandes d\'avis');
+    return apiRequest('/review-requests');
+  },
+
+  // Récupérer les demandes d'avis d'un client
+  getByClient: (clientId) => {
+    console.log(`Appel API: récupération des demandes d'avis du client ID ${clientId}`);
+    return apiRequest(`/review-requests/client/${clientId}`);
+  },
+
+  // Obtenir le template par défaut
+  getTemplate: (platforms, clientName, contactName) => {
+    console.log('Appel API: récupération du template d\'avis');
+    const params = new URLSearchParams();
+    if (platforms) params.append('platforms', platforms.join(','));
+    if (clientName) params.append('client_name', clientName);
+    if (contactName) params.append('contact_name', contactName);
+    return apiRequest(`/review-requests/template?${params}`);
+  },
+
+  // Obtenir les statistiques
+  getStats: () => {
+    console.log('Appel API: récupération des statistiques d\'avis');
+    return apiRequest('/review-requests/stats');
+  }
+};
+

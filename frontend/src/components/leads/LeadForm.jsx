@@ -1,6 +1,10 @@
 // src/components/leads/LeadForm.jsx
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import { FiBriefcase, FiUser } from 'react-icons/fi';
+import CompanyAutocomplete from '../common/CompanyAutocomplete';
+import TemplateSelector from '../common/TemplateSelector';
+import { templateCategories } from '../../services/templates';
 
 const LeadForm = ({ lead = {}, onSave, onCancel }) => {
   // État du formulaire avec valeurs par défaut ou existantes
@@ -12,7 +16,7 @@ const LeadForm = ({ lead = {}, onSave, onCancel }) => {
     source: lead.source || '',
     notes: lead.notes || ''
   });
-  
+
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
 
@@ -25,7 +29,7 @@ const LeadForm = ({ lead = {}, onSave, onCancel }) => {
     { value: 'client', label: 'Client' },
     { value: 'perdu', label: 'Perdu' }
   ];
-  
+
   // Options de source
   const sourceOptions = [
     { value: 'Site Web', label: 'Site Web' },
@@ -36,7 +40,7 @@ const LeadForm = ({ lead = {}, onSave, onCancel }) => {
     { value: 'Contact direct', label: 'Contact direct' },
     { value: 'Autre', label: 'Autre' }
   ];
-  
+
   // Mise à jour des champs du formulaire
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -44,7 +48,7 @@ const LeadForm = ({ lead = {}, onSave, onCancel }) => {
       ...prev,
       [name]: value
     }));
-    
+
     // Effacer les erreurs lors de la saisie
     if (errors[name]) {
       setErrors(prev => ({
@@ -53,31 +57,31 @@ const LeadForm = ({ lead = {}, onSave, onCancel }) => {
       }));
     }
   };
-  
+
   // Validation du formulaire
   const validateForm = () => {
     const newErrors = {};
-    
+
     if (!formData.name.trim()) {
       newErrors.name = 'Le nom est requis';
     }
-    
+
     if (formData.type === 'company' && !formData.company.trim()) {
       newErrors.company = 'Le nom de l\'entreprise est requis';
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-  
+
   // Soumission du formulaire
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
-    
+
     try {
       setSubmitting(true);
       await onSave(formData);
@@ -90,55 +94,55 @@ const LeadForm = ({ lead = {}, onSave, onCancel }) => {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-indigo-300 to-purple-300">
+      <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 bg-clip-text text-transparent bg-gradient-to-r from-indigo-300 to-purple-300">
         {lead.id ? 'Modifier le lead' : 'Nouveau lead'}
       </h2>
-      
-      <form onSubmit={handleSubmit} className="space-y-6">
+
+      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
         {/* Type de lead (entreprise ou particulier) */}
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-300 mb-2">Type de lead</label>
-          <div className="flex space-x-4">
-            <label className={`flex items-center px-4 py-2 rounded-lg cursor-pointer transition-colors ${
-              formData.type === 'company' 
-                ? 'bg-indigo-600/40 border-indigo-500' 
+        <div className="mb-4 sm:mb-6">
+          <label className="block text-xs sm:text-sm font-medium text-gray-300 mb-2">Type de lead</label>
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
+            <label className={`flex items-center px-3 py-2 sm:px-4 sm:py-2 rounded-lg cursor-pointer transition-colors ${
+              formData.type === 'company'
+                ? 'bg-indigo-600/40 border-indigo-500'
                 : 'bg-gray-800/40 border-gray-700 hover:bg-gray-700/30'
             } border`}>
-              <input 
-                type="radio" 
-                name="type" 
-                value="company" 
-                checked={formData.type === 'company'} 
+              <input
+                type="radio"
+                name="type"
+                value="company"
+                checked={formData.type === 'company'}
                 onChange={handleInputChange}
                 className="sr-only"
               />
-              <span className="text-lg mr-2">🏢</span>
-              <span>Entreprise</span>
+              <FiBriefcase className="text-base sm:text-lg mr-2 text-white" />
+              <span className="text-sm sm:text-base text-white">Entreprise</span>
             </label>
-            
-            <label className={`flex items-center px-4 py-2 rounded-lg cursor-pointer transition-colors ${
-              formData.type === 'individual' 
-                ? 'bg-purple-600/40 border-purple-500' 
+
+            <label className={`flex items-center px-3 py-2 sm:px-4 sm:py-2 rounded-lg cursor-pointer transition-colors ${
+              formData.type === 'individual'
+                ? 'bg-purple-600/40 border-purple-500'
                 : 'bg-gray-800/40 border-gray-700 hover:bg-gray-700/30'
             } border`}>
-              <input 
-                type="radio" 
-                name="type" 
-                value="individual" 
-                checked={formData.type === 'individual'} 
+              <input
+                type="radio"
+                name="type"
+                value="individual"
+                checked={formData.type === 'individual'}
                 onChange={handleInputChange}
                 className="sr-only"
               />
-              <span className="text-lg mr-2">👤</span>
-              <span>Particulier</span>
+              <FiUser className="text-base sm:text-lg mr-2 text-white" />
+              <span className="text-sm sm:text-base text-white">Particulier</span>
             </label>
           </div>
         </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
           {/* Nom */}
           <div>
-            <label htmlFor="name" className="block text-sm font-medium text-gray-300 mb-1">
+            <label htmlFor="name" className="block text-xs sm:text-sm font-medium text-gray-300 mb-1">
               {formData.type === 'company' ? 'Contact principal' : 'Nom'}
               <span className="text-rose-500 ml-1">*</span>
             </label>
@@ -150,11 +154,11 @@ const LeadForm = ({ lead = {}, onSave, onCancel }) => {
               onChange={handleInputChange}
               className={`w-full bg-gray-800/50 border ${
                 errors.name ? 'border-rose-500' : 'border-gray-700'
-              } rounded-lg px-4 py-2 text-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent`}
+              } rounded-lg px-3 py-2 sm:px-4 sm:py-2 text-white placeholder-gray-400 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent`}
               placeholder="John Doe"
             />
             {errors.name && (
-              <motion.p 
+              <motion.p
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="mt-1 text-xs text-rose-500"
@@ -163,39 +167,42 @@ const LeadForm = ({ lead = {}, onSave, onCancel }) => {
               </motion.p>
             )}
           </div>
-          
-          {/* Entreprise (conditionnellement affiché) */}
+
+          {/* Entreprise (conditionnellement affiché avec auto-complétion) */}
           {formData.type === 'company' && (
             <div>
-              <label htmlFor="company" className="block text-sm font-medium text-gray-300 mb-1">
+              <label htmlFor="company" className="block text-xs sm:text-sm font-medium text-gray-300 mb-1">
                 Entreprise<span className="text-rose-500 ml-1">*</span>
               </label>
-              <input
-                type="text"
-                id="company"
-                name="company"
+              <CompanyAutocomplete
                 value={formData.company}
-                onChange={handleInputChange}
-                className={`w-full bg-gray-800/50 border ${
-                  errors.company ? 'border-rose-500' : 'border-gray-700'
-                } rounded-lg px-4 py-2 text-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent`}
-                placeholder="Acme Inc."
+                onChange={(value) => {
+                  setFormData(prev => ({ ...prev, company: value }));
+                  if (errors.company) {
+                    setErrors(prev => ({ ...prev, company: null }));
+                  }
+                }}
+                onSelect={(companyDetails) => {
+                  // Remplir automatiquement les champs avec les données de l'entreprise
+                  console.log('Entreprise sélectionnée:', companyDetails);
+                  setFormData(prev => ({
+                    ...prev,
+                    company: companyDetails.name,
+                    // On pourrait ajouter d'autres champs si le formulaire les supporte
+                    notes: prev.notes
+                      ? `${prev.notes}\n\nSIREN: ${companyDetails.siren}\nForme juridique: ${companyDetails.legalForm}\nActivité: ${companyDetails.activityLabel}\nEffectifs: ${companyDetails.employees}${companyDetails.address ? '\nAdresse: ' + companyDetails.address : ''}`
+                      : `SIREN: ${companyDetails.siren}\nForme juridique: ${companyDetails.legalForm}\nActivité: ${companyDetails.activityLabel}\nEffectifs: ${companyDetails.employees}${companyDetails.address ? '\nAdresse: ' + companyDetails.address : ''}`
+                  }));
+                }}
+                placeholder="Rechercher une entreprise (nom, SIREN)..."
+                error={errors.company}
               />
-              {errors.company && (
-                <motion.p 
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="mt-1 text-xs text-rose-500"
-                >
-                  {errors.company}
-                </motion.p>
-              )}
             </div>
           )}
-          
+
           {/* Statut */}
           <div>
-            <label htmlFor="status" className="block text-sm font-medium text-gray-300 mb-1">
+            <label htmlFor="status" className="block text-xs sm:text-sm font-medium text-gray-300 mb-1">
               Statut
             </label>
             <select
@@ -203,7 +210,7 @@ const LeadForm = ({ lead = {}, onSave, onCancel }) => {
               name="status"
               value={formData.status}
               onChange={handleInputChange}
-              className="w-full bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-2 text-black focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="w-full bg-gray-800/50 border border-gray-700 rounded-lg px-3 py-2 sm:px-4 sm:py-2 text-white text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
             >
               {statusOptions.map(option => (
                 <option key={option.value} value={option.value}>
@@ -212,10 +219,10 @@ const LeadForm = ({ lead = {}, onSave, onCancel }) => {
               ))}
             </select>
           </div>
-          
+
           {/* Source */}
           <div>
-            <label htmlFor="source" className="block text-sm font-medium text-gray-300 mb-1">
+            <label htmlFor="source" className="block text-xs sm:text-sm font-medium text-gray-300 mb-1">
               Source
             </label>
             <select
@@ -223,7 +230,7 @@ const LeadForm = ({ lead = {}, onSave, onCancel }) => {
               name="source"
               value={formData.source}
               onChange={handleInputChange}
-              className="w-full bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-2 text-black focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="w-full bg-gray-800/50 border border-gray-700 rounded-lg px-3 py-2 sm:px-4 sm:py-2 text-white text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
             >
               <option value="">Sélectionner une source</option>
               {sourceOptions.map(option => (
@@ -234,39 +241,47 @@ const LeadForm = ({ lead = {}, onSave, onCancel }) => {
             </select>
           </div>
         </div>
-        
+
         {/* Notes */}
         <div>
-          <label htmlFor="notes" className="block text-sm font-medium text-gray-300 mb-1">
-            Notes
-          </label>
+          <div className="flex items-center justify-between mb-1">
+            <label htmlFor="notes" className="block text-xs sm:text-sm font-medium text-gray-300">
+              Notes
+            </label>
+            <TemplateSelector
+              category={templateCategories.LEAD}
+              currentValue={formData.notes}
+              onSelect={(content) => setFormData(prev => ({ ...prev, notes: content }))}
+              buttonText="Template"
+            />
+          </div>
           <textarea
             id="notes"
             name="notes"
             value={formData.notes}
             onChange={handleInputChange}
             rows={4}
-            className="w-full bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-2 text-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            className="w-full bg-gray-800/50 border border-gray-700 rounded-lg px-3 py-2 sm:px-4 sm:py-2 text-white placeholder-gray-400 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
             placeholder="Informations supplémentaires sur ce lead..."
           />
         </div>
-        
+
         {/* Boutons d'action */}
-        <div className="flex justify-end space-x-3 pt-4">
+        <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 pt-2 sm:pt-4">
           <motion.button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 rounded-lg border border-gray-600 text-gray-300 hover:bg-gray-700"
+            className="px-4 py-2 rounded-lg border-2 border-white/30 text-white hover:bg-white/10 hover:border-white/40 font-medium text-sm sm:text-base transition-all"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             disabled={submitting}
           >
             Annuler
           </motion.button>
-          
+
           <motion.button
             type="submit"
-            className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium flex items-center"
+            className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium flex items-center justify-center text-sm sm:text-base"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             disabled={submitting}

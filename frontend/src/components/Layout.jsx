@@ -3,17 +3,28 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { deleteDB } from 'idb';
+import { remindersAPI } from '../services/api';
 
 // Utiliser les icônes de React Icons (Feather Icons)
 import { FiGrid as DashboardIcon } from 'react-icons/fi';
 import { FiUsers as LeadsIcon } from 'react-icons/fi';
+import { FiUserCheck as ClientsIcon } from 'react-icons/fi';
 import { FiBriefcase as ProjectsIcon } from 'react-icons/fi';
 import { FiCalendar as CalendarIcon } from 'react-icons/fi';
 import { FiDollarSign as RevenuesIcon } from 'react-icons/fi';
 import { FiActivity as ActivitiesIcon } from 'react-icons/fi';
 import { FiTarget as GoalsIcon } from 'react-icons/fi';
+import { FiBarChart2 as ReportsIcon } from 'react-icons/fi';
+import { FiFileText as QuotesIcon } from 'react-icons/fi';
+import { FiFile as InvoicesIcon } from 'react-icons/fi';
+import { FiTrendingUp as TreasuryIcon } from 'react-icons/fi';
 import { FiLogOut as LogoutIcon } from 'react-icons/fi';
+import { FiBell, FiSettings } from 'react-icons/fi';
+
+// Import des modals
+import RemindersModal from './reminders/RemindersModal';
+import SearchModal from './search/SearchModal';
+import { FiSearch } from 'react-icons/fi';
 
 const Layout = ({ children }) => {
   const location = useLocation();
@@ -22,39 +33,70 @@ const Layout = ({ children }) => {
   const [activeModule, setActiveModule] = useState('/dashboard');
   const [menuOpen, setMenuOpen] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
-  const [isResetting, setIsResetting] = useState(false);
-  const [resetProgress, setResetProgress] = useState(0);
+  const [remindersOpen, setRemindersOpen] = useState(false);
+  const [reminderCount, setReminderCount] = useState({ active: 0, overdue: 0 });
+  const [searchOpen, setSearchOpen] = useState(false);
 
   useEffect(() => {
     setActiveModule(location.pathname);
   }, [location]);
 
-  // Effet pour simuler la progression de la réinitialisation
+  // Charger le nombre de rappels
   useEffect(() => {
-    let intervalId;
-    if (isResetting) {
-      intervalId = setInterval(() => {
-        setResetProgress(prev => {
-          // Augmenter la progression jusqu'à 95% maximum
-          // Les 5% restants se complèteront une fois la redirection effectuée
-          return Math.min(prev + 1, 95);
-        });
-      }, 100); // Mettre à jour toutes les 100ms
-    }
-    
-    return () => {
-      if (intervalId) clearInterval(intervalId);
+    const fetchReminderCount = async () => {
+      try {
+        const count = await remindersAPI.getCount();
+        setReminderCount(count);
+      } catch (error) {
+        console.error('Erreur lors du chargement du nombre de rappels:', error);
+      }
     };
-  }, [isResetting]);
+
+    fetchReminderCount();
+
+    // Rafraîchir toutes les 30 secondes
+    const interval = setInterval(fetchReminderCount, 30000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Rafraîchir le compteur après fermeture du modal
+  const handleRemindersClose = async () => {
+    setRemindersOpen(false);
+    try {
+      const count = await remindersAPI.getCount();
+      setReminderCount(count);
+    } catch (error) {
+      console.error('Erreur lors du rafraîchissement du nombre de rappels:', error);
+    }
+  };
+
+  // Raccourci clavier pour la recherche (Ctrl+K / Cmd+K)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setSearchOpen(true);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const navigationItems = [
     { path: '/dashboard', label: 'Dashboard', icon: <DashboardIcon /> },
     { path: '/leads', label: 'Leads', icon: <LeadsIcon /> },
+    { path: '/clients', label: 'Clients', icon: <ClientsIcon /> },
     { path: '/projects', label: 'Projets', icon: <ProjectsIcon /> },
+    { path: '/quotes', label: 'Devis', icon: <QuotesIcon /> },
+    { path: '/invoices', label: 'Factures', icon: <InvoicesIcon /> },
+    { path: '/treasury', label: 'Trésorerie', icon: <TreasuryIcon /> },
     { path: '/calendar', label: 'Calendrier', icon: <CalendarIcon /> },
     { path: '/revenues', label: 'Revenus', icon: <RevenuesIcon /> },
     { path: '/activities', label: 'Activités', icon: <ActivitiesIcon /> },
     { path: '/goals', label: 'Objectifs', icon: <GoalsIcon /> },
+    { path: '/reports', label: 'Rapports', icon: <ReportsIcon /> },
     // Ajouter l'option de déconnexion
     { path: '/logout', label: 'Déconnexion', icon: <LogoutIcon />, isLogout: true }
   ];
@@ -108,191 +150,94 @@ const Layout = ({ children }) => {
     }
   };
 
-  // Fonction de réinitialisation complète et robuste
-  const resetApplication = async () => {
-    if (isResetting) return; // Éviter les clics multiples
-    
-    // Définir les délais de timeout
-    const NORMAL_RESET_TIMEOUT = 5000; // 5 secondes pour la redirection normale
-    const MAX_RESET_TIMEOUT = 15000; // 15 secondes maximum avant redirection forcée
-    
-    try {
-      // Indiquer globalement que nous sommes en train de réinitialiser
-      window.isAppResetting = true;
-      
-      // Forcer l'arrêt de toute tentative d'initialisation de la base de données
-      window.stopAllDbOperations = true;
-      
-      setIsResetting(true);
-      setResetProgress(0);
-      console.log("Début de la réinitialisation complète de l'application...");
-      
-      // Configurer un timer de sécurité pour forcer le redémarrage si nécessaire
-      const securityTimer = setTimeout(() => {
-        console.log("Délai maximum dépassé, redémarrage forcé de l'application...");
-        window.location.href = window.location.origin;
-      }, MAX_RESET_TIMEOUT);
-      
-      // 1. Fermer toutes les connexions actives à SQLite
-      if (window.sqliteConnection) {
-        try {
-          console.log("Fermeture de la connexion SQLite...");
-          window.sqliteConnection.close();
-          window.sqliteConnection = null;
-        } catch (e) {
-          console.warn("Erreur lors de la fermeture de SQLite:", e);
-        }
-      }
-      
-      // 2. Supprimer les tâches périodiques
-      if (window.dbSaveInterval) {
-        console.log("Arrêt des sauvegardes automatiques...");
-        clearInterval(window.dbSaveInterval);
-        window.dbSaveInterval = null;
-      }
-      
-      // 3. Supprimer les gestionnaires d'événements
-      if (window.dbBeforeUnloadHandler) {
-        console.log("Suppression du gestionnaire beforeunload...");
-        window.removeEventListener('beforeunload', window.dbBeforeUnloadHandler);
-        window.dbBeforeUnloadHandler = null;
-      }
-      
-      // 4. Supprimer les références à la base de données
-      if (window.dbInstance) {
-        console.log("Suppression des références à la base de données...");
-        window.dbInstance = null;
-      }
-      
-      // 5. Supprimer la base de données IndexedDB
-      const DB_NAME = 'crm_audacieux_db';
-      console.log(`Suppression de la base de données IndexedDB: ${DB_NAME}...`);
-      
-      try {
-        await deleteDB(DB_NAME);
-        console.log("Base de données IndexedDB supprimée avec succès");
-      } catch (e) {
-        console.error("Erreur lors de la suppression d'IndexedDB:", e);
-        // Continuer malgré l'erreur
-      }
-      
-      // 6. Nettoyer localStorage et sessionStorage
-      console.log("Nettoyage du stockage local...");
-      localStorage.clear();
-      sessionStorage.clear();
-      
-      // 7. Nettoyer les cookies
-      console.log("Nettoyage des cookies...");
-      document.cookie.split(';').forEach(cookie => {
-        const [name] = cookie.trim().split('=');
-        if (name) document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
-      });
-
-      // 8. Supprimer les Service Workers si présents
-      if (navigator.serviceWorker) {
-        console.log("Désenregistrement des Service Workers...");
-        try {
-          const registrations = await navigator.serviceWorker.getRegistrations();
-          for (let registration of registrations) {
-            await registration.unregister();
-            console.log("Service Worker désenregistré");
-          }
-        } catch (e) {
-          console.warn("Erreur lors du désenregistrement des Service Workers:", e);
-        }
-      }
-      
-      console.log("Réinitialisation terminée avec succès!");
-      
-      // 9. Redirection normale avec annulation du timer de sécurité
-      setTimeout(() => {
-        clearTimeout(securityTimer); // Annuler le timer de sécurité
-        console.log("Redirection vers la page d'accueil...");
-        window.location.href = window.location.origin;
-      }, NORMAL_RESET_TIMEOUT);
-      
-    } catch (error) {
-      console.error("Erreur catastrophique lors de la réinitialisation:", error);
-      alert("Une erreur est survenue. L'application va être rechargée.");
-      
-      // En cas d'erreur, recharger la page après un délai
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
-    }
-  };
-
-  // Composant de bouton de réinitialisation
-  const ResetButton = () => {
-    const handleReset = () => {
-      if (window.confirm('Êtes-vous sûr de vouloir réinitialiser toutes les données ? Cette action est irréversible.')) {
-        resetApplication();
-      }
-    };
-    
-    return (
-      <>
-        <motion.button
-          className="absolute top-4 right-4 px-3 py-2 bg-rose-600 text-white rounded-lg text-sm z-50 shadow-lg"
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={handleReset}
-          disabled={isResetting}
-        >
-          {isResetting ? "Réinitialisation en cours..." : "Réinitialiser les données"}
-        </motion.button>
-        
-        {isResetting && (
-          <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center">
-            <div className="text-center max-w-lg p-8 bg-gray-900/80 rounded-xl backdrop-blur">
-              {/* Animation de chargement plus visible */}
-              <div className="relative mb-6 mx-auto">
-                <motion.div 
-                  className="w-28 h-28 border-8 border-indigo-500 border-t-transparent rounded-full mx-auto"
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                />
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <p className="text-2xl font-bold text-indigo-300">{resetProgress}%</p>
-                </div>
-              </div>
-              
-              <h2 className="text-white text-2xl font-bold mb-4">Réinitialisation en cours</h2>
-              <p className="text-gray-300 text-lg mb-6">Veuillez patienter, ne fermez pas la page</p>
-              <p className="text-gray-400">L'application redémarrera automatiquement</p>
-              
-              {/* Barre de progression */}
-              <div className="h-2 bg-gray-700 mt-6 rounded-full overflow-hidden">
-                <motion.div 
-                  className="h-full bg-indigo-500"
-                  style={{ width: `${resetProgress}%` }}
-                />
-              </div>
-              
-              <div className="mt-2 text-gray-400 text-sm">
-                Nettoyage et préparation de l'application...
-              </div>
-            </div>
-          </div>
-        )}
-      </>
-    );
-  };
 
   return (
     <div className="flex h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900 text-white overflow-hidden">
-      {/* Bouton de réinitialisation */}
-      <ResetButton />
-      
+      {/* Barre de recherche en haut à gauche - Position fixe pour visibilité constante */}
+      <motion.button
+        className="fixed top-4 left-4 z-50 px-4 py-2 sm:px-6 sm:py-3 bg-gray-800/80 backdrop-blur-md border border-purple-500/30 rounded-full flex items-center gap-2 sm:gap-3 shadow-xl hover:bg-gray-800/90 transition-all"
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        onClick={() => setSearchOpen(true)}
+      >
+        <FiSearch className="text-lg sm:text-xl text-indigo-300" />
+        <span className="hidden sm:inline text-sm text-gray-400">Rechercher...</span>
+        <kbd className="hidden sm:inline px-2 py-1 bg-gray-900/50 border border-gray-700 rounded text-xs text-gray-500">
+          Ctrl+K
+        </kbd>
+      </motion.button>
+
+      {/* Bouton Paramètres en haut à droite */}
+      <motion.button
+        className="fixed top-4 right-20 z-50 w-12 h-12 sm:w-14 sm:h-14 bg-gray-700 rounded-full flex items-center justify-center shadow-xl hover:bg-gray-600 transition-all"
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.95 }}
+        onClick={() => navigate('/settings')}
+        title="Paramètres"
+      >
+        <FiSettings className="text-xl sm:text-2xl" />
+      </motion.button>
+
+      {/* Badge de notifications en haut à droite - Position fixe pour visibilité constante */}
+      <motion.button
+        className="fixed top-4 right-4 z-50 w-12 h-12 sm:w-14 sm:h-14 bg-indigo-600 rounded-full flex items-center justify-center shadow-xl hover:bg-indigo-700 transition-all"
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.95 }}
+        onClick={() => setRemindersOpen(true)}
+      >
+        <FiBell className="text-xl sm:text-2xl" />
+        {reminderCount.overdue > 0 && (
+          <motion.div
+            className="absolute -top-1 -right-1 bg-rose-500 text-white text-xs font-bold rounded-full w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center"
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: "spring", stiffness: 500 }}
+          >
+            {reminderCount.overdue > 9 ? '9+' : reminderCount.overdue}
+          </motion.div>
+        )}
+      </motion.button>
+
+      {/* Modal de recherche */}
+      <AnimatePresence>
+        {searchOpen && (
+          <SearchModal
+            onClose={() => setSearchOpen(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Modal des rappels */}
+      <AnimatePresence>
+        {remindersOpen && (
+          <RemindersModal
+            onClose={handleRemindersClose}
+          />
+        )}
+      </AnimatePresence>
+
       {/* Navigation innovante circulaire */}
-      <motion.div 
-        className="absolute bottom-6 right-6 z-40"
+      <motion.div
+        className="fixed bottom-6 right-6 z-40"
         initial={false}
         animate={menuOpen ? "open" : "closed"}
       >
+        {/* Overlay de fond quand le menu est ouvert */}
+        <AnimatePresence>
+          {menuOpen && (
+            <motion.div
+              className="fixed inset-0 bg-black/30 backdrop-blur-sm"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setMenuOpen(false)}
+              style={{ zIndex: -1 }}
+            />
+          )}
+        </AnimatePresence>
+
         <motion.div
-          className="absolute z-20 flex items-center justify-center shadow-xl bg-indigo-600 rounded-full overflow-hidden"
-          style={{ bottom: 0, right: 0 }} // Position absolue
+          className="relative z-20 flex items-center justify-center shadow-xl bg-indigo-600 rounded-full overflow-hidden cursor-pointer"
           variants={mainButtonVariants}
           animate={menuOpen ? "menuOpen" : "default"}
           transition={{ duration: 0.3, type: "spring", stiffness: 300 }}
@@ -321,13 +266,14 @@ const Layout = ({ children }) => {
         <AnimatePresence>
           {menuOpen && (
             <motion.div
-              className="absolute bottom-8 right-8"
+              className="absolute"
+              style={{ bottom: '4rem', right: '4rem' }}
               variants={menuVariants}
               initial="closed"
               animate="open"
               exit="closed"
             >
-              <motion.div 
+              <motion.div
                 className="relative"
                 style={{ width: '300px', height: '300px' }}
               >
@@ -340,19 +286,19 @@ const Layout = ({ children }) => {
 
                   // Style spécial pour le bouton de déconnexion
                   const isLogoutButton = item.isLogout === true;
-                  const buttonStyle = isLogoutButton 
-                    ? 'bg-rose-600 text-white hover:bg-rose-700' 
-                    : activeModule === item.path 
-                      ? 'bg-white text-indigo-800' 
+                  const buttonStyle = isLogoutButton
+                    ? 'bg-rose-600 text-white hover:bg-rose-700'
+                    : activeModule === item.path
+                      ? 'bg-white text-indigo-800'
                       : 'bg-indigo-700 text-white';
 
                   return (
                     <motion.div
                       key={item.path}
                       className={`absolute w-14 h-14 rounded-full flex items-center justify-center cursor-pointer shadow-lg ${buttonStyle}`}
-                      style={{ 
-                        left: `calc(50% + ${x}px - 28px)`, 
-                        top: `calc(50% + ${y}px - 28px)` 
+                      style={{
+                        left: `calc(50% + ${x}px - 28px)`,
+                        top: `calc(50% + ${y}px - 28px)`
                       }}
                       variants={itemVariants}
                       whileHover={{ scale: 1.1 }}

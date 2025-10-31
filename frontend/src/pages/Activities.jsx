@@ -1,8 +1,12 @@
 // src/pages/Activities.jsx
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { FiClipboard, FiCalendar, FiEdit2, FiTrash2, FiMonitor, FiEdit, FiUsers, FiPhone, FiRadio, FiTool, FiCheck, FiDownload } from 'react-icons/fi';
+import { useToast } from '../hooks/useToast';
+import { useConfirm } from '../hooks/useConfirm';
+import ConfirmModal from '../components/common/ConfirmModal';
 // Importer vos services d'API
-import { activitiesAPI, projectsAPI } from '../services/api';
+import { activitiesAPI, projectsAPI, exportAPI } from '../services/api';
 
 // Composants internes
 import ActivityStats from '../components/activities/ActivityStats';
@@ -13,6 +17,8 @@ import ActivityCalendar from '../components/activities/ActivityCalendar';
 import EmptyState from '../components/common/EmptyState';
 
 const Activities = () => {
+  const { toast } = useToast();
+  const { confirm, confirmState } = useConfirm();
   const [activities, setActivities] = useState([]);
   const [filteredActivities, setFilteredActivities] = useState([]);
   const [selectedActivity, setSelectedActivity] = useState(null);
@@ -41,6 +47,8 @@ const Activities = () => {
     status: 'all',
     project: 'all'
   });
+  const [sortField, setSortField] = useState('date');
+  const [sortDirection, setSortDirection] = useState('desc');
   const [projects, setProjects] = useState([]);
 
   // Charger les projets et activités via l'API
@@ -149,10 +157,51 @@ const Activities = () => {
       return matchSearch && matchType && matchPriority && matchStatus && matchProject;
     });
 
-    // Trier par date descendante
-    result = result.sort((a, b) => new Date(b.date) - new Date(a.date));
+    // Tri des résultats
+    result.sort((a, b) => {
+      let aValue, bValue;
+
+      switch (sortField) {
+        case 'name':
+          aValue = (a.description || '').toLowerCase();
+          bValue = (b.description || '').toLowerCase();
+          break;
+        case 'date':
+          aValue = new Date(a.date);
+          bValue = new Date(b.date);
+          break;
+        case 'estimated_time':
+          aValue = a.planned_time || 0;
+          bValue = b.planned_time || 0;
+          break;
+        case 'priority':
+          const priorityOrder = { high: 3, medium: 2, low: 1 };
+          aValue = priorityOrder[a.priority] || 0;
+          bValue = priorityOrder[b.priority] || 0;
+          break;
+        default:
+          return 0;
+      }
+
+      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+
     setFilteredActivities(result);
-  }, [activities, filters, startDate, endDate]);
+  }, [activities, filters, startDate, endDate, sortField, sortDirection]);
+
+  // Gestion du tri
+  const handleSort = (field) => {
+    if (sortField === field) {
+      // Toggle entre asc et desc si c'est déjà le champ actif
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      // Nouveau champ de tri: définir à 'asc' par défaut
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
 
   // Gestion de la période
   const handlePeriodChange = (start, end) => {
@@ -204,8 +253,8 @@ const Activities = () => {
       if (error.message && error.message.includes('lead_name')) {
         errorMessage = 'Ce serveur ne prend pas en charge le champ "lead_name". Veuillez mettre à jour la base de données.';
       }
-      
-      alert(errorMessage);
+
+      toast.error(errorMessage);
     }
   };
 
@@ -226,13 +275,29 @@ const Activities = () => {
       setSelectedActivity(updated);
     } catch (error) {
       console.error('Erreur de mise à jour:', error);
-      alert('Erreur lors de la mise à jour: ' + error.message);
+      toast.error('Erreur lors de la mise à jour: ' + error.message);
     }
   };
 
   // Suppression
   const handleDeleteActivity = async (id) => {
     try {
+      // Trouver l'activité à supprimer
+      const activityToDelete = activities.find(a => a.id === id);
+      if (!activityToDelete) return;
+
+      // Demander confirmation
+      const confirmed = await confirm({
+        title: "Supprimer cette activité ?",
+        message: "Cette action est irréversible.",
+        confirmText: "Supprimer",
+        cancelText: "Annuler",
+        variant: "danger",
+        itemName: activityToDelete.description
+      });
+
+      if (!confirmed) return;
+
       console.log('Suppression activité ID:', id);
       await activitiesAPI.delete(id);
       const remaining = activities.filter(a => a.id !== id);
@@ -240,9 +305,11 @@ const Activities = () => {
       setActivities(remaining);
       calculateStats(remaining);
       setSelectedActivity(null);
+
+      toast.success("Activité supprimée avec succès");
     } catch (error) {
       console.error('Erreur suppression:', error);
-      alert('Erreur lors de la suppression: ' + error.message);
+      toast.error('Erreur lors de la suppression: ' + error.message);
     }
   };
 
@@ -260,7 +327,7 @@ const Activities = () => {
       setSelectedActivity(completed);
     } catch (error) {
       console.error('Erreur completion:', error);
-      alert('Erreur lors de la complétion: ' + error.message);
+      toast.error('Erreur lors de la complétion: ' + error.message);
     }
   };
 
@@ -279,7 +346,7 @@ const Activities = () => {
   return (
     <div className="h-full flex flex-col">
       {/* Titre de page */}
-      <header className="mb-6">
+      <header className="mb-6 pt-16 sm:pt-0">
         <motion.h1 
           className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-300 to-indigo-300"
           initial={{ opacity: 0, y: -20 }}
@@ -310,6 +377,9 @@ const Activities = () => {
           startDate={startDate}
           endDate={endDate}
           onPeriodChange={handlePeriodChange}
+          onSort={handleSort}
+          sortField={sortField}
+          sortDirection={sortDirection}
         />
         <div className="flex items-center space-x-3">
           {/* Sélecteur de vue : liste / calendrier */}
@@ -324,7 +394,7 @@ const Activities = () => {
               whileTap={{ scale: 0.95 }}
               onClick={() => setView('list')}
             >
-              <span className="mr-1">📋</span>
+              <FiClipboard className="mr-1" />
               Liste
             </motion.button>
             <motion.button
@@ -337,11 +407,20 @@ const Activities = () => {
               whileTap={{ scale: 0.95 }}
               onClick={() => setView('calendar')}
             >
-              <span className="mr-1">📅</span>
+              <FiCalendar className="mr-1" />
               Calendrier
             </motion.button>
           </div>
-          {/* Bouton ajouter une nouvelle activité */}
+          {/* Boutons export et ajout */}
+          <motion.button
+            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg flex items-center"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => exportAPI.activities()}
+            title="Exporter les activités en CSV"
+          >
+            <FiDownload className="mr-1" /> Exporter
+          </motion.button>
           <motion.button
             className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg flex items-center"
             whileHover={{ scale: 1.05 }}
@@ -447,7 +526,7 @@ const Activities = () => {
                         setSelectedActivity(null);
                       }}
                     >
-                      ✏️
+                      <FiEdit2 />
                     </motion.button>
                     {/* Bouton Supprimer */}
                     <motion.button
@@ -456,7 +535,7 @@ const Activities = () => {
                       className="p-2 rounded-lg bg-rose-600/30 hover:bg-rose-600/50 text-rose-300"
                       onClick={() => handleDeleteActivity(selectedActivity.id)}
                     >
-                      🗑️
+                      <FiTrash2 />
                     </motion.button>
                   </div>
                 </div>
@@ -465,13 +544,13 @@ const Activities = () => {
                   {/* Type */}
                   <div className="flex justify-between items-center">
                     <span className="text-gray-400">Type</span>
-                    <span className="text-white capitalize">
-                      {selectedActivity.type === 'development' ? '💻 Développement' :
-                       selectedActivity.type === 'design'      ? '🎨 Design'        :
-                       selectedActivity.type === 'meeting'     ? '👥 Réunion'       :
-                       selectedActivity.type === 'call'        ? '📞 Appel'         :
-                       selectedActivity.type === 'marketing'   ? '📢 Marketing'     :
-                       selectedActivity.type === 'maintenance' ? '🔧 Maintenance'   :
+                    <span className="text-white capitalize flex items-center gap-1">
+                      {selectedActivity.type === 'development' ? <><FiMonitor /> Développement</> :
+                       selectedActivity.type === 'design'      ? <><FiEdit /> Design</>        :
+                       selectedActivity.type === 'meeting'     ? <><FiUsers /> Réunion</>       :
+                       selectedActivity.type === 'call'        ? <><FiPhone /> Appel</>         :
+                       selectedActivity.type === 'marketing'   ? <><FiRadio /> Marketing</>     :
+                       selectedActivity.type === 'maintenance' ? <><FiTool /> Maintenance</>   :
                        selectedActivity.type}
                     </span>
                   </div>
@@ -569,7 +648,7 @@ const Activities = () => {
                           }
                         }}
                       >
-                        <span className="mr-2">✓</span>
+                        <FiCheck className="mr-2" />
                         Marquer comme terminé
                       </motion.button>
                     </div>
@@ -586,7 +665,7 @@ const Activities = () => {
                 className="h-full flex items-center justify-center"
               >
                 <EmptyState
-                  icon="📋"
+                  icon={<FiClipboard />}
                   title="Activités"
                   description="Sélectionnez une activité dans la liste ou ajoutez-en une nouvelle."
                 />
@@ -595,6 +674,9 @@ const Activities = () => {
           </AnimatePresence>
         </div>
       </div>
+
+      {/* Modal de confirmation */}
+      <ConfirmModal {...confirmState.config} isOpen={confirmState.isOpen} />
     </div>
   );
 };

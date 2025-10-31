@@ -1,18 +1,19 @@
 // src/components/dashboard/ProjectTimeline.jsx
 import React from 'react';
 import { motion } from 'framer-motion';
+import { FiCalendar, FiClock } from 'react-icons/fi';
 
 const ProjectTimeline = ({ project }) => {
   // Vérifier si le projet est valide
   if (!project || !project.tasks || project.tasks.length === 0) {
     return (
       <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl p-5">
-        <h3 className="text-lg font-medium text-gray-200 mb-4 flex items-center">
-          <span className="mr-2">📅</span>
+        <h3 className="text-lg font-medium text-gray-200 mb-4 flex items-center gap-2">
+          <FiCalendar />
           Chronologie du projet
         </h3>
         <div className="bg-gray-900/30 rounded-lg p-6 text-center">
-          <div className="text-4xl mb-3">⏱️</div>
+          <div className="text-4xl mb-3"><FiClock /></div>
           <h4 className="text-lg font-medium text-gray-300 mb-2">Pas de chronologie disponible</h4>
           <p className="text-gray-400 text-sm">
             Ajoutez des tâches au projet pour visualiser sa chronologie.
@@ -73,8 +74,8 @@ const ProjectTimeline = ({ project }) => {
 
   return (
     <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl p-5">
-      <h3 className="text-lg font-medium text-gray-200 mb-4 flex items-center">
-        <span className="mr-2">📅</span>
+      <h3 className="text-lg font-medium text-gray-200 mb-4 flex items-center gap-2">
+        <FiCalendar />
         Chronologie du projet
       </h3>
       

@@ -1,13 +1,14 @@
 // src/components/goals/GoalList.jsx
 import React from 'react';
 import { motion } from 'framer-motion';
+import { FiUsers, FiDollarSign, FiSettings, FiRadio, FiStar, FiCheckCircle, FiClock, FiZap, FiAlertCircle, FiMinusCircle, FiTarget, FiMapPin } from 'react-icons/fi';
 
 const GoalList = ({ goals, selectedGoal, onSelectGoal }) => {
   // Fonction pour calculer le pourcentage de progression
   const calculateProgress = (current, target) => {
     return Math.min(100, Math.round((current / target) * 100));
   };
-  
+
   // Formatage des dates
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -16,23 +17,23 @@ const GoalList = ({ goals, selectedGoal, onSelectGoal }) => {
       month: 'short'
     });
   };
-  
+
   // Configuration des couleurs de catégorie
   const categoryConfig = {
-    'leads': { icon: '👥', label: 'Leads', color: 'text-blue-300' },
-    'revenue': { icon: '💰', label: 'Revenus', color: 'text-emerald-300' },
-    'productivity': { icon: '⚙️', label: 'Productivité', color: 'text-purple-300' },
-    'marketing': { icon: '📢', label: 'Marketing', color: 'text-amber-300' },
-    'personal': { icon: '🌱', label: 'Personnel', color: 'text-rose-300' }
+    'leads': { icon: <FiUsers />, label: 'Leads', color: 'text-blue-300' },
+    'revenue': { icon: <FiDollarSign />, label: 'Revenus', color: 'text-emerald-300' },
+    'productivity': { icon: <FiSettings />, label: 'Productivité', color: 'text-purple-300' },
+    'marketing': { icon: <FiRadio />, label: 'Marketing', color: 'text-amber-300' },
+    'personal': { icon: <FiStar />, label: 'Personnel', color: 'text-rose-300' }
   };
-  
+
   // Configuration des couleurs de période
   const periodConfig = {
     'monthly': { label: 'Mensuel', color: 'text-blue-300' },
     'quarterly': { label: 'Trimestriel', color: 'text-purple-300' },
     'yearly': { label: 'Annuel', color: 'text-amber-300' }
   };
-  
+
   // Vérifier si un objectif est actif (en cours)
   const isActive = (goal) => {
     const now = new Date();
@@ -40,38 +41,38 @@ const GoalList = ({ goals, selectedGoal, onSelectGoal }) => {
     const endDate = new Date(goal.end_date);
     return startDate <= now && endDate >= now;
   };
-  
+
   // Vérifier si un objectif est à venir
   const isUpcoming = (goal) => {
     const now = new Date();
     const startDate = new Date(goal.start_date);
     return startDate > now;
   };
-  
+
   // Vérifier si un objectif est complété
   const isCompleted = (goal) => {
     return goal.current_value >= goal.target_value;
   };
-  
+
   // Vérifier si un objectif est expiré (passé la date de fin)
   const isExpired = (goal) => {
     const now = new Date();
     const endDate = new Date(goal.end_date);
     return endDate < now && !isCompleted(goal);
   };
-  
+
   // Obtenir le statut de l'objectif
   const getGoalStatus = (goal) => {
     if (isCompleted(goal)) {
-      return { text: 'Complété', color: 'bg-green-900/30 text-green-300', icon: '✓' };
+      return { text: 'Complété', color: 'bg-green-900/30 text-green-300', icon: <FiCheckCircle /> };
     } else if (isUpcoming(goal)) {
-      return { text: 'À venir', color: 'bg-purple-900/30 text-purple-300', icon: '🔮' };
+      return { text: 'À venir', color: 'bg-purple-900/30 text-purple-300', icon: <FiClock /> };
     } else if (isActive(goal)) {
-      return { text: 'En cours', color: 'bg-blue-900/30 text-blue-300', icon: '⚡' };
+      return { text: 'En cours', color: 'bg-blue-900/30 text-blue-300', icon: <FiZap /> };
     } else if (isExpired(goal)) {
-      return { text: 'Expiré', color: 'bg-rose-900/30 text-rose-300', icon: '⏰' };
+      return { text: 'Expiré', color: 'bg-rose-900/30 text-rose-300', icon: <FiAlertCircle /> };
     } else {
-      return { text: 'Inactif', color: 'bg-gray-900/30 text-gray-300', icon: '📌' };
+      return { text: 'Inactif', color: 'bg-gray-900/30 text-gray-300', icon: <FiMinusCircle /> };
     }
   };
   
@@ -104,7 +105,7 @@ const GoalList = ({ goals, selectedGoal, onSelectGoal }) => {
   if (goals.length === 0) {
     return (
       <div className="bg-white/10 backdrop-blur-md rounded-lg p-6 text-center">
-        <div className="text-5xl mb-4">🎯</div>
+        <div className="text-5xl mb-4"><FiTarget /></div>
         <h4 className="text-lg font-medium text-white mb-2">Sélectionnez un objectif dans la liste ou créez-en un nouveau</h4>
         <p className="text-gray-300 text-sm">
           Aucun objectif trouvé pour cette période ou avec ces filtres.
@@ -120,7 +121,7 @@ const GoalList = ({ goals, selectedGoal, onSelectGoal }) => {
         const progress = calculateProgress(goal.current_value, goal.target_value);
         const statusInfo = getGoalStatus(goal);
         const timeRemaining = getTimeRemaining(goal);
-        const categoryInfo = categoryConfig[goal.category] || { icon: '📌', label: goal.category, color: 'text-gray-300' };
+        const categoryInfo = categoryConfig[goal.category] || { icon: <FiMapPin />, label: goal.category, color: 'text-gray-300' };
         const periodInfo = periodConfig[goal.period] || { label: goal.period, color: 'text-gray-300' };
         
         return (

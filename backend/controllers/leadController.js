@@ -480,36 +480,112 @@ const leadController = {
   deleteContact: (req, res) => {
     const db = req.app.locals.db;
     const { leadId, contactId } = req.params;
-    
+
     // Vérifier si le contact existe et appartient au lead
     db.get(
-      'SELECT * FROM contacts WHERE id = ? AND lead_id = ?', 
-      [contactId, leadId], 
+      'SELECT * FROM contacts WHERE id = ? AND lead_id = ?',
+      [contactId, leadId],
       (err, contact) => {
         if (err) {
           console.error('Erreur lors de la vérification du contact:', err);
           return res.status(500).json({ message: 'Erreur serveur' });
         }
-        
+
         if (!contact) {
           return res.status(404).json({ message: 'Contact non trouvé' });
         }
-        
+
         // Supprimer le contact
         db.run(
-          'DELETE FROM contacts WHERE id = ? AND lead_id = ?', 
-          [contactId, leadId], 
+          'DELETE FROM contacts WHERE id = ? AND lead_id = ?',
+          [contactId, leadId],
           function(deleteErr) {
             if (deleteErr) {
               console.error('Erreur lors de la suppression du contact:', deleteErr);
               return res.status(500).json({ message: 'Erreur serveur' });
             }
-            
+
             res.json({ message: 'Contact supprimé avec succès' });
           }
         );
       }
     );
+  },
+
+  /**
+   * Récupérer les statistiques Kanban (nombre de leads par statut + taux de conversion)
+   */
+  getKanbanStats: (req, res) => {
+    const db = req.app.locals.db;
+
+    // Récupérer le nombre de leads par statut
+    const statsQuery = `
+      SELECT
+        status,
+        COUNT(*) as count,
+        SUM(CASE WHEN budget IS NOT NULL THEN budget ELSE 0 END) as total_budget
+      FROM leads
+      GROUP BY status
+    `;
+
+    db.all(statsQuery, [], (err, stats) => {
+      if (err) {
+        console.error('Erreur lors de la récupération des statistiques Kanban:', err);
+        return res.status(500).json({ message: 'Erreur serveur' });
+      }
+
+      // Créer un objet avec les statistiques par statut
+      const statsByStatus = {
+        new: { count: 0, total_budget: 0 },
+        contacted: { count: 0, total_budget: 0 },
+        proposal: { count: 0, total_budget: 0 },
+        negotiation: { count: 0, total_budget: 0 },
+        won: { count: 0, total_budget: 0 },
+        lost: { count: 0, total_budget: 0 }
+      };
+
+      // Remplir avec les données de la base
+      stats.forEach(stat => {
+        if (statsByStatus[stat.status]) {
+          statsByStatus[stat.status] = {
+            count: stat.count,
+            total_budget: stat.total_budget
+          };
+        }
+      });
+
+      // Calculer les totaux
+      const totalLeads = stats.reduce((sum, stat) => sum + stat.count, 0);
+      const totalBudget = stats.reduce((sum, stat) => sum + stat.total_budget, 0);
+
+      // Calculer les taux de conversion
+      const activeLeads = statsByStatus.new.count +
+                          statsByStatus.contacted.count +
+                          statsByStatus.proposal.count +
+                          statsByStatus.negotiation.count;
+
+      const closedLeads = statsByStatus.won.count + statsByStatus.lost.count;
+
+      const winRate = closedLeads > 0
+        ? Math.round((statsByStatus.won.count / closedLeads) * 100)
+        : 0;
+
+      const conversionRate = totalLeads > 0
+        ? Math.round((statsByStatus.won.count / totalLeads) * 100)
+        : 0;
+
+      res.json({
+        by_status: statsByStatus,
+        totals: {
+          total_leads: totalLeads,
+          active_leads: activeLeads,
+          closed_leads: closedLeads,
+          total_budget: totalBudget,
+          win_rate: winRate,
+          conversion_rate: conversionRate
+        }
+      });
+    });
   }
 };
 

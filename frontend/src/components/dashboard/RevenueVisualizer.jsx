@@ -2,6 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
+import { FiDollarSign } from 'react-icons/fi';
 
 const RevenueVisualizer = ({ revenues = [], projects = [], showTitle = true, maxItems = 5 }) => {
   const [visualizationType, setVisualizationType] = useState('status'); // 'status', 'project', 'type'
@@ -178,8 +179,8 @@ const RevenueVisualizer = ({ revenues = [], projects = [], showTitle = true, max
     <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl p-5">
       {showTitle && (
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-medium text-white flex items-center">
-            <span className="mr-2">💰</span>
+          <h3 className="text-lg font-medium text-white flex items-center gap-2">
+            <FiDollarSign />
             Répartition des revenus
           </h3>
           
@@ -293,7 +294,7 @@ const RevenueVisualizer = ({ revenues = [], projects = [], showTitle = true, max
         </div>
       ) : (
         <div className="py-8 text-center">
-          <div className="text-4xl mb-3">💰</div>
+          <div className="text-4xl mb-3"><FiDollarSign /></div>
           <h4 className="text-lg font-medium text-gray-300 mb-2">Aucun revenu</h4>
           <p className="text-gray-400 text-sm">
             Les revenus apparaîtront ici lorsque vous en ajouterez.

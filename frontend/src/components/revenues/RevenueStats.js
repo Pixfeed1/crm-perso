@@ -1,6 +1,7 @@
 // src/components/revenues/RevenueStats.jsx
 import React from 'react';
 import { motion } from 'framer-motion';
+import { FiDollarSign, FiBarChart2, FiAward, FiTrendingUp } from 'react-icons/fi';
 
 const RevenueStats = ({ stats }) => {
   // Fonction pour formater les montants correctement
@@ -17,28 +18,28 @@ const RevenueStats = ({ stats }) => {
     {
       label: 'Revenus Totaux',
       value: formatAmount(stats.total),
-      icon: '💵',
+      icon: <FiDollarSign />,
       color: 'from-emerald-500 to-teal-500',
       delay: 0.1
     },
     {
       label: 'Montant Moyen',
       value: formatAmount(stats.average),
-      icon: '📊',
+      icon: <FiBarChart2 />,
       color: 'from-blue-500 to-indigo-500',
       delay: 0.2
     },
     {
       label: 'Montant Maximum',
       value: formatAmount(stats.highest),
-      icon: '🏆',
+      icon: <FiAward />,
       color: 'from-purple-500 to-indigo-500',
       delay: 0.3
     },
     {
       label: 'Revenus Prévus',
       value: formatAmount(stats.forecasted),
-      icon: '📈',
+      icon: <FiTrendingUp />,
       color: 'from-amber-500 to-orange-500',
       delay: 0.4
     }

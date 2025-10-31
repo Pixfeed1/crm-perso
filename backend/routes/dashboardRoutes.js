@@ -3,32 +3,21 @@ const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middleware/authMiddleware');
 
-console.log('[DASHBOARD] Module dashboardRoutes chargé');
-
-// Middleware de logs pour toutes les requêtes du tableau de bord
-router.use((req, res, next) => {
-  console.log(`[DASHBOARD] Requête ${req.method} reçue sur ${req.originalUrl} à ${new Date().toISOString()}`);
-  console.log(`[DASHBOARD] Utilisateur: ${req.user ? JSON.stringify(req.user) : 'Non authentifié'}`);
-  console.log(`[DASHBOARD] Paramètres: ${JSON.stringify(req.params)}`);
-  console.log(`[DASHBOARD] Query: ${JSON.stringify(req.query)}`);
-  console.log(`[DASHBOARD] Body: ${JSON.stringify(req.body)}`);
-  next();
-});
+// Import des modèles
+const leadModel = require('../models/leadModel');
+const projectModel = require('../models/projectModel');
+const revenueModel = require('../models/revenueModel');
+const activityModel = require('../models/activityModel');
+const goalModel = require('../models/goalModel');
 
 // Appliquer le middleware d'authentification à toutes les routes
-console.log('[DASHBOARD] Application du middleware d\'authentification');
 router.use(authMiddleware);
 
 // Obtenir les données du tableau de bord
 router.get('/', async (req, res) => {
-  console.log('[DASHBOARD] Début de la récupération des données du tableau de bord');
-  console.log(`[DASHBOARD] Utilisateur authentifié: ID=${req.user.id}, Rôle=${req.user.role || 'N/A'}`);
-  
   const db = req.app.locals.db;
-  console.log('[DASHBOARD] Connexion à la base de données obtenue');
-  
+
   try {
-    console.log('[DASHBOARD] Initialisation de la structure des données du tableau de bord');
     // Structure des données du tableau de bord
     const dashboardData = {
       leads: { total: 0, newThisMonth: 0 },
@@ -40,339 +29,141 @@ router.get('/', async (req, res) => {
       projectTimeline: [],
       revenueChart: []
     };
-    
+
     // Date du début du mois en cours
     const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-    console.log(`[DASHBOARD] Date de début du mois en cours: ${startOfMonth}`);
-    
-    // Récupérer les statistiques des leads
-    console.log('[DASHBOARD] Début de la récupération des statistiques des leads');
-    const leadsPromise = new Promise((resolve, reject) => {
-      console.log('[DASHBOARD] Exécution de la requête pour compter le total des leads');
-      db.get('SELECT COUNT(*) as total FROM leads', [], (err, result) => {
-        if (err) {
-          console.error('[DASHBOARD] Erreur lors du comptage des leads:', err);
-          console.error('[DASHBOARD] Stack trace:', err.stack);
-          resolve(); // Continuer malgré l'erreur
-        } else {
-          dashboardData.leads.total = result.total || 0;
-          console.log(`[DASHBOARD] Nombre total de leads: ${dashboardData.leads.total}`);
-          
-          // Compter les nouveaux leads du mois
-          console.log('[DASHBOARD] Exécution de la requête pour compter les nouveaux leads du mois');
-          db.get(`
-            SELECT COUNT(*) as newLeads 
-            FROM leads 
-            WHERE created_at >= ?
-          `, [startOfMonth], (err, result) => {
-            if (err) {
-              console.error('[DASHBOARD] Erreur lors du comptage des nouveaux leads:', err);
-              console.error('[DASHBOARD] Stack trace:', err.stack);
-              // Continuer malgré l'erreur
-            } else {
-              dashboardData.leads.newThisMonth = result.newLeads || 0;
-              console.log(`[DASHBOARD] Nombre de nouveaux leads ce mois: ${dashboardData.leads.newThisMonth}`);
-            }
-            console.log('[DASHBOARD] Promesse de récupération des leads résolue');
-            resolve();
-          });
-        }
-      });
-    });
-    
-    // Récupérer les statistiques des projets
-    console.log('[DASHBOARD] Début de la récupération des statistiques des projets');
-    const projectsPromise = new Promise((resolve, reject) => {
-      console.log('[DASHBOARD] Exécution de la requête pour compter les projets par statut');
-      db.all(`
-        SELECT 
-          SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) as active,
-          SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
-          SUM(CASE WHEN status = 'planned' AND start_date > date('now') THEN 1 ELSE 0 END) as upcoming
-        FROM projects
-      `, [], (err, results) => {
-        if (err) {
-          console.error('[DASHBOARD] Erreur lors du comptage des projets:', err);
-          console.error('[DASHBOARD] Stack trace:', err.stack);
-          resolve(); // Continuer malgré l'erreur
-        } else if (results.length > 0) {
-          const result = results[0];
-          dashboardData.projects.active = result.active || 0;
-          dashboardData.projects.completed = result.completed || 0;
-          dashboardData.projects.upcoming = result.upcoming || 0;
-          console.log(`[DASHBOARD] Statistiques des projets - Actifs: ${dashboardData.projects.active}, Terminés: ${dashboardData.projects.completed}, À venir: ${dashboardData.projects.upcoming}`);
-        } else {
-          console.log('[DASHBOARD] Aucun résultat trouvé pour les statistiques des projets');
-        }
-        console.log('[DASHBOARD] Promesse de récupération des projets résolue');
-        resolve();
-      });
-    });
-    
-    // Récupérer les statistiques des revenus
-    console.log('[DASHBOARD] Début de la récupération des statistiques des revenus');
-    const revenuesPromise = new Promise((resolve, reject) => {
-      // Revenus du mois en cours
-      console.log('[DASHBOARD] Exécution de la requête pour calculer les revenus du mois en cours');
-      db.get(`
-        SELECT SUM(amount) as monthTotal 
-        FROM revenues 
-        WHERE date >= ?
-      `, [startOfMonth], (err, result) => {
-        if (err) {
-          console.error('[DASHBOARD] Erreur lors du calcul des revenus du mois:', err);
-          console.error('[DASHBOARD] Stack trace:', err.stack);
-          resolve(); // Continuer malgré l'erreur
-        } else {
-          dashboardData.revenues.thisMonth = result.monthTotal || 0;
-          console.log(`[DASHBOARD] Revenus du mois en cours: ${dashboardData.revenues.thisMonth}`);
-          
-          // Revenus totaux
-          console.log('[DASHBOARD] Exécution de la requête pour calculer les revenus totaux');
-          db.get('SELECT SUM(amount) as total FROM revenues', [], (err, result) => {
-            if (err) {
-              console.error('[DASHBOARD] Erreur lors du calcul des revenus totaux:', err);
-              console.error('[DASHBOARD] Stack trace:', err.stack);
-              // Continuer malgré l'erreur
-            } else {
-              dashboardData.revenues.total = result.total || 0;
-              console.log(`[DASHBOARD] Revenus totaux: ${dashboardData.revenues.total}`);
-              
-              // Projection basée sur la moyenne des 3 derniers mois
-              const threeMonthsAgo = new Date();
-              threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
-              const threeMonthsAgoStr = threeMonthsAgo.toISOString().split('T')[0];
-              console.log(`[DASHBOARD] Date il y a trois mois: ${threeMonthsAgoStr}`);
-              
-              console.log('[DASHBOARD] Exécution de la requête pour calculer la projection des revenus');
-              db.get(`
-                SELECT SUM(amount) / 3 as avgMonthly 
-                FROM revenues 
-                WHERE date >= ?
-              `, [threeMonthsAgoStr], (err, result) => {
-                if (err) {
-                  console.error('[DASHBOARD] Erreur lors du calcul de la projection des revenus:', err);
-                  console.error('[DASHBOARD] Stack trace:', err.stack);
-                  // Continuer malgré l'erreur
-                } else {
-                  dashboardData.revenues.projection = result.avgMonthly || 0;
-                  console.log(`[DASHBOARD] Projection des revenus: ${dashboardData.revenues.projection}`);
-                }
-                console.log('[DASHBOARD] Promesse de récupération des revenus résolue');
-                resolve();
-              });
-            }
-          });
-        }
-      });
-    });
-    
-    // Récupérer les statistiques des activités
-    console.log('[DASHBOARD] Début de la récupération des statistiques des activités');
-    const activitiesPromise = new Promise((resolve, reject) => {
-      console.log('[DASHBOARD] Exécution de la requête pour compter les activités par statut');
-      db.all(`
-        SELECT 
-          SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
-          SUM(CASE WHEN status != 'completed' THEN 1 ELSE 0 END) as pending
-        FROM activities
-      `, [], (err, results) => {
-        if (err) {
-          console.error('[DASHBOARD] Erreur lors du comptage des activités:', err);
-          console.error('[DASHBOARD] Stack trace:', err.stack);
-          resolve(); // Continuer malgré l'erreur
-        } else if (results.length > 0) {
-          const result = results[0];
-          dashboardData.activities.completed = result.completed || 0;
-          dashboardData.activities.pending = result.pending || 0;
-          console.log(`[DASHBOARD] Statistiques des activités - Terminées: ${dashboardData.activities.completed}, En attente: ${dashboardData.activities.pending}`);
-        } else {
-          console.log('[DASHBOARD] Aucun résultat trouvé pour les statistiques des activités');
-        }
-        console.log('[DASHBOARD] Promesse de récupération des activités résolue');
-        resolve();
-      });
-    });
-    
-    // Récupérer les statistiques des objectifs
-    console.log('[DASHBOARD] Début de la récupération des statistiques des objectifs');
-    const goalsPromise = new Promise((resolve, reject) => {
-      // Calculer le pourcentage atteint pour chaque objectif
-      console.log('[DASHBOARD] Exécution de la requête pour récupérer les objectifs en cours');
-      db.all(`
-        SELECT id, current_value, target_value
-        FROM goals
-        WHERE end_date >= date('now')
-      `, [], (err, goals) => {
-        if (err) {
-          console.error('[DASHBOARD] Erreur lors de la récupération des objectifs:', err);
-          console.error('[DASHBOARD] Stack trace:', err.stack);
-          resolve(); // Continuer malgré l'erreur
-        } else {
-          console.log(`[DASHBOARD] Nombre d'objectifs récupérés: ${goals.length}`);
-          let onTrack = 0;
-          let atRisk = 0;
-          
-          goals.forEach(goal => {
-            const progress = goal.current_value / goal.target_value;
-            console.log(`[DASHBOARD] Objectif ID=${goal.id}: progression à ${(progress * 100).toFixed(2)}% (${goal.current_value}/${goal.target_value})`);
-            // Si la progression est supérieure à 70%, considérer comme "sur la bonne voie"
-            if (progress >= 0.7) {
-              onTrack++;
-              console.log(`[DASHBOARD] Objectif ID=${goal.id} est sur la bonne voie`);
-            } else {
-              atRisk++;
-              console.log(`[DASHBOARD] Objectif ID=${goal.id} est à risque`);
-            }
-          });
-          
-          dashboardData.goals.onTrack = onTrack;
-          dashboardData.goals.atRisk = atRisk;
-          console.log(`[DASHBOARD] Statistiques des objectifs - Sur la bonne voie: ${dashboardData.goals.onTrack}, À risque: ${dashboardData.goals.atRisk}`);
-        }
-        console.log('[DASHBOARD] Promesse de récupération des objectifs résolue');
-        resolve();
-      });
-    });
-    
-    // Récupérer les activités récentes
-    console.log('[DASHBOARD] Début de la récupération des activités récentes');
-    const recentActivitiesPromise = new Promise((resolve, reject) => {
-      console.log('[DASHBOARD] Exécution de la requête pour récupérer les 5 dernières activités');
-      db.all(`
-        SELECT a.*, p.name as project_name
-        FROM activities a
-        LEFT JOIN projects p ON a.project_id = p.id
-        ORDER BY a.date DESC
-        LIMIT 5
-      `, [], (err, activities) => {
-        if (err) {
-          console.error('[DASHBOARD] Erreur lors de la récupération des activités récentes:', err);
-          console.error('[DASHBOARD] Stack trace:', err.stack);
-          resolve(); // Continuer malgré l'erreur
-        } else {
-          dashboardData.recentActivities = activities || [];
-          console.log(`[DASHBOARD] Nombre d'activités récentes récupérées: ${dashboardData.recentActivities.length}`);
-          dashboardData.recentActivities.forEach((activity, index) => {
-            console.log(`[DASHBOARD] Activité récente #${index + 1}: ID=${activity.id}, Projet=${activity.project_name}, Date=${activity.date}`);
-          });
-        }
-        console.log('[DASHBOARD] Promesse de récupération des activités récentes résolue');
-        resolve();
-      });
-    });
-    
-    // Récupérer la timeline des projets
-    console.log('[DASHBOARD] Début de la récupération de la timeline des projets');
-    const projectTimelinePromise = new Promise((resolve, reject) => {
-      console.log('[DASHBOARD] Exécution de la requête pour récupérer la timeline des projets');
-      db.all(`
-        SELECT id, name, start_date, end_date, status
-        FROM projects
-        WHERE (status = 'in_progress' OR status = 'planned')
-          AND start_date IS NOT NULL
-          AND end_date IS NOT NULL
-        ORDER BY start_date
-        LIMIT 10
-      `, [], (err, projects) => {
-        if (err) {
-          console.error('[DASHBOARD] Erreur lors de la récupération de la timeline des projets:', err);
-          console.error('[DASHBOARD] Stack trace:', err.stack);
-          resolve(); // Continuer malgré l'erreur
-        } else {
-          dashboardData.projectTimeline = projects || [];
-          console.log(`[DASHBOARD] Nombre de projets dans la timeline: ${dashboardData.projectTimeline.length}`);
-          dashboardData.projectTimeline.forEach((project, index) => {
-            console.log(`[DASHBOARD] Projet timeline #${index + 1}: ID=${project.id}, Nom=${project.name}, Du ${project.start_date} au ${project.end_date}, Statut=${project.status}`);
-          });
-        }
-        console.log('[DASHBOARD] Promesse de récupération de la timeline des projets résolue');
-        resolve();
-      });
-    });
-    
-    // Récupérer les données du graphique des revenus (derniers 6 mois)
-    console.log('[DASHBOARD] Début de la récupération des données du graphique des revenus');
-    const revenueChartPromise = new Promise((resolve, reject) => {
-      const sixMonthsAgo = new Date();
-      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
-      const sixMonthsAgoStr = sixMonthsAgo.toISOString().split('T')[0].substring(0, 7);
-      console.log(`[DASHBOARD] Date il y a six mois: ${sixMonthsAgoStr}`);
-      
-      console.log('[DASHBOARD] Exécution de la requête pour récupérer les données du graphique des revenus');
-      db.all(`
-        SELECT strftime('%Y-%m', date) as month, SUM(amount) as amount
-        FROM revenues
-        WHERE strftime('%Y-%m', date) >= ?
-        GROUP BY month
-        ORDER BY month
-      `, [sixMonthsAgoStr], (err, results) => {
-        if (err) {
-          console.error('[DASHBOARD] Erreur lors de la récupération des données du graphique des revenus:', err);
-          console.error('[DASHBOARD] Stack trace:', err.stack);
-          resolve(); // Continuer malgré l'erreur
-        } else {
-          dashboardData.revenueChart = results || [];
-          console.log(`[DASHBOARD] Nombre de points de données pour le graphique des revenus: ${dashboardData.revenueChart.length}`);
-          dashboardData.revenueChart.forEach((dataPoint, index) => {
-            console.log(`[DASHBOARD] Revenus ${dataPoint.month}: ${dataPoint.amount}`);
-          });
-        }
-        console.log('[DASHBOARD] Promesse de récupération des données du graphique des revenus résolue');
-        resolve();
-      });
-    });
-    
-    console.log('[DASHBOARD] Attente de la résolution de toutes les promesses');
-    // Attendre que toutes les requêtes soient terminées
-    await Promise.all([
-      leadsPromise,
-      projectsPromise,
-      revenuesPromise,
-      activitiesPromise,
-      goalsPromise,
-      recentActivitiesPromise,
-      projectTimelinePromise,
-      revenueChartPromise
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    // Récupérer toutes les données en parallèle
+    const [
+      allLeads,
+      allProjects,
+      allRevenues,
+      allActivities,
+      allGoals,
+      recentActivities
+    ] = await Promise.all([
+      leadModel.getAllLeads(db),
+      projectModel.getAllProjects(db),
+      revenueModel.getAllRevenues(db),
+      activityModel.getAllActivities(db),
+      goalModel.getAllGoals(db),
+      activityModel.getRecentActivities(db, 5)
     ]);
-    
-    console.log('[DASHBOARD] Toutes les promesses ont été résolues');
-    console.log('[DASHBOARD] Envoi des données du tableau de bord au client');
-    
-    // Intercept the response sending
-    const oldJson = res.json;
-    res.json = function(obj) {
-      console.log(`[DASHBOARD] Réponse JSON envoyée avec statut ${res.statusCode}`);
-      console.log(`[DASHBOARD] Taille de la réponse: environ ${JSON.stringify(obj).length} caractères`);
-      return oldJson.apply(res, arguments);
-    };
-    
+
+    // Statistiques des leads
+    dashboardData.leads.total = allLeads.length;
+    dashboardData.leads.newThisMonth = allLeads.filter(lead =>
+      new Date(lead.created_at) >= startOfMonth
+    ).length;
+
+    // Statistiques des projets
+    const now_iso = new Date().toISOString();
+    dashboardData.projects.active = allProjects.filter(p =>
+      p.status === 'in_progress' || p.status === 'en-cours'
+    ).length;
+    dashboardData.projects.completed = allProjects.filter(p =>
+      p.status === 'completed' || p.status === 'terminé'
+    ).length;
+    dashboardData.projects.upcoming = allProjects.filter(p =>
+      (p.status === 'planned' || p.status === 'planifié') &&
+      p.start_date &&
+      new Date(p.start_date) > new Date()
+    ).length;
+
+    // Statistiques des revenus
+    const startOfMonthISO = startOfMonth.toISOString();
+    dashboardData.revenues.thisMonth = allRevenues
+      .filter(r => r.date && r.date >= startOfMonthISO)
+      .reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0);
+
+    dashboardData.revenues.total = allRevenues
+      .reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0);
+
+    // Projection basée sur la moyenne des 3 derniers mois
+    const threeMonthsAgo = new Date();
+    threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+    const threeMonthsAgoISO = threeMonthsAgo.toISOString();
+    const recentRevenues = allRevenues.filter(r => r.date >= threeMonthsAgoISO);
+    dashboardData.revenues.projection = recentRevenues.length > 0
+      ? recentRevenues.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0) / 3
+      : 0;
+
+    // Statistiques des activités
+    dashboardData.activities.completed = allActivities.filter(a =>
+      a.status === 'completed' || a.status === 'terminé'
+    ).length;
+    dashboardData.activities.pending = allActivities.filter(a =>
+      a.status !== 'completed' && a.status !== 'terminé'
+    ).length;
+
+    // Statistiques des objectifs
+    const activeGoals = allGoals.filter(g =>
+      !g.end_date || new Date(g.end_date) >= new Date()
+    );
+    activeGoals.forEach(goal => {
+      const progress = (goal.current_value || 0) / (goal.target_value || 1);
+      // Si la progression est supérieure à 70%, considérer comme "sur la bonne voie"
+      if (progress >= 0.7) {
+        dashboardData.goals.onTrack++;
+      } else {
+        dashboardData.goals.atRisk++;
+      }
+    });
+
+    // Activités récentes (déjà récupérées)
+    dashboardData.recentActivities = recentActivities;
+
+    // Timeline des projets (projets en cours ou planifiés)
+    dashboardData.projectTimeline = allProjects
+      .filter(p =>
+        (p.status === 'in_progress' || p.status === 'en-cours' ||
+         p.status === 'planned' || p.status === 'planifié') &&
+        p.start_date && p.end_date
+      )
+      .sort((a, b) => new Date(a.start_date) - new Date(b.start_date))
+      .slice(0, 10)
+      .map(p => ({
+        id: p.id,
+        name: p.name,
+        start_date: p.start_date,
+        end_date: p.end_date,
+        status: p.status
+      }));
+
+    // Données du graphique des revenus (derniers 6 mois)
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
+    const revenuesByMonth = {};
+
+    // Initialiser tous les mois
+    for (let i = 0; i < 6; i++) {
+      const date = new Date();
+      date.setMonth(date.getMonth() - (5 - i));
+      const month = date.toISOString().substring(0, 7); // YYYY-MM
+      revenuesByMonth[month] = 0;
+    }
+
+    // Calculer les revenus par mois
+    allRevenues
+      .filter(r => r.date && new Date(r.date) >= sixMonthsAgo)
+      .forEach(r => {
+        const month = r.date.substring(0, 7); // YYYY-MM
+        if (revenuesByMonth[month] !== undefined) {
+          revenuesByMonth[month] += parseFloat(r.amount) || 0;
+        }
+      });
+
+    // Convertir en tableau pour le graphique
+    dashboardData.revenueChart = Object.entries(revenuesByMonth)
+      .map(([month, amount]) => ({ month, amount }))
+      .sort((a, b) => a.month.localeCompare(b.month));
+
     res.json(dashboardData);
   } catch (error) {
-    console.error('[DASHBOARD] Erreur lors de la récupération des données du tableau de bord:', error);
-    console.error('[DASHBOARD] Stack trace complète:', error.stack);
-    console.error(`[DASHBOARD] Type d'erreur: ${error.name}, Message: ${error.message}`);
-    console.error(`[DASHBOARD] Informations système - Mémoire: ${process.memoryUsage().heapUsed / 1024 / 1024} MB`);
-    console.error('[DASHBOARD] Envoi d\'une réponse d\'erreur au client');
-    res.status(500).json({ message: 'Erreur serveur' });
+    console.error('[Dashboard] Erreur lors de la récupération des données:', error);
+    res.status(500).json({ message: 'Erreur serveur', error: error.message });
   }
 });
-
-// Middleware de gestion des erreurs pour le routeur dashboard
-router.use((err, req, res, next) => {
-  console.error('[DASHBOARD] Erreur interceptée par le middleware d\'erreur:', err);
-  console.error('[DASHBOARD] Stack trace:', err.stack);
-  console.error(`[DASHBOARD] Requête qui a causé l'erreur: ${req.method} ${req.originalUrl}`);
-  console.error(`[DASHBOARD] Corps de la requête: ${JSON.stringify(req.body)}`);
-  console.error(`[DASHBOARD] Paramètres de la requête: ${JSON.stringify(req.params)}`);
-  console.error(`[DASHBOARD] Query string: ${JSON.stringify(req.query)}`);
-  res.status(500).json({ 
-    message: 'Erreur serveur dans le module dashboard', 
-    errorId: Date.now() 
-  });
-});
-
-console.log('[DASHBOARD] Configuration des routes du tableau de bord terminée');
 
 module.exports = router;
