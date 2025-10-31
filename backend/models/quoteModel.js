@@ -50,12 +50,12 @@ const getAllQuotes = (db) => {
       ORDER BY q.issue_date DESC
     `;
 
-    db.all(query, [], (err, quotes) => {
+    db.pool.query(query, [], (err, result) => {
       if (err) {
         console.error('[QuoteModel] Erreur lors de la récupération des devis:', err);
         reject(err);
       } else {
-        resolve(quotes || []);
+        resolve(result.rows || []);
       }
     });
   });

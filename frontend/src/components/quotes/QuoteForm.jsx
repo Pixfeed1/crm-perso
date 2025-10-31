@@ -24,7 +24,7 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
     client_address: quote?.client_address || '',
     client_siret: quote?.client_siret || '',
     project_id: quote?.project_id || null,
-    items: quote?.items || [{ description: '', quantity: 1, unit_price: 0 }],
+    items: quote?.items || [{ type: 'product', description: '', quantity: 1, unit_price: 0 }],
     discount_type: quote?.discount_type || 'none',
     discount_value: quote?.discount_value || 0,
     tva_rate: quote?.tva_rate || 20,
@@ -77,6 +77,20 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
     };
     fetchData();
   }, []);
+
+  // Migrer les items existants pour ajouter le champ type s'il n'existe pas
+  useEffect(() => {
+    if (quote && quote.items) {
+      const migratedItems = quote.items.map(item => ({
+        ...item,
+        type: item.type || 'product' // Par défaut, c'est un produit
+      }));
+      setFormData(prev => ({
+        ...prev,
+        items: migratedItems
+      }));
+    }
+  }, [quote]);
 
   // Charger les fichiers du quote
   useEffect(() => {
@@ -148,7 +162,14 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
   const addItem = () => {
     setFormData({
       ...formData,
-      items: [...formData.items, { description: '', quantity: 1, unit_price: 0 }]
+      items: [...formData.items, { type: 'product', description: '', quantity: 1, unit_price: 0 }]
+    });
+  };
+
+  const addDetailLine = () => {
+    setFormData({
+      ...formData,
+      items: [...formData.items, { type: 'detail', description: '', quantity: 0, unit_price: 0 }]
     });
   };
 
@@ -159,8 +180,9 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
 
   // Calculs
   const calculateTotals = () => {
-    // Total des items
+    // Total des items (uniquement les produits, pas les lignes de détail)
     const subtotal = formData.items.reduce((sum, item) => {
+      if (item.type === 'detail') return sum; // Ignorer les lignes de détail
       return sum + (parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0);
     }, 0);
 
@@ -255,8 +277,10 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
         }
         return true;
       case 1: // Articles
-        if (formData.items.length === 0 || !formData.items.some(item => item.description.trim())) {
-          alert('Au moins un article est requis');
+        // Vérifier qu'il y a au moins un produit (pas juste des lignes de détail)
+        const hasProducts = formData.items.some(item => item.type !== 'detail' && item.description.trim());
+        if (!hasProducts) {
+          alert('Au moins un article/produit est requis');
           return false;
         }
         return true;
@@ -294,8 +318,10 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
       return;
     }
 
-    if (formData.items.length === 0 || !formData.items.some(item => item.description.trim())) {
-      alert('Au moins un article est requis');
+    // Vérifier qu'il y a au moins un produit (pas juste des lignes de détail)
+    const hasProducts = formData.items.some(item => item.type !== 'detail' && item.description.trim());
+    if (!hasProducts) {
+      alert('Au moins un article/produit est requis');
       return;
     }
 
@@ -445,72 +471,112 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
       <div className="space-y-6 animate-fadeIn">
         <div className="flex justify-between items-center">
           <h3 className="text-lg font-semibold text-white">Articles / Services</h3>
-          <button
-            type="button"
-            onClick={addItem}
-            className="flex items-center gap-2 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors text-sm"
-          >
-            <FiPlus className="w-4 h-4" />
-            Ajouter
-          </button>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={addDetailLine}
+              className="flex items-center gap-2 px-3 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors text-sm"
+              title="Ajouter une ligne de détail/description"
+            >
+              <FiPlus className="w-4 h-4" />
+              Ligne de détail
+            </button>
+            <button
+              type="button"
+              onClick={addItem}
+              className="flex items-center gap-2 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors text-sm"
+            >
+              <FiPlus className="w-4 h-4" />
+              Ajouter produit
+            </button>
+          </div>
         </div>
 
         <div className="space-y-3">
           {formData.items.map((item, index) => (
-            <div key={index} className="grid grid-cols-12 gap-3 items-start bg-gray-800/30 p-4 rounded-lg border border-gray-700/50">
-              <div className="col-span-12 sm:col-span-5">
-                <label className="block text-xs font-medium text-gray-400 mb-1">Description</label>
-                <input
-                  type="text"
-                  placeholder="Ex: Développement site web"
-                  value={item.description}
-                  onChange={(e) => handleItemChange(index, 'description', e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-white text-sm focus:outline-none focus:border-indigo-500"
-                  required
-                />
-              </div>
-              <div className="col-span-5 sm:col-span-3">
-                <label className="block text-xs font-medium text-gray-400 mb-1">Quantité</label>
-                <input
-                  type="number"
-                  placeholder="1"
-                  value={item.quantity}
-                  onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
-                  min="0"
-                  step="0.01"
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-white text-sm focus:outline-none focus:border-indigo-500"
-                  required
-                />
-              </div>
-              <div className="col-span-5 sm:col-span-3">
-                <label className="block text-xs font-medium text-gray-400 mb-1">Prix unitaire (€)</label>
-                <input
-                  type="number"
-                  placeholder="0.00"
-                  value={item.unit_price}
-                  onChange={(e) => handleItemChange(index, 'unit_price', e.target.value)}
-                  min="0"
-                  step="0.01"
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-white text-sm focus:outline-none focus:border-indigo-500"
-                  required
-                />
-              </div>
-              <div className="col-span-2 sm:col-span-1 flex items-end justify-center">
-                {formData.items.length > 1 && (
+            item.type === 'detail' ? (
+              // Ligne de détail (texte libre, pas de calcul)
+              <div key={index} className="bg-amber-900/20 border border-amber-700/50 p-3 rounded-lg">
+                <div className="flex gap-3 items-start">
+                  <div className="flex-1">
+                    <label className="block text-xs font-medium text-amber-400 mb-1">
+                      Ligne de détail (optionnelle)
+                    </label>
+                    <textarea
+                      placeholder="Ex: Description détaillée, notes, conditions particulières..."
+                      value={item.description}
+                      onChange={(e) => handleItemChange(index, 'description', e.target.value)}
+                      className="w-full px-3 py-2 bg-gray-800/50 border border-amber-700/50 rounded text-white text-sm focus:outline-none focus:border-amber-500 min-h-[60px]"
+                      rows={2}
+                    />
+                  </div>
                   <button
                     type="button"
                     onClick={() => removeItem(index)}
-                    className="p-2 text-red-400 hover:bg-red-500/20 rounded transition-colors"
+                    className="p-2 text-red-400 hover:bg-red-500/20 rounded transition-colors mt-6"
                     title="Supprimer"
                   >
                     <FiTrash2 className="w-4 h-4" />
                   </button>
-                )}
+                </div>
               </div>
-              <div className="col-span-12 text-right text-sm text-gray-400">
-                Total: <span className="text-white font-semibold">{((item.quantity || 0) * (item.unit_price || 0)).toFixed(2)} €</span>
+            ) : (
+              // Ligne produit (avec quantité et prix)
+              <div key={index} className="grid grid-cols-12 gap-3 items-start bg-gray-800/30 p-4 rounded-lg border border-gray-700/50">
+                <div className="col-span-12 sm:col-span-5">
+                  <label className="block text-xs font-medium text-gray-400 mb-1">Description</label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Développement site web"
+                    value={item.description}
+                    onChange={(e) => handleItemChange(index, 'description', e.target.value)}
+                    className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-white text-sm focus:outline-none focus:border-indigo-500"
+                    required
+                  />
+                </div>
+                <div className="col-span-5 sm:col-span-3">
+                  <label className="block text-xs font-medium text-gray-400 mb-1">Quantité</label>
+                  <input
+                    type="number"
+                    placeholder="1"
+                    value={item.quantity}
+                    onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
+                    min="0"
+                    step="0.01"
+                    className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-white text-sm focus:outline-none focus:border-indigo-500"
+                    required
+                  />
+                </div>
+                <div className="col-span-5 sm:col-span-3">
+                  <label className="block text-xs font-medium text-gray-400 mb-1">Prix unitaire (€)</label>
+                  <input
+                    type="number"
+                    placeholder="0.00"
+                    value={item.unit_price}
+                    onChange={(e) => handleItemChange(index, 'unit_price', e.target.value)}
+                    min="0"
+                    step="0.01"
+                    className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-white text-sm focus:outline-none focus:border-indigo-500"
+                    required
+                  />
+                </div>
+                <div className="col-span-2 sm:col-span-1 flex items-end justify-center">
+                  {formData.items.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeItem(index)}
+                      className="p-2 text-red-400 hover:bg-red-500/20 rounded transition-colors"
+                      title="Supprimer"
+                    >
+                      <FiTrash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+                <div className="col-span-12 text-right text-sm text-gray-400">
+                  Total: <span className="text-white font-semibold">{((item.quantity || 0) * (item.unit_price || 0)).toFixed(2)} €</span>
+                </div>
               </div>
-            </div>
+            )
           ))}
         </div>
 
@@ -1108,14 +1174,22 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
           <h4 className="text-sm font-medium text-gray-300 mb-3">Articles ({formData.items.length})</h4>
           <div className="space-y-2">
             {formData.items.map((item, index) => (
-              <div key={index} className="flex justify-between text-sm">
-                <span className="text-gray-400">
-                  {item.description} <span className="text-xs">({item.quantity} × {parseFloat(item.unit_price).toFixed(2)}€)</span>
-                </span>
-                <span className="text-white font-medium">
-                  {((item.quantity || 0) * (item.unit_price || 0)).toFixed(2)} €
-                </span>
-              </div>
+              item.type === 'detail' ? (
+                // Ligne de détail
+                <div key={index} className="py-1 text-sm">
+                  <p className="text-amber-300/80 italic text-xs">{item.description}</p>
+                </div>
+              ) : (
+                // Ligne produit
+                <div key={index} className="flex justify-between text-sm">
+                  <span className="text-gray-400">
+                    {item.description} <span className="text-xs">({item.quantity} × {parseFloat(item.unit_price).toFixed(2)}€)</span>
+                  </span>
+                  <span className="text-white font-medium">
+                    {((item.quantity || 0) * (item.unit_price || 0)).toFixed(2)} €
+                  </span>
+                </div>
+              )
             ))}
           </div>
         </div>
