@@ -42,7 +42,7 @@ const SearchModal = ({ onClose }) => {
         setSelectedIndex(0);
       } catch (error) {
         console.error('Erreur lors de la recherche:', error);
-        setResults({ leads: [], projects: [], goals: [], activities: [], contacts: [], total: 0 });
+        setResults({ clients: [], leads: [], projects: [], goals: [], activities: [], contacts: [], total: 0 });
       } finally {
         setIsLoading(false);
       }
@@ -53,6 +53,14 @@ const SearchModal = ({ onClose }) => {
 
   // Configuration des icônes et couleurs par type
   const entityConfig = {
+    clients: {
+      icon: <FiUsers />,
+      label: 'Clients',
+      color: 'text-emerald-400',
+      bg: 'bg-emerald-500/20',
+      border: 'border-emerald-500/30',
+      path: '/clients'
+    },
     leads: {
       icon: <FiUser />,
       label: 'Leads',
@@ -149,7 +157,7 @@ const SearchModal = ({ onClose }) => {
 
   // Obtenir le nom affiché pour une entité
   const getDisplayName = (type, item) => {
-    if (type === 'leads' || type === 'projects' || type === 'goals' || type === 'contacts') {
+    if (type === 'clients' || type === 'leads' || type === 'projects' || type === 'goals' || type === 'contacts') {
       return item.name;
     }
     if (type === 'activities') {
@@ -160,6 +168,9 @@ const SearchModal = ({ onClose }) => {
 
   // Obtenir les infos secondaires
   const getSecondaryInfo = (type, item) => {
+    if (type === 'clients') {
+      return item.company || item.email;
+    }
     if (type === 'leads') {
       return item.company || item.email;
     }
@@ -202,7 +213,7 @@ const SearchModal = ({ onClose }) => {
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Rechercher dans leads, projets, objectifs..."
+              placeholder="Rechercher dans clients, leads, projets, objectifs..."
               className="flex-1 bg-transparent text-white text-lg placeholder-gray-400 focus:outline-none"
             />
             {isLoading && (

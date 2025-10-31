@@ -4,6 +4,7 @@ const leadModel = require('../models/leadModel');
 const projectModel = require('../models/projectModel');
 const goalModel = require('../models/goalModel');
 const activityModel = require('../models/activityModel');
+const clientModel = require('../models/clientModel');
 
 /**
  * Recherche globale dans toutes les entités
@@ -15,6 +16,7 @@ const globalSearch = async (req, res) => {
 
     if (!query || query.trim().length < 2) {
       return res.json({
+        clients: [],
         leads: [],
         projects: [],
         goals: [],
@@ -27,12 +29,31 @@ const globalSearch = async (req, res) => {
     const searchTerm = query.toLowerCase();
 
     // Récupérer toutes les données en parallèle
-    const [allLeads, allProjects, allGoals, allActivities] = await Promise.all([
+    const [allClients, allLeads, allProjects, allGoals, allActivities] = await Promise.all([
+      clientModel.getAllClients(db).catch(() => []),
       leadModel.getAllLeads(db).catch(() => []),
       projectModel.getAllProjects(db).catch(() => []),
       goalModel.getAllGoals(db).catch(() => []),
       activityModel.getAllActivities(db).catch(() => [])
     ]);
+
+    // Recherche dans les clients
+    const clients = allClients
+      .filter(client =>
+        (client.name && client.name.toLowerCase().includes(searchTerm)) ||
+        (client.company && client.company.toLowerCase().includes(searchTerm)) ||
+        (client.email && client.email.toLowerCase().includes(searchTerm)) ||
+        (client.industry && client.industry.toLowerCase().includes(searchTerm))
+      )
+      .map(client => ({
+        id: client.id,
+        name: client.name,
+        company: client.company,
+        status: client.status,
+        type: client.type,
+        email: client.email
+      }))
+      .slice(0, 10);
 
     // Recherche dans les leads
     const leads = allLeads
@@ -131,12 +152,13 @@ const globalSearch = async (req, res) => {
     }
 
     res.json({
+      clients,
       leads,
       projects,
       goals,
       activities,
       contacts,
-      total: leads.length + projects.length + goals.length + activities.length + contacts.length
+      total: clients.length + leads.length + projects.length + goals.length + activities.length + contacts.length
     });
   } catch (error) {
     console.error('Erreur lors de la recherche globale:', error);
