@@ -53,13 +53,18 @@ const Dashboard = () => {
   const [showNewMenu, setShowNewMenu] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [reviewStats, setReviewStats] = useState(null);
+  const [dateFilter, setDateFilter] = useState('month'); // month, quarter, year, all
   const newMenuRef = useRef(null);
+  const filtersRef = useRef(null);
 
-  // Fermer le menu si on clique en dehors
+  // Fermer les menus si on clique en dehors
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (newMenuRef.current && !newMenuRef.current.contains(event.target)) {
         setShowNewMenu(false);
+      }
+      if (filtersRef.current && !filtersRef.current.contains(event.target)) {
+        setShowFilters(false);
       }
     };
 
@@ -185,15 +190,86 @@ const Dashboard = () => {
               >
                 <FiRefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
               </button>
-              {/* TODO: Implémenter le panneau de filtres
-              <button
-                onClick={() => setShowFilters(!showFilters)}
-                className={`p-2 transition-colors ${showFilters ? 'text-indigo-400' : 'text-gray-400 hover:text-white'}`}
-                title="Filtres"
-              >
-                <FaFilter className="w-5 h-5" />
-              </button>
-              */}
+
+              {/* Filtres avec dropdown */}
+              <div className="relative" ref={filtersRef}>
+                <button
+                  onClick={() => setShowFilters(!showFilters)}
+                  className={`p-2 transition-colors ${showFilters ? 'text-indigo-400' : 'text-gray-400 hover:text-white'}`}
+                  title="Filtres"
+                >
+                  <FaFilter className="w-5 h-5" />
+                </button>
+
+                <AnimatePresence>
+                  {showFilters && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="absolute right-0 mt-2 w-64 bg-gray-800 border border-gray-700 rounded-lg shadow-xl overflow-hidden z-50"
+                    >
+                      <div className="p-4">
+                        <h3 className="text-sm font-medium text-gray-300 mb-3">Période d'affichage</h3>
+
+                        <div className="space-y-2">
+                          <button
+                            onClick={() => { setDateFilter('month'); setShowFilters(false); }}
+                            className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
+                              dateFilter === 'month'
+                                ? 'bg-indigo-600 text-white'
+                                : 'text-gray-300 hover:bg-gray-700'
+                            }`}
+                          >
+                            Ce mois
+                          </button>
+                          <button
+                            onClick={() => { setDateFilter('quarter'); setShowFilters(false); }}
+                            className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
+                              dateFilter === 'quarter'
+                                ? 'bg-indigo-600 text-white'
+                                : 'text-gray-300 hover:bg-gray-700'
+                            }`}
+                          >
+                            Ce trimestre
+                          </button>
+                          <button
+                            onClick={() => { setDateFilter('year'); setShowFilters(false); }}
+                            className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
+                              dateFilter === 'year'
+                                ? 'bg-indigo-600 text-white'
+                                : 'text-gray-300 hover:bg-gray-700'
+                            }`}
+                          >
+                            Cette année
+                          </button>
+                          <button
+                            onClick={() => { setDateFilter('all'); setShowFilters(false); }}
+                            className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
+                              dateFilter === 'all'
+                                ? 'bg-indigo-600 text-white'
+                                : 'text-gray-300 hover:bg-gray-700'
+                            }`}
+                          >
+                            Toutes les données
+                          </button>
+                        </div>
+
+                        <div className="mt-3 pt-3 border-t border-gray-700">
+                          <p className="text-xs text-gray-400">
+                            Filtre sélectionné: <span className="text-indigo-400 font-medium">
+                              {dateFilter === 'month' && 'Ce mois'}
+                              {dateFilter === 'quarter' && 'Ce trimestre'}
+                              {dateFilter === 'year' && 'Cette année'}
+                              {dateFilter === 'all' && 'Toutes les données'}
+                            </span>
+                          </p>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
 
               {/* Menu "Nouveau" avec dropdown */}
               <div className="relative" ref={newMenuRef}>
