@@ -328,7 +328,7 @@ const LeadDetails = ({ lead, onUpdate, onDelete, onAddContact, onUpdateContact, 
       {/* Informations principales */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
         {/* Panneau de gauche */}
-        <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl p-4 sm:p-5">
+        <div className="bg-gray-800/30 rounded-xl p-4 sm:p-5 overflow-visible">
           <h3 className="text-base sm:text-lg font-medium text-gray-200 mb-3 sm:mb-4 flex items-center gap-2">
             <FiClipboard className="text-base sm:text-lg" />
             Informations
@@ -342,7 +342,7 @@ const LeadDetails = ({ lead, onUpdate, onDelete, onAddContact, onUpdateContact, 
                 {lead.type === 'company' ? <><FiBriefcase className="text-sm sm:text-base text-white" /> <span className="text-white">Entreprise</span></> : <><FiUser className="text-sm sm:text-base text-white" /> <span className="text-white">Particulier</span></>}
               </span>
             </div>
-            
+
             {/* Statut avec menu déroulant */}
             <div className="flex justify-between items-center">
               <span className="text-gray-400 text-sm sm:text-base">Statut</span>
@@ -353,11 +353,11 @@ const LeadDetails = ({ lead, onUpdate, onDelete, onAddContact, onUpdateContact, 
                 >
                   <span className="mr-1 text-xs sm:text-sm text-white">{statusStyle.icon}</span>
                   {lead.status.charAt(0).toUpperCase() + lead.status.slice(1)}
-                  <span className="ml-1">▲</span>
+                  <span className="ml-1">▼</span>
                 </button>
 
                 {/* Menu déroulant pour changer le statut */}
-                <div className="absolute right-0 bottom-full mb-2 w-40 sm:w-48 bg-gray-900 border border-gray-700 rounded-lg shadow-lg z-50 overflow-hidden opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300">
+                <div className="absolute right-0 mt-2 w-40 sm:w-48 bg-gray-900 border border-gray-700 rounded-lg shadow-lg z-50 overflow-hidden opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300">
                   {Object.keys(statusConfig).map(status => (
                     <button
                       key={status}
