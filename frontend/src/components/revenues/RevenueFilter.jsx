@@ -75,18 +75,18 @@ const RevenueFilter = ({ filters, setFilters, projects, onSort, sortField, sortD
               placeholder="Rechercher un revenu..."
               value={filters.search}
               onChange={(e) => handleFilterChange('search', e.target.value)}
-              className="w-full bg-white text-gray-800 border border-gray-400 rounded-lg px-4 py-2 pl-10 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+              className="w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg px-4 py-2 pl-10 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
               style={searchInputStyle}
             />
-          <span 
-            className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500"
+          <span
+            className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
             style={iconStyle}
           >
             <FiSearch />
           </span>
           {filters.search && (
             <motion.button
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-300"
               style={iconStyle}
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
@@ -168,7 +168,7 @@ const RevenueFilter = ({ filters, setFilters, projects, onSort, sortField, sortD
                       className={`px-3 py-1 rounded-full text-xs font-medium ${
                         filters.type === option.value
                           ? 'bg-teal-600 text-white'
-                          : 'bg-white text-gray-800 hover:bg-gray-100'
+                          : 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50 border border-gray-700'
                       }`}
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
@@ -192,11 +192,11 @@ const RevenueFilter = ({ filters, setFilters, projects, onSort, sortField, sortD
                       id="minAmount"
                       value={filters.minAmount}
                       onChange={(e) => handleFilterChange('minAmount', e.target.value)}
-                      className="w-full bg-white text-gray-800 border border-gray-400 rounded-lg px-4 py-2 pl-8 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                      className="w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg px-4 py-2 pl-8 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                       placeholder="Min"
                       min="0"
                     />
-                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
                       €
                     </span>
                   </div>
@@ -212,11 +212,11 @@ const RevenueFilter = ({ filters, setFilters, projects, onSort, sortField, sortD
                       id="maxAmount"
                       value={filters.maxAmount}
                       onChange={(e) => handleFilterChange('maxAmount', e.target.value)}
-                      className="w-full bg-white text-gray-800 border border-gray-400 rounded-lg px-4 py-2 pl-8 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                      className="w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg px-4 py-2 pl-8 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                       placeholder="Max"
                       min="0"
                     />
-                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
                       €
                     </span>
                   </div>
@@ -232,7 +232,7 @@ const RevenueFilter = ({ filters, setFilters, projects, onSort, sortField, sortD
                   id="project"
                   value={filters.project}
                   onChange={(e) => handleFilterChange('project', e.target.value)}
-                  className="w-full bg-white text-gray-800 border border-gray-400 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                  className="w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                 >
                   <option value="all">Tous les projets</option>
                   <option value="none">Sans projet</option>
