@@ -564,11 +564,11 @@ const leadController = {
       const closedLeads = (statsByStatus.won?.count || 0) + (statsByStatus.lost?.count || 0);
 
       const winRate = closedLeads > 0
-        ? Math.round((statsByStatus.won.count / closedLeads) * 100)
+        ? Math.round(((statsByStatus.won?.count || 0) / closedLeads) * 100)
         : 0;
 
       const conversionRate = totalLeads > 0
-        ? Math.round((statsByStatus.won.count / totalLeads) * 100)
+        ? Math.round(((statsByStatus.won?.count || 0) / totalLeads) * 100)
         : 0;
 
       res.json({
