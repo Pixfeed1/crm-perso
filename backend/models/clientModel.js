@@ -215,25 +215,39 @@ const convertFromLead = (db, leadId, conversionData = {}) => {
 
               const newClientId = this.lastID;
 
-              // Mettre à jour le statut du lead en 'won'
+              // Transférer les projets du lead vers le nouveau client
               db.run(
-                'UPDATE leads SET status = ?, updated_at = ? WHERE id = ?',
-                ['won', now, leadId],
-                (err) => {
-                  if (err) {
-                    console.warn('[ClientModel] Erreur lors de la mise à jour du statut du lead:', err);
+                'UPDATE projects SET client_id = ?, lead_id = NULL WHERE lead_id = ?',
+                [newClientId, leadId],
+                (projectErr) => {
+                  if (projectErr) {
+                    console.warn('[ClientModel] Erreur lors du transfert des projets:', projectErr);
                     // Continuer quand même
+                  } else {
+                    console.log(`[ClientModel] Projets transférés du lead ${leadId} vers le client ${newClientId}`);
                   }
 
-                  // Récupérer le client créé
-                  db.get('SELECT * FROM crm_clients WHERE id = ?', [newClientId], (err, client) => {
-                    if (err) {
-                      console.error('[ClientModel] Erreur lors de la récupération du client créé:', err);
-                      reject(err);
-                    } else {
-                      resolve(client);
+                  // Mettre à jour le statut du lead en 'won'
+                  db.run(
+                    'UPDATE leads SET status = ?, updated_at = ? WHERE id = ?',
+                    ['won', now, leadId],
+                    (err) => {
+                      if (err) {
+                        console.warn('[ClientModel] Erreur lors de la mise à jour du statut du lead:', err);
+                        // Continuer quand même
+                      }
+
+                      // Récupérer le client créé
+                      db.get('SELECT * FROM crm_clients WHERE id = ?', [newClientId], (err, client) => {
+                        if (err) {
+                          console.error('[ClientModel] Erreur lors de la récupération du client créé:', err);
+                          reject(err);
+                        } else {
+                          resolve(client);
+                        }
+                      });
                     }
-                  });
+                  );
                 }
               );
             }
