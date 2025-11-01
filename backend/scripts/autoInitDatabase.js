@@ -621,6 +621,39 @@ async function ensureTvaRegimes(client) {
 }
 
 /**
+ * Supprime la contrainte de clé étrangère sur projects.lead_id si elle existe
+ * Cette contrainte n'est pas nécessaire car lead_id est une référence optionnelle
+ * et on veut pouvoir supprimer les leads sans casser les projets
+ */
+async function dropLeadIdForeignKey(client) {
+  console.log('\n🔧 Vérification de la contrainte FK sur projects.lead_id...');
+
+  try {
+    // Vérifier si la contrainte existe
+    const result = await client.query(`
+      SELECT constraint_name
+      FROM information_schema.table_constraints
+      WHERE table_name = 'projects'
+        AND constraint_type = 'FOREIGN KEY'
+        AND constraint_name LIKE '%lead_id%';
+    `);
+
+    if (result.rows.length > 0) {
+      const constraintName = result.rows[0].constraint_name;
+      console.log(`  → Suppression de la contrainte ${constraintName}...`);
+
+      await client.query(`ALTER TABLE projects DROP CONSTRAINT IF EXISTS ${constraintName};`);
+      console.log(`  ✓ Contrainte ${constraintName} supprimée`);
+    } else {
+      console.log(`  ✓ Aucune contrainte FK sur lead_id (OK)`);
+    }
+  } catch (error) {
+    console.warn(`  ⚠ Impossible de supprimer la contrainte FK: ${error.message}`);
+    // Ne pas bloquer l'initialisation
+  }
+}
+
+/**
  * Fonction principale d'auto-initialisation
  */
 async function autoInitDatabase(pool) {
@@ -632,6 +665,9 @@ async function autoInitDatabase(pool) {
     console.log('═'.repeat(60));
 
     await client.query('BEGIN');
+
+    // Supprimer la contrainte FK problématique sur lead_id
+    await dropLeadIdForeignKey(client);
 
     // Vérifier et créer toutes les tables
     for (const [tableName, schema] of Object.entries(DATABASE_SCHEMA)) {
