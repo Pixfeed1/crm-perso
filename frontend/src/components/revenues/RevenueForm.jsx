@@ -110,12 +110,11 @@ const RevenueForm = ({ revenue = {}, onSave, onCancel, projects }) => {
               onChange={handleInputChange}
               step="0.01"
               min="0"
-              className={`w-full bg-white text-gray-900 border ${
-                errors.amount ? 'border-rose-500' : 'border-gray-400'
+              className={`w-full bg-gray-800/50 text-white border ${
+                errors.amount ? 'border-rose-500' : 'border-gray-700'
               } rounded-lg px-4 py-2 pl-10 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent`}
-              style={{ color: '#111827' }}
             />
-            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-600">
+            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
               €
             </span>
           </div>
@@ -141,10 +140,9 @@ const RevenueForm = ({ revenue = {}, onSave, onCancel, projects }) => {
             name="date"
             value={formData.date}
             onChange={handleInputChange}
-            className={`w-full bg-white text-gray-900 border ${
-              errors.date ? 'border-rose-500' : 'border-gray-400'
+            className={`w-full bg-gray-800/50 text-white border ${
+              errors.date ? 'border-rose-500' : 'border-gray-700'
             } rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent`}
-            style={{ color: '#111827' }}
           />
           {errors.date && (
             <motion.p 
@@ -168,11 +166,10 @@ const RevenueForm = ({ revenue = {}, onSave, onCancel, projects }) => {
             name="description"
             value={formData.description}
             onChange={handleInputChange}
-            className={`w-full bg-white text-gray-900 border ${
-              errors.description ? 'border-rose-500' : 'border-gray-400'
-            } rounded-lg px-4 py-2 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent`}
+            className={`w-full bg-gray-800/50 text-white border ${
+              errors.description ? 'border-rose-500' : 'border-gray-700'
+            } rounded-lg px-4 py-2 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent`}
             placeholder="Ex: Acompte projet site web"
-            style={{ color: '#111827' }}
           />
           {errors.description && (
             <motion.p 
@@ -195,8 +192,7 @@ const RevenueForm = ({ revenue = {}, onSave, onCancel, projects }) => {
             name="project_id"
             value={formData.project_id}
             onChange={handleInputChange}
-            className="w-full bg-white text-gray-900 border border-gray-400 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-            style={{ color: '#111827' }}
+            className="w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
           >
             <option value="">Aucun projet</option>
             {projects.map(project => (
@@ -218,8 +214,7 @@ const RevenueForm = ({ revenue = {}, onSave, onCancel, projects }) => {
               name="type"
               value={formData.type}
               onChange={handleInputChange}
-              className="w-full bg-white text-gray-900 border border-gray-400 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-              style={{ color: '#111827' }}
+              className="w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
             >
               {typeOptions.map(option => (
                 <option key={option.value} value={option.value}>
@@ -236,12 +231,12 @@ const RevenueForm = ({ revenue = {}, onSave, onCancel, projects }) => {
             </label>
             <div className="flex space-x-2">
               {statusOptions.map(option => (
-                <label 
+                <label
                   key={option.value}
                   className={`flex-1 py-2 rounded-lg cursor-pointer text-center text-sm ${
-                    formData.status === option.value 
+                    formData.status === option.value
                       ? `${option.color} text-white`
-                      : 'bg-white/90 text-gray-800 hover:bg-gray-100'
+                      : 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50 border border-gray-700'
                   }`}
                 >
                   <input 
@@ -264,7 +259,7 @@ const RevenueForm = ({ revenue = {}, onSave, onCancel, projects }) => {
           <motion.button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 rounded-lg border-2 border-gray-600 bg-white text-gray-900 hover:bg-gray-100 hover:border-gray-700 font-semibold transition-all"
+            className="px-4 py-2 rounded-lg border-2 border-white/30 text-white hover:bg-white/10 hover:border-white/40 font-medium transition-all"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             disabled={submitting}

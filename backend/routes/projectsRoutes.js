@@ -244,6 +244,15 @@ router.post('/:id/payments', async (req, res) => {
 
     // Créer automatiquement un revenu lié au paiement
     let revenueId = null;
+    console.log('[ProjectPayment] Tentative de création de revenu avec:', {
+      amount,
+      date: payment_date || new Date().toISOString().split('T')[0],
+      description: `Paiement pour le projet: ${project.name}`,
+      project_id: id,
+      type: 'invoice',
+      status: 'paid'
+    });
+
     try {
       const revenue = await revenueModel.createRevenue(db, {
         amount: amount,
@@ -254,9 +263,11 @@ router.post('/:id/payments', async (req, res) => {
         status: 'paid'
       });
       revenueId = revenue.id;
-      console.log('[ProjectPayment] Revenu créé automatiquement:', revenueId);
+      console.log('[ProjectPayment] ✅ Revenu créé automatiquement avec succès ! ID:', revenueId, 'Revenu complet:', revenue);
     } catch (revenueError) {
-      console.error('[ProjectPayment] Erreur lors de la création du revenu:', revenueError);
+      console.error('[ProjectPayment] ❌ ERREUR lors de la création du revenu:');
+      console.error('[ProjectPayment] Message:', revenueError.message);
+      console.error('[ProjectPayment] Stack:', revenueError.stack);
       // Continuer même si la création du revenu échoue
     }
 
