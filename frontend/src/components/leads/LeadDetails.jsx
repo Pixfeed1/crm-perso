@@ -168,7 +168,7 @@ const LeadDetails = ({ lead, onUpdate, onDelete, onAddContact, onUpdateContact, 
   // Confirmation et suppression du lead
   const handleConfirmDelete = async () => {
     try {
-      await onDelete();
+      await onDelete(lead.id);
       setShowDeleteConfirm(false);
     } catch (error) {
       console.error('Erreur lors de la suppression du lead:', error);
@@ -198,7 +198,7 @@ const LeadDetails = ({ lead, onUpdate, onDelete, onAddContact, onUpdateContact, 
       toast.success('Lead converti en client avec succès !');
 
       // Supprimer le lead de la liste (il est maintenant un client)
-      await onDelete();
+      await onDelete(lead.id);
 
     } catch (error) {
       console.error('Erreur lors de la conversion du lead:', error);
