@@ -110,9 +110,10 @@ const RevenueForm = ({ revenue = {}, onSave, onCancel, projects }) => {
               onChange={handleInputChange}
               step="0.01"
               min="0"
-              className={`w-full bg-white text-gray-800 border ${
+              className={`w-full bg-white text-gray-900 border ${
                 errors.amount ? 'border-rose-500' : 'border-gray-400'
               } rounded-lg px-4 py-2 pl-10 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent`}
+              style={{ color: '#111827' }}
             />
             <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-600">
               €
@@ -140,9 +141,10 @@ const RevenueForm = ({ revenue = {}, onSave, onCancel, projects }) => {
             name="date"
             value={formData.date}
             onChange={handleInputChange}
-            className={`w-full bg-white text-gray-800 border ${
+            className={`w-full bg-white text-gray-900 border ${
               errors.date ? 'border-rose-500' : 'border-gray-400'
             } rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent`}
+            style={{ color: '#111827' }}
           />
           {errors.date && (
             <motion.p 
@@ -166,10 +168,11 @@ const RevenueForm = ({ revenue = {}, onSave, onCancel, projects }) => {
             name="description"
             value={formData.description}
             onChange={handleInputChange}
-            className={`w-full bg-white text-gray-800 border ${
+            className={`w-full bg-white text-gray-900 border ${
               errors.description ? 'border-rose-500' : 'border-gray-400'
             } rounded-lg px-4 py-2 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent`}
             placeholder="Ex: Acompte projet site web"
+            style={{ color: '#111827' }}
           />
           {errors.description && (
             <motion.p 
@@ -192,7 +195,8 @@ const RevenueForm = ({ revenue = {}, onSave, onCancel, projects }) => {
             name="project_id"
             value={formData.project_id}
             onChange={handleInputChange}
-            className="w-full bg-white text-gray-800 border border-gray-400 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+            className="w-full bg-white text-gray-900 border border-gray-400 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+            style={{ color: '#111827' }}
           >
             <option value="">Aucun projet</option>
             {projects.map(project => (
@@ -214,7 +218,8 @@ const RevenueForm = ({ revenue = {}, onSave, onCancel, projects }) => {
               name="type"
               value={formData.type}
               onChange={handleInputChange}
-              className="w-full bg-white text-gray-800 border border-gray-400 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+              className="w-full bg-white text-gray-900 border border-gray-400 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+              style={{ color: '#111827' }}
             >
               {typeOptions.map(option => (
                 <option key={option.value} value={option.value}>
