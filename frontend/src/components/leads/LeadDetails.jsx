@@ -104,7 +104,7 @@ const LeadDetails = ({ lead, onUpdate, onDelete, onAddContact, onUpdateContact, 
   // Sauvegarde d'un nouveau contact
   const handleSaveContact = async (contactData) => {
     try {
-      await onAddContact(contactData);
+      await onAddContact(lead.id, contactData);
       setIsAddingContact(false);
     } catch (error) {
       console.error('Erreur lors de l\'ajout du contact:', error);
@@ -131,7 +131,7 @@ const LeadDetails = ({ lead, onUpdate, onDelete, onAddContact, onUpdateContact, 
   // Sauvegarde d'une nouvelle interaction
   const handleSaveInteraction = async (interactionData) => {
     try {
-      await onAddInteraction(interactionData);
+      await onAddInteraction(lead.id, interactionData);
       setIsAddingInteraction(false);
       // Recharger les interactions
       const interactionsData = await leadsAPI.getInteractions(lead.id);

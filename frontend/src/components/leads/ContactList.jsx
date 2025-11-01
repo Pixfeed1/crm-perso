@@ -30,7 +30,7 @@ const ContactList = ({
   // Gérer la sauvegarde d'un contact édité
   const handleSaveEdit = async (contactData) => {
     if (onUpdateContact) {
-      await onUpdateContact(editingContact.id, contactData);
+      await onUpdateContact(leadId, editingContact.id, contactData);
     }
     setEditingContact(null);
   };
@@ -38,7 +38,7 @@ const ContactList = ({
   // Confirmer la suppression
   const handleConfirmDelete = async () => {
     if (onDeleteContact && deletingContact) {
-      await onDeleteContact(deletingContact.id);
+      await onDeleteContact(leadId, deletingContact.id);
     }
     setDeletingContact(null);
   };
