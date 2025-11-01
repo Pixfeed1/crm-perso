@@ -18,7 +18,7 @@ class PDFService {
       const protocol = url.startsWith('https') ? https : http;
       protocol.get(url, (response) => {
         if (response.statusCode !== 200) {
-          reject(new Error(\`Impossible de télécharger l'image: \${response.statusCode}\`));
+          reject(new Error(`Impossible de télécharger l'image: ${response.statusCode}`));
           return;
         }
 
@@ -72,7 +72,7 @@ class PDFService {
           try {
             doc.image(logoBuffer, 460, currentY, { width: 100, height: 60, fit: [100, 60] });
           } catch (err) {
-            console.warn('Erreur lors de l\\'insertion du logo:', err.message);
+            console.warn('Erreur lors de l\'insertion du logo:', err.message);
           }
         }
 
@@ -102,19 +102,19 @@ class PDFService {
           currentY += 10;
         }
         if (companySettings.postal_code && companySettings.city) {
-          doc.text(\`\${companySettings.postal_code} \${companySettings.city}\`, 50, currentY);
+          doc.text(`${companySettings.postal_code} ${companySettings.city}`, 50, currentY);
           currentY += 10;
         }
         if (companySettings.phone) {
-          doc.text(\`Tél: \${companySettings.phone}\`, 50, currentY);
+          doc.text(`Tél: ${companySettings.phone}`, 50, currentY);
           currentY += 10;
         }
         if (companySettings.email) {
-          doc.text(\`Email: \${companySettings.email}\`, 50, currentY);
+          doc.text(`Email: ${companySettings.email}`, 50, currentY);
           currentY += 10;
         }
         if (companySettings.siret) {
-          doc.text(\`SIRET: \${companySettings.siret}\`, 50, currentY);
+          doc.text(`SIRET: ${companySettings.siret}`, 50, currentY);
           currentY += 10;
         }
 
@@ -146,7 +146,7 @@ class PDFService {
           clientY += 10;
         }
         if (quote.client_siret) {
-          doc.text(\`SIRET: \${quote.client_siret}\`, clientX, clientY, { width: 210, align: 'left' });
+          doc.text(`SIRET: ${quote.client_siret}`, clientX, clientY, { width: 210, align: 'left' });
           clientY += 10;
         }
 
@@ -161,11 +161,11 @@ class PDFService {
         const issueDate = quote.issue_date ? new Date(quote.issue_date).toLocaleDateString('fr-FR') : new Date().toLocaleDateString('fr-FR');
         const expiryDate = quote.expiry_date ? new Date(quote.expiry_date).toLocaleDateString('fr-FR') : '';
 
-        doc.text(\`Date d'émission : \${issueDate}\`, 50, currentY);
+        doc.text(`Date d'émission : ${issueDate}`, 50, currentY);
         currentY += 12;
 
         if (expiryDate) {
-          doc.text(\`Date d'échéance : \${expiryDate}\`, 50, currentY);
+          doc.text(`Date d'échéance : ${expiryDate}`, 50, currentY);
           currentY += 12;
         }
 
@@ -237,7 +237,7 @@ class PDFService {
           if (item.type === 'detail') {
             doc.fontSize(8)
                .fillColor('#666666')
-               .text(\`  \${item.description || ''}\`, colX[0] + 10, yPosition + 3, {
+               .text(`  ${item.description || ''}`, colX[0] + 10, yPosition + 3, {
                  width: colWidths[0] - 20
                });
             doc.fontSize(9).fillColor('#000000');
@@ -297,11 +297,11 @@ class PDFService {
         if (quote.discount_amount && quote.discount_amount > 0) {
           let discountLabel = 'Remise';
           if (quote.discount_type === 'percent') {
-            discountLabel += \` (\${quote.discount_value}%)\`;
+            discountLabel += ` (${quote.discount_value}%)`;
           }
-          doc.text(\`\${discountLabel} :\`, totalsX, yPosition, { continued: true, width: 90 });
+          doc.text(`${discountLabel} :`, totalsX, yPosition, { continued: true, width: 90 });
           doc.fillColor('#16A34A')
-             .text(\`-\${this.formatAmount(quote.discount_amount)}\`, { align: 'right' });
+             .text(`-${this.formatAmount(quote.discount_amount)}`, { align: 'right' });
           doc.fillColor('#000000');
           yPosition += 20;
 
@@ -320,8 +320,8 @@ class PDFService {
         } else if (quote.tva_applicable === false) {
           tvaLabel = 'TVA (non applicable)';
         } else {
-          const regimeLabel = quote.tva_regime ? \` - \${quote.tva_regime}\` : '';
-          tvaLabel = \`TVA (\${quote.tva_rate || 20}%\${regimeLabel})\`;
+          const regimeLabel = quote.tva_regime ? ` - ${quote.tva_regime}` : '';
+          tvaLabel = `TVA (${quote.tva_rate || 20}%${regimeLabel})`;
         }
         doc.text(tvaLabel, totalsX, yPosition, { continued: true, width: 90 });
         doc.text(this.formatAmount(quote.tva_amount || 0), { align: 'right' });
@@ -358,9 +358,9 @@ class PDFService {
              .fillColor('#16A34A');
           const montantEscompte = (quote.total_ttc || 0) * (quote.escompte_percent / 100);
           const totalAvecEscompte = (quote.total_ttc || 0) - montantEscompte;
-          doc.text(\`💡 Escompte de \${quote.escompte_percent}% si paiement sous \${quote.escompte_days} jours\`, 50, yPosition);
+          doc.text(`💡 Escompte de ${quote.escompte_percent}% si paiement sous ${quote.escompte_days} jours`, 50, yPosition);
           yPosition += 12;
-          doc.text(\`   Montant avec escompte : \${this.formatAmount(totalAvecEscompte)}\`, 50, yPosition);
+          doc.text(`   Montant avec escompte : ${this.formatAmount(totalAvecEscompte)}`, 50, yPosition);
           doc.fillColor('#000000');
         }
 
@@ -432,18 +432,18 @@ class PDFService {
             if (paymentDetails.VIREMENT?.iban) {
               doc.text('Paiement par virement bancaire :', 50, yPosition);
               yPosition += 12;
-              doc.text(\`  IBAN: \${paymentDetails.VIREMENT.iban}\`, 50, yPosition);
+              doc.text(`  IBAN: ${paymentDetails.VIREMENT.iban}`, 50, yPosition);
               yPosition += 10;
               if (paymentDetails.VIREMENT.bic) {
-                doc.text(\`  BIC: \${paymentDetails.VIREMENT.bic}\`, 50, yPosition);
+                doc.text(`  BIC: ${paymentDetails.VIREMENT.bic}`, 50, yPosition);
                 yPosition += 10;
               }
               if (paymentDetails.VIREMENT.titulaire) {
-                doc.text(\`  Titulaire: \${paymentDetails.VIREMENT.titulaire}\`, 50, yPosition);
+                doc.text(`  Titulaire: ${paymentDetails.VIREMENT.titulaire}`, 50, yPosition);
                 yPosition += 10;
               }
               if (paymentDetails.VIREMENT.banque) {
-                doc.text(\`  Banque: \${paymentDetails.VIREMENT.banque}\`, 50, yPosition);
+                doc.text(`  Banque: ${paymentDetails.VIREMENT.banque}`, 50, yPosition);
                 yPosition += 10;
               }
               yPosition += 5;
@@ -453,11 +453,11 @@ class PDFService {
             if (paymentDetails.PAYPAL?.email) {
               doc.text('Paiement par PayPal :', 50, yPosition);
               yPosition += 12;
-              doc.text(\`  Email: \${paymentDetails.PAYPAL.email}\`, 50, yPosition);
+              doc.text(`  Email: ${paymentDetails.PAYPAL.email}`, 50, yPosition);
               yPosition += 10;
               if (paymentDetails.PAYPAL.lien) {
                 doc.fillColor('#6366F1')
-                   .text(\`  Lien: \${paymentDetails.PAYPAL.lien}\`, 50, yPosition, { link: paymentDetails.PAYPAL.lien });
+                   .text(`  Lien: ${paymentDetails.PAYPAL.lien}`, 50, yPosition, { link: paymentDetails.PAYPAL.lien });
                 doc.fillColor('#333333');
                 yPosition += 10;
               }
@@ -469,7 +469,7 @@ class PDFService {
               doc.text('Paiement par carte bancaire (Stripe) :', 50, yPosition);
               yPosition += 12;
               doc.fillColor('#6366F1')
-                 .text(\`  \${paymentDetails.STRIPE.lien}\`, 50, yPosition, { link: paymentDetails.STRIPE.lien });
+                 .text(`  ${paymentDetails.STRIPE.lien}`, 50, yPosition, { link: paymentDetails.STRIPE.lien });
               doc.fillColor('#333333');
               yPosition += 15;
             }
@@ -478,7 +478,7 @@ class PDFService {
             if (paymentDetails.CARTE?.instructions) {
               doc.text('Paiement par carte bancaire :', 50, yPosition);
               yPosition += 12;
-              doc.text(\`  \${paymentDetails.CARTE.instructions}\`, 50, yPosition);
+              doc.text(`  ${paymentDetails.CARTE.instructions}`, 50, yPosition);
               yPosition += 15;
             }
 
@@ -540,9 +540,9 @@ class PDFService {
                .fillColor('#333333');
 
             files.forEach((file, index) => {
-              const fileName = file.filename || file.name || \`Document \${index + 1}\`;
-              const fileSize = file.size ? \`(\${(file.size / 1024).toFixed(2)} Ko)\` : '';
-              doc.text(\`• \${fileName} \${fileSize}\`, 50, yPosition);
+              const fileName = file.filename || file.name || `Document ${index + 1}`;
+              const fileSize = file.size ? `(${(file.size / 1024).toFixed(2)} Ko)` : '';
+              doc.text(`• ${fileName} ${fileSize}`, 50, yPosition);
               yPosition += 12;
             });
           }
