@@ -85,7 +85,7 @@ const LeadDetails = ({ lead, onUpdate, onDelete, onAddContact, onUpdateContact, 
   // Mise à jour du statut du lead
   const handleStatusChange = async (newStatus) => {
     try {
-      await onUpdate({ status: newStatus });
+      await onUpdate(lead.id, { status: newStatus });
     } catch (error) {
       console.error('Erreur lors de la mise à jour du statut:', error);
     }
@@ -94,7 +94,7 @@ const LeadDetails = ({ lead, onUpdate, onDelete, onAddContact, onUpdateContact, 
   // Sauvegarde des modifications du lead
   const handleSaveEdit = async (formData) => {
     try {
-      await onUpdate(formData);
+      await onUpdate(lead.id, formData);
       setIsEditing(false);
     } catch (error) {
       console.error('Erreur lors de la mise à jour du lead:', error);
@@ -198,7 +198,7 @@ const LeadDetails = ({ lead, onUpdate, onDelete, onAddContact, onUpdateContact, 
       toast.success('Lead converti en client avec succès !');
 
       // Mettre à jour le statut du lead dans l'interface
-      await onUpdate({ status: 'won' });
+      await onUpdate(lead.id, { status: 'won' });
 
     } catch (error) {
       console.error('Erreur lors de la conversion du lead:', error);
@@ -218,7 +218,7 @@ const LeadDetails = ({ lead, onUpdate, onDelete, onAddContact, onUpdateContact, 
       toast.success('Client créé et lié au contact avec succès !');
       // Recharger les contacts pour afficher le nouveau lien
       if (onUpdate) {
-        await onUpdate({});
+        await onUpdate(lead.id, {});
       }
     } catch (error) {
       console.error('Erreur lors de la création du client:', error);
@@ -232,7 +232,7 @@ const LeadDetails = ({ lead, onUpdate, onDelete, onAddContact, onUpdateContact, 
       toast.success('Contact lié au client avec succès !');
       // Recharger les contacts pour afficher le nouveau lien
       if (onUpdate) {
-        await onUpdate({});
+        await onUpdate(lead.id, {});
       }
     } catch (error) {
       console.error('Erreur lors de la liaison:', error);
@@ -258,7 +258,7 @@ const LeadDetails = ({ lead, onUpdate, onDelete, onAddContact, onUpdateContact, 
 
       // Recharger les contacts
       if (onUpdate) {
-        await onUpdate({});
+        await onUpdate(lead.id, {});
       }
     } catch (error) {
       console.error('Erreur lors du déliaison:', error);
