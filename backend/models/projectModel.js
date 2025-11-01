@@ -13,9 +13,14 @@
 const getAllProjects = (db) => {
   return new Promise((resolve, reject) => {
     const query = `
-      SELECT p.*, l.name as lead_name
+      SELECT
+        p.*,
+        l.name as lead_name,
+        c.name as client_name,
+        COALESCE(c.name, l.name) as display_name
       FROM projects p
       LEFT JOIN leads l ON p.lead_id = l.id
+      LEFT JOIN crm_clients c ON p.client_id = c.id
       ORDER BY p.start_date DESC
     `;
 
@@ -35,9 +40,14 @@ const getAllProjects = (db) => {
 const getProjectById = (db, id) => {
   return new Promise((resolve, reject) => {
     const query = `
-      SELECT p.*, l.name as lead_name
+      SELECT
+        p.*,
+        l.name as lead_name,
+        c.name as client_name,
+        COALESCE(c.name, l.name) as display_name
       FROM projects p
       LEFT JOIN leads l ON p.lead_id = l.id
+      LEFT JOIN crm_clients c ON p.client_id = c.id
       WHERE p.id = ?
     `;
 
@@ -85,7 +95,8 @@ const createProject = (db, projectData) => {
       end_date,
       status,
       amount,
-      lead_id
+      lead_id,
+      client_id
     } = projectData;
 
     if (!name || !type || !status) {
@@ -95,8 +106,8 @@ const createProject = (db, projectData) => {
     const query = `
       INSERT INTO projects (
         name, type, description, start_date, end_date,
-        status, amount, lead_id, created_at, updated_at, progress
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        status, amount, lead_id, client_id, created_at, updated_at, progress
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     const now = new Date().toISOString();
@@ -109,6 +120,7 @@ const createProject = (db, projectData) => {
       status,
       amount || 0,
       lead_id || null,
+      client_id || null,
       now,
       now,
       0
@@ -122,9 +134,14 @@ const createProject = (db, projectData) => {
 
         // Récupérer le projet créé
         const getQuery = `
-          SELECT p.*, l.name as lead_name
+          SELECT
+            p.*,
+            l.name as lead_name,
+            c.name as client_name,
+            COALESCE(c.name, l.name) as display_name
           FROM projects p
           LEFT JOIN leads l ON p.lead_id = l.id
+          LEFT JOIN crm_clients c ON p.client_id = c.id
           WHERE p.id = ?
         `;
 
@@ -198,6 +215,11 @@ const updateProject = (db, id, projectData) => {
     if (projectData.lead_id !== undefined) {
       updates.push('lead_id = ?');
       params.push(projectData.lead_id);
+    }
+
+    if (projectData.client_id !== undefined) {
+      updates.push('client_id = ?');
+      params.push(projectData.client_id);
     }
 
     if (projectData.progress !== undefined) {

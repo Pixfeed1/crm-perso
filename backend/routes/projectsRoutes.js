@@ -44,7 +44,7 @@ router.get('/:id', async (req, res) => {
 // Créer un nouveau projet
 router.post('/', async (req, res) => {
   const db = req.app.locals.db;
-  const { name, type, description, start_date, end_date, status, amount, lead_id } = req.body;
+  const { name, type, description, start_date, end_date, status, amount, lead_id, client_id } = req.body;
 
   if (!name || !type || !status) {
     return res.status(400).json({ message: 'Nom, type et statut sont requis' });
@@ -59,7 +59,8 @@ router.post('/', async (req, res) => {
       end_date,
       status,
       amount,
-      lead_id
+      lead_id,
+      client_id
     });
 
     res.status(201).json(project);
@@ -73,7 +74,7 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   const db = req.app.locals.db;
   const { id } = req.params;
-  const { name, type, description, start_date, end_date, status, amount, lead_id } = req.body;
+  const { name, type, description, start_date, end_date, status, amount, lead_id, client_id } = req.body;
 
   try {
     const updatedProject = await projectModel.updateProject(db, id, {
@@ -84,7 +85,8 @@ router.put('/:id', async (req, res) => {
       end_date,
       status,
       amount,
-      lead_id
+      lead_id,
+      client_id
     });
 
     res.json(updatedProject);

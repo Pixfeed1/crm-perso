@@ -169,8 +169,12 @@ const ProjectDetails = ({ project, onUpdate, onDelete, onAddTask, onToggleTaskSt
           <div className="flex items-center text-lg text-purple-300 mt-1">
             <span className="mr-2">{typeInfo.icon}</span>
             <span>{typeInfo.label}</span>
-            <span className="mx-2">•</span>
-            <span>{project.lead_name}</span>
+            {(project.display_name || project.client_name || project.lead_name) && (
+              <>
+                <span className="mx-2">•</span>
+                <span>{project.display_name || project.client_name || project.lead_name}</span>
+              </>
+            )}
           </div>
         </div>
         
@@ -366,6 +370,159 @@ const ProjectDetails = ({ project, onUpdate, onDelete, onAddTask, onToggleTaskSt
         </AnimatePresence>
       </div>
       
+      {/* Modal d'édition */}
+      <AnimatePresence>
+        {isEditing && (
+          <motion.div
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setIsEditing(false)}
+          >
+            <motion.div
+              className="bg-gray-900 border border-gray-700 rounded-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="text-xl font-semibold text-white mb-4">Modifier le projet</h3>
+
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                handleSaveEdit({
+                  name: formData.get('name'),
+                  type: formData.get('type'),
+                  description: formData.get('description'),
+                  start_date: formData.get('start_date'),
+                  end_date: formData.get('end_date'),
+                  status: formData.get('status'),
+                  amount: parseFloat(formData.get('amount')) || 0
+                });
+              }}>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-1">Nom du projet *</label>
+                    <input
+                      type="text"
+                      name="name"
+                      defaultValue={project.name}
+                      required
+                      className="w-full bg-gray-800 text-gray-100 border border-gray-600 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-1">Type *</label>
+                      <select
+                        name="type"
+                        defaultValue={project.type}
+                        required
+                        className="w-full bg-gray-800 text-gray-100 border border-gray-600 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      >
+                        <option value="site-web">Site Web</option>
+                        <option value="application-mobile">App Mobile</option>
+                        <option value="application-bureau">App Bureau</option>
+                        <option value="design">Design</option>
+                        <option value="marketing">Marketing</option>
+                        <option value="maintenance">Maintenance</option>
+                        <option value="autre">Autre</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-1">Statut *</label>
+                      <select
+                        name="status"
+                        defaultValue={project.status}
+                        required
+                        className="w-full bg-gray-800 text-gray-100 border border-gray-600 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      >
+                        <option value="planifié">Planifié</option>
+                        <option value="en-cours">En cours</option>
+                        <option value="pause">En pause</option>
+                        <option value="terminé">Terminé</option>
+                        <option value="annulé">Annulé</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-1">Description</label>
+                    <textarea
+                      name="description"
+                      defaultValue={project.description || ''}
+                      rows={3}
+                      className="w-full bg-gray-800 text-gray-100 border border-gray-600 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-1">Date de début *</label>
+                      <input
+                        type="date"
+                        name="start_date"
+                        defaultValue={project.start_date}
+                        required
+                        className="w-full bg-gray-800 text-gray-100 border border-gray-600 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-1">Date de fin *</label>
+                      <input
+                        type="date"
+                        name="end_date"
+                        defaultValue={project.end_date}
+                        required
+                        className="w-full bg-gray-800 text-gray-100 border border-gray-600 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-1">Montant (€)</label>
+                    <input
+                      type="number"
+                      name="amount"
+                      defaultValue={project.amount}
+                      step="0.01"
+                      min="0"
+                      className="w-full bg-gray-800 text-gray-100 border border-gray-600 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end space-x-3 mt-6">
+                  <motion.button
+                    type="button"
+                    className="px-4 py-2 rounded-lg border-2 border-white/30 text-white hover:bg-white/10 hover:border-white/40 font-medium transition-all"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setIsEditing(false)}
+                  >
+                    Annuler
+                  </motion.button>
+
+                  <motion.button
+                    type="submit"
+                    className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-medium"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    Enregistrer
+                  </motion.button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Popup de confirmation de suppression */}
       <AnimatePresence>
         {showDeleteConfirm && (

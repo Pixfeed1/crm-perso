@@ -24,9 +24,9 @@ const getAllRevenues = (db, filters = {}) => {
       params.push(filters.end_date);
     }
 
-    if (filters.type) {
-      conditions.push('r.type = ?');
-      params.push(filters.type);
+    if (filters.type || filters.category) {
+      conditions.push('r.category = ?');
+      params.push(filters.type || filters.category);
     }
 
     if (filters.project_id) {
@@ -88,19 +88,36 @@ const createRevenue = (db, revenueData) => {
     const {
       amount,
       date,
-      description,
+      source,
+      description, // alias pour notes
+      notes,
+      category,
+      type, // alias pour category
       project_id,
       lead_id,
-      type
+      client_id,
+      status,
+      payment_method,
+      invoice_number
     } = revenueData;
 
-    if (!amount || !date || !type) {
-      return reject(new Error('Montant, date et type sont requis'));
+    if (!amount || !date) {
+      return reject(new Error('Montant et date sont requis'));
     }
 
+    // Support des anciennes et nouvelles colonnes
+    const finalSource = source || description || 'Paiement de projet';
+    const finalNotes = notes || description || null;
+    const finalCategory = category || type || 'invoice';
+    const finalStatus = status || 'paid';
+
     const query = `
-      INSERT INTO revenues (amount, date, description, project_id, lead_id, type, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO revenues (
+        amount, date, source, notes, category, status,
+        project_id, lead_id, client_id, payment_method,
+        invoice_number, created_at, updated_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     const now = new Date().toISOString();
@@ -110,10 +127,16 @@ const createRevenue = (db, revenueData) => {
       [
         amount,
         date,
-        description || null,
+        finalSource,
+        finalNotes,
+        finalCategory,
+        finalStatus,
         project_id || null,
         lead_id || null,
-        type,
+        client_id || null,
+        payment_method || null,
+        invoice_number || null,
+        now,
         now
       ],
       function(err) {
@@ -146,9 +169,21 @@ const updateRevenue = (db, id, revenueData) => {
       fields.push('date = ?');
       values.push(revenueData.date);
     }
-    if (revenueData.description !== undefined) {
-      fields.push('description = ?');
-      values.push(revenueData.description);
+    if (revenueData.source !== undefined) {
+      fields.push('source = ?');
+      values.push(revenueData.source);
+    }
+    if (revenueData.notes !== undefined || revenueData.description !== undefined) {
+      fields.push('notes = ?');
+      values.push(revenueData.notes || revenueData.description);
+    }
+    if (revenueData.category !== undefined || revenueData.type !== undefined) {
+      fields.push('category = ?');
+      values.push(revenueData.category || revenueData.type);
+    }
+    if (revenueData.status !== undefined) {
+      fields.push('status = ?');
+      values.push(revenueData.status);
     }
     if (revenueData.project_id !== undefined) {
       fields.push('project_id = ?');
@@ -158,14 +193,26 @@ const updateRevenue = (db, id, revenueData) => {
       fields.push('lead_id = ?');
       values.push(revenueData.lead_id);
     }
-    if (revenueData.type !== undefined) {
-      fields.push('type = ?');
-      values.push(revenueData.type);
+    if (revenueData.client_id !== undefined) {
+      fields.push('client_id = ?');
+      values.push(revenueData.client_id);
+    }
+    if (revenueData.payment_method !== undefined) {
+      fields.push('payment_method = ?');
+      values.push(revenueData.payment_method);
+    }
+    if (revenueData.invoice_number !== undefined) {
+      fields.push('invoice_number = ?');
+      values.push(revenueData.invoice_number);
     }
 
     if (fields.length === 0) {
       return reject(new Error('Aucun champ à mettre à jour'));
     }
+
+    // Ajouter updated_at
+    fields.push('updated_at = ?');
+    values.push(new Date().toISOString());
 
     // Ajouter l'ID pour la clause WHERE
     values.push(id);
@@ -229,9 +276,9 @@ const getRevenueStats = (db, filters = {}) => {
       params.push(filters.end_date);
     }
 
-    if (filters.type) {
-      conditions.push('type = ?');
-      params.push(filters.type);
+    if (filters.type || filters.category) {
+      conditions.push('category = ?');
+      params.push(filters.type || filters.category);
     }
 
     if (filters.project_id) {
@@ -250,30 +297,31 @@ const getRevenueStats = (db, filters = {}) => {
         return reject(err);
       }
 
-      // Statistiques par type
-      let typeQuery = `
+      // Statistiques par catégorie
+      let categoryQuery = `
         SELECT
-          type,
+          category,
           COUNT(*) as count,
           SUM(amount) as total_amount
         FROM revenues
       `;
 
       if (conditions.length > 0) {
-        typeQuery += ' WHERE ' + conditions.join(' AND ');
+        categoryQuery += ' WHERE ' + conditions.join(' AND ');
       }
 
-      typeQuery += ' GROUP BY type';
+      categoryQuery += ' GROUP BY category';
 
-      db.all(typeQuery, params, (err, typeStats) => {
+      db.all(categoryQuery, params, (err, categoryStats) => {
         if (err) {
-          console.error('[RevenueModel] Erreur lors de la récupération des stats par type:', err);
+          console.error('[RevenueModel] Erreur lors de la récupération des stats par catégorie:', err);
           return resolve(stats);
         }
 
         resolve({
           ...stats,
-          by_type: typeStats
+          by_category: categoryStats,
+          by_type: categoryStats // Alias pour compatibilité
         });
       });
     });
