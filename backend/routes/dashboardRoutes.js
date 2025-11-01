@@ -52,7 +52,10 @@ router.get('/', async (req, res) => {
     ]);
 
     // Statistiques des leads
+    // Compter TOUS les leads (y compris ceux convertis en clients avec statut 'won')
     dashboardData.leads.total = allLeads.length;
+
+    // Compter seulement les NOUVEAUX leads ce mois (tous statuts)
     dashboardData.leads.newThisMonth = allLeads.filter(lead =>
       new Date(lead.created_at) >= startOfMonth
     ).length;

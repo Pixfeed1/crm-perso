@@ -109,7 +109,10 @@ const Leads = () => {
         (lead.company && lead.company.toLowerCase().includes(filters.search.toLowerCase()));
 
       // Filtre par statut
-      const statusMatch = filters.status === 'all' || lead.status === filters.status;
+      // "all" signifie tous les leads ACTIFS (exclut won/lost qui sont archivés)
+      const statusMatch = filters.status === 'all'
+        ? (lead.status !== 'won' && lead.status !== 'lost')
+        : lead.status === filters.status;
 
       // Filtre par type
       const typeMatch = filters.type === 'all' || lead.type === filters.type;

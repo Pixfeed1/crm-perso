@@ -197,8 +197,9 @@ const LeadDetails = ({ lead, onUpdate, onDelete, onAddContact, onUpdateContact, 
 
       toast.success('Lead converti en client avec succès !');
 
-      // Supprimer le lead de la liste (il est maintenant un client)
-      await onDelete(lead.id);
+      // Mettre à jour le statut du lead à "won" (le backend l'a déjà fait)
+      // Le lead reste dans la base pour les statistiques mais disparaît de la vue
+      await onUpdate(lead.id, { status: 'won' });
 
     } catch (error) {
       console.error('Erreur lors de la conversion du lead:', error);
