@@ -160,6 +160,27 @@ export const projectsAPI = {
   delete: (id) => {
     console.log(`Appel API: suppression du projet ID ${id}`);
     return apiRequest(`/projects/${id}`, 'DELETE');
+  },
+  // Paiements
+  getPayments: (projectId) => {
+    console.log(`Appel API: récupération des paiements du projet ID ${projectId}`);
+    return apiRequest(`/projects/${projectId}/payments`);
+  },
+  getPaymentsTotal: (projectId) => {
+    console.log(`Appel API: récupération du total des paiements du projet ID ${projectId}`);
+    return apiRequest(`/projects/${projectId}/payments/total`);
+  },
+  addPayment: (projectId, data) => {
+    console.log(`Appel API: ajout d'un paiement au projet ID ${projectId}`, data);
+    return apiRequest(`/projects/${projectId}/payments`, 'POST', data);
+  },
+  updatePayment: (projectId, paymentId, data) => {
+    console.log(`Appel API: mise à jour du paiement ID ${paymentId} du projet ID ${projectId}`, data);
+    return apiRequest(`/projects/${projectId}/payments/${paymentId}`, 'PUT', data);
+  },
+  deletePayment: (projectId, paymentId) => {
+    console.log(`Appel API: suppression du paiement ID ${paymentId} du projet ID ${projectId}`);
+    return apiRequest(`/projects/${projectId}/payments/${paymentId}`, 'DELETE');
   }
 };
 

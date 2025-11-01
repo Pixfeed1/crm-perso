@@ -6,6 +6,7 @@ import { FiGlobe, FiSmartphone, FiMonitor, FiEdit2, FiRadio, FiTool, FiPackage, 
 // Sous-composants
 import TaskList from './TaskList';
 import TaskForm from './TaskForm';
+import ProjectPayments from './ProjectPayments';
 
 const ProjectDetails = ({ project, onUpdate, onDelete, onAddTask, onToggleTaskStatus }) => {
   const [isEditing, setIsEditing] = useState(false);
@@ -312,7 +313,10 @@ const ProjectDetails = ({ project, onUpdate, onDelete, onAddTask, onToggleTaskSt
           </div>
         </div>
       </div>
-      
+
+      {/* Section Paiements */}
+      <ProjectPayments project={project} />
+
       {/* Section Tâches */}
       <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl p-5 mb-6">
         <div className="flex justify-between items-center mb-4">

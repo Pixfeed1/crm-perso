@@ -82,6 +82,26 @@ const DATABASE_SCHEMA = {
     ]
   },
 
+  // Table project_payments (paiements des projets)
+  project_payments: {
+    columns: {
+      id: 'SERIAL PRIMARY KEY',
+      project_id: 'INTEGER REFERENCES projects(id) ON DELETE CASCADE',
+      amount: 'NUMERIC NOT NULL CHECK (amount > 0)',
+      payment_date: 'DATE NOT NULL DEFAULT CURRENT_DATE',
+      payment_method: 'VARCHAR(50)',
+      reference: 'VARCHAR(255)',
+      notes: 'TEXT',
+      revenue_id: 'INTEGER',
+      created_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP',
+      updated_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'
+    },
+    indexes: [
+      'CREATE INDEX IF NOT EXISTS idx_project_payments_project_id ON project_payments(project_id)',
+      'CREATE INDEX IF NOT EXISTS idx_project_payments_payment_date ON project_payments(payment_date)'
+    ]
+  },
+
   // Table tva_regimes
   tva_regimes: {
     columns: {
