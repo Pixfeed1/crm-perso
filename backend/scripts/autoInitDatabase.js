@@ -66,6 +66,7 @@ const DATABASE_SCHEMA = {
       name: 'TEXT NOT NULL',
       description: 'TEXT',
       client_id: 'INTEGER REFERENCES crm_clients(id) ON DELETE SET NULL',
+      lead_id: 'INTEGER',
       status: "VARCHAR(50) DEFAULT 'active'",
       start_date: 'DATE',
       end_date: 'DATE',
@@ -76,6 +77,7 @@ const DATABASE_SCHEMA = {
     },
     indexes: [
       'CREATE INDEX IF NOT EXISTS idx_projects_client_id ON projects(client_id)',
+      'CREATE INDEX IF NOT EXISTS idx_projects_lead_id ON projects(lead_id)',
       'CREATE INDEX IF NOT EXISTS idx_projects_status ON projects(status)'
     ]
   },
