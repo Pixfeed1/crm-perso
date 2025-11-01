@@ -573,14 +573,11 @@ const leadController = {
 
       res.json({
         by_status: statsByStatus,
-        totals: {
-          total_leads: totalLeads,
-          active_leads: activeLeads,
-          closed_leads: closedLeads,
-          total_budget: totalBudget,
-          win_rate: winRate,
-          conversion_rate: conversionRate
-        }
+        total_leads: totalLeads,
+        active_leads: activeLeads,
+        closed_leads: closedLeads,
+        win_rate: winRate,
+        conversion_rate: conversionRate
       });
     });
   }
