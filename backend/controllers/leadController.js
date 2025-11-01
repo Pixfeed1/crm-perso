@@ -522,8 +522,7 @@ const leadController = {
     const statsQuery = `
       SELECT
         status,
-        COUNT(*) as count,
-        SUM(CASE WHEN budget IS NOT NULL THEN budget ELSE 0 END) as total_budget
+        COUNT(*) as count
       FROM leads
       GROUP BY status
     `;
@@ -531,32 +530,30 @@ const leadController = {
     db.all(statsQuery, [], (err, stats) => {
       if (err) {
         console.error('Erreur lors de la récupération des statistiques Kanban:', err);
-        return res.status(500).json({ message: 'Erreur serveur' });
+        return res.status(500).json({ message: 'Erreur serveur', error: err.message });
       }
 
       // Créer un objet avec les statistiques par statut
       const statsByStatus = {
-        new: { count: 0, total_budget: 0 },
-        contacted: { count: 0, total_budget: 0 },
-        proposal: { count: 0, total_budget: 0 },
-        negotiation: { count: 0, total_budget: 0 },
-        won: { count: 0, total_budget: 0 },
-        lost: { count: 0, total_budget: 0 }
+        new: { count: 0 },
+        contacted: { count: 0 },
+        proposal: { count: 0 },
+        negotiation: { count: 0 },
+        won: { count: 0 },
+        lost: { count: 0 }
       };
 
       // Remplir avec les données de la base
       stats.forEach(stat => {
         if (statsByStatus[stat.status]) {
           statsByStatus[stat.status] = {
-            count: stat.count,
-            total_budget: stat.total_budget
+            count: stat.count
           };
         }
       });
 
       // Calculer les totaux
       const totalLeads = stats.reduce((sum, stat) => sum + stat.count, 0);
-      const totalBudget = stats.reduce((sum, stat) => sum + stat.total_budget, 0);
 
       // Calculer les taux de conversion
       const activeLeads = statsByStatus.new.count +
@@ -580,7 +577,6 @@ const leadController = {
           total_leads: totalLeads,
           active_leads: activeLeads,
           closed_leads: closedLeads,
-          total_budget: totalBudget,
           win_rate: winRate,
           conversion_rate: conversionRate
         }
