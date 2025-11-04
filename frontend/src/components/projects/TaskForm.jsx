@@ -85,9 +85,9 @@ const TaskForm = ({ task = {}, onSave, onCancel }) => {
             name="name"
             value={formData.name}
             onChange={handleInputChange}
-            className={`w-full bg-white/90 border ${
-              errors.name ? 'border-rose-500' : 'border-gray-300'
-            } rounded-lg px-4 py-2 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
+            className={`w-full bg-gray-800/50 text-white border ${
+              errors.name ? 'border-rose-500' : 'border-gray-700'
+            } rounded-lg px-4 py-2 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
             placeholder="Développer la page d'accueil"
           />
           {errors.name && (
@@ -112,7 +112,7 @@ const TaskForm = ({ task = {}, onSave, onCancel }) => {
             value={formData.description}
             onChange={handleInputChange}
             rows={2}
-            className="w-full bg-white/90 border border-gray-300 rounded-lg px-4 py-2 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            className="w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg px-4 py-2 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             placeholder="Détails supplémentaires sur cette tâche..."
           />
         </div>
