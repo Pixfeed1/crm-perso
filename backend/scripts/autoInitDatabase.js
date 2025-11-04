@@ -102,6 +102,26 @@ const DATABASE_SCHEMA = {
     ]
   },
 
+  // Table tasks (tâches des projets)
+  tasks: {
+    columns: {
+      id: 'SERIAL PRIMARY KEY',
+      project_id: 'INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE',
+      title: 'TEXT NOT NULL',
+      description: 'TEXT',
+      deadline: 'DATE',
+      completed: 'BOOLEAN DEFAULT false',
+      priority: 'VARCHAR(20) DEFAULT \'medium\'',
+      created_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP',
+      updated_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'
+    },
+    indexes: [
+      'CREATE INDEX IF NOT EXISTS idx_tasks_project_id ON tasks(project_id)',
+      'CREATE INDEX IF NOT EXISTS idx_tasks_completed ON tasks(completed)',
+      'CREATE INDEX IF NOT EXISTS idx_tasks_deadline ON tasks(deadline)'
+    ]
+  },
+
   // Table tva_regimes
   tva_regimes: {
     columns: {

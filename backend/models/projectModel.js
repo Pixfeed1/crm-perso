@@ -284,63 +284,46 @@ const deleteProject = (db, id) => {
  */
 const addTask = (db, projectId, taskData) => {
   return new Promise((resolve, reject) => {
-    const { title, description, deadline, completed } = taskData;
+    const { title, description, deadline, completed, priority } = taskData;
 
     if (!title) {
       return reject(new Error('Titre de la tâche requis'));
     }
 
-    // Créer la table tasks si elle n'existe pas
-    db.run(`
-      CREATE TABLE IF NOT EXISTS tasks (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        project_id INTEGER NOT NULL,
-        title TEXT NOT NULL,
-        description TEXT,
-        deadline DATE,
-        completed BOOLEAN DEFAULT 0,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE
-      )
-    `, (tableErr) => {
-      if (tableErr) {
-        return reject(tableErr);
+    const query = `
+      INSERT INTO tasks (project_id, title, description, deadline, completed, priority)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `;
+
+    db.run(query, [
+      projectId,
+      title,
+      description || null,
+      deadline || null,
+      completed ? 1 : 0,
+      priority || 'medium'
+    ], function(err) {
+      if (err) {
+        reject(err);
+      } else {
+        const newTaskId = this.lastID;
+
+        // Récupérer la tâche créée
+        db.get('SELECT * FROM tasks WHERE id = ?', [newTaskId], (getErr, task) => {
+          if (getErr) {
+            resolve({
+              id: newTaskId,
+              project_id: projectId,
+              ...taskData
+            });
+          } else {
+            // Mettre à jour la progression du projet
+            updateProjectProgress(db, projectId)
+              .then(() => resolve(task))
+              .catch(() => resolve(task)); // Résoudre même en cas d'erreur de progression
+          }
+        });
       }
-
-      const query = `
-        INSERT INTO tasks (project_id, title, description, deadline, completed)
-        VALUES (?, ?, ?, ?, ?)
-      `;
-
-      db.run(query, [
-        projectId,
-        title,
-        description || null,
-        deadline || null,
-        completed ? 1 : 0
-      ], function(err) {
-        if (err) {
-          reject(err);
-        } else {
-          const newTaskId = this.lastID;
-
-          // Récupérer la tâche créée
-          db.get('SELECT * FROM tasks WHERE id = ?', [newTaskId], (getErr, task) => {
-            if (getErr) {
-              resolve({
-                id: newTaskId,
-                project_id: projectId,
-                ...taskData
-              });
-            } else {
-              // Mettre à jour la progression du projet
-              updateProjectProgress(db, projectId)
-                .then(() => resolve(task))
-                .catch(() => resolve(task)); // Résoudre même en cas d'erreur de progression
-            }
-          });
-        }
-      });
     });
   });
 };
