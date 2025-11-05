@@ -66,7 +66,7 @@ const GoalFilter = ({ filters, setFilters, onSort, sortField, sortDirection }) =
               placeholder="Rechercher un objectif..."
               value={filters.search}
               onChange={(e) => handleFilterChange('search', e.target.value)}
-              className="w-full bg-white text-gray-800 border border-gray-400 rounded-lg px-4 py-2 pl-10 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent relative z-10"
+              className="w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg px-4 py-2 pl-10 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent relative z-10"
             />
             <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 z-[15]">
               <FiSearch />
@@ -154,7 +154,7 @@ const GoalFilter = ({ filters, setFilters, onSort, sortField, sortDirection }) =
                       className={`px-3 py-1 rounded-full text-xs font-medium ${
                         filters.category === option.value
                           ? 'bg-amber-600 text-white shadow-md'
-                          : 'bg-white text-gray-800 hover:bg-gray-100 shadow-sm'
+                          : 'bg-gray-800/50 text-white hover:bg-gray-700 shadow-sm'
                       }`}
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
@@ -177,7 +177,7 @@ const GoalFilter = ({ filters, setFilters, onSort, sortField, sortDirection }) =
                       className={`px-3 py-1 rounded-full text-xs font-medium ${
                         filters.period === option.value
                           ? 'bg-amber-600 text-white shadow-md'
-                          : 'bg-white text-gray-800 hover:bg-gray-100 shadow-sm'
+                          : 'bg-gray-800/50 text-white hover:bg-gray-700 shadow-sm'
                       }`}
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
