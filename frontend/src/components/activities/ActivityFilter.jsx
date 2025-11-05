@@ -28,7 +28,8 @@ const ActivityFilter = ({
     { value: 'meeting', label: 'Réunion' },
     { value: 'call', label: 'Appel' },
     { value: 'marketing', label: 'Marketing' },
-    { value: 'maintenance', label: 'Maintenance' }
+    { value: 'maintenance', label: 'Maintenance' },
+    { value: 'prospection', label: 'Prospection' }
   ];
 
   // Options de priorité

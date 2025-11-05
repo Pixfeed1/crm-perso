@@ -76,7 +76,8 @@ const ActivityForm = ({ activity = {}, onSave, onCancel, projects, defaultDate }
     { value: 'meeting', label: 'Réunion' },
     { value: 'call', label: 'Appel' },
     { value: 'marketing', label: 'Marketing' },
-    { value: 'maintenance', label: 'Maintenance' }
+    { value: 'maintenance', label: 'Maintenance' },
+    { value: 'prospection', label: 'Prospection' }
   ];
 
   const priorityLevels = [

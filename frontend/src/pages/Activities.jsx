@@ -1,7 +1,7 @@
 // src/pages/Activities.jsx
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiClipboard, FiCalendar, FiEdit2, FiTrash2, FiMonitor, FiEdit, FiUsers, FiPhone, FiRadio, FiTool, FiCheck, FiDownload } from 'react-icons/fi';
+import { FiClipboard, FiCalendar, FiEdit2, FiTrash2, FiMonitor, FiEdit, FiUsers, FiPhone, FiRadio, FiTool, FiCheck, FiDownload, FiSearch } from 'react-icons/fi';
 import { useToast } from '../hooks/useToast';
 import { useConfirm } from '../hooks/useConfirm';
 import ConfirmModal from '../components/common/ConfirmModal';
@@ -551,6 +551,7 @@ const Activities = () => {
                        selectedActivity.type === 'call'        ? <><FiPhone /> Appel</>         :
                        selectedActivity.type === 'marketing'   ? <><FiRadio /> Marketing</>     :
                        selectedActivity.type === 'maintenance' ? <><FiTool /> Maintenance</>   :
+                       selectedActivity.type === 'prospection' ? <><FiSearch /> Prospection</>  :
                        selectedActivity.type}
                     </span>
                   </div>
