@@ -484,7 +484,7 @@ const Leads = () => {
               </div>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               {/* Toggle vue cartes/table/kanban/prospection */}
               <div className="flex bg-gray-700 rounded-lg p-1">
                 <button
@@ -546,7 +546,7 @@ const Leads = () => {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={handleAddLead}
-                className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-lg flex items-center gap-2 transition-colors"
+                className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-lg flex items-center gap-2 transition-colors"
               >
                 <FiPlus />
                 <span>Nouveau lead</span>
