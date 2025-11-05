@@ -638,8 +638,8 @@ const Revenues = () => {
         </div>
       </div>
 
-      {/* Liste des revenus - Correction pour éviter la double scrollbar */}
-      <div className="bg-gray-800/30 backdrop-blur-sm rounded-2xl p-6 flex flex-col flex-grow overflow-hidden">
+      {/* Liste des revenus - Avec hauteur minimale pour être visible */}
+      <div className="bg-gray-800/30 backdrop-blur-sm rounded-2xl p-6 flex flex-col flex-grow overflow-hidden min-h-[400px]">
         <h3 className="text-xl font-semibold text-white mb-4">Liste des revenus</h3>
         <RevenueList
           revenues={filteredRevenues}
