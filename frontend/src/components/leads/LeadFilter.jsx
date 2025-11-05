@@ -77,9 +77,9 @@ const LeadFilter = ({ filters, setFilters, onSort, sortField, sortDirection, isK
     <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl overflow-hidden">
       {/* Barre de recherche et tri toujours visible */}
       <div className="p-3 space-y-3">
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2">
           {/* Recherche */}
-          <div className="flex-1 relative">
+          <div className="flex-1 w-full relative">
             <input
               type="text"
               placeholder="Rechercher un lead..."
@@ -104,12 +104,12 @@ const LeadFilter = ({ filters, setFilters, onSort, sortField, sortDirection, isK
 
           {/* Tri rapide */}
           {onSort && (
-            <div className="flex gap-1">
+            <div className="grid grid-cols-2 sm:flex gap-1 w-full sm:w-auto">
               {sortOptions.map(option => (
                 <motion.button
                   key={option.field}
                   onClick={() => onSort(option.field)}
-                  className={`px-3 py-2 rounded-lg flex items-center gap-1 text-sm ${
+                  className={`px-3 py-2 rounded-lg flex items-center justify-center gap-1 text-sm ${
                     sortField === option.field
                       ? 'bg-indigo-600 text-white'
                       : 'bg-gray-700/50 text-gray-300 hover:bg-gray-700'
@@ -118,7 +118,7 @@ const LeadFilter = ({ filters, setFilters, onSort, sortField, sortDirection, isK
                   whileTap={{ scale: 0.98 }}
                 >
                   <span className="hidden sm:inline">{option.label}</span>
-                  <span className="sm:hidden">{option.label.substring(0, 3)}</span>
+                  <span className="sm:hidden text-xs">{option.label}</span>
                   {sortField === option.field && (
                     sortDirection === 'asc' ? <FiArrowUp size={14} /> : <FiArrowDown size={14} />
                   )}
