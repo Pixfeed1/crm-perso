@@ -75,57 +75,58 @@ const LeadFilter = ({ filters, setFilters, onSort, sortField, sortDirection, isK
 
   return (
     <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl overflow-hidden">
-      {/* Barre de recherche et tri - Optimisé mobile */}
+      {/* Barre de recherche et tri toujours visible */}
       <div className="p-3 space-y-3">
-        {/* Recherche - pleine largeur */}
-        <div className="relative">
-          <input
-            type="text"
-            placeholder="Rechercher un lead..."
-            value={filters.search}
-            onChange={(e) => handleFilterChange('search', e.target.value)}
-            className="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-4 py-3 pl-10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-          />
-          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-            <FiSearch />
-          </span>
-          {filters.search && (
-            <motion.button
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={() => handleFilterChange('search', '')}
-            >
-              <FiX />
-            </motion.button>
-          )}
-        </div>
+        <div className="flex gap-2">
+          {/* Recherche */}
+          <div className="flex-1 relative">
+            <input
+              type="text"
+              placeholder="Rechercher un lead..."
+              value={filters.search}
+              onChange={(e) => handleFilterChange('search', e.target.value)}
+              className="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-4 py-2 pl-10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            />
+            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+              <FiSearch />
+            </span>
+            {filters.search && (
+              <motion.button
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={() => handleFilterChange('search', '')}
+              >
+                <FiX />
+              </motion.button>
+            )}
+          </div>
 
-        {/* Tri rapide - Mobile: scroll horizontal, Desktop: flex normal */}
-        {onSort && (
-          <div className="overflow-x-auto -mx-3 px-3">
-            <div className="flex gap-2 min-w-min">
+          {/* Tri rapide */}
+          {onSort && (
+            <div className="flex gap-1">
               {sortOptions.map(option => (
                 <motion.button
                   key={option.field}
                   onClick={() => onSort(option.field)}
-                  className={`px-4 py-2.5 rounded-lg flex items-center gap-2 text-sm font-medium whitespace-nowrap ${
+                  className={`px-3 py-2 rounded-lg flex items-center gap-1 text-sm ${
                     sortField === option.field
-                      ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg'
+                      ? 'bg-indigo-600 text-white'
                       : 'bg-gray-700/50 text-gray-300 hover:bg-gray-700'
                   }`}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                 >
-                  <span>{option.label}</span>
+                  <span className="hidden sm:inline">{option.label}</span>
+                  <span className="sm:hidden">{option.label.substring(0, 3)}</span>
                   {sortField === option.field && (
                     sortDirection === 'asc' ? <FiArrowUp size={14} /> : <FiArrowDown size={14} />
                   )}
                 </motion.button>
               ))}
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Bouton d'expansion des filtres */}
