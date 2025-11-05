@@ -633,7 +633,7 @@ const Activities = () => {
                   {selectedActivity.status !== 'completed' && (
                     <div className="pt-4">
                       <motion.button
-                        className="w-full px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg flex items-center justify-center"
+                        className="w-full px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg flex items-center justify-center"
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={() => {
