@@ -89,7 +89,7 @@ const TaskList = ({ tasks = [], onToggleStatus }) => {
                 </motion.button>
                 
                 <span className={`${task.completed ? 'text-gray-400 line-through' : 'text-white'}`}>
-                  {task.name}
+                  {task.title}
                 </span>
               </div>
               
