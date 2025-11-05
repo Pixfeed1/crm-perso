@@ -103,9 +103,9 @@ const ActivityForm = ({ activity = {}, onSave, onCancel, projects, defaultDate }
             name="description"
             value={formData.description}
             onChange={handleInputChange}
-            className={`w-full bg-white text-gray-800 border ${
-              errors.description ? 'border-rose-500' : 'border-gray-400'
-            } rounded-lg px-2 sm:px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-gray-500`}
+            className={`w-full bg-gray-800/50 text-white border ${
+              errors.description ? 'border-rose-500' : 'border-gray-700'
+            } rounded-lg px-2 sm:px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 placeholder-gray-400`}
             placeholder="Ex: Développement de la page d'accueil"
           />
           {errors.description && (
@@ -124,7 +124,7 @@ const ActivityForm = ({ activity = {}, onSave, onCancel, projects, defaultDate }
               name="type"
               value={formData.type}
               onChange={handleInputChange}
-              className="w-full bg-white text-gray-800 border border-gray-400 rounded-lg px-2 sm:px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+              className="w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg px-2 sm:px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
             >
               {activityTypes.map(type => (
                 <option key={type.value} value={type.value}>
@@ -143,7 +143,7 @@ const ActivityForm = ({ activity = {}, onSave, onCancel, projects, defaultDate }
               name="priority"
               value={formData.priority}
               onChange={handleInputChange}
-              className="w-full bg-white text-gray-800 border border-gray-400 rounded-lg px-2 sm:px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+              className="w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg px-2 sm:px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
             >
               {priorityLevels.map(priority => (
                 <option key={priority.value} value={priority.value}>
@@ -166,9 +166,9 @@ const ActivityForm = ({ activity = {}, onSave, onCancel, projects, defaultDate }
               name="date"
               value={formData.date}
               onChange={handleInputChange}
-              className={`w-full bg-white text-gray-800 border ${
-                errors.date ? 'border-rose-500' : 'border-gray-400'
-              } rounded-lg px-2 sm:px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm`}
+              className={`w-full bg-gray-800/50 text-white border ${
+                errors.date ? 'border-rose-500' : 'border-gray-700'
+              } rounded-lg px-2 sm:px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm`}
             />
             {errors.date && (
               <span className="text-rose-500 text-xs">{errors.date}</span>
@@ -186,9 +186,9 @@ const ActivityForm = ({ activity = {}, onSave, onCancel, projects, defaultDate }
               value={formData.planned_time}
               onChange={handleInputChange}
               min="1"
-              className={`w-full bg-white text-gray-800 border ${
-                errors.planned_time ? 'border-rose-500' : 'border-gray-400'
-              } rounded-lg px-2 sm:px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm`}
+              className={`w-full bg-gray-800/50 text-white border ${
+                errors.planned_time ? 'border-rose-500' : 'border-gray-700'
+              } rounded-lg px-2 sm:px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm`}
             />
             {errors.planned_time && (
               <span className="text-rose-500 text-xs">{errors.planned_time}</span>
@@ -206,7 +206,7 @@ const ActivityForm = ({ activity = {}, onSave, onCancel, projects, defaultDate }
             name="project_id"
             value={formData.project_id}
             onChange={handleInputChange}
-            className="w-full bg-white text-gray-800 border border-gray-400 rounded-lg px-2 sm:px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+            className="w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg px-2 sm:px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
           >
             <option value="">Aucun projet</option>
             {projects && projects.map(project => (
@@ -244,7 +244,7 @@ const ActivityForm = ({ activity = {}, onSave, onCancel, projects, defaultDate }
               name="lead_name"
               value={formData.lead_name}
               onChange={handleInputChange}
-              className="w-full bg-white text-gray-800 border border-gray-400 rounded-lg px-2 sm:px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-gray-500 text-sm"
+              className="w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg px-2 sm:px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 placeholder-gray-400 text-sm"
               placeholder="Nom du lead"
             />
           )}
