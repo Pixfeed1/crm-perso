@@ -53,11 +53,11 @@ const GoalForm = ({ goal = {}, onSave, onCancel }) => {
 
   // Options de catégorie
   const categoryOptions = [
-    { value: 'leads', label: 'Leads', icon: '👥', description: 'Objectifs liés à l\'acquisition de clients' },
-    { value: 'revenue', label: 'Revenus', icon: '💰', description: 'Objectifs financiers et de chiffre d\'affaires' },
-    { value: 'productivity', label: 'Productivité', icon: '⚙️', description: 'Objectifs liés à l\'efficacité et à la performance' },
-    { value: 'marketing', label: 'Marketing', icon: '📢', description: 'Objectifs de visibilité et de communication' },
-    { value: 'personal', label: 'Personnel', icon: '🌱', description: 'Objectifs de développement personnel' }
+    { value: 'leads', label: 'Leads', description: 'Objectifs liés à l\'acquisition de clients' },
+    { value: 'revenue', label: 'Revenus', description: 'Objectifs financiers et de chiffre d\'affaires' },
+    { value: 'productivity', label: 'Productivité', description: 'Objectifs liés à l\'efficacité et à la performance' },
+    { value: 'marketing', label: 'Marketing', description: 'Objectifs de visibilité et de communication' },
+    { value: 'personal', label: 'Personnel', description: 'Objectifs de développement personnel' }
   ];
   
   // Options de période
@@ -376,7 +376,7 @@ const GoalForm = ({ goal = {}, onSave, onCancel }) => {
         <div className="pt-6 flex justify-end space-x-4">
           <button
             type="button"
-            className="px-5 py-2 rounded-lg border border-gray-400 bg-white text-gray-800 hover:bg-gray-100 shadow-md"
+            className="px-5 py-2 rounded-lg border-2 border-gray-600 bg-white text-gray-900 hover:bg-gray-100 hover:border-gray-700 shadow-md font-semibold transition-all"
             onClick={onCancel}
           >
             Annuler
@@ -386,10 +386,10 @@ const GoalForm = ({ goal = {}, onSave, onCancel }) => {
             type="button"
             onClick={handleSubmit}
             className={`px-6 py-2 rounded-lg ${
-              !formValid ? 
-              'bg-amber-600/50 text-white/70 cursor-not-allowed' : 
+              !formValid ?
+              'bg-amber-400 text-gray-700 cursor-not-allowed opacity-60' :
               'bg-amber-600 hover:bg-amber-700 text-white'
-            } font-medium shadow-md`}
+            } font-medium shadow-md transition-all`}
             disabled={!formValid || submitting}
           >
             {submitting ? 'Enregistrement...' : goal.id ? 'Mettre à jour' : 'Enregistrer'}

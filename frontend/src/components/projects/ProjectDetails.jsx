@@ -1,16 +1,18 @@
 // src/components/projects/ProjectDetails.jsx
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { FiGlobe, FiSmartphone, FiMonitor, FiEdit2, FiRadio, FiTool, FiPackage, FiClipboard, FiRotateCw, FiCalendar, FiCheckCircle, FiPauseCircle, FiXCircle, FiHelpCircle, FiTrash2, FiFileText, FiCheck } from 'react-icons/fi';
 
 // Sous-composants
 import TaskList from './TaskList';
 import TaskForm from './TaskForm';
+import ProjectPayments from './ProjectPayments';
 
 const ProjectDetails = ({ project, onUpdate, onDelete, onAddTask, onToggleTaskStatus }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  
+
   // Configuration des couleurs de statut
   const statusConfig = {
     'en-cours': {
@@ -18,47 +20,47 @@ const ProjectDetails = ({ project, onUpdate, onDelete, onAddTask, onToggleTaskSt
       text: 'text-blue-300',
       border: 'border-blue-500/30',
       label: 'En cours',
-      icon: '🔄'
+      icon: <FiRotateCw />
     },
     'planifié': {
       bg: 'bg-purple-500/20',
       text: 'text-purple-300',
       border: 'border-purple-500/30',
       label: 'Planifié',
-      icon: '📅'
+      icon: <FiCalendar />
     },
     'terminé': {
       bg: 'bg-emerald-500/20',
       text: 'text-emerald-300',
       border: 'border-emerald-500/30',
       label: 'Terminé',
-      icon: '✅'
+      icon: <FiCheckCircle />
     },
     'pause': {
       bg: 'bg-amber-500/20',
       text: 'text-amber-300',
       border: 'border-amber-500/30',
       label: 'En pause',
-      icon: '⏸️'
+      icon: <FiPauseCircle />
     },
     'annulé': {
       bg: 'bg-rose-500/20',
       text: 'text-rose-300',
       border: 'border-rose-500/30',
       label: 'Annulé',
-      icon: '❌'
+      icon: <FiXCircle />
     }
   };
 
   // Configuration des icônes de type
   const typeConfig = {
-    'site-web': { icon: '🌐', label: 'Site Web' },
-    'application-mobile': { icon: '📱', label: 'App Mobile' },
-    'application-bureau': { icon: '💻', label: 'App Bureau' },
-    'design': { icon: '🎨', label: 'Design' },
-    'marketing': { icon: '📢', label: 'Marketing' },
-    'maintenance': { icon: '🔧', label: 'Maintenance' },
-    'autre': { icon: '📦', label: 'Autre' }
+    'site-web': { icon: <FiGlobe />, label: 'Site Web' },
+    'application-mobile': { icon: <FiSmartphone />, label: 'App Mobile' },
+    'application-bureau': { icon: <FiMonitor />, label: 'App Bureau' },
+    'design': { icon: <FiEdit2 />, label: 'Design' },
+    'marketing': { icon: <FiRadio />, label: 'Marketing' },
+    'maintenance': { icon: <FiTool />, label: 'Maintenance' },
+    'autre': { icon: <FiPackage />, label: 'Autre' }
   };
 
   // Valeurs par défaut si le statut ou type n'est pas configuré
@@ -67,10 +69,10 @@ const ProjectDetails = ({ project, onUpdate, onDelete, onAddTask, onToggleTaskSt
     text: 'text-gray-300',
     border: 'border-gray-500/30',
     label: project.status,
-    icon: '❓'
+    icon: <FiHelpCircle />
   };
 
-  const typeInfo = typeConfig[project.type] || { icon: '📋', label: project.type };
+  const typeInfo = typeConfig[project.type] || { icon: <FiClipboard />, label: project.type };
   
   // Format des dates
   const formatDate = (dateString) => {
@@ -167,8 +169,12 @@ const ProjectDetails = ({ project, onUpdate, onDelete, onAddTask, onToggleTaskSt
           <div className="flex items-center text-lg text-purple-300 mt-1">
             <span className="mr-2">{typeInfo.icon}</span>
             <span>{typeInfo.label}</span>
-            <span className="mx-2">•</span>
-            <span>{project.lead_name}</span>
+            {(project.display_name || project.client_name || project.lead_name) && (
+              <>
+                <span className="mx-2">•</span>
+                <span>{project.display_name || project.client_name || project.lead_name}</span>
+              </>
+            )}
           </div>
         </div>
         
@@ -179,16 +185,16 @@ const ProjectDetails = ({ project, onUpdate, onDelete, onAddTask, onToggleTaskSt
             className="p-2 rounded-lg bg-purple-600/30 hover:bg-purple-600/50 text-purple-300"
             onClick={() => setIsEditing(true)}
           >
-            ✏️
+            <FiEdit2 />
           </motion.button>
-          
+
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             className="p-2 rounded-lg bg-rose-600/30 hover:bg-rose-600/50 text-rose-300"
             onClick={() => setShowDeleteConfirm(true)}
           >
-            🗑️
+            <FiTrash2 />
           </motion.button>
         </div>
       </div>
@@ -198,7 +204,7 @@ const ProjectDetails = ({ project, onUpdate, onDelete, onAddTask, onToggleTaskSt
         {/* Panneau de gauche (Informations) */}
         <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl p-5">
           <h3 className="text-lg font-medium text-gray-200 mb-4 flex items-center">
-            <span className="mr-2">📋</span>
+            <span className="mr-2"><FiClipboard /></span>
             Détails du projet
           </h3>
           
@@ -221,7 +227,7 @@ const ProjectDetails = ({ project, onUpdate, onDelete, onAddTask, onToggleTaskSt
                   {Object.keys(statusConfig).map(status => (
                     <button
                       key={status}
-                      className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-800 flex items-center ${
+                      className={`w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-800 flex items-center ${
                         project.status === status ? 'bg-gray-800' : ''
                       }`}
                       onClick={() => handleStatusChange(status)}
@@ -274,7 +280,7 @@ const ProjectDetails = ({ project, onUpdate, onDelete, onAddTask, onToggleTaskSt
         {/* Panneau de droite (Description) */}
         <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl p-5">
           <h3 className="text-lg font-medium text-gray-200 mb-4 flex items-center">
-            <span className="mr-2">📝</span>
+            <span className="mr-2"><FiFileText /></span>
             Description
           </h3>
           
@@ -298,7 +304,7 @@ const ProjectDetails = ({ project, onUpdate, onDelete, onAddTask, onToggleTaskSt
             </div>
             
             {/* Visualisation de la période écoulée */}
-            <div className="mt-3 flex justify-between text-xs text-gray-500">
+            <div className="mt-3 flex justify-between text-xs text-gray-400">
               <span>{formatDate(project.start_date)}</span>
               <span>{formatDate(project.end_date)}</span>
             </div>
@@ -311,12 +317,15 @@ const ProjectDetails = ({ project, onUpdate, onDelete, onAddTask, onToggleTaskSt
           </div>
         </div>
       </div>
-      
+
+      {/* Section Paiements */}
+      <ProjectPayments project={project} />
+
       {/* Section Tâches */}
       <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl p-5 mb-6">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-medium text-gray-200 flex items-center">
-            <span className="mr-2">✓</span>
+            <span className="mr-2"><FiCheck /></span>
             Tâches
           </h3>
           
@@ -361,6 +370,159 @@ const ProjectDetails = ({ project, onUpdate, onDelete, onAddTask, onToggleTaskSt
         </AnimatePresence>
       </div>
       
+      {/* Modal d'édition */}
+      <AnimatePresence>
+        {isEditing && (
+          <motion.div
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setIsEditing(false)}
+          >
+            <motion.div
+              className="bg-gray-900 border border-gray-700 rounded-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="text-xl font-semibold text-white mb-4">Modifier le projet</h3>
+
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                handleSaveEdit({
+                  name: formData.get('name'),
+                  type: formData.get('type'),
+                  description: formData.get('description'),
+                  start_date: formData.get('start_date'),
+                  end_date: formData.get('end_date'),
+                  status: formData.get('status'),
+                  amount: parseFloat(formData.get('amount')) || 0
+                });
+              }}>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-1">Nom du projet *</label>
+                    <input
+                      type="text"
+                      name="name"
+                      defaultValue={project.name}
+                      required
+                      className="w-full bg-gray-800 text-gray-100 border border-gray-600 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-1">Type *</label>
+                      <select
+                        name="type"
+                        defaultValue={project.type}
+                        required
+                        className="w-full bg-gray-800 text-gray-100 border border-gray-600 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      >
+                        <option value="site-web">Site Web</option>
+                        <option value="application-mobile">App Mobile</option>
+                        <option value="application-bureau">App Bureau</option>
+                        <option value="design">Design</option>
+                        <option value="marketing">Marketing</option>
+                        <option value="maintenance">Maintenance</option>
+                        <option value="autre">Autre</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-1">Statut *</label>
+                      <select
+                        name="status"
+                        defaultValue={project.status}
+                        required
+                        className="w-full bg-gray-800 text-gray-100 border border-gray-600 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      >
+                        <option value="planifié">Planifié</option>
+                        <option value="en-cours">En cours</option>
+                        <option value="pause">En pause</option>
+                        <option value="terminé">Terminé</option>
+                        <option value="annulé">Annulé</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-1">Description</label>
+                    <textarea
+                      name="description"
+                      defaultValue={project.description || ''}
+                      rows={3}
+                      className="w-full bg-gray-800 text-gray-100 border border-gray-600 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-1">Date de début *</label>
+                      <input
+                        type="date"
+                        name="start_date"
+                        defaultValue={project.start_date}
+                        required
+                        className="w-full bg-gray-800 text-gray-100 border border-gray-600 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-1">Date de fin *</label>
+                      <input
+                        type="date"
+                        name="end_date"
+                        defaultValue={project.end_date}
+                        required
+                        className="w-full bg-gray-800 text-gray-100 border border-gray-600 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-1">Montant (€)</label>
+                    <input
+                      type="number"
+                      name="amount"
+                      defaultValue={project.amount}
+                      step="0.01"
+                      min="0"
+                      className="w-full bg-gray-800 text-gray-100 border border-gray-600 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end space-x-3 mt-6">
+                  <motion.button
+                    type="button"
+                    className="px-4 py-2 rounded-lg border-2 border-white/30 text-white hover:bg-white/10 hover:border-white/40 font-medium transition-all"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setIsEditing(false)}
+                  >
+                    Annuler
+                  </motion.button>
+
+                  <motion.button
+                    type="submit"
+                    className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-medium"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    Enregistrer
+                  </motion.button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Popup de confirmation de suppression */}
       <AnimatePresence>
         {showDeleteConfirm && (
@@ -383,7 +545,7 @@ const ProjectDetails = ({ project, onUpdate, onDelete, onAddTask, onToggleTaskSt
               
               <div className="flex justify-end space-x-3">
                 <motion.button
-                  className="px-4 py-2 rounded-lg border border-gray-600 text-gray-300 hover:bg-gray-700"
+                  className="px-4 py-2 rounded-lg border-2 border-white/30 text-white hover:bg-white/10 hover:border-white/40 font-medium transition-all"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => setShowDeleteConfirm(false)}

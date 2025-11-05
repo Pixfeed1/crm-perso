@@ -1,16 +1,25 @@
 // src/components/revenues/RevenueFilter.jsx
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { FiSearch, FiX, FiFilter, FiArrowUp, FiArrowDown } from 'react-icons/fi';
 
-const RevenueFilter = ({ filters, setFilters, projects }) => {
+const RevenueFilter = ({ filters, setFilters, projects, onSort, sortField, sortDirection }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  
+
   // Options de type
   const typeOptions = [
     { value: 'all', label: 'Tous les types' },
     { value: 'invoice', label: 'Facture' },
     { value: 'recurring', label: 'Récurrent' },
     { value: 'other', label: 'Autre' }
+  ];
+
+  // Options de tri
+  const sortOptions = [
+    { field: 'amount', label: 'Montant' },
+    { field: 'date', label: 'Date' },
+    { field: 'project_name', label: 'Projet' },
+    { field: 'type', label: 'Type' }
   ];
   
   // Mise à jour des filtres
@@ -56,44 +65,72 @@ const RevenueFilter = ({ filters, setFilters, projects }) => {
 
   return (
     <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl mb-6">
-      {/* Barre de recherche toujours visible */}
-      <div className="p-3" style={searchContainerStyle}>
-        <div className="relative">
-          <input
-            type="text"
-            placeholder="Rechercher un revenu..."
-            value={filters.search}
-            onChange={(e) => handleFilterChange('search', e.target.value)}
-            className="w-full bg-white text-gray-800 border border-gray-400 rounded-lg px-4 py-2 pl-10 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-            style={searchInputStyle}
-          />
-          <span 
-            className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500"
+      {/* Barre de recherche et tri toujours visible */}
+      <div className="p-3 space-y-3" style={searchContainerStyle}>
+        <div className="flex gap-2">
+          {/* Recherche */}
+          <div className="flex-1 relative">
+            <input
+              type="text"
+              placeholder="Rechercher un revenu..."
+              value={filters.search}
+              onChange={(e) => handleFilterChange('search', e.target.value)}
+              className="w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg px-4 py-2 pl-10 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              style={searchInputStyle}
+            />
+          <span
+            className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
             style={iconStyle}
           >
-            🔍
+            <FiSearch />
           </span>
           {filters.search && (
             <motion.button
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-300"
               style={iconStyle}
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               onClick={() => handleFilterChange('search', '')}
             >
-              ✕
+              <FiX />
             </motion.button>
+          )}
+          </div>
+
+          {/* Tri rapide */}
+          {onSort && (
+            <div className="flex gap-1">
+              {sortOptions.map(option => (
+                <motion.button
+                  key={option.field}
+                  onClick={() => onSort(option.field)}
+                  className={`px-3 py-2 rounded-lg flex items-center gap-1 text-sm ${
+                    sortField === option.field
+                      ? 'bg-teal-600 text-white'
+                      : 'bg-gray-700/50 text-gray-300 hover:bg-gray-700'
+                  }`}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <span className="hidden sm:inline">{option.label}</span>
+                  <span className="sm:hidden">{option.label.substring(0, 3)}</span>
+                  {sortField === option.field && (
+                    sortDirection === 'asc' ? <FiArrowUp size={14} /> : <FiArrowDown size={14} />
+                  )}
+                </motion.button>
+              ))}
+            </div>
           )}
         </div>
       </div>
       
       {/* Bouton d'expansion des filtres */}
-      <div 
-        className="px-3 py-2 flex justify-between items-center cursor-pointer hover:bg-gray-700/30"
+      <div
+        className="px-3 py-2 flex justify-between items-center cursor-pointer hover:bg-gray-700/30 transition-colors"
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <div className="flex items-center text-sm">
-          <span className="mr-2">🔍</span>
+          <span className="mr-2"><FiFilter /></span>
           <span className="text-gray-300 font-medium">Filtres avancés</span>
           {hasActiveFilters && (
             <span className="ml-2 px-1.5 py-0.5 bg-teal-600 rounded-full text-xs text-white">
@@ -131,7 +168,7 @@ const RevenueFilter = ({ filters, setFilters, projects }) => {
                       className={`px-3 py-1 rounded-full text-xs font-medium ${
                         filters.type === option.value
                           ? 'bg-teal-600 text-white'
-                          : 'bg-white text-gray-800 hover:bg-gray-100'
+                          : 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50 border border-gray-700'
                       }`}
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
@@ -155,11 +192,11 @@ const RevenueFilter = ({ filters, setFilters, projects }) => {
                       id="minAmount"
                       value={filters.minAmount}
                       onChange={(e) => handleFilterChange('minAmount', e.target.value)}
-                      className="w-full bg-white text-gray-800 border border-gray-400 rounded-lg px-4 py-2 pl-8 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                      className="w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg px-4 py-2 pl-8 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                       placeholder="Min"
                       min="0"
                     />
-                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
                       €
                     </span>
                   </div>
@@ -175,11 +212,11 @@ const RevenueFilter = ({ filters, setFilters, projects }) => {
                       id="maxAmount"
                       value={filters.maxAmount}
                       onChange={(e) => handleFilterChange('maxAmount', e.target.value)}
-                      className="w-full bg-white text-gray-800 border border-gray-400 rounded-lg px-4 py-2 pl-8 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                      className="w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg px-4 py-2 pl-8 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                       placeholder="Max"
                       min="0"
                     />
-                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
                       €
                     </span>
                   </div>
@@ -195,7 +232,7 @@ const RevenueFilter = ({ filters, setFilters, projects }) => {
                   id="project"
                   value={filters.project}
                   onChange={(e) => handleFilterChange('project', e.target.value)}
-                  className="w-full bg-white text-gray-800 border border-gray-400 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                  className="w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 >
                   <option value="all">Tous les projets</option>
                   <option value="none">Sans projet</option>

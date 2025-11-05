@@ -1,14 +1,17 @@
 // src/components/goals/GoalDetails.jsx
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { FiUsers, FiDollarSign, FiSettings, FiRadio, FiStar, FiCheckCircle, FiClock, FiZap, FiAlertCircle, FiMinusCircle, FiMapPin, FiEdit2, FiTrash2, FiTrendingUp, FiClipboard, FiAward, FiCheck, FiCircle } from 'react-icons/fi';
+import { useToast } from '../../hooks/useToast';
 
-const GoalDetails = ({ 
-  goal, 
-  onUpdate, 
-  onDelete, 
-  onAddMilestone, 
-  onUpdateMilestone 
+const GoalDetails = ({
+  goal,
+  onUpdate,
+  onDelete,
+  onAddMilestone,
+  onUpdateMilestone
 }) => {
+  const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const [isAddingMilestone, setIsAddingMilestone] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -19,12 +22,12 @@ const GoalDetails = ({
   const [editData, setEditData] = useState({
     current_value: goal.current_value
   });
-  
+
   // Fonction pour calculer le pourcentage de progression
   const calculateProgress = (current, target) => {
     return Math.min(100, Math.round((current / target) * 100));
   };
-  
+
   // Formatage des dates
   const formatDate = (dateString) => {
     if (!dateString) return 'Non défini';
@@ -40,23 +43,23 @@ const GoalDetails = ({
       return 'Date invalide';
     }
   };
-  
+
   // Configuration des couleurs de catégorie
   const categoryConfig = {
-    'leads': { icon: '👥', label: 'Leads', color: 'text-blue-300' },
-    'revenue': { icon: '💰', label: 'Revenus', color: 'text-emerald-300' },
-    'productivity': { icon: '⚙️', label: 'Productivité', color: 'text-purple-300' },
-    'marketing': { icon: '📢', label: 'Marketing', color: 'text-amber-300' },
-    'personal': { icon: '🌱', label: 'Personnel', color: 'text-rose-300' }
+    'leads': { icon: <FiUsers />, label: 'Leads', color: 'text-blue-300' },
+    'revenue': { icon: <FiDollarSign />, label: 'Revenus', color: 'text-emerald-300' },
+    'productivity': { icon: <FiSettings />, label: 'Productivité', color: 'text-purple-300' },
+    'marketing': { icon: <FiRadio />, label: 'Marketing', color: 'text-amber-300' },
+    'personal': { icon: <FiStar />, label: 'Personnel', color: 'text-rose-300' }
   };
-  
+
   // Configuration des couleurs de période
   const periodConfig = {
     'monthly': { label: 'Mensuel', color: 'text-blue-300' },
     'quarterly': { label: 'Trimestriel', color: 'text-purple-300' },
     'yearly': { label: 'Annuel', color: 'text-amber-300' }
   };
-  
+
   // Vérifier si un objectif est actif (en cours)
   const isActive = () => {
     const now = new Date();
@@ -64,38 +67,38 @@ const GoalDetails = ({
     const endDate = new Date(goal.end_date);
     return startDate <= now && endDate >= now;
   };
-  
+
   // Vérifier si un objectif est à venir
   const isUpcoming = () => {
     const now = new Date();
     const startDate = new Date(goal.start_date);
     return startDate > now;
   };
-  
+
   // Vérifier si un objectif est complété
   const isCompleted = () => {
     return goal.current_value >= goal.target_value;
   };
-  
+
   // Vérifier si un objectif est expiré (passé la date de fin)
   const isExpired = () => {
     const now = new Date();
     const endDate = new Date(goal.end_date);
     return endDate < now && !isCompleted();
   };
-  
+
   // Obtenir le statut de l'objectif
   const getGoalStatus = () => {
     if (isCompleted()) {
-      return { text: 'Complété', color: 'bg-green-900/30 text-green-300', icon: '✓' };
+      return { text: 'Complété', color: 'bg-green-900/30 text-green-300', icon: <FiCheckCircle /> };
     } else if (isUpcoming()) {
-      return { text: 'À venir', color: 'bg-purple-900/30 text-purple-300', icon: '🔮' };
+      return { text: 'À venir', color: 'bg-purple-900/30 text-purple-300', icon: <FiClock /> };
     } else if (isActive()) {
-      return { text: 'En cours', color: 'bg-blue-900/30 text-blue-300', icon: '⚡' };
+      return { text: 'En cours', color: 'bg-blue-900/30 text-blue-300', icon: <FiZap /> };
     } else if (isExpired()) {
-      return { text: 'Expiré', color: 'bg-rose-900/30 text-rose-300', icon: '⏰' };
+      return { text: 'Expiré', color: 'bg-rose-900/30 text-rose-300', icon: <FiAlertCircle /> };
     } else {
-      return { text: 'Inactif', color: 'bg-gray-900/30 text-gray-300', icon: '📌' };
+      return { text: 'Inactif', color: 'bg-gray-900/30 text-gray-300', icon: <FiMinusCircle /> };
     }
   };
   
@@ -115,9 +118,9 @@ const GoalDetails = ({
   const handleUpdateCurrentValue = () => {
     // Conversion explicite en nombre et validation
     const numericValue = parseFloat(editData.current_value);
-    
+
     if (isNaN(numericValue)) {
-      alert("Veuillez entrer une valeur numérique valide");
+      toast.error("Veuillez entrer une valeur numérique valide");
       return;
     }
     
@@ -128,7 +131,7 @@ const GoalDetails = ({
   
   const handleSubmitMilestone = () => {
     if (!milestoneData.name || milestoneData.target <= 0) {
-      alert("Veuillez entrer un nom et une valeur cible valide");
+      toast.error("Veuillez entrer un nom et une valeur cible valide");
       return;
     }
     
@@ -140,7 +143,7 @@ const GoalDetails = ({
   const progress = calculateProgress(goal.current_value, goal.target_value);
   const statusInfo = getGoalStatus();
   const timeRemaining = getTimeRemaining();
-  const categoryInfo = categoryConfig[goal.category] || { icon: '📌', label: goal.category, color: 'text-gray-300' };
+  const categoryInfo = categoryConfig[goal.category] || { icon: '<FiMapPin />', label: goal.category, color: 'text-gray-300' };
   const periodInfo = periodConfig[goal.period] || { label: goal.period, color: 'text-gray-300' };
   
   return (
@@ -170,7 +173,7 @@ const GoalDetails = ({
             className="p-2 rounded-lg bg-amber-600/30 hover:bg-amber-600/50 text-amber-300"
             onClick={() => setIsEditing(true)}
           >
-            ✏️
+            <FiEdit2 />
           </motion.button>
           
           <motion.button
@@ -179,7 +182,7 @@ const GoalDetails = ({
             className="p-2 rounded-lg bg-rose-600/30 hover:bg-rose-600/50 text-rose-300"
             onClick={() => setShowDeleteConfirm(true)}
           >
-            🗑️
+            <FiTrash2 />
           </motion.button>
         </div>
       </div>
@@ -198,7 +201,7 @@ const GoalDetails = ({
       {/* Progression */}
       <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl p-5 mb-6">
         <h3 className="text-lg font-medium text-gray-200 mb-4 flex items-center">
-          <span className="mr-2">📈</span>
+          <span className="mr-2"><FiTrendingUp /></span>
           Progression
         </h3>
         
@@ -267,7 +270,7 @@ const GoalDetails = ({
                   Mettre à jour
                 </motion.button>
                 <motion.button
-                  className="p-2 rounded-lg border border-gray-600 text-gray-300 hover:bg-gray-700"
+                  className="p-2 rounded-lg border-2 border-white/30 text-white hover:bg-white/10 hover:border-white/40 font-medium transition-all"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => setIsEditing(false)}
@@ -283,7 +286,7 @@ const GoalDetails = ({
       {/* Informations détaillées */}
       <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl p-5 mb-6">
         <h3 className="text-lg font-medium text-gray-200 mb-4 flex items-center">
-          <span className="mr-2">📋</span>
+          <span className="mr-2"><FiClipboard /></span>
           Détails
         </h3>
         
@@ -321,7 +324,7 @@ const GoalDetails = ({
       <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl p-5">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-medium text-gray-200 flex items-center">
-            <span className="mr-2">🏆</span>
+            <span className="mr-2"><FiAward /></span>
             Étapes
           </h3>
           
@@ -352,7 +355,7 @@ const GoalDetails = ({
                       ? 'bg-green-500 text-white' 
                       : 'bg-gray-700 text-gray-400'
                   }`}>
-                    {milestone.achieved ? '✓' : '○'}
+                    {milestone.achieved ? '<FiCheck />' : '<FiCircle />'}
                   </div>
                   <div>
                     <div className="font-medium text-white">{milestone.name}</div>
@@ -431,7 +434,7 @@ const GoalDetails = ({
                     Ajouter
                   </motion.button>
                   <motion.button
-                    className="p-2 rounded-lg border border-gray-600 text-gray-300 hover:bg-gray-700"
+                    className="p-2 rounded-lg border-2 border-white/30 text-white hover:bg-white/10 hover:border-white/40 font-medium transition-all"
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={() => setIsAddingMilestone(false)}
@@ -467,7 +470,7 @@ const GoalDetails = ({
               
               <div className="flex justify-end space-x-3">
                 <motion.button
-                  className="px-4 py-2 rounded-lg border border-gray-600 text-gray-300 hover:bg-gray-700"
+                  className="px-4 py-2 rounded-lg border-2 border-white/30 text-white hover:bg-white/10 hover:border-white/40 font-medium transition-all"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => setShowDeleteConfirm(false)}

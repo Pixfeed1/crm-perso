@@ -2,498 +2,459 @@
 const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middleware/authMiddleware');
+const leadController = require('../controllers/leadController');
+const leadModel = require('../models/leadModel');
 
 // Appliquer le middleware d'authentification à toutes les routes
 router.use(authMiddleware);
 
+// Obtenir les statistiques Kanban
+router.get('/kanban/stats', leadController.getKanbanStats);
+
 // Obtenir tous les leads
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   const db = req.app.locals.db;
-  
-  const query = `
-    SELECT *
-    FROM leads
-    ORDER BY name ASC
-  `;
-  
-  db.all(query, [], (err, leads) => {
-    if (err) {
-      console.error('Erreur lors de la récupération des leads:', err);
-      return res.status(500).json({ message: 'Erreur serveur' });
-    }
+
+  try {
+    const leads = await leadModel.getAllLeads(db);
     res.json(leads);
-  });
+  } catch (error) {
+    console.error('Erreur lors de la récupération des leads:', error);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
 });
 
 // Obtenir un lead spécifique
-router.get('/:id', (req, res) => {
+router.get('/:id', async (req, res) => {
   const db = req.app.locals.db;
   const { id } = req.params;
-  
-  db.get('SELECT * FROM leads WHERE id = ?', [id], (err, lead) => {
-    if (err) {
-      console.error('Erreur lors de la récupération du lead:', err);
-      return res.status(500).json({ message: 'Erreur serveur' });
-    }
-    
+
+  try {
+    const lead = await leadModel.getLeadById(db, id);
+
     if (!lead) {
       return res.status(404).json({ message: 'Lead non trouvé' });
     }
-    
-    // Récupérer les contacts associés au lead
-    db.all('SELECT * FROM contacts WHERE lead_id = ? ORDER BY name', [id], (contactErr, contacts) => {
-      if (contactErr) {
-        console.error('Erreur lors de la récupération des contacts:', contactErr);
-        // Renvoyer le lead sans les contacts
-        return res.json(lead);
-      }
-      
-      // Ajouter les contacts au lead
-      lead.contacts = contacts || [];
-      
-      // Récupérer les projets associés au lead
-      db.all('SELECT * FROM projects WHERE lead_id = ? ORDER BY name', [id], (projectErr, projects) => {
-        if (projectErr) {
-          console.error('Erreur lors de la récupération des projets:', projectErr);
-          // Renvoyer le lead avec contacts mais sans projets
-          return res.json(lead);
-        }
-        
-        // Ajouter les projets au lead
-        lead.projects = projects || [];
-        res.json(lead);
-      });
-    });
-  });
+
+    res.json(lead);
+  } catch (error) {
+    console.error('Erreur lors de la récupération du lead:', error);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
 });
 
 // Créer un nouveau lead
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   const db = req.app.locals.db;
   const { name, company, type, status, source, notes } = req.body;
-  
+
   if (!name || !status) {
     return res.status(400).json({ message: 'Nom et statut sont requis' });
   }
-  
-  const query = `
-    INSERT INTO leads (
-      name, company, type, status, source, notes, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `;
-  
-  const now = new Date().toISOString();
-  
-  db.run(query, [
-    name, 
-    company || null, 
-    type || 'individual', 
-    status, 
-    source || null, 
-    notes || null, 
-    now, 
-    now
-  ], function(err) {
-    if (err) {
-      console.error('Erreur lors de la création du lead:', err);
-      return res.status(500).json({ message: 'Erreur serveur' });
-    }
-    
-    const newLeadId = this.lastID;
-    
-    // Récupérer le lead créé
-    db.get('SELECT * FROM leads WHERE id = ?', [newLeadId], (err, lead) => {
-      if (err) {
-        console.error('Erreur lors de la récupération du nouveau lead:', err);
-        return res.status(201).json({ id: newLeadId, message: 'Lead créé' });
-      }
-      
-      res.status(201).json(lead);
+
+  try {
+    const lead = await leadModel.createLead(db, {
+      name,
+      company,
+      type,
+      status,
+      source,
+      notes
     });
-  });
+
+    res.status(201).json(lead);
+  } catch (error) {
+    console.error('Erreur lors de la création du lead:', error);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
 });
 
 // Mettre à jour un lead
-router.put('/:id', (req, res) => {
+router.put('/:id', async (req, res) => {
   const db = req.app.locals.db;
   const { id } = req.params;
   const { name, company, type, status, source, notes } = req.body;
-  
-  // Vérifier si le lead existe
-  db.get('SELECT * FROM leads WHERE id = ?', [id], (err, lead) => {
-    if (err) {
-      console.error('Erreur lors de la vérification du lead:', err);
-      return res.status(500).json({ message: 'Erreur serveur' });
-    }
-    
-    if (!lead) {
+
+  try {
+    // Vérifier si le lead existe
+    const existingLead = await leadModel.getLeadById(db, id);
+    if (!existingLead) {
       return res.status(404).json({ message: 'Lead non trouvé' });
     }
-    
-    // Construire la requête de mise à jour
-    const updates = [];
-    const params = [];
-    
-    if (name !== undefined) {
-      updates.push('name = ?');
-      params.push(name);
-    }
-    
-    if (company !== undefined) {
-      updates.push('company = ?');
-      params.push(company);
-    }
-    
-    if (type !== undefined) {
-      updates.push('type = ?');
-      params.push(type);
-    }
-    
-    if (status !== undefined) {
-      updates.push('status = ?');
-      params.push(status);
-    }
-    
-    if (source !== undefined) {
-      updates.push('source = ?');
-      params.push(source);
-    }
-    
-    if (notes !== undefined) {
-      updates.push('notes = ?');
-      params.push(notes);
-    }
-    
-    // Ajouter la date de mise à jour
-    updates.push('updated_at = ?');
-    params.push(new Date().toISOString());
-    
-    // Ajouter l'ID pour la clause WHERE
-    params.push(id);
-    
-    const query = `
-      UPDATE leads
-      SET ${updates.join(', ')}
-      WHERE id = ?
-    `;
-    
-    db.run(query, params, function(err) {
-      if (err) {
-        console.error('Erreur lors de la mise à jour du lead:', err);
-        return res.status(500).json({ message: 'Erreur serveur' });
-      }
-      
-      // Récupérer le lead mis à jour
-      db.get('SELECT * FROM leads WHERE id = ?', [id], (err, updatedLead) => {
-        if (err) {
-          console.error('Erreur lors de la récupération du lead mis à jour:', err);
-          return res.status(200).json({ id, message: 'Lead mis à jour' });
-        }
-        
-        res.json(updatedLead);
-      });
+
+    const updatedLead = await leadModel.updateLead(db, id, {
+      name,
+      company,
+      type,
+      status,
+      source,
+      notes
     });
-  });
+
+    res.json(updatedLead);
+  } catch (error) {
+    console.error('Erreur lors de la mise à jour du lead:', error);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
 });
 
 // Supprimer un lead
-router.delete('/:id', (req, res) => {
+router.delete('/:id', async (req, res) => {
   const db = req.app.locals.db;
   const { id } = req.params;
-  
-  // Vérifier si le lead existe
-  db.get('SELECT * FROM leads WHERE id = ?', [id], (err, lead) => {
-    if (err) {
-      console.error('Erreur lors de la vérification du lead:', err);
-      return res.status(500).json({ message: 'Erreur serveur' });
-    }
-    
-    if (!lead) {
+
+  try {
+    // Vérifier si le lead existe
+    const existingLead = await leadModel.getLeadById(db, id);
+    if (!existingLead) {
       return res.status(404).json({ message: 'Lead non trouvé' });
     }
-    
-    // Supprimer le lead (les contacts seront supprimés automatiquement grâce à ON DELETE CASCADE)
-    db.run('DELETE FROM leads WHERE id = ?', [id], function(err) {
-      if (err) {
-        console.error('Erreur lors de la suppression du lead:', err);
-        return res.status(500).json({ message: 'Erreur serveur' });
-      }
-      
-      res.json({ message: 'Lead supprimé avec succès' });
-    });
-  });
+
+    await leadModel.deleteLead(db, id);
+    res.json({ message: 'Lead supprimé avec succès' });
+  } catch (error) {
+    console.error('Erreur lors de la suppression du lead:', error);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
 });
 
 // Obtenir tous les contacts d'un lead
-router.get('/:id/contacts', (req, res) => {
+router.get('/:id/contacts', async (req, res) => {
   const db = req.app.locals.db;
   const { id } = req.params;
-  
-  // Vérifier si le lead existe
-  db.get('SELECT * FROM leads WHERE id = ?', [id], (err, lead) => {
-    if (err) {
-      console.error('Erreur lors de la vérification du lead:', err);
-      return res.status(500).json({ message: 'Erreur serveur' });
-    }
-    
-    if (!lead) {
+
+  try {
+    // Vérifier si le lead existe
+    const existingLead = await leadModel.getLeadById(db, id);
+    if (!existingLead) {
       return res.status(404).json({ message: 'Lead non trouvé' });
     }
-    
-    // Récupérer les contacts
-    db.all('SELECT * FROM contacts WHERE lead_id = ? ORDER BY name', [id], (err, contacts) => {
-      if (err) {
-        console.error('Erreur lors de la récupération des contacts:', err);
-        return res.status(500).json({ message: 'Erreur serveur' });
-      }
-      
-      res.json(contacts || []);
-    });
-  });
+
+    const contacts = await leadModel.getLeadContacts(db, id);
+    res.json(contacts);
+  } catch (error) {
+    console.error('Erreur lors de la récupération des contacts:', error);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
 });
 
 // Ajouter un contact à un lead
-router.post('/:id/contacts', (req, res) => {
+router.post('/:id/contacts', async (req, res) => {
   const db = req.app.locals.db;
   const { id } = req.params;
   const { name, position, email, phone, is_primary, notes } = req.body;
-  
+
   if (!name) {
     return res.status(400).json({ message: 'Nom du contact requis' });
   }
-  
-  // Vérifier si le lead existe
-  db.get('SELECT * FROM leads WHERE id = ?', [id], (err, lead) => {
-    if (err) {
-      console.error('Erreur lors de la vérification du lead:', err);
-      return res.status(500).json({ message: 'Erreur serveur' });
-    }
-    
-    if (!lead) {
+
+  try {
+    // Vérifier si le lead existe
+    const existingLead = await leadModel.getLeadById(db, id);
+    if (!existingLead) {
       return res.status(404).json({ message: 'Lead non trouvé' });
     }
-    
-    // Créer la table contacts si elle n'existe pas
-    db.run(`
-      CREATE TABLE IF NOT EXISTS contacts (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        lead_id INTEGER,
-        name TEXT NOT NULL,
-        position TEXT,
-        email TEXT,
-        phone TEXT,
-        is_primary BOOLEAN DEFAULT 0,
-        notes TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (lead_id) REFERENCES leads(id) ON DELETE CASCADE
-      )
-    `, (tableErr) => {
-      if (tableErr) {
-        console.error('Erreur lors de la création de la table contacts:', tableErr);
-        return res.status(500).json({ message: 'Erreur serveur' });
-      }
-      
-      // Si ce contact est défini comme principal, mettre à jour les autres contacts
-      const updatePrimaryQuery = is_primary ? 
-        'UPDATE contacts SET is_primary = 0 WHERE lead_id = ?' : null;
-      
-      // Fonction pour insérer le contact après la mise à jour des contacts principaux
-      const insertContact = () => {
-        const query = `
-          INSERT INTO contacts (lead_id, name, position, email, phone, is_primary, notes, created_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        `;
-        
-        const now = new Date().toISOString();
-        
-        db.run(query, [
-          id, 
-          name, 
-          position || null, 
-          email || null, 
-          phone || null, 
-          is_primary ? 1 : 0, 
-          notes || null, 
-          now
-        ], function(insertErr) {
-          if (insertErr) {
-            console.error('Erreur lors de la création du contact:', insertErr);
-            return res.status(500).json({ message: 'Erreur serveur' });
-          }
-          
-          const newContactId = this.lastID;
-          
-          // Récupérer le contact créé
-          db.get('SELECT * FROM contacts WHERE id = ?', [newContactId], (getErr, contact) => {
-            if (getErr) {
-              console.error('Erreur lors de la récupération du contact:', getErr);
-              return res.status(201).json({ id: newContactId, message: 'Contact créé' });
-            }
-            
-            res.status(201).json(contact);
-          });
-        });
-      };
-      
-      // Si le contact est principal, mettre à jour les autres contacts
-      if (updatePrimaryQuery) {
-        db.run(updatePrimaryQuery, [id], (updateErr) => {
-          if (updateErr) {
-            console.error('Erreur lors de la mise à jour des contacts principaux:', updateErr);
-            // Continuer malgré l'erreur
-          }
-          
-          insertContact();
-        });
-      } else {
-        insertContact();
-      }
+
+    const contact = await leadModel.createContact(db, id, {
+      name,
+      position,
+      email,
+      phone,
+      is_primary,
+      notes
     });
-  });
+
+    res.status(201).json(contact);
+  } catch (error) {
+    console.error('Erreur lors de la création du contact:', error);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
 });
 
 // Mettre à jour un contact
-router.put('/:leadId/contacts/:contactId', (req, res) => {
+router.put('/:leadId/contacts/:contactId', async (req, res) => {
   const db = req.app.locals.db;
   const { leadId, contactId } = req.params;
   const { name, position, email, phone, is_primary, notes } = req.body;
-  
-  // Vérifier si le contact existe et appartient au lead
-  db.get(
-    'SELECT * FROM contacts WHERE id = ? AND lead_id = ?', 
-    [contactId, leadId], 
-    (err, contact) => {
-      if (err) {
-        console.error('Erreur lors de la vérification du contact:', err);
-        return res.status(500).json({ message: 'Erreur serveur' });
-      }
-      
-      if (!contact) {
-        return res.status(404).json({ message: 'Contact non trouvé' });
-      }
-      
-      // Si ce contact devient principal, mettre à jour les autres contacts
-      let updatePrimaryPromise = Promise.resolve();
-      if (is_primary) {
-        updatePrimaryPromise = new Promise((resolve, reject) => {
-          db.run(
-            'UPDATE contacts SET is_primary = 0 WHERE lead_id = ? AND id != ?', 
-            [leadId, contactId], 
-            (updateErr) => {
-              if (updateErr) {
-                console.error('Erreur lors de la mise à jour des contacts principaux:', updateErr);
-                // Continuer malgré l'erreur
-              }
-              resolve();
-            }
-          );
-        });
-      }
-      
-// Attendre la mise à jour des contacts principaux si nécessaire
-updatePrimaryPromise.then(() => {
-  // Construire la requête de mise à jour
-  const updates = [];
-  const params = [];
-  
-  if (name !== undefined) {
-    updates.push('name = ?');
-    params.push(name);
-  }
-  
-  if (position !== undefined) {
-    updates.push('position = ?');
-    params.push(position);
-  }
-  
-  if (email !== undefined) {
-    updates.push('email = ?');
-    params.push(email);
-  }
-  
-  if (phone !== undefined) {
-    updates.push('phone = ?');
-    params.push(phone);
-  }
-  
-  if (is_primary !== undefined) {
-    updates.push('is_primary = ?');
-    params.push(is_primary ? 1 : 0);
-  }
-  
-  if (notes !== undefined) {
-    updates.push('notes = ?');
-    params.push(notes);
-  }
-  
-  // Ajouter les IDs pour la clause WHERE
-  params.push(contactId);
-  params.push(leadId);
-  
-  const query = `
-    UPDATE contacts
-    SET ${updates.join(', ')}
-    WHERE id = ? AND lead_id = ?
-  `;
-  
-  db.run(query, params, function(updateErr) {
-    if (updateErr) {
-      console.error('Erreur lors de la mise à jour du contact:', updateErr);
-      return res.status(500).json({ message: 'Erreur serveur' });
+
+  try {
+    // Vérifier si le contact existe et appartient au lead
+    const existingContact = await leadModel.checkContactExists(db, contactId, leadId);
+    if (!existingContact) {
+      return res.status(404).json({ message: 'Contact non trouvé' });
     }
-    
-    // Récupérer le contact mis à jour
-    db.get('SELECT * FROM contacts WHERE id = ?', [contactId], (getErr, updatedContact) => {
-      if (getErr) {
-        console.error('Erreur lors de la récupération du contact mis à jour:', getErr);
-        return res.status(200).json({ id: contactId, message: 'Contact mis à jour' });
-      }
-      
-      res.json(updatedContact);
+
+    const updatedContact = await leadModel.updateContact(db, contactId, leadId, {
+      name,
+      position,
+      email,
+      phone,
+      is_primary,
+      notes
     });
-  });
-}).catch(error => {
-  console.error('Erreur lors de la mise à jour du contact:', error);
-  res.status(500).json({ message: 'Erreur serveur' });
-});
-}
-);
+
+    res.json(updatedContact);
+  } catch (error) {
+    console.error('Erreur lors de la mise à jour du contact:', error);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
 });
 
 // Supprimer un contact
-router.delete('/:leadId/contacts/:contactId', (req, res) => {
-const db = req.app.locals.db;
-const { leadId, contactId } = req.params;
+router.delete('/:leadId/contacts/:contactId', async (req, res) => {
+  const db = req.app.locals.db;
+  const { leadId, contactId } = req.params;
 
-// Vérifier si le contact existe et appartient au lead
-db.get(
-'SELECT * FROM contacts WHERE id = ? AND lead_id = ?', 
-[contactId, leadId], 
-(err, contact) => {
-if (err) {
-  console.error('Erreur lors de la vérification du contact:', err);
-  return res.status(500).json({ message: 'Erreur serveur' });
-}
-
-if (!contact) {
-  return res.status(404).json({ message: 'Contact non trouvé' });
-}
-
-// Supprimer le contact
-db.run(
-  'DELETE FROM contacts WHERE id = ? AND lead_id = ?', 
-  [contactId, leadId], 
-  function(deleteErr) {
-    if (deleteErr) {
-      console.error('Erreur lors de la suppression du contact:', deleteErr);
-      return res.status(500).json({ message: 'Erreur serveur' });
+  try {
+    // Vérifier si le contact existe et appartient au lead
+    const existingContact = await leadModel.checkContactExists(db, contactId, leadId);
+    if (!existingContact) {
+      return res.status(404).json({ message: 'Contact non trouvé' });
     }
-    
+
+    await leadModel.deleteContact(db, contactId, leadId);
     res.json({ message: 'Contact supprimé avec succès' });
+  } catch (error) {
+    console.error('Erreur lors de la suppression du contact:', error);
+    res.status(500).json({ message: 'Erreur serveur' });
   }
-);
-}
-);
+});
+
+// ========================================
+// Routes de liaison Contact <-> Client
+// ========================================
+
+// Lier un contact existant à un client existant
+router.post('/:leadId/contacts/:contactId/link-client', async (req, res) => {
+  const db = req.app.locals.db;
+  const { leadId, contactId } = req.params;
+  const { clientId } = req.body;
+
+  try {
+    // Vérifier si le contact existe et appartient au lead
+    const existingContact = await leadModel.checkContactExists(db, contactId, leadId);
+    if (!existingContact) {
+      return res.status(404).json({ message: 'Contact non trouvé' });
+    }
+
+    if (!clientId) {
+      return res.status(400).json({ message: 'ID du client requis' });
+    }
+
+    const updatedContact = await leadModel.linkContactToClient(db, contactId, clientId);
+    res.json({
+      message: 'Contact lié au client avec succès',
+      contact: updatedContact
+    });
+  } catch (error) {
+    console.error('Erreur lors de la liaison contact-client:', error);
+    res.status(500).json({
+      message: error.message || 'Erreur serveur'
+    });
+  }
+});
+
+// Créer un nouveau client particulier depuis un contact
+router.post('/:leadId/contacts/:contactId/create-client', async (req, res) => {
+  const db = req.app.locals.db;
+  const { leadId, contactId } = req.params;
+  const additionalData = req.body || {};
+
+  try {
+    // Vérifier si le contact existe et appartient au lead
+    const existingContact = await leadModel.checkContactExists(db, contactId, leadId);
+    if (!existingContact) {
+      return res.status(404).json({ message: 'Contact non trouvé' });
+    }
+
+    // Vérifier si le contact n'est pas déjà lié à un client
+    if (existingContact.client_id) {
+      return res.status(400).json({
+        message: 'Ce contact est déjà lié à un client',
+        client_id: existingContact.client_id
+      });
+    }
+
+    const result = await leadModel.createClientFromContact(db, contactId, additionalData);
+    res.status(201).json({
+      message: 'Client créé et lié au contact avec succès',
+      contact: result.contact,
+      client_id: result.client_id
+    });
+  } catch (error) {
+    console.error('Erreur lors de la création du client depuis le contact:', error);
+    res.status(500).json({
+      message: error.message || 'Erreur serveur'
+    });
+  }
+});
+
+// Délier un contact de son client
+router.delete('/:leadId/contacts/:contactId/unlink-client', async (req, res) => {
+  const db = req.app.locals.db;
+  const { leadId, contactId } = req.params;
+
+  try {
+    // Vérifier si le contact existe et appartient au lead
+    const existingContact = await leadModel.checkContactExists(db, contactId, leadId);
+    if (!existingContact) {
+      return res.status(404).json({ message: 'Contact non trouvé' });
+    }
+
+    if (!existingContact.client_id) {
+      return res.status(400).json({ message: 'Ce contact n\'est pas lié à un client' });
+    }
+
+    const updatedContact = await leadModel.unlinkContactFromClient(db, contactId);
+    res.json({
+      message: 'Contact délié du client avec succès',
+      contact: updatedContact
+    });
+  } catch (error) {
+    console.error('Erreur lors du déliaison contact-client:', error);
+    res.status(500).json({
+      message: error.message || 'Erreur serveur'
+    });
+  }
+});
+
+// ========================================
+// Routes d'import de leads
+// ========================================
+
+const multer = require('multer');
+const LeadImportService = require('../services/leadImportService');
+const path = require('path');
+const fs = require('fs');
+
+// Configuration multer pour l'upload de fichiers
+const upload = multer({
+  dest: 'uploads/imports/',
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB max
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedMimes = [
+      'text/csv',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    ];
+
+    if (allowedMimes.includes(file.mimetype) ||
+        file.originalname.endsWith('.csv') ||
+        file.originalname.endsWith('.xlsx') ||
+        file.originalname.endsWith('.xls')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Format de fichier non supporté. Utilisez CSV ou Excel (.xlsx, .xls)'));
+    }
+  }
+});
+
+// Upload et analyse du fichier
+router.post('/import/upload', upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'Aucun fichier fourni' });
+    }
+
+    console.log('Fichier reçu:', req.file.originalname);
+
+    // Parser le fichier
+    const { headers, data } = await LeadImportService.parseFile(
+      req.file.path,
+      req.file.mimetype
+    );
+
+    // Mapping intelligent
+    const suggestedMapping = LeadImportService.intelligentMapping(headers);
+
+    // Prévisualisation (5 premières lignes)
+    const preview = data.slice(0, 5);
+
+    // Supprimer le fichier temporaire après parsing
+    fs.unlinkSync(req.file.path);
+
+    res.json({
+      success: true,
+      headers,
+      suggestedMapping,
+      preview,
+      totalRows: data.length,
+      // Sauvegarder les données en session pour l'import
+      sessionId: Date.now().toString()
+    });
+
+  } catch (error) {
+    console.error('Erreur lors de l\'upload:', error);
+
+    // Nettoyer le fichier en cas d'erreur
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Erreur lors du traitement du fichier'
+    });
+  }
+});
+
+// Exécuter l'import avec le mapping fourni
+router.post('/import/execute', upload.single('file'), async (req, res) => {
+  const db = req.app.locals.db;
+
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'Aucun fichier fourni' });
+    }
+
+    const { mapping, checkDuplicates } = req.body;
+
+    if (!mapping) {
+      return res.status(400).json({ message: 'Mapping requis' });
+    }
+
+    console.log('Démarrage de l\'import...');
+    console.log('Mapping:', mapping);
+
+    // Parser le mapping (vient en JSON string du frontend)
+    const parsedMapping = typeof mapping === 'string' ? JSON.parse(mapping) : mapping;
+
+    // Parser le fichier
+    const { data } = await LeadImportService.parseFile(
+      req.file.path,
+      req.file.mimetype
+    );
+
+    console.log(`${data.length} lignes à importer`);
+
+    // Exécuter l'import
+    const results = await LeadImportService.importLeads(db, data, parsedMapping, {
+      checkDuplicates: checkDuplicates !== 'false'
+    });
+
+    // Supprimer le fichier temporaire
+    fs.unlinkSync(req.file.path);
+
+    res.json({
+      success: true,
+      results
+    });
+
+  } catch (error) {
+    console.error('Erreur lors de l\'import:', error);
+
+    // Nettoyer le fichier en cas d'erreur
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Erreur lors de l\'import'
+    });
+  }
 });
 
 module.exports = router;

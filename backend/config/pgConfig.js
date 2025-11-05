@@ -49,18 +49,29 @@ class DatabaseConfig {
   }
 
   /**
-   * Initialise la connexion à la base de données et exécute les migrations
+   * Initialise la connexion à la base de données
+   *
+   * NOTE: Les migrations ont été DÉSACTIVÉES car elles entrent en conflit
+   * avec le système autoInitDatabase.js qui gère automatiquement
+   * la création et mise à jour de TOUTES les tables et colonnes.
+   *
+   * autoInitDatabase.js est plus robuste car il :
+   * - Vérifie l'existence de chaque table/colonne avant de la créer
+   * - Est idempotent (peut tourner plusieurs fois sans erreur)
+   * - Gère automatiquement les dépendances (foreign keys)
+   * - Ne nécessite pas de fichiers de migration manuels
    */
   async initDatabase() {
     console.log('[DBConfig] Démarrage de l\'initialisation de la base de données...');
-    
+    console.log('[DBConfig] ℹ️  Migrations désactivées - autoInitDatabase.js gère la structure de la BDD');
+
     try {
-      // Exécuter les migrations
-      await runMigrations(this.pool);
-      
+      // Les migrations ont été désactivées - voir autoInitDatabase.js dans server.js
+      // await runMigrations(this.pool);
+
       // Initialiser l'utilisateur par défaut
       await this.initDefaultUser();
-      
+
       console.log('[DBConfig] Initialisation de la base de données terminée avec succès');
     } catch (error) {
       console.error('[DBConfig] Erreur lors de l\'initialisation de la base de données:', error);
@@ -210,11 +221,15 @@ class DatabaseConfig {
     // Remplacer les comportements SQLite de LIKE (case sensitive/insensitive)
     pgQuery = pgQuery.replace(/LIKE/g, 'ILIKE');
     
-    // Gérer les INSERTS avec RETURNING
+    // Gérer les INSERTS et UPDATES avec RETURNING
     if (pgQuery.toLowerCase().includes('insert into') && !pgQuery.toLowerCase().includes('returning')) {
       pgQuery += ' RETURNING id';
     }
-    
+
+    if (pgQuery.toLowerCase().includes('update ') && !pgQuery.toLowerCase().includes('returning')) {
+      pgQuery += ' RETURNING id';
+    }
+
     // Adapter les expressions booléennes (0/1 à false/true)
     pgQuery = pgQuery.replace(/= 0/g, '= false');
     pgQuery = pgQuery.replace(/= 1/g, '= true');

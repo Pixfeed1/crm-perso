@@ -1,11 +1,12 @@
 // src/components/calendar/EventDetails.jsx
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { FiUsers, FiPhone, FiClock, FiCheck, FiHome, FiClipboard, FiEdit2, FiTrash2, FiCalendar, FiFileText, FiUser, FiZap } from 'react-icons/fi';
 
 const EventDetails = ({ event, onUpdate, onDelete }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  
+
   // Configuration des couleurs de catégorie
   const categoryConfig = {
     'meeting': {
@@ -13,38 +14,38 @@ const EventDetails = ({ event, onUpdate, onDelete }) => {
       text: 'text-blue-300',
       border: 'border-blue-500/50',
       label: 'Réunion',
-      icon: '👥'
+      icon: <FiUsers />
     },
     'call': {
       bg: 'bg-green-500/30',
       text: 'text-green-300',
       border: 'border-green-500/50',
       label: 'Appel',
-      icon: '📞'
+      icon: <FiPhone />
     },
     'deadline': {
       bg: 'bg-amber-500/30',
       text: 'text-amber-300',
       border: 'border-amber-500/50',
       label: 'Échéance',
-      icon: '⏰'
+      icon: <FiClock />
     },
     'task': {
       bg: 'bg-purple-500/30',
       text: 'text-purple-300',
       border: 'border-purple-500/50',
       label: 'Tâche',
-      icon: '✓'
+      icon: <FiCheck />
     },
     'personal': {
       bg: 'bg-rose-500/30',
       text: 'text-rose-300',
       border: 'border-rose-500/50',
       label: 'Personnel',
-      icon: '🏠'
+      icon: <FiHome />
     }
   };
-  
+
   // Configuration des couleurs de priorité
   const priorityConfig = {
     'low': {
@@ -75,7 +76,7 @@ const EventDetails = ({ event, onUpdate, onDelete }) => {
     text: 'text-gray-300',
     border: 'border-gray-500/50',
     label: event.category || 'Autre',
-    icon: '📋'
+    icon: <FiClipboard />
   };
   
   const priorityStyle = priorityConfig[event.priority] || {
@@ -240,16 +241,16 @@ const EventDetails = ({ event, onUpdate, onDelete }) => {
             className="p-2 rounded-lg bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300"
             onClick={() => setIsEditing(true)}
           >
-            ✏️
+            <FiEdit2 />
           </motion.button>
-          
+
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             className="p-2 rounded-lg bg-rose-600/30 hover:bg-rose-600/50 text-rose-300"
             onClick={() => setShowDeleteConfirm(true)}
           >
-            🗑️
+            <FiTrash2 />
           </motion.button>
         </div>
       </div>
@@ -257,18 +258,18 @@ const EventDetails = ({ event, onUpdate, onDelete }) => {
       {/* Statut de l'événement */}
       <div className="mb-6">
         {isPast() ? (
-          <div className="bg-gray-800/30 text-gray-300 px-4 py-2 rounded-lg flex items-center">
-            <span className="mr-2">✓</span>
+          <div className="bg-gray-800/30 text-gray-300 px-4 py-2 rounded-lg flex items-center gap-2">
+            <FiCheck />
             Événement passé
           </div>
         ) : isOngoing() ? (
-          <div className="bg-green-900/30 text-green-300 px-4 py-2 rounded-lg flex items-center">
-            <span className="mr-2">▶️</span>
+          <div className="bg-green-900/30 text-green-300 px-4 py-2 rounded-lg flex items-center gap-2">
+            <FiClock />
             En cours
           </div>
         ) : (
-          <div className="bg-indigo-900/30 text-indigo-300 px-4 py-2 rounded-lg flex items-center">
-            <span className="mr-2">🕒</span>
+          <div className="bg-indigo-900/30 text-indigo-300 px-4 py-2 rounded-lg flex items-center gap-2">
+            <FiClock />
             À venir
           </div>
         )}
@@ -278,8 +279,8 @@ const EventDetails = ({ event, onUpdate, onDelete }) => {
       <div className="grid grid-cols-1 gap-6">
         {/* Panneau Date et heure */}
         <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl p-5">
-          <h3 className="text-lg font-medium text-gray-200 mb-4 flex items-center">
-            <span className="mr-2">🗓️</span>
+          <h3 className="text-lg font-medium text-gray-200 mb-4 flex items-center gap-2">
+            <FiCalendar />
             Date et heure
           </h3>
           
@@ -331,8 +332,8 @@ const EventDetails = ({ event, onUpdate, onDelete }) => {
         
         {/* Panneau Détails */}
         <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl p-5">
-          <h3 className="text-lg font-medium text-gray-200 mb-4 flex items-center">
-            <span className="mr-2">📝</span>
+          <h3 className="text-lg font-medium text-gray-200 mb-4 flex items-center gap-2">
+            <FiFileText />
             Détails
           </h3>
           
@@ -354,11 +355,11 @@ const EventDetails = ({ event, onUpdate, onDelete }) => {
             )}
             
             {/* Élément relié */}
-            {event.related_to && (
+            {event.related_to && event.related_to.name && (
               <div className="flex justify-between items-center">
                 <span className="text-gray-400">Associé à</span>
-                <span className="px-3 py-1 rounded-full bg-gray-700/50 text-gray-300 text-sm">
-                  {event.related_to.type === 'lead' ? '👤 ' : '🚀 '}
+                <span className="px-3 py-1 rounded-full bg-gray-700/50 text-gray-300 text-sm flex items-center gap-1">
+                  {event.related_to.type === 'lead' ? <FiUser /> : <FiZap />}
                   {event.related_to.name}
                 </span>
               </div>
@@ -399,7 +400,7 @@ const EventDetails = ({ event, onUpdate, onDelete }) => {
               
               <div className="flex justify-end space-x-3">
                 <motion.button
-                  className="px-4 py-2 rounded-lg border border-gray-600 text-gray-300 hover:bg-gray-700"
+                  className="px-4 py-2 rounded-lg border-2 border-white/30 text-white hover:bg-white/10 hover:border-white/40 font-medium transition-all"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => setShowDeleteConfirm(false)}

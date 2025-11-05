@@ -1,11 +1,13 @@
 // src/App.jsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
-import { initDB } from './database/dbConfig';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ToastProvider } from './contexts/ToastContext';
 
-// Importation du composant Login
+// Importation du composant Login et pages de récupération de mot de passe
 import Login from './pages/Login';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 
 // Layout
 import Layout from './components/Layout';
@@ -13,17 +15,23 @@ import Layout from './components/Layout';
 // Pages
 import Dashboard from './pages/Dashboard';
 import Leads from './pages/Leads';
+import Clients from './pages/Clients';
 import Projects from './pages/Projects';
 import Calendar from './pages/Calendar';
 import Revenues from './pages/Revenues';
 import Activities from './pages/Activities';
 import Goals from './pages/Goals';
+import Reports from './pages/Reports';
+import Quotes from './pages/Quotes';
+import Invoices from './pages/Invoices';
+import Treasury from './pages/Treasury';
+import Settings from './pages/Settings';
 
 // Composant ProtectedRoute pour protéger les routes
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
-  
+
   // Utiliser useEffect pour la redirection
   useEffect(() => {
     // Ne rediriger que lorsque le chargement est terminé et que l'utilisateur n'est pas authentifié
@@ -32,7 +40,7 @@ const ProtectedRoute = ({ children }) => {
       navigate('/login');
     }
   }, [isLoading, isAuthenticated, navigate]);
-  
+
   // Pendant le chargement, afficher un indicateur
   if (isLoading) {
     return (
@@ -42,58 +50,27 @@ const ProtectedRoute = ({ children }) => {
       </div>
     );
   }
-  
+
   // Si non authentifié, ne rien rendre (la redirection est gérée par useEffect)
   if (!isAuthenticated) {
     return null;
   }
-  
+
   // Si authentifié, afficher le contenu protégé
   return children;
 };
 
 const App = () => {
-  const [loading, setLoading] = useState(true);
-
-  // Initialisation de la base de données
-  useEffect(() => {
-    const setupDB = async () => {
-      try {
-        console.log("Initialisation de la base de données...");
-        await initDB();
-        console.log("Base de données initialisée avec succès");
-      } catch (error) {
-        console.error("Erreur lors de l'initialisation de la base de données:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    // Ajouter un léger délai pour éviter les problèmes de quota
-    const timeoutId = setTimeout(() => {
-      setupDB();
-    }, 500);
-    
-    return () => clearTimeout(timeoutId);
-  }, []);
-
-  // Afficher un indicateur de chargement
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
-        <p className="ml-2 text-white">Chargement de l'application...</p>
-      </div>
-    );
-  }
-
   return (
     <AuthProvider>
-      <Router>
-        <Routes>
-          {/* Route de login non protégée */}
-          <Route path="/login" element={<Login />} />
-          
+      <ToastProvider>
+        <Router>
+          <Routes>
+            {/* Routes d'authentification non protégées */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+
           {/* Routes protégées avec Layout */}
           <Route path="/dashboard" element={
             <ProtectedRoute>
@@ -102,7 +79,7 @@ const App = () => {
               </Layout>
             </ProtectedRoute>
           } />
-          
+
           <Route path="/leads" element={
             <ProtectedRoute>
               <Layout>
@@ -110,7 +87,15 @@ const App = () => {
               </Layout>
             </ProtectedRoute>
           } />
-          
+
+          <Route path="/clients" element={
+            <ProtectedRoute>
+              <Layout>
+                <Clients />
+              </Layout>
+            </ProtectedRoute>
+          } />
+
           <Route path="/projects" element={
             <ProtectedRoute>
               <Layout>
@@ -118,7 +103,7 @@ const App = () => {
               </Layout>
             </ProtectedRoute>
           } />
-          
+
           <Route path="/calendar" element={
             <ProtectedRoute>
               <Layout>
@@ -126,7 +111,7 @@ const App = () => {
               </Layout>
             </ProtectedRoute>
           } />
-          
+
           <Route path="/revenues" element={
             <ProtectedRoute>
               <Layout>
@@ -134,7 +119,7 @@ const App = () => {
               </Layout>
             </ProtectedRoute>
           } />
-          
+
           <Route path="/activities" element={
             <ProtectedRoute>
               <Layout>
@@ -142,7 +127,7 @@ const App = () => {
               </Layout>
             </ProtectedRoute>
           } />
-          
+
           <Route path="/goals" element={
             <ProtectedRoute>
               <Layout>
@@ -150,12 +135,53 @@ const App = () => {
               </Layout>
             </ProtectedRoute>
           } />
-          
+
+          <Route path="/reports" element={
+            <ProtectedRoute>
+              <Layout>
+                <Reports />
+              </Layout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/quotes" element={
+            <ProtectedRoute>
+              <Layout>
+                <Quotes />
+              </Layout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/invoices" element={
+            <ProtectedRoute>
+              <Layout>
+                <Invoices />
+              </Layout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/treasury" element={
+            <ProtectedRoute>
+              <Layout>
+                <Treasury />
+              </Layout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/settings" element={
+            <ProtectedRoute>
+              <Layout>
+                <Settings />
+              </Layout>
+            </ProtectedRoute>
+          } />
+
           {/* Rediriger la racine et toutes les autres routes vers Dashboard ou Login selon l'authentification */}
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </Router>
+      </ToastProvider>
     </AuthProvider>
   );
 };

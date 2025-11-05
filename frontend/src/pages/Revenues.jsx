@@ -2,6 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { FiEdit2, FiTrash2, FiDollarSign, FiDownload } from 'react-icons/fi';
+import { useToast } from '../hooks/useToast';
+import { useConfirm } from '../hooks/useConfirm';
+import ConfirmModal from '../components/common/ConfirmModal';
 
 // Composants
 import RevenueStats from '../components/revenues/RevenueStats';
@@ -12,9 +16,11 @@ import RevenueFilter from '../components/revenues/RevenueFilter';
 import EmptyState from '../components/common/EmptyState';
 
 // API
-import { revenuesAPI, projectsAPI } from '../services/api';
+import { revenuesAPI, projectsAPI, exportAPI } from '../services/api';
 
 const Revenues = () => {
+  const { toast } = useToast();
+  const { confirm, confirmState } = useConfirm();
   const [revenues, setRevenues] = useState([]);
   const [filteredRevenues, setFilteredRevenues] = useState([]);
   const [selectedRevenue, setSelectedRevenue] = useState(null);
@@ -35,6 +41,8 @@ const Revenues = () => {
     maxAmount: '',
     project: 'all'
   });
+  const [sortField, setSortField] = useState('date');
+  const [sortDirection, setSortDirection] = useState('desc');
   const [projects, setProjects] = useState([]);
   const [error, setError] = useState(null);
 
@@ -144,8 +152,48 @@ const Revenues = () => {
       );
     });
 
+    // Tri des résultats
+    result.sort((a, b) => {
+      let aValue, bValue;
+
+      switch (sortField) {
+        case 'amount':
+          aValue = a.amount || 0;
+          bValue = b.amount || 0;
+          break;
+        case 'date':
+          aValue = new Date(a.date);
+          bValue = new Date(b.date);
+          break;
+        case 'project_name':
+          aValue = (a.project_name || '').toLowerCase();
+          bValue = (b.project_name || '').toLowerCase();
+          break;
+        case 'type':
+          aValue = a.type || '';
+          bValue = b.type || '';
+          break;
+        default:
+          return 0;
+      }
+
+      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+
     setFilteredRevenues(result);
-  }, [revenues, filters]);
+  }, [revenues, filters, sortField, sortDirection]);
+
+  // Gestion du tri
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
 
   // Filtrer par période
   const getRevenuesForPeriod = () => {
@@ -254,8 +302,8 @@ const Revenues = () => {
       if (error.message && error.message.includes("no such table")) {
         errorMessage = "La table 'revenues' n'existe pas dans la base de données. Veuillez exécuter les migrations pour la créer.";
       }
-      
-      alert(errorMessage);
+
+      toast.error(errorMessage);
     }
   };
 
@@ -276,22 +324,40 @@ const Revenues = () => {
       setSelectedRevenue(updated);
     } catch (error) {
       console.error('Erreur lors de la mise à jour du revenu:', error);
-      alert(`Erreur lors de la mise à jour: ${error.message}`);
+      toast.error(`Erreur lors de la mise à jour: ${error.message}`);
     }
   };
 
   // Supprimer un revenu
   const handleDeleteRevenue = async (id) => {
     try {
+      // Trouver le revenu à supprimer
+      const revenueToDelete = revenues.find(r => r.id === id);
+      if (!revenueToDelete) return;
+
+      // Demander confirmation
+      const confirmed = await confirm({
+        title: "Supprimer ce revenu ?",
+        message: "Cette action est irréversible.",
+        confirmText: "Supprimer",
+        cancelText: "Annuler",
+        variant: "danger",
+        itemName: `Revenu de ${revenueToDelete.amount}€`
+      });
+
+      if (!confirmed) return;
+
       await revenuesAPI.delete(id);
-      
+
       const remaining = revenues.filter(r => r.id !== id);
       setRevenues(remaining);
       calculateStats(remaining);
       setSelectedRevenue(null);
+
+      toast.success("Revenu supprimé avec succès");
     } catch (error) {
       console.error('Erreur lors de la suppression du revenu:', error);
-      alert(`Erreur lors de la suppression: ${error.message}`);
+      toast.error(`Erreur lors de la suppression: ${error.message}`);
     }
   };
 
@@ -313,9 +379,9 @@ const Revenues = () => {
   return (
     <div className="h-full flex flex-col">
       {/* En-tête */}
-      <header className="mb-6">
+      <header className="mb-4 sm:mb-6 px-2 sm:px-0 pt-16 sm:pt-0">
         <motion.h1
-          className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-300 to-teal-300"
+          className="text-3xl sm:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-300 to-teal-300"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
@@ -323,7 +389,7 @@ const Revenues = () => {
           Revenus
         </motion.h1>
         <motion.p
-          className="text-teal-200 mt-2"
+          className="text-teal-200 mt-2 text-sm sm:text-base"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.2 }}
@@ -334,12 +400,12 @@ const Revenues = () => {
 
       {/* Affichage des erreurs */}
       {error && (
-        <motion.div 
-          className="mb-6 p-4 bg-rose-900/30 border border-rose-800 rounded-lg text-rose-200"
+        <motion.div
+          className="mb-4 sm:mb-6 mx-2 sm:mx-0 p-3 sm:p-4 bg-rose-900/30 border border-rose-800 rounded-lg text-rose-200 text-sm sm:text-base"
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
         >
-          <h3 className="font-medium text-rose-100 mb-1">Erreur</h3>
+          <h3 className="font-medium text-rose-100 mb-1 text-sm sm:text-base">Erreur</h3>
           <p>{error}</p>
         </motion.div>
       )}
@@ -350,11 +416,11 @@ const Revenues = () => {
       </div>
 
       {/* Navigation de période */}
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex items-center">
-          <div className="flex space-x-2 mr-4">
+      <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center mb-4 sm:mb-6 gap-3 px-2 sm:px-0">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-0">
+          <div className="flex gap-1 sm:gap-2 sm:mr-4">
             <motion.button
-              className="p-2 rounded-lg bg-gray-800/50 hover:bg-gray-700/50 text-gray-300"
+              className="flex-1 sm:flex-none p-1.5 sm:p-2 rounded-lg bg-gray-800/50 hover:bg-gray-700/50 text-gray-300 text-xs sm:text-base"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={navigateToPrevious}
@@ -362,7 +428,7 @@ const Revenues = () => {
               ◀
             </motion.button>
             <motion.button
-              className="p-2 rounded-lg bg-gray-800/50 hover:bg-gray-700/50 text-gray-300"
+              className="flex-1 sm:flex-none px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg bg-gray-800/50 hover:bg-gray-700/50 text-gray-300 text-xs sm:text-sm whitespace-nowrap"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={navigateToToday}
@@ -370,7 +436,7 @@ const Revenues = () => {
               Aujourd'hui
             </motion.button>
             <motion.button
-              className="p-2 rounded-lg bg-gray-800/50 hover:bg-gray-700/50 text-gray-300"
+              className="flex-1 sm:flex-none p-1.5 sm:p-2 rounded-lg bg-gray-800/50 hover:bg-gray-700/50 text-gray-300 text-xs sm:text-base"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={navigateToNext}
@@ -378,17 +444,17 @@ const Revenues = () => {
               ▶
             </motion.button>
           </div>
-          <h2 className="text-2xl font-semibold text-white capitalize">
+          <h2 className="text-lg sm:text-2xl font-semibold text-white capitalize text-center sm:text-left">
             {formatPeriodTitle()}
           </h2>
         </div>
 
-        <div className="flex items-center space-x-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
           <div className="bg-gray-800/50 rounded-lg p-1 flex">
             {['month', 'quarter', 'year'].map((p) => (
               <motion.button
                 key={p}
-                className={`px-3 py-1 rounded-lg text-sm ${
+                className={`flex-1 sm:flex-none px-2 py-1 sm:px-3 sm:py-1 rounded-lg text-xs sm:text-sm ${
                   period === p
                     ? 'bg-teal-600 text-white'
                     : 'text-gray-300 hover:bg-gray-700/50'
@@ -404,7 +470,16 @@ const Revenues = () => {
             ))}
           </div>
           <motion.button
-            className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg flex items-center"
+            className="px-3 py-2 sm:px-4 sm:py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg flex items-center justify-center text-sm sm:text-base"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => exportAPI.revenues()}
+            title="Exporter les revenus en CSV"
+          >
+            <FiDownload className="mr-1" /> Exporter
+          </motion.button>
+          <motion.button
+            className="px-3 py-2 sm:px-4 sm:py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg flex items-center justify-center text-sm sm:text-base"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={handleAddRevenue}
@@ -420,6 +495,9 @@ const Revenues = () => {
           filters={filters}
           setFilters={setFilters}
           projects={projects}
+          onSort={handleSort}
+          sortField={sortField}
+          sortDirection={sortDirection}
         />
       </div>
 
@@ -528,7 +606,7 @@ const Revenues = () => {
                         setSelectedRevenue(null);
                       }}
                     >
-                      ✏️
+                      <FiEdit2 />
                     </motion.button>
                     <motion.button
                       className="p-2 rounded-lg bg-rose-600/30 hover:bg-rose-600/50 text-rose-300"
@@ -536,7 +614,7 @@ const Revenues = () => {
                       whileTap={{ scale: 0.95 }}
                       onClick={() => handleDeleteRevenue(selectedRevenue.id)}
                     >
-                      🗑️
+                      <FiTrash2 />
                     </motion.button>
                   </div>
                 </div>
@@ -550,7 +628,7 @@ const Revenues = () => {
                 className="h-full flex items-center justify-center"
               >
                 <EmptyState
-                  icon="💰"
+                  icon={<FiDollarSign />}
                   title="Revenus"
                   description="Sélectionnez un revenu dans la liste ou ajoutez-en un nouveau."
                 />
@@ -569,6 +647,9 @@ const Revenues = () => {
           onSelectRevenue={handleSelectRevenue}
         />
       </div>
+
+      {/* Modal de confirmation */}
+      <ConfirmModal {...confirmState.config} isOpen={confirmState.isOpen} />
     </div>
   );
 };

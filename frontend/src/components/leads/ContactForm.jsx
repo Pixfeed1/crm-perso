@@ -197,7 +197,7 @@ const ContactForm = ({ contact = {}, onSave, onCancel }) => {
           <motion.button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 rounded-lg border border-gray-600 text-gray-300 hover:bg-gray-700"
+            className="px-4 py-2 rounded-lg border-2 border-white/30 text-white hover:bg-white/10 hover:border-white/40 font-medium transition-all"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             disabled={submitting}

@@ -1,8 +1,13 @@
 // src/components/projects/ProjectForm.jsx
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { useToast } from '../../hooks/useToast';
+import TemplateSelector from '../common/TemplateSelector';
+import { templateCategories } from '../../services/templates';
+import { clientsAPI, leadsAPI } from '../../services/api';
 
 const ProjectForm = ({ project = {}, onSave, onCancel }) => {
+  const { toast } = useToast();
   // État du formulaire avec valeurs par défaut ou existantes
   const [formData, setFormData] = useState({
     name: project.name || '',
@@ -15,46 +20,72 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
     status: project.status || 'planifié',
     amount: project.amount || 0
   });
-  
+
   const [leads, setLeads] = useState([]);
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [loadingLeads, setLoadingLeads] = useState(false);
 
-  // Charger les leads pour le sélecteur
+  // Charger les clients et leads depuis l'API
   useEffect(() => {
-    const fetchLeads = async () => {
+    const fetchClientsAndLeads = async () => {
       setLoadingLeads(true);
       try {
-        // Dans un scénario réel, nous récupérerions depuis l'API
-        // Pour l'exemple, utilisons des données fictives
-        setTimeout(() => {
-          const mockLeads = [
-            { id: 1, name: 'Acme Corporation' },
-            { id: 2, name: 'Technologie Future' },
-            { id: 3, name: 'Julie Martin' }
-          ];
-          setLeads(mockLeads);
-          setLoadingLeads(false);
-        }, 500);
+        // Récupérer les clients et les leads en parallèle
+        const [clientsData, leadsData] = await Promise.all([
+          clientsAPI.getAll().catch(err => {
+            console.error('Erreur lors du chargement des clients:', err);
+            return [];
+          }),
+          leadsAPI.getAll().catch(err => {
+            console.error('Erreur lors du chargement des leads:', err);
+            return [];
+          })
+        ]);
+
+        // Combiner clients et leads dans une seule liste
+        // Les clients sont marqués comme type 'client' et les leads comme type 'lead'
+        const combinedList = [
+          ...clientsData.map(client => ({
+            id: `client-${client.id}`,
+            originalId: client.id,
+            name: client.name,
+            type: 'client',
+            displayName: `${client.name} (Client)`
+          })),
+          ...leadsData.map(lead => ({
+            id: `lead-${lead.id}`,
+            originalId: lead.id,
+            name: lead.name,
+            type: 'lead',
+            displayName: `${lead.name} (Lead)`
+          }))
+        ];
+
+        // Trier par nom
+        combinedList.sort((a, b) => a.name.localeCompare(b.name));
+
+        setLeads(combinedList);
       } catch (error) {
-        console.error('Erreur lors du chargement des leads:', error);
+        console.error('Erreur lors du chargement des clients/leads:', error);
+        toast.error('Impossible de charger la liste des clients/leads');
+      } finally {
         setLoadingLeads(false);
       }
     };
-    
-    fetchLeads();
-  }, []);
+
+    fetchClientsAndLeads();
+  }, [toast]);
 
   // Options de type
   const typeOptions = [
-    { value: 'site-web', label: 'Site Web', icon: '🌐' },
-    { value: 'application-mobile', label: 'Application Mobile', icon: '📱' },
-    { value: 'application-bureau', label: 'Application Bureau', icon: '💻' },
-    { value: 'design', label: 'Design', icon: '🎨' },
-    { value: 'marketing', label: 'Marketing', icon: '📢' },
-    { value: 'maintenance', label: 'Maintenance', icon: '🔧' },
-    { value: 'autre', label: 'Autre', icon: '📦' }
+    { value: 'site-web', label: 'Site Web' },
+    { value: 'application-mobile', label: 'Application Mobile' },
+    { value: 'application-bureau', label: 'Application Bureau' },
+    { value: 'design', label: 'Design' },
+    { value: 'marketing', label: 'Marketing' },
+    { value: 'maintenance', label: 'Maintenance' },
+    { value: 'autre', label: 'Autre' }
   ];
   
   // Options de statut
@@ -94,16 +125,17 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
     }
   };
   
-  // Mise à jour spécifique pour le sélecteur de lead
+  // Mise à jour spécifique pour le sélecteur de lead/client
   const handleLeadChange = (e) => {
-    const leadId = parseInt(e.target.value);
-    const selectedLead = leads.find(lead => lead.id === leadId);
-    
-    if (selectedLead) {
+    const selectedId = e.target.value;
+    const selectedItem = leads.find(item => item.id === selectedId);
+
+    if (selectedItem) {
+      // Stocker l'ID original (sans préfixe client- ou lead-)
       setFormData(prev => ({
         ...prev,
-        lead_id: leadId,
-        lead_name: selectedLead.name
+        lead_id: selectedItem.originalId,
+        lead_name: selectedItem.name
       }));
     } else {
       setFormData(prev => ({
@@ -112,7 +144,7 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
         lead_name: ''
       }));
     }
-    
+
     // Effacer les erreurs de lead
     if (errors.lead_id) {
       setErrors(prev => ({
@@ -176,23 +208,30 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
       await onSave(projectData);
     } catch (error) {
       console.error('Erreur lors de la sauvegarde:', error);
-      alert("Erreur lors de la sauvegarde du projet: " + (error.message || "Erreur inconnue"));
+      toast.error("Erreur lors de la sauvegarde du projet: " + (error.message || "Erreur inconnue"));
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div className="w-full max-w-full">
-      <h2 className="text-2xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-purple-300 to-indigo-300">
-        {project.id ? 'Modifier le projet' : 'Nouveau projet'}
-      </h2>
-      
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 20 }}
+      className="bg-gray-800/30 border border-gray-700 rounded-2xl p-6"
+    >
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold text-white">
+          {project.id ? 'Modifier le projet' : 'Nouveau projet'}
+        </h2>
+      </div>
+
       <form onSubmit={handleSubmit} className="space-y-4 w-full">
         {/* Nom du projet */}
         <div>
           <label htmlFor="name" className="block text-sm font-medium text-gray-300 mb-1">
-            Nom du projet<span className="text-rose-500 ml-1">*</span>
+            Nom du projet<span className="text-rose-400 ml-1">*</span>
           </label>
           <input
             type="text"
@@ -200,9 +239,9 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
             name="name"
             value={formData.name}
             onChange={handleInputChange}
-            className={`w-full bg-white/90 border ${
-              errors.name ? 'border-rose-500' : 'border-gray-300'
-            } rounded-lg px-4 py-2 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
+            className={`w-full bg-gray-700 border ${
+              errors.name ? 'border-rose-500' : 'border-gray-600'
+            } rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
             placeholder="Site E-commerce 2025"
           />
           {errors.name && (
@@ -227,40 +266,40 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
               name="type"
               value={formData.type}
               onChange={handleInputChange}
-              className="w-full bg-white/90 border border-gray-300 rounded-lg px-4 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             >
               {typeOptions.map(option => (
                 <option key={option.value} value={option.value}>
-                  {option.icon} {option.label}
+                  {option.label}
                 </option>
               ))}
             </select>
           </div>
           
-          {/* Client (Lead) */}
+          {/* Client/Lead */}
           <div>
             <label htmlFor="lead_id" className="block text-sm font-medium text-gray-300 mb-1">
-              Client
+              Client / Lead
             </label>
             <select
               id="lead_id"
               name="lead_id"
-              value={formData.lead_id}
+              value={leads.find(item => item.originalId === formData.lead_id)?.id || ''}
               onChange={handleLeadChange}
-              className={`w-full bg-white/90 border ${
-                errors.lead_id ? 'border-rose-500' : 'border-gray-300'
-              } rounded-lg px-4 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
+              className={`w-full bg-gray-700 border ${
+                errors.lead_id ? 'border-rose-500' : 'border-gray-600'
+              } rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
               disabled={loadingLeads}
             >
-              <option value="">Sélectionner un client</option>
-              {leads.map(lead => (
-                <option key={lead.id} value={lead.id}>
-                  {lead.name}
+              <option value="">{loadingLeads ? 'Chargement...' : 'Sélectionner un client ou lead'}</option>
+              {leads.map(item => (
+                <option key={item.id} value={item.id}>
+                  {item.displayName}
                 </option>
               ))}
             </select>
             {errors.lead_id && (
-              <motion.p 
+              <motion.p
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="mt-1 text-xs text-rose-500"
@@ -273,16 +312,24 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
         
         {/* Description */}
         <div>
-          <label htmlFor="description" className="block text-sm font-medium text-gray-300 mb-1">
-            Description
-          </label>
+          <div className="flex items-center justify-between mb-1">
+            <label htmlFor="description" className="block text-sm font-medium text-gray-300">
+              Description
+            </label>
+            <TemplateSelector
+              category={templateCategories.PROJECT}
+              currentValue={formData.description}
+              onSelect={(content) => setFormData(prev => ({ ...prev, description: content }))}
+              buttonText="Template"
+            />
+          </div>
           <textarea
             id="description"
             name="description"
             value={formData.description}
             onChange={handleInputChange}
             rows={4}
-            className="w-full bg-white/90 border border-gray-300 rounded-lg px-4 py-2 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             placeholder="Description détaillée du projet..."
           />
         </div>
@@ -291,7 +338,7 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
           {/* Date de début */}
           <div>
             <label htmlFor="start_date" className="block text-sm font-medium text-gray-300 mb-1">
-              Date de début<span className="text-rose-500 ml-1">*</span>
+              Date de début<span className="text-rose-400 ml-1">*</span>
             </label>
             <input
               type="date"
@@ -299,9 +346,9 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
               name="start_date"
               value={formData.start_date}
               onChange={handleInputChange}
-              className={`w-full bg-white/90 border ${
-                errors.start_date ? 'border-rose-500' : 'border-gray-300'
-              } rounded-lg px-4 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
+              className={`w-full bg-gray-700 border ${
+                errors.start_date ? 'border-rose-500' : 'border-gray-600'
+              } rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
             />
             {errors.start_date && (
               <motion.p 
@@ -317,7 +364,7 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
           {/* Date de fin */}
           <div>
             <label htmlFor="end_date" className="block text-sm font-medium text-gray-300 mb-1">
-              Date de fin<span className="text-rose-500 ml-1">*</span>
+              Date de fin<span className="text-rose-400 ml-1">*</span>
             </label>
             <input
               type="date"
@@ -325,9 +372,9 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
               name="end_date"
               value={formData.end_date}
               onChange={handleInputChange}
-              className={`w-full bg-white/90 border ${
-                errors.end_date ? 'border-rose-500' : 'border-gray-300'
-              } rounded-lg px-4 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
+              className={`w-full bg-gray-700 border ${
+                errors.end_date ? 'border-rose-500' : 'border-gray-600'
+              } rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
             />
             {errors.end_date && (
               <motion.p 
@@ -350,7 +397,7 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
               name="status"
               value={formData.status}
               onChange={handleInputChange}
-              className="w-full bg-white/90 border border-gray-300 rounded-lg px-4 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             >
               {statusOptions.map(option => (
                 <option key={option.value} value={option.value}>
@@ -375,11 +422,11 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
               onChange={handleInputChange}
               step="0.01"
               min="0"
-              className={`w-full bg-white/90 border ${
-                errors.amount ? 'border-rose-500' : 'border-gray-300'
-              } rounded-lg px-4 py-2 pl-10 text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
+              className={`w-full bg-gray-700 border ${
+                errors.amount ? 'border-rose-500' : 'border-gray-600'
+              } rounded-lg px-4 py-2 pl-10 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
             />
-            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-600">
+            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
               €
             </span>
           </div>
@@ -399,7 +446,7 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
           <motion.button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 rounded-lg border border-gray-600 text-gray-300 hover:bg-gray-700"
+            className="px-4 py-2 rounded-lg border-2 border-white/30 text-white hover:bg-white/10 hover:border-white/40 font-medium transition-all"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             disabled={submitting}
@@ -429,7 +476,7 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
           </motion.button>
         </div>
       </form>
-    </div>
+    </motion.div>
   );
 };
 

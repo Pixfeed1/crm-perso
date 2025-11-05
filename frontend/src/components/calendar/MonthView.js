@@ -1,6 +1,7 @@
 // src/components/calendar/MonthView.jsx
 import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
+import { FiCalendar, FiClock } from 'react-icons/fi';
 
 const MonthView = ({ 
   currentDate, 
@@ -149,7 +150,7 @@ const MonthView = ({
               {getEventsForDay(day.date).slice(0, 3).map((event, eventIndex) => (
                 <motion.div
                   key={event.id}
-                  className={`px-2 py-1 text-xs rounded truncate cursor-pointer border-l-2 ${
+                  className={`px-2 py-1 text-xs rounded cursor-pointer border-l-2 flex items-center gap-1 ${
                     categoryColors[event.category] || 'bg-gray-600/80 text-gray-100'
                   } ${priorityColors[event.priority] || 'border-l-gray-400'} ${
                     selectedEvent && selectedEvent.id === event.id ? 'ring-2 ring-white' : ''
@@ -161,8 +162,8 @@ const MonthView = ({
                     onSelectEvent(event);
                   }}
                 >
-                  {event.all_day ? '📅 ' : '🕓 '}
-                  {event.title}
+                  {event.all_day ? <FiCalendar className="flex-shrink-0" /> : <FiClock className="flex-shrink-0" />}
+                  <span className="truncate">{event.title}</span>
                 </motion.div>
               ))}
               
