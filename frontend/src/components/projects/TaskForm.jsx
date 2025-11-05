@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 
 const TaskForm = ({ task = {}, onSave, onCancel }) => {
   const [formData, setFormData] = useState({
-    name: task.name || '',
+    title: task.title || '',
     description: task.description || '',
     priority: task.priority || 'medium'
   });
@@ -40,11 +40,11 @@ const TaskForm = ({ task = {}, onSave, onCancel }) => {
   // Validation du formulaire
   const validateForm = () => {
     const newErrors = {};
-    
-    if (!formData.name.trim()) {
-      newErrors.name = 'Le nom de la tâche est requis';
+
+    if (!formData.title.trim()) {
+      newErrors.title = 'Le titre de la tâche est requis';
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -74,29 +74,29 @@ const TaskForm = ({ task = {}, onSave, onCancel }) => {
       </h4>
       
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Nom de la tâche */}
+        {/* Titre de la tâche */}
         <div>
-          <label htmlFor="task-name" className="block text-sm font-medium text-gray-300 mb-1">
-            Nom de la tâche<span className="text-rose-500 ml-1">*</span>
+          <label htmlFor="task-title" className="block text-sm font-medium text-gray-300 mb-1">
+            Titre de la tâche<span className="text-rose-500 ml-1">*</span>
           </label>
           <input
             type="text"
-            id="task-name"
-            name="name"
-            value={formData.name}
+            id="task-title"
+            name="title"
+            value={formData.title}
             onChange={handleInputChange}
             className={`w-full bg-gray-800/50 text-white border ${
-              errors.name ? 'border-rose-500' : 'border-gray-700'
+              errors.title ? 'border-rose-500' : 'border-gray-700'
             } rounded-lg px-4 py-2 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
             placeholder="Développer la page d'accueil"
           />
-          {errors.name && (
-            <motion.p 
+          {errors.title && (
+            <motion.p
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               className="mt-1 text-xs text-rose-500"
             >
-              {errors.name}
+              {errors.title}
             </motion.p>
           )}
         </div>
