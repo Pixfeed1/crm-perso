@@ -471,7 +471,9 @@ const Leads = () => {
       <div className="max-w-7xl mx-auto w-full">
         {/* En-tête avec statistiques */}
         <div className="mb-6 pt-16 sm:pt-0">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+          {/* Header - Optimisé mobile */}
+          <div className="flex flex-col gap-3 mb-4">
+            {/* Titre + Logo */}
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center">
                 <FiUsers className="text-white text-2xl" />
@@ -484,72 +486,77 @@ const Leads = () => {
               </div>
             </div>
 
-            <div className="flex gap-2">
-              {/* Toggle vue cartes/table/kanban/prospection */}
-              <div className="flex bg-gray-700 rounded-lg p-1">
-                <button
-                  onClick={() => setView('cards')}
-                  className={`p-2 rounded transition-colors ${
-                    view === 'cards'
-                      ? 'bg-indigo-600 text-white'
-                      : 'text-gray-400 hover:text-white'
-                  }`}
-                  title="Vue cartes"
-                >
-                  <FiGrid />
-                </button>
-                <button
-                  onClick={() => setView('table')}
-                  className={`p-2 rounded transition-colors ${
-                    view === 'table'
-                      ? 'bg-indigo-600 text-white'
-                      : 'text-gray-400 hover:text-white'
-                  }`}
-                  title="Vue liste"
-                >
-                  <FiList />
-                </button>
-                <button
-                  onClick={() => setView('kanban')}
-                  className={`p-2 rounded transition-colors ${
-                    view === 'kanban'
-                      ? 'bg-indigo-600 text-white'
-                      : 'text-gray-400 hover:text-white'
-                  }`}
-                  title="Vue Kanban"
-                >
-                  <FiTrello />
-                </button>
-                <button
-                  onClick={() => setView('prospection')}
-                  className={`p-2 rounded transition-colors ${
-                    view === 'prospection'
-                      ? 'bg-indigo-600 text-white'
-                      : 'text-gray-400 hover:text-white'
-                  }`}
-                  title="Prospection"
-                >
-                  <FiSearch />
-                </button>
-              </div>
+            {/* Boutons de vue - Mobile: grille 2x2, Desktop: ligne */}
+            <div className="grid grid-cols-2 sm:flex sm:flex-row gap-2 sm:gap-0">
+              <button
+                onClick={() => setView('cards')}
+                className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg transition-all ${
+                  view === 'cards'
+                    ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg'
+                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                } sm:rounded-r-none sm:border-r sm:border-gray-600`}
+              >
+                <FiGrid className="text-lg" />
+                <span className="text-sm font-medium">Cartes</span>
+              </button>
+
+              <button
+                onClick={() => setView('table')}
+                className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg transition-all ${
+                  view === 'table'
+                    ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg'
+                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                } sm:rounded-none sm:border-r sm:border-gray-600`}
+              >
+                <FiList className="text-lg" />
+                <span className="text-sm font-medium">Liste</span>
+              </button>
+
+              <button
+                onClick={() => setView('kanban')}
+                className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg transition-all ${
+                  view === 'kanban'
+                    ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg'
+                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                } sm:rounded-none sm:border-r sm:border-gray-600`}
+              >
+                <FiTrello className="text-lg" />
+                <span className="text-sm font-medium">Kanban</span>
+              </button>
+
+              <button
+                onClick={() => setView('prospection')}
+                className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg transition-all ${
+                  view === 'prospection'
+                    ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg'
+                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                } sm:rounded-l-none`}
+              >
+                <FiSearch className="text-lg" />
+                <span className="text-sm font-medium">Prosp.</span>
+              </button>
+            </div>
+
+            {/* Boutons actions - Mobile: pleine largeur, Desktop: ligne */}
+            <div className="flex flex-col sm:flex-row gap-2">
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={handleAddLead}
+                className="w-full sm:flex-1 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-lg flex items-center justify-center gap-2 transition-all shadow-lg font-medium"
+              >
+                <FiPlus className="text-lg" />
+                <span>Nouveau lead</span>
+              </motion.button>
 
               <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
                 onClick={() => exportAPI.leads()}
-                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg flex items-center gap-2 transition-colors"
+                className="w-full sm:w-auto px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg flex items-center justify-center gap-2 transition-all font-medium"
               >
-                <FiDownload />
-                <span className="hidden sm:inline">Exporter</span>
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={handleAddLead}
-                className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-lg flex items-center gap-2 transition-colors"
-              >
-                <FiPlus />
-                <span>Nouveau lead</span>
+                <FiDownload className="text-lg" />
+                <span>Exporter</span>
               </motion.button>
             </div>
           </div>
