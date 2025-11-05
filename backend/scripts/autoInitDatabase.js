@@ -102,6 +102,32 @@ const DATABASE_SCHEMA = {
     ]
   },
 
+  // Table revenues (revenus)
+  revenues: {
+    columns: {
+      id: 'SERIAL PRIMARY KEY',
+      amount: 'NUMERIC NOT NULL',
+      date: 'DATE NOT NULL',
+      description: 'TEXT',
+      type: 'VARCHAR(50)',
+      status: 'VARCHAR(50) DEFAULT \'pending\'',
+      project_id: 'INTEGER REFERENCES projects(id) ON DELETE SET NULL',
+      lead_id: 'INTEGER',
+      client_id: 'INTEGER REFERENCES crm_clients(id) ON DELETE SET NULL',
+      payment_method: 'VARCHAR(50)',
+      invoice_number: 'VARCHAR(100)',
+      notes: 'TEXT',
+      created_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP',
+      updated_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'
+    },
+    indexes: [
+      'CREATE INDEX IF NOT EXISTS idx_revenues_date ON revenues(date)',
+      'CREATE INDEX IF NOT EXISTS idx_revenues_status ON revenues(status)',
+      'CREATE INDEX IF NOT EXISTS idx_revenues_project_id ON revenues(project_id)',
+      'CREATE INDEX IF NOT EXISTS idx_revenues_client_id ON revenues(client_id)'
+    ]
+  },
+
   // Table tasks (tâches des projets)
   tasks: {
     columns: {

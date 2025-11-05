@@ -1,42 +1,57 @@
 // backend/models/revenueModel.js
+/**
+ * Modèle pour la gestion des revenus (PostgreSQL)
+ */
 
 /**
  * Récupère tous les revenus avec filtres optionnels
  */
-const getAllRevenues = (db, filters = {}) => {
-  return new Promise((resolve, reject) => {
+const getAllRevenues = async (pool, filters = {}) => {
+  try {
     let query = `
-      SELECT r.*, p.name as project_name
+      SELECT r.*, p.name as project_name, c.name as client_name
       FROM revenues r
       LEFT JOIN projects p ON r.project_id = p.id
+      LEFT JOIN crm_clients c ON r.client_id = c.id
     `;
     const params = [];
     const conditions = [];
+    let paramIndex = 1;
 
     // Ajouter des filtres si spécifiés
     if (filters.start_date) {
-      conditions.push('r.date >= ?');
+      conditions.push(`r.date >= $${paramIndex++}`);
       params.push(filters.start_date);
     }
 
     if (filters.end_date) {
-      conditions.push('r.date <= ?');
+      conditions.push(`r.date <= $${paramIndex++}`);
       params.push(filters.end_date);
     }
 
-    if (filters.type || filters.category) {
-      conditions.push('r.category = ?');
-      params.push(filters.type || filters.category);
+    if (filters.type) {
+      conditions.push(`r.type = $${paramIndex++}`);
+      params.push(filters.type);
+    }
+
+    if (filters.status) {
+      conditions.push(`r.status = $${paramIndex++}`);
+      params.push(filters.status);
     }
 
     if (filters.project_id) {
-      conditions.push('r.project_id = ?');
+      conditions.push(`r.project_id = $${paramIndex++}`);
       params.push(filters.project_id);
     }
 
     if (filters.lead_id) {
-      conditions.push('r.lead_id = ?');
+      conditions.push(`r.lead_id = $${paramIndex++}`);
       params.push(filters.lead_id);
+    }
+
+    if (filters.client_id) {
+      conditions.push(`r.client_id = $${paramIndex++}`);
+      params.push(filters.client_id);
     }
 
     // Appliquer les conditions si elles existent
@@ -44,354 +59,264 @@ const getAllRevenues = (db, filters = {}) => {
       query += ' WHERE ' + conditions.join(' AND ');
     }
 
-    query += ' ORDER BY r.date DESC';
+    query += ' ORDER BY r.date DESC, r.id DESC';
 
-    db.all(query, params, (err, revenues) => {
-      if (err) {
-        console.error('[RevenueModel] Erreur lors de la récupération des revenus:', err);
-        reject(err);
-      } else {
-        resolve(revenues || []);
-      }
-    });
-  });
+    const result = await pool.query(query, params);
+    return result.rows;
+  } catch (error) {
+    console.error('[RevenueModel] Erreur lors de la récupération des revenus:', error);
+    throw error;
+  }
 };
 
 /**
  * Récupère un revenu par son ID
  */
-const getRevenueById = (db, id) => {
-  return new Promise((resolve, reject) => {
+const getRevenueById = async (pool, id) => {
+  try {
     const query = `
-      SELECT r.*, p.name as project_name
+      SELECT r.*, p.name as project_name, c.name as client_name
       FROM revenues r
       LEFT JOIN projects p ON r.project_id = p.id
-      WHERE r.id = ?
+      LEFT JOIN crm_clients c ON r.client_id = c.id
+      WHERE r.id = $1
     `;
+    const result = await pool.query(query, [id]);
 
-    db.get(query, [id], (err, revenue) => {
-      if (err) {
-        console.error('[RevenueModel] Erreur lors de la récupération du revenu:', err);
-        reject(err);
-      } else {
-        resolve(revenue);
-      }
-    });
-  });
+    if (result.rows.length === 0) {
+      throw new Error('Revenu non trouvé');
+    }
+
+    return result.rows[0];
+  } catch (error) {
+    console.error('[RevenueModel] Erreur lors de la récupération du revenu:', error);
+    throw error;
+  }
 };
 
 /**
  * Crée un nouveau revenu
  */
-const createRevenue = (db, revenueData) => {
-  return new Promise((resolve, reject) => {
+const createRevenue = async (pool, revenueData) => {
+  try {
     const {
       amount,
       date,
-      source,
-      description, // alias pour notes
-      notes,
-      category,
-      type, // alias pour category
+      description,
+      type,
+      status = 'pending',
       project_id,
       lead_id,
       client_id,
-      status,
       payment_method,
-      invoice_number
+      invoice_number,
+      notes
     } = revenueData;
 
     if (!amount || !date) {
-      return reject(new Error('Montant et date sont requis'));
+      throw new Error('Montant et date sont requis');
     }
-
-    // Support des anciennes et nouvelles colonnes
-    const finalSource = source || description || 'Paiement de projet';
-    const finalNotes = notes || description || null;
-    const finalCategory = category || type || 'invoice';
-    const finalStatus = status || 'paid';
 
     const query = `
       INSERT INTO revenues (
-        amount, date, source, notes, category, status,
+        amount, date, description, type, status,
         project_id, lead_id, client_id, payment_method,
-        invoice_number, created_at, updated_at
+        invoice_number, notes, created_at, updated_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      RETURNING *
     `;
 
-    const now = new Date().toISOString();
+    const result = await pool.query(query, [
+      amount,
+      date,
+      description || null,
+      type || null,
+      status,
+      project_id || null,
+      lead_id || null,
+      client_id || null,
+      payment_method || null,
+      invoice_number || null,
+      notes || null
+    ]);
 
-    db.run(
-      query,
-      [
-        amount,
-        date,
-        finalSource,
-        finalNotes,
-        finalCategory,
-        finalStatus,
-        project_id || null,
-        lead_id || null,
-        client_id || null,
-        payment_method || null,
-        invoice_number || null,
-        now,
-        now
-      ],
-      function(err) {
-        if (err) {
-          console.error('[RevenueModel] Erreur lors de la création du revenu:', err);
-          reject(err);
-        } else {
-          getRevenueById(db, this.lastID)
-            .then(revenue => resolve(revenue))
-            .catch(err => reject(err));
-        }
-      }
-    );
-  });
+    console.log('[RevenueModel] ✅ Revenu créé avec succès:', result.rows[0]);
+    return result.rows[0];
+  } catch (error) {
+    console.error('[RevenueModel] ❌ Erreur lors de la création du revenu:', error);
+    throw error;
+  }
 };
 
 /**
- * Met à jour un revenu
+ * Met à jour un revenu existant
  */
-const updateRevenue = (db, id, revenueData) => {
-  return new Promise((resolve, reject) => {
-    const fields = [];
-    const values = [];
+const updateRevenue = async (pool, id, revenueData) => {
+  try {
+    const {
+      amount,
+      date,
+      description,
+      type,
+      status,
+      project_id,
+      lead_id,
+      client_id,
+      payment_method,
+      invoice_number,
+      notes
+    } = revenueData;
 
-    if (revenueData.amount !== undefined) {
-      fields.push('amount = ?');
-      values.push(revenueData.amount);
-    }
-    if (revenueData.date !== undefined) {
-      fields.push('date = ?');
-      values.push(revenueData.date);
-    }
-    if (revenueData.source !== undefined) {
-      fields.push('source = ?');
-      values.push(revenueData.source);
-    }
-    if (revenueData.notes !== undefined || revenueData.description !== undefined) {
-      fields.push('notes = ?');
-      values.push(revenueData.notes || revenueData.description);
-    }
-    if (revenueData.category !== undefined || revenueData.type !== undefined) {
-      fields.push('category = ?');
-      values.push(revenueData.category || revenueData.type);
-    }
-    if (revenueData.status !== undefined) {
-      fields.push('status = ?');
-      values.push(revenueData.status);
-    }
-    if (revenueData.project_id !== undefined) {
-      fields.push('project_id = ?');
-      values.push(revenueData.project_id);
-    }
-    if (revenueData.lead_id !== undefined) {
-      fields.push('lead_id = ?');
-      values.push(revenueData.lead_id);
-    }
-    if (revenueData.client_id !== undefined) {
-      fields.push('client_id = ?');
-      values.push(revenueData.client_id);
-    }
-    if (revenueData.payment_method !== undefined) {
-      fields.push('payment_method = ?');
-      values.push(revenueData.payment_method);
-    }
-    if (revenueData.invoice_number !== undefined) {
-      fields.push('invoice_number = ?');
-      values.push(revenueData.invoice_number);
+    const query = `
+      UPDATE revenues
+      SET
+        amount = COALESCE($1, amount),
+        date = COALESCE($2, date),
+        description = COALESCE($3, description),
+        type = COALESCE($4, type),
+        status = COALESCE($5, status),
+        project_id = COALESCE($6, project_id),
+        lead_id = COALESCE($7, lead_id),
+        client_id = COALESCE($8, client_id),
+        payment_method = COALESCE($9, payment_method),
+        invoice_number = COALESCE($10, invoice_number),
+        notes = COALESCE($11, notes),
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $12
+      RETURNING *
+    `;
+
+    const result = await pool.query(query, [
+      amount,
+      date,
+      description,
+      type,
+      status,
+      project_id,
+      lead_id,
+      client_id,
+      payment_method,
+      invoice_number,
+      notes,
+      id
+    ]);
+
+    if (result.rows.length === 0) {
+      throw new Error('Revenu non trouvé');
     }
 
-    if (fields.length === 0) {
-      return reject(new Error('Aucun champ à mettre à jour'));
-    }
-
-    // Ajouter updated_at
-    fields.push('updated_at = ?');
-    values.push(new Date().toISOString());
-
-    // Ajouter l'ID pour la clause WHERE
-    values.push(id);
-
-    const query = `UPDATE revenues SET ${fields.join(', ')} WHERE id = ?`;
-
-    db.run(query, values, function(err) {
-      if (err) {
-        console.error('[RevenueModel] Erreur lors de la mise à jour du revenu:', err);
-        reject(err);
-      } else {
-        getRevenueById(db, id)
-          .then(revenue => resolve(revenue))
-          .catch(err => reject(err));
-      }
-    });
-  });
+    console.log('[RevenueModel] ✅ Revenu mis à jour avec succès:', result.rows[0]);
+    return result.rows[0];
+  } catch (error) {
+    console.error('[RevenueModel] ❌ Erreur lors de la mise à jour du revenu:', error);
+    throw error;
+  }
 };
 
 /**
  * Supprime un revenu
  */
-const deleteRevenue = (db, id) => {
-  return new Promise((resolve, reject) => {
-    db.run('DELETE FROM revenues WHERE id = ?', [id], function(err) {
-      if (err) {
-        console.error('[RevenueModel] Erreur lors de la suppression du revenu:', err);
-        reject(err);
-      } else {
-        resolve({ success: true, changes: this.changes });
-      }
-    });
-  });
+const deleteRevenue = async (pool, id) => {
+  try {
+    const query = 'DELETE FROM revenues WHERE id = $1 RETURNING *';
+    const result = await pool.query(query, [id]);
+
+    if (result.rows.length === 0) {
+      throw new Error('Revenu non trouvé');
+    }
+
+    console.log('[RevenueModel] ✅ Revenu supprimé avec succès');
+    return { success: true, deleted: result.rows[0] };
+  } catch (error) {
+    console.error('[RevenueModel] ❌ Erreur lors de la suppression du revenu:', error);
+    throw error;
+  }
 };
 
 /**
- * Récupère les statistiques des revenus
+ * Calcule les statistiques des revenus
  */
-const getRevenueStats = (db, filters = {}) => {
-  return new Promise((resolve, reject) => {
+const getRevenueStats = async (pool, filters = {}) => {
+  try {
     let query = `
       SELECT
         COUNT(*) as total_count,
-        SUM(amount) as total_amount,
-        AVG(amount) as avg_amount,
-        MIN(amount) as min_amount,
-        MAX(amount) as max_amount
+        SUM(CASE WHEN status = 'paid' THEN amount ELSE 0 END) as total_paid,
+        SUM(CASE WHEN status = 'pending' THEN amount ELSE 0 END) as total_pending,
+        SUM(CASE WHEN status = 'planned' THEN amount ELSE 0 END) as total_planned,
+        SUM(amount) as total_all,
+        AVG(amount) as average_amount,
+        MAX(amount) as max_amount,
+        MIN(amount) as min_amount
       FROM revenues
     `;
+
     const params = [];
     const conditions = [];
+    let paramIndex = 1;
 
-    // Ajouter des filtres si spécifiés
     if (filters.start_date) {
-      conditions.push('date >= ?');
+      conditions.push(`date >= $${paramIndex++}`);
       params.push(filters.start_date);
     }
 
     if (filters.end_date) {
-      conditions.push('date <= ?');
+      conditions.push(`date <= $${paramIndex++}`);
       params.push(filters.end_date);
     }
 
-    if (filters.type || filters.category) {
-      conditions.push('category = ?');
-      params.push(filters.type || filters.category);
+    if (filters.type) {
+      conditions.push(`type = $${paramIndex++}`);
+      params.push(filters.type);
     }
 
-    if (filters.project_id) {
-      conditions.push('project_id = ?');
-      params.push(filters.project_id);
-    }
-
-    // Appliquer les conditions si elles existent
     if (conditions.length > 0) {
       query += ' WHERE ' + conditions.join(' AND ');
     }
 
-    db.get(query, params, (err, stats) => {
-      if (err) {
-        console.error('[RevenueModel] Erreur lors de la récupération des statistiques:', err);
-        return reject(err);
-      }
+    const result = await pool.query(query, params);
 
-      // Statistiques par catégorie
-      let categoryQuery = `
-        SELECT
-          category,
-          COUNT(*) as count,
-          SUM(amount) as total_amount
-        FROM revenues
-      `;
-
-      if (conditions.length > 0) {
-        categoryQuery += ' WHERE ' + conditions.join(' AND ');
-      }
-
-      categoryQuery += ' GROUP BY category';
-
-      db.all(categoryQuery, params, (err, categoryStats) => {
-        if (err) {
-          console.error('[RevenueModel] Erreur lors de la récupération des stats par catégorie:', err);
-          return resolve(stats);
-        }
-
-        resolve({
-          ...stats,
-          by_category: categoryStats,
-          by_type: categoryStats // Alias pour compatibilité
-        });
-      });
-    });
-  });
+    // Convertir les valeurs en nombres
+    const stats = result.rows[0];
+    return {
+      total_count: parseInt(stats.total_count) || 0,
+      total_paid: parseFloat(stats.total_paid) || 0,
+      total_pending: parseFloat(stats.total_pending) || 0,
+      total_planned: parseFloat(stats.total_planned) || 0,
+      total_all: parseFloat(stats.total_all) || 0,
+      average_amount: parseFloat(stats.average_amount) || 0,
+      max_amount: parseFloat(stats.max_amount) || 0,
+      min_amount: parseFloat(stats.min_amount) || 0
+    };
+  } catch (error) {
+    console.error('[RevenueModel] Erreur lors du calcul des stats:', error);
+    throw error;
+  }
 };
 
 /**
- * Récupère les revenus d'un projet spécifique
+ * Récupère les revenus par mois pour les graphiques
  */
-const getRevenuesByProject = (db, projectId) => {
-  return new Promise((resolve, reject) => {
+const getRevenuesByMonth = async (pool, year) => {
+  try {
     const query = `
-      SELECT * FROM revenues
-      WHERE project_id = ?
-      ORDER BY date DESC
-    `;
-
-    db.all(query, [projectId], (err, revenues) => {
-      if (err) {
-        console.error('[RevenueModel] Erreur lors de la récupération des revenus du projet:', err);
-        reject(err);
-      } else {
-        resolve(revenues || []);
-      }
-    });
-  });
-};
-
-/**
- * Récupère les revenus d'un lead spécifique
- */
-const getRevenuesByLead = (db, leadId) => {
-  return new Promise((resolve, reject) => {
-    const query = `
-      SELECT * FROM revenues
-      WHERE lead_id = ?
-      ORDER BY date DESC
-    `;
-
-    db.all(query, [leadId], (err, revenues) => {
-      if (err) {
-        console.error('[RevenueModel] Erreur lors de la récupération des revenus du lead:', err);
-        reject(err);
-      } else {
-        resolve(revenues || []);
-      }
-    });
-  });
-};
-
-/**
- * Calcule le total des revenus pour une période
- */
-const getTotalRevenueForPeriod = (db, startDate, endDate) => {
-  return new Promise((resolve, reject) => {
-    const query = `
-      SELECT SUM(amount) as total
+      SELECT
+        EXTRACT(MONTH FROM date) as month,
+        status,
+        SUM(amount) as total
       FROM revenues
-      WHERE date >= ? AND date <= ?
+      WHERE EXTRACT(YEAR FROM date) = $1
+      GROUP BY EXTRACT(MONTH FROM date), status
+      ORDER BY month
     `;
 
-    db.get(query, [startDate, endDate], (err, result) => {
-      if (err) {
-        console.error('[RevenueModel] Erreur lors du calcul du total des revenus:', err);
-        reject(err);
-      } else {
-        resolve(result.total || 0);
-      }
-    });
-  });
+    const result = await pool.query(query, [year]);
+    return result.rows;
+  } catch (error) {
+    console.error('[RevenueModel] Erreur lors de la récupération des revenus par mois:', error);
+    throw error;
+  }
 };
 
 module.exports = {
@@ -401,7 +326,5 @@ module.exports = {
   updateRevenue,
   deleteRevenue,
   getRevenueStats,
-  getRevenuesByProject,
-  getRevenuesByLead,
-  getTotalRevenueForPeriod
+  getRevenuesByMonth
 };

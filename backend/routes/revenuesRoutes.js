@@ -13,7 +13,7 @@ router.get('/stats', async (req, res) => {
   const { start_date, end_date, type, project_id } = req.query;
 
   try {
-    const stats = await revenueModel.getRevenueStats(db, {
+    const stats = await revenueModel.getRevenueStats(db.pool, {
       start_date,
       end_date,
       type,
@@ -32,7 +32,7 @@ router.get('/', async (req, res) => {
   const { start_date, end_date, type, project_id } = req.query;
 
   try {
-    const revenues = await revenueModel.getAllRevenues(db, {
+    const revenues = await revenueModel.getAllRevenues(db.pool, {
       start_date,
       end_date,
       type,
@@ -51,7 +51,7 @@ router.get('/:id', async (req, res) => {
   const { id } = req.params;
 
   try {
-    const revenue = await revenueModel.getRevenueById(db, id);
+    const revenue = await revenueModel.getRevenueById(db.pool, id);
 
     if (!revenue) {
       return res.status(404).json({ message: 'Revenu non trouvé' });
@@ -74,7 +74,7 @@ router.post('/', async (req, res) => {
   }
 
   try {
-    const revenue = await revenueModel.createRevenue(db, {
+    const revenue = await revenueModel.createRevenue(db.pool, {
       amount,
       date,
       description,
@@ -98,12 +98,12 @@ router.put('/:id', async (req, res) => {
 
   try {
     // Vérifier si le revenu existe
-    const existingRevenue = await revenueModel.getRevenueById(db, id);
+    const existingRevenue = await revenueModel.getRevenueById(db.pool, id);
     if (!existingRevenue) {
       return res.status(404).json({ message: 'Revenu non trouvé' });
     }
 
-    const updatedRevenue = await revenueModel.updateRevenue(db, id, {
+    const updatedRevenue = await revenueModel.updateRevenue(db.pool, id, {
       amount,
       date,
       description,
@@ -126,12 +126,12 @@ router.delete('/:id', async (req, res) => {
 
   try {
     // Vérifier si le revenu existe
-    const existingRevenue = await revenueModel.getRevenueById(db, id);
+    const existingRevenue = await revenueModel.getRevenueById(db.pool, id);
     if (!existingRevenue) {
       return res.status(404).json({ message: 'Revenu non trouvé' });
     }
 
-    await revenueModel.deleteRevenue(db, id);
+    await revenueModel.deleteRevenue(db.pool, id);
     res.json({ message: 'Revenu supprimé avec succès' });
   } catch (error) {
     console.error('Erreur lors de la suppression du revenu:', error);
