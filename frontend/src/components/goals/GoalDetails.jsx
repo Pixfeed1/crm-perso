@@ -257,12 +257,12 @@ const GoalDetails = ({
                   type="number"
                   value={editData.current_value}
                   onChange={(e) => setEditData({ current_value: e.target.value })}
-                  className="flex-1 bg-white text-gray-800 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                  className="flex-1 bg-gray-800/50 text-white border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   step="0.01"
                   min="0"
                 />
                 <motion.button
-                  className="px-3 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg"
+                  className="px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={handleUpdateCurrentValue}
@@ -412,7 +412,7 @@ const GoalDetails = ({
                   placeholder="Nom de l'étape"
                   value={milestoneData.name}
                   onChange={(e) => setMilestoneData({ ...milestoneData, name: e.target.value })}
-                  className="w-full bg-white text-gray-800 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                  className="w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 />
                 <div className="flex items-center space-x-2">
                   <input
@@ -420,12 +420,12 @@ const GoalDetails = ({
                     placeholder="Valeur cible"
                     value={milestoneData.target}
                     onChange={(e) => setMilestoneData({ ...milestoneData, target: parseFloat(e.target.value) })}
-                    className="flex-1 bg-white text-gray-800 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                    className="flex-1 bg-gray-800/50 text-white border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     step="0.01"
                     min="0"
                   />
                   <motion.button
-                    className="px-3 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg"
+                    className="px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg"
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={handleSubmitMilestone}
