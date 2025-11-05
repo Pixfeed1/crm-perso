@@ -254,7 +254,7 @@ const ActivityForm = ({ activity = {}, onSave, onCancel, projects, defaultDate }
         <div className="flex justify-center sm:justify-end space-x-3 pt-4">
           <motion.button
             type="button"
-            className="px-3 sm:px-4 py-2 rounded-lg bg-white text-gray-900 border-2 border-gray-600 hover:bg-gray-100 hover:border-gray-700 shadow-sm text-sm font-semibold transition-all"
+            className="px-3 sm:px-4 py-2 rounded-lg border-2 border-white/30 text-white hover:bg-white/10 hover:border-white/40 shadow-sm text-sm font-semibold transition-all"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={onCancel}

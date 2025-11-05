@@ -149,7 +149,7 @@ const ActivityFilter = ({
           {periodOptions.map((option, index) => (
             <motion.button
               key={index}
-              className="px-3 py-1 bg-gray-800/50 text-white hover:bg-gray-100 rounded-lg text-sm"
+              className="px-3 py-1 bg-gray-800/50 text-white hover:bg-gray-700 rounded-lg text-sm"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={option.action}
@@ -209,7 +209,7 @@ const ActivityFilter = ({
               </span>
               {filters.search && (
                 <motion.button
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-700"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
                   onClick={() => handleFilterChange('search', '')}
@@ -290,7 +290,7 @@ const ActivityFilter = ({
                         className={`px-3 py-1 rounded-full text-xs font-medium ${
                           filters.type === option.value
                             ? 'bg-indigo-600 text-white'
-                            : 'bg-gray-800/50 text-white hover:bg-gray-100'
+                            : 'bg-gray-800/50 text-white hover:bg-gray-700'
                         }`}
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
@@ -312,7 +312,7 @@ const ActivityFilter = ({
                         className={`px-3 py-1 rounded-full text-xs font-medium ${
                           filters.priority === option.value
                             ? 'bg-indigo-600 text-white'
-                            : 'bg-gray-800/50 text-white hover:bg-gray-100'
+                            : 'bg-gray-800/50 text-white hover:bg-gray-700'
                         }`}
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
@@ -334,7 +334,7 @@ const ActivityFilter = ({
                         className={`px-3 py-1 rounded-full text-xs font-medium ${
                           filters.status === option.value
                             ? 'bg-indigo-600 text-white'
-                            : 'bg-gray-800/50 text-white hover:bg-gray-100'
+                            : 'bg-gray-800/50 text-white hover:bg-gray-700'
                         }`}
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
