@@ -112,7 +112,7 @@ const RevenueForm = ({ revenue = {}, onSave, onCancel, projects }) => {
               min="0"
               className={`w-full bg-gray-800/50 text-white border ${
                 errors.amount ? 'border-rose-500' : 'border-gray-700'
-              } rounded-lg px-4 py-2 pl-10 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent`}
+              } rounded-lg px-4 py-2 pl-10 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
             />
             <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
               €
@@ -142,7 +142,7 @@ const RevenueForm = ({ revenue = {}, onSave, onCancel, projects }) => {
             onChange={handleInputChange}
             className={`w-full bg-gray-800/50 text-white border ${
               errors.date ? 'border-rose-500' : 'border-gray-700'
-            } rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent`}
+            } rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
           />
           {errors.date && (
             <motion.p 
@@ -168,7 +168,7 @@ const RevenueForm = ({ revenue = {}, onSave, onCancel, projects }) => {
             onChange={handleInputChange}
             className={`w-full bg-gray-800/50 text-white border ${
               errors.description ? 'border-rose-500' : 'border-gray-700'
-            } rounded-lg px-4 py-2 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent`}
+            } rounded-lg px-4 py-2 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
             placeholder="Ex: Acompte projet site web"
           />
           {errors.description && (
@@ -192,7 +192,7 @@ const RevenueForm = ({ revenue = {}, onSave, onCancel, projects }) => {
             name="project_id"
             value={formData.project_id}
             onChange={handleInputChange}
-            className="w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+            className="w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
           >
             <option value="">Aucun projet</option>
             {projects.map(project => (
@@ -214,7 +214,7 @@ const RevenueForm = ({ revenue = {}, onSave, onCancel, projects }) => {
               name="type"
               value={formData.type}
               onChange={handleInputChange}
-              className="w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+              className="w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             >
               {typeOptions.map(option => (
                 <option key={option.value} value={option.value}>
