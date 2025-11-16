@@ -80,29 +80,29 @@ const CalendarHeader = ({
   
   return (
     <div className="mb-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-        <div className="flex items-center space-x-4">
-          <div className="flex space-x-2">
+      <div className="flex flex-col gap-4 mb-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+          <div className="flex space-x-2 w-full sm:w-auto">
             <motion.button
-              className="p-2 rounded-lg bg-gray-800/50 hover:bg-gray-700/50 text-gray-300"
+              className="p-2 sm:px-3 rounded-lg bg-gray-800/50 hover:bg-gray-700/50 text-gray-300 flex-shrink-0"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={onPrevious}
             >
               ◀
             </motion.button>
-            
+
             <motion.button
-              className="p-2 rounded-lg bg-gray-800/50 hover:bg-gray-700/50 text-gray-300"
+              className="px-3 py-2 rounded-lg bg-gray-800/50 hover:bg-gray-700/50 text-gray-300 flex-1 sm:flex-initial whitespace-nowrap"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={onToday}
             >
               Aujourd'hui
             </motion.button>
-            
+
             <motion.button
-              className="p-2 rounded-lg bg-gray-800/50 hover:bg-gray-700/50 text-gray-300"
+              className="p-2 sm:px-3 rounded-lg bg-gray-800/50 hover:bg-gray-700/50 text-gray-300 flex-shrink-0"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={onNext}
@@ -110,66 +110,68 @@ const CalendarHeader = ({
               ▶
             </motion.button>
           </div>
-          
-          <h2 className="text-2xl font-semibold text-white capitalize">
+
+          <h2 className="text-lg sm:text-2xl font-semibold text-white capitalize">
             {formatTitle()}
           </h2>
         </div>
-        
-        <div className="flex items-center space-x-3 w-full sm:w-auto justify-end">
-          <motion.button
-            className="p-2 rounded-lg text-gray-300 hover:bg-gray-800/50 relative"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setShowFilters(!showFilters)}
-          >
-            <FiSearch />
-            {hasActiveFilters && (
-              <span className="absolute top-0 right-0 h-3 w-3 bg-indigo-600 rounded-full"></span>
-            )}
-          </motion.button>
-          
-          <div className="bg-gray-800/50 rounded-lg p-1 flex">
+
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto sm:justify-end">
+          <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
             <motion.button
-              className={`px-3 py-1 rounded-lg text-sm ${
-                view === 'month'
-                  ? 'bg-indigo-600 text-white'
-                  : 'text-gray-300 hover:bg-gray-700/50'
-              }`}
-              whileHover={{ scale: view === 'month' ? 1 : 1.05 }}
+              className="p-2 rounded-lg text-gray-300 hover:bg-gray-800/50 relative flex-shrink-0"
+              whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={() => setView('month')}
+              onClick={() => setShowFilters(!showFilters)}
             >
-              Mois
+              <FiSearch />
+              {hasActiveFilters && (
+                <span className="absolute top-0 right-0 h-3 w-3 bg-indigo-600 rounded-full"></span>
+              )}
             </motion.button>
-            <motion.button
-              className={`px-3 py-1 rounded-lg text-sm ${
-                view === 'week'
-                  ? 'bg-indigo-600 text-white'
-                  : 'text-gray-300 hover:bg-gray-700/50'
-              }`}
-              whileHover={{ scale: view === 'week' ? 1 : 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setView('week')}
-            >
-              Semaine
-            </motion.button>
-            <motion.button
-              className={`px-3 py-1 rounded-lg text-sm ${
-                view === 'day'
-                  ? 'bg-indigo-600 text-white'
-                  : 'text-gray-300 hover:bg-gray-700/50'
-              }`}
-              whileHover={{ scale: view === 'day' ? 1 : 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setView('day')}
-            >
-              Jour
-            </motion.button>
+
+            <div className="bg-gray-800/50 rounded-lg p-1 flex flex-1 sm:flex-initial">
+              <motion.button
+                className={`flex-1 sm:flex-initial px-3 py-1.5 sm:py-1 rounded-lg text-sm ${
+                  view === 'month'
+                    ? 'bg-indigo-600 text-white'
+                    : 'text-gray-300 hover:bg-gray-700/50'
+                }`}
+                whileHover={{ scale: view === 'month' ? 1 : 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setView('month')}
+              >
+                Mois
+              </motion.button>
+              <motion.button
+                className={`flex-1 sm:flex-initial px-3 py-1.5 sm:py-1 rounded-lg text-sm ${
+                  view === 'week'
+                    ? 'bg-indigo-600 text-white'
+                    : 'text-gray-300 hover:bg-gray-700/50'
+                }`}
+                whileHover={{ scale: view === 'week' ? 1 : 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setView('week')}
+              >
+                Semaine
+              </motion.button>
+              <motion.button
+                className={`flex-1 sm:flex-initial px-3 py-1.5 sm:py-1 rounded-lg text-sm ${
+                  view === 'day'
+                    ? 'bg-indigo-600 text-white'
+                    : 'text-gray-300 hover:bg-gray-700/50'
+                }`}
+                whileHover={{ scale: view === 'day' ? 1 : 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setView('day')}
+              >
+                Jour
+              </motion.button>
+            </div>
           </div>
-          
+
           <motion.button
-            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg flex items-center"
+            className="w-full sm:w-auto px-4 py-2.5 sm:py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg flex items-center justify-center"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={onAddEvent}
@@ -189,8 +191,8 @@ const CalendarHeader = ({
             transition={{ duration: 0.2 }}
             className="bg-gray-800/30 backdrop-blur-sm rounded-xl p-4 overflow-hidden mb-4"
           >
-            <div className="flex flex-wrap gap-4 items-end">
-              <div className="flex-1 min-w-[200px]">
+            <div className="flex flex-col sm:flex-row sm:flex-wrap gap-4 sm:items-end">
+              <div className="flex-1 min-w-full sm:min-w-[200px]">
                 <label className="block text-xs text-gray-400 mb-1">Recherche</label>
                 <div className="relative">
                   <input
@@ -213,13 +215,13 @@ const CalendarHeader = ({
                   )}
                 </div>
               </div>
-              
+
               <div className="w-full sm:w-auto">
                 <label className="block text-xs text-gray-400 mb-1">Catégorie</label>
                 <select
                   value={filters.category}
                   onChange={(e) => handleFilterChange('category', e.target.value)}
-                  className="bg-white text-gray-800 border border-gray-400 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 w-48"
+                  className="w-full sm:w-48 bg-white text-gray-800 border border-gray-400 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
                   {categoryOptions.map(option => (
                     <option key={option.value} value={option.value}>
@@ -228,13 +230,13 @@ const CalendarHeader = ({
                   ))}
                 </select>
               </div>
-              
+
               <div className="w-full sm:w-auto">
                 <label className="block text-xs text-gray-400 mb-1">Priorité</label>
                 <select
                   value={filters.priority}
                   onChange={(e) => handleFilterChange('priority', e.target.value)}
-                  className="bg-white text-gray-800 border border-gray-400 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 w-48"
+                  className="w-full sm:w-48 bg-white text-gray-800 border border-gray-400 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
                   {priorityOptions.map(option => (
                     <option key={option.value} value={option.value}>
@@ -246,7 +248,7 @@ const CalendarHeader = ({
               
               {hasActiveFilters && (
                 <motion.button
-                  className="px-3 py-2 text-xs text-indigo-300 hover:text-indigo-200 flex items-center ml-auto"
+                  className="w-full sm:w-auto px-3 py-2 text-xs text-indigo-300 hover:text-indigo-200 flex items-center justify-center sm:justify-start sm:ml-auto"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => {

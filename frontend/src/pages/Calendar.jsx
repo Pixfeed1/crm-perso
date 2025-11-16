@@ -335,10 +335,10 @@ const Calendar = () => {
   return (
     <div className="h-screen flex flex-col overflow-hidden">
       <header className="mb-4 flex-shrink-0 pt-16 sm:pt-0">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
           <div>
             <motion.h1
-              className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-teal-300 to-indigo-300"
+              className="text-3xl sm:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-teal-300 to-indigo-300"
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
@@ -346,7 +346,7 @@ const Calendar = () => {
               Calendrier
             </motion.h1>
             <motion.p
-              className="text-indigo-200 mt-2"
+              className="text-indigo-200 mt-2 text-sm sm:text-base"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.5, delay: 0.2 }}
@@ -354,12 +354,12 @@ const Calendar = () => {
               Planifiez vos rendez-vous et suivez vos échéances
             </motion.p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
             <motion.button
               onClick={() => setIsExportModalOpen(true)}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition-colors"
+              className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition-colors"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.5, delay: 0.3 }}
@@ -371,7 +371,7 @@ const Calendar = () => {
               onClick={() => setIsSyncModalOpen(true)}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold transition-colors"
+              className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold transition-colors"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.5, delay: 0.4 }}
@@ -396,15 +396,15 @@ const Calendar = () => {
         className="flex-shrink-0"
       />
 
-      <div className="flex flex-col md:flex-row flex-grow bg-gray-800/30 backdrop-blur-sm rounded-2xl overflow-hidden">
+      <div className="flex flex-col md:flex-row flex-grow bg-gray-800/30 backdrop-blur-sm rounded-2xl overflow-hidden gap-4 md:gap-0">
         <motion.div
-          className="w-full md:w-2/3 flex flex-col overflow-hidden"
+          className="w-full md:w-2/3 flex flex-col overflow-hidden min-h-[400px] md:min-h-0"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.3 }}
           key={`view-${view}-${currentDate}`}
         >
-          <div className="flex-grow overflow-auto">
+          <div className="flex-grow overflow-auto p-2 sm:p-0">
             <AnimatePresence mode="wait">
               {view === 'month' && (
                 <MonthView
@@ -453,12 +453,12 @@ const Calendar = () => {
         </motion.div>
 
         <motion.div
-          className="w-full md:w-1/3 md:pl-4 mt-4 md:mt-0 overflow-hidden"
+          className="w-full md:w-1/3 md:pl-4 overflow-hidden"
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.3, delay: 0.1 }}
         >
-          <div className="bg-gray-800/30 backdrop-blur-sm rounded-2xl p-4 h-full overflow-auto">
+          <div className="bg-gray-800/30 backdrop-blur-sm rounded-2xl p-3 sm:p-4 h-full overflow-auto min-h-[300px] md:min-h-0">
             <AnimatePresence mode="wait">
               {isAddingEvent ? (
                 <motion.div
