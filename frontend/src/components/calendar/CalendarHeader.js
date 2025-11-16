@@ -193,21 +193,21 @@ const CalendarHeader = ({
           >
             <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 sm:gap-4 sm:items-end">
               <div className="flex-1 min-w-full sm:min-w-[200px]">
-                <label className="block text-xs text-gray-400 mb-1.5">Recherche</label>
+                <label className="block text-xs text-gray-400 mb-1.5 font-medium">Recherche</label>
                 <div className="relative">
                   <input
                     type="text"
                     placeholder="Rechercher un événement..."
                     value={filters.search}
                     onChange={(e) => handleFilterChange('search', e.target.value)}
-                    className="w-full bg-white text-gray-800 border border-gray-400 rounded-lg px-3 sm:px-4 py-2 pl-9 sm:pl-10 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
+                    className="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-3 sm:px-4 py-2 pl-9 sm:pl-10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
                   />
-                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
+                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm">
                     <FiSearch />
                   </span>
                   {filters.search && (
                     <button
-                      className="absolute right-2 sm:right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                      className="absolute right-2 sm:right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
                       onClick={() => handleFilterChange('search', '')}
                     >
                       <FiX className="text-sm" />
@@ -217,11 +217,11 @@ const CalendarHeader = ({
               </div>
 
               <div className="w-full sm:w-auto">
-                <label className="block text-xs text-gray-400 mb-1.5">Catégorie</label>
+                <label className="block text-xs text-gray-400 mb-1.5 font-medium">Catégorie</label>
                 <select
                   value={filters.category}
                   onChange={(e) => handleFilterChange('category', e.target.value)}
-                  className="w-full sm:w-48 bg-white text-gray-800 border border-gray-400 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                  className="w-full sm:w-48 bg-gray-900/50 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
                 >
                   {categoryOptions.map(option => (
                     <option key={option.value} value={option.value}>
@@ -232,11 +232,11 @@ const CalendarHeader = ({
               </div>
 
               <div className="w-full sm:w-auto">
-                <label className="block text-xs text-gray-400 mb-1.5">Priorité</label>
+                <label className="block text-xs text-gray-400 mb-1.5 font-medium">Priorité</label>
                 <select
                   value={filters.priority}
                   onChange={(e) => handleFilterChange('priority', e.target.value)}
-                  className="w-full sm:w-48 bg-white text-gray-800 border border-gray-400 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                  className="w-full sm:w-48 bg-gray-900/50 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
                 >
                   {priorityOptions.map(option => (
                     <option key={option.value} value={option.value}>
