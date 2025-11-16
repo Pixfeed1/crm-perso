@@ -353,128 +353,150 @@ const Quotes = () => {
         )}
       </AnimatePresence>
 
-      {/* Modal de visualisation */}
+      {/* Modal de visualisation avec aperçu PDF */}
       <AnimatePresence>
         {isViewingQuote && selectedQuote && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
             onClick={() => {
               setIsViewingQuote(false);
               setSelectedQuote(null);
             }}
           >
+            {/* Barre d'actions flottante */}
+            <div className="fixed top-4 right-4 z-[60] flex gap-3">
+              <Button
+                onClick={() => exportQuoteToPDF(selectedQuote)}
+                variant="primary"
+                icon={FiDownload}
+              >
+                Télécharger PDF
+              </Button>
+              <button
+                onClick={() => {
+                  setIsViewingQuote(false);
+                  setSelectedQuote(null);
+                }}
+                className="bg-gray-800 hover:bg-gray-700 text-white p-3 rounded-lg transition-colors"
+              >
+                <FiX size={20} />
+              </button>
+            </div>
+
+            {/* Document PDF preview */}
             <motion.div
               initial={{ scale: 0.95 }}
               animate={{ scale: 1 }}
               exit={{ scale: 0.95 }}
-              className="bg-gray-900 rounded-lg border border-gray-700 max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+              className="bg-white shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
+              style={{
+                aspectRatio: '1/1.414', // Format A4
+                maxHeight: '90vh'
+              }}
             >
-              <div className="sticky top-0 bg-gray-900 border-b border-gray-700 px-6 py-4 flex justify-between items-center">
-                <h2 className="text-xl font-bold text-white">Aperçu du devis</h2>
-                <button
-                  onClick={() => {
-                    setIsViewingQuote(false);
-                    setSelectedQuote(null);
-                  }}
-                  className="text-gray-400 hover:text-white transition-colors"
-                >
-                  <FiX size={24} />
-                </button>
-              </div>
-
-              <div className="p-6">
-                {/* Informations principales */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              {/* Contenu du PDF */}
+              <div className="p-12 text-gray-900">
+                {/* En-tête */}
+                <div className="flex justify-between items-start mb-12 pb-6 border-b-2 border-indigo-600">
                   <div>
-                    <h3 className="text-sm font-medium text-gray-400 mb-2">Numéro de devis</h3>
-                    <p className="text-lg font-mono text-indigo-300">{selectedQuote.quote_number}</p>
+                    <h1 className="text-4xl font-bold text-indigo-600 mb-2">DEVIS</h1>
+                    <p className="text-sm text-gray-600">N° {selectedQuote.quote_number}</p>
                   </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-400 mb-2">Client</h3>
-                    <p className="text-lg text-white">{selectedQuote.client_name}</p>
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-400 mb-2">Date d'émission</h3>
-                    <p className="text-lg text-white">{formatDate(selectedQuote.issue_date)}</p>
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-400 mb-2">Statut</h3>
-                    <div className="inline-block">{getStatusBadge(selectedQuote.status)}</div>
+                  <div className="text-right">
+                    <h2 className="text-xl font-bold text-gray-900 mb-1">Votre Entreprise</h2>
+                    <p className="text-sm text-gray-600">123 Rue Example</p>
+                    <p className="text-sm text-gray-600">75001 Paris</p>
+                    <p className="text-sm text-gray-600">contact@entreprise.fr</p>
                   </div>
                 </div>
 
-                {/* Lignes du devis */}
+                {/* Informations client et date */}
+                <div className="grid grid-cols-2 gap-8 mb-12">
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">Client</h3>
+                    <p className="text-lg font-semibold text-gray-900">{selectedQuote.client_name}</p>
+                    {selectedQuote.client_email && (
+                      <p className="text-sm text-gray-600">{selectedQuote.client_email}</p>
+                    )}
+                  </div>
+                  <div className="text-right">
+                    <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">Date d'émission</h3>
+                    <p className="text-lg font-semibold text-gray-900">{formatDate(selectedQuote.issue_date)}</p>
+                    {selectedQuote.valid_until && (
+                      <>
+                        <h3 className="text-sm font-semibold text-gray-500 uppercase mt-4 mb-2">Valable jusqu'au</h3>
+                        <p className="text-lg font-semibold text-gray-900">{formatDate(selectedQuote.valid_until)}</p>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Tableau des articles */}
                 {selectedQuote.items && selectedQuote.items.length > 0 && (
-                  <div className="mb-6">
-                    <h3 className="text-lg font-semibold text-white mb-4">Articles</h3>
-                    <div className="bg-gray-800/30 rounded-lg border border-gray-700 overflow-hidden">
-                      <table className="w-full">
-                        <thead className="bg-gray-800/50">
-                          <tr className="text-left text-sm text-gray-400">
-                            <th className="px-4 py-3">Description</th>
-                            <th className="px-4 py-3 text-right">Quantité</th>
-                            <th className="px-4 py-3 text-right">Prix unitaire</th>
-                            <th className="px-4 py-3 text-right">Total</th>
+                  <div className="mb-12">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr className="bg-indigo-600 text-white">
+                          <th className="px-4 py-3 text-left font-semibold">Description</th>
+                          <th className="px-4 py-3 text-center font-semibold w-24">Qté</th>
+                          <th className="px-4 py-3 text-right font-semibold w-32">P.U. HT</th>
+                          <th className="px-4 py-3 text-right font-semibold w-32">Total HT</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {selectedQuote.items.map((item, index) => (
+                          <tr key={index} className="border-b border-gray-200">
+                            <td className="px-4 py-3 text-gray-900">{item.description}</td>
+                            <td className="px-4 py-3 text-center text-gray-700">{item.quantity}</td>
+                            <td className="px-4 py-3 text-right text-gray-700">{formatAmount(item.unit_price)}</td>
+                            <td className="px-4 py-3 text-right font-semibold text-gray-900">
+                              {formatAmount(item.quantity * item.unit_price)}
+                            </td>
                           </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-700/50">
-                          {selectedQuote.items.map((item, index) => (
-                            <tr key={index}>
-                              <td className="px-4 py-3 text-white">{item.description}</td>
-                              <td className="px-4 py-3 text-right text-gray-300">{item.quantity}</td>
-                              <td className="px-4 py-3 text-right text-gray-300">{formatAmount(item.unit_price)}</td>
-                              <td className="px-4 py-3 text-right text-white font-semibold">
-                                {formatAmount(item.quantity * item.unit_price)}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 )}
 
                 {/* Totaux */}
-                <div className="bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border border-indigo-500/30 rounded-lg p-6">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-gray-400">Total HT</span>
-                    <span className="text-white font-semibold">{formatAmount(selectedQuote.total_ht)}</span>
-                  </div>
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-gray-400">TVA</span>
-                    <span className="text-white font-semibold">{formatAmount(selectedQuote.total_tva)}</span>
-                  </div>
-                  <div className="flex justify-between items-center pt-2 border-t border-gray-700">
-                    <span className="text-lg font-semibold text-white">Total TTC</span>
-                    <span className="text-2xl font-bold text-indigo-300">{formatAmount(selectedQuote.total_ttc)}</span>
+                <div className="flex justify-end mb-12">
+                  <div className="w-80">
+                    <div className="bg-gray-50 p-6 rounded-lg">
+                      <div className="flex justify-between items-center mb-3 pb-3 border-b border-gray-200">
+                        <span className="text-gray-700 font-medium">Total HT</span>
+                        <span className="text-gray-900 font-semibold text-lg">{formatAmount(selectedQuote.total_ht)}</span>
+                      </div>
+                      <div className="flex justify-between items-center mb-3 pb-3 border-b border-gray-200">
+                        <span className="text-gray-700 font-medium">TVA (20%)</span>
+                        <span className="text-gray-900 font-semibold text-lg">{formatAmount(selectedQuote.total_tva)}</span>
+                      </div>
+                      <div className="flex justify-between items-center pt-3 bg-indigo-600 -m-6 mt-0 p-6 rounded-b-lg">
+                        <span className="text-white font-bold text-lg">Total TTC</span>
+                        <span className="text-white font-bold text-2xl">{formatAmount(selectedQuote.total_ttc)}</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                {/* Actions */}
-                <div className="flex gap-3 mt-6">
-                  <Button
-                    onClick={() => exportQuoteToPDF(selectedQuote)}
-                    variant="secondary"
-                    icon={FiDownload}
-                    className="flex-1"
-                  >
-                    Télécharger PDF
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      setIsViewingQuote(false);
-                      handleSendEmail(selectedQuote);
-                    }}
-                    variant="primary"
-                    icon={FiSend}
-                    className="flex-1"
-                  >
-                    Envoyer par email
-                  </Button>
+                {/* Conditions */}
+                <div className="border-t-2 border-gray-200 pt-6">
+                  <h3 className="text-sm font-semibold text-gray-700 uppercase mb-3">Conditions</h3>
+                  <p className="text-xs text-gray-600 leading-relaxed">
+                    Devis valable 30 jours. Acompte de 30% à la commande.
+                    Paiement du solde à la livraison. Conditions générales de vente disponibles sur demande.
+                  </p>
+                </div>
+
+                {/* Pied de page */}
+                <div className="mt-8 pt-6 border-t border-gray-200 text-center">
+                  <p className="text-xs text-gray-500">
+                    Votre Entreprise - SIRET: 123 456 789 00012 - TVA: FR12 123456789
+                  </p>
                 </div>
               </div>
             </motion.div>
