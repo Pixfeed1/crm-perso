@@ -80,8 +80,8 @@ const CalendarHeader = ({
     filters.priority !== 'all';
   
   return (
-    <div className="mb-4 sm:mb-6">
-      <div className="flex flex-col gap-3 sm:gap-4 mb-3 sm:mb-4">
+    <div className="mb-3 sm:mb-4">
+      <div className="flex flex-col gap-2 sm:gap-4">
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
           <div className="flex space-x-1.5 sm:space-x-2 w-full sm:w-auto">
             <motion.button
@@ -117,8 +117,8 @@ const CalendarHeader = ({
           </h2>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto sm:justify-end">
-          <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
+        <div className="flex flex-col gap-2 sm:gap-3 w-full sm:w-auto sm:justify-end">
+          <div className="flex items-center gap-2 sm:gap-3 w-full">
             <motion.button
               className="p-2 rounded-lg text-gray-300 hover:bg-gray-800/50 relative flex-shrink-0"
               whileHover={{ scale: 1.05 }}

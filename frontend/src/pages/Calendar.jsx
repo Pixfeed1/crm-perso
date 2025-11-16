@@ -336,8 +336,8 @@ const Calendar = () => {
   return (
     <div className="h-full flex flex-col overflow-y-auto p-4 sm:p-6">
       <div className="max-w-7xl mx-auto w-full">
-        <header className="mb-6 pt-16 sm:pt-0">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 mb-4">
+        <header className="mb-4 sm:mb-6 pt-16 sm:pt-0">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
             <div>
               <motion.h1
                 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-teal-300 to-indigo-300"
@@ -356,22 +356,22 @@ const Calendar = () => {
                 Planifiez vos rendez-vous et suivez vos échéances
               </motion.p>
             </div>
-            <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
               <Button
                 onClick={() => setIsExportModalOpen(true)}
                 variant="secondary"
                 icon={FiDownload}
-                className="flex-1 sm:flex-initial"
+                className="w-full sm:w-auto"
               >
-                <span className="hidden sm:inline">Exporter</span>
+                Exporter
               </Button>
               <Button
                 onClick={() => setIsSyncModalOpen(true)}
                 variant="primary"
                 icon={FiRefreshCw}
-                className="flex-1 sm:flex-initial"
+                className="w-full sm:w-auto"
               >
-                <span className="hidden sm:inline">Synchroniser</span>
+                Synchroniser
               </Button>
             </div>
           </div>
@@ -391,7 +391,7 @@ const Calendar = () => {
           />
         </div>
 
-        <div className="bg-gray-800/30 backdrop-blur-sm rounded-2xl overflow-hidden" style={{ height: 'calc(100vh - 400px)', minHeight: '500px' }}>
+        <div className="bg-gray-800/30 backdrop-blur-sm rounded-2xl overflow-hidden" style={{ height: 'calc(100vh - 320px)', minHeight: '400px' }}>
         <motion.div
           className="w-full h-full flex flex-col overflow-hidden"
           initial={{ opacity: 0 }}
