@@ -120,40 +120,40 @@ const MonthView = ({
       {/* En-tête des jours de la semaine */}
       <div className="grid grid-cols-7 text-center border-b border-gray-700">
         {weekdays.map((day, index) => (
-          <div key={index} className="py-2 text-gray-400 font-medium text-sm">
+          <div key={index} className="py-1.5 sm:py-2 text-gray-400 font-medium text-xs sm:text-sm">
             {day}
           </div>
         ))}
       </div>
-      
+
       {/* Grille du calendrier */}
       <div className="flex-1 grid grid-cols-7 grid-rows-6 border-b border-gray-700">
         {daysInMonth.map((day, index) => (
-          <div 
+          <div
             key={index}
-            className={`min-h-[80px] md:min-h-[100px] border-r border-b border-gray-700 flex flex-col ${
+            className={`min-h-[70px] sm:min-h-[90px] md:min-h-[100px] border-r border-b border-gray-700 flex flex-col ${
               day.isCurrentMonth ? 'bg-transparent' : 'bg-gray-900/30'
             } ${day.isToday ? 'bg-indigo-900/20' : ''}`}
             onClick={() => onSelectDate(day.date)}
           >
             {/* Numéro du jour */}
-            <div className={`text-right p-1 ${
-              day.isCurrentMonth 
-                ? day.isToday ? 'text-indigo-300 font-bold' : 'text-white' 
+            <div className={`text-right p-0.5 sm:p-1 text-xs sm:text-sm ${
+              day.isCurrentMonth
+                ? day.isToday ? 'text-indigo-300 font-bold' : 'text-white'
                 : 'text-gray-600'
             }`}>
               {formatDayNumber(day.date)}
             </div>
-            
+
             {/* Événements du jour */}
-            <div className="flex-1 p-1 space-y-1 overflow-hidden">
+            <div className="flex-1 px-0.5 sm:px-1 py-0.5 space-y-0.5 sm:space-y-1 overflow-hidden">
               {getEventsForDay(day.date).slice(0, 3).map((event, eventIndex) => (
                 <motion.div
                   key={event.id}
-                  className={`px-2 py-1 text-xs rounded cursor-pointer border-l-2 flex items-center gap-1 ${
+                  className={`px-1 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs rounded cursor-pointer border-l-2 flex items-center gap-0.5 sm:gap-1 ${
                     categoryColors[event.category] || 'bg-gray-600/80 text-gray-100'
                   } ${priorityColors[event.priority] || 'border-l-gray-400'} ${
-                    selectedEvent && selectedEvent.id === event.id ? 'ring-2 ring-white' : ''
+                    selectedEvent && selectedEvent.id === event.id ? 'ring-1 sm:ring-2 ring-white' : ''
                   }`}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
@@ -162,21 +162,21 @@ const MonthView = ({
                     onSelectEvent(event);
                   }}
                 >
-                  {event.all_day ? <FiCalendar className="flex-shrink-0" /> : <FiClock className="flex-shrink-0" />}
+                  {event.all_day ? <FiCalendar className="flex-shrink-0 text-[10px] sm:text-xs" /> : <FiClock className="flex-shrink-0 text-[10px] sm:text-xs" />}
                   <span className="truncate">{event.title}</span>
                 </motion.div>
               ))}
-              
+
               {/* Indiquer s'il y a plus d'événements que ceux affichés */}
               {getEventsForDay(day.date).length > 3 && (
-                <div className="text-xs text-indigo-300 text-center">
-                  +{getEventsForDay(day.date).length - 3} de plus
+                <div className="text-[10px] sm:text-xs text-indigo-300 text-center">
+                  +{getEventsForDay(day.date).length - 3}
                 </div>
               )}
-              
+
               {day.isCurrentMonth && (
                 <motion.button
-                  className="w-full mt-1 text-xs text-indigo-300 hover:text-indigo-200 opacity-0 hover:opacity-100 flex justify-center items-center"
+                  className="w-full mt-0.5 sm:mt-1 text-[10px] sm:text-xs text-indigo-300 hover:text-indigo-200 opacity-0 hover:opacity-100 flex justify-center items-center"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={(e) => {
@@ -184,7 +184,7 @@ const MonthView = ({
                     onAddEvent(day.date);
                   }}
                 >
-                  <span className="mr-1">+</span> Ajouter
+                  <span className="mr-0.5 sm:mr-1">+</span> <span className="hidden sm:inline">Ajouter</span><span className="sm:hidden">Add</span>
                 </motion.button>
               )}
             </div>
