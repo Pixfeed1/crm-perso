@@ -447,6 +447,7 @@ const Calendar = () => {
           </div>
         </motion.div>
       </div>
+      </div>
 
       {/* Modal pour formulaire/détails - Mobile & Desktop (en dehors du conteneur calendrier) */}
       <AnimatePresence>
