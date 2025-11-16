@@ -349,29 +349,81 @@ const Activities = () => {
       <div className="max-w-7xl mx-auto w-full">
         {/* Titre de page */}
         <header className="mb-6 pt-16 sm:pt-0">
-          <motion.h1
-            className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-300 to-indigo-300"
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            Activités
-          </motion.h1>
-          <motion.p
-            className="text-indigo-200 mt-2"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-          >
-            Suivez vos tâches quotidiennes et optimisez votre productivité
-          </motion.p>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+            <div>
+              <motion.h1
+                className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-300 to-indigo-300"
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+              >
+                Activités
+              </motion.h1>
+              <motion.p
+                className="text-indigo-200 mt-2"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+              >
+                Suivez vos tâches quotidiennes et optimisez votre productivité
+              </motion.p>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-2">
+              {/* Sélecteur de vue : liste / calendrier */}
+              <div className="bg-gray-800/50 rounded-lg p-1 flex">
+                <motion.button
+                  className={`px-3 py-1 rounded-lg text-sm flex items-center justify-center flex-1 sm:flex-none ${
+                    view === 'list'
+                      ? 'bg-indigo-600 text-white'
+                      : 'text-gray-300 hover:bg-gray-700/50'
+                  }`}
+                  whileHover={{ scale: view === 'list' ? 1 : 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setView('list')}
+                >
+                  <FiClipboard className="mr-1" />
+                  Liste
+                </motion.button>
+                <motion.button
+                  className={`px-3 py-1 rounded-lg text-sm flex items-center justify-center flex-1 sm:flex-none ${
+                    view === 'calendar'
+                      ? 'bg-indigo-600 text-white'
+                      : 'text-gray-300 hover:bg-gray-700/50'
+                  }`}
+                  whileHover={{ scale: view === 'calendar' ? 1 : 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setView('calendar')}
+                >
+                  <FiCalendar className="mr-1" />
+                  Calendrier
+                </motion.button>
+              </div>
+              {/* Boutons export et ajout */}
+              <Button
+                onClick={() => exportAPI.activities()}
+                variant="secondary"
+                icon={FiDownload}
+                className="w-full sm:w-auto"
+              >
+                Exporter
+              </Button>
+              <Button
+                onClick={handleAddActivity}
+                variant="primary"
+                className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700"
+              >
+                + Activité
+              </Button>
+            </div>
+          </div>
         </header>
 
         {/* Statistiques globales */}
         <ActivityStats stats={stats} />
 
-        {/* Filtres et sélecteurs */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        {/* Filtres */}
+        <div className="mb-6">
           <ActivityFilter
             filters={filters}
             setFilters={setFilters}
@@ -383,53 +435,6 @@ const Activities = () => {
             sortField={sortField}
             sortDirection={sortDirection}
           />
-          <div className="flex flex-col sm:flex-row gap-2">
-            {/* Sélecteur de vue : liste / calendrier */}
-            <div className="bg-gray-800/50 rounded-lg p-1 flex">
-              <motion.button
-                className={`px-3 py-1 rounded-lg text-sm flex items-center justify-center flex-1 sm:flex-none ${
-                  view === 'list'
-                    ? 'bg-indigo-600 text-white'
-                    : 'text-gray-300 hover:bg-gray-700/50'
-                }`}
-                whileHover={{ scale: view === 'list' ? 1 : 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setView('list')}
-              >
-                <FiClipboard className="mr-1" />
-                Liste
-              </motion.button>
-              <motion.button
-                className={`px-3 py-1 rounded-lg text-sm flex items-center justify-center flex-1 sm:flex-none ${
-                  view === 'calendar'
-                    ? 'bg-indigo-600 text-white'
-                    : 'text-gray-300 hover:bg-gray-700/50'
-                }`}
-                whileHover={{ scale: view === 'calendar' ? 1 : 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setView('calendar')}
-              >
-                <FiCalendar className="mr-1" />
-                Calendrier
-              </motion.button>
-            </div>
-            {/* Boutons export et ajout */}
-            <Button
-              onClick={() => exportAPI.activities()}
-              variant="secondary"
-              icon={FiDownload}
-              className="w-full sm:w-auto"
-            >
-              Exporter
-            </Button>
-            <Button
-              onClick={handleAddActivity}
-              variant="primary"
-              className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700"
-            >
-              + Activité
-            </Button>
-          </div>
         </div>
 
         {/* Vue principale (liste/calendrier) */}
