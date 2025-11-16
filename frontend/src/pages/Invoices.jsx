@@ -12,6 +12,7 @@ import PaymentForm from '../components/payments/PaymentForm';
 import PaymentList from '../components/payments/PaymentList';
 import ConfirmModal from '../components/common/ConfirmModal';
 import SendEmailModal from '../components/common/SendEmailModal';
+import Button from '../components/common/Button';
 import { exportInvoiceToPDF } from '../services/exportPDF';
 
 const Invoices = () => {
@@ -160,143 +161,146 @@ const Invoices = () => {
   };
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-300 to-purple-300">
-            Factures
-          </h1>
-          <p className="text-gray-400 text-sm mt-1">
-            {filteredInvoices.length} facture{filteredInvoices.length !== 1 ? 's' : ''}
-          </p>
-        </div>
-        <button
-          onClick={() => {
-            setSelectedInvoice(null);
-            setIsFormOpen(true);
-          }}
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
-        >
-          <FiPlus />
-          <span>Nouvelle facture</span>
-        </button>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-        <input
-          type="text"
-          placeholder="Rechercher..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-indigo-500"
-        />
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
-        >
-          <option value="all">Tous les statuts</option>
-          <option value="pending">En attente</option>
-          <option value="paid">Payée</option>
-          <option value="overdue">En retard</option>
-        </select>
-      </div>
-
-      {isLoading ? (
-        <div className="text-center py-12 text-gray-400">Chargement...</div>
-      ) : filteredInvoices.length === 0 ? (
-        <div className="text-center py-12 bg-gray-800/30 rounded-lg border border-gray-700/50">
-          <FiFileText className="w-16 h-16 mx-auto text-gray-600 mb-4" />
-          <p className="text-gray-400">Aucune facture trouvée</p>
-        </div>
-      ) : (
-        <div className="bg-gray-800/30 rounded-lg border border-gray-700/50 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-800/50">
-                <tr className="text-left text-sm text-gray-400">
-                  <th className="px-4 py-3">Numéro</th>
-                  <th className="px-4 py-3">Client</th>
-                  <th className="px-4 py-3">Date</th>
-                  <th className="px-4 py-3">Échéance</th>
-                  <th className="px-4 py-3">Montant TTC</th>
-                  <th className="px-4 py-3">Statut</th>
-                  <th className="px-4 py-3">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-700/50">
-                {filteredInvoices.map((invoice) => (
-                  <motion.tr
-                    key={invoice.id}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="hover:bg-gray-700/30 transition-colors"
-                  >
-                    <td className="px-4 py-3 font-mono text-sm text-indigo-300">
-                      {invoice.invoice_number}
-                    </td>
-                    <td className="px-4 py-3 text-white">{invoice.client_name}</td>
-                    <td className="px-4 py-3 text-gray-400 text-sm">
-                      {formatDate(invoice.issue_date)}
-                    </td>
-                    <td className="px-4 py-3 text-gray-400 text-sm">
-                      {formatDate(invoice.due_date)}
-                    </td>
-                    <td className="px-4 py-3 font-semibold text-white">
-                      {formatAmount(invoice.total_ttc)}
-                    </td>
-                    <td className="px-4 py-3">
-                      <PaymentBadge invoice={invoice} showAmount={false} />
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleSendEmail(invoice)}
-                          className="p-2 text-indigo-400 hover:bg-indigo-500/20 rounded transition-colors"
-                          title="Envoyer par email"
-                        >
-                          <FiSend className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => exportInvoiceToPDF(invoice)}
-                          className="p-2 text-purple-400 hover:bg-purple-500/20 rounded transition-colors"
-                          title="Télécharger PDF"
-                        >
-                          <FiDownload className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleViewPayments(invoice)}
-                          className="p-2 text-green-400 hover:bg-green-500/20 rounded transition-colors"
-                          title="Gérer les paiements"
-                        >
-                          <FiCreditCard className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => {
-                            setSelectedInvoice(invoice);
-                            setIsFormOpen(true);
-                          }}
-                          className="p-2 text-blue-400 hover:bg-blue-500/20 rounded transition-colors"
-                          title="Modifier"
-                        >
-                          <FiEdit2 className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(invoice.id)}
-                          className="p-2 text-red-400 hover:bg-red-500/20 rounded transition-colors"
-                          title="Supprimer"
-                        >
-                          <FiTrash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </motion.tr>
-                ))}
-              </tbody>
-            </table>
+    <div className="h-full flex flex-col overflow-y-auto p-4 sm:p-6">
+      <div className="max-w-7xl mx-auto w-full">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 pt-16 sm:pt-0">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-300 to-purple-300">
+              Factures
+            </h1>
+            <p className="text-gray-400 text-sm mt-1">
+              {filteredInvoices.length} facture{filteredInvoices.length !== 1 ? 's' : ''}
+            </p>
           </div>
+          <Button
+            onClick={() => {
+              setSelectedInvoice(null);
+              setIsFormOpen(true);
+            }}
+            variant="primary"
+            icon={FiPlus}
+            className="w-full sm:w-auto"
+          >
+            Nouvelle facture
+          </Button>
         </div>
-      )}
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+          <input
+            type="text"
+            placeholder="Rechercher..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-indigo-500"
+          />
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+          >
+            <option value="all">Tous les statuts</option>
+            <option value="pending">En attente</option>
+            <option value="paid">Payée</option>
+            <option value="overdue">En retard</option>
+          </select>
+        </div>
+
+        {isLoading ? (
+          <div className="text-center py-12 text-gray-400">Chargement...</div>
+        ) : filteredInvoices.length === 0 ? (
+          <div className="text-center py-12 bg-gray-800/30 rounded-lg border border-gray-700/50">
+            <FiFileText className="w-16 h-16 mx-auto text-gray-600 mb-4" />
+            <p className="text-gray-400">Aucune facture trouvée</p>
+          </div>
+        ) : (
+          <div className="bg-gray-800/30 rounded-lg border border-gray-700/50 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-800/50">
+                  <tr className="text-left text-sm text-gray-400">
+                    <th className="px-4 py-3">Numéro</th>
+                    <th className="px-4 py-3">Client</th>
+                    <th className="px-4 py-3">Date</th>
+                    <th className="px-4 py-3">Échéance</th>
+                    <th className="px-4 py-3">Montant TTC</th>
+                    <th className="px-4 py-3">Statut</th>
+                    <th className="px-4 py-3">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-700/50">
+                  {filteredInvoices.map((invoice) => (
+                    <motion.tr
+                      key={invoice.id}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="hover:bg-gray-700/30 transition-colors"
+                    >
+                      <td className="px-4 py-3 font-mono text-sm text-indigo-300">
+                        {invoice.invoice_number}
+                      </td>
+                      <td className="px-4 py-3 text-white">{invoice.client_name}</td>
+                      <td className="px-4 py-3 text-gray-400 text-sm">
+                        {formatDate(invoice.issue_date)}
+                      </td>
+                      <td className="px-4 py-3 text-gray-400 text-sm">
+                        {formatDate(invoice.due_date)}
+                      </td>
+                      <td className="px-4 py-3 font-semibold text-white">
+                        {formatAmount(invoice.total_ttc)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <PaymentBadge invoice={invoice} showAmount={false} />
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleSendEmail(invoice)}
+                            className="p-2 text-indigo-400 hover:bg-indigo-500/20 rounded transition-colors"
+                            title="Envoyer par email"
+                          >
+                            <FiSend className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => exportInvoiceToPDF(invoice)}
+                            className="p-2 text-purple-400 hover:bg-purple-500/20 rounded transition-colors"
+                            title="Télécharger PDF"
+                          >
+                            <FiDownload className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleViewPayments(invoice)}
+                            className="p-2 text-green-400 hover:bg-green-500/20 rounded transition-colors"
+                            title="Gérer les paiements"
+                          >
+                            <FiCreditCard className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              setSelectedInvoice(invoice);
+                              setIsFormOpen(true);
+                            }}
+                            className="p-2 text-blue-400 hover:bg-blue-500/20 rounded transition-colors"
+                            title="Modifier"
+                          >
+                            <FiEdit2 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(invoice.id)}
+                            className="p-2 text-red-400 hover:bg-red-500/20 rounded transition-colors"
+                            title="Supprimer"
+                          >
+                            <FiTrash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </motion.tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Modal formulaire */}
       <AnimatePresence>
