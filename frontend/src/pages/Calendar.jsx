@@ -451,73 +451,73 @@ const Calendar = () => {
             </AnimatePresence>
           </div>
         </motion.div>
-
-        {/* Modal pour formulaire/détails - Mobile & Desktop */}
-        <AnimatePresence>
-          {(isAddingEvent || selectedEvent) && (
-            <>
-              {/* Overlay pour fermer */}
-              <motion.div
-                className="fixed inset-0 bg-black/60 z-40"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={() => {
-                  setIsAddingEvent(false);
-                  setSelectedEvent(null);
-                }}
-              />
-
-              {/* Modal slide-up (mobile) / Modal centré (desktop) */}
-              <motion.div
-                className="fixed inset-x-0 bottom-0 lg:inset-0 lg:flex lg:items-center lg:justify-center z-50 overflow-hidden"
-                initial={{ y: "100%", opacity: 0 }}
-                animate={{
-                  y: 0,
-                  opacity: 1
-                }}
-                exit={{ y: "100%", opacity: 0 }}
-                transition={{ duration: 0.3 }}
-              >
-                <div className="bg-gray-800/98 backdrop-blur-lg rounded-t-2xl lg:rounded-2xl p-4 sm:p-6 h-[85vh] lg:h-[90vh] lg:max-w-3xl lg:w-full overflow-auto mx-auto lg:m-4 shadow-2xl border-t lg:border border-gray-700/50">
-                  <AnimatePresence mode="wait">
-                    {isAddingEvent ? (
-                      <motion.div
-                        key="add-form"
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -20 }}
-                        transition={{ duration: 0.3 }}
-                        className="w-full"
-                      >
-                        <EventForm
-                          selectedDate={selectedDate}
-                          onSave={handleSaveEvent}
-                          onCancel={() => setIsAddingEvent(false)}
-                        />
-                      </motion.div>
-                    ) : selectedEvent ? (
-                      <motion.div
-                        key={`event-${selectedEvent.id}`}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -20 }}
-                        transition={{ duration: 0.3 }}
-                      >
-                        <EventDetails
-                          event={selectedEvent}
-                          onUpdate={(updatedData) => handleUpdateEvent(selectedEvent.id, updatedData)}
-                          onDelete={() => handleDeleteEvent(selectedEvent.id)}
-                        />
-                      </motion.div>
-                    ) : null}
-                  </AnimatePresence>
-                </div>
-              </motion.div>
-            </>
-          )}
-        </AnimatePresence>
       </div>
+
+      {/* Modal pour formulaire/détails - Mobile & Desktop (en dehors du conteneur calendrier) */}
+      <AnimatePresence>
+        {(isAddingEvent || selectedEvent) && (
+          <>
+            {/* Overlay pour fermer */}
+            <motion.div
+              className="fixed inset-0 bg-black/60 z-[100]"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => {
+                setIsAddingEvent(false);
+                setSelectedEvent(null);
+              }}
+            />
+
+            {/* Modal slide-up (mobile) / Modal centré (desktop) */}
+            <motion.div
+              className="fixed inset-x-0 bottom-0 lg:inset-0 lg:flex lg:items-center lg:justify-center z-[101] overflow-hidden pointer-events-none"
+              initial={{ y: "100%", opacity: 0 }}
+              animate={{
+                y: 0,
+                opacity: 1
+              }}
+              exit={{ y: "100%", opacity: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <div className="bg-gray-800/98 backdrop-blur-lg rounded-t-2xl lg:rounded-2xl p-4 sm:p-6 h-[85vh] lg:h-auto lg:max-h-[90vh] lg:max-w-3xl lg:w-full overflow-y-auto mx-auto lg:m-4 shadow-2xl border-t lg:border border-gray-700/50 pointer-events-auto">
+                <AnimatePresence mode="wait">
+                  {isAddingEvent ? (
+                    <motion.div
+                      key="add-form"
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      transition={{ duration: 0.3 }}
+                      className="w-full"
+                    >
+                      <EventForm
+                        selectedDate={selectedDate}
+                        onSave={handleSaveEvent}
+                        onCancel={() => setIsAddingEvent(false)}
+                      />
+                    </motion.div>
+                  ) : selectedEvent ? (
+                    <motion.div
+                      key={`event-${selectedEvent.id}`}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <EventDetails
+                        event={selectedEvent}
+                        onUpdate={(updatedData) => handleUpdateEvent(selectedEvent.id, updatedData)}
+                        onDelete={() => handleDeleteEvent(selectedEvent.id)}
+                      />
+                    </motion.div>
+                  ) : null}
+                </AnimatePresence>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* Modal de synchronisation */}
       <CalendarSync
