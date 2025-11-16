@@ -1,7 +1,8 @@
 // src/components/calendar/CalendarHeader.jsx
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiSearch, FiX } from 'react-icons/fi';
+import { FiSearch, FiX, FiPlus } from 'react-icons/fi';
+import Button from '../common/Button';
 
 const CalendarHeader = ({
   view,
@@ -170,15 +171,14 @@ const CalendarHeader = ({
             </div>
           </div>
 
-          <motion.button
-            className="w-full sm:w-auto px-3 sm:px-4 py-2.5 sm:py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg flex items-center justify-center text-sm"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+          <Button
+            variant="primary"
+            icon={FiPlus}
             onClick={onAddEvent}
+            className="w-full sm:w-auto"
           >
-            <span className="mr-2">+</span>
             Événement
-          </motion.button>
+          </Button>
         </div>
       </div>
       
