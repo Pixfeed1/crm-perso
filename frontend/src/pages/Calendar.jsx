@@ -396,15 +396,15 @@ const Calendar = () => {
         className="flex-shrink-0"
       />
 
-      <div className="flex flex-col lg:flex-row flex-grow bg-gray-800/30 backdrop-blur-sm rounded-2xl overflow-hidden gap-0 lg:gap-0">
+      <div className="flex-grow bg-gray-800/30 backdrop-blur-sm rounded-2xl overflow-hidden">
         <motion.div
-          className="w-full lg:w-2/3 flex flex-col overflow-hidden min-h-[500px] sm:min-h-[550px] lg:min-h-0"
+          className="w-full h-full flex flex-col overflow-hidden"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.3 }}
           key={`view-${view}-${currentDate}`}
         >
-          <div className="flex-grow overflow-auto p-2 sm:p-3 lg:p-0">
+          <div className="flex-grow overflow-auto p-2 sm:p-3">
             <AnimatePresence mode="wait">
               {view === 'month' && (
                 <MonthView
@@ -452,13 +452,13 @@ const Calendar = () => {
           </div>
         </motion.div>
 
-        {/* Panneau latéral Desktop / Modal Mobile */}
+        {/* Modal pour formulaire/détails - Mobile & Desktop */}
         <AnimatePresence>
           {(isAddingEvent || selectedEvent) && (
             <>
-              {/* Overlay mobile uniquement */}
+              {/* Overlay pour fermer */}
               <motion.div
-                className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+                className="fixed inset-0 bg-black/60 z-40"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
@@ -468,19 +468,18 @@ const Calendar = () => {
                 }}
               />
 
-              {/* Panneau de détails/formulaire */}
+              {/* Modal slide-up (mobile) / Modal centré (desktop) */}
               <motion.div
-                className="fixed inset-x-0 bottom-0 lg:relative lg:w-1/3 lg:pl-4 z-50 lg:z-0 overflow-hidden"
-                initial={{ y: "100%", opacity: 0, x: 0 }}
+                className="fixed inset-x-0 bottom-0 lg:inset-0 lg:flex lg:items-center lg:justify-center z-50 overflow-hidden"
+                initial={{ y: "100%", opacity: 0 }}
                 animate={{
                   y: 0,
-                  opacity: 1,
-                  x: 0
+                  opacity: 1
                 }}
                 exit={{ y: "100%", opacity: 0 }}
-                transition={{ duration: 0.3, delay: 0 }}
+                transition={{ duration: 0.3 }}
               >
-                <div className="bg-gray-800/95 lg:bg-gray-800/30 backdrop-blur-sm rounded-t-2xl lg:rounded-2xl p-4 sm:p-5 lg:p-4 h-[85vh] lg:h-full overflow-auto max-h-[85vh] lg:max-h-none">
+                <div className="bg-gray-800/98 backdrop-blur-lg rounded-t-2xl lg:rounded-2xl p-4 sm:p-6 h-[85vh] lg:h-[90vh] lg:max-w-3xl lg:w-full overflow-auto mx-auto lg:m-4 shadow-2xl border-t lg:border border-gray-700/50">
                   <AnimatePresence mode="wait">
                     {isAddingEvent ? (
                       <motion.div
@@ -518,39 +517,6 @@ const Calendar = () => {
             </>
           )}
         </AnimatePresence>
-
-        {/* Empty state - Desktop uniquement */}
-        {!isAddingEvent && !selectedEvent && (
-          <motion.div
-            className="hidden lg:flex lg:w-1/3 lg:pl-4 overflow-hidden"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.3, delay: 0.1 }}
-          >
-            <div className="bg-gray-800/30 backdrop-blur-sm rounded-2xl p-4 h-full overflow-auto flex items-center justify-center">
-              <EmptyState
-                icon={<FiCalendar />}
-                title={view === 'day' ? 'Sélectionnez un événement' : 'Calendrier'}
-                description={
-                  view === 'day'
-                    ? "Sélectionnez un événement ou créez-en un nouveau."
-                    : "Cliquez sur une date pour voir les détails ou ajouter un événement."
-                }
-                action={
-                  <motion.button
-                    className="mt-4 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg flex items-center text-sm"
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => handleAddEvent()}
-                  >
-                    <span className="mr-2">+</span>
-                    Nouvel événement
-                  </motion.button>
-                }
-              />
-            </div>
-          </motion.div>
-        )}
       </div>
 
       {/* Modal de synchronisation */}
