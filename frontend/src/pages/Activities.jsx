@@ -371,7 +371,7 @@ const Activities = () => {
         <ActivityStats stats={stats} />
 
         {/* Filtres et sélecteurs */}
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <ActivityFilter
             filters={filters}
             setFilters={setFilters}
@@ -383,7 +383,7 @@ const Activities = () => {
             sortField={sortField}
             sortDirection={sortDirection}
           />
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
+          <div className="flex flex-col sm:flex-row gap-2">
             {/* Sélecteur de vue : liste / calendrier */}
             <div className="bg-gray-800/50 rounded-lg p-1 flex">
               <motion.button
@@ -432,10 +432,8 @@ const Activities = () => {
           </div>
         </div>
 
-        {/* Conteneur principal (grille) */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow">
-          {/* 1) Vue principale (liste/calendrier) */}
-          <div className="lg:col-span-7 bg-gray-800/30 backdrop-blur-sm rounded-2xl p-3 sm:p-4 md:p-6 overflow-hidden flex flex-col">
+        {/* Vue principale (liste/calendrier) */}
+        <div className="bg-gray-800/30 backdrop-blur-sm rounded-2xl p-3 sm:p-4 md:p-6 mb-6">
           <AnimatePresence mode="wait">
             {view === 'list' ? (
               <motion.div
@@ -472,18 +470,11 @@ const Activities = () => {
               </motion.div>
             )}
           </AnimatePresence>
-          </div>
+        </div>
 
-          {/* 2) Panneau de détails ou formulaire
-              Ici, on force l'overflow en 'hidden' pour empêcher tout défilement. */}
-          <div className="
-            lg:col-span-5
-            bg-gray-800/30
-            backdrop-blur-sm
-            rounded-2xl
-            p-2 sm:p-4 md:p-6
-            overflow-hidden
-          ">
+        {/* Panneau de détails ou formulaire (sous la liste) */}
+        {(isAddingActivity || selectedActivity) && (
+          <div className="bg-gray-800/30 backdrop-blur-sm rounded-2xl p-2 sm:p-4 md:p-6">
             <AnimatePresence mode="wait">
               {isAddingActivity ? (
                 /* Formulaire de création */
@@ -655,25 +646,10 @@ const Activities = () => {
                     )}
                   </div>
                 </motion.div>
-              ) : (
-                /* État vide (aucune activité sélectionnée et pas en mode ajout) */
-                <motion.div
-                  key="empty-state"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="h-full flex items-center justify-center"
-                >
-                  <EmptyState
-                    icon={<FiClipboard />}
-                    title="Activités"
-                    description="Sélectionnez une activité dans la liste ou ajoutez-en une nouvelle."
-                  />
-                </motion.div>
-              )}
+              ) : null}
             </AnimatePresence>
           </div>
-        </div>
+        )}
 
         {/* Modal de confirmation */}
         <ConfirmModal {...confirmState.config} isOpen={confirmState.isOpen} />
