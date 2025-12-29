@@ -88,13 +88,12 @@ const handleMaintenanceWebhook = async (req, res) => {
     console.log('[Webhook Maintenance] Création du projet maintenance...');
 
     const projectName = `Maintenance WordPress - ${plan}`;
-    const projectDescription = `Contrat de maintenance WordPress - Forfait ${plan}\nClient: ${name}\nPrix: ${plan_price}€/mois\nDébut: ${new Date(contract_start_date || Date.now()).toLocaleDateString('fr-FR')}`;
-    const projectTags = `maintenance,wordpress,${plan.toLowerCase()},${tags || ''}`;
+    const projectDescription = `Contrat de maintenance WordPress - Forfait ${plan}\nClient: ${name}\nPrix: ${plan_price}€/mois\nDébut: ${new Date(contract_start_date || Date.now()).toLocaleDateString('fr-FR')}\n\nTags: maintenance, wordpress, ${plan.toLowerCase()}, ${tags || ''}\n\nSource: Stripe (WordPress)`;
 
     const projectQuery = `
       INSERT INTO projects (
-        name, description, client_id, status,
-        start_date, budget, progress, tags, notes,
+        name, type, description, client_id, status,
+        start_date, budget, progress, color,
         created_at, updated_at
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
       RETURNING id, name
@@ -102,14 +101,14 @@ const handleMaintenanceWebhook = async (req, res) => {
 
     const projectResult = await db.pool.query(projectQuery, [
       projectName,
+      'maintenance', // Type de projet
       projectDescription,
       clientId,
-      'in_progress', // Statut: en cours
+      'active', // Statut: actif
       contract_start_date || new Date().toISOString(),
       plan_price, // Budget mensuel
       0, // Progression initiale
-      projectTags,
-      `Forfait: ${plan}\nPrix: ${plan_price}€/mois\nSource: Stripe (WordPress)` // Notes
+      '#10B981' // Couleur verte pour maintenance
     ]);
 
     const project = projectResult.rows[0];
