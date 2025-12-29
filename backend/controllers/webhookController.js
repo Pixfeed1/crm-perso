@@ -93,10 +93,10 @@ const handleMaintenanceWebhook = async (req, res) => {
 
     const projectQuery = `
       INSERT INTO projects (
-        name, description, client_id, status, priority,
+        name, description, client_id, status,
         start_date, budget, progress, tags, notes,
         created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
       RETURNING id, name
     `;
 
@@ -105,7 +105,6 @@ const handleMaintenanceWebhook = async (req, res) => {
       projectDescription,
       clientId,
       'in_progress', // Statut: en cours
-      'medium',
       contract_start_date || new Date().toISOString(),
       plan_price, // Budget mensuel
       0, // Progression initiale
