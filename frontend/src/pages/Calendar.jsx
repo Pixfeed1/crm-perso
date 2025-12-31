@@ -17,6 +17,7 @@ import EventForm from '../components/calendar/EventForm';
 import CalendarSync from '../components/calendar/CalendarSync';
 import ICalExport from '../components/calendar/ICalExport';
 import EmptyState from '../components/common/EmptyState';
+import Button from '../components/common/Button';
 
 const Calendar = () => {
   const { toast } = useToast();
@@ -333,78 +334,72 @@ const Calendar = () => {
   }
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden">
-      <header className="mb-4 flex-shrink-0 pt-16 sm:pt-0">
-        <div className="flex items-center justify-between">
-          <div>
-            <motion.h1
-              className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-teal-300 to-indigo-300"
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-            >
-              Calendrier
-            </motion.h1>
-            <motion.p
-              className="text-indigo-200 mt-2"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-            >
-              Planifiez vos rendez-vous et suivez vos échéances
-            </motion.p>
+    <div className="h-full flex flex-col overflow-y-auto p-4 sm:p-6">
+      <div className="max-w-7xl mx-auto w-full">
+        <header className="mb-4 sm:mb-6 pt-16 sm:pt-0">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
+            <div>
+              <motion.h1
+                className="text-2xl sm:text-3xl md:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-teal-300 to-indigo-300"
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+              >
+                Calendrier
+              </motion.h1>
+              <motion.p
+                className="text-indigo-200 mt-1 sm:mt-2 text-xs sm:text-sm md:text-base"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+              >
+                Planifiez vos rendez-vous et suivez vos échéances
+              </motion.p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+              <Button
+                onClick={() => setIsExportModalOpen(true)}
+                variant="secondary"
+                icon={FiDownload}
+                className="w-full sm:w-auto"
+              >
+                Exporter
+              </Button>
+              <Button
+                onClick={() => setIsSyncModalOpen(true)}
+                variant="primary"
+                icon={FiRefreshCw}
+                className="w-full sm:w-auto"
+              >
+                Synchroniser
+              </Button>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <motion.button
-              onClick={() => setIsExportModalOpen(true)}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition-colors"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5, delay: 0.3 }}
-            >
-              <FiDownload />
-              <span className="hidden sm:inline">Exporter</span>
-            </motion.button>
-            <motion.button
-              onClick={() => setIsSyncModalOpen(true)}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold transition-colors"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5, delay: 0.4 }}
-            >
-              <FiRefreshCw />
-              <span className="hidden sm:inline">Synchroniser</span>
-            </motion.button>
-          </div>
+        </header>
+
+        <div className="mb-4">
+          <CalendarHeader
+            view={view}
+            setView={setView}
+            currentDate={currentDate}
+            onPrevious={navigateToPrevious}
+            onNext={navigateToNext}
+            onToday={navigateToToday}
+            onAddEvent={() => handleAddEvent()}
+            filters={filters}
+            setFilters={setFilters}
+          />
         </div>
-      </header>
 
-      <CalendarHeader
-        view={view}
-        setView={setView}
-        currentDate={currentDate}
-        onPrevious={navigateToPrevious}
-        onNext={navigateToNext}
-        onToday={navigateToToday}
-        onAddEvent={() => handleAddEvent()}
-        filters={filters}
-        setFilters={setFilters}
-        className="flex-shrink-0"
-      />
-
-      <div className="flex flex-col md:flex-row flex-grow bg-gray-800/30 backdrop-blur-sm rounded-2xl overflow-hidden">
+        <div className="bg-gray-800/30 backdrop-blur-sm rounded-2xl overflow-hidden" style={{ height: 'calc(100vh - 320px)', minHeight: '400px' }}>
         <motion.div
-          className="w-full md:w-2/3 flex flex-col overflow-hidden"
+          className="w-full h-full flex flex-col overflow-hidden"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.3 }}
           key={`view-${view}-${currentDate}`}
         >
-          <div className="flex-grow overflow-auto">
+          <div className="flex-grow overflow-auto p-2 sm:p-3">
             <AnimatePresence mode="wait">
               {view === 'month' && (
                 <MonthView
@@ -451,78 +446,74 @@ const Calendar = () => {
             </AnimatePresence>
           </div>
         </motion.div>
-
-        <motion.div
-          className="w-full md:w-1/3 md:pl-4 mt-4 md:mt-0 overflow-hidden"
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.3, delay: 0.1 }}
-        >
-          <div className="bg-gray-800/30 backdrop-blur-sm rounded-2xl p-4 h-full overflow-auto">
-            <AnimatePresence mode="wait">
-              {isAddingEvent ? (
-                <motion.div
-                  key="add-form"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.3 }}
-                  className="w-full"
-                >
-                  <EventForm
-                    selectedDate={selectedDate}
-                    onSave={handleSaveEvent}
-                    onCancel={() => setIsAddingEvent(false)}
-                  />
-                </motion.div>
-              ) : selectedEvent ? (
-                <motion.div
-                  key={`event-${selectedEvent.id}`}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <EventDetails
-                    event={selectedEvent}
-                    onUpdate={(updatedData) => handleUpdateEvent(selectedEvent.id, updatedData)}
-                    onDelete={() => handleDeleteEvent(selectedEvent.id)}
-                  />
-                </motion.div>
-              ) : (
-                <motion.div
-                  key="empty-state"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="h-full flex items-center justify-center"
-                >
-                  <EmptyState
-                    icon={<FiCalendar />}
-                    title={view === 'day' ? 'Sélectionnez un événement' : 'Calendrier'}
-                    description={
-                      view === 'day'
-                        ? "Sélectionnez un événement ou créez-en un nouveau."
-                        : "Cliquez sur une date pour voir les détails ou ajouter un événement."
-                    }
-                    action={
-                      <motion.button
-                        className="mt-4 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg flex items-center"
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => handleAddEvent()}
-                      >
-                        <span className="mr-2">+</span>
-                        Nouvel événement
-                      </motion.button>
-                    }
-                  />
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        </motion.div>
       </div>
+      </div>
+
+      {/* Modal pour formulaire/détails - Mobile & Desktop (en dehors du conteneur calendrier) */}
+      <AnimatePresence>
+        {(isAddingEvent || selectedEvent) && (
+          <>
+            {/* Overlay pour fermer */}
+            <motion.div
+              className="fixed inset-0 bg-black/60 z-[100]"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => {
+                setIsAddingEvent(false);
+                setSelectedEvent(null);
+              }}
+            />
+
+            {/* Modal slide-up (mobile) / Modal centré (desktop) */}
+            <motion.div
+              className="fixed inset-x-0 bottom-0 lg:inset-0 lg:flex lg:items-center lg:justify-center z-[101] overflow-hidden pointer-events-none"
+              initial={{ y: "100%", opacity: 0 }}
+              animate={{
+                y: 0,
+                opacity: 1
+              }}
+              exit={{ y: "100%", opacity: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <div className="bg-gray-800/98 backdrop-blur-lg rounded-t-2xl lg:rounded-2xl p-4 sm:p-6 h-[85vh] lg:h-auto lg:max-h-[90vh] lg:max-w-3xl lg:w-full overflow-y-auto mx-auto lg:m-4 shadow-2xl border-t lg:border border-gray-700/50 pointer-events-auto">
+                <AnimatePresence mode="wait">
+                  {isAddingEvent ? (
+                    <motion.div
+                      key="add-form"
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      transition={{ duration: 0.3 }}
+                      className="w-full"
+                    >
+                      <EventForm
+                        selectedDate={selectedDate}
+                        onSave={handleSaveEvent}
+                        onCancel={() => setIsAddingEvent(false)}
+                      />
+                    </motion.div>
+                  ) : selectedEvent ? (
+                    <motion.div
+                      key={`event-${selectedEvent.id}`}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <EventDetails
+                        event={selectedEvent}
+                        onUpdate={(updatedData) => handleUpdateEvent(selectedEvent.id, updatedData)}
+                        onDelete={() => handleDeleteEvent(selectedEvent.id)}
+                      />
+                    </motion.div>
+                  ) : null}
+                </AnimatePresence>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* Modal de synchronisation */}
       <CalendarSync

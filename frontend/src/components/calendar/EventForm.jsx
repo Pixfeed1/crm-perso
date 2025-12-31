@@ -261,9 +261,9 @@ const EventForm = ({ event = {}, selectedDate, onSave, onCancel }) => {
             name="title"
             value={formData.title}
             onChange={handleInputChange}
-            className={`w-full bg-white text-gray-800 border ${
-              errors.title ? 'border-rose-500' : 'border-gray-400'
-            } rounded-lg px-4 py-2 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500`}
+            className={`w-full bg-gray-900/50 text-white border ${
+              errors.title ? 'border-rose-500' : 'border-gray-700'
+            } rounded-lg px-4 py-2 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500`}
             placeholder="Ex: Réunion d'équipe"
           />
           {errors.title && (
@@ -282,7 +282,7 @@ const EventForm = ({ event = {}, selectedDate, onSave, onCancel }) => {
               name="category"
               value={formData.category}
               onChange={handleInputChange}
-              className="w-full bg-white text-gray-800 border border-gray-400 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full bg-gray-900/50 text-white border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
             >
               {categoryOptions.map(option => (
                 <option key={option.value} value={option.value}>
@@ -298,12 +298,12 @@ const EventForm = ({ event = {}, selectedDate, onSave, onCancel }) => {
             </label>
             <div className="flex space-x-2">
               {priorityOptions.map(option => (
-                <label 
+                <label
                   key={option.value}
                   className={`flex-1 py-2 rounded-lg cursor-pointer text-center text-sm ${
-                    formData.priority === option.value 
+                    formData.priority === option.value
                       ? `${option.color} text-white`
-                      : 'bg-white text-gray-800 hover:bg-gray-100'
+                      : 'bg-gray-900/50 text-gray-300 border border-gray-700 hover:bg-gray-800/50'
                   }`}
                 >
                   <input 
@@ -348,8 +348,8 @@ const EventForm = ({ event = {}, selectedDate, onSave, onCancel }) => {
                 dateFormat={formData.all_day ? "dd/MM/yyyy" : "dd/MM/yyyy HH:mm"}
                 timeFormat="HH:mm"
                 timeIntervals={15}
-                className={`w-full bg-white text-gray-800 border ${
-                  errors.start_date ? 'border-rose-500' : 'border-gray-400'
+                className={`w-full bg-gray-900/50 text-white border ${
+                  errors.start_date ? 'border-rose-500' : 'border-gray-700'
                 } rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500`}
               />
               {errors.start_date && (
@@ -368,8 +368,8 @@ const EventForm = ({ event = {}, selectedDate, onSave, onCancel }) => {
                 dateFormat={formData.all_day ? "dd/MM/yyyy" : "dd/MM/yyyy HH:mm"}
                 timeFormat="HH:mm"
                 timeIntervals={15}
-                className={`w-full bg-white text-gray-800 border ${
-                  errors.end_date ? 'border-rose-500' : 'border-gray-400'
+                className={`w-full bg-gray-900/50 text-white border ${
+                  errors.end_date ? 'border-rose-500' : 'border-gray-700'
                 } rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500`}
               />
               {errors.end_date && (
@@ -463,7 +463,7 @@ const EventForm = ({ event = {}, selectedDate, onSave, onCancel }) => {
             value={formData.description}
             onChange={handleInputChange}
             rows="3"
-            className="w-full bg-white text-gray-800 border border-gray-400 rounded-lg px-4 py-2 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full bg-gray-900/50 text-white border border-gray-700 rounded-lg px-4 py-2 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             placeholder="Détails de l'événement..."
           />
         </div>

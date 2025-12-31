@@ -254,7 +254,7 @@ router.post('/:id/payments', async (req, res) => {
     });
 
     try {
-      const revenue = await revenueModel.createRevenue(db, {
+      const revenue = await revenueModel.createRevenue(db.pool, {
         amount: amount,
         date: payment_date || new Date().toISOString().split('T')[0],
         description: `Paiement pour le projet: ${project.name}`,

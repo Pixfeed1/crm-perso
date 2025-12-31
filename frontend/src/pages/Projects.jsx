@@ -14,6 +14,7 @@ import ProjectForm from '../components/projects/ProjectForm';
 import ProjectFilter from '../components/projects/ProjectFilter';
 import TimelineView from '../components/projects/TimelineView';
 import EmptyState from '../components/common/EmptyState';
+import Button from '../components/common/Button';
 
 const Projects = () => {
   const { toast } = useToast();
@@ -453,225 +454,200 @@ const Projects = () => {
   }
 
   return (
-    <div className="h-full flex flex-col">
-      <header className="mb-4 sm:mb-6 px-2 sm:px-0 pt-16 sm:pt-0">
-        <motion.h1
-          className="text-3xl sm:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-300 to-indigo-300"
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          Projets
-        </motion.h1>
-        <motion.p
-          className="text-indigo-200 mt-2 text-sm sm:text-base"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-        >
-          Gérez vos projets et suivez leur avancement
-        </motion.p>
-      </header>
-
-      {/* Statistiques */}
-      {stats && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6 px-2 sm:px-0">
-          <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-4">
-            <div className="text-gray-400 text-xs mb-1">Total Projets</div>
-            <div className="text-white text-2xl font-bold">{stats.total || 0}</div>
-          </div>
-          <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4">
-            <div className="text-green-400 text-xs mb-1">Actifs</div>
-            <div className="text-white text-2xl font-bold">{stats.active || 0}</div>
-          </div>
-          <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4">
-            <div className="text-blue-400 text-xs mb-1">Terminés</div>
-            <div className="text-white text-2xl font-bold">{stats.completed || 0}</div>
-          </div>
-          <div className="bg-purple-500/10 border border-purple-500/30 rounded-xl p-4">
-            <div className="text-purple-400 text-xs mb-1">Budget Total</div>
-            <div className="text-white text-2xl font-bold">{stats.totalBudget || 0}€</div>
-          </div>
-        </div>
-      )}
-
-      {/* Barre d'outils avec boutons vue et actions */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3 px-2 sm:px-0">
-        <div className="flex items-center gap-4">
-          <h2 className="text-lg sm:text-xl font-semibold text-white">Vos Projets</h2>
-          <div className="bg-gray-800/50 rounded-lg p-1 flex">
-            <motion.button
-              className={`px-3 py-1 rounded-lg text-sm flex items-center gap-1 transition-colors ${
-                view === 'list' ? 'bg-purple-600 text-white' : 'text-gray-300 hover:bg-gray-700/50'
-              }`}
-              onClick={() => setView('list')}
-              whileTap={{ scale: 0.95 }}
-            >
-              <FiList size={14} /> Liste
-            </motion.button>
-            <motion.button
-              className={`px-3 py-1 rounded-lg text-sm flex items-center gap-1 transition-colors ${
-                view === 'timeline' ? 'bg-purple-600 text-white' : 'text-gray-300 hover:bg-gray-700/50'
-              }`}
-              onClick={() => setView('timeline')}
-              whileTap={{ scale: 0.95 }}
-            >
-              <FiCalendar size={14} /> Timeline
-            </motion.button>
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => exportAPI.projects()}
-            title="Exporter les projets en CSV"
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg flex items-center gap-2 transition-colors"
+    <div className="h-full flex flex-col overflow-y-auto p-4 sm:p-6">
+      <div className="max-w-7xl mx-auto w-full">
+        <header className="mb-4 sm:mb-6 pt-16 sm:pt-0">
+          <motion.h1
+            className="text-3xl sm:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-300 to-indigo-300"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
           >
-            <FiDownload />
-            <span className="hidden sm:inline">Exporter</span>
-          </motion.button>
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={handleAddProject}
-            className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-lg flex items-center gap-2 transition-colors"
+            Projets
+          </motion.h1>
+          <motion.p
+            className="text-indigo-200 mt-2 text-sm sm:text-base"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
           >
-            <FiPlus />
-            <span>Nouveau projet</span>
-          </motion.button>
-        </div>
-      </div>
+            Gérez vos projets et suivez leur avancement
+          </motion.p>
+        </header>
 
-      {view === 'timeline' ? (
-        /* Vue Timeline/Gantt */
-        <motion.div
-          className="flex-grow overflow-hidden"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.3 }}
-        >
-          <TimelineView
-            projects={filteredProjects}
-            onProjectClick={handleSelectProject}
-          />
-        </motion.div>
-      ) : (
-        /* Vue Liste */
-        <div className="flex flex-col lg:flex-row flex-grow overflow-hidden gap-4">
-          {/* Panneau de gauche: Liste des projets */}
+        {/* Statistiques */}
+        {stats && (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+            <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-4">
+              <div className="text-gray-400 text-xs mb-1">Total Projets</div>
+              <div className="text-white text-2xl font-bold">{stats.total || 0}</div>
+            </div>
+            <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4">
+              <div className="text-green-400 text-xs mb-1">Actifs</div>
+              <div className="text-white text-2xl font-bold">{stats.active || 0}</div>
+            </div>
+            <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4">
+              <div className="text-blue-400 text-xs mb-1">Terminés</div>
+              <div className="text-white text-2xl font-bold">{stats.completed || 0}</div>
+            </div>
+            <div className="bg-purple-500/10 border border-purple-500/30 rounded-xl p-4">
+              <div className="text-purple-400 text-xs mb-1">Budget Total</div>
+              <div className="text-white text-2xl font-bold">{stats.totalBudget || 0}€</div>
+            </div>
+          </div>
+        )}
+
+        {/* Barre d'outils avec boutons vue et actions */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
+          <div className="flex items-center gap-4">
+            <h2 className="text-lg sm:text-xl font-semibold text-white">Vos Projets</h2>
+            <div className="bg-gray-800/50 rounded-lg p-1 flex">
+              <motion.button
+                className={`px-3 py-1 rounded-lg text-sm flex items-center gap-1 transition-colors ${
+                  view === 'list' ? 'bg-purple-600 text-white' : 'text-gray-300 hover:bg-gray-700/50'
+                }`}
+                onClick={() => setView('list')}
+                whileTap={{ scale: 0.95 }}
+              >
+                <FiList size={14} /> Liste
+              </motion.button>
+              <motion.button
+                className={`px-3 py-1 rounded-lg text-sm flex items-center gap-1 transition-colors ${
+                  view === 'timeline' ? 'bg-purple-600 text-white' : 'text-gray-300 hover:bg-gray-700/50'
+                }`}
+                onClick={() => setView('timeline')}
+                whileTap={{ scale: 0.95 }}
+              >
+                <FiCalendar size={14} /> Timeline
+              </motion.button>
+            </div>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            <Button
+              onClick={() => exportAPI.projects()}
+              variant="secondary"
+              icon={FiDownload}
+              className="w-full sm:w-auto"
+            >
+              Exporter
+            </Button>
+            <Button
+              onClick={handleAddProject}
+              variant="primary"
+              icon={FiPlus}
+              className="w-full sm:w-auto"
+            >
+              Nouveau projet
+            </Button>
+          </div>
+        </div>
+
+        {view === 'timeline' ? (
+          /* Vue Timeline/Gantt */
           <motion.div
-            className={`${showDetails ? 'hidden lg:flex' : 'flex'} w-full lg:w-1/3 overflow-hidden flex-col`}
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
+            className="flex-grow overflow-hidden"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
             transition={{ duration: 0.3 }}
           >
-          <div className="px-2 sm:px-0">
-            <ProjectFilter
-              filters={filters}
-              setFilters={setFilters}
-              onSort={handleSort}
-              sortField={sortField}
-              sortDirection={sortDirection}
+            <TimelineView
+              projects={filteredProjects}
+              onProjectClick={handleSelectProject}
             />
-          </div>
+          </motion.div>
+        ) : (
+          /* Vue Liste */
+          <>
+            {/* Filtres */}
+            <div className="mb-4">
+              <ProjectFilter
+                filters={filters}
+                setFilters={setFilters}
+                onSort={handleSort}
+                sortField={sortField}
+                sortDirection={sortDirection}
+              />
+            </div>
 
-          <div className="flex-grow overflow-y-auto px-2 sm:px-0 space-y-3 mt-4">
-            <AnimatePresence>
-              {filteredProjects.length > 0 ? (
-                filteredProjects.map((project) => (
-                  <motion.div
-                    key={project.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.2 }}
-                    layout
-                  >
-                    <ProjectCard
-                      project={project}
-                      isSelected={selectedProject && selectedProject.id === project.id}
-                      onClick={() => handleSelectProject(project)}
-                    />
-                  </motion.div>
-                ))
-              ) : (
-                <EmptyState
-                  icon={<FiZap />}
-                  title="Aucun projet trouvé"
-                  description={filters.search || filters.status !== 'all' || filters.type !== 'all' || filters.timeframe !== 'all' ?
-                    "Modifiez vos filtres pour voir plus de projets." :
-                    "Ajoutez de nouveaux projets pour commencer."
-                  }
-                />
-              )}
-            </AnimatePresence>
-          </div>
-        </motion.div>
-
-        {/* Panneau de droite: Détails du projet ou formulaire d'ajout */}
-        <motion.div
-          className={`${showDetails ? 'flex' : 'hidden lg:flex'} w-full lg:w-2/3 overflow-hidden flex-col`}
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.3, delay: 0.1 }}
-        >
-          {/* Bouton retour mobile */}
-          {showDetails && (
-            <motion.button
-              className="lg:hidden mb-3 flex items-center text-purple-300 hover:text-purple-200 px-2"
-              onClick={handleBackToList}
-              whileTap={{ scale: 0.95 }}
-            >
-              <FiArrowLeft className="mr-2" />
-              <span className="text-sm text-white">Retour à la liste</span>
-            </motion.button>
-          )}
-
-          <div className="h-full overflow-y-auto">
-            {isLoading && selectedProject ? (
-              <div className="h-full flex items-center justify-center">
-                <motion.div
-                  className="w-10 h-10 sm:w-12 sm:h-12 border-4 border-purple-500 border-t-transparent rounded-full"
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                />
+            {/* Grille de projets */}
+            {filteredProjects.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <AnimatePresence>
+                  {filteredProjects.map((project) => (
+                    <motion.div
+                      key={project.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      transition={{ duration: 0.2 }}
+                      layout
+                    >
+                      <ProjectCard
+                        project={project}
+                        isSelected={selectedProject && selectedProject.id === project.id}
+                        onClick={() => handleSelectProject(project)}
+                      />
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
               </div>
             ) : (
-              <AnimatePresence mode="wait">
-                {isAddingProject ? (
-                  <ProjectForm
-                    onSave={handleSaveProject}
-                    onCancel={handleBackToList}
-                  />
-                ) : selectedProject ? (
-                  <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-gray-700/50">
-                    <ProjectDetails
-                      project={selectedProject}
-                      onUpdate={(updatedData) => handleUpdateProject(selectedProject.id, updatedData)}
-                      onDelete={() => handleDeleteProject(selectedProject.id)}
-                      onAddTask={(taskData) => handleAddTask(selectedProject.id, taskData)}
-                      onToggleTaskStatus={(taskId) => handleToggleTaskStatus(selectedProject.id, taskId)}
-                    />
-                  </div>
-                ) : (
-                  <div className="h-full flex items-center justify-center">
-                    <EmptyState
-                      icon={<FiTarget />}
-                      title="Sélectionnez un projet"
-                      description="Choisissez un projet dans la liste ou créez-en un nouveau."
-                    />
-                  </div>
-                )}
-              </AnimatePresence>
+              <EmptyState
+                icon={<FiZap />}
+                title="Aucun projet trouvé"
+                description={filters.search || filters.status !== 'all' || filters.type !== 'all' || filters.timeframe !== 'all' ?
+                  "Modifiez vos filtres pour voir plus de projets." :
+                  "Ajoutez de nouveaux projets pour commencer."
+                }
+              />
             )}
-          </div>
-        </motion.div>
-        </div>
-      )}
+          </>
+        )}
+      </div>
 
       {/* Modal de confirmation */}
       <ConfirmModal {...confirmState.config} isOpen={confirmState.isOpen} />
+
+      {/* Modal d'ajout de projet */}
+      {isAddingProject && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center p-4 overflow-y-auto bg-black/60 backdrop-blur-sm">
+          <div className="relative w-full max-w-4xl my-8">
+            <ProjectForm
+              onSave={handleSaveProject}
+              onCancel={() => {
+                setIsAddingProject(false);
+                setShowDetails(false);
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Modal détails projet */}
+      {!isAddingProject && selectedProject && showDetails && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center p-4 overflow-y-auto">
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => {
+              setSelectedProject(null);
+              setShowDetails(false);
+            }}
+          />
+          <div className="relative w-full max-w-4xl my-8">
+            <ProjectDetails
+              project={selectedProject}
+              onUpdate={(updatedData) => handleUpdateProject(selectedProject.id, updatedData)}
+              onDelete={() => handleDeleteProject(selectedProject.id)}
+              onAddTask={(taskData) => handleAddTask(selectedProject.id, taskData)}
+              onToggleTaskStatus={(taskId) => handleToggleTaskStatus(selectedProject.id, taskId)}
+              onClose={() => {
+                setSelectedProject(null);
+                setShowDetails(false);
+              }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -107,11 +107,11 @@ const RevenueList = ({ revenues, selectedRevenue, onSelectRevenue }) => {
   }
   
   // Solution pour éviter la double barre de défilement :
-  // Utilisation de 'overflow-visible' au lieu de 'overflow-y-auto'
+  // Activer le scroll vertical pour pouvoir défiler dans la liste
   return (
-    <div className="flex-1 overflow-visible">
+    <div className="flex-1 overflow-y-auto">
       <table className="min-w-full divide-y divide-gray-700">
-        <thead className="sticky top-0 bg-gray-800/80 backdrop-blur-sm">
+        <thead className="sticky top-0 bg-gray-800/80 backdrop-blur-sm z-10">
           <tr>
             <th 
               className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer"

@@ -301,7 +301,7 @@ const ProspectionPanel = ({ onLeadCreated }) => {
         </div>
 
         {/* Onglets modernes */}
-        <div className="flex gap-2 mt-4">
+        <div className="flex flex-col sm:flex-row gap-2 mt-4">
           <button
             onClick={() => setActiveTab('jobs')}
             className={`flex-1 px-6 py-3 rounded-lg text-sm font-medium transition-all ${
@@ -348,8 +348,8 @@ const ProspectionPanel = ({ onLeadCreated }) => {
           <form onSubmit={handleJobSearch} className="bg-gray-800/30 border border-gray-700 rounded-xl p-6 space-y-6">
             <div className="space-y-4">
               {/* Champs principaux */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <div className="lg:col-span-2">
+              <div className="space-y-4">
+                <div>
                   <label className="block text-sm font-semibold text-white mb-2 flex items-center gap-2">
                     <FiSearch className="text-indigo-400" />
                     Mots-clés <span className="text-rose-400">*</span>
@@ -363,7 +363,7 @@ const ProspectionPanel = ({ onLeadCreated }) => {
                   />
                 </div>
 
-                <div className="lg:col-span-2">
+                <div>
                   <label className="block text-sm font-semibold text-white mb-2 flex items-center gap-2">
                     <FiMapPin className="text-indigo-400" />
                     Localisation
@@ -387,7 +387,7 @@ const ProspectionPanel = ({ onLeadCreated }) => {
                 <label className="block text-sm font-semibold text-white mb-3">
                   Sources de recherche <span className="text-rose-400">*</span>
                 </label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="flex flex-col gap-3">
                   <label className={`flex items-center gap-3 p-4 border-2 rounded-xl cursor-pointer transition-all ${
                     jobSearchParams.sources.includes('pole-emploi')
                       ? 'bg-indigo-500/20 border-indigo-500 shadow-lg shadow-indigo-500/20'
@@ -424,9 +424,9 @@ const ProspectionPanel = ({ onLeadCreated }) => {
               </div>
 
               {/* Filtres avancés */}
-              <div className="md:col-span-2 pt-2 border-t border-gray-700">
+              <div className="pt-2 border-t border-gray-700">
                 <h4 className="text-sm font-medium text-gray-300 mb-3">Filtres avancés</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-4">
 
                   {/* Type de contrat */}
                   <div>
@@ -484,7 +484,7 @@ const ProspectionPanel = ({ onLeadCreated }) => {
                   </div>
 
                   {/* Salaire */}
-                  <div className="flex gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2">
                     <div className="flex-1">
                       <label className="block text-sm font-medium text-gray-300 mb-2">
                         Salaire min (€/an)
@@ -520,7 +520,7 @@ const ProspectionPanel = ({ onLeadCreated }) => {
               <button
                 type="submit"
                 disabled={isSearchingJobs}
-                className="px-8 py-3.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:from-gray-700 disabled:to-gray-700 disabled:cursor-not-allowed text-white rounded-xl font-semibold transition-all flex items-center gap-3 shadow-lg shadow-indigo-500/30 hover:shadow-xl hover:shadow-indigo-500/50 hover:scale-105"
+                className="w-full sm:w-auto px-8 py-3.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:from-gray-700 disabled:to-gray-700 disabled:cursor-not-allowed text-white rounded-xl font-semibold transition-all flex items-center justify-center gap-3 shadow-lg shadow-indigo-500/30 hover:shadow-xl hover:shadow-indigo-500/50 sm:hover:scale-105"
               >
                 {isSearchingJobs ? (
                   <>
@@ -549,7 +549,7 @@ const ProspectionPanel = ({ onLeadCreated }) => {
                   Cliquez sur une carte pour importer
                 </span>
               </div>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 max-h-[700px] overflow-y-auto pr-2">
+              <div className="flex flex-col gap-4 max-h-[700px] overflow-y-auto pr-2">
                 {jobResults.map((opportunity, index) => (
                   <OpportunityCard
                     key={opportunity.id || index}
@@ -609,8 +609,8 @@ const ProspectionPanel = ({ onLeadCreated }) => {
           )}
 
           <form onSubmit={handleCompanySearch} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="md:col-span-2">
+            <div className="space-y-4">
+              <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
                   Code NAF/APE
                 </label>
@@ -666,29 +666,29 @@ const ProspectionPanel = ({ onLeadCreated }) => {
                 <label className="block text-sm font-medium text-gray-300 mb-2">
                   Effectifs min - max
                 </label>
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <input
                     type="number"
                     value={companySearchParams.minEmployees}
                     onChange={(e) => setCompanySearchParams({ ...companySearchParams, minEmployees: e.target.value })}
                     placeholder="Min"
-                    className="w-1/2 px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                    className="w-full sm:w-1/2 px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
                   />
                   <input
                     type="number"
                     value={companySearchParams.maxEmployees}
                     onChange={(e) => setCompanySearchParams({ ...companySearchParams, maxEmployees: e.target.value })}
                     placeholder="Max"
-                    className="w-1/2 px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                    className="w-full sm:w-1/2 px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
                   />
                 </div>
               </div>
 
-              <div className="md:col-span-2">
+              <div>
                 <button
                   type="submit"
                   disabled={isSearchingCompanies}
-                  className={`w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                  className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium transition-colors ${
                     isSearchingCompanies
                       ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
                       : 'bg-indigo-600 hover:bg-indigo-700 text-white'
@@ -735,8 +735,8 @@ const ProspectionPanel = ({ onLeadCreated }) => {
 
 const OpportunityCard = ({ opportunity, onImport, importing }) => (
   <div className="bg-gray-800/30 border border-gray-700/50 rounded-lg p-4 hover:border-indigo-500/30 transition-colors">
-    <div className="flex items-start justify-between gap-4">
-      <div className="flex-1">
+    <div className="flex flex-col sm:flex-row items-start gap-4">
+      <div className="flex-1 w-full">
         <h5 className="text-white font-semibold mb-1">
           {opportunity.company_name || 'Entreprise confidentielle'}
         </h5>
@@ -781,11 +781,11 @@ const OpportunityCard = ({ opportunity, onImport, importing }) => (
         </div>
       </div>
 
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-row sm:flex-col gap-2 w-full sm:w-auto">
         <button
           onClick={() => onImport(opportunity)}
           disabled={importing}
-          className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+          className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
             importing
               ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
               : 'bg-green-600 hover:bg-green-700 text-white'
@@ -800,7 +800,7 @@ const OpportunityCard = ({ opportunity, onImport, importing }) => (
             href={opportunity.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-2 px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm font-medium transition-colors"
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm font-medium transition-colors"
           >
             <FiExternalLink className="w-4 h-4" />
             Voir
@@ -817,8 +817,8 @@ const OpportunityCard = ({ opportunity, onImport, importing }) => (
 
 const CompanyCard = ({ company, onImport, onEnrichWithPappers, onManualEnrich, importing, enriching, pappersCredits }) => (
   <div className="bg-gray-800/30 border border-gray-700/50 rounded-lg p-4 hover:border-indigo-500/30 transition-colors">
-    <div className="flex items-start justify-between gap-4">
-      <div className="flex-1">
+    <div className="flex flex-col sm:flex-row items-start gap-4">
+      <div className="flex-1 w-full">
         <div className="flex items-center gap-2 mb-1">
           <h5 className="text-white font-semibold">
             {company.company_name}
@@ -871,11 +871,11 @@ const CompanyCard = ({ company, onImport, onEnrichWithPappers, onManualEnrich, i
         )}
       </div>
 
-      <div className="flex flex-col gap-2 min-w-[140px]">
+      <div className="flex flex-row sm:flex-col gap-2 w-full sm:w-auto sm:min-w-[140px]">
         <button
           onClick={() => onImport(company)}
           disabled={importing}
-          className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+          className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
             importing
               ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
               : 'bg-green-600 hover:bg-green-700 text-white'
@@ -890,7 +890,7 @@ const CompanyCard = ({ company, onImport, onEnrichWithPappers, onManualEnrich, i
             <button
               onClick={() => onEnrichWithPappers(company)}
               disabled={enriching || (pappersCredits && pappersCredits.is_depleted)}
-              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                 enriching || (pappersCredits && pappersCredits.is_depleted)
                   ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
                   : 'bg-indigo-600 hover:bg-indigo-700 text-white'
@@ -903,7 +903,7 @@ const CompanyCard = ({ company, onImport, onEnrichWithPappers, onManualEnrich, i
 
             <button
               onClick={() => onManualEnrich(company)}
-              className="flex items-center gap-2 px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm font-medium transition-colors"
+              className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm font-medium transition-colors"
               title="Enrichir manuellement"
             >
               <FiEdit className="w-4 h-4" />

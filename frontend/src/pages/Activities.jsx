@@ -1,7 +1,7 @@
 // src/pages/Activities.jsx
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiClipboard, FiCalendar, FiEdit2, FiTrash2, FiMonitor, FiEdit, FiUsers, FiPhone, FiRadio, FiTool, FiCheck, FiDownload } from 'react-icons/fi';
+import { FiClipboard, FiCalendar, FiEdit2, FiTrash2, FiMonitor, FiEdit, FiUsers, FiPhone, FiRadio, FiTool, FiCheck, FiDownload, FiSearch } from 'react-icons/fi';
 import { useToast } from '../hooks/useToast';
 import { useConfirm } from '../hooks/useConfirm';
 import ConfirmModal from '../components/common/ConfirmModal';
@@ -15,6 +15,7 @@ import ActivityForm from '../components/activities/ActivityForm';
 import ActivityFilter from '../components/activities/ActivityFilter';
 import ActivityCalendar from '../components/activities/ActivityCalendar';
 import EmptyState from '../components/common/EmptyState';
+import Button from '../components/common/Button';
 
 const Activities = () => {
   const { toast } = useToast();
@@ -344,99 +345,100 @@ const Activities = () => {
   }
 
   return (
-    <div className="h-full flex flex-col">
-      {/* Titre de page */}
-      <header className="mb-6 pt-16 sm:pt-0">
-        <motion.h1 
-          className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-300 to-indigo-300"
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          Activités
-        </motion.h1>
-        <motion.p 
-          className="text-indigo-200 mt-2"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-        >
-          Suivez vos tâches quotidiennes et optimisez votre productivité
-        </motion.p>
-      </header>
+    <div className="h-full flex flex-col overflow-y-auto p-4 sm:p-6">
+      <div className="max-w-7xl mx-auto w-full">
+        {/* Titre de page */}
+        <header className="mb-6 pt-16 sm:pt-0">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+            <div>
+              <motion.h1
+                className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-300 to-indigo-300"
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+              >
+                Activités
+              </motion.h1>
+              <motion.p
+                className="text-indigo-200 mt-2"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+              >
+                Suivez vos tâches quotidiennes et optimisez votre productivité
+              </motion.p>
+            </div>
 
-      {/* Statistiques globales */}
-      <ActivityStats stats={stats} />
-
-      {/* Filtres et sélecteurs */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 sm:gap-0">
-        <ActivityFilter
-          filters={filters}
-          setFilters={setFilters}
-          projects={projects}
-          startDate={startDate}
-          endDate={endDate}
-          onPeriodChange={handlePeriodChange}
-          onSort={handleSort}
-          sortField={sortField}
-          sortDirection={sortDirection}
-        />
-        <div className="flex items-center space-x-3">
-          {/* Sélecteur de vue : liste / calendrier */}
-          <div className="bg-gray-800/50 rounded-lg p-1 flex">
-            <motion.button
-              className={`px-3 py-1 rounded-lg text-sm flex items-center ${
-                view === 'list'
-                  ? 'bg-indigo-600 text-white'
-                  : 'text-gray-300 hover:bg-gray-700/50'
-              }`}
-              whileHover={{ scale: view === 'list' ? 1 : 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setView('list')}
-            >
-              <FiClipboard className="mr-1" />
-              Liste
-            </motion.button>
-            <motion.button
-              className={`px-3 py-1 rounded-lg text-sm flex items-center ${
-                view === 'calendar'
-                  ? 'bg-indigo-600 text-white'
-                  : 'text-gray-300 hover:bg-gray-700/50'
-              }`}
-              whileHover={{ scale: view === 'calendar' ? 1 : 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setView('calendar')}
-            >
-              <FiCalendar className="mr-1" />
-              Calendrier
-            </motion.button>
+            <div className="flex flex-col sm:flex-row gap-2">
+              {/* Sélecteur de vue : liste / calendrier */}
+              <div className="bg-gray-800/50 rounded-lg p-1 flex">
+                <motion.button
+                  className={`px-3 py-1 rounded-lg text-sm flex items-center justify-center flex-1 sm:flex-none ${
+                    view === 'list'
+                      ? 'bg-indigo-600 text-white'
+                      : 'text-gray-300 hover:bg-gray-700/50'
+                  }`}
+                  whileHover={{ scale: view === 'list' ? 1 : 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setView('list')}
+                >
+                  <FiClipboard className="mr-1" />
+                  Liste
+                </motion.button>
+                <motion.button
+                  className={`px-3 py-1 rounded-lg text-sm flex items-center justify-center flex-1 sm:flex-none ${
+                    view === 'calendar'
+                      ? 'bg-indigo-600 text-white'
+                      : 'text-gray-300 hover:bg-gray-700/50'
+                  }`}
+                  whileHover={{ scale: view === 'calendar' ? 1 : 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setView('calendar')}
+                >
+                  <FiCalendar className="mr-1" />
+                  Calendrier
+                </motion.button>
+              </div>
+              {/* Boutons export et ajout */}
+              <Button
+                onClick={() => exportAPI.activities()}
+                variant="secondary"
+                icon={FiDownload}
+                className="w-full sm:w-auto"
+              >
+                Exporter
+              </Button>
+              <Button
+                onClick={handleAddActivity}
+                variant="primary"
+                className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700"
+              >
+                + Activité
+              </Button>
+            </div>
           </div>
-          {/* Boutons export et ajout */}
-          <motion.button
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg flex items-center"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => exportAPI.activities()}
-            title="Exporter les activités en CSV"
-          >
-            <FiDownload className="mr-1" /> Exporter
-          </motion.button>
-          <motion.button
-            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg flex items-center"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={handleAddActivity}
-          >
-            <span className="mr-2">+</span>
-            Activité
-          </motion.button>
-        </div>
-      </div>
+        </header>
 
-      {/* Conteneur principal (grille) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow">
-        {/* 1) Vue principale (liste/calendrier) */}
-        <div className="lg:col-span-7 bg-gray-800/30 backdrop-blur-sm rounded-2xl p-3 sm:p-4 md:p-6 overflow-hidden flex flex-col">
+        {/* Statistiques globales */}
+        <ActivityStats stats={stats} />
+
+        {/* Filtres */}
+        <div className="mb-6">
+          <ActivityFilter
+            filters={filters}
+            setFilters={setFilters}
+            projects={projects}
+            startDate={startDate}
+            endDate={endDate}
+            onPeriodChange={handlePeriodChange}
+            onSort={handleSort}
+            sortField={sortField}
+            sortDirection={sortDirection}
+          />
+        </div>
+
+        {/* Vue principale (liste/calendrier) */}
+        <div className="bg-gray-800/30 backdrop-blur-sm rounded-2xl p-3 sm:p-4 md:p-6 mb-6">
           <AnimatePresence mode="wait">
             {view === 'list' ? (
               <motion.div
@@ -475,208 +477,188 @@ const Activities = () => {
           </AnimatePresence>
         </div>
 
-        {/* 2) Panneau de détails ou formulaire
-            Ici, on force l'overflow en 'hidden' pour empêcher tout défilement. */}
-        <div className="
-          lg:col-span-5
-          bg-gray-800/30
-          backdrop-blur-sm
-          rounded-2xl
-          p-2 sm:p-4 md:p-6
-          overflow-hidden
-        ">
-          <AnimatePresence mode="wait">
-            {isAddingActivity ? (
-              /* Formulaire de création */
-              <motion.div
-                key="add-form"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-                className="w-full"
-              >
-                <ActivityForm
-                  onSave={handleSaveActivity}
-                  onCancel={() => setIsAddingActivity(false)}
-                  projects={projects}
-                  defaultDate={new Date()}
-                />
-              </motion.div>
-            ) : selectedActivity ? (
-              /* Affichage des détails d'une activité */
-              <motion.div
-                key={`activity-${selectedActivity.id}`}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-                className="w-full"
-              >
-                <div className="flex justify-between items-start mb-4">
-                  <h3 className="text-xl font-semibold text-white">Détails de l'activité</h3>
-                  <div className="flex space-x-2">
-                    {/* Bouton Editer (= recréer) */}
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      className="p-2 rounded-lg bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300"
-                      onClick={() => {
-                        setIsAddingActivity(true);
-                        setSelectedActivity(null);
-                      }}
-                    >
-                      <FiEdit2 />
-                    </motion.button>
-                    {/* Bouton Supprimer */}
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      className="p-2 rounded-lg bg-rose-600/30 hover:bg-rose-600/50 text-rose-300"
-                      onClick={() => handleDeleteActivity(selectedActivity.id)}
-                    >
-                      <FiTrash2 />
-                    </motion.button>
+        {/* Panneau de détails ou formulaire (sous la liste) */}
+        {(isAddingActivity || selectedActivity) && (
+          <div className="bg-gray-800/30 backdrop-blur-sm rounded-2xl p-2 sm:p-4 md:p-6">
+            <AnimatePresence mode="wait">
+              {isAddingActivity ? (
+                /* Formulaire de création */
+                <motion.div
+                  key="add-form"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.3 }}
+                  className="w-full"
+                >
+                  <ActivityForm
+                    onSave={handleSaveActivity}
+                    onCancel={() => setIsAddingActivity(false)}
+                    projects={projects}
+                    defaultDate={new Date()}
+                  />
+                </motion.div>
+              ) : selectedActivity ? (
+                /* Affichage des détails d'une activité */
+                <motion.div
+                  key={`activity-${selectedActivity.id}`}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.3 }}
+                  className="w-full"
+                >
+                  <div className="flex justify-between items-start mb-4">
+                    <h3 className="text-xl font-semibold text-white">Détails de l'activité</h3>
+                    <div className="flex space-x-2">
+                      {/* Bouton Editer (= recréer) */}
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        className="p-2 rounded-lg bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300"
+                        onClick={() => {
+                          setIsAddingActivity(true);
+                          setSelectedActivity(null);
+                        }}
+                      >
+                        <FiEdit2 />
+                      </motion.button>
+                      {/* Bouton Supprimer */}
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        className="p-2 rounded-lg bg-rose-600/30 hover:bg-rose-600/50 text-rose-300"
+                        onClick={() => handleDeleteActivity(selectedActivity.id)}
+                      >
+                        <FiTrash2 />
+                      </motion.button>
+                    </div>
                   </div>
-                </div>
 
-                <div className="space-y-4">
-                  {/* Type */}
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-400">Type</span>
-                    <span className="text-white capitalize flex items-center gap-1">
-                      {selectedActivity.type === 'development' ? <><FiMonitor /> Développement</> :
-                       selectedActivity.type === 'design'      ? <><FiEdit /> Design</>        :
-                       selectedActivity.type === 'meeting'     ? <><FiUsers /> Réunion</>       :
-                       selectedActivity.type === 'call'        ? <><FiPhone /> Appel</>         :
-                       selectedActivity.type === 'marketing'   ? <><FiRadio /> Marketing</>     :
-                       selectedActivity.type === 'maintenance' ? <><FiTool /> Maintenance</>   :
-                       selectedActivity.type}
-                    </span>
-                  </div>
-                  {/* Priorité */}
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-400">Priorité</span>
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        selectedActivity.priority === 'high'
-                          ? 'bg-rose-900/30 text-rose-300'
-                          : selectedActivity.priority === 'medium'
-                          ? 'bg-amber-900/30 text-amber-300'
-                          : 'bg-blue-900/30 text-blue-300'
-                      }`}
-                    >
-                      {selectedActivity.priority === 'high'
-                        ? 'Haute'
-                        : selectedActivity.priority === 'medium'
-                        ? 'Moyenne'
-                        : 'Basse'}
-                    </span>
-                  </div>
-                  {/* Date */}
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-400">Date</span>
-                    <span className="text-white">
-                      {new Date(selectedActivity.date).toLocaleDateString('fr-FR')}
-                    </span>
-                  </div>
-                  {/* Statut */}
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-400">Statut</span>
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        selectedActivity.status === 'completed'
-                          ? 'bg-green-900/30 text-green-300'
-                          : 'bg-amber-900/30 text-amber-300'
-                      }`}
-                    >
-                      {selectedActivity.status === 'completed' ? 'Terminé' : 'Planifié'}
-                    </span>
-                  </div>
-                  {/* Temps prévu / Temps réel */}
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-400">Temps prévu</span>
-                    <span className="text-white">
-                      {Math.floor(selectedActivity.planned_time / 60)}h
-                      {selectedActivity.planned_time % 60
-                        ? `${selectedActivity.planned_time % 60}min`
-                        : ''}
-                    </span>
-                  </div>
-                  {selectedActivity.status === 'completed' && (
+                  <div className="space-y-4">
+                    {/* Type */}
                     <div className="flex justify-between items-center">
-                      <span className="text-gray-400">Temps réel</span>
+                      <span className="text-gray-400">Type</span>
+                      <span className="text-white capitalize flex items-center gap-1">
+                        {selectedActivity.type === 'development' ? <><FiMonitor /> Développement</> :
+                         selectedActivity.type === 'design'      ? <><FiEdit /> Design</>        :
+                         selectedActivity.type === 'meeting'     ? <><FiUsers /> Réunion</>       :
+                         selectedActivity.type === 'call'        ? <><FiPhone /> Appel</>         :
+                         selectedActivity.type === 'marketing'   ? <><FiRadio /> Marketing</>     :
+                         selectedActivity.type === 'maintenance' ? <><FiTool /> Maintenance</>   :
+                         selectedActivity.type === 'prospection' ? <><FiSearch /> Prospection</>  :
+                         selectedActivity.type}
+                      </span>
+                    </div>
+                    {/* Priorité */}
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-400">Priorité</span>
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          selectedActivity.priority === 'high'
+                            ? 'bg-rose-900/30 text-rose-300'
+                            : selectedActivity.priority === 'medium'
+                            ? 'bg-amber-900/30 text-amber-300'
+                            : 'bg-blue-900/30 text-blue-300'
+                        }`}
+                      >
+                        {selectedActivity.priority === 'high'
+                          ? 'Haute'
+                          : selectedActivity.priority === 'medium'
+                          ? 'Moyenne'
+                          : 'Basse'}
+                      </span>
+                    </div>
+                    {/* Date */}
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-400">Date</span>
                       <span className="text-white">
-                        {Math.floor(selectedActivity.actual_time / 60)}h
-                        {selectedActivity.actual_time % 60
-                          ? `${selectedActivity.actual_time % 60}min`
+                        {new Date(selectedActivity.date).toLocaleDateString('fr-FR')}
+                      </span>
+                    </div>
+                    {/* Statut */}
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-400">Statut</span>
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          selectedActivity.status === 'completed'
+                            ? 'bg-green-900/30 text-green-300'
+                            : 'bg-amber-900/30 text-amber-300'
+                        }`}
+                      >
+                        {selectedActivity.status === 'completed' ? 'Terminé' : 'Planifié'}
+                      </span>
+                    </div>
+                    {/* Temps prévu / Temps réel */}
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-400">Temps prévu</span>
+                      <span className="text-white">
+                        {Math.floor(selectedActivity.planned_time / 60)}h
+                        {selectedActivity.planned_time % 60
+                          ? `${selectedActivity.planned_time % 60}min`
                           : ''}
                       </span>
                     </div>
-                  )}
-                  {/* Projet */}
-                  {selectedActivity.project_name && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-400">Projet</span>
-                      <span className="text-indigo-300">{selectedActivity.project_name}</span>
+                    {selectedActivity.status === 'completed' && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-400">Temps réel</span>
+                        <span className="text-white">
+                          {Math.floor(selectedActivity.actual_time / 60)}h
+                          {selectedActivity.actual_time % 60
+                            ? `${selectedActivity.actual_time % 60}min`
+                            : ''}
+                        </span>
+                      </div>
+                    )}
+                    {/* Projet */}
+                    {selectedActivity.project_name && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-400">Projet</span>
+                        <span className="text-indigo-300">{selectedActivity.project_name}</span>
+                      </div>
+                    )}
+                    {/* Description */}
+                    <div>
+                      <span className="text-gray-400">Description</span>
+                      <p className="mt-1 text-white break-words">
+                        {selectedActivity.description}
+                      </p>
                     </div>
-                  )}
-                  {/* Description */}
-                  <div>
-                    <span className="text-gray-400">Description</span>
-                    <p className="mt-1 text-white break-words">
-                      {selectedActivity.description}
-                    </p>
-                  </div>
-                  {/* Bouton "Marquer comme terminé" */}
-                  {selectedActivity.status !== 'completed' && (
-                    <div className="pt-4">
-                      <motion.button
-                        className="w-full px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg flex items-center justify-center"
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => {
-                          const actualTime = window.prompt(
-                            "Temps réel passé (en minutes)",
-                            selectedActivity.planned_time.toString()
-                          );
-                          if (actualTime !== null) {
-                            handleCompleteActivity(
-                              selectedActivity.id,
-                              parseInt(actualTime, 10) || 0
+                    {/* Bouton "Marquer comme terminé" */}
+                    {selectedActivity.status !== 'completed' && (
+                      <div className="pt-4">
+                        <motion.button
+                          className="w-full px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg flex items-center justify-center"
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={() => {
+                            const actualTime = window.prompt(
+                              "Temps réel passé (en minutes)",
+                              selectedActivity.planned_time.toString()
                             );
-                          }
-                        }}
-                      >
-                        <FiCheck className="mr-2" />
-                        Marquer comme terminé
-                      </motion.button>
-                    </div>
-                  )}
-                </div>
-              </motion.div>
-            ) : (
-              /* État vide (aucune activité sélectionnée et pas en mode ajout) */
-              <motion.div
-                key="empty-state"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="h-full flex items-center justify-center"
-              >
-                <EmptyState
-                  icon={<FiClipboard />}
-                  title="Activités"
-                  description="Sélectionnez une activité dans la liste ou ajoutez-en une nouvelle."
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      </div>
+                            if (actualTime !== null) {
+                              handleCompleteActivity(
+                                selectedActivity.id,
+                                parseInt(actualTime, 10) || 0
+                              );
+                            }
+                          }}
+                        >
+                          <FiCheck className="mr-2" />
+                          Marquer comme terminé
+                        </motion.button>
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              ) : null}
+            </AnimatePresence>
+          </div>
+        )}
 
-      {/* Modal de confirmation */}
-      <ConfirmModal {...confirmState.config} isOpen={confirmState.isOpen} />
+        {/* Modal de confirmation */}
+        <ConfirmModal {...confirmState.config} isOpen={confirmState.isOpen} />
+      </div>
     </div>
   );
 };

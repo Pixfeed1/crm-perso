@@ -14,6 +14,7 @@ import RevenueList from '../components/revenues/RevenueList';
 import RevenueForm from '../components/revenues/RevenueForm';
 import RevenueFilter from '../components/revenues/RevenueFilter';
 import EmptyState from '../components/common/EmptyState';
+import Button from '../components/common/Button';
 
 // API
 import { revenuesAPI, projectsAPI, exportAPI } from '../services/api';
@@ -364,12 +365,14 @@ const Revenues = () => {
   // Loader
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center w-full h-full">
-        <motion.div
-          className="w-16 h-16 border-4 border-teal-500 border-t-transparent rounded-full"
-          animate={{ rotate: 360 }}
-          transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-        />
+      <div className="h-full flex flex-col overflow-y-auto p-4 sm:p-6">
+        <div className="max-w-7xl mx-auto w-full flex items-center justify-center h-full">
+          <motion.div
+            className="w-16 h-16 border-4 border-teal-500 border-t-transparent rounded-full"
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+          />
+        </div>
       </div>
     );
   }
@@ -377,46 +380,47 @@ const Revenues = () => {
   const periodRevenues = getRevenuesForPeriod();
 
   return (
-    <div className="h-full flex flex-col">
-      {/* En-tête */}
-      <header className="mb-4 sm:mb-6 px-2 sm:px-0 pt-16 sm:pt-0">
-        <motion.h1
-          className="text-3xl sm:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-300 to-teal-300"
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          Revenus
-        </motion.h1>
-        <motion.p
-          className="text-teal-200 mt-2 text-sm sm:text-base"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-        >
-          Suivez vos revenus et analysez vos finances
-        </motion.p>
-      </header>
+    <div className="h-full flex flex-col overflow-y-auto p-4 sm:p-6">
+      <div className="max-w-7xl mx-auto w-full">
+        {/* En-tête */}
+        <header className="mb-4 sm:mb-6 pt-16 sm:pt-0">
+          <motion.h1
+            className="text-3xl sm:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-300 to-teal-300"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            Revenus
+          </motion.h1>
+          <motion.p
+            className="text-teal-200 mt-2 text-sm sm:text-base"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+          >
+            Suivez vos revenus et analysez vos finances
+          </motion.p>
+        </header>
 
-      {/* Affichage des erreurs */}
-      {error && (
-        <motion.div
-          className="mb-4 sm:mb-6 mx-2 sm:mx-0 p-3 sm:p-4 bg-rose-900/30 border border-rose-800 rounded-lg text-rose-200 text-sm sm:text-base"
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <h3 className="font-medium text-rose-100 mb-1 text-sm sm:text-base">Erreur</h3>
-          <p>{error}</p>
-        </motion.div>
-      )}
+        {/* Affichage des erreurs */}
+        {error && (
+          <motion.div
+            className="mb-4 sm:mb-6 p-3 sm:p-4 bg-rose-900/30 border border-rose-800 rounded-lg text-rose-200 text-sm sm:text-base"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            <h3 className="font-medium text-rose-100 mb-1 text-sm sm:text-base">Erreur</h3>
+            <p>{error}</p>
+          </motion.div>
+        )}
 
-      {/* Stats */}
-      <div>
-        <RevenueStats stats={stats} />
-      </div>
+        {/* Stats */}
+        <div>
+          <RevenueStats stats={stats} />
+        </div>
 
-      {/* Navigation de période */}
-      <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center mb-4 sm:mb-6 gap-3 px-2 sm:px-0">
+        {/* Navigation de période */}
+        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center mb-4 sm:mb-6 gap-3">
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-0">
           <div className="flex gap-1 sm:gap-2 sm:mr-4">
             <motion.button
@@ -469,42 +473,38 @@ const Revenues = () => {
               </motion.button>
             ))}
           </div>
-          <motion.button
-            className="px-3 py-2 sm:px-4 sm:py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg flex items-center justify-center text-sm sm:text-base"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+          <Button
             onClick={() => exportAPI.revenues()}
-            title="Exporter les revenus en CSV"
+            variant="secondary"
+            icon={FiDownload}
+            className="w-full sm:w-auto"
           >
-            <FiDownload className="mr-1" /> Exporter
-          </motion.button>
-          <motion.button
-            className="px-3 py-2 sm:px-4 sm:py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg flex items-center justify-center text-sm sm:text-base"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+            Exporter
+          </Button>
+          <Button
             onClick={handleAddRevenue}
+            variant="primary"
+            className="w-full sm:w-auto bg-teal-600 hover:bg-teal-700"
           >
-            <span className="mr-2">+</span>Revenu
-          </motion.button>
+            + Revenu
+          </Button>
         </div>
       </div>
 
-      {/* Filtres */}
-      <div className="mb-6">
-        <RevenueFilter
-          filters={filters}
-          setFilters={setFilters}
-          projects={projects}
-          onSort={handleSort}
-          sortField={sortField}
-          sortDirection={sortDirection}
-        />
-      </div>
+        {/* Filtres */}
+        <div className="mb-6">
+          <RevenueFilter
+            filters={filters}
+            setFilters={setFilters}
+            projects={projects}
+            onSort={handleSort}
+            sortField={sortField}
+            sortDirection={sortDirection}
+          />
+        </div>
 
-      {/* Graphique + Formulaire/Détails */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        {/* Graphique */}
-        <div className="md:col-span-2 bg-gray-800/30 backdrop-blur-sm rounded-2xl p-6 h-96">
+        {/* Graphique - Pleine largeur */}
+        <div className="bg-gray-800/30 backdrop-blur-sm rounded-2xl p-6 h-96 mb-6">
           <RevenueChart
             revenues={periodRevenues}
             period={period}
@@ -512,8 +512,8 @@ const Revenues = () => {
           />
         </div>
 
-        {/* Formulaire ou Détails */}
-        <div className="bg-gray-800/30 backdrop-blur-sm rounded-2xl p-6">
+        {/* Formulaire ou Détails - En dessous */}
+        <div className="bg-gray-800/30 backdrop-blur-sm rounded-2xl p-6 mb-6">
           <AnimatePresence mode="wait">
             {isAddingRevenue ? (
               <motion.div
@@ -636,16 +636,16 @@ const Revenues = () => {
             )}
           </AnimatePresence>
         </div>
-      </div>
 
-      {/* Liste des revenus - Correction pour éviter la double scrollbar */}
-      <div className="bg-gray-800/30 backdrop-blur-sm rounded-2xl p-6 flex flex-col flex-grow overflow-hidden">
-        <h3 className="text-xl font-semibold text-white mb-4">Liste des revenus</h3>
-        <RevenueList
-          revenues={filteredRevenues}
-          selectedRevenue={selectedRevenue}
-          onSelectRevenue={handleSelectRevenue}
-        />
+        {/* Liste des revenus - Avec hauteur minimale pour être visible */}
+        <div className="bg-gray-800/30 backdrop-blur-sm rounded-2xl p-6 flex flex-col flex-grow overflow-hidden min-h-[400px]">
+          <h3 className="text-xl font-semibold text-white mb-4">Liste des revenus</h3>
+          <RevenueList
+            revenues={filteredRevenues}
+            selectedRevenue={selectedRevenue}
+            onSelectRevenue={handleSelectRevenue}
+          />
+        </div>
       </div>
 
       {/* Modal de confirmation */}

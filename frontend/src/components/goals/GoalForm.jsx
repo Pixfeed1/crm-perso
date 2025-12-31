@@ -189,9 +189,9 @@ const GoalForm = ({ goal = {}, onSave, onCancel }) => {
             name="title"
             value={formData.title}
             onChange={handleInputChange}
-            className={`w-full bg-white text-gray-800 border ${
-              errors.title ? 'border-rose-500' : 'border-gray-400'
-            } rounded-lg px-4 py-2 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent break-words`}
+            className={`w-full bg-gray-800/50 text-white border ${
+              errors.title ? 'border-rose-500' : 'border-gray-700'
+            } rounded-lg px-4 py-2 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent break-words`}
             placeholder="Ex: Acquérir 5 nouveaux clients"
           />
           {errors.title && (
@@ -212,7 +212,7 @@ const GoalForm = ({ goal = {}, onSave, onCancel }) => {
             value={formData.description}
             onChange={handleInputChange}
             rows="3"
-            className="w-full bg-white text-gray-800 border border-gray-400 rounded-lg px-4 py-2 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+            className="w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg px-4 py-2 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             placeholder="Décrivez votre objectif en quelques mots..."
           />
         </div>
@@ -229,9 +229,9 @@ const GoalForm = ({ goal = {}, onSave, onCancel }) => {
               name="target_value"
               value={formData.target_value}
               onChange={handleInputChange}
-              className={`w-full bg-white text-gray-800 border ${
-                errors.target_value ? 'border-rose-500' : 'border-gray-400'
-              } rounded-lg px-4 py-2 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent`}
+              className={`w-full bg-gray-800/50 text-white border ${
+                errors.target_value ? 'border-rose-500' : 'border-gray-700'
+              } rounded-lg px-4 py-2 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
               placeholder="Ex: 5000"
               step="0.01"
               min="0"
@@ -256,7 +256,7 @@ const GoalForm = ({ goal = {}, onSave, onCancel }) => {
               name="current_value"
               value={formData.current_value}
               onChange={handleInputChange}
-              className="w-full bg-white text-gray-800 border border-gray-400 rounded-lg px-4 py-2 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+              className="w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg px-4 py-2 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               placeholder="Ex: 0"
               step="0.01"
               min="0"
@@ -276,7 +276,7 @@ const GoalForm = ({ goal = {}, onSave, onCancel }) => {
                 className={`cursor-pointer p-4 rounded-lg border ${
                   formData.category === option.value
                     ? 'bg-amber-600 text-white border-amber-500'
-                    : 'bg-white text-gray-800 border-gray-300 hover:bg-gray-100'
+                    : 'bg-gray-800/50 text-white border-gray-300 hover:bg-gray-700'
                 }`}
                 onClick={() => setFormData(prev => ({ ...prev, category: option.value }))}
               >
@@ -309,7 +309,7 @@ const GoalForm = ({ goal = {}, onSave, onCancel }) => {
                 className={`cursor-pointer p-4 rounded-lg border ${
                   formData.period === option.value
                     ? 'bg-amber-600 text-white border-amber-500'
-                    : 'bg-white text-gray-800 border-gray-300 hover:bg-gray-100'
+                    : 'bg-gray-800/50 text-white border-gray-300 hover:bg-gray-700'
                 }`}
                 onClick={() => handlePeriodChange(option.value)}
               >
@@ -339,9 +339,9 @@ const GoalForm = ({ goal = {}, onSave, onCancel }) => {
               name="start_date"
               value={formData.start_date}
               onChange={handleInputChange}
-              className={`w-full bg-white text-gray-800 border ${
-                errors.start_date ? 'border-rose-500' : 'border-gray-400'
-              } rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent`}
+              className={`w-full bg-gray-800/50 text-white border ${
+                errors.start_date ? 'border-rose-500' : 'border-gray-700'
+              } rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
             />
             {errors.start_date && (
               <p className="mt-1 text-xs text-rose-500">
@@ -360,9 +360,9 @@ const GoalForm = ({ goal = {}, onSave, onCancel }) => {
               name="end_date"
               value={formData.end_date}
               onChange={handleInputChange}
-              className={`w-full bg-white text-gray-800 border ${
-                errors.end_date ? 'border-rose-500' : 'border-gray-400'
-              } rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent`}
+              className={`w-full bg-gray-800/50 text-white border ${
+                errors.end_date ? 'border-rose-500' : 'border-gray-700'
+              } rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
             />
             {errors.end_date && (
               <p className="mt-1 text-xs text-rose-500">
@@ -376,7 +376,7 @@ const GoalForm = ({ goal = {}, onSave, onCancel }) => {
         <div className="pt-6 flex justify-end space-x-4">
           <button
             type="button"
-            className="px-5 py-2 rounded-lg border-2 border-gray-600 bg-white text-gray-900 hover:bg-gray-100 hover:border-gray-700 shadow-md font-semibold transition-all"
+            className="px-5 py-2 rounded-lg border-2 border-white/30 text-white hover:bg-white/10 hover:border-white/40 shadow-md font-semibold transition-all"
             onClick={onCancel}
           >
             Annuler

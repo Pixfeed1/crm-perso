@@ -40,11 +40,11 @@ const TaskForm = ({ task = {}, onSave, onCancel }) => {
   // Validation du formulaire
   const validateForm = () => {
     const newErrors = {};
-    
+
     if (!formData.title.trim()) {
       newErrors.title = 'Le titre de la tâche est requis';
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -76,7 +76,7 @@ const TaskForm = ({ task = {}, onSave, onCancel }) => {
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Titre de la tâche */}
         <div>
-          <label htmlFor="task-name" className="block text-sm font-medium text-gray-300 mb-1">
+          <label htmlFor="task-title" className="block text-sm font-medium text-gray-300 mb-1">
             Titre de la tâche<span className="text-rose-500 ml-1">*</span>
           </label>
           <input
@@ -91,7 +91,7 @@ const TaskForm = ({ task = {}, onSave, onCancel }) => {
             placeholder="Développer la page d'accueil"
           />
           {errors.title && (
-            <motion.p 
+            <motion.p
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               className="mt-1 text-xs text-rose-500"

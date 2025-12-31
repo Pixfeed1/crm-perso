@@ -12,6 +12,7 @@ import GoalDetails from '../components/goals/GoalDetails';
 import GoalForm from '../components/goals/GoalForm';
 import GoalFilter from '../components/goals/GoalFilter';
 import EmptyState from '../components/common/EmptyState';
+import Button from '../components/common/Button';
 
 const Goals = () => {
   const { toast } = useToast();
@@ -445,103 +446,104 @@ const Goals = () => {
   }
 
   return (
-    <div className="h-full flex flex-col">
-      <header className="mb-4 sm:mb-6 px-2 sm:px-0 pt-16 sm:pt-0">
-        <h1
-          className="text-3xl sm:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-amber-300 to-orange-300"
-        >
-          Objectifs
-        </h1>
-        <p
-          className="text-amber-200 mt-2 text-sm sm:text-base"
-        >
-          Définissez vos objectifs et suivez votre progression vers le succès
-        </p>
-      </header>
+    <div className="h-full flex flex-col overflow-y-auto p-4 sm:p-6">
+      <div className="max-w-7xl mx-auto w-full">
+        {/* En-tête */}
+        <header className="mb-6 pt-16 sm:pt-0">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+            <div>
+              <h1 className="text-3xl sm:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-amber-300 to-orange-300">
+                Objectifs
+              </h1>
+              <p className="text-amber-200 mt-2 text-sm sm:text-base">
+                Définissez vos objectifs et suivez votre progression vers le succès
+              </p>
+            </div>
 
-      {/* Section statistiques */}
-      <GoalStats stats={stats} />
-      
-      {/* Filtres et contrôles */}
-      <div className="flex flex-col sm:flex-row flex-wrap justify-between items-stretch sm:items-center mb-4 sm:mb-6 gap-3 px-2 sm:px-0">
-        <div className="flex flex-wrap gap-2">
-          <button
-            className={`px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm flex items-center justify-center ${
-              view === 'all'
-                ? 'bg-amber-600 text-white'
-                : 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50'
-            }`}
-            onClick={() => setView('all')}
-          >
-            <FiTarget className="mr-1 text-xs sm:text-base" />
-            <span className="hidden xs:inline">Tous</span>
-          </button>
-          <button
-            className={`px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm flex items-center justify-center ${
-              view === 'active'
-                ? 'bg-amber-600 text-white'
-                : 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50'
-            }`}
-            onClick={() => setView('active')}
-          >
-            <FiZap className="mr-1 text-xs sm:text-base" />
-            <span className="hidden xs:inline">En cours</span>
-          </button>
-          <button
-            className={`px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm flex items-center justify-center ${
-              view === 'completed'
-                ? 'bg-amber-600 text-white'
-                : 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50'
-            }`}
-            onClick={() => setView('completed')}
-          >
-            <FiCheckCircle className="mr-1 text-xs sm:text-base" />
-            <span className="hidden xs:inline">Complétés</span>
-          </button>
-          <button
-            className={`px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm flex items-center justify-center ${
-              view === 'upcoming'
-                ? 'bg-amber-600 text-white'
-                : 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50'
-            }`}
-            onClick={() => setView('upcoming')}
-          >
-            <FiClock className="mr-1 text-xs sm:text-base" />
-            <span className="hidden xs:inline">À venir</span>
-          </button>
+            <div className="flex flex-col sm:flex-row gap-2">
+              {/* Toggle de vue */}
+              <div className="bg-gray-800/50 rounded-lg p-1 flex">
+                <button
+                  className={`px-3 py-1 rounded-lg text-sm flex items-center justify-center flex-1 sm:flex-none ${
+                    view === 'all'
+                      ? 'bg-amber-600 text-white'
+                      : 'text-gray-300 hover:bg-gray-700/50'
+                  }`}
+                  onClick={() => setView('all')}
+                >
+                  <FiTarget className="mr-1" />
+                  Tous
+                </button>
+                <button
+                  className={`px-3 py-1 rounded-lg text-sm flex items-center justify-center flex-1 sm:flex-none ${
+                    view === 'active'
+                      ? 'bg-amber-600 text-white'
+                      : 'text-gray-300 hover:bg-gray-700/50'
+                  }`}
+                  onClick={() => setView('active')}
+                >
+                  <FiZap className="mr-1" />
+                  En cours
+                </button>
+                <button
+                  className={`px-3 py-1 rounded-lg text-sm flex items-center justify-center flex-1 sm:flex-none ${
+                    view === 'completed'
+                      ? 'bg-amber-600 text-white'
+                      : 'text-gray-300 hover:bg-gray-700/50'
+                  }`}
+                  onClick={() => setView('completed')}
+                >
+                  <FiCheckCircle className="mr-1" />
+                  Complétés
+                </button>
+                <button
+                  className={`px-3 py-1 rounded-lg text-sm flex items-center justify-center flex-1 sm:flex-none ${
+                    view === 'upcoming'
+                      ? 'bg-amber-600 text-white'
+                      : 'text-gray-300 hover:bg-gray-700/50'
+                  }`}
+                  onClick={() => setView('upcoming')}
+                >
+                  <FiClock className="mr-1" />
+                  À venir
+                </button>
+              </div>
+              {/* Boutons actions */}
+              <Button
+                onClick={() => exportAPI.goals()}
+                variant="secondary"
+                icon={FiDownload}
+                className="w-full sm:w-auto"
+              >
+                Exporter
+              </Button>
+              <Button
+                onClick={handleAddGoal}
+                variant="primary"
+                className="w-full sm:w-auto bg-amber-600 hover:bg-amber-700"
+              >
+                + Objectif
+              </Button>
+            </div>
+          </div>
+        </header>
+
+        {/* Section statistiques */}
+        <GoalStats stats={stats} />
+
+        {/* Filtre de recherche */}
+        <div className="mb-6">
+          <GoalFilter
+            filters={filters}
+            setFilters={setFilters}
+            onSort={handleSort}
+            sortField={sortField}
+            sortDirection={sortDirection}
+          />
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            className="px-3 py-2 sm:px-4 sm:py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg flex items-center justify-center shadow-md hover:scale-105 active:scale-95 transition-transform text-sm sm:text-base"
-            onClick={() => exportAPI.goals()}
-            title="Exporter les objectifs en CSV"
-          >
-            <FiDownload className="mr-1" /> Exporter
-          </button>
-          <button
-            className="w-full sm:w-auto px-3 py-2 sm:px-4 sm:py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg flex items-center justify-center shadow-md hover:scale-105 active:scale-95 transition-transform text-sm sm:text-base"
-            onClick={handleAddGoal}
-          >
-            <span className="mr-2">+</span>
-            Objectif
-          </button>
-        </div>
-      </div>
-      
-      {/* Filtre de recherche */}
-      <GoalFilter
-        filters={filters}
-        setFilters={setFilters}
-        onSort={handleSort}
-        sortField={sortField}
-        sortDirection={sortDirection}
-      />
-      
-      {/* Contenu principal */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6 flex-grow overflow-hidden px-2 sm:px-0">
         {/* Liste des objectifs */}
-        <div className="lg:col-span-2 bg-gray-800/30 backdrop-blur-sm rounded-xl sm:rounded-2xl p-4 sm:p-6 overflow-y-auto">
+        <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl sm:rounded-2xl p-4 sm:p-6 mb-6">
           <h3 className="text-lg sm:text-xl font-semibold text-white mb-3 sm:mb-4">Liste des objectifs</h3>
           <GoalList
             goals={filteredGoals}
@@ -550,44 +552,35 @@ const Goals = () => {
           />
         </div>
 
-        {/* Panneau de détails ou formulaire */}
-        <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl sm:rounded-2xl p-4 sm:p-6 overflow-y-auto">
-          {isAddingGoal ? (
-            <div key="add-form">
-              <GoalForm 
-                onSave={handleSaveGoal}
-                onCancel={handleCancelGoalForm}
-              />
-            </div>
-          ) : selectedGoal ? (
-            <div key={`goal-${selectedGoal.id}`}>
-              <GoalDetails 
-                goal={selectedGoal}
-                onUpdate={(updatedData) => handleUpdateGoal(selectedGoal.id, updatedData)}
-                onDelete={() => handleDeleteGoal(selectedGoal.id)}
-                onAddMilestone={(milestoneData) => handleAddMilestone(selectedGoal.id, milestoneData)}
-                onUpdateMilestone={(milestoneId, achieved) => 
-                  handleUpdateMilestone(selectedGoal.id, milestoneId, achieved)
-                }
-              />
-            </div>
-          ) : (
-            <div
-              key="empty-state"
-              className="h-full flex items-center justify-center"
-            >
-              <EmptyState
-                icon={<FiTarget />}
-                title="Objectifs"
-                description="Sélectionnez un objectif dans la liste ou créez-en un nouveau."
-              />
-            </div>
-          )}
-        </div>
-      </div>
+        {/* Panneau de détails ou formulaire (sous la liste) */}
+        {(isAddingGoal || selectedGoal) && (
+          <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl sm:rounded-2xl p-4 sm:p-6">
+            {isAddingGoal ? (
+              <div key="add-form">
+                <GoalForm
+                  onSave={handleSaveGoal}
+                  onCancel={handleCancelGoalForm}
+                />
+              </div>
+            ) : selectedGoal ? (
+              <div key={`goal-${selectedGoal.id}`}>
+                <GoalDetails
+                  goal={selectedGoal}
+                  onUpdate={(updatedData) => handleUpdateGoal(selectedGoal.id, updatedData)}
+                  onDelete={() => handleDeleteGoal(selectedGoal.id)}
+                  onAddMilestone={(milestoneData) => handleAddMilestone(selectedGoal.id, milestoneData)}
+                  onUpdateMilestone={(milestoneId, achieved) =>
+                    handleUpdateMilestone(selectedGoal.id, milestoneId, achieved)
+                  }
+                />
+              </div>
+            ) : null}
+          </div>
+        )}
 
-      {/* Modal de confirmation */}
-      <ConfirmModal {...confirmState.config} isOpen={confirmState.isOpen} />
+        {/* Modal de confirmation */}
+        <ConfirmModal {...confirmState.config} isOpen={confirmState.isOpen} />
+      </div>
     </div>
   );
 };

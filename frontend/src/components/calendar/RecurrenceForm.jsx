@@ -77,7 +77,7 @@ const RecurrenceForm = ({ recurrenceData = {}, onChange }) => {
         <select
           value={formData.recurrence_type}
           onChange={(e) => handleChange('recurrence_type', e.target.value)}
-          className="w-full bg-white text-gray-800 border border-gray-400 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="w-full bg-gray-900/50 text-white border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
         >
           {recurrenceTypeOptions.map(option => (
             <option key={option.value} value={option.value}>
@@ -98,7 +98,7 @@ const RecurrenceForm = ({ recurrenceData = {}, onChange }) => {
         <select
           value={formData.recurrence_type}
           onChange={(e) => handleChange('recurrence_type', e.target.value)}
-          className="w-full bg-white text-gray-800 border border-gray-400 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="w-full bg-gray-900/50 text-white border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
         >
           {recurrenceTypeOptions.map(option => (
             <option key={option.value} value={option.value}>
@@ -120,7 +120,7 @@ const RecurrenceForm = ({ recurrenceData = {}, onChange }) => {
             max="365"
             value={formData.recurrence_interval}
             onChange={(e) => handleChange('recurrence_interval', parseInt(e.target.value) || 1)}
-            className="w-20 bg-white text-gray-800 border border-gray-400 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-20 bg-gray-900/50 text-white border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
           <span className="text-gray-300">
             {intervalLabels[formData.recurrence_type] || ''}
@@ -148,7 +148,7 @@ const RecurrenceForm = ({ recurrenceData = {}, onChange }) => {
                   className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                     isSelected
                       ? 'bg-indigo-600 text-white'
-                      : 'bg-white text-gray-800 hover:bg-gray-100'
+                      : 'bg-gray-900/50 text-gray-300 border border-gray-700 hover:bg-gray-800/50'
                   }`}
                   title={day.fullLabel}
                 >
@@ -198,7 +198,7 @@ const RecurrenceForm = ({ recurrenceData = {}, onChange }) => {
               value={formData.recurrence_count}
               onChange={(e) => handleChange('recurrence_count', parseInt(e.target.value) || 1)}
               disabled={formData.recurrence_end_type !== 'COUNT'}
-              className={`mx-2 w-20 bg-white text-gray-800 border border-gray-400 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+              className={`mx-2 w-20 bg-gray-900/50 text-white border border-gray-700 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
                 formData.recurrence_end_type !== 'COUNT' ? 'opacity-50' : ''
               }`}
             />
@@ -222,7 +222,7 @@ const RecurrenceForm = ({ recurrenceData = {}, onChange }) => {
                 onChange={(date) => handleChange('recurrence_end_date', date)}
                 dateFormat="dd/MM/yyyy"
                 disabled={formData.recurrence_end_type !== 'DATE'}
-                className={`bg-white text-gray-800 border border-gray-400 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                className={`bg-gray-900/50 text-white border border-gray-700 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
                   formData.recurrence_end_type !== 'DATE' ? 'opacity-50' : ''
                 }`}
                 minDate={new Date()}

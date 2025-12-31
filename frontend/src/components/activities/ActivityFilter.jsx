@@ -28,7 +28,8 @@ const ActivityFilter = ({
     { value: 'meeting', label: 'Réunion' },
     { value: 'call', label: 'Appel' },
     { value: 'marketing', label: 'Marketing' },
-    { value: 'maintenance', label: 'Maintenance' }
+    { value: 'maintenance', label: 'Maintenance' },
+    { value: 'prospection', label: 'Prospection' }
   ];
 
   // Options de priorité
@@ -149,7 +150,7 @@ const ActivityFilter = ({
           {periodOptions.map((option, index) => (
             <motion.button
               key={index}
-              className="px-3 py-1 bg-white text-gray-800 hover:bg-gray-100 rounded-lg text-sm"
+              className="px-3 py-1 bg-gray-800/50 text-white hover:bg-gray-700 rounded-lg text-sm"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={option.action}
@@ -166,7 +167,7 @@ const ActivityFilter = ({
               selected={localStartDate}
               onChange={date => setLocalStartDate(date)}
               dateFormat="dd/MM/yyyy"
-              className="bg-white text-gray-800 border border-gray-400 rounded-lg px-3 py-1 w-32 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="bg-gray-800/50 text-white border border-gray-700 rounded-lg px-3 py-1 w-32 focus:outline-none focus:ring-2 focus:ring-purple-500"
             />
           </div>
           
@@ -176,7 +177,7 @@ const ActivityFilter = ({
               selected={localEndDate}
               onChange={date => setLocalEndDate(date)}
               dateFormat="dd/MM/yyyy"
-              className="bg-white text-gray-800 border border-gray-400 rounded-lg px-3 py-1 w-32 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="bg-gray-800/50 text-white border border-gray-700 rounded-lg px-3 py-1 w-32 focus:outline-none focus:ring-2 focus:ring-purple-500"
             />
           </div>
           
@@ -202,14 +203,14 @@ const ActivityFilter = ({
                 placeholder="Rechercher une activité..."
                 value={filters.search}
                 onChange={(e) => handleFilterChange('search', e.target.value)}
-                className="w-full bg-white text-gray-800 border border-gray-400 rounded-lg px-4 py-2 pl-10 pr-8 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg px-4 py-2 pl-10 pr-8 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               />
-              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
+              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
                 <FiSearch />
               </span>
               {filters.search && (
                 <motion.button
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
                   onClick={() => handleFilterChange('search', '')}
@@ -290,7 +291,7 @@ const ActivityFilter = ({
                         className={`px-3 py-1 rounded-full text-xs font-medium ${
                           filters.type === option.value
                             ? 'bg-indigo-600 text-white'
-                            : 'bg-white text-gray-800 hover:bg-gray-100'
+                            : 'bg-gray-800/50 text-white hover:bg-gray-700'
                         }`}
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
@@ -312,7 +313,7 @@ const ActivityFilter = ({
                         className={`px-3 py-1 rounded-full text-xs font-medium ${
                           filters.priority === option.value
                             ? 'bg-indigo-600 text-white'
-                            : 'bg-white text-gray-800 hover:bg-gray-100'
+                            : 'bg-gray-800/50 text-white hover:bg-gray-700'
                         }`}
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
@@ -334,7 +335,7 @@ const ActivityFilter = ({
                         className={`px-3 py-1 rounded-full text-xs font-medium ${
                           filters.status === option.value
                             ? 'bg-indigo-600 text-white'
-                            : 'bg-white text-gray-800 hover:bg-gray-100'
+                            : 'bg-gray-800/50 text-white hover:bg-gray-700'
                         }`}
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
@@ -355,7 +356,7 @@ const ActivityFilter = ({
                     id="project"
                     value={filters.project}
                     onChange={(e) => handleFilterChange('project', e.target.value)}
-                    className="w-full bg-white text-gray-800 border border-gray-400 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    className="w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   >
                     <option value="all">Tous les projets</option>
                     <option value="none">Sans projet</option>

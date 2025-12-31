@@ -118,65 +118,70 @@ const MonthView = ({
   return (
     <div className="flex-1 flex flex-col h-full">
       {/* En-tête des jours de la semaine */}
-      <div className="grid grid-cols-7 text-center border-b border-gray-700">
+      <div className="grid grid-cols-7 text-center border-b border-gray-700/50">
         {weekdays.map((day, index) => (
-          <div key={index} className="py-2 text-gray-400 font-medium text-sm">
+          <div key={index} className="py-2 sm:py-2.5 text-gray-400 font-semibold text-[11px] sm:text-sm">
             {day}
           </div>
         ))}
       </div>
-      
+
       {/* Grille du calendrier */}
-      <div className="flex-1 grid grid-cols-7 grid-rows-6 border-b border-gray-700">
+      <div className="flex-1 grid grid-cols-7 auto-rows-fr border-b border-gray-700/50">
         {daysInMonth.map((day, index) => (
-          <div 
+          <div
             key={index}
-            className={`min-h-[80px] md:min-h-[100px] border-r border-b border-gray-700 flex flex-col ${
-              day.isCurrentMonth ? 'bg-transparent' : 'bg-gray-900/30'
-            } ${day.isToday ? 'bg-indigo-900/20' : ''}`}
+            className={`min-h-[75px] sm:min-h-[95px] lg:min-h-[105px] border-r border-b border-gray-700/50 flex flex-col cursor-pointer transition-colors hover:bg-gray-700/20 ${
+              day.isCurrentMonth ? 'bg-transparent' : 'bg-gray-900/40'
+            } ${day.isToday ? 'bg-indigo-900/30 ring-1 ring-indigo-600/30' : ''}`}
             onClick={() => onSelectDate(day.date)}
           >
             {/* Numéro du jour */}
-            <div className={`text-right p-1 ${
-              day.isCurrentMonth 
-                ? day.isToday ? 'text-indigo-300 font-bold' : 'text-white' 
+            <div className={`text-center sm:text-right px-1 py-1 text-xs sm:text-sm font-medium ${
+              day.isCurrentMonth
+                ? day.isToday ? 'text-indigo-300 font-bold' : 'text-gray-200'
                 : 'text-gray-600'
             }`}>
               {formatDayNumber(day.date)}
             </div>
-            
+
             {/* Événements du jour */}
-            <div className="flex-1 p-1 space-y-1 overflow-hidden">
-              {getEventsForDay(day.date).slice(0, 3).map((event, eventIndex) => (
+            <div className="flex-1 px-1 py-0.5 space-y-0.5 overflow-hidden">
+              {getEventsForDay(day.date).slice(0, 2).map((event, eventIndex) => (
                 <motion.div
                   key={event.id}
-                  className={`px-2 py-1 text-xs rounded cursor-pointer border-l-2 flex items-center gap-1 ${
+                  className={`px-1.5 py-1 text-[9px] sm:text-[10px] lg:text-xs rounded cursor-pointer border-l-2 flex items-center gap-1 ${
                     categoryColors[event.category] || 'bg-gray-600/80 text-gray-100'
                   } ${priorityColors[event.priority] || 'border-l-gray-400'} ${
-                    selectedEvent && selectedEvent.id === event.id ? 'ring-2 ring-white' : ''
-                  }`}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
+                    selectedEvent && selectedEvent.id === event.id ? 'ring-2 ring-indigo-400' : ''
+                  } hover:brightness-110`}
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
                   onClick={(e) => {
                     e.stopPropagation();
                     onSelectEvent(event);
                   }}
                 >
-                  {event.all_day ? <FiCalendar className="flex-shrink-0" /> : <FiClock className="flex-shrink-0" />}
-                  <span className="truncate">{event.title}</span>
+                  {event.all_day ? <FiCalendar className="flex-shrink-0 text-[9px] sm:text-[10px]" /> : <FiClock className="flex-shrink-0 text-[9px] sm:text-[10px]" />}
+                  <span className="truncate font-medium">{event.title}</span>
                 </motion.div>
               ))}
-              
+
               {/* Indiquer s'il y a plus d'événements que ceux affichés */}
-              {getEventsForDay(day.date).length > 3 && (
-                <div className="text-xs text-indigo-300 text-center">
-                  +{getEventsForDay(day.date).length - 3} de plus
+              {getEventsForDay(day.date).length > 2 && (
+                <div className="text-[9px] sm:text-[10px] lg:text-xs text-indigo-400 text-center font-semibold py-0.5 cursor-pointer hover:text-indigo-300"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSelectDate(day.date);
+                  }}
+                >
+                  +{getEventsForDay(day.date).length - 2} autres
                 </div>
               )}
-              
-              {day.isCurrentMonth && (
+
+              {day.isCurrentMonth && getEventsForDay(day.date).length === 0 && (
                 <motion.button
-                  className="w-full mt-1 text-xs text-indigo-300 hover:text-indigo-200 opacity-0 hover:opacity-100 flex justify-center items-center"
+                  className="w-full mt-1 text-[9px] sm:text-[10px] text-indigo-400 hover:text-indigo-300 opacity-0 hover:opacity-100 flex justify-center items-center py-1 rounded hover:bg-indigo-600/20 transition-all"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={(e) => {
@@ -184,7 +189,7 @@ const MonthView = ({
                     onAddEvent(day.date);
                   }}
                 >
-                  <span className="mr-1">+</span> Ajouter
+                  <span className="mr-1">+</span> <span className="hidden sm:inline">Ajouter</span><span className="sm:hidden">+</span>
                 </motion.button>
               )}
             </div>

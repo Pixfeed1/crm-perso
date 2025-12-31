@@ -189,27 +189,11 @@ export const projectsAPI = {
   },
   addTask: (projectId, data) => {
     console.log(`Appel API: ajout d'une tâche au projet ID ${projectId}`, data);
-    // Mapper 'name' vers 'title' pour correspondre au backend
-    const taskData = {
-      title: data.name || data.title,
-      description: data.description,
-      deadline: data.deadline,
-      completed: data.completed || false,
-      priority: data.priority // Garder priority même si non utilisé par le backend pour l'instant
-    };
-    return apiRequest(`/projects/${projectId}/tasks`, 'POST', taskData);
+    return apiRequest(`/projects/${projectId}/tasks`, 'POST', data);
   },
   updateTask: (projectId, taskId, data) => {
     console.log(`Appel API: mise à jour de la tâche ID ${taskId} du projet ID ${projectId}`, data);
-    // Mapper 'name' vers 'title' pour correspondre au backend
-    const taskData = {
-      title: data.name || data.title,
-      description: data.description,
-      deadline: data.deadline,
-      completed: data.completed,
-      priority: data.priority
-    };
-    return apiRequest(`/projects/${projectId}/tasks/${taskId}`, 'PUT', taskData);
+    return apiRequest(`/projects/${projectId}/tasks/${taskId}`, 'PUT', data);
   },
   deleteTask: (projectId, taskId) => {
     console.log(`Appel API: suppression de la tâche ID ${taskId} du projet ID ${projectId}`);

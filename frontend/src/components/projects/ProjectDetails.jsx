@@ -1,14 +1,14 @@
 // src/components/projects/ProjectDetails.jsx
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiGlobe, FiSmartphone, FiMonitor, FiEdit2, FiRadio, FiTool, FiPackage, FiClipboard, FiRotateCw, FiCalendar, FiCheckCircle, FiPauseCircle, FiXCircle, FiHelpCircle, FiTrash2, FiFileText, FiCheck } from 'react-icons/fi';
+import { FiGlobe, FiSmartphone, FiMonitor, FiEdit2, FiRadio, FiTool, FiPackage, FiClipboard, FiRotateCw, FiCalendar, FiCheckCircle, FiPauseCircle, FiXCircle, FiHelpCircle, FiTrash2, FiFileText, FiCheck, FiX } from 'react-icons/fi';
 
 // Sous-composants
 import TaskList from './TaskList';
 import TaskForm from './TaskForm';
 import ProjectPayments from './ProjectPayments';
 
-const ProjectDetails = ({ project, onUpdate, onDelete, onAddTask, onToggleTaskStatus }) => {
+const ProjectDetails = ({ project, onUpdate, onDelete, onAddTask, onToggleTaskStatus, onClose }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -159,7 +159,7 @@ const ProjectDetails = ({ project, onUpdate, onDelete, onAddTask, onToggleTaskSt
   };
 
   return (
-    <div>
+    <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-gray-700/50">
       {/* En-tête avec actions */}
       <div className="flex justify-between items-start mb-6">
         <div>
@@ -177,7 +177,7 @@ const ProjectDetails = ({ project, onUpdate, onDelete, onAddTask, onToggleTaskSt
             )}
           </div>
         </div>
-        
+
         <div className="flex space-x-2">
           <motion.button
             whileHover={{ scale: 1.05 }}
@@ -196,6 +196,17 @@ const ProjectDetails = ({ project, onUpdate, onDelete, onAddTask, onToggleTaskSt
           >
             <FiTrash2 />
           </motion.button>
+
+          {onClose && (
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="p-2 rounded-lg bg-gray-600/30 hover:bg-gray-600/50 text-gray-300"
+              onClick={onClose}
+            >
+              <FiX />
+            </motion.button>
+          )}
         </div>
       </div>
       
