@@ -315,6 +315,16 @@ class EmailService {
       'other': 'Autre'
     };
 
+    // Icônes des types (emoji fallback pour compatibilité email)
+    const typeIcons = {
+      'update': '🔄',
+      'backup': '💾',
+      'security': '🔒',
+      'maintenance': '🔧',
+      'support': '💬',
+      'other': '📋'
+    };
+
     // Formater la durée
     const formatDuration = (minutes) => {
       if (!minutes) return '-';
@@ -328,87 +338,166 @@ class EmailService {
     if (data.interventions && data.interventions.length > 0) {
       interventionsHtml = data.interventions.map(i => `
         <tr>
-          <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">${this.formatDate(i.completed_date || i.scheduled_date)}</td>
-          <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">${typeLabels[i.type] || i.type}</td>
-          <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">${i.title}</td>
-          <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">${formatDuration(i.duration_minutes)}</td>
+          <td style="padding: 14px 12px; border-bottom: 1px solid #e5e7eb; color: #374151;">${this.formatDate(i.completed_date || i.scheduled_date)}</td>
+          <td style="padding: 14px 12px; border-bottom: 1px solid #e5e7eb;">
+            <span style="display: inline-block; padding: 4px 10px; border-radius: 20px; background: #f3e8ff; color: #7c3aed; font-size: 12px; font-weight: 500;">
+              ${typeIcons[i.type] || '📋'} ${typeLabels[i.type] || i.type}
+            </span>
+          </td>
+          <td style="padding: 14px 12px; border-bottom: 1px solid #e5e7eb; color: #374151;">${i.title}</td>
+          <td style="padding: 14px 12px; border-bottom: 1px solid #e5e7eb; color: #6b7280; text-align: center;">${formatDuration(i.duration_minutes)}</td>
         </tr>
       `).join('');
     } else {
-      interventionsHtml = '<tr><td colspan="4" style="padding: 20px; text-align: center; color: #6b7280;">Aucune intervention sur cette période</td></tr>';
+      interventionsHtml = '<tr><td colspan="4" style="padding: 30px; text-align: center; color: #9ca3af; font-style: italic;">Aucune intervention sur cette période</td></tr>';
     }
 
-    // Construction du message HTML
+    // Déterminer le forfait mensuel
+    const forfaitMensuel = report.budget || data.project?.budget || 0;
+
+    // Construction du message HTML professionnel avec branding Pixfeed
     const html = `
-      <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 700px; margin: 0 auto; background: #ffffff;">
-        <div style="background: linear-gradient(135deg, #8b5cf6, #6366f1); color: white; padding: 30px; border-radius: 12px 12px 0 0;">
-          <h1 style="margin: 0 0 10px 0; font-size: 24px;">Rapport de maintenance</h1>
-          <p style="margin: 0; opacity: 0.9;">${report.project_name || data.project?.name || 'Votre site'}</p>
-          <p style="margin: 10px 0 0 0; font-size: 14px;">
-            Période du ${this.formatDate(report.period_start)} au ${this.formatDate(report.period_end)}
-          </p>
+      <!DOCTYPE html>
+      <html lang="fr">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="margin: 0; padding: 0; background: #f3f4f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+        <div style="max-width: 700px; margin: 0 auto; background: #ffffff;">
+
+          <!-- Header avec logo Pixfeed -->
+          <div style="background: linear-gradient(135deg, #7c3aed 0%, #6366f1 50%, #8b5cf6 100%); padding: 35px 30px; text-align: center;">
+            <img src="https://pixfeed.net/wp-content/uploads/2024/01/pixfeed-logo-blanc.png" alt="Pixfeed" style="height: 45px; margin-bottom: 20px;" />
+            <h1 style="margin: 0; color: #ffffff; font-size: 26px; font-weight: 600; letter-spacing: -0.5px;">Rapport de Maintenance</h1>
+            <p style="margin: 10px 0 0 0; color: rgba(255,255,255,0.9); font-size: 16px;">${report.project_name || data.project?.name || 'Votre site web'}</p>
+            <div style="margin-top: 15px; display: inline-block; background: rgba(255,255,255,0.2); padding: 8px 20px; border-radius: 25px;">
+              <span style="color: #ffffff; font-size: 14px;">📅 ${this.formatDate(report.period_start)} → ${this.formatDate(report.period_end)}</span>
+            </div>
+          </div>
+
+          <!-- Contenu principal -->
+          <div style="padding: 40px 35px;">
+
+            <!-- Message d'introduction -->
+            <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+              Bonjour <strong>${report.client_name || data.client?.name || ''}</strong>,
+            </p>
+            <p style="color: #6b7280; font-size: 15px; line-height: 1.7; margin: 0 0 30px 0;">
+              Voici le récapitulatif des interventions réalisées sur votre site durant cette période.
+              Ce rapport vous permet de suivre l'ensemble des actions effectuées dans le cadre de votre forfait de maintenance.
+            </p>
+
+            ${customMessage ? `
+            <div style="margin: 0 0 30px 0; padding: 20px; background: linear-gradient(135deg, #f3e8ff 0%, #ede9fe 100%); border-left: 4px solid #7c3aed; border-radius: 0 12px 12px 0;">
+              <p style="margin: 0; color: #5b21b6; font-size: 14px; line-height: 1.6;">${customMessage.replace(/\n/g, '<br>')}</p>
+            </div>
+            ` : ''}
+
+            <!-- Statistiques -->
+            <div style="margin: 30px 0; background: #fafafa; border-radius: 16px; padding: 5px; display: flex;">
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                  <td style="width: 33%; padding: 25px 15px; text-align: center; vertical-align: top;">
+                    <div style="font-size: 36px; font-weight: 700; color: #7c3aed; line-height: 1;">${data.summary?.interventions_count || 0}</div>
+                    <div style="color: #6b7280; font-size: 13px; margin-top: 8px; text-transform: uppercase; letter-spacing: 0.5px;">Interventions</div>
+                  </td>
+                  <td style="width: 33%; padding: 25px 15px; text-align: center; vertical-align: top; border-left: 2px solid #e5e7eb; border-right: 2px solid #e5e7eb;">
+                    <div style="font-size: 36px; font-weight: 700; color: #7c3aed; line-height: 1;">${formatDuration(data.summary?.total_duration_minutes || 0)}</div>
+                    <div style="color: #6b7280; font-size: 13px; margin-top: 8px; text-transform: uppercase; letter-spacing: 0.5px;">Temps total</div>
+                  </td>
+                  <td style="width: 33%; padding: 25px 15px; text-align: center; vertical-align: top;">
+                    <div style="font-size: 36px; font-weight: 700; color: #10b981; line-height: 1;">${forfaitMensuel}€</div>
+                    <div style="color: #6b7280; font-size: 13px; margin-top: 8px; text-transform: uppercase; letter-spacing: 0.5px;">Forfait/mois</div>
+                  </td>
+                </tr>
+              </table>
+            </div>
+
+            <!-- Tableau des interventions -->
+            <div style="margin: 35px 0;">
+              <h3 style="color: #1f2937; font-size: 18px; font-weight: 600; margin: 0 0 20px 0; padding-bottom: 10px; border-bottom: 2px solid #e5e7eb;">
+                📋 Détail des interventions
+              </h3>
+              <table style="width: 100%; border-collapse: collapse; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                <thead>
+                  <tr style="background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);">
+                    <th style="padding: 16px 12px; text-align: left; font-weight: 600; color: #374151; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">Date</th>
+                    <th style="padding: 16px 12px; text-align: left; font-weight: 600; color: #374151; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">Type</th>
+                    <th style="padding: 16px 12px; text-align: left; font-weight: 600; color: #374151; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">Description</th>
+                    <th style="padding: 16px 12px; text-align: center; font-weight: 600; color: #374151; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">Durée</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${interventionsHtml}
+                </tbody>
+              </table>
+            </div>
+
+            ${report.notes ? `
+            <div style="margin: 30px 0; padding: 20px; background: #fef3c7; border-radius: 12px; border-left: 4px solid #f59e0b;">
+              <p style="margin: 0; color: #92400e; font-size: 14px; line-height: 1.6;">
+                <strong>📝 Note importante :</strong><br>
+                ${report.notes}
+              </p>
+            </div>
+            ` : ''}
+
+            <!-- Message de conclusion -->
+            <p style="color: #6b7280; font-size: 15px; line-height: 1.7; margin: 30px 0 0 0;">
+              Pour toute question concernant ce rapport ou votre forfait de maintenance, n'hésitez pas à me contacter directement.
+            </p>
+
+            <!-- Signature Pixfeed professionnelle -->
+            <div style="margin-top: 40px; padding-top: 30px; border-top: 1px solid #e5e7eb;">
+              <table cellpadding="0" cellspacing="0" style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+                <tr>
+                  <td style="vertical-align: top; padding-right: 20px;">
+                    <img src="https://pixfeed.net/wp-content/uploads/2024/01/pixfeed-logo-couleur.png" alt="Pixfeed" style="width: 120px; height: auto;" />
+                  </td>
+                  <td style="vertical-align: top; border-left: 3px solid #7c3aed; padding-left: 20px;">
+                    <p style="margin: 0 0 5px 0; font-size: 16px; font-weight: 600; color: #1f2937;">Marc Gueffie</p>
+                    <p style="margin: 0 0 12px 0; font-size: 14px; color: #7c3aed; font-weight: 500;">Développeur chez Pixfeed</p>
+                    <p style="margin: 0 0 4px 0; font-size: 13px; color: #6b7280;">
+                      📞 <a href="tel:+33612345678" style="color: #6b7280; text-decoration: none;">06 12 34 56 78</a>
+                    </p>
+                    <p style="margin: 0 0 4px 0; font-size: 13px; color: #6b7280;">
+                      ✉️ <a href="mailto:contact@pixfeed.fr" style="color: #6b7280; text-decoration: none;">contact@pixfeed.fr</a>
+                    </p>
+                    <p style="margin: 0 0 12px 0; font-size: 13px; color: #6b7280;">
+                      🌐 <a href="https://pixfeed.net" style="color: #7c3aed; text-decoration: none; font-weight: 500;">pixfeed.net</a>
+                    </p>
+                    <p style="margin: 0; font-size: 12px; color: #9ca3af; font-style: italic;">
+                      "L'humain au cœur de nos solutions"
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </div>
+
+          </div>
+
+          <!-- Footer -->
+          <div style="background: linear-gradient(135deg, #1f2937 0%, #374151 100%); padding: 25px 35px; text-align: center;">
+            <p style="margin: 0 0 10px 0; color: rgba(255,255,255,0.9); font-size: 13px;">
+              Ce rapport a été généré automatiquement par votre service de maintenance Pixfeed
+            </p>
+            <p style="margin: 0; color: rgba(255,255,255,0.6); font-size: 12px;">
+              © ${new Date().getFullYear()} Pixfeed - Tous droits réservés
+            </p>
+          </div>
+
         </div>
-
-        <div style="padding: 30px; background: #ffffff;">
-          <p>Bonjour ${report.client_name || data.client?.name || ''},</p>
-          <p>Voici le récapitulatif des interventions réalisées sur votre site durant cette période.</p>
-
-          ${customMessage ? `<div style="margin: 20px 0; padding: 15px; background: #f3f4f6; border-radius: 8px;">
-            ${customMessage.replace(/\n/g, '<br>')}
-          </div>` : ''}
-
-          <table style="width: 100%; border-collapse: collapse; margin: 25px 0;">
-            <tr>
-              <td style="width: 33%; background: #f9fafb; border-radius: 8px; padding: 20px; text-align: center;">
-                <div style="font-size: 28px; font-weight: bold; color: #8b5cf6;">${data.summary?.interventions_count || 0}</div>
-                <div style="color: #6b7280; font-size: 14px; margin-top: 5px;">Interventions</div>
-              </td>
-              <td style="width: 33%; background: #f9fafb; border-radius: 8px; padding: 20px; text-align: center;">
-                <div style="font-size: 28px; font-weight: bold; color: #8b5cf6;">${formatDuration(data.summary?.total_duration_minutes || 0)}</div>
-                <div style="color: #6b7280; font-size: 14px; margin-top: 5px;">Temps total</div>
-              </td>
-              <td style="width: 33%; background: #f9fafb; border-radius: 8px; padding: 20px; text-align: center;">
-                <div style="font-size: 28px; font-weight: bold; color: #8b5cf6;">${this.formatAmount(report.budget || data.project?.budget)}</div>
-                <div style="color: #6b7280; font-size: 14px; margin-top: 5px;">Forfait</div>
-              </td>
-            </tr>
-          </table>
-
-          <h3 style="color: #374151; margin-bottom: 15px;">Détail des interventions</h3>
-          <table style="width: 100%; border-collapse: collapse; background: #ffffff;">
-            <thead>
-              <tr style="background: #f9fafb;">
-                <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151;">Date</th>
-                <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151;">Type</th>
-                <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151;">Description</th>
-                <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151;">Durée</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${interventionsHtml}
-            </tbody>
-          </table>
-
-          ${report.notes ? `<div style="margin-top: 20px; padding: 15px; background: #fef3c7; border-radius: 8px; color: #92400e;">
-            <strong>Note :</strong> ${report.notes}
-          </div>` : ''}
-
-          <p style="margin-top: 30px;">Pour toute question, n'hésitez pas à nous contacter.</p>
-          <p>Cordialement</p>
-        </div>
-
-        <div style="background: #f9fafb; padding: 20px 30px; text-align: center; color: #6b7280; font-size: 14px; border-radius: 0 0 12px 12px;">
-          <p style="margin: 0;">Ce rapport a été généré automatiquement par votre service de maintenance.</p>
-        </div>
-      </div>
+      </body>
+      </html>
     `;
 
     // Envoi
     return await this.sendEmail({
       to,
-      subject: `Rapport de maintenance - ${report.project_name || data.project?.name || 'Votre site'} - ${this.formatDate(report.period_start)} au ${this.formatDate(report.period_end)}`,
+      subject: `🔧 Rapport de maintenance - ${report.project_name || data.project?.name || 'Votre site'} - ${this.formatDate(report.period_start)} au ${this.formatDate(report.period_end)}`,
       html,
-      text: `Rapport de maintenance du ${this.formatDate(report.period_start)} au ${this.formatDate(report.period_end)}. ${data.summary?.interventions_count || 0} interventions réalisées.`,
+      text: `Rapport de maintenance Pixfeed\n\nBonjour ${report.client_name || data.client?.name || ''},\n\nVoici le récapitulatif des interventions réalisées sur votre site du ${this.formatDate(report.period_start)} au ${this.formatDate(report.period_end)}.\n\nRésumé :\n- ${data.summary?.interventions_count || 0} interventions réalisées\n- Temps total : ${formatDuration(data.summary?.total_duration_minutes || 0)}\n- Forfait mensuel : ${forfaitMensuel}€\n\nPour toute question, contactez-nous sur contact@pixfeed.fr ou au 06 12 34 56 78.\n\nCordialement,\nMarc Gueffie\nDéveloppeur chez Pixfeed\nhttps://pixfeed.net`,
       ccToSelf
     });
   }
