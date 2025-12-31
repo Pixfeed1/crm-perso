@@ -9,6 +9,7 @@ import TaskForm from './TaskForm';
 import ProjectPayments from './ProjectPayments';
 import InterventionList from './InterventionList';
 import InterventionForm from './InterventionForm';
+import MaintenanceReports from './MaintenanceReports';
 import { interventionsAPI } from '../../services/api';
 
 const ProjectDetails = ({ project, onUpdate, onDelete, onAddTask, onToggleTaskStatus, onClose }) => {
@@ -495,6 +496,11 @@ const ProjectDetails = ({ project, onUpdate, onDelete, onAddTask, onToggleTaskSt
             )}
           </AnimatePresence>
         </div>
+      )}
+
+      {/* Section Rapports de maintenance (uniquement pour les projets maintenance) */}
+      {project.type === 'maintenance' && (
+        <MaintenanceReports project={project} />
       )}
 
       {/* Modal d'édition */}

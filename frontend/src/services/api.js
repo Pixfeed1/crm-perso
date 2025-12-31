@@ -928,3 +928,50 @@ export const interventionsAPI = {
   }
 };
 
+// ===== RAPPORTS DE MAINTENANCE =====
+export const maintenanceReportsAPI = {
+  // Générer un rapport
+  generate: (projectId, data) => {
+    console.log(`Appel API: génération rapport pour projet ${projectId}`, data);
+    return apiRequest(`/maintenance-reports/project/${projectId}/generate`, 'POST', data);
+  },
+
+  // Récupérer les rapports d'un projet
+  getByProject: (projectId) => {
+    console.log(`Appel API: récupération rapports du projet ${projectId}`);
+    return apiRequest(`/maintenance-reports/project/${projectId}`);
+  },
+
+  // Récupérer un rapport par ID
+  getById: (id) => {
+    console.log(`Appel API: récupération rapport ${id}`);
+    return apiRequest(`/maintenance-reports/${id}`);
+  },
+
+  // URL de prévisualisation
+  getPreviewUrl: (id) => {
+    const baseUrl = process.env.NODE_ENV === 'production'
+      ? 'https://crm.pixfeed.net/api'
+      : 'http://localhost:5000/api';
+    return `${baseUrl}/maintenance-reports/${id}/preview`;
+  },
+
+  // Mettre à jour un rapport
+  update: (id, data) => {
+    console.log(`Appel API: mise à jour rapport ${id}`, data);
+    return apiRequest(`/maintenance-reports/${id}`, 'PUT', data);
+  },
+
+  // Envoyer un rapport
+  send: (id, email) => {
+    console.log(`Appel API: envoi rapport ${id} à ${email}`);
+    return apiRequest(`/maintenance-reports/${id}/send`, 'POST', { email });
+  },
+
+  // Supprimer un rapport
+  delete: (id) => {
+    console.log(`Appel API: suppression rapport ${id}`);
+    return apiRequest(`/maintenance-reports/${id}`, 'DELETE');
+  }
+};
+

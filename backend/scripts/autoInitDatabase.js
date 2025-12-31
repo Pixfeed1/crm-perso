@@ -478,6 +478,33 @@ const DATABASE_SCHEMA = {
     ]
   },
 
+  // Table maintenance_reports (rapports de maintenance envoyés aux clients)
+  maintenance_reports: {
+    columns: {
+      id: 'SERIAL PRIMARY KEY',
+      project_id: 'INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE',
+      client_id: 'INTEGER REFERENCES crm_clients(id) ON DELETE SET NULL',
+      period_start: 'DATE NOT NULL',
+      period_end: 'DATE NOT NULL',
+      interventions_count: 'INTEGER DEFAULT 0',
+      total_duration_minutes: 'INTEGER DEFAULT 0',
+      report_data: 'JSONB', // Contenu du rapport (interventions, stats, etc.)
+      status: "VARCHAR(50) DEFAULT 'draft'", // draft, sent, viewed
+      sent_at: 'TIMESTAMP',
+      sent_to: 'VARCHAR(255)',
+      viewed_at: 'TIMESTAMP',
+      notes: 'TEXT',
+      created_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP',
+      updated_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'
+    },
+    indexes: [
+      'CREATE INDEX IF NOT EXISTS idx_maintenance_reports_project_id ON maintenance_reports(project_id)',
+      'CREATE INDEX IF NOT EXISTS idx_maintenance_reports_client_id ON maintenance_reports(client_id)',
+      'CREATE INDEX IF NOT EXISTS idx_maintenance_reports_status ON maintenance_reports(status)',
+      'CREATE INDEX IF NOT EXISTS idx_maintenance_reports_period ON maintenance_reports(period_start, period_end)'
+    ]
+  },
+
   // Table interventions (suivi des interventions de maintenance)
   interventions: {
     columns: {
