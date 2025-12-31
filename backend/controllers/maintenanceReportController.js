@@ -1,4 +1,5 @@
 // backend/controllers/maintenanceReportController.js
+const emailService = require('../services/emailService');
 
 /**
  * Contrôleur pour la génération et l'envoi des rapports de maintenance
@@ -232,9 +233,28 @@ const sendReport = async (req, res) => {
     const report = reportResult.rows[0];
     const sendTo = email || report.client_email;
 
-    // TODO: Intégrer l'envoi d'email réel ici
-    // Pour l'instant, on marque juste comme envoyé
+    if (!sendTo) {
+      return res.status(400).json({
+        success: false,
+        message: 'Aucune adresse email définie pour ce client'
+      });
+    }
 
+    // Envoyer l'email via emailService
+    try {
+      await emailService.sendMaintenanceReportEmail(report, {
+        recipientEmail: sendTo,
+        ccToSelf: true
+      });
+    } catch (emailError) {
+      console.error('Erreur envoi email:', emailError);
+      return res.status(500).json({
+        success: false,
+        message: `Erreur lors de l'envoi de l'email: ${emailError.message}`
+      });
+    }
+
+    // Mettre à jour le statut du rapport
     const updateQuery = `
       UPDATE maintenance_reports
       SET status = 'sent', sent_at = NOW(), sent_to = $1, updated_at = NOW()
@@ -246,7 +266,7 @@ const sendReport = async (req, res) => {
 
     res.json({
       success: true,
-      message: `Rapport envoyé à ${sendTo}`,
+      message: `Rapport envoyé avec succès à ${sendTo}`,
       report: result.rows[0]
     });
   } catch (error) {

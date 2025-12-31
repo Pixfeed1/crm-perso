@@ -291,6 +291,127 @@ class EmailService {
     };
     return labels[status] || status;
   }
+
+  /**
+   * Envoie un rapport de maintenance par email
+   */
+  async sendMaintenanceReportEmail(report, options = {}) {
+    const { recipientEmail, customMessage = '', ccToSelf = false } = options;
+
+    const data = report.report_data || {};
+    const to = recipientEmail || report.client_email;
+
+    if (!to) {
+      throw new Error('Aucun email destinataire défini pour ce client');
+    }
+
+    // Labels des types d'intervention
+    const typeLabels = {
+      'update': 'Mise à jour',
+      'backup': 'Sauvegarde',
+      'security': 'Sécurité',
+      'maintenance': 'Maintenance',
+      'support': 'Support',
+      'other': 'Autre'
+    };
+
+    // Formater la durée
+    const formatDuration = (minutes) => {
+      if (!minutes) return '-';
+      const hours = Math.floor(minutes / 60);
+      const mins = minutes % 60;
+      return hours > 0 ? `${hours}h${mins > 0 ? mins.toString().padStart(2, '0') : ''}` : `${mins}min`;
+    };
+
+    // Générer le tableau des interventions
+    let interventionsHtml = '';
+    if (data.interventions && data.interventions.length > 0) {
+      interventionsHtml = data.interventions.map(i => `
+        <tr>
+          <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">${this.formatDate(i.completed_date || i.scheduled_date)}</td>
+          <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">${typeLabels[i.type] || i.type}</td>
+          <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">${i.title}</td>
+          <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">${formatDuration(i.duration_minutes)}</td>
+        </tr>
+      `).join('');
+    } else {
+      interventionsHtml = '<tr><td colspan="4" style="padding: 20px; text-align: center; color: #6b7280;">Aucune intervention sur cette période</td></tr>';
+    }
+
+    // Construction du message HTML
+    const html = `
+      <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 700px; margin: 0 auto; background: #ffffff;">
+        <div style="background: linear-gradient(135deg, #8b5cf6, #6366f1); color: white; padding: 30px; border-radius: 12px 12px 0 0;">
+          <h1 style="margin: 0 0 10px 0; font-size: 24px;">Rapport de maintenance</h1>
+          <p style="margin: 0; opacity: 0.9;">${report.project_name || data.project?.name || 'Votre site'}</p>
+          <p style="margin: 10px 0 0 0; font-size: 14px;">
+            Période du ${this.formatDate(report.period_start)} au ${this.formatDate(report.period_end)}
+          </p>
+        </div>
+
+        <div style="padding: 30px; background: #ffffff;">
+          <p>Bonjour ${report.client_name || data.client?.name || ''},</p>
+          <p>Voici le récapitulatif des interventions réalisées sur votre site durant cette période.</p>
+
+          ${customMessage ? `<div style="margin: 20px 0; padding: 15px; background: #f3f4f6; border-radius: 8px;">
+            ${customMessage.replace(/\n/g, '<br>')}
+          </div>` : ''}
+
+          <table style="width: 100%; border-collapse: collapse; margin: 25px 0;">
+            <tr>
+              <td style="width: 33%; background: #f9fafb; border-radius: 8px; padding: 20px; text-align: center;">
+                <div style="font-size: 28px; font-weight: bold; color: #8b5cf6;">${data.summary?.interventions_count || 0}</div>
+                <div style="color: #6b7280; font-size: 14px; margin-top: 5px;">Interventions</div>
+              </td>
+              <td style="width: 33%; background: #f9fafb; border-radius: 8px; padding: 20px; text-align: center;">
+                <div style="font-size: 28px; font-weight: bold; color: #8b5cf6;">${formatDuration(data.summary?.total_duration_minutes || 0)}</div>
+                <div style="color: #6b7280; font-size: 14px; margin-top: 5px;">Temps total</div>
+              </td>
+              <td style="width: 33%; background: #f9fafb; border-radius: 8px; padding: 20px; text-align: center;">
+                <div style="font-size: 28px; font-weight: bold; color: #8b5cf6;">${this.formatAmount(report.budget || data.project?.budget)}</div>
+                <div style="color: #6b7280; font-size: 14px; margin-top: 5px;">Forfait</div>
+              </td>
+            </tr>
+          </table>
+
+          <h3 style="color: #374151; margin-bottom: 15px;">Détail des interventions</h3>
+          <table style="width: 100%; border-collapse: collapse; background: #ffffff;">
+            <thead>
+              <tr style="background: #f9fafb;">
+                <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151;">Date</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151;">Type</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151;">Description</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151;">Durée</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${interventionsHtml}
+            </tbody>
+          </table>
+
+          ${report.notes ? `<div style="margin-top: 20px; padding: 15px; background: #fef3c7; border-radius: 8px; color: #92400e;">
+            <strong>Note :</strong> ${report.notes}
+          </div>` : ''}
+
+          <p style="margin-top: 30px;">Pour toute question, n'hésitez pas à nous contacter.</p>
+          <p>Cordialement</p>
+        </div>
+
+        <div style="background: #f9fafb; padding: 20px 30px; text-align: center; color: #6b7280; font-size: 14px; border-radius: 0 0 12px 12px;">
+          <p style="margin: 0;">Ce rapport a été généré automatiquement par votre service de maintenance.</p>
+        </div>
+      </div>
+    `;
+
+    // Envoi
+    return await this.sendEmail({
+      to,
+      subject: `Rapport de maintenance - ${report.project_name || data.project?.name || 'Votre site'} - ${this.formatDate(report.period_start)} au ${this.formatDate(report.period_end)}`,
+      html,
+      text: `Rapport de maintenance du ${this.formatDate(report.period_start)} au ${this.formatDate(report.period_end)}. ${data.summary?.interventions_count || 0} interventions réalisées.`,
+      ccToSelf
+    });
+  }
 }
 
 // Export d'une instance unique (singleton)
