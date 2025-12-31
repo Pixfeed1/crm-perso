@@ -889,3 +889,42 @@ export const reviewRequestsAPI = {
   }
 };
 
+// ===== INTERVENTIONS MAINTENANCE =====
+export const interventionsAPI = {
+  // Récupérer les interventions d'un projet
+  getByProject: (projectId) => {
+    console.log(`Appel API: récupération des interventions du projet ${projectId}`);
+    return apiRequest(`/interventions/project/${projectId}`);
+  },
+
+  // Récupérer les stats d'un projet
+  getStats: (projectId) => {
+    console.log(`Appel API: récupération des stats interventions du projet ${projectId}`);
+    return apiRequest(`/interventions/project/${projectId}/stats`);
+  },
+
+  // Créer une intervention
+  create: (projectId, data) => {
+    console.log(`Appel API: création intervention pour projet ${projectId}`, data);
+    return apiRequest(`/interventions/project/${projectId}`, 'POST', data);
+  },
+
+  // Récupérer une intervention par ID
+  getById: (id) => {
+    console.log(`Appel API: récupération intervention ${id}`);
+    return apiRequest(`/interventions/${id}`);
+  },
+
+  // Mettre à jour une intervention
+  update: (id, data) => {
+    console.log(`Appel API: mise à jour intervention ${id}`, data);
+    return apiRequest(`/interventions/${id}`, 'PUT', data);
+  },
+
+  // Supprimer une intervention
+  delete: (id) => {
+    console.log(`Appel API: suppression intervention ${id}`);
+    return apiRequest(`/interventions/${id}`, 'DELETE');
+  }
+};
+

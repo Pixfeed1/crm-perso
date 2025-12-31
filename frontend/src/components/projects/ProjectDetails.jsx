@@ -1,17 +1,68 @@
 // src/components/projects/ProjectDetails.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiGlobe, FiSmartphone, FiMonitor, FiEdit2, FiRadio, FiTool, FiPackage, FiClipboard, FiRotateCw, FiCalendar, FiCheckCircle, FiPauseCircle, FiXCircle, FiHelpCircle, FiTrash2, FiFileText, FiCheck, FiX } from 'react-icons/fi';
+import { FiGlobe, FiSmartphone, FiMonitor, FiEdit2, FiRadio, FiTool, FiPackage, FiClipboard, FiRotateCw, FiCalendar, FiCheckCircle, FiPauseCircle, FiXCircle, FiHelpCircle, FiTrash2, FiFileText, FiCheck, FiX, FiPlus } from 'react-icons/fi';
 
 // Sous-composants
 import TaskList from './TaskList';
 import TaskForm from './TaskForm';
 import ProjectPayments from './ProjectPayments';
+import InterventionList from './InterventionList';
+import InterventionForm from './InterventionForm';
+import { interventionsAPI } from '../../services/api';
 
 const ProjectDetails = ({ project, onUpdate, onDelete, onAddTask, onToggleTaskStatus, onClose }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  // États pour les interventions (projets maintenance)
+  const [interventions, setInterventions] = useState([]);
+  const [interventionStats, setInterventionStats] = useState(null);
+  const [isAddingIntervention, setIsAddingIntervention] = useState(false);
+  const [loadingInterventions, setLoadingInterventions] = useState(false);
+
+  // Charger les interventions pour les projets de type maintenance
+  useEffect(() => {
+    if (project?.type === 'maintenance' && project?.id) {
+      loadInterventions();
+    }
+  }, [project?.id, project?.type]);
+
+  const loadInterventions = async () => {
+    try {
+      setLoadingInterventions(true);
+      const [interventionsData, statsData] = await Promise.all([
+        interventionsAPI.getByProject(project.id),
+        interventionsAPI.getStats(project.id)
+      ]);
+      setInterventions(interventionsData);
+      setInterventionStats(statsData);
+    } catch (error) {
+      console.error('Erreur chargement interventions:', error);
+    } finally {
+      setLoadingInterventions(false);
+    }
+  };
+
+  const handleSaveIntervention = async (data) => {
+    try {
+      await interventionsAPI.create(project.id, data);
+      setIsAddingIntervention(false);
+      loadInterventions();
+    } catch (error) {
+      console.error('Erreur création intervention:', error);
+    }
+  };
+
+  const handleToggleInterventionStatus = async (interventionId, newStatus) => {
+    try {
+      await interventionsAPI.update(interventionId, { status: newStatus });
+      loadInterventions();
+    } catch (error) {
+      console.error('Erreur mise à jour intervention:', error);
+    }
+  };
 
   // Configuration des couleurs de statut
   const statusConfig = {
@@ -380,7 +431,72 @@ const ProjectDetails = ({ project, onUpdate, onDelete, onAddTask, onToggleTaskSt
           )}
         </AnimatePresence>
       </div>
-      
+
+      {/* Section Interventions (uniquement pour les projets maintenance) */}
+      {project.type === 'maintenance' && (
+        <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl p-5 mb-6">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-medium text-gray-200 flex items-center">
+              <span className="mr-2"><FiTool /></span>
+              Interventions
+            </h3>
+
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="bg-purple-600/30 hover:bg-purple-600/50 text-purple-300 px-3 py-1 rounded-lg text-sm flex items-center"
+              onClick={() => setIsAddingIntervention(true)}
+            >
+              <FiPlus className="mr-1" />
+              Ajouter une intervention
+            </motion.button>
+          </div>
+
+          {/* Liste des interventions ou formulaire d'ajout */}
+          <AnimatePresence mode="wait">
+            {isAddingIntervention ? (
+              <motion.div
+                key="intervention-form"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+              >
+                <InterventionForm
+                  onSave={handleSaveIntervention}
+                  onCancel={() => setIsAddingIntervention(false)}
+                />
+              </motion.div>
+            ) : loadingInterventions ? (
+              <motion.div
+                key="loading"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="flex justify-center py-8"
+              >
+                <motion.div
+                  className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full"
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                />
+              </motion.div>
+            ) : (
+              <motion.div
+                key="intervention-list"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+              >
+                <InterventionList
+                  interventions={interventions}
+                  stats={interventionStats}
+                  onToggleStatus={handleToggleInterventionStatus}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
+
       {/* Modal d'édition */}
       <AnimatePresence>
         {isEditing && (
