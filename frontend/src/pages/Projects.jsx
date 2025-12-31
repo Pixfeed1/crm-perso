@@ -85,9 +85,9 @@ const Projects = () => {
     // Projets terminés
     const completed = projectsData.filter(p => p.status === 'terminé').length;
 
-    // Budget total (somme des budgets de tous les projets)
+    // Budget total (somme des budgets de tous les projets - compatibilité amount/budget)
     const totalBudget = projectsData.reduce((sum, p) => {
-      const budget = parseFloat(p.budget) || 0;
+      const budget = parseFloat(p.amount) || parseFloat(p.budget) || 0;
       return sum + budget;
     }, 0);
 

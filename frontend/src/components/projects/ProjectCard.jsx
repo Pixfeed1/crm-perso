@@ -101,8 +101,8 @@ const ProjectCard = ({ project, isSelected, onClick }) => {
   
   const daysRemaining = getDaysRemaining();
   
-  // Assurer que le montant est un nombre
-  const amount = typeof project.amount === 'number' ? project.amount : 0;
+  // Assurer que le montant est un nombre (compatibilité amount/budget)
+  const amount = project.amount || project.budget || 0;
   
   return (
     <motion.div

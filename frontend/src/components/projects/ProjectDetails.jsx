@@ -272,7 +272,7 @@ const ProjectDetails = ({ project, onUpdate, onDelete, onAddTask, onToggleTaskSt
             {/* Montant */}
             <div className="flex justify-between">
               <span className="text-gray-400">Montant</span>
-              <span className="font-medium text-white">{project.amount.toLocaleString()} €</span>
+              <span className="font-medium text-white">{(project.amount || project.budget || 0).toLocaleString()} €</span>
             </div>
           </div>
         </div>
@@ -489,7 +489,7 @@ const ProjectDetails = ({ project, onUpdate, onDelete, onAddTask, onToggleTaskSt
                     <input
                       type="number"
                       name="amount"
-                      defaultValue={project.amount}
+                      defaultValue={project.amount || project.budget || 0}
                       step="0.01"
                       min="0"
                       className="w-full bg-gray-800 text-gray-100 border border-gray-600 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
