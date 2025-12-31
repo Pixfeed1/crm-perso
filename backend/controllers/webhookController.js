@@ -193,6 +193,337 @@ const handleMaintenanceWebhook = async (req, res) => {
   }
 };
 
+/**
+ * Webhook pour les paiements mensuels récurrents
+ * Appelé par WordPress après réception de invoice.payment_succeeded de Stripe
+ * Crée un nouveau revenue dans la trésorerie
+ *
+ * @route POST /api/webhooks/stripe-payment
+ * @access Public (pas d'authentification)
+ */
+const handleStripePayment = async (req, res) => {
+  const db = req.app.locals.db;
+
+  console.log('[Webhook Stripe Payment] Réception des données:', JSON.stringify(req.body, null, 2));
+
+  try {
+    const {
+      stripe_customer_id,
+      stripe_subscription_id,
+      stripe_invoice_id,
+      stripe_payment_intent_id,
+      amount,
+      plan,
+      plan_price,
+      next_billing_date,
+      invoice_url,
+      payment_date
+    } = req.body;
+
+    // Validation
+    if (!stripe_subscription_id || !amount) {
+      console.error('[Webhook Stripe Payment] Erreur: données manquantes');
+      return res.status(400).json({
+        success: false,
+        error: 'subscription_id et amount sont requis'
+      });
+    }
+
+    // 1. Trouver le projet maintenance correspondant via la description (qui contient l'ID subscription)
+    console.log('[Webhook Stripe Payment] Recherche du projet...');
+
+    const projectQuery = `
+      SELECT p.id, p.name, p.client_id, p.budget
+      FROM projects p
+      WHERE p.type = 'maintenance'
+        AND p.description LIKE $1
+        AND p.status = 'active'
+      LIMIT 1
+    `;
+
+    const projectResult = await db.pool.query(projectQuery, [`%${stripe_subscription_id}%`]);
+
+    if (projectResult.rows.length === 0) {
+      console.error('[Webhook Stripe Payment] Projet non trouvé pour subscription:', stripe_subscription_id);
+      return res.status(404).json({
+        success: false,
+        error: 'Projet maintenance non trouvé pour cet abonnement'
+      });
+    }
+
+    const project = projectResult.rows[0];
+    console.log('[Webhook Stripe Payment] Projet trouvé:', project.id, project.name);
+
+    // 2. Créer le revenue (paiement mensuel)
+    const revenueDescription = `Paiement mensuel - ${project.name}`;
+    const revenueNotes = `Stripe Invoice: ${stripe_invoice_id || 'N/A'}\nPayment Intent: ${stripe_payment_intent_id || 'N/A'}\nProchain paiement: ${next_billing_date ? new Date(next_billing_date).toLocaleDateString('fr-FR') : 'N/A'}${invoice_url ? '\nFacture: ' + invoice_url : ''}`;
+
+    const revenueQuery = `
+      INSERT INTO revenues (
+        amount, date, description, project_id, client_id,
+        type, status, payment_method, invoice_number, notes,
+        created_at, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
+      RETURNING id
+    `;
+
+    const revenueResult = await db.pool.query(revenueQuery, [
+      amount || plan_price || project.budget,
+      payment_date || new Date().toISOString(),
+      revenueDescription,
+      project.id,
+      project.client_id,
+      'subscription',
+      'paid',
+      'stripe',
+      stripe_invoice_id || null,
+      revenueNotes
+    ]);
+
+    const revenueId = revenueResult.rows[0].id;
+    console.log('[Webhook Stripe Payment] Paiement créé:', revenueId);
+
+    // 3. Mettre à jour la description du projet avec la nouvelle date de facturation
+    if (next_billing_date) {
+      await db.pool.query(
+        `UPDATE projects SET updated_at = NOW() WHERE id = $1`,
+        [project.id]
+      );
+    }
+
+    return res.status(201).json({
+      success: true,
+      message: 'Paiement mensuel enregistré avec succès',
+      revenue_id: revenueId,
+      project_id: project.id,
+      amount: amount || plan_price || project.budget
+    });
+
+  } catch (error) {
+    console.error('[Webhook Stripe Payment] Erreur:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Erreur lors de l\'enregistrement du paiement',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+/**
+ * Webhook pour les paiements échoués
+ * Appelé par WordPress après réception de invoice.payment_failed de Stripe
+ * Crée un revenue avec statut "failed" et peut déclencher des alertes
+ *
+ * @route POST /api/webhooks/stripe-payment-failed
+ * @access Public (pas d'authentification)
+ */
+const handleStripePaymentFailed = async (req, res) => {
+  const db = req.app.locals.db;
+
+  console.log('[Webhook Stripe Payment Failed] Réception des données:', JSON.stringify(req.body, null, 2));
+
+  try {
+    const {
+      stripe_customer_id,
+      stripe_subscription_id,
+      stripe_invoice_id,
+      amount,
+      plan,
+      plan_price,
+      failure_reason,
+      next_retry_date
+    } = req.body;
+
+    // Validation
+    if (!stripe_subscription_id) {
+      console.error('[Webhook Stripe Payment Failed] Erreur: subscription_id manquant');
+      return res.status(400).json({
+        success: false,
+        error: 'subscription_id est requis'
+      });
+    }
+
+    // 1. Trouver le projet maintenance
+    const projectQuery = `
+      SELECT p.id, p.name, p.client_id, p.budget, c.name as client_name, c.email as client_email
+      FROM projects p
+      LEFT JOIN crm_clients c ON p.client_id = c.id
+      WHERE p.type = 'maintenance'
+        AND p.description LIKE $1
+        AND p.status = 'active'
+      LIMIT 1
+    `;
+
+    const projectResult = await db.pool.query(projectQuery, [`%${stripe_subscription_id}%`]);
+
+    if (projectResult.rows.length === 0) {
+      console.error('[Webhook Stripe Payment Failed] Projet non trouvé');
+      return res.status(404).json({
+        success: false,
+        error: 'Projet maintenance non trouvé'
+      });
+    }
+
+    const project = projectResult.rows[0];
+    console.log('[Webhook Stripe Payment Failed] Projet trouvé:', project.id, project.name);
+
+    // 2. Créer un revenue avec statut "failed"
+    const revenueDescription = `⚠️ ÉCHEC PAIEMENT - ${project.name}`;
+    const revenueNotes = `Stripe Invoice: ${stripe_invoice_id || 'N/A'}\nRaison: ${failure_reason || 'Non spécifiée'}\nProchaine tentative: ${next_retry_date ? new Date(next_retry_date).toLocaleDateString('fr-FR') : 'N/A'}\nClient: ${project.client_name || 'N/A'}\nEmail: ${project.client_email || 'N/A'}`;
+
+    const revenueQuery = `
+      INSERT INTO revenues (
+        amount, date, description, project_id, client_id,
+        type, status, payment_method, invoice_number, notes,
+        created_at, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
+      RETURNING id
+    `;
+
+    const revenueResult = await db.pool.query(revenueQuery, [
+      amount || plan_price || project.budget,
+      new Date().toISOString(),
+      revenueDescription,
+      project.id,
+      project.client_id,
+      'subscription',
+      'failed', // Statut échec
+      'stripe',
+      stripe_invoice_id || null,
+      revenueNotes
+    ]);
+
+    const revenueId = revenueResult.rows[0].id;
+    console.log('[Webhook Stripe Payment Failed] Échec enregistré:', revenueId);
+
+    // 3. Ajouter une note au client pour historique
+    await db.pool.query(
+      `UPDATE crm_clients
+       SET notes = notes || $1, updated_at = NOW()
+       WHERE id = $2`,
+      [`\n\n⚠️ [${new Date().toLocaleDateString('fr-FR')}] Échec de paiement - ${failure_reason || 'Raison non spécifiée'}`, project.client_id]
+    );
+
+    return res.status(201).json({
+      success: true,
+      message: 'Échec de paiement enregistré',
+      revenue_id: revenueId,
+      project_id: project.id,
+      client_id: project.client_id,
+      alert: true
+    });
+
+  } catch (error) {
+    console.error('[Webhook Stripe Payment Failed] Erreur:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Erreur lors de l\'enregistrement de l\'échec',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+/**
+ * Webhook pour les annulations d'abonnement
+ * Appelé par WordPress après réception de customer.subscription.deleted de Stripe
+ * Met à jour le projet en "terminé" et le client en "inactif"
+ *
+ * @route POST /api/webhooks/stripe-cancel
+ * @access Public (pas d'authentification)
+ */
+const handleStripeCancel = async (req, res) => {
+  const db = req.app.locals.db;
+
+  console.log('[Webhook Stripe Cancel] Réception des données:', JSON.stringify(req.body, null, 2));
+
+  try {
+    const {
+      stripe_customer_id,
+      stripe_subscription_id,
+      cancellation_reason,
+      canceled_at
+    } = req.body;
+
+    // Validation
+    if (!stripe_subscription_id) {
+      console.error('[Webhook Stripe Cancel] Erreur: subscription_id manquant');
+      return res.status(400).json({
+        success: false,
+        error: 'subscription_id est requis'
+      });
+    }
+
+    // 1. Trouver le projet maintenance
+    const projectQuery = `
+      SELECT p.id, p.name, p.client_id, c.name as client_name
+      FROM projects p
+      LEFT JOIN crm_clients c ON p.client_id = c.id
+      WHERE p.type = 'maintenance'
+        AND p.description LIKE $1
+      LIMIT 1
+    `;
+
+    const projectResult = await db.pool.query(projectQuery, [`%${stripe_subscription_id}%`]);
+
+    if (projectResult.rows.length === 0) {
+      console.error('[Webhook Stripe Cancel] Projet non trouvé');
+      return res.status(404).json({
+        success: false,
+        error: 'Projet maintenance non trouvé'
+      });
+    }
+
+    const project = projectResult.rows[0];
+    console.log('[Webhook Stripe Cancel] Projet trouvé:', project.id, project.name);
+
+    // 2. Mettre à jour le projet : statut = "completed" (terminé)
+    const cancelDate = canceled_at ? new Date(canceled_at) : new Date();
+    const cancelNote = `\n\n--- RÉSILIATION ---\nDate: ${cancelDate.toLocaleDateString('fr-FR')}\nRaison: ${cancellation_reason || 'Non spécifiée'}`;
+
+    await db.pool.query(
+      `UPDATE projects
+       SET status = 'completed',
+           end_date = $1,
+           description = description || $2,
+           updated_at = NOW()
+       WHERE id = $3`,
+      [cancelDate.toISOString(), cancelNote, project.id]
+    );
+
+    console.log('[Webhook Stripe Cancel] Projet terminé:', project.id);
+
+    // 3. Mettre à jour le client : ajouter note de résiliation
+    // On ne le passe pas en "inactif" automatiquement car il peut avoir d'autres projets
+    await db.pool.query(
+      `UPDATE crm_clients
+       SET notes = notes || $1, updated_at = NOW()
+       WHERE id = $2`,
+      [`\n\n🔴 [${cancelDate.toLocaleDateString('fr-FR')}] Résiliation abonnement maintenance - ${cancellation_reason || 'Raison non spécifiée'}`, project.client_id]
+    );
+
+    console.log('[Webhook Stripe Cancel] Client mis à jour:', project.client_id);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Abonnement résilié avec succès',
+      project_id: project.id,
+      client_id: project.client_id,
+      canceled_at: cancelDate.toISOString()
+    });
+
+  } catch (error) {
+    console.error('[Webhook Stripe Cancel] Erreur:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Erreur lors de la résiliation',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
 module.exports = {
-  handleMaintenanceWebhook
+  handleMaintenanceWebhook,
+  handleStripePayment,
+  handleStripePaymentFailed,
+  handleStripeCancel
 };
