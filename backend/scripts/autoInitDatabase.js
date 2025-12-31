@@ -478,8 +478,33 @@ const DATABASE_SCHEMA = {
     ]
   },
 
+  // Table interventions (suivi des interventions de maintenance)
+  interventions: {
+    columns: {
+      id: 'SERIAL PRIMARY KEY',
+      project_id: 'INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE',
+      title: 'TEXT NOT NULL',
+      description: 'TEXT',
+      type: "VARCHAR(50) DEFAULT 'maintenance'", // maintenance, update, backup, security, support, other
+      status: "VARCHAR(50) DEFAULT 'planned'", // planned, in_progress, completed, cancelled
+      priority: "VARCHAR(20) DEFAULT 'normal'", // low, normal, high, urgent
+      scheduled_date: 'TIMESTAMP',
+      completed_date: 'TIMESTAMP',
+      duration_minutes: 'INTEGER',
+      technician: 'VARCHAR(255)',
+      notes: 'TEXT',
+      created_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP',
+      updated_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'
+    },
+    indexes: [
+      'CREATE INDEX IF NOT EXISTS idx_interventions_project_id ON interventions(project_id)',
+      'CREATE INDEX IF NOT EXISTS idx_interventions_status ON interventions(status)',
+      'CREATE INDEX IF NOT EXISTS idx_interventions_scheduled_date ON interventions(scheduled_date)',
+      'CREATE INDEX IF NOT EXISTS idx_interventions_type ON interventions(type)'
+    ]
+  },
+
   // Table review_requests
-  review_requests: {
     columns: {
       id: 'SERIAL PRIMARY KEY',
       client_id: 'INTEGER REFERENCES crm_clients(id) ON DELETE CASCADE',
