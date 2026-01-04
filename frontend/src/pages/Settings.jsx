@@ -438,6 +438,72 @@ const Settings = () => {
               <p className="text-sm text-gray-400 mb-4">
                 Personnalisez votre signature pour les emails envoyés depuis l'application
               </p>
+
+              {/* Templates de signature */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Modèles de signature
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => handleSignatureChange(`
+<table cellpadding="0" cellspacing="0" style="font-family: Arial, sans-serif;">
+  <tr>
+    <td style="padding-right: 15px; border-right: 2px solid #6366f1;">
+      <img src="${formData.logo_url || 'https://via.placeholder.com/80x80?text=Logo'}" alt="Logo" style="width: 80px; height: auto;" />
+    </td>
+    <td style="padding-left: 15px;">
+      <div style="font-size: 16px; font-weight: bold; color: #1f2937;">${formData.company_name || 'Votre Entreprise'}</div>
+      <div style="font-size: 13px; color: #6b7280; margin-top: 4px;">${formData.email || 'email@exemple.com'}</div>
+      <div style="font-size: 13px; color: #6b7280;">${formData.phone || '01 23 45 67 89'}</div>
+      <div style="font-size: 12px; color: #9ca3af; margin-top: 8px;">${formData.address || ''} ${formData.postal_code || ''} ${formData.city || ''}</div>
+    </td>
+  </tr>
+</table>
+                    `)}
+                    className="p-3 bg-gray-900/50 border border-gray-700 rounded-lg hover:border-indigo-500 transition-colors text-left"
+                  >
+                    <div className="text-sm font-medium text-white mb-1">Professionnel</div>
+                    <div className="text-xs text-gray-400">Logo + coordonnées</div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleSignatureChange(`
+<div style="font-family: Arial, sans-serif; border-top: 3px solid #6366f1; padding-top: 15px; margin-top: 20px;">
+  <div style="font-size: 15px; font-weight: bold; color: #1f2937;">${formData.company_name || 'Votre Entreprise'}</div>
+  <div style="font-size: 13px; color: #6366f1; margin-top: 2px;">Développement Web & Digital</div>
+  <div style="margin-top: 10px;">
+    <span style="font-size: 12px; color: #6b7280;">📧 ${formData.email || 'email@exemple.com'}</span>
+    <span style="font-size: 12px; color: #6b7280; margin-left: 15px;">📞 ${formData.phone || '01 23 45 67 89'}</span>
+  </div>
+  <div style="font-size: 11px; color: #9ca3af; margin-top: 8px;">🌐 www.votre-site.com</div>
+</div>
+                    `)}
+                    className="p-3 bg-gray-900/50 border border-gray-700 rounded-lg hover:border-indigo-500 transition-colors text-left"
+                  >
+                    <div className="text-sm font-medium text-white mb-1">Moderne</div>
+                    <div className="text-xs text-gray-400">Style épuré avec bordure</div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleSignatureChange(`
+<div style="font-family: Arial, sans-serif;">
+  <p style="font-size: 14px; color: #374151; margin: 0;">Cordialement,</p>
+  <p style="font-size: 15px; font-weight: bold; color: #1f2937; margin: 8px 0 4px 0;">${formData.company_name || 'Votre Entreprise'}</p>
+  <p style="font-size: 13px; color: #6b7280; margin: 0;">${formData.email || 'email@exemple.com'} | ${formData.phone || '01 23 45 67 89'}</p>
+</div>
+                    `)}
+                    className="p-3 bg-gray-900/50 border border-gray-700 rounded-lg hover:border-indigo-500 transition-colors text-left"
+                  >
+                    <div className="text-sm font-medium text-white mb-1">Simple</div>
+                    <div className="text-xs text-gray-400">Minimaliste</div>
+                  </button>
+                </div>
+              </div>
+
               <div className="bg-white rounded-lg [&_.ql-editor]:text-black [&_.ql-editor]:text-base [&_.ql-editor_*]:text-black">
                 <ReactQuill
                   theme="snow"

@@ -1,6 +1,6 @@
 // src/components/common/FileUpload.jsx
 import React, { useState } from 'react';
-import { FiUpload, FiTrash2, FiFile, FiDownload, FiX } from 'react-icons/fi';
+import { FiUpload, FiTrash2, FiFile, FiDownload, FiX, FiImage, FiFileText, FiPaperclip, FiPackage, FiPieChart } from 'react-icons/fi';
 import { uploadAPI } from '../../services/uploadAPI';
 
 const FileUpload = ({
@@ -24,13 +24,13 @@ const FileUpload = ({
 
   // Obtenir l'icône selon le type de fichier
   const getFileIcon = (mimetype) => {
-    if (mimetype.startsWith('image/')) return '🖼️';
-    if (mimetype === 'application/pdf') return '📄';
-    if (mimetype.includes('word')) return '📝';
-    if (mimetype.includes('excel') || mimetype.includes('spreadsheet')) return '📊';
-    if (mimetype.includes('powerpoint') || mimetype.includes('presentation')) return '📊';
-    if (mimetype.includes('zip')) return '📦';
-    return '📎';
+    if (mimetype.startsWith('image/')) return <FiImage className="w-5 h-5 text-purple-400" />;
+    if (mimetype === 'application/pdf') return <FiFileText className="w-5 h-5 text-red-400" />;
+    if (mimetype.includes('word')) return <FiFileText className="w-5 h-5 text-blue-400" />;
+    if (mimetype.includes('excel') || mimetype.includes('spreadsheet')) return <FiPieChart className="w-5 h-5 text-green-400" />;
+    if (mimetype.includes('powerpoint') || mimetype.includes('presentation')) return <FiPieChart className="w-5 h-5 text-orange-400" />;
+    if (mimetype.includes('zip')) return <FiPackage className="w-5 h-5 text-yellow-400" />;
+    return <FiPaperclip className="w-5 h-5 text-gray-400" />;
   };
 
   // Upload de fichiers
@@ -163,7 +163,7 @@ const FileUpload = ({
                 key={index}
                 className="flex items-center gap-3 p-3 bg-gray-800/30 border border-gray-700 rounded-lg hover:border-gray-600 transition-colors"
               >
-                <span className="text-2xl">{getFileIcon(file.mimetype)}</span>
+                <div className="flex-shrink-0">{getFileIcon(file.mimetype)}</div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-white truncate">
                     {file.originalName}

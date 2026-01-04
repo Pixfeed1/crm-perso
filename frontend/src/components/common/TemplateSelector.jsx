@@ -1,7 +1,7 @@
 // src/components/common/TemplateSelector.jsx
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiFile, FiX, FiCheck, FiCopy } from 'react-icons/fi';
+import { FiFile, FiX, FiCheck, FiCopy, FiInfo } from 'react-icons/fi';
 import { getTemplatesByCategory, fillTemplate } from '../../services/templates';
 
 /**
@@ -229,8 +229,9 @@ const TemplateSelector = ({
                     </div>
 
                     {currentValue && (
-                      <p className="text-xs text-gray-400 mt-2 text-center">
-                        💡 Vous pouvez remplacer le contenu actuel ou l'ajouter à la fin
+                      <p className="text-xs text-gray-400 mt-2 text-center flex items-center justify-center gap-1">
+                        <FiInfo className="flex-shrink-0" />
+                        Vous pouvez remplacer le contenu actuel ou l'ajouter à la fin
                       </p>
                     )}
                   </div>

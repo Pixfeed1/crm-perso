@@ -363,9 +363,10 @@ const clientController = {
       };
 
       // Essayer de charger depuis la base de données (priorité)
+      let emailSignature = '';
       try {
         const settingsResult = await db.pool.query(
-          'SELECT smtp_host, smtp_port, smtp_secure, smtp_user, smtp_pass, smtp_from_email, smtp_from_name FROM company_settings LIMIT 1'
+          'SELECT smtp_host, smtp_port, smtp_secure, smtp_user, smtp_pass, smtp_from_email, smtp_from_name, email_signature FROM company_settings LIMIT 1'
         );
         if (settingsResult.rows && settingsResult.rows.length > 0) {
           const dbSettings = settingsResult.rows[0];
@@ -377,6 +378,7 @@ const clientController = {
           if (dbSettings.smtp_pass) smtpConfig.pass = dbSettings.smtp_pass;
           if (dbSettings.smtp_from_email) smtpConfig.from_email = dbSettings.smtp_from_email;
           if (dbSettings.smtp_from_name) smtpConfig.from_name = dbSettings.smtp_from_name;
+          if (dbSettings.email_signature) emailSignature = dbSettings.email_signature;
         }
       } catch (dbError) {
         console.log('Pas de config SMTP en base, utilisation du .env');
@@ -401,7 +403,13 @@ const clientController = {
         }
       });
 
-      // Construire le HTML de l'email
+      // Construire le HTML de l'email avec signature
+      const signatureHtml = emailSignature ? `
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+          ${emailSignature}
+        </div>
+      ` : '';
+
       const htmlContent = `
         <!DOCTYPE html>
         <html>
@@ -416,6 +424,7 @@ const clientController = {
         <body>
           <div class="container">
             <div class="message">${message.replace(/\n/g, '<br>')}</div>
+            ${signatureHtml}
           </div>
         </body>
         </html>

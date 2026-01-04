@@ -34,6 +34,7 @@ import {
 import KPIOrb from '../components/dashboard/KPIOrb';
 import ActivityStream from '../components/dashboard/ActivityStream';
 import GoalProgress from '../components/dashboard/GoalProgress';
+import EmailAutocomplete from '../components/common/EmailAutocomplete';
 import { dashboardAPI, reviewRequestsAPI, clientsAPI } from '../services/api';
 import { useToast } from '../hooks/useToast';
 
@@ -1056,11 +1057,10 @@ const Dashboard = () => {
                   <label className="block text-sm font-medium text-gray-300 mb-2">
                     Destinataire *
                   </label>
-                  <input
-                    type="email"
+                  <EmailAutocomplete
                     value={quickEmailData.to}
-                    onChange={(e) => setQuickEmailData({ ...quickEmailData, to: e.target.value })}
-                    placeholder="email@exemple.com"
+                    onChange={(value) => setQuickEmailData({ ...quickEmailData, to: value })}
+                    placeholder="Tapez un nom ou email..."
                     className="w-full px-4 py-2.5 bg-gray-800/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
                   />
                 </div>

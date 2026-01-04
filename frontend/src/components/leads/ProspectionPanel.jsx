@@ -1,6 +1,6 @@
 // src/components/leads/ProspectionPanel.jsx
 import React, { useState, useEffect } from 'react';
-import { FiSearch, FiMapPin, FiUserPlus, FiExternalLink, FiCheck, FiX, FiAlertCircle, FiDollarSign, FiRefreshCw, FiEdit } from 'react-icons/fi';
+import { FiSearch, FiMapPin, FiUserPlus, FiExternalLink, FiCheck, FiX, FiAlertCircle, FiDollarSign, FiRefreshCw, FiEdit, FiPhone, FiGlobe, FiMail } from 'react-icons/fi';
 import { prospectionAPI } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
 
@@ -207,7 +207,7 @@ const ProspectionPanel = ({ onLeadCreated }) => {
 
         // Alerte si crédits faibles
         if (response.credits.is_low && !response.credits.is_depleted) {
-          toast.warning(`⚠️ Attention: seulement ${response.credits.remaining} crédits Pappers restants ce mois-ci`);
+          toast.warning(`Attention: seulement ${response.credits.remaining} crédits Pappers restants ce mois-ci`);
         }
       } else {
         toast.error(response.message || 'Erreur lors de l\'enrichissement');
@@ -601,8 +601,9 @@ const ProspectionPanel = ({ onLeadCreated }) => {
                 </div>
               </div>
               {pappersCredits.is_depleted && (
-                <p className="text-xs text-red-400 mt-2">
-                  ⚠️ Crédits épuisés. Réinitialisation le {new Date(pappersCredits.next_reset).toLocaleDateString('fr-FR')}
+                <p className="text-xs text-red-400 mt-2 flex items-center gap-1">
+                  <FiAlertCircle className="flex-shrink-0" />
+                  Crédits épuisés. Réinitialisation le {new Date(pappersCredits.next_reset).toLocaleDateString('fr-FR')}
                 </p>
               )}
             </div>
@@ -848,13 +849,13 @@ const CompanyCard = ({ company, onImport, onEnrichWithPappers, onManualEnrich, i
         {company.enriched && (
           <div className="flex flex-wrap gap-2 mb-2">
             {company.phone && (
-              <span className="px-2 py-1 bg-blue-500/20 text-blue-300 text-xs rounded">
-                📞 {company.phone}
+              <span className="px-2 py-1 bg-blue-500/20 text-blue-300 text-xs rounded flex items-center gap-1">
+                <FiPhone className="w-3 h-3" /> {company.phone}
               </span>
             )}
             {company.email && (
-              <span className="px-2 py-1 bg-green-500/20 text-green-300 text-xs rounded">
-                ✉️ {company.email}
+              <span className="px-2 py-1 bg-green-500/20 text-green-300 text-xs rounded flex items-center gap-1">
+                <FiMail className="w-3 h-3" /> {company.email}
               </span>
             )}
             {company.website && (
@@ -862,9 +863,9 @@ const CompanyCard = ({ company, onImport, onEnrichWithPappers, onManualEnrich, i
                 href={company.website}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-2 py-1 bg-purple-500/20 text-purple-300 text-xs rounded hover:bg-purple-500/30"
+                className="px-2 py-1 bg-purple-500/20 text-purple-300 text-xs rounded hover:bg-purple-500/30 flex items-center gap-1"
               >
-                🌐 Site web
+                <FiGlobe className="w-3 h-3" /> Site web
               </a>
             )}
           </div>

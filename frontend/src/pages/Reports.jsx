@@ -9,7 +9,8 @@ import {
   FiPieChart,
   FiBarChart2,
   FiCalendar,
-  FiFilter
+  FiFilter,
+  FiInfo
 } from 'react-icons/fi';
 import { FaFileExport, FaChartLine } from 'react-icons/fa';
 import { dashboardAPI, leadsAPI, clientsAPI, revenuesAPI } from '../services/api';
@@ -709,9 +710,10 @@ const Reports = () => {
 
         {/* Note de bas de page */}
         <div className="mt-6 p-4 bg-slate-800/30 backdrop-blur rounded-lg shadow-xl shadow-black/20">
-          <p className="text-sm text-gray-300">
-            💡 <strong>Astuce :</strong> Ces rapports sont générés en temps réel à partir de vos données.
-            Utilisez le sélecteur de période pour analyser différentes périodes et exportez en PDF pour vos présentations.
+          <p className="text-sm text-gray-300 flex items-start gap-2">
+            <FiInfo className="text-indigo-400 flex-shrink-0 mt-0.5" />
+            <span><strong>Astuce :</strong> Ces rapports sont générés en temps réel à partir de vos données.
+            Utilisez le sélecteur de période pour analyser différentes périodes et exportez en PDF pour vos présentations.</span>
           </p>
         </div>
       </div>
