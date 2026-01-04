@@ -532,6 +532,7 @@ const DATABASE_SCHEMA = {
   },
 
   // Table review_requests
+  review_requests: {
     columns: {
       id: 'SERIAL PRIMARY KEY',
       client_id: 'INTEGER REFERENCES crm_clients(id) ON DELETE CASCADE',
