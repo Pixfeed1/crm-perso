@@ -151,7 +151,9 @@ router.get('/', async (req, res) => {
     allRevenues
       .filter(r => r.date && new Date(r.date) >= sixMonthsAgo)
       .forEach(r => {
-        const month = r.date.substring(0, 7); // YYYY-MM
+        // Convertir la date en string si c'est un objet Date (PostgreSQL)
+        const dateStr = r.date instanceof Date ? r.date.toISOString() : r.date;
+        const month = dateStr.substring(0, 7); // YYYY-MM
         if (revenuesByMonth[month] !== undefined) {
           revenuesByMonth[month] += parseFloat(r.amount) || 0;
         }
