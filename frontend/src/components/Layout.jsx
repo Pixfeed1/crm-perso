@@ -32,7 +32,6 @@ const Layout = ({ children }) => {
   const { logout } = useAuth();
   const [activeModule, setActiveModule] = useState('/dashboard');
   const [menuOpen, setMenuOpen] = useState(false);
-  const [isHovering, setIsHovering] = useState(false);
   const [remindersOpen, setRemindersOpen] = useState(false);
   const [reminderCount, setReminderCount] = useState({ active: 0, overdue: 0 });
   const [searchOpen, setSearchOpen] = useState(false);
@@ -139,15 +138,17 @@ const Layout = ({ children }) => {
     open: { y: 0, opacity: 1 }
   };
 
-  // Variantes pour le bouton principal
+  // Variantes pour le bouton principal - taille fixe pour garder le centrage
   const mainButtonVariants = {
-    default: { 
-      width: "4rem", 
-      height: "4rem" 
+    default: {
+      width: "4rem",
+      height: "4rem",
+      scale: 1
     },
-    menuOpen: { 
-      width: isHovering ? "3.5rem" : "2.5rem", 
-      height: isHovering ? "3.5rem" : "2.5rem"
+    menuOpen: {
+      width: "4rem",
+      height: "4rem",
+      scale: 0.7
     }
   };
 
@@ -238,36 +239,27 @@ const Layout = ({ children }) => {
         </AnimatePresence>
 
         <motion.div
-          className="relative z-20 flex items-center justify-center shadow-xl bg-indigo-600 rounded-full overflow-hidden cursor-pointer"
+          className="relative z-20 flex items-center justify-center shadow-xl bg-indigo-600 rounded-full cursor-pointer"
           variants={mainButtonVariants}
           animate={menuOpen ? "menuOpen" : "default"}
           transition={{ duration: 0.3, type: "spring", stiffness: 300 }}
-          whileTap={{ scale: 0.95 }}
+          whileTap={{ scale: 0.9 }}
           onClick={() => setMenuOpen(!menuOpen)}
-          onMouseEnter={() => setIsHovering(true)}
-          onMouseLeave={() => setIsHovering(false)}
         >
-          <div className="flex items-center justify-center w-full h-full">
-            <motion.div
-              animate={{ rotate: menuOpen ? 45 : 0 }}
-              transition={{ duration: 0.3 }}
-              className="flex items-center justify-center w-full h-full"
-            >
-              <div className="absolute inset-0 flex items-center justify-center">
-                {menuOpen ? (
-                  <span className={`flex items-center justify-center ${isHovering ? "text-2xl" : "text-xl"}`} style={{ marginTop: "-1px" }}>×</span>
-                ) : (
-                  <span className="flex items-center justify-center text-2xl" style={{ marginTop: "-1px" }}>+</span>
-                )}
-              </div>
-            </motion.div>
-          </div>
+          <motion.span
+            className="text-2xl font-light select-none"
+            animate={{ rotate: menuOpen ? 135 : 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            +
+          </motion.span>
         </motion.div>
 
+        {/* Menu circulaire desktop */}
         <AnimatePresence>
           {menuOpen && (
             <motion.div
-              className="absolute"
+              className="absolute hidden lg:block"
               style={{ bottom: '4rem', right: '4rem' }}
               variants={menuVariants}
               initial="closed"
@@ -276,12 +268,12 @@ const Layout = ({ children }) => {
             >
               <motion.div
                 className="relative"
-                style={{ width: '300px', height: '300px' }}
+                style={{ width: '420px', height: '420px' }}
               >
                 {navigationItems.map((item, index) => {
-                  // Position des éléments en cercle
+                  // Position des éléments en cercle - rayon augmenté pour 13 items
                   const angle = (index * (2 * Math.PI / navigationItems.length)) - Math.PI/2;
-                  const radius = 150;
+                  const radius = 190;
                   const x = Math.cos(angle) * radius;
                   const y = Math.sin(angle) * radius;
 
@@ -318,6 +310,55 @@ const Layout = ({ children }) => {
                   );
                 })}
               </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Menu mobile/tablette - panneau coulissant en grille */}
+        <AnimatePresence>
+          {menuOpen && (
+            <motion.div
+              className="fixed inset-x-0 bottom-0 lg:hidden z-50"
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            >
+              <div className="bg-gray-900/95 backdrop-blur-xl border-t border-gray-700 rounded-t-3xl p-4 pb-8 max-h-[70vh] overflow-y-auto">
+                {/* Indicateur de glissement */}
+                <div className="flex justify-center mb-4">
+                  <div className="w-12 h-1 bg-gray-600 rounded-full" />
+                </div>
+
+                {/* Grille de navigation */}
+                <div className="grid grid-cols-4 gap-3">
+                  {navigationItems.map((item) => {
+                    const isLogoutButton = item.isLogout === true;
+                    const isActive = activeModule === item.path;
+
+                    return (
+                      <motion.button
+                        key={item.path}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => handleNavigation(item.path, item.isLogout)}
+                        className={`flex flex-col items-center justify-center p-3 rounded-xl transition-colors ${
+                          isLogoutButton
+                            ? 'bg-rose-600/20 text-rose-300'
+                            : isActive
+                              ? 'bg-indigo-600 text-white'
+                              : 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50'
+                        }`}
+                      >
+                        <span className="text-xl mb-1">{item.icon}</span>
+                        <span className="text-xs font-medium truncate w-full text-center">
+                          {item.label}
+                        </span>
+                      </motion.button>
+                    );
+                  })}
+                </div>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
