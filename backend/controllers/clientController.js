@@ -412,9 +412,10 @@ const clientController = {
 
       const htmlContent = `
         <!DOCTYPE html>
-        <html>
+        <html lang="fr">
         <head>
           <meta charset="utf-8">
+          <meta http-equiv="Content-Language" content="fr">
           <style>
             body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
             .container { max-width: 600px; margin: 0 auto; padding: 20px; }
