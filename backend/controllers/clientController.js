@@ -350,35 +350,53 @@ const clientController = {
         });
       }
 
-      // Charger les paramètres SMTP depuis la base de données
-      const settingsResult = await db.pool.query(
-        'SELECT smtp_host, smtp_port, smtp_secure, smtp_user, smtp_pass, smtp_from_email, smtp_from_name FROM company_settings LIMIT 1'
-      );
+      // Charger les paramètres SMTP depuis la base de données OU le .env
+      let smtpConfig = {
+        host: process.env.SMTP_HOST,
+        port: parseInt(process.env.SMTP_PORT) || 587,
+        secure: process.env.SMTP_SECURE === 'true',
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+        from_email: process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER,
+        from_name: process.env.SMTP_FROM_NAME || 'CRM Pixfeed'
+      };
 
-      if (!settingsResult.rows || settingsResult.rows.length === 0) {
-        return res.status(500).json({
-          message: 'Configuration SMTP non trouvée. Veuillez configurer vos paramètres d\'envoi d\'emails.'
-        });
+      // Essayer de charger depuis la base de données (priorité)
+      try {
+        const settingsResult = await db.pool.query(
+          'SELECT smtp_host, smtp_port, smtp_secure, smtp_user, smtp_pass, smtp_from_email, smtp_from_name FROM company_settings LIMIT 1'
+        );
+        if (settingsResult.rows && settingsResult.rows.length > 0) {
+          const dbSettings = settingsResult.rows[0];
+          // Utiliser les valeurs de la DB si elles existent
+          if (dbSettings.smtp_host) smtpConfig.host = dbSettings.smtp_host;
+          if (dbSettings.smtp_port) smtpConfig.port = dbSettings.smtp_port;
+          if (dbSettings.smtp_secure !== null) smtpConfig.secure = dbSettings.smtp_secure;
+          if (dbSettings.smtp_user) smtpConfig.user = dbSettings.smtp_user;
+          if (dbSettings.smtp_pass) smtpConfig.pass = dbSettings.smtp_pass;
+          if (dbSettings.smtp_from_email) smtpConfig.from_email = dbSettings.smtp_from_email;
+          if (dbSettings.smtp_from_name) smtpConfig.from_name = dbSettings.smtp_from_name;
+        }
+      } catch (dbError) {
+        console.log('Pas de config SMTP en base, utilisation du .env');
       }
 
-      const settings = settingsResult.rows[0];
-
       // Vérifier que la configuration SMTP est complète
-      if (!settings.smtp_host || !settings.smtp_user || !settings.smtp_pass) {
+      if (!smtpConfig.host || !smtpConfig.user || !smtpConfig.pass) {
         return res.status(500).json({
-          message: 'Configuration SMTP incomplète. Veuillez configurer vos paramètres SMTP dans les réglages.'
+          message: 'Configuration SMTP incomplète. Configurez SMTP_HOST, SMTP_USER et SMTP_PASS dans le .env ou dans les réglages.'
         });
       }
 
       // Configurer nodemailer
       const nodemailer = require('nodemailer');
       const transporter = nodemailer.createTransport({
-        host: settings.smtp_host,
-        port: settings.smtp_port || 587,
-        secure: settings.smtp_secure || false,
+        host: smtpConfig.host,
+        port: smtpConfig.port,
+        secure: smtpConfig.secure,
         auth: {
-          user: settings.smtp_user,
-          pass: settings.smtp_pass
+          user: smtpConfig.user,
+          pass: smtpConfig.pass
         }
       });
 
@@ -404,7 +422,7 @@ const clientController = {
 
       // Envoyer l'email
       const mailOptions = {
-        from: `"${settings.smtp_from_name || 'CRM'}" <${settings.smtp_from_email || settings.smtp_user}>`,
+        from: `"${smtpConfig.from_name}" <${smtpConfig.from_email}>`,
         to: to,
         subject: subject,
         text: message,
