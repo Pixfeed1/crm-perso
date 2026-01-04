@@ -593,9 +593,152 @@ const downloadPDF = async (req, res) => {
   }
 };
 
+/**
+ * Générer un rapport pour un contrat de maintenance
+ */
+const generateContractReport = async (req, res) => {
+  const db = req.app.locals.db;
+  const { contractId } = req.params;
+  const { period_start, period_end, notes, report_data } = req.body;
+
+  try {
+    // 1. Récupérer les infos du contrat et du client
+    const contractQuery = `
+      SELECT mc.*, c.name as client_name, c.email as client_email, c.phone as client_phone
+      FROM maintenance_contracts mc
+      LEFT JOIN crm_clients c ON mc.client_id = c.id
+      WHERE mc.id = $1
+    `;
+    const contractResult = await db.pool.query(contractQuery, [contractId]);
+
+    if (contractResult.rows.length === 0) {
+      return res.status(404).json({ message: 'Contrat non trouvé' });
+    }
+
+    const contract = contractResult.rows[0];
+
+    // 2. Récupérer les interventions de la période (si elles existent)
+    const interventionsQuery = `
+      SELECT * FROM interventions
+      WHERE maintenance_contract_id = $1
+        AND status = 'completed'
+        AND (scheduled_date BETWEEN $2 AND $3 OR completed_date BETWEEN $2 AND $3)
+      ORDER BY completed_date DESC, scheduled_date DESC
+    `;
+    const interventionsResult = await db.pool.query(interventionsQuery, [
+      contractId,
+      period_start,
+      period_end
+    ]);
+
+    const interventions = interventionsResult.rows;
+
+    // 3. Calculer les statistiques
+    const interventionsCount = interventions.length;
+    const totalDuration = interventions.reduce((acc, i) => acc + (i.duration_minutes || 0), 0);
+
+    // 4. Créer le rapport avec les données fournies
+    const finalReportData = {
+      contract: {
+        id: contract.id,
+        site_name: contract.site_name,
+        site_url: contract.site_url,
+        wordpress_version: contract.wordpress_version,
+        monthly_amount: contract.monthly_amount
+      },
+      client: {
+        name: contract.client_name,
+        email: contract.client_email
+      },
+      period: {
+        start: period_start,
+        end: period_end
+      },
+      summary: {
+        interventions_count: interventionsCount,
+        total_duration_minutes: totalDuration
+      },
+      interventions: interventions.map(i => ({
+        id: i.id,
+        title: i.title,
+        description: i.description,
+        type: i.type,
+        scheduled_date: i.scheduled_date,
+        completed_date: i.completed_date,
+        duration_minutes: i.duration_minutes
+      })),
+      // Données du formulaire
+      ...report_data,
+      generated_at: new Date().toISOString()
+    };
+
+    // 5. Sauvegarder le rapport
+    const insertQuery = `
+      INSERT INTO maintenance_reports (
+        maintenance_contract_id, client_id, period_start, period_end,
+        interventions_count, total_duration_minutes, report_data,
+        status, notes, created_at, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'draft', $8, NOW(), NOW())
+      RETURNING *
+    `;
+
+    const insertResult = await db.pool.query(insertQuery, [
+      contractId,
+      contract.client_id,
+      period_start,
+      period_end,
+      interventionsCount,
+      totalDuration,
+      JSON.stringify(finalReportData),
+      notes || null
+    ]);
+
+    // 6. Mettre à jour la date du dernier rapport sur le contrat
+    await db.pool.query(`
+      UPDATE maintenance_contracts
+      SET last_report_date = $1,
+          next_report_due = $2,
+          updated_at = NOW()
+      WHERE id = $3
+    `, [
+      new Date().toISOString(),
+      new Date(new Date().getFullYear(), new Date().getMonth() + 2, 0).toISOString().split('T')[0],
+      contractId
+    ]);
+
+    res.status(201).json(insertResult.rows[0]);
+  } catch (error) {
+    console.error('Erreur génération rapport contrat:', error);
+    res.status(500).json({ message: 'Erreur serveur: ' + error.message });
+  }
+};
+
+/**
+ * Récupérer les rapports d'un contrat
+ */
+const getReportsByContract = async (req, res) => {
+  const db = req.app.locals.db;
+  const { contractId } = req.params;
+
+  try {
+    const query = `
+      SELECT * FROM maintenance_reports
+      WHERE maintenance_contract_id = $1
+      ORDER BY period_end DESC, created_at DESC
+    `;
+    const result = await db.pool.query(query, [contractId]);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Erreur récupération rapports contrat:', error);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
+};
+
 module.exports = {
   generateReport,
+  generateContractReport,
   getReportsByProject,
+  getReportsByContract,
   getReportById,
   updateReport,
   sendReport,

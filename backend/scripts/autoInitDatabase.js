@@ -478,11 +478,45 @@ const DATABASE_SCHEMA = {
     ]
   },
 
+  // Table maintenance_contracts (contrats de maintenance WordPress)
+  maintenance_contracts: {
+    columns: {
+      id: 'SERIAL PRIMARY KEY',
+      client_id: 'INTEGER REFERENCES crm_clients(id) ON DELETE SET NULL',
+      site_name: 'VARCHAR(255) NOT NULL',
+      site_url: 'VARCHAR(500)',
+      contract_start_date: 'DATE',
+      monthly_amount: 'NUMERIC(10,2) DEFAULT 0',
+      status: "VARCHAR(50) DEFAULT 'active'", // active, paused, cancelled
+      wordpress_version: 'VARCHAR(20)',
+      php_version: 'VARCHAR(20)',
+      hosting_provider: 'VARCHAR(100)',
+      admin_url: 'VARCHAR(500)',
+      pagespeed_mobile: 'INTEGER',
+      pagespeed_desktop: 'INTEGER',
+      last_pagespeed_date: 'DATE',
+      last_backup_date: 'DATE',
+      last_update_date: 'DATE',
+      last_report_date: 'DATE',
+      next_report_due: 'DATE',
+      plugins_count: 'INTEGER DEFAULT 0',
+      notes: 'TEXT',
+      created_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP',
+      updated_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'
+    },
+    indexes: [
+      'CREATE INDEX IF NOT EXISTS idx_maintenance_contracts_client_id ON maintenance_contracts(client_id)',
+      'CREATE INDEX IF NOT EXISTS idx_maintenance_contracts_status ON maintenance_contracts(status)',
+      'CREATE INDEX IF NOT EXISTS idx_maintenance_contracts_next_report ON maintenance_contracts(next_report_due)'
+    ]
+  },
+
   // Table maintenance_reports (rapports de maintenance envoyés aux clients)
   maintenance_reports: {
     columns: {
       id: 'SERIAL PRIMARY KEY',
-      project_id: 'INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE',
+      project_id: 'INTEGER REFERENCES projects(id) ON DELETE CASCADE',
+      maintenance_contract_id: 'INTEGER REFERENCES maintenance_contracts(id) ON DELETE CASCADE',
       client_id: 'INTEGER REFERENCES crm_clients(id) ON DELETE SET NULL',
       period_start: 'DATE NOT NULL',
       period_end: 'DATE NOT NULL',
@@ -499,6 +533,7 @@ const DATABASE_SCHEMA = {
     },
     indexes: [
       'CREATE INDEX IF NOT EXISTS idx_maintenance_reports_project_id ON maintenance_reports(project_id)',
+      'CREATE INDEX IF NOT EXISTS idx_maintenance_reports_contract_id ON maintenance_reports(maintenance_contract_id)',
       'CREATE INDEX IF NOT EXISTS idx_maintenance_reports_client_id ON maintenance_reports(client_id)',
       'CREATE INDEX IF NOT EXISTS idx_maintenance_reports_status ON maintenance_reports(status)',
       'CREATE INDEX IF NOT EXISTS idx_maintenance_reports_period ON maintenance_reports(period_start, period_end)'
@@ -509,7 +544,8 @@ const DATABASE_SCHEMA = {
   interventions: {
     columns: {
       id: 'SERIAL PRIMARY KEY',
-      project_id: 'INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE',
+      project_id: 'INTEGER REFERENCES projects(id) ON DELETE CASCADE',
+      maintenance_contract_id: 'INTEGER REFERENCES maintenance_contracts(id) ON DELETE CASCADE',
       title: 'TEXT NOT NULL',
       description: 'TEXT',
       type: "VARCHAR(50) DEFAULT 'maintenance'", // maintenance, update, backup, security, support, other
@@ -525,6 +561,7 @@ const DATABASE_SCHEMA = {
     },
     indexes: [
       'CREATE INDEX IF NOT EXISTS idx_interventions_project_id ON interventions(project_id)',
+      'CREATE INDEX IF NOT EXISTS idx_interventions_contract_id ON interventions(maintenance_contract_id)',
       'CREATE INDEX IF NOT EXISTS idx_interventions_status ON interventions(status)',
       'CREATE INDEX IF NOT EXISTS idx_interventions_scheduled_date ON interventions(scheduled_date)',
       'CREATE INDEX IF NOT EXISTS idx_interventions_type ON interventions(type)'

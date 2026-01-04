@@ -6,8 +6,14 @@ const reportController = require('../controllers/maintenanceReportController');
 // Générer un rapport pour un projet
 router.post('/project/:projectId/generate', reportController.generateReport);
 
+// Générer un rapport pour un contrat de maintenance
+router.post('/contract/:contractId/generate', reportController.generateContractReport);
+
 // Récupérer les rapports d'un projet
 router.get('/project/:projectId', reportController.getReportsByProject);
+
+// Récupérer les rapports d'un contrat
+router.get('/contract/:contractId', reportController.getReportsByContract);
 
 // Récupérer un rapport par ID
 router.get('/:id', reportController.getReportById);

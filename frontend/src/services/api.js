@@ -930,16 +930,28 @@ export const interventionsAPI = {
 
 // ===== RAPPORTS DE MAINTENANCE =====
 export const maintenanceReportsAPI = {
-  // Générer un rapport
+  // Générer un rapport pour un projet
   generate: (projectId, data) => {
     console.log(`Appel API: génération rapport pour projet ${projectId}`, data);
     return apiRequest(`/maintenance-reports/project/${projectId}/generate`, 'POST', data);
+  },
+
+  // Générer un rapport pour un contrat de maintenance
+  generateForContract: (contractId, data) => {
+    console.log(`Appel API: génération rapport pour contrat ${contractId}`, data);
+    return apiRequest(`/maintenance-reports/contract/${contractId}/generate`, 'POST', data);
   },
 
   // Récupérer les rapports d'un projet
   getByProject: (projectId) => {
     console.log(`Appel API: récupération rapports du projet ${projectId}`);
     return apiRequest(`/maintenance-reports/project/${projectId}`);
+  },
+
+  // Récupérer les rapports d'un contrat
+  getByContract: (contractId) => {
+    console.log(`Appel API: récupération rapports du contrat ${contractId}`);
+    return apiRequest(`/maintenance-reports/contract/${contractId}`);
   },
 
   // Récupérer un rapport par ID
@@ -972,6 +984,51 @@ export const maintenanceReportsAPI = {
   delete: (id) => {
     console.log(`Appel API: suppression rapport ${id}`);
     return apiRequest(`/maintenance-reports/${id}`, 'DELETE');
+  }
+};
+
+// API pour les contrats de maintenance WordPress
+export const maintenanceContractsAPI = {
+  // Récupérer tous les contrats
+  getAll: () => {
+    console.log('Appel API: récupération contrats maintenance');
+    return apiRequest('/maintenance-contracts');
+  },
+
+  // Récupérer les statistiques
+  getStats: () => {
+    console.log('Appel API: récupération stats contrats maintenance');
+    return apiRequest('/maintenance-contracts/stats');
+  },
+
+  // Récupérer un contrat par ID
+  getById: (id) => {
+    console.log(`Appel API: récupération contrat ${id}`);
+    return apiRequest(`/maintenance-contracts/${id}`);
+  },
+
+  // Créer un nouveau contrat
+  create: (data) => {
+    console.log('Appel API: création contrat maintenance', data);
+    return apiRequest('/maintenance-contracts', 'POST', data);
+  },
+
+  // Mettre à jour un contrat
+  update: (id, data) => {
+    console.log(`Appel API: mise à jour contrat ${id}`, data);
+    return apiRequest(`/maintenance-contracts/${id}`, 'PUT', data);
+  },
+
+  // Mettre à jour les scores PageSpeed
+  updatePageSpeed: (id, mobile, desktop) => {
+    console.log(`Appel API: mise à jour PageSpeed contrat ${id}`, { mobile, desktop });
+    return apiRequest(`/maintenance-contracts/${id}/pagespeed`, 'PUT', { mobile, desktop });
+  },
+
+  // Supprimer un contrat
+  delete: (id) => {
+    console.log(`Appel API: suppression contrat ${id}`);
+    return apiRequest(`/maintenance-contracts/${id}`, 'DELETE');
   }
 };
 

@@ -126,6 +126,7 @@ app.use('/api/video-conference', require('./routes/videoConferenceRoutes'));
 app.use('/api/review-requests', require('./routes/reviewRequestRoutes'));
 app.use('/api/interventions', require('./routes/interventionRoutes'));
 app.use('/api/maintenance-reports', require('./routes/maintenanceReportRoutes'));
+app.use('/api/maintenance-contracts', require('./routes/maintenanceContractRoutes'));
 
 // Servir les fichiers uploadés en statique (protégés par auth si nécessaire)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));

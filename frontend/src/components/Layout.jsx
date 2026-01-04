@@ -19,7 +19,7 @@ import { FiFileText as QuotesIcon } from 'react-icons/fi';
 import { FiFile as InvoicesIcon } from 'react-icons/fi';
 import { FiTrendingUp as TreasuryIcon } from 'react-icons/fi';
 import { FiLogOut as LogoutIcon } from 'react-icons/fi';
-import { FiBell, FiSettings } from 'react-icons/fi';
+import { FiBell, FiSettings, FiTool as MaintenanceIcon } from 'react-icons/fi';
 
 // Import des modals
 import RemindersModal from './reminders/RemindersModal';
@@ -89,6 +89,7 @@ const Layout = ({ children }) => {
     { path: '/leads', label: 'Leads', icon: <LeadsIcon /> },
     { path: '/clients', label: 'Clients', icon: <ClientsIcon /> },
     { path: '/projects', label: 'Projets', icon: <ProjectsIcon /> },
+    { path: '/maintenance', label: 'Maintenance', icon: <MaintenanceIcon /> },
     { path: '/quotes', label: 'Devis', icon: <QuotesIcon /> },
     { path: '/invoices', label: 'Factures', icon: <InvoicesIcon /> },
     { path: '/treasury', label: 'Trésorerie', icon: <TreasuryIcon /> },

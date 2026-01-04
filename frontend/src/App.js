@@ -26,6 +26,7 @@ import Quotes from './pages/Quotes';
 import Invoices from './pages/Invoices';
 import Treasury from './pages/Treasury';
 import Settings from './pages/Settings';
+import Maintenance from './pages/Maintenance';
 
 // Composant ProtectedRoute pour protéger les routes
 const ProtectedRoute = ({ children }) => {
@@ -164,6 +165,14 @@ const App = () => {
             <ProtectedRoute>
               <Layout>
                 <Treasury />
+              </Layout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/maintenance" element={
+            <ProtectedRoute>
+              <Layout>
+                <Maintenance />
               </Layout>
             </ProtectedRoute>
           } />
