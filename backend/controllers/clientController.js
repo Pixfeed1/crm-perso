@@ -333,6 +333,97 @@ const clientController = {
         error: error.message
       });
     }
+  },
+
+  /**
+   * Envoyer un email générique (sans client requis)
+   */
+  sendGenericEmail: async (req, res) => {
+    const db = req.app.locals.db;
+    const { to, subject, message } = req.body;
+
+    try {
+      // Validation
+      if (!to || !subject || !message) {
+        return res.status(400).json({
+          message: 'Destinataire, objet et message sont requis'
+        });
+      }
+
+      // Charger les paramètres SMTP depuis la base de données
+      const settingsResult = await db.pool.query(
+        'SELECT smtp_host, smtp_port, smtp_secure, smtp_user, smtp_pass, smtp_from_email, smtp_from_name FROM company_settings LIMIT 1'
+      );
+
+      if (!settingsResult.rows || settingsResult.rows.length === 0) {
+        return res.status(500).json({
+          message: 'Configuration SMTP non trouvée. Veuillez configurer vos paramètres d\'envoi d\'emails.'
+        });
+      }
+
+      const settings = settingsResult.rows[0];
+
+      // Vérifier que la configuration SMTP est complète
+      if (!settings.smtp_host || !settings.smtp_user || !settings.smtp_pass) {
+        return res.status(500).json({
+          message: 'Configuration SMTP incomplète. Veuillez configurer vos paramètres SMTP dans les réglages.'
+        });
+      }
+
+      // Configurer nodemailer
+      const nodemailer = require('nodemailer');
+      const transporter = nodemailer.createTransport({
+        host: settings.smtp_host,
+        port: settings.smtp_port || 587,
+        secure: settings.smtp_secure || false,
+        auth: {
+          user: settings.smtp_user,
+          pass: settings.smtp_pass
+        }
+      });
+
+      // Construire le HTML de l'email
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .message { white-space: pre-wrap; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="message">${message.replace(/\n/g, '<br>')}</div>
+          </div>
+        </body>
+        </html>
+      `;
+
+      // Envoyer l'email
+      const mailOptions = {
+        from: `"${settings.smtp_from_name || 'CRM'}" <${settings.smtp_from_email || settings.smtp_user}>`,
+        to: to,
+        subject: subject,
+        text: message,
+        html: htmlContent
+      };
+
+      await transporter.sendMail(mailOptions);
+
+      res.json({
+        success: true,
+        message: 'Email envoyé avec succès'
+      });
+    } catch (error) {
+      console.error('Erreur lors de l\'envoi de l\'email:', error);
+      res.status(500).json({
+        message: 'Erreur lors de l\'envoi de l\'email',
+        error: error.message
+      });
+    }
   }
 };
 

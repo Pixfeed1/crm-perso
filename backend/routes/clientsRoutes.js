@@ -10,6 +10,9 @@ const clientController = require('../controllers/clientController');
 // GET /api/clients/stats - Récupérer les statistiques des clients
 router.get('/stats', clientController.getClientStats);
 
+// POST /api/clients/send-email - Envoyer un email générique (sans client requis)
+router.post('/send-email', clientController.sendGenericEmail);
+
 // GET /api/clients - Récupérer tous les clients
 router.get('/', clientController.getAllClients);
 

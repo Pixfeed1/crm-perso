@@ -117,8 +117,8 @@ const Dashboard = () => {
     }
     setSendingEmail(true);
     try {
-      await clientsAPI.sendEmail(null, {
-        recipientEmail: quickEmailData.to,
+      await clientsAPI.sendGenericEmail({
+        to: quickEmailData.to,
         subject: quickEmailData.subject,
         message: quickEmailData.message
       });

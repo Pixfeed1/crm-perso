@@ -305,6 +305,11 @@ export const clientsAPI = {
   getStats: () => {
     console.log('Appel API: récupération des statistiques des clients');
     return apiRequest('/clients/stats');
+  },
+  // Envoyer un email générique (sans client)
+  sendGenericEmail: (data) => {
+    console.log('Appel API: envoi email générique', data);
+    return apiRequest('/clients/send-email', 'POST', data);
   }
 };
 
