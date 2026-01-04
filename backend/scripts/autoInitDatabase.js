@@ -416,6 +416,14 @@ const DATABASE_SCHEMA = {
       phone: 'VARCHAR(20)',
       logo_url: 'TEXT',
       email_signature: 'TEXT',
+      // Paramètres SMTP
+      smtp_host: 'VARCHAR(255)',
+      smtp_port: 'INTEGER DEFAULT 587',
+      smtp_secure: 'BOOLEAN DEFAULT false',
+      smtp_user: 'VARCHAR(255)',
+      smtp_pass: 'VARCHAR(255)',
+      smtp_from_email: 'VARCHAR(255)',
+      smtp_from_name: 'VARCHAR(255)',
       created_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP',
       updated_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'
     },
