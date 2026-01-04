@@ -365,7 +365,7 @@ const Layout = ({ children }) => {
       </motion.div>
 
       {/* Contenu principal avec effets de transition - CORRIGÉ */}
-      <main className="flex-1 overflow-auto p-6 pb-0">
+      <main className="flex-1 overflow-auto p-2 sm:p-4 lg:p-6 pb-0">
         <AnimatePresence mode="wait">
           <motion.div
             key={location.pathname}

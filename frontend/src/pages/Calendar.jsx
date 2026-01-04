@@ -334,7 +334,7 @@ const Calendar = () => {
   }
 
   return (
-    <div className="h-full flex flex-col overflow-y-auto p-4 sm:p-6">
+    <div className="h-full flex flex-col overflow-y-auto p-1 sm:p-2 lg:p-4">
       <div className="max-w-7xl mx-auto w-full">
         <header className="mb-4 sm:mb-6 pt-16 sm:pt-0">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">

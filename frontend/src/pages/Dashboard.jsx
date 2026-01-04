@@ -161,7 +161,7 @@ const Dashboard = () => {
 
       {/* ========== HEADER ÉPURÉ ========== */}
       <motion.header 
-        className="px-6 pt-8 pb-4"
+        className="px-2 sm:px-4 lg:px-6 pt-8 pb-4"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
       >
@@ -327,7 +327,7 @@ const Dashboard = () => {
       </motion.header>
 
       {/* ========== CONTENU PRINCIPAL ========== */}
-      <div className="px-6 pb-12">
+      <div className="px-2 sm:px-4 lg:px-6 pb-12">
         <div className="max-w-7xl mx-auto space-y-8">
 
           {/* ========== MÉTRIQUES PRINCIPALES - Sans bordures ========== */}

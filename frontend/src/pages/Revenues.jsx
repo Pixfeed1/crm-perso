@@ -365,7 +365,7 @@ const Revenues = () => {
   // Loader
   if (isLoading) {
     return (
-      <div className="h-full flex flex-col overflow-y-auto p-4 sm:p-6">
+      <div className="h-full flex flex-col overflow-y-auto p-1 sm:p-2 lg:p-4">
         <div className="max-w-7xl mx-auto w-full flex items-center justify-center h-full">
           <motion.div
             className="w-16 h-16 border-4 border-teal-500 border-t-transparent rounded-full"
@@ -380,7 +380,7 @@ const Revenues = () => {
   const periodRevenues = getRevenuesForPeriod();
 
   return (
-    <div className="h-full flex flex-col overflow-y-auto p-4 sm:p-6">
+    <div className="h-full flex flex-col overflow-y-auto p-1 sm:p-2 lg:p-4">
       <div className="max-w-7xl mx-auto w-full">
         {/* En-tête */}
         <header className="mb-4 sm:mb-6 pt-16 sm:pt-0">

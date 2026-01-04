@@ -200,7 +200,7 @@ const Quotes = () => {
   };
 
   return (
-    <div className="h-full flex flex-col overflow-y-auto p-4 sm:p-6">
+    <div className="h-full flex flex-col overflow-y-auto p-1 sm:p-2 lg:p-4">
       <div className="max-w-7xl mx-auto w-full">
         {/* En-tête */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 pt-16 sm:pt-0">
