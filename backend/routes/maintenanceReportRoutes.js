@@ -15,6 +15,9 @@ router.get('/:id', reportController.getReportById);
 // Prévisualiser un rapport (HTML)
 router.get('/:id/preview', reportController.previewReport);
 
+// Télécharger le PDF
+router.get('/:id/pdf', reportController.downloadPDF);
+
 // Mettre à jour un rapport
 router.put('/:id', reportController.updateReport);
 

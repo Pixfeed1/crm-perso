@@ -293,10 +293,10 @@ class EmailService {
   }
 
   /**
-   * Envoie un rapport de maintenance par email
+   * Envoie un rapport de maintenance par email avec PDF en pièce jointe
    */
   async sendMaintenanceReportEmail(report, options = {}) {
-    const { recipientEmail, customMessage = '', ccToSelf = false } = options;
+    const { recipientEmail, customMessage = '', ccToSelf = false, pdfBuffer = null, pdfFileName = null } = options;
 
     const data = report.report_data || {};
     const to = recipientEmail || report.client_email;
@@ -492,12 +492,23 @@ class EmailService {
       </html>
     `;
 
+    // Préparer les pièces jointes
+    const attachments = [];
+    if (pdfBuffer && pdfFileName) {
+      attachments.push({
+        filename: pdfFileName,
+        content: pdfBuffer,
+        contentType: 'application/pdf'
+      });
+    }
+
     // Envoi
     return await this.sendEmail({
       to,
       subject: `🔧 Rapport de maintenance - ${report.project_name || data.project?.name || 'Votre site'} - ${this.formatDate(report.period_start)} au ${this.formatDate(report.period_end)}`,
       html,
-      text: `Rapport de maintenance Pixfeed\n\nBonjour ${report.client_name || data.client?.name || ''},\n\nVoici le récapitulatif des interventions réalisées sur votre site du ${this.formatDate(report.period_start)} au ${this.formatDate(report.period_end)}.\n\nRésumé :\n- ${data.summary?.interventions_count || 0} interventions réalisées\n- Temps total : ${formatDuration(data.summary?.total_duration_minutes || 0)}\n- Forfait mensuel : ${forfaitMensuel}€\n\nPour toute question, contactez-nous sur contact@pixfeed.fr ou au 06 12 34 56 78.\n\nCordialement,\nMarc Gueffie\nDéveloppeur chez Pixfeed\nhttps://pixfeed.net`,
+      text: `Rapport de maintenance Pixfeed\n\nBonjour ${report.client_name || data.client?.name || ''},\n\nVoici le récapitulatif des interventions réalisées sur votre site du ${this.formatDate(report.period_start)} au ${this.formatDate(report.period_end)}.\n\nRésumé :\n- ${data.summary?.interventions_count || 0} interventions réalisées\n- Temps total : ${formatDuration(data.summary?.total_duration_minutes || 0)}\n- Forfait mensuel : ${forfaitMensuel}€\n\nVeuillez trouver le rapport détaillé en pièce jointe.\n\nCordialement,\nMarc Gueffie\nDéveloppeur chez Pixfeed\nhttps://pixfeed.net`,
+      attachments,
       ccToSelf
     });
   }

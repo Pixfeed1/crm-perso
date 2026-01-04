@@ -1,5 +1,6 @@
 // backend/controllers/maintenanceReportController.js
 const emailService = require('../services/emailService');
+const pdfService = require('../services/pdfService');
 
 /**
  * Contrôleur pour la génération et l'envoi des rapports de maintenance
@@ -208,7 +209,7 @@ const updateReport = async (req, res) => {
 };
 
 /**
- * Marquer un rapport comme envoyé
+ * Envoyer un rapport par email avec PDF en pièce jointe
  */
 const sendReport = async (req, res) => {
   const db = req.app.locals.db;
@@ -216,9 +217,10 @@ const sendReport = async (req, res) => {
   const { email } = req.body;
 
   try {
-    // Récupérer le rapport
+    // Récupérer le rapport avec budget
     const reportQuery = `
-      SELECT mr.*, p.name as project_name, c.email as client_email, c.name as client_name
+      SELECT mr.*, p.name as project_name, p.budget,
+             c.email as client_email, c.name as client_name
       FROM maintenance_reports mr
       LEFT JOIN projects p ON mr.project_id = p.id
       LEFT JOIN crm_clients c ON mr.client_id = c.id
@@ -231,6 +233,7 @@ const sendReport = async (req, res) => {
     }
 
     const report = reportResult.rows[0];
+    const data = report.report_data;
     const sendTo = email || report.client_email;
 
     if (!sendTo) {
@@ -240,11 +243,26 @@ const sendReport = async (req, res) => {
       });
     }
 
+    // Générer le PDF
+    let pdfBuffer = null;
+    let pdfFileName = null;
+    try {
+      pdfBuffer = await pdfService.generateMaintenanceReportPDF(report, data);
+      const formatDate = (d) => new Date(d).toLocaleDateString('fr-FR').replace(/\//g, '-');
+      pdfFileName = `Rapport_Maintenance_${report.project_name.replace(/[^a-zA-Z0-9]/g, '_')}_${formatDate(report.period_start)}.pdf`;
+      console.log('✅ PDF généré avec succès');
+    } catch (pdfError) {
+      console.warn('⚠️ Impossible de générer le PDF:', pdfError.message);
+      // Continuer sans PDF si erreur
+    }
+
     // Envoyer l'email via emailService
     try {
       await emailService.sendMaintenanceReportEmail(report, {
         recipientEmail: sendTo,
-        ccToSelf: true
+        ccToSelf: true,
+        pdfBuffer: pdfBuffer,
+        pdfFileName: pdfFileName
       });
     } catch (emailError) {
       console.error('Erreur envoi email:', emailError);
@@ -266,7 +284,7 @@ const sendReport = async (req, res) => {
 
     res.json({
       success: true,
-      message: `Rapport envoyé avec succès à ${sendTo}`,
+      message: `Rapport envoyé avec succès à ${sendTo}` + (pdfBuffer ? ' (avec PDF)' : ' (sans PDF)'),
       report: result.rows[0]
     });
   } catch (error) {
@@ -533,6 +551,48 @@ const previewReport = async (req, res) => {
   }
 };
 
+/**
+ * Télécharger le rapport en PDF
+ */
+const downloadPDF = async (req, res) => {
+  const db = req.app.locals.db;
+  const { id } = req.params;
+
+  try {
+    const query = `
+      SELECT mr.*, p.name as project_name, p.budget,
+             c.name as client_name, c.email as client_email
+      FROM maintenance_reports mr
+      LEFT JOIN projects p ON mr.project_id = p.id
+      LEFT JOIN crm_clients c ON mr.client_id = c.id
+      WHERE mr.id = $1
+    `;
+    const result = await db.pool.query(query, [id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'Rapport non trouvé' });
+    }
+
+    const report = result.rows[0];
+    const data = report.report_data;
+
+    // Générer le PDF
+    const pdfBuffer = await pdfService.generateMaintenanceReportPDF(report, data);
+
+    // Formater le nom du fichier
+    const formatDate = (d) => new Date(d).toLocaleDateString('fr-FR').replace(/\//g, '-');
+    const fileName = `Rapport_Maintenance_${report.project_name.replace(/[^a-zA-Z0-9]/g, '_')}_${formatDate(report.period_start)}_${formatDate(report.period_end)}.pdf`;
+
+    // Envoyer le PDF
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    res.send(pdfBuffer);
+  } catch (error) {
+    console.error('Erreur génération PDF:', error);
+    res.status(500).json({ message: 'Erreur lors de la génération du PDF: ' + error.message });
+  }
+};
+
 module.exports = {
   generateReport,
   getReportsByProject,
@@ -540,5 +600,6 @@ module.exports = {
   updateReport,
   sendReport,
   deleteReport,
-  previewReport
+  previewReport,
+  downloadPDF
 };
