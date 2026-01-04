@@ -351,14 +351,15 @@ const clientController = {
       }
 
       // Charger les paramètres SMTP depuis la base de données OU le .env
+      // Support des deux formats: EMAIL_* et SMTP_*
       let smtpConfig = {
-        host: process.env.SMTP_HOST,
-        port: parseInt(process.env.SMTP_PORT) || 587,
-        secure: process.env.SMTP_SECURE === 'true',
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASSWORD || process.env.SMTP_PASS,
-        from_email: process.env.SMTP_FROM || process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER,
-        from_name: process.env.SMTP_FROM_NAME || 'CRM Pixfeed'
+        host: process.env.EMAIL_HOST || process.env.SMTP_HOST,
+        port: parseInt(process.env.EMAIL_PORT || process.env.SMTP_PORT) || 587,
+        secure: process.env.EMAIL_USE_SSL === 'true' || process.env.SMTP_SECURE === 'true',
+        user: process.env.EMAIL_USER || process.env.SMTP_USER,
+        pass: process.env.EMAIL_PASSWORD || process.env.SMTP_PASSWORD || process.env.SMTP_PASS,
+        from_email: process.env.EMAIL_USER || process.env.SMTP_FROM || process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER,
+        from_name: process.env.EMAIL_FROM_NAME || process.env.SMTP_FROM_NAME || 'CRM Pixfeed'
       };
 
       // Essayer de charger depuis la base de données (priorité)
