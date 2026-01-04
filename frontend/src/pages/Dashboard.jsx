@@ -27,15 +27,19 @@ import {
   FiActivity,
   FiTarget,
   FiClock,
-  FiRefreshCw
+  FiRefreshCw,
+  FiMail,
+  FiSend
 } from 'react-icons/fi';
 import KPIOrb from '../components/dashboard/KPIOrb';
 import ActivityStream from '../components/dashboard/ActivityStream';
 import GoalProgress from '../components/dashboard/GoalProgress';
-import { dashboardAPI, reviewRequestsAPI } from '../services/api';
+import { dashboardAPI, reviewRequestsAPI, clientsAPI } from '../services/api';
+import { useToast } from '../hooks/useToast';
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [dashboardData, setDashboardData] = useState({
     leads: { total: 0, newThisMonth: 0 },
     projects: { active: 0, completed: 0, upcoming: 0 },
@@ -56,6 +60,11 @@ const Dashboard = () => {
   const [dateFilter, setDateFilter] = useState('month'); // month, quarter, year, all
   const newMenuRef = useRef(null);
   const filtersRef = useRef(null);
+
+  // Modal email rapide
+  const [showQuickEmail, setShowQuickEmail] = useState(false);
+  const [quickEmailData, setQuickEmailData] = useState({ to: '', subject: '', message: '' });
+  const [sendingEmail, setSendingEmail] = useState(false);
 
   // Fermer les menus si on clique en dehors
   useEffect(() => {
@@ -100,6 +109,49 @@ const Dashboard = () => {
     fetchDashboardData();
   };
 
+  // Envoyer un email rapide
+  const handleSendQuickEmail = async () => {
+    if (!quickEmailData.to || !quickEmailData.subject || !quickEmailData.message) {
+      toast.error('Veuillez remplir tous les champs');
+      return;
+    }
+    setSendingEmail(true);
+    try {
+      await clientsAPI.sendEmail(null, {
+        recipientEmail: quickEmailData.to,
+        subject: quickEmailData.subject,
+        message: quickEmailData.message
+      });
+      toast.success('Email envoyé avec succès !');
+      setShowQuickEmail(false);
+      setQuickEmailData({ to: '', subject: '', message: '' });
+    } catch (error) {
+      toast.error(error.message || 'Erreur lors de l\'envoi');
+    } finally {
+      setSendingEmail(false);
+    }
+  };
+
+  // Naviguer vers les nouveaux items
+  const handleCardClick = (type) => {
+    switch (type) {
+      case 'leads':
+        navigate('/leads?filter=new');
+        break;
+      case 'clients':
+        navigate('/clients?filter=recent');
+        break;
+      case 'projects':
+        navigate('/projects?filter=active');
+        break;
+      case 'revenues':
+        navigate('/revenues');
+        break;
+      default:
+        break;
+    }
+  };
+
   const handleNewAction = (action) => {
     setShowNewMenu(false);
     switch (action) {
@@ -114,6 +166,9 @@ const Dashboard = () => {
         break;
       case 'invoice':
         navigate('/invoices');
+        break;
+      case 'email':
+        setShowQuickEmail(true);
         break;
       default:
         break;
@@ -317,6 +372,14 @@ const Dashboard = () => {
                         <FaFileInvoice className="w-4 h-4 text-emerald-400" />
                         <span>Nouvelle facture</span>
                       </button>
+                      <div className="border-t border-gray-700 my-1" />
+                      <button
+                        onClick={() => handleNewAction('email')}
+                        className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
+                      >
+                        <FiMail className="w-4 h-4 text-pink-400" />
+                        <span>Envoyer un email</span>
+                      </button>
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -340,8 +403,10 @@ const Dashboard = () => {
             {/* Card Leads */}
             <motion.div
               whileHover={{ y: -4 }}
+              whileTap={{ scale: 0.98 }}
               onHoverStart={() => setHoveredCard('leads')}
               onHoverEnd={() => setHoveredCard(null)}
+              onClick={() => handleCardClick('leads')}
               className="relative bg-gradient-to-br from-slate-800/50 to-slate-800/30 backdrop-blur rounded-2xl p-4 sm:p-6 shadow-xl shadow-black/20 overflow-hidden cursor-pointer"
             >
               {/* Accent gradient subtil */}
@@ -378,8 +443,10 @@ const Dashboard = () => {
             {/* Card Projets */}
             <motion.div
               whileHover={{ y: -4 }}
+              whileTap={{ scale: 0.98 }}
               onHoverStart={() => setHoveredCard('projects')}
               onHoverEnd={() => setHoveredCard(null)}
+              onClick={() => handleCardClick('projects')}
               className="relative bg-gradient-to-br from-slate-800/50 to-slate-800/30 backdrop-blur rounded-2xl p-6 shadow-xl shadow-black/20 overflow-hidden cursor-pointer"
             >
               <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 to-pink-500 opacity-60"></div>
@@ -411,8 +478,10 @@ const Dashboard = () => {
             {/* Card Revenus */}
             <motion.div
               whileHover={{ y: -4 }}
+              whileTap={{ scale: 0.98 }}
               onHoverStart={() => setHoveredCard('revenue')}
               onHoverEnd={() => setHoveredCard(null)}
+              onClick={() => handleCardClick('revenues')}
               className="relative bg-gradient-to-br from-slate-800/50 to-slate-800/30 backdrop-blur rounded-2xl p-6 shadow-xl shadow-black/20 overflow-hidden cursor-pointer"
             >
               <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 to-teal-500 opacity-60"></div>
@@ -449,8 +518,10 @@ const Dashboard = () => {
             {/* Card Activités */}
             <motion.div
               whileHover={{ y: -4 }}
+              whileTap={{ scale: 0.98 }}
               onHoverStart={() => setHoveredCard('activities')}
               onHoverEnd={() => setHoveredCard(null)}
+              onClick={() => navigate('/activities')}
               className="relative bg-gradient-to-br from-slate-800/50 to-slate-800/30 backdrop-blur rounded-2xl p-6 shadow-xl shadow-black/20 overflow-hidden cursor-pointer"
             >
               <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-500 to-orange-500 opacity-60"></div>
@@ -948,6 +1019,109 @@ const Dashboard = () => {
 
         </div>
       </div>
+
+      {/* ========== MODAL EMAIL RAPIDE ========== */}
+      <AnimatePresence>
+        {showQuickEmail && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[10000] flex items-center justify-center p-4"
+            onClick={() => setShowQuickEmail(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 border border-indigo-500/30 rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="p-6 pb-4 border-b border-gray-700/50">
+                <div className="flex items-center gap-4">
+                  <div className="bg-pink-500/20 text-pink-400 p-3 rounded-xl">
+                    <FiMail className="text-2xl" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-white">Envoyer un email</h3>
+                    <p className="text-gray-400 text-sm">Email rapide à n'importe qui</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Corps */}
+              <div className="p-6 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Destinataire *
+                  </label>
+                  <input
+                    type="email"
+                    value={quickEmailData.to}
+                    onChange={(e) => setQuickEmailData({ ...quickEmailData, to: e.target.value })}
+                    placeholder="email@exemple.com"
+                    className="w-full px-4 py-2.5 bg-gray-800/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Sujet *
+                  </label>
+                  <input
+                    type="text"
+                    value={quickEmailData.subject}
+                    onChange={(e) => setQuickEmailData({ ...quickEmailData, subject: e.target.value })}
+                    placeholder="Objet de l'email"
+                    className="w-full px-4 py-2.5 bg-gray-800/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Message *
+                  </label>
+                  <textarea
+                    value={quickEmailData.message}
+                    onChange={(e) => setQuickEmailData({ ...quickEmailData, message: e.target.value })}
+                    placeholder="Votre message..."
+                    rows="5"
+                    className="w-full px-4 py-2.5 bg-gray-800/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 resize-none"
+                  />
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="px-6 py-4 bg-black/20 border-t border-gray-700/50 flex gap-3">
+                <button
+                  onClick={() => setShowQuickEmail(false)}
+                  className="flex-1 px-4 py-2.5 border-2 border-gray-600 text-gray-300 hover:bg-gray-700/30 rounded-lg font-medium transition-all"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={handleSendQuickEmail}
+                  disabled={sendingEmail}
+                  className="flex-1 px-4 py-2.5 bg-pink-600 hover:bg-pink-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {sendingEmail ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <span>Envoi...</span>
+                    </>
+                  ) : (
+                    <>
+                      <FiSend className="w-4 h-4" />
+                      <span>Envoyer</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
