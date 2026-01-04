@@ -8,6 +8,7 @@ const cookieParser = require('cookie-parser');
 const fs = require('fs');
 const db = require('./config/pgConfig'); // Changé pour utiliser PostgreSQL
 const { autoInitDatabase } = require('./scripts/autoInitDatabase');
+const scheduledEmailWorker = require('./services/scheduledEmailWorker');
 
 // Charger les variables d'environnement
 dotenv.config();
@@ -127,6 +128,7 @@ app.use('/api/review-requests', require('./routes/reviewRequestRoutes'));
 app.use('/api/interventions', require('./routes/interventionRoutes'));
 app.use('/api/maintenance-reports', require('./routes/maintenanceReportRoutes'));
 app.use('/api/maintenance-contracts', require('./routes/maintenanceContractRoutes'));
+app.use('/api/scheduled-emails', require('./routes/scheduledEmailRoutes'));
 
 // Servir les fichiers uploadés en statique (protégés par auth si nécessaire)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -223,6 +225,10 @@ async function startServer() {
   // Initialiser la base de données
   await initializeDatabase();
 
+  // Initialiser et démarrer le worker d'emails programmés
+  scheduledEmailWorker.initialize(app.locals.db);
+  scheduledEmailWorker.start();
+
   // Démarrer le serveur HTTP
   const server = app.listen(PORT, () => {
     console.log('===========================================');
@@ -259,6 +265,10 @@ process.on('SIGTERM', gracefulShutdown);
 
 function gracefulShutdown() {
   console.log('Arrêt gracieux du serveur...');
+
+  // Arrêter le worker d'emails programmés
+  scheduledEmailWorker.stop();
+
   server.close(() => {
     console.log('Serveur HTTP fermé.');
     db.close((err) => {

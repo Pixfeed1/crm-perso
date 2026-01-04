@@ -594,6 +594,47 @@ const DATABASE_SCHEMA = {
       'CREATE INDEX IF NOT EXISTS idx_review_requests_status ON review_requests(status)',
       'CREATE INDEX IF NOT EXISTS idx_review_requests_sent_at ON review_requests(sent_at)'
     ]
+  },
+
+  // Table scheduled_emails (emails programmés en différé)
+  scheduled_emails: {
+    columns: {
+      id: 'SERIAL PRIMARY KEY',
+      // Destinataire
+      to_email: 'VARCHAR(255) NOT NULL',
+      to_name: 'VARCHAR(255)',
+      cc_email: 'VARCHAR(255)',
+      // Contenu
+      subject: 'TEXT NOT NULL',
+      body_html: 'TEXT NOT NULL',
+      body_text: 'TEXT',
+      // Pièces jointes (JSON array: [{filename, path, content_type}])
+      attachments: 'JSONB DEFAULT \'[]\'',
+      // Programmation
+      scheduled_at: 'TIMESTAMP NOT NULL',
+      timezone: "VARCHAR(50) DEFAULT 'Europe/Paris'",
+      // Statut
+      status: "VARCHAR(50) DEFAULT 'pending'", // pending, sent, failed, cancelled
+      sent_at: 'TIMESTAMP',
+      error_message: 'TEXT',
+      retry_count: 'INTEGER DEFAULT 0',
+      max_retries: 'INTEGER DEFAULT 3',
+      // Contexte (pour pouvoir retrouver l'origine de l'email)
+      email_type: 'VARCHAR(50)', // quote, invoice, maintenance_report, reminder, custom
+      related_type: 'VARCHAR(50)', // client, quote, invoice, project, maintenance_contract
+      related_id: 'INTEGER',
+      // Métadonnées
+      created_by: 'INTEGER REFERENCES users(id)',
+      notes: 'TEXT',
+      created_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP',
+      updated_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'
+    },
+    indexes: [
+      'CREATE INDEX IF NOT EXISTS idx_scheduled_emails_status ON scheduled_emails(status)',
+      'CREATE INDEX IF NOT EXISTS idx_scheduled_emails_scheduled_at ON scheduled_emails(scheduled_at)',
+      'CREATE INDEX IF NOT EXISTS idx_scheduled_emails_related ON scheduled_emails(related_type, related_id)',
+      'CREATE INDEX IF NOT EXISTS idx_scheduled_emails_pending ON scheduled_emails(status, scheduled_at) WHERE status = \'pending\''
+    ]
   }
 };
 

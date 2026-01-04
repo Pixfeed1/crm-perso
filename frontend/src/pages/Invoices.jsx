@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiFileText, FiPlus, FiEdit2, FiTrash2, FiDollarSign, FiAlertCircle, FiDownload, FiSend, FiX, FiCreditCard } from 'react-icons/fi';
 import { invoicesAPI } from '../services/quotesAPI';
-import { paymentsAPI } from '../services/api';
+import { paymentsAPI, scheduledEmailsAPI } from '../services/api';
 import { useToast } from '../hooks/useToast';
 import { useConfirm } from '../hooks/useConfirm';
 import InvoiceForm from '../components/invoices/InvoiceForm';
@@ -157,6 +157,34 @@ const Invoices = () => {
     } catch (error) {
       console.error('Erreur lors de l\'envoi:', error);
       throw new Error(error.message || 'Erreur lors de l\'envoi de l\'email');
+    }
+  };
+
+  // Programmer l'envoi d'un email
+  const handleScheduleEmail = async (scheduleData) => {
+    try {
+      await scheduledEmailsAPI.create({
+        to_email: scheduleData.recipientEmail,
+        to_name: invoiceToSend.client_name,
+        subject: `Votre facture ${invoiceToSend.invoice_number}`,
+        body_html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #4F46E5;">Votre facture ${invoiceToSend.invoice_number}</h2>
+            <p>Bonjour ${invoiceToSend.client_name || ''},</p>
+            <p>Veuillez trouver ci-joint votre facture n°<strong>${invoiceToSend.invoice_number}</strong>.</p>
+            ${scheduleData.customMessage ? `<div style="margin: 20px 0; padding: 15px; background: #f5f5f5; border-radius: 5px;">${scheduleData.customMessage.replace(/\n/g, '<br>')}</div>` : ''}
+            <p>Cordialement,<br/>L'équipe</p>
+          </div>
+        `,
+        scheduled_at: scheduleData.scheduledAt,
+        email_type: 'invoice',
+        related_type: 'invoice',
+        related_id: invoiceToSend.id
+      });
+      toast.success(`Email programmé pour le ${new Date(scheduleData.scheduledAt).toLocaleString('fr-FR')}`);
+    } catch (error) {
+      console.error('Erreur lors de la programmation:', error);
+      throw new Error(error.message || 'Erreur lors de la programmation de l\'email');
     }
   };
 
@@ -456,6 +484,7 @@ const Invoices = () => {
           setInvoiceToSend(null);
         }}
         onSend={handleEmailSend}
+        onSchedule={handleScheduleEmail}
         defaultEmail={invoiceToSend?.client_email || ''}
         documentType="facture"
         documentNumber={invoiceToSend?.invoice_number || ''}

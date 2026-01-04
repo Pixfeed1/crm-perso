@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiFileText, FiPlus, FiEdit2, FiTrash2, FiEye, FiSend, FiCheck, FiX, FiClock, FiDownload } from 'react-icons/fi';
 import { quotesAPI } from '../services/quotesAPI';
+import { scheduledEmailsAPI } from '../services/api';
 import { useToast } from '../hooks/useToast';
 import { useConfirm } from '../hooks/useConfirm';
 import QuoteForm from '../components/quotes/QuoteForm';
@@ -165,6 +166,36 @@ const Quotes = () => {
     } catch (error) {
       console.error('Erreur lors de l\'envoi:', error);
       throw new Error(error.message || 'Erreur lors de l\'envoi de l\'email');
+    }
+  };
+
+  // Programmer l'envoi d'un email
+  const handleScheduleEmail = async (scheduleData) => {
+    try {
+      // Créer un email programmé pour le devis
+      await scheduledEmailsAPI.create({
+        to_email: scheduleData.recipientEmail,
+        to_name: quoteToSend.client_name,
+        subject: `Votre devis ${quoteToSend.quote_number}`,
+        body_html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #4F46E5;">Votre devis ${quoteToSend.quote_number}</h2>
+            <p>Bonjour ${quoteToSend.client_name || ''},</p>
+            <p>Veuillez trouver ci-joint votre devis n°<strong>${quoteToSend.quote_number}</strong>.</p>
+            ${scheduleData.customMessage ? `<div style="margin: 20px 0; padding: 15px; background: #f5f5f5; border-radius: 5px;">${scheduleData.customMessage.replace(/\n/g, '<br>')}</div>` : ''}
+            <p>Cordialement,<br/>L'équipe</p>
+          </div>
+        `,
+        scheduled_at: scheduleData.scheduledAt,
+        email_type: 'quote',
+        related_type: 'quote',
+        related_id: quoteToSend.id,
+        cc_email: scheduleData.ccToSelf ? null : null // TODO: récupérer l'email de l'utilisateur
+      });
+      toast.success(`Email programmé pour le ${new Date(scheduleData.scheduledAt).toLocaleString('fr-FR')}`);
+    } catch (error) {
+      console.error('Erreur lors de la programmation:', error);
+      throw new Error(error.message || 'Erreur lors de la programmation de l\'email');
     }
   };
 
@@ -515,6 +546,7 @@ const Quotes = () => {
           setQuoteToSend(null);
         }}
         onSend={handleEmailSend}
+        onSchedule={handleScheduleEmail}
         defaultEmail={quoteToSend?.client_email || ''}
         documentType="devis"
         documentNumber={quoteToSend?.quote_number || ''}

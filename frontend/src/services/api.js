@@ -1032,3 +1032,66 @@ export const maintenanceContractsAPI = {
   }
 };
 
+// API pour les emails programmés
+export const scheduledEmailsAPI = {
+  // Récupérer tous les emails programmés
+  getAll: (filters = {}) => {
+    const params = new URLSearchParams();
+    if (filters.status) params.append('status', filters.status);
+    if (filters.email_type) params.append('email_type', filters.email_type);
+    if (filters.limit) params.append('limit', filters.limit);
+    if (filters.offset) params.append('offset', filters.offset);
+    const query = params.toString() ? `?${params.toString()}` : '';
+    console.log('Appel API: récupération emails programmés');
+    return apiRequest(`/scheduled-emails${query}`);
+  },
+
+  // Récupérer les statistiques
+  getStats: () => {
+    console.log('Appel API: récupération stats emails programmés');
+    return apiRequest('/scheduled-emails/stats');
+  },
+
+  // Récupérer les prochains emails
+  getUpcoming: (limit = 10) => {
+    console.log('Appel API: récupération prochains emails programmés');
+    return apiRequest(`/scheduled-emails/upcoming?limit=${limit}`);
+  },
+
+  // Récupérer un email par ID
+  getById: (id) => {
+    console.log(`Appel API: récupération email programmé ${id}`);
+    return apiRequest(`/scheduled-emails/${id}`);
+  },
+
+  // Programmer un nouvel email
+  create: (data) => {
+    console.log('Appel API: création email programmé', data);
+    return apiRequest('/scheduled-emails', 'POST', data);
+  },
+
+  // Mettre à jour un email programmé
+  update: (id, data) => {
+    console.log(`Appel API: mise à jour email programmé ${id}`, data);
+    return apiRequest(`/scheduled-emails/${id}`, 'PUT', data);
+  },
+
+  // Annuler un email programmé
+  cancel: (id) => {
+    console.log(`Appel API: annulation email programmé ${id}`);
+    return apiRequest(`/scheduled-emails/${id}/cancel`, 'POST');
+  },
+
+  // Supprimer un email programmé
+  delete: (id) => {
+    console.log(`Appel API: suppression email programmé ${id}`);
+    return apiRequest(`/scheduled-emails/${id}`, 'DELETE');
+  },
+
+  // Récupérer les emails liés à un élément
+  getByRelated: (type, id) => {
+    console.log(`Appel API: récupération emails programmés pour ${type}/${id}`);
+    return apiRequest(`/scheduled-emails/related/${type}/${id}`);
+  }
+};
+
