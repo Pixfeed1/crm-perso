@@ -194,6 +194,11 @@ class DatabaseConfig {
     });
   }
 
+  // Méthode query directe pour compatibilité avec db.query()
+  async query(text, params) {
+    return this.pool.query(text, params);
+  }
+
   // Convertir les paramètres SQLite (tableau) en paramètres PostgreSQL (tableau)
   convertParams(params) {
     if (!params) return [];
