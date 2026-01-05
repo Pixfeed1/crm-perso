@@ -11,7 +11,10 @@ const clientController = require('../controllers/clientController');
 router.get('/stats', clientController.getClientStats);
 
 // POST /api/clients/send-email - Envoyer un email générique (sans client requis)
-router.post('/send-email', clientController.sendGenericEmail);
+router.post('/send-email', clientController.upload.array('attachments', 10), clientController.sendGenericEmail);
+
+// POST /api/clients/send-generic-email - Alias pour compatibilité
+router.post('/send-generic-email', clientController.upload.array('attachments', 10), clientController.sendGenericEmail);
 
 // GET /api/clients - Récupérer tous les clients
 router.get('/', clientController.getAllClients);

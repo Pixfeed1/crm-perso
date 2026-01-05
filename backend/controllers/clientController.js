@@ -336,11 +336,12 @@ const clientController = {
   },
 
   /**
-   * Envoyer un email générique (sans client requis)
+   * Envoyer un email générique (sans client requis) avec support pièces jointes
    */
   sendGenericEmail: async (req, res) => {
     const db = req.app.locals.db;
     const { to, subject, message } = req.body;
+    const attachmentFiles = req.files || [];
 
     try {
       // Validation
@@ -410,6 +411,9 @@ const clientController = {
         </div>
       ` : '';
 
+      // Le message peut contenir du HTML (venant de ReactQuill)
+      const messageHtml = message.startsWith('<') ? message : message.replace(/\n/g, '<br>');
+
       const htmlContent = `
         <!DOCTYPE html>
         <html lang="fr">
@@ -419,25 +423,33 @@ const clientController = {
           <style>
             body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
             .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .message { white-space: pre-wrap; }
+            .message { }
           </style>
         </head>
         <body>
           <div class="container">
-            <div class="message">${message.replace(/\n/g, '<br>')}</div>
+            <div class="message">${messageHtml}</div>
             ${signatureHtml}
           </div>
         </body>
         </html>
       `;
 
+      // Préparer les pièces jointes
+      const attachments = attachmentFiles.map(file => ({
+        filename: file.originalname,
+        content: file.buffer,
+        contentType: file.mimetype
+      }));
+
       // Envoyer l'email
       const mailOptions = {
         from: `"${smtpConfig.from_name}" <${smtpConfig.from_email}>`,
         to: to,
         subject: subject,
-        text: message,
-        html: htmlContent
+        text: message.replace(/<[^>]*>/g, ''), // Version texte sans HTML
+        html: htmlContent,
+        attachments: attachments
       };
 
       await transporter.sendMail(mailOptions);
