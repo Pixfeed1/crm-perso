@@ -453,10 +453,10 @@ const Settings = () => {
 <tbody>
 <tr>
 <td style="padding-right: 15px; vertical-align: middle;">
-<div style="font-weight: bold; color: #1a1a1a; font-size: 18px; margin-bottom: 5px;">Marc Gueffier</div>
+<div style="font-weight: bold; color: #1a1a1a; font-size: 18px; margin-bottom: 5px;">Marc Gueffie</div>
 <div style="color: #666; font-size: 14px; margin-bottom: 10px;">Chargé de Projet chez Pixfeed</div>
 <div style="color: #555; margin-bottom: 10px;">
-<p style="margin: 0 0 5px 0;">Tél: <a style="color: #4a90e2; text-decoration: none;" href="tel:0645373930">06.45.37.39.30</a><br />Email: <a style="color: #4a90e2; text-decoration: none;" href="mailto:mgueffier@pixfeed.net">mgueffier@pixfeed.net</a><br />Site web: <a style="color: #4a90e2; text-decoration: none;" href="https://pixfeed.net/">pixfeed.net</a></p>
+<p style="margin: 0 0 5px 0;">Tél: <a style="color: #4a90e2; text-decoration: none;" href="tel:0645373930">06.45.37.39.30</a><br />Email: <a style="color: #4a90e2; text-decoration: none;" href="mailto:mgueffie@pixfeed.net">mgueffie@pixfeed.net</a><br />Site web: <a style="color: #4a90e2; text-decoration: none;" href="https://pixfeed.net/">pixfeed.net</a></p>
 </div>
 <table style="border-spacing: 0; border-collapse: collapse; margin-top: 10px;"><tr><td style="padding-right: 15px;"><a style="text-decoration: none; color: #4a90e2; font-weight: 500;" href="https://www.facebook.com/Pixfeed"><img style="width: 24px; height: 24px; vertical-align: middle;" src="https://jurojin.net/wp-content/uploads/2026/01/fasebookmail.png" alt="Facebook" /> <span style="vertical-align: middle;">Facebook</span></a></td><td><a style="text-decoration: none; color: #4a90e2; font-weight: 500;" href="https://www.linkedin.com/company/100015229/"><img style="width: 24px; height: 24px; vertical-align: middle;" src="https://jurojin.net/wp-content/uploads/2026/01/linkedinmail.png" alt="LinkedIn" /> <span style="vertical-align: middle;">LinkedIn</span></a></td></tr></table>
 </td>
