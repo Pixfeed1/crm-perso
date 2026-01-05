@@ -444,7 +444,41 @@ const Settings = () => {
                 <label className="block text-sm font-medium text-gray-300 mb-2">
                   Modèles de signature
                 </label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  {/* Template Pixfeed */}
+                  <button
+                    type="button"
+                    onClick={() => handleSignatureChange(`
+<table style="font-family: Arial, sans-serif; font-size: 14px; color: #333; max-width: 500px; width: 100%; line-height: 1.6; border-top: 2px solid #4a90e2; padding-top: 15px; border-spacing: 0; border-collapse: collapse;">
+  <tbody>
+    <tr>
+      <td style="vertical-align: middle; width: 90px; padding-right: 15px;">
+        <img style="width: 80px; height: auto; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);" src="https://pixfeed.net/wp-content/uploads/2025/04/logo.png" alt="Pixfeed" />
+      </td>
+      <td style="vertical-align: middle;">
+        <div style="font-weight: bold; color: #1a1a1a; font-size: 18px; margin-bottom: 3px;">Marc Gueffie</div>
+        <div style="color: #666; font-size: 14px; margin-bottom: 8px;">Chargé de Projet chez Pixfeed</div>
+        <div style="color: #555; font-size: 13px; margin-bottom: 8px;">
+          Tél : <a style="color: #4a90e2; text-decoration: none;" href="tel:+33645373930">06 45 37 39 30</a><br />
+          Email : <a style="color: #4a90e2; text-decoration: none;" href="mailto:mgueffie@pixfeed.net">mgueffie@pixfeed.net</a><br />
+          Web : <a style="color: #4a90e2; text-decoration: none;" href="https://pixfeed.net/">pixfeed.net</a>
+        </div>
+        <div style="font-size: 13px;">
+          <a style="color: #4a90e2; text-decoration: none; margin-right: 12px;" href="https://www.facebook.com/Pixfeed">ⓕ Facebook</a>
+          <a style="color: #4a90e2; text-decoration: none;" href="https://www.linkedin.com/company/100015229/">in LinkedIn</a>
+        </div>
+        <div style="font-size: 12px; color: #888; font-style: italic; margin-top: 10px;">L'humain au cœur de nos solutions</div>
+      </td>
+    </tr>
+  </tbody>
+</table>
+                    `)}
+                    className="p-3 bg-blue-900/30 border border-blue-500/50 rounded-lg hover:border-blue-400 transition-colors text-left"
+                  >
+                    <div className="text-sm font-medium text-blue-400 mb-1">Pixfeed</div>
+                    <div className="text-xs text-gray-400">Signature officielle</div>
+                  </button>
+
                   <button
                     type="button"
                     onClick={() => handleSignatureChange(`
