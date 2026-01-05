@@ -479,13 +479,17 @@ Site web: <a href="https://pixfeed.net/" style="color: #4a90e2; text-decoration:
 <table cellpadding="0" cellspacing="0" style="font-family: Arial, sans-serif;">
   <tr>
     <td style="padding-right: 15px; border-right: 2px solid #6366f1;">
-      <img src="${formData.logo_url || 'https://via.placeholder.com/80x80?text=Logo'}" alt="Logo" style="width: 80px; height: auto;" />
+      <img src="https://pixfeed.net/wp-content/uploads/2025/04/logo.png" alt="Logo" style="width: 80px; height: auto;" />
     </td>
     <td style="padding-left: 15px;">
-      <div style="font-size: 16px; font-weight: bold; color: #1f2937;">${formData.company_name || 'Votre Entreprise'}</div>
-      <div style="font-size: 13px; color: #6b7280; margin-top: 4px;">${formData.email || 'email@exemple.com'}</div>
-      <div style="font-size: 13px; color: #6b7280;">${formData.phone || '01 23 45 67 89'}</div>
-      <div style="font-size: 12px; color: #9ca3af; margin-top: 8px;">${formData.address || ''} ${formData.postal_code || ''} ${formData.city || ''}</div>
+      <div style="font-size: 16px; font-weight: bold; color: #1f2937;">\${formData.company_name || 'Votre Entreprise'}</div>
+      <div style="font-size: 13px; color: #6b7280; margin-top: 4px;">\${formData.email || 'email@exemple.com'}</div>
+      <div style="font-size: 13px; color: #6b7280;">\${formData.phone || '01 23 45 67 89'}</div>
+      <div style="font-size: 12px; color: #9ca3af; margin-top: 8px;">\${formData.address || ''} \${formData.postal_code || ''} \${formData.city || ''}</div>
+      <div style="margin-top: 10px;">
+        <a href="https://www.facebook.com/Pixfeed" style="text-decoration: none;"><img src="https://jurojin.net/wp-content/uploads/2026/01/fasebookmail.png" width="20" height="20" alt="Facebook" style="vertical-align: middle;" /></a>&nbsp;&nbsp;
+        <a href="https://www.linkedin.com/company/pixfeed/" style="text-decoration: none;"><img src="https://jurojin.net/wp-content/uploads/2026/01/linkedinmail.png" width="20" height="20" alt="LinkedIn" style="vertical-align: middle;" /></a>
+      </div>
     </td>
   </tr>
 </table>
@@ -499,15 +503,24 @@ Site web: <a href="https://pixfeed.net/" style="color: #4a90e2; text-decoration:
                   <button
                     type="button"
                     onClick={() => handleSignatureChange(`
-<div style="font-family: Arial, sans-serif; border-top: 3px solid #6366f1; padding-top: 15px; margin-top: 20px;">
-  <div style="font-size: 15px; font-weight: bold; color: #1f2937;">${formData.company_name || 'Votre Entreprise'}</div>
-  <div style="font-size: 13px; color: #6366f1; margin-top: 2px;">Développement Web & Digital</div>
-  <div style="margin-top: 10px;">
-    <span style="font-size: 12px; color: #6b7280;">📧 ${formData.email || 'email@exemple.com'}</span>
-    <span style="font-size: 12px; color: #6b7280; margin-left: 15px;">📞 ${formData.phone || '01 23 45 67 89'}</span>
-  </div>
-  <div style="font-size: 11px; color: #9ca3af; margin-top: 8px;">🌐 www.votre-site.com</div>
-</div>
+<table cellpadding="0" cellspacing="0" style="font-family: Arial, sans-serif;">
+  <tr>
+    <td valign="top" style="padding-right: 15px;">
+      <img src="https://pixfeed.net/wp-content/uploads/2025/04/logo.png" alt="Logo" style="width: 60px; height: auto;" />
+    </td>
+    <td valign="top" style="border-left: 3px solid #6366f1; padding-left: 15px;">
+      <div style="font-size: 15px; font-weight: bold; color: #1f2937;">\${formData.company_name || 'Votre Entreprise'}</div>
+      <div style="font-size: 13px; color: #6366f1; margin-top: 2px;">Développement Web & Digital</div>
+      <div style="margin-top: 10px; font-size: 12px; color: #6b7280;">
+        \${formData.email || 'email@exemple.com'} | \${formData.phone || '01 23 45 67 89'}
+      </div>
+      <div style="margin-top: 10px;">
+        <a href="https://www.facebook.com/Pixfeed" style="text-decoration: none;"><img src="https://jurojin.net/wp-content/uploads/2026/01/fasebookmail.png" width="20" height="20" alt="Facebook" style="vertical-align: middle;" /></a>&nbsp;&nbsp;
+        <a href="https://www.linkedin.com/company/pixfeed/" style="text-decoration: none;"><img src="https://jurojin.net/wp-content/uploads/2026/01/linkedinmail.png" width="20" height="20" alt="LinkedIn" style="vertical-align: middle;" /></a>
+      </div>
+    </td>
+  </tr>
+</table>
                     `)}
                     className="p-3 bg-gray-900/50 border border-gray-700 rounded-lg hover:border-indigo-500 transition-colors text-left"
                   >
@@ -518,11 +531,19 @@ Site web: <a href="https://pixfeed.net/" style="color: #4a90e2; text-decoration:
                   <button
                     type="button"
                     onClick={() => handleSignatureChange(`
-<div style="font-family: Arial, sans-serif;">
-  <p style="font-size: 14px; color: #374151; margin: 0;">Cordialement,</p>
-  <p style="font-size: 15px; font-weight: bold; color: #1f2937; margin: 8px 0 4px 0;">${formData.company_name || 'Votre Entreprise'}</p>
-  <p style="font-size: 13px; color: #6b7280; margin: 0;">${formData.email || 'email@exemple.com'} | ${formData.phone || '01 23 45 67 89'}</p>
-</div>
+<table cellpadding="0" cellspacing="0" style="font-family: Arial, sans-serif;">
+  <tr>
+    <td>
+      <p style="font-size: 14px; color: #374151; margin: 0;">Cordialement,</p>
+      <p style="font-size: 15px; font-weight: bold; color: #1f2937; margin: 8px 0 4px 0;">\${formData.company_name || 'Votre Entreprise'}</p>
+      <p style="font-size: 13px; color: #6b7280; margin: 0;">\${formData.email || 'email@exemple.com'} | \${formData.phone || '01 23 45 67 89'}</p>
+      <p style="margin: 10px 0 0 0;">
+        <a href="https://www.facebook.com/Pixfeed" style="text-decoration: none;"><img src="https://jurojin.net/wp-content/uploads/2026/01/fasebookmail.png" width="18" height="18" alt="Facebook" style="vertical-align: middle;" /></a>&nbsp;&nbsp;
+        <a href="https://www.linkedin.com/company/pixfeed/" style="text-decoration: none;"><img src="https://jurojin.net/wp-content/uploads/2026/01/linkedinmail.png" width="18" height="18" alt="LinkedIn" style="vertical-align: middle;" /></a>
+      </p>
+    </td>
+  </tr>
+</table>
                     `)}
                     className="p-3 bg-gray-900/50 border border-gray-700 rounded-lg hover:border-indigo-500 transition-colors text-left"
                   >
