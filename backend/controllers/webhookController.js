@@ -1,5 +1,7 @@
 // backend/controllers/webhookController.js
 
+const emailService = require('../services/emailService');
+
 /**
  * Contrôleur pour la gestion des webhooks externes
  * Route publique (sans authentification) pour permettre aux systèmes externes d'envoyer des données
@@ -159,7 +161,25 @@ const handleMaintenanceWebhook = async (req, res) => {
 
     console.log('[Webhook Maintenance] Paiement créé avec succès:', revenueId);
 
-    // 4. Retourner le succès avec les IDs
+    // 4. Envoyer notification email à l'admin
+    try {
+      await emailService.sendNewSubscriptionNotification({
+        clientName: name,
+        clientEmail: email,
+        clientPhone: phone,
+        company,
+        plan,
+        planPrice: plan_price,
+        stripeCustomerId: stripe_customer_id,
+        stripeSubscriptionId: stripe_subscription_id
+      });
+      console.log('[Webhook Maintenance] Notification email envoyée à l\'admin');
+    } catch (emailError) {
+      console.error('[Webhook Maintenance] Erreur envoi notification:', emailError.message);
+      // On ne bloque pas si l'email échoue
+    }
+
+    // 5. Retourner le succès avec les IDs
     return res.status(201).json({
       success: true,
       message: 'Client, projet et paiement créés avec succès',

@@ -9,6 +9,7 @@ const fs = require('fs');
 const db = require('./config/pgConfig'); // Changé pour utiliser PostgreSQL
 const { autoInitDatabase } = require('./scripts/autoInitDatabase');
 const scheduledEmailWorker = require('./services/scheduledEmailWorker');
+const maintenanceReminderWorker = require('./services/maintenanceReminderWorker');
 
 // Charger les variables d'environnement
 dotenv.config();
@@ -229,6 +230,10 @@ async function startServer() {
   scheduledEmailWorker.initialize(app.locals.db);
   scheduledEmailWorker.start();
 
+  // Initialiser et démarrer le worker de rappel maintenance
+  maintenanceReminderWorker.initialize(app.locals.db);
+  maintenanceReminderWorker.start(); // Tous les jours à 9h00
+
   // Démarrer le serveur HTTP
   const server = app.listen(PORT, () => {
     console.log('===========================================');
@@ -266,8 +271,9 @@ process.on('SIGTERM', gracefulShutdown);
 function gracefulShutdown() {
   console.log('Arrêt gracieux du serveur...');
 
-  // Arrêter le worker d'emails programmés
+  // Arrêter les workers
   scheduledEmailWorker.stop();
+  maintenanceReminderWorker.stop();
 
   server.close(() => {
     console.log('Serveur HTTP fermé.');

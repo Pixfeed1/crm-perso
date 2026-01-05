@@ -470,6 +470,188 @@ class EmailService {
     };
     return labels[status] || status;
   }
+
+  /**
+   * Envoie une notification interne pour un nouvel abonnement
+   */
+  async sendNewSubscriptionNotification(data) {
+    const {
+      clientName,
+      clientEmail,
+      clientPhone,
+      company,
+      plan,
+      planPrice,
+      stripeCustomerId,
+      stripeSubscriptionId
+    } = data;
+
+    const adminEmail = process.env.ADMIN_EMAIL || 'mgueffie@pixfeed.net';
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+      </head>
+      <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f3f4f6;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="padding: 20px;">
+          <tr>
+            <td align="center">
+              <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <tr>
+                  <td style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px; border-radius: 8px 8px 0 0; text-align: center;">
+                    <h1 style="margin: 0; color: #ffffff; font-size: 24px;">🎉 Nouvel Abonnement !</h1>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 30px;">
+                    <p style="margin: 0 0 20px 0; font-size: 16px; color: #374151;">
+                      Un nouveau client vient de souscrire à un abonnement maintenance !
+                    </p>
+
+                    <div style="background-color: #f0fdf4; border-left: 4px solid #10b981; padding: 20px; margin: 20px 0; border-radius: 4px;">
+                      <h3 style="margin: 0 0 15px 0; color: #065f46;">Informations client</h3>
+                      <table width="100%" cellpadding="0" cellspacing="0">
+                        <tr>
+                          <td style="padding: 8px 0; color: #6b7280; width: 120px;">Nom :</td>
+                          <td style="padding: 8px 0; color: #111827; font-weight: 600;">${clientName || 'Non renseigné'}</td>
+                        </tr>
+                        ${company ? `<tr>
+                          <td style="padding: 8px 0; color: #6b7280;">Entreprise :</td>
+                          <td style="padding: 8px 0; color: #111827;">${company}</td>
+                        </tr>` : ''}
+                        <tr>
+                          <td style="padding: 8px 0; color: #6b7280;">Email :</td>
+                          <td style="padding: 8px 0;"><a href="mailto:${clientEmail}" style="color: #6366f1;">${clientEmail || 'Non renseigné'}</a></td>
+                        </tr>
+                        ${clientPhone ? `<tr>
+                          <td style="padding: 8px 0; color: #6b7280;">Téléphone :</td>
+                          <td style="padding: 8px 0;"><a href="tel:${clientPhone}" style="color: #6366f1;">${clientPhone}</a></td>
+                        </tr>` : ''}
+                      </table>
+                    </div>
+
+                    <div style="background-color: #eef2ff; border-left: 4px solid #6366f1; padding: 20px; margin: 20px 0; border-radius: 4px;">
+                      <h3 style="margin: 0 0 15px 0; color: #4338ca;">Détails de l'abonnement</h3>
+                      <table width="100%" cellpadding="0" cellspacing="0">
+                        <tr>
+                          <td style="padding: 8px 0; color: #6b7280; width: 120px;">Forfait :</td>
+                          <td style="padding: 8px 0; color: #111827; font-weight: 600;">${plan || 'Standard'}</td>
+                        </tr>
+                        <tr>
+                          <td style="padding: 8px 0; color: #6b7280;">Montant :</td>
+                          <td style="padding: 8px 0; color: #10b981; font-weight: 700; font-size: 18px;">${this.formatAmount(planPrice)}/mois</td>
+                        </tr>
+                        ${stripeSubscriptionId ? `<tr>
+                          <td style="padding: 8px 0; color: #6b7280;">Stripe ID :</td>
+                          <td style="padding: 8px 0; color: #9ca3af; font-size: 12px;">${stripeSubscriptionId}</td>
+                        </tr>` : ''}
+                      </table>
+                    </div>
+
+                    <p style="margin: 20px 0 0 0; font-size: 14px; color: #6b7280;">
+                      Le client, le projet et le paiement ont été créés automatiquement dans le CRM.
+                    </p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="background-color: #f9fafb; padding: 20px; border-radius: 0 0 8px 8px; text-align: center; border-top: 1px solid #e5e7eb;">
+                    <p style="margin: 0; font-size: 12px; color: #9ca3af;">
+                      Notification automatique CRM Pixfeed
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
+    `;
+
+    return await this.sendEmail({
+      to: adminEmail,
+      subject: `🎉 Nouvel abonnement : ${clientName} - ${plan} (${this.formatAmount(planPrice)}/mois)`,
+      html
+    });
+  }
+
+  /**
+   * Envoie un rappel pour les rapports de maintenance à envoyer
+   */
+  async sendMaintenanceReportReminder(contracts) {
+    const adminEmail = process.env.ADMIN_EMAIL || 'mgueffie@pixfeed.net';
+
+    const contractsList = contracts.map(c => `
+      <tr>
+        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">${c.client_name || 'Client'}</td>
+        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">${c.site_name || c.project_name || 'Site'}</td>
+        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">${c.last_report_date ? this.formatDate(c.last_report_date) : 'Jamais'}</td>
+      </tr>
+    `).join('');
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+      </head>
+      <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f3f4f6;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="padding: 20px;">
+          <tr>
+            <td align="center">
+              <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <tr>
+                  <td style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 30px; border-radius: 8px 8px 0 0; text-align: center;">
+                    <h1 style="margin: 0; color: #ffffff; font-size: 24px;">📋 Rappel : Rapports de maintenance</h1>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 30px;">
+                    <p style="margin: 0 0 20px 0; font-size: 16px; color: #374151;">
+                      Il est temps d'envoyer les rapports de maintenance mensuels pour les clients suivants :
+                    </p>
+
+                    <table width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
+                      <thead>
+                        <tr style="background-color: #f9fafb;">
+                          <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; border-bottom: 2px solid #e5e7eb;">Client</th>
+                          <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; border-bottom: 2px solid #e5e7eb;">Site</th>
+                          <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; border-bottom: 2px solid #e5e7eb;">Dernier rapport</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        ${contractsList}
+                      </tbody>
+                    </table>
+
+                    <p style="margin: 25px 0 0 0; font-size: 14px; color: #6b7280;">
+                      Connectez-vous au CRM pour générer et envoyer les rapports.
+                    </p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="background-color: #f9fafb; padding: 20px; border-radius: 0 0 8px 8px; text-align: center; border-top: 1px solid #e5e7eb;">
+                    <p style="margin: 0; font-size: 12px; color: #9ca3af;">
+                      Rappel automatique CRM Pixfeed
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
+    `;
+
+    return await this.sendEmail({
+      to: adminEmail,
+      subject: `📋 Rappel : ${contracts.length} rapport(s) de maintenance à envoyer`,
+      html
+    });
+  }
 }
 
 // Export singleton
