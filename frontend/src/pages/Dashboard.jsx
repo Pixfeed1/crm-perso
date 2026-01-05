@@ -183,7 +183,7 @@ const Dashboard = () => {
     }
     setSendingEmail(true);
     try {
-      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
       // Utiliser FormData pour les pièces jointes
       const formData = new FormData();
@@ -196,7 +196,7 @@ const Dashboard = () => {
         formData.append('attachments', file);
       });
 
-      const response = await fetch(`${API_URL}/api/clients/send-generic-email`, {
+      const response = await fetch(`${API_URL}/clients/send-generic-email`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
