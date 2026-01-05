@@ -451,17 +451,18 @@ const Settings = () => {
                     onClick={() => handleSignatureChange(`
 <table cellpadding="0" cellspacing="0" border="0" style="font-family: Arial, sans-serif; font-size: 14px; color: #333;">
 <tr>
-<td width="90" valign="top" style="padding-right: 15px;">
-<img src="https://pixfeed.net/wp-content/uploads/2025/04/logo.png" width="80" height="80" alt="Pixfeed" style="display: block;" />
-</td>
-<td valign="top" style="border-left: 2px solid #4a90e2; padding-left: 15px;">
+<td valign="top" style="padding-right: 20px;">
 <strong style="font-size: 16px; color: #1a1a1a;">Marc Gueffie</strong><br />
 <span style="color: #666;">Chargé de Projet chez Pixfeed</span><br /><br />
 Tél: <a href="tel:0645373930" style="color: #4a90e2; text-decoration: none;">06.45.37.39.30</a><br />
 Email: <a href="mailto:mgueffie@pixfeed.net" style="color: #4a90e2; text-decoration: none;">mgueffie@pixfeed.net</a><br />
-Web: <a href="https://pixfeed.net/" style="color: #4a90e2; text-decoration: none;">pixfeed.net</a><br /><br />
-<a href="https://www.facebook.com/Pixfeed" style="text-decoration: none;"><img src="https://jurojin.net/wp-content/uploads/2026/01/fasebookmail.png" width="24" height="24" alt="Facebook" style="display: inline-block;" /></a>&nbsp;&nbsp;
-<a href="https://www.linkedin.com/company/100015229/" style="text-decoration: none;"><img src="https://jurojin.net/wp-content/uploads/2026/01/linkedinmail.png" width="24" height="24" alt="LinkedIn" style="display: inline-block;" /></a>
+Site web: <a href="https://pixfeed.net/" style="color: #4a90e2; text-decoration: none;">pixfeed.net</a><br /><br />
+<a href="https://www.facebook.com/Pixfeed" style="text-decoration: none; color: #4a90e2;"><img src="https://jurojin.net/wp-content/uploads/2026/01/fasebookmail.png" width="20" height="20" alt="Facebook" style="vertical-align: middle;" /> Facebook</a>&nbsp;&nbsp;&nbsp;
+<a href="https://www.linkedin.com/company/100015229/" style="text-decoration: none; color: #4a90e2;"><img src="https://jurojin.net/wp-content/uploads/2026/01/linkedinmail.png" width="20" height="20" alt="LinkedIn" style="vertical-align: middle;" /> LinkedIn</a>
+</td>
+<td valign="top" width="120" style="text-align: center;">
+<img src="https://pixfeed.net/wp-content/uploads/2025/04/logo.png" width="80" alt="Pixfeed" style="display: block; margin: 0 auto;" /><br />
+<em style="font-size: 11px; color: #666;">L'humain au cœur<br />de nos solutions</em>
 </td>
 </tr>
 </table>
