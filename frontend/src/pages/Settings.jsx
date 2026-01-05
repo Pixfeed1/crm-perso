@@ -449,7 +449,7 @@ const Settings = () => {
                   <button
                     type="button"
                     onClick={() => handleSignatureChange(`
-<table cellpadding="0" cellspacing="0" border="0" style="font-family: Arial, sans-serif; font-size: 14px; color: #333;">
+<table cellpadding="0" cellspacing="0" border="0" align="left" style="font-family: Arial, sans-serif; font-size: 14px; color: #333; line-height: 1.4;">
 <tr>
 <td valign="top" style="padding-right: 20px;">
 <strong style="font-size: 16px; color: #1a1a1a;">Marc Gueffie</strong><br />
@@ -458,7 +458,7 @@ Tél: <a href="tel:0645373930" style="color: #4a90e2; text-decoration: none;">06
 Email: <a href="mailto:mgueffie@pixfeed.net" style="color: #4a90e2; text-decoration: none;">mgueffie@pixfeed.net</a><br />
 Site web: <a href="https://pixfeed.net/" style="color: #4a90e2; text-decoration: none;">pixfeed.net</a><br /><br />
 <a href="https://www.facebook.com/Pixfeed" style="text-decoration: none; color: #4a90e2;"><img src="https://jurojin.net/wp-content/uploads/2026/01/fasebookmail.png" width="20" height="20" alt="Facebook" style="vertical-align: middle;" /> Facebook</a>&nbsp;&nbsp;&nbsp;
-<a href="https://www.linkedin.com/company/100015229/" style="text-decoration: none; color: #4a90e2;"><img src="https://jurojin.net/wp-content/uploads/2026/01/linkedinmail.png" width="20" height="20" alt="LinkedIn" style="vertical-align: middle;" /> LinkedIn</a>
+<a href="https://www.linkedin.com/company/pixfeed/" style="text-decoration: none; color: #4a90e2;"><img src="https://jurojin.net/wp-content/uploads/2026/01/linkedinmail.png" width="20" height="20" alt="LinkedIn" style="vertical-align: middle;" /> LinkedIn</a>
 </td>
 <td valign="top" width="120" style="text-align: center;">
 <img src="https://pixfeed.net/wp-content/uploads/2025/04/logo.png" width="80" alt="Pixfeed" style="display: block; margin: 0 auto;" /><br />
@@ -476,12 +476,12 @@ Site web: <a href="https://pixfeed.net/" style="color: #4a90e2; text-decoration:
                   <button
                     type="button"
                     onClick={() => handleSignatureChange(`
-<table cellpadding="0" cellspacing="0" style="font-family: Arial, sans-serif;">
+<table cellpadding="0" cellspacing="0" border="0" align="left" style="font-family: Arial, sans-serif; font-size: 14px; color: #333; line-height: 1.4;">
   <tr>
-    <td style="padding-right: 15px; border-right: 2px solid #6366f1;">
-      <img src="https://pixfeed.net/wp-content/uploads/2025/04/logo.png" alt="Logo" style="width: 80px; height: auto;" />
+    <td valign="top" style="padding-right: 15px; border-right: 2px solid #6366f1;">
+      <img src="https://pixfeed.net/wp-content/uploads/2025/04/logo.png" alt="Logo" width="80" style="display: block;" />
     </td>
-    <td style="padding-left: 15px;">
+    <td valign="top" style="padding-left: 15px;">
       <div style="font-size: 16px; font-weight: bold; color: #1f2937;">${formData.company_name || 'Votre Entreprise'}</div>
       <div style="font-size: 13px; color: #6b7280; margin-top: 4px;">${formData.email || 'email@exemple.com'}</div>
       <div style="font-size: 13px; color: #6b7280;">${formData.phone || '01 23 45 67 89'}</div>
@@ -503,10 +503,10 @@ Site web: <a href="https://pixfeed.net/" style="color: #4a90e2; text-decoration:
                   <button
                     type="button"
                     onClick={() => handleSignatureChange(`
-<table cellpadding="0" cellspacing="0" style="font-family: Arial, sans-serif;">
+<table cellpadding="0" cellspacing="0" border="0" align="left" style="font-family: Arial, sans-serif; font-size: 14px; color: #333; line-height: 1.4;">
   <tr>
     <td valign="top" style="padding-right: 15px;">
-      <img src="https://pixfeed.net/wp-content/uploads/2025/04/logo.png" alt="Logo" style="width: 60px; height: auto;" />
+      <img src="https://pixfeed.net/wp-content/uploads/2025/04/logo.png" alt="Logo" width="60" style="display: block;" />
     </td>
     <td valign="top" style="border-left: 3px solid #6366f1; padding-left: 15px;">
       <div style="font-size: 15px; font-weight: bold; color: #1f2937;">${formData.company_name || 'Votre Entreprise'}</div>
@@ -531,7 +531,7 @@ Site web: <a href="https://pixfeed.net/" style="color: #4a90e2; text-decoration:
                   <button
                     type="button"
                     onClick={() => handleSignatureChange(`
-<table cellpadding="0" cellspacing="0" style="font-family: Arial, sans-serif;">
+<table cellpadding="0" cellspacing="0" border="0" align="left" style="font-family: Arial, sans-serif; font-size: 14px; color: #333; line-height: 1.4;">
   <tr>
     <td>
       <p style="font-size: 14px; color: #374151; margin: 0;">Cordialement,</p>
