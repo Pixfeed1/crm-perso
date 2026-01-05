@@ -449,22 +449,21 @@ const Settings = () => {
                   <button
                     type="button"
                     onClick={() => handleSignatureChange(`
-<table style="font-family: Arial, sans-serif; font-size: 14px; color: #333; max-width: 500px; line-height: 1.6; border-top: 2px solid #4a90e2; padding-top: 15px; border-spacing: 0; border-collapse: collapse;">
-<tbody>
+<table cellpadding="0" cellspacing="0" border="0" style="font-family: Arial, sans-serif; font-size: 14px; color: #333;">
 <tr>
-<td style="padding-right: 15px; vertical-align: middle;">
-<div style="font-weight: bold; color: #1a1a1a; font-size: 18px; margin-bottom: 5px;">Marc Gueffie</div>
-<div style="color: #666; font-size: 14px; margin-bottom: 10px;">Chargé de Projet chez Pixfeed</div>
-<div style="color: #555; margin-bottom: 10px;">
-<p style="margin: 0 0 5px 0;">Tél: <a style="color: #4a90e2; text-decoration: none;" href="tel:0645373930">06.45.37.39.30</a><br />Email: <a style="color: #4a90e2; text-decoration: none;" href="mailto:mgueffie@pixfeed.net">mgueffie@pixfeed.net</a><br />Site web: <a style="color: #4a90e2; text-decoration: none;" href="https://pixfeed.net/">pixfeed.net</a></p>
-</div>
-<table style="border-spacing: 0; border-collapse: collapse; margin-top: 10px;"><tr><td style="padding-right: 15px;"><a style="text-decoration: none; color: #4a90e2; font-weight: 500;" href="https://www.facebook.com/Pixfeed"><img style="width: 24px; height: 24px; vertical-align: middle;" src="https://jurojin.net/wp-content/uploads/2026/01/fasebookmail.png" alt="Facebook" /> <span style="vertical-align: middle;">Facebook</span></a></td><td><a style="text-decoration: none; color: #4a90e2; font-weight: 500;" href="https://www.linkedin.com/company/100015229/"><img style="width: 24px; height: 24px; vertical-align: middle;" src="https://jurojin.net/wp-content/uploads/2026/01/linkedinmail.png" alt="LinkedIn" /> <span style="vertical-align: middle;">LinkedIn</span></a></td></tr></table>
+<td width="90" valign="top" style="padding-right: 15px;">
+<img src="https://pixfeed.net/wp-content/uploads/2025/04/logo.png" width="80" height="80" alt="Pixfeed" style="display: block;" />
 </td>
-<td style="vertical-align: middle; width: 100px; padding-left: 0;"><img style="width: 80px; height: auto; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 5px; display: block;" src="https://pixfeed.net/wp-content/uploads/2025/04/logo.png" alt="Pixfeed Logo" />
-<div style="font-size: 12px; color: #666; text-align: center; font-style: italic; max-width: 100px;">L'humain au cœur de nos solutions</div>
+<td valign="top" style="border-left: 2px solid #4a90e2; padding-left: 15px;">
+<strong style="font-size: 16px; color: #1a1a1a;">Marc Gueffie</strong><br />
+<span style="color: #666;">Chargé de Projet chez Pixfeed</span><br /><br />
+Tél: <a href="tel:0645373930" style="color: #4a90e2; text-decoration: none;">06.45.37.39.30</a><br />
+Email: <a href="mailto:mgueffie@pixfeed.net" style="color: #4a90e2; text-decoration: none;">mgueffie@pixfeed.net</a><br />
+Web: <a href="https://pixfeed.net/" style="color: #4a90e2; text-decoration: none;">pixfeed.net</a><br /><br />
+<a href="https://www.facebook.com/Pixfeed" style="text-decoration: none;"><img src="https://jurojin.net/wp-content/uploads/2026/01/fasebookmail.png" width="24" height="24" alt="Facebook" style="display: inline-block;" /></a>&nbsp;&nbsp;
+<a href="https://www.linkedin.com/company/100015229/" style="text-decoration: none;"><img src="https://jurojin.net/wp-content/uploads/2026/01/linkedinmail.png" width="24" height="24" alt="LinkedIn" style="display: inline-block;" /></a>
 </td>
 </tr>
-</tbody>
 </table>
                     `)}
                     className="p-3 bg-blue-900/30 border border-blue-500/50 rounded-lg hover:border-blue-400 transition-colors text-left"
