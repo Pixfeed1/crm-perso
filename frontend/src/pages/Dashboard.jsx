@@ -77,6 +77,11 @@ const Dashboard = () => {
   const fileInputRef = useRef(null);
   const quillRef = useRef(null);
 
+  // Envoi différé
+  const [isScheduled, setIsScheduled] = useState(false);
+  const [scheduledDate, setScheduledDate] = useState('');
+  const [scheduledTime, setScheduledTime] = useState('09:00');
+
   const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
   const MAX_TOTAL_SIZE = 25 * 1024 * 1024; // 25MB total
 
@@ -172,6 +177,9 @@ const Dashboard = () => {
   const resetEmailModal = () => {
     setQuickEmailData({ to: '', subject: '', message: '' });
     setAttachments([]);
+    setIsScheduled(false);
+    setScheduledDate('');
+    setScheduledTime('09:00');
     setShowQuickEmail(false);
   };
 
@@ -181,35 +189,78 @@ const Dashboard = () => {
       toast.error('Veuillez remplir tous les champs');
       return;
     }
+
+    // Validation pour l'envoi différé
+    if (isScheduled) {
+      if (!scheduledDate || !scheduledTime) {
+        toast.error('Veuillez sélectionner une date et une heure');
+        return;
+      }
+      const scheduledDateTime = new Date(`${scheduledDate}T${scheduledTime}`);
+      if (scheduledDateTime <= new Date()) {
+        toast.error('La date de programmation doit être dans le futur');
+        return;
+      }
+    }
+
     setSendingEmail(true);
     try {
       const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
-      // Utiliser FormData pour les pièces jointes
-      const formData = new FormData();
-      formData.append('to', quickEmailData.to);
-      formData.append('subject', quickEmailData.subject);
-      formData.append('message', quickEmailData.message);
+      if (isScheduled) {
+        // Envoi différé via /api/scheduled-emails
+        const scheduledAt = new Date(`${scheduledDate}T${scheduledTime}`).toISOString();
+        const response = await fetch(`${API_URL}/scheduled-emails`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            to_email: quickEmailData.to,
+            subject: quickEmailData.subject,
+            body_html: quickEmailData.message,
+            scheduled_at: scheduledAt,
+            email_type: 'custom'
+          })
+        });
 
-      // Ajouter les pièces jointes
-      attachments.forEach((file) => {
-        formData.append('attachments', file);
-      });
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.message || 'Erreur lors de la programmation');
+        }
 
-      const response = await fetch(`${API_URL}/clients/send-generic-email`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: formData
-      });
+        const formattedDate = new Date(`${scheduledDate}T${scheduledTime}`).toLocaleString('fr-FR', {
+          dateStyle: 'long',
+          timeStyle: 'short'
+        });
+        toast.success(`Email programmé pour le ${formattedDate}`);
+      } else {
+        // Envoi immédiat
+        const formData = new FormData();
+        formData.append('to', quickEmailData.to);
+        formData.append('subject', quickEmailData.subject);
+        formData.append('message', quickEmailData.message);
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Erreur lors de l\'envoi');
+        attachments.forEach((file) => {
+          formData.append('attachments', file);
+        });
+
+        const response = await fetch(`${API_URL}/clients/send-generic-email`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          },
+          body: formData
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.message || 'Erreur lors de l\'envoi');
+        }
+
+        toast.success('Email envoyé avec succès !');
       }
-
-      toast.success('Email envoyé avec succès !');
       resetEmailModal();
     } catch (error) {
       toast.error(error.message || 'Erreur lors de l\'envoi');
@@ -1314,6 +1365,76 @@ const Dashboard = () => {
                     </div>
                   )}
                 </div>
+
+                {/* Option envoi différé */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 p-3 bg-gray-900/50 rounded-lg border border-gray-700">
+                    <input
+                      type="checkbox"
+                      id="scheduleEmail"
+                      checked={isScheduled}
+                      onChange={(e) => {
+                        setIsScheduled(e.target.checked);
+                        if (e.target.checked && !scheduledDate) {
+                          const tomorrow = new Date();
+                          tomorrow.setDate(tomorrow.getDate() + 1);
+                          setScheduledDate(tomorrow.toISOString().split('T')[0]);
+                        }
+                      }}
+                      className="w-4 h-4 text-purple-600 bg-gray-800 border-gray-600 rounded focus:ring-purple-500 focus:ring-2"
+                      disabled={sendingEmail}
+                    />
+                    <label htmlFor="scheduleEmail" className="text-sm text-gray-300 cursor-pointer flex items-center gap-2">
+                      <FiClock className="text-purple-400" />
+                      Programmer l'envoi pour plus tard
+                    </label>
+                  </div>
+
+                  {/* Sélecteurs date/heure */}
+                  <AnimatePresence>
+                    {isScheduled && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="flex gap-3 p-4 bg-purple-500/10 rounded-lg border border-purple-500/30">
+                          <div className="flex-1">
+                            <label className="block text-xs font-medium text-purple-300 mb-1">
+                              <FiCalendarIcon className="inline mr-1" /> Date
+                            </label>
+                            <input
+                              type="date"
+                              value={scheduledDate}
+                              onChange={(e) => setScheduledDate(e.target.value)}
+                              min={new Date().toISOString().split('T')[0]}
+                              className="w-full px-3 py-2 bg-gray-800/50 border border-purple-500/30 rounded-lg text-white text-sm focus:outline-none focus:border-purple-500 transition-colors"
+                              disabled={sendingEmail}
+                            />
+                          </div>
+                          <div className="flex-1">
+                            <label className="block text-xs font-medium text-purple-300 mb-1">
+                              <FiClock className="inline mr-1" /> Heure
+                            </label>
+                            <input
+                              type="time"
+                              value={scheduledTime}
+                              onChange={(e) => setScheduledTime(e.target.value)}
+                              className="w-full px-3 py-2 bg-gray-800/50 border border-purple-500/30 rounded-lg text-white text-sm focus:outline-none focus:border-purple-500 transition-colors"
+                              disabled={sendingEmail}
+                            />
+                          </div>
+                        </div>
+                        {scheduledDate && scheduledTime && (
+                          <p className="mt-2 text-xs text-purple-300 px-1">
+                            L'email sera envoyé le {new Date(`${scheduledDate}T${scheduledTime}`).toLocaleString('fr-FR', { dateStyle: 'long', timeStyle: 'short' })}
+                          </p>
+                        )}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
               </div>
 
               {/* Footer */}
@@ -1327,18 +1448,18 @@ const Dashboard = () => {
                 </button>
                 <button
                   onClick={handleSendQuickEmail}
-                  disabled={sendingEmail || !quickEmailData.to.trim() || !quickEmailData.subject.trim() || !quickEmailData.message.trim()}
-                  className="px-6 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  disabled={sendingEmail || !quickEmailData.to.trim() || !quickEmailData.subject.trim() || !quickEmailData.message.trim() || (isScheduled && (!scheduledDate || !scheduledTime))}
+                  className={`px-6 py-2 ${isScheduled ? 'bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800' : 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800'} text-white rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2`}
                 >
                   {sendingEmail ? (
                     <>
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      <span>Envoi en cours...</span>
+                      <span>{isScheduled ? 'Programmation...' : 'Envoi en cours...'}</span>
                     </>
                   ) : (
                     <>
-                      <FiSend />
-                      <span>Envoyer</span>
+                      {isScheduled ? <FiClock /> : <FiSend />}
+                      <span>{isScheduled ? 'Programmer' : 'Envoyer'}</span>
                     </>
                   )}
                 </button>
