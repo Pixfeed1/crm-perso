@@ -1,7 +1,7 @@
 // src/components/common/EmailAutocomplete.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { FiUser, FiBriefcase, FiUsers } from 'react-icons/fi';
-import { searchAPI } from '../../services/api';
+import { searchAPI, clientsAPI, leadsAPI } from '../../services/api';
 
 const EmailAutocomplete = ({
   value,
@@ -10,12 +10,87 @@ const EmailAutocomplete = ({
   className = ""
 }) => {
   const [suggestions, setSuggestions] = useState([]);
+  const [recentContacts, setRecentContacts] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [loading, setLoading] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
+  const [hasLoadedRecents, setHasLoadedRecents] = useState(false);
   const inputRef = useRef(null);
   const suggestionsRef = useRef(null);
   const debounceRef = useRef(null);
+
+  // Charger les contacts récents au montage
+  useEffect(() => {
+    loadRecentContacts();
+  }, []);
+
+  // Charger tous les contacts avec email (clients + leads)
+  const loadRecentContacts = async () => {
+    if (hasLoadedRecents) return;
+
+    try {
+      const [clients, leads] = await Promise.all([
+        clientsAPI.getAll().catch(() => []),
+        leadsAPI.getAll().catch(() => [])
+      ]);
+
+      const allContacts = [];
+
+      // Clients
+      if (Array.isArray(clients)) {
+        clients.forEach(client => {
+          if (client.email) {
+            allContacts.push({
+              id: `client-${client.id}`,
+              type: 'client',
+              name: client.name || client.company,
+              company: client.company,
+              email: client.email,
+              icon: FiBriefcase,
+              updated_at: client.updated_at || client.created_at
+            });
+          }
+        });
+      }
+
+      // Leads
+      if (Array.isArray(leads)) {
+        leads.forEach(lead => {
+          if (lead.email) {
+            allContacts.push({
+              id: `lead-${lead.id}`,
+              type: 'lead',
+              name: lead.name || lead.company,
+              company: lead.company,
+              email: lead.email,
+              icon: FiUsers,
+              updated_at: lead.updated_at || lead.created_at
+            });
+          }
+        });
+      }
+
+      // Trier par date de mise à jour (plus récent en premier)
+      allContacts.sort((a, b) => {
+        const dateA = new Date(a.updated_at || 0);
+        const dateB = new Date(b.updated_at || 0);
+        return dateB - dateA;
+      });
+
+      // Dédupliquer par email
+      const uniqueEmails = new Map();
+      allContacts.forEach(c => {
+        if (!uniqueEmails.has(c.email)) {
+          uniqueEmails.set(c.email, c);
+        }
+      });
+
+      setRecentContacts(Array.from(uniqueEmails.values()).slice(0, 10));
+      setHasLoadedRecents(true);
+    } catch (error) {
+      console.error('Erreur chargement contacts récents:', error);
+    }
+  };
 
   // Fermer les suggestions si on clique en dehors
   useEffect(() => {
@@ -45,7 +120,6 @@ const EmailAutocomplete = ({
     try {
       const results = await searchAPI.global(query);
 
-      // Combiner tous les contacts avec emails
       const allSuggestions = [];
 
       // Clients
@@ -123,9 +197,21 @@ const EmailAutocomplete = ({
     if (debounceRef.current) {
       clearTimeout(debounceRef.current);
     }
-    debounceRef.current = setTimeout(() => {
-      searchContacts(newValue);
-    }, 300);
+
+    if (newValue.length >= 2) {
+      debounceRef.current = setTimeout(() => {
+        searchContacts(newValue);
+      }, 300);
+    } else {
+      // Si moins de 2 caractères, afficher les contacts récents
+      setSuggestions([]);
+      setShowSuggestions(true);
+    }
+  };
+
+  const handleFocus = () => {
+    // Afficher les contacts récents ou les suggestions au focus
+    setShowSuggestions(true);
   };
 
   const handleSelectSuggestion = (suggestion) => {
@@ -136,13 +222,14 @@ const EmailAutocomplete = ({
   };
 
   const handleKeyDown = (e) => {
-    if (!showSuggestions || suggestions.length === 0) return;
+    const currentList = suggestions.length > 0 ? suggestions : recentContacts;
+    if (!showSuggestions || currentList.length === 0) return;
 
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault();
         setSelectedIndex(prev =>
-          prev < suggestions.length - 1 ? prev + 1 : prev
+          prev < currentList.length - 1 ? prev + 1 : prev
         );
         break;
       case 'ArrowUp':
@@ -152,7 +239,7 @@ const EmailAutocomplete = ({
       case 'Enter':
         e.preventDefault();
         if (selectedIndex >= 0) {
-          handleSelectSuggestion(suggestions[selectedIndex]);
+          handleSelectSuggestion(currentList[selectedIndex]);
         }
         break;
       case 'Escape':
@@ -179,6 +266,9 @@ const EmailAutocomplete = ({
     }
   };
 
+  // Afficher les suggestions de recherche OU les contacts récents
+  const displayList = suggestions.length > 0 ? suggestions : recentContacts;
+
   return (
     <div className="relative">
       <input
@@ -187,11 +277,7 @@ const EmailAutocomplete = ({
         value={value}
         onChange={handleInputChange}
         onKeyDown={handleKeyDown}
-        onFocus={() => {
-          if (suggestions.length > 0) {
-            setShowSuggestions(true);
-          }
-        }}
+        onFocus={handleFocus}
         placeholder={placeholder}
         className={className || "w-full px-4 py-2.5 bg-gray-800/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"}
         autoComplete="off"
@@ -205,12 +291,17 @@ const EmailAutocomplete = ({
       )}
 
       {/* Suggestions dropdown */}
-      {showSuggestions && suggestions.length > 0 && (
+      {showSuggestions && displayList.length > 0 && (
         <div
           ref={suggestionsRef}
           className="absolute z-50 w-full mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-xl max-h-64 overflow-y-auto"
         >
-          {suggestions.map((suggestion, index) => {
+          {suggestions.length === 0 && recentContacts.length > 0 && (
+            <div className="px-4 py-2 text-xs text-gray-500 border-b border-gray-700">
+              Contacts récents
+            </div>
+          )}
+          {displayList.map((suggestion, index) => {
             const Icon = suggestion.icon;
             return (
               <button
@@ -219,7 +310,7 @@ const EmailAutocomplete = ({
                 onClick={() => handleSelectSuggestion(suggestion)}
                 className={`w-full px-4 py-3 flex items-start gap-3 hover:bg-gray-700/50 transition-colors text-left ${
                   index === selectedIndex ? 'bg-gray-700/50' : ''
-                } ${index > 0 ? 'border-t border-gray-700/50' : ''}`}
+                } ${index > 0 || suggestions.length === 0 ? 'border-t border-gray-700/50' : ''}`}
               >
                 <div className={`p-2 rounded-lg ${getTypeColor(suggestion.type)}`}>
                   <Icon className="w-4 h-4" />

@@ -35,6 +35,8 @@ import KPIOrb from '../components/dashboard/KPIOrb';
 import ActivityStream from '../components/dashboard/ActivityStream';
 import GoalProgress from '../components/dashboard/GoalProgress';
 import EmailAutocomplete from '../components/common/EmailAutocomplete';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 import { dashboardAPI, reviewRequestsAPI, clientsAPI } from '../services/api';
 import { useToast } from '../hooks/useToast';
 
@@ -1082,13 +1084,23 @@ const Dashboard = () => {
                   <label className="block text-sm font-medium text-gray-300 mb-2">
                     Message *
                   </label>
-                  <textarea
-                    value={quickEmailData.message}
-                    onChange={(e) => setQuickEmailData({ ...quickEmailData, message: e.target.value })}
-                    placeholder="Votre message..."
-                    rows="5"
-                    className="w-full px-4 py-2.5 bg-gray-800/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 resize-none"
-                  />
+                  <div className="bg-white rounded-lg [&_.ql-editor]:min-h-[150px] [&_.ql-editor]:text-black [&_.ql-toolbar]:border-gray-300 [&_.ql-container]:border-gray-300">
+                    <ReactQuill
+                      theme="snow"
+                      value={quickEmailData.message}
+                      onChange={(value) => setQuickEmailData({ ...quickEmailData, message: value })}
+                      placeholder="Votre message..."
+                      modules={{
+                        toolbar: [
+                          ['bold', 'italic', 'underline'],
+                          [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                          ['link'],
+                          ['clean']
+                        ]
+                      }}
+                      formats={['bold', 'italic', 'underline', 'list', 'bullet', 'link']}
+                    />
+                  </div>
                 </div>
               </div>
 
