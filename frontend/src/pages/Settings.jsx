@@ -590,9 +590,9 @@ const Settings = () => {
                   <label className="block text-sm font-medium text-gray-300 mb-2">
                     Prévisualisation
                   </label>
-                  <div className="bg-white rounded-lg p-4 border border-gray-200">
+                  <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
                     <div
-                      className="text-gray-800"
+                      className="text-gray-200"
                       dangerouslySetInnerHTML={{ __html: formData.email_signature }}
                     />
                   </div>
