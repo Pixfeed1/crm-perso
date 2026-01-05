@@ -27,13 +27,13 @@ class EmailService {
       this.transporter = nodemailer.createTransport({
         host: process.env.EMAIL_HOST,
         port: parseInt(process.env.EMAIL_PORT) || 587,
-        secure: process.env.EMAIL_SECURE === 'true',
+        secure: process.env.EMAIL_SECURE === 'true', // true pour port 465, false pour 587
         auth: {
           user: process.env.EMAIL_USER,
           pass: process.env.EMAIL_PASSWORD
         },
         tls: {
-          rejectUnauthorized: false
+          rejectUnauthorized: false // Permet les certificats auto-signés
         }
       });
 
@@ -87,32 +87,6 @@ class EmailService {
   }
 
   /**
-   * Génère la signature email par défaut
-   */
-  getDefaultSignature() {
-    return `
-<table cellpadding="0" cellspacing="0" border="0" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.5; color: #374151;">
-  <tr>
-    <td valign="top" style="padding-right: 20px; border-right: 3px solid #6366f1;">
-      <img src="https://pixfeed.net/wp-content/uploads/2025/04/logo.png" alt="Pixfeed" width="70" style="display: block;">
-      <p style="margin: 10px 0 0 0; font-size: 10px; color: #9ca3af; font-style: italic; max-width: 70px; line-height: 1.3;">L'humain au cœur de nos solutions</p>
-    </td>
-    <td valign="top" style="padding-left: 20px;">
-      <p style="margin: 0 0 2px 0; font-size: 16px; font-weight: 600; color: #111827;">Marc Gueffie</p>
-      <p style="margin: 0 0 12px 0; font-size: 13px; color: #6366f1; font-weight: 500;">Chargé de Projet · Pixfeed</p>
-      <p style="margin: 0 0 4px 0; font-size: 13px; color: #6b7280;">📞 <a href="tel:0645373930" style="color: #6b7280; text-decoration: none;">06.45.37.39.30</a></p>
-      <p style="margin: 0 0 4px 0; font-size: 13px; color: #6b7280;">✉️ <a href="mailto:mgueffie@pixfeed.net" style="color: #6b7280; text-decoration: none;">mgueffie@pixfeed.net</a></p>
-      <p style="margin: 0 0 10px 0; font-size: 13px; color: #6b7280;">🌐 <a href="https://pixfeed.net" style="color: #6366f1; text-decoration: none; font-weight: 500;">pixfeed.net</a></p>
-      <p style="margin: 0;">
-        <a href="https://www.linkedin.com/company/pixfeed/" style="text-decoration: none; margin-right: 8px;"><img src="https://pixfeed.net/wp-content/uploads/2026/01/linkedinmail.png" alt="LinkedIn" width="20" height="20" style="vertical-align: middle;"></a>
-        <a href="https://www.facebook.com/Pixfeed" style="text-decoration: none;"><img src="https://pixfeed.net/wp-content/uploads/2026/01/fasebookmail.png" alt="Facebook" width="20" height="20" style="vertical-align: middle;"></a>
-      </p>
-    </td>
-  </tr>
-</table>`;
-  }
-
-  /**
    * Envoie un email
    * @param {Object} options - Options d'envoi
    * @param {string} options.to - Email destinataire
@@ -151,7 +125,7 @@ class EmailService {
       to,
       subject,
       html,
-      text: text || '',
+      text: text || '', // Fallback texte brut
       attachments
     };
 
@@ -181,44 +155,47 @@ class EmailService {
    * Envoie un devis par email
    */
   async sendQuoteEmail(quote, pdfBuffer, options = {}) {
-    const { recipientEmail, customMessage = '', ccToSelf = false, signature = null } = options;
+    const { recipientEmail, customMessage = '', ccToSelf = false } = options;
 
+    // Email par défaut : celui du client
     const to = recipientEmail || quote.client_email;
     if (!to) {
       throw new Error('Aucun email destinataire défini pour ce client');
     }
 
-    // Utiliser la signature fournie ou la signature par défaut
-    const emailSignature = signature || this.getDefaultSignature();
-
+    // Construction du message HTML
     const html = `
-      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; color: #374151;">
-        <p style="font-size: 15px; line-height: 1.6;">Bonjour ${quote.client_name || ''},</p>
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #4F46E5;">Votre devis ${quote.quote_number}</h2>
 
-        <p style="font-size: 15px; line-height: 1.6;">Veuillez trouver ci-joint votre devis n°<strong>${quote.quote_number}</strong>.</p>
+        <p>Bonjour ${quote.client_name || ''},</p>
 
-        ${customMessage ? `<div style="margin: 20px 0; padding: 16px; background: #f9fafb; border-radius: 8px; font-size: 14px; line-height: 1.6;">${customMessage.replace(/\n/g, '<br>')}</div>` : ''}
+        <p>Veuillez trouver ci-joint votre devis n°<strong>${quote.quote_number}</strong>.</p>
 
-        <div style="margin: 24px 0; padding: 16px; background: #f0f9ff; border-left: 4px solid #6366f1; border-radius: 0 8px 8px 0;">
-          <p style="margin: 0 0 8px 0; font-size: 14px;"><strong>Montant total TTC :</strong> ${this.formatAmount(quote.total_ttc)}</p>
-          <p style="margin: 0 0 8px 0; font-size: 14px;"><strong>Validité :</strong> ${quote.validity_days || 30} jours</p>
-          ${quote.expiry_date ? `<p style="margin: 0; font-size: 14px;"><strong>Date d'expiration :</strong> ${this.formatDate(quote.expiry_date)}</p>` : ''}
+        ${customMessage ? `<div style="margin: 20px 0;">
+          ${customMessage.replace(/\n/g, '<br>')}
+        </div>` : ''}
+
+        <div style="margin: 20px 0;">
+          <p style="margin: 5px 0;"><strong>Montant total TTC :</strong> ${this.formatAmount(quote.total_ttc)}</p>
+          <p style="margin: 5px 0;"><strong>Validité :</strong> ${quote.validity_days || 30} jours</p>
+          ${quote.expiry_date ? `<p style="margin: 5px 0;"><strong>Date d'expiration :</strong> ${this.formatDate(quote.expiry_date)}</p>` : ''}
         </div>
 
-        <p style="font-size: 15px; line-height: 1.6;">Pour toute question, n'hésitez pas à me contacter.</p>
+        <p>Pour toute question, n'hésitez pas à me contacter.</p>
 
-        <p style="font-size: 15px; line-height: 1.6; margin-bottom: 24px;">Bien cordialement,</p>
-
-        ${emailSignature}
+        ${options.signature || '<p>Cordialement</p>'}
       </div>
     `;
 
+    // Pièce jointe PDF
     const attachments = pdfBuffer ? [{
       filename: `Devis_${quote.quote_number}.pdf`,
       content: pdfBuffer,
       contentType: 'application/pdf'
     }] : [];
 
+    // Envoi
     return await this.sendEmail({
       to,
       subject: `Devis ${quote.quote_number}`,
@@ -233,208 +210,52 @@ class EmailService {
    * Envoie une facture par email
    */
   async sendInvoiceEmail(invoice, pdfBuffer, options = {}) {
-    const { recipientEmail, customMessage = '', ccToSelf = false, signature = null } = options;
+    const { recipientEmail, customMessage = '', ccToSelf = false } = options;
 
+    // Email par défaut : celui du client
     const to = recipientEmail || invoice.client_email;
     if (!to) {
       throw new Error('Aucun email destinataire défini pour ce client');
     }
 
-    const emailSignature = signature || this.getDefaultSignature();
-
+    // Construction du message HTML
     const html = `
-      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; color: #374151;">
-        <p style="font-size: 15px; line-height: 1.6;">Bonjour ${invoice.client_name || ''},</p>
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #4F46E5;">Votre facture ${invoice.invoice_number}</h2>
 
-        <p style="font-size: 15px; line-height: 1.6;">Veuillez trouver ci-joint votre facture n°<strong>${invoice.invoice_number}</strong>.</p>
+        <p>Bonjour ${invoice.client_name || ''},</p>
 
-        ${customMessage ? `<div style="margin: 20px 0; padding: 16px; background: #f9fafb; border-radius: 8px; font-size: 14px; line-height: 1.6;">${customMessage.replace(/\n/g, '<br>')}</div>` : ''}
+        <p>Veuillez trouver ci-joint votre facture n°<strong>${invoice.invoice_number}</strong>.</p>
 
-        <div style="margin: 24px 0; padding: 16px; background: #f0f9ff; border-left: 4px solid #6366f1; border-radius: 0 8px 8px 0;">
-          <p style="margin: 0 0 8px 0; font-size: 14px;"><strong>Montant total TTC :</strong> ${this.formatAmount(invoice.total_ttc)}</p>
-          ${invoice.due_date ? `<p style="margin: 0 0 8px 0; font-size: 14px;"><strong>Date d'échéance :</strong> ${this.formatDate(invoice.due_date)}</p>` : ''}
-          <p style="margin: 0; font-size: 14px;"><strong>Statut :</strong> ${this.getPaymentStatusLabel(invoice.payment_status)}</p>
+        ${customMessage ? `<div style="margin: 20px 0;">
+          ${customMessage.replace(/\n/g, '<br>')}
+        </div>` : ''}
+
+        <div style="margin: 20px 0;">
+          <p style="margin: 5px 0;"><strong>Montant total TTC :</strong> ${this.formatAmount(invoice.total_ttc)}</p>
+          ${invoice.due_date ? `<p style="margin: 5px 0;"><strong>Date d'échéance :</strong> ${this.formatDate(invoice.due_date)}</p>` : ''}
+          <p style="margin: 5px 0;"><strong>Statut :</strong> ${this.getPaymentStatusLabel(invoice.payment_status)}</p>
         </div>
 
-        <p style="font-size: 15px; line-height: 1.6;">Pour toute question, n'hésitez pas à me contacter.</p>
+        <p>Pour toute question, n'hésitez pas à me contacter.</p>
 
-        <p style="font-size: 15px; line-height: 1.6; margin-bottom: 24px;">Bien cordialement,</p>
-
-        ${emailSignature}
+        ${options.signature || '<p>Cordialement</p>'}
       </div>
     `;
 
+    // Pièce jointe PDF
     const attachments = pdfBuffer ? [{
       filename: `Facture_${invoice.invoice_number}.pdf`,
       content: pdfBuffer,
       contentType: 'application/pdf'
     }] : [];
 
+    // Envoi
     return await this.sendEmail({
       to,
       subject: `Facture ${invoice.invoice_number}`,
       html,
       text: `Bonjour, veuillez trouver ci-joint votre facture ${invoice.invoice_number}.`,
-      attachments,
-      ccToSelf
-    });
-  }
-
-  /**
-   * Envoie un rapport de maintenance par email avec PDF en pièce jointe
-   */
-  async sendMaintenanceReportEmail(report, options = {}) {
-    const { recipientEmail, customMessage = '', ccToSelf = false, pdfBuffer = null, pdfFileName = null, signature = null } = options;
-
-    const data = report.report_data || {};
-    const to = recipientEmail || report.client_email;
-
-    if (!to) {
-      throw new Error('Aucun email destinataire défini pour ce client');
-    }
-
-    const emailSignature = signature || this.getDefaultSignature();
-
-    // Labels des types d'intervention
-    const typeLabels = {
-      'update': 'Mise à jour',
-      'backup': 'Sauvegarde',
-      'security': 'Sécurité',
-      'maintenance': 'Maintenance',
-      'support': 'Support',
-      'other': 'Autre'
-    };
-
-    // Formater la durée
-    const formatDuration = (minutes) => {
-      if (!minutes) return '-';
-      const hours = Math.floor(minutes / 60);
-      const mins = minutes % 60;
-      return hours > 0 ? `${hours}h${mins > 0 ? mins.toString().padStart(2, '0') : ''}` : `${mins}min`;
-    };
-
-    // Générer le tableau des interventions
-    let interventionsHtml = '';
-    if (data.interventions && data.interventions.length > 0) {
-      interventionsHtml = data.interventions.map(i => `
-        <tr>
-          <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; color: #374151; font-size: 13px;">${this.formatDate(i.completed_date || i.scheduled_date)}</td>
-          <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">
-            <span style="display: inline-block; padding: 4px 10px; border-radius: 20px; background: #ede9fe; color: #6366f1; font-size: 11px; font-weight: 500;">
-              ${typeLabels[i.type] || i.type}
-            </span>
-          </td>
-          <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; color: #374151; font-size: 13px;">${i.title}</td>
-          <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; color: #6b7280; text-align: center; font-size: 13px;">${formatDuration(i.duration_minutes)}</td>
-        </tr>
-      `).join('');
-    } else {
-      interventionsHtml = '<tr><td colspan="4" style="padding: 24px; text-align: center; color: #9ca3af; font-style: italic;">Aucune intervention sur cette période</td></tr>';
-    }
-
-    const forfaitMensuel = report.budget || data.project?.budget || 0;
-
-    const html = `
-      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 650px; margin: 0 auto; color: #374151;">
-
-        <!-- Header -->
-        <div style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); padding: 32px; border-radius: 12px 12px 0 0; text-align: center;">
-          <img src="https://pixfeed.net/wp-content/uploads/2025/04/logo.png" alt="Pixfeed" height="40" style="margin-bottom: 16px;">
-          <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">Rapport de Maintenance</h1>
-          <p style="margin: 8px 0 0 0; color: rgba(255,255,255,0.9); font-size: 15px;">${report.project_name || data.project?.name || 'Votre site web'}</p>
-          <p style="margin: 12px 0 0 0; color: rgba(255,255,255,0.8); font-size: 13px;">📅 ${this.formatDate(report.period_start)} → ${this.formatDate(report.period_end)}</p>
-        </div>
-
-        <!-- Contenu -->
-        <div style="padding: 32px; background: #ffffff; border: 1px solid #e5e7eb; border-top: none;">
-
-          <p style="font-size: 15px; line-height: 1.6; margin: 0 0 16px 0;">
-            Bonjour <strong>${report.client_name || data.client?.name || ''}</strong>,
-          </p>
-          <p style="font-size: 14px; line-height: 1.7; color: #6b7280; margin: 0 0 24px 0;">
-            Voici le récapitulatif des interventions réalisées sur votre site durant cette période.
-          </p>
-
-          ${customMessage ? `
-          <div style="margin: 0 0 24px 0; padding: 16px; background: #f5f3ff; border-left: 4px solid #6366f1; border-radius: 0 8px 8px 0;">
-            <p style="margin: 0; color: #5b21b6; font-size: 14px; line-height: 1.6;">${customMessage.replace(/\n/g, '<br>')}</p>
-          </div>
-          ` : ''}
-
-          <!-- Stats -->
-          <table style="width: 100%; margin: 24px 0; background: #f9fafb; border-radius: 12px;" cellpadding="0" cellspacing="0">
-            <tr>
-              <td style="width: 33%; padding: 20px; text-align: center;">
-                <div style="font-size: 28px; font-weight: 700; color: #6366f1;">${data.summary?.interventions_count || 0}</div>
-                <div style="color: #6b7280; font-size: 12px; margin-top: 4px; text-transform: uppercase;">Interventions</div>
-              </td>
-              <td style="width: 33%; padding: 20px; text-align: center; border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb;">
-                <div style="font-size: 28px; font-weight: 700; color: #6366f1;">${formatDuration(data.summary?.total_duration_minutes || 0)}</div>
-                <div style="color: #6b7280; font-size: 12px; margin-top: 4px; text-transform: uppercase;">Temps total</div>
-              </td>
-              <td style="width: 33%; padding: 20px; text-align: center;">
-                <div style="font-size: 28px; font-weight: 700; color: #10b981;">${forfaitMensuel}€</div>
-                <div style="color: #6b7280; font-size: 12px; margin-top: 4px; text-transform: uppercase;">Forfait/mois</div>
-              </td>
-            </tr>
-          </table>
-
-          <!-- Tableau interventions -->
-          <h3 style="color: #111827; font-size: 16px; font-weight: 600; margin: 32px 0 16px 0;">📋 Détail des interventions</h3>
-          <table style="width: 100%; border-collapse: collapse; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px;">
-            <thead>
-              <tr style="background: #f9fafb;">
-                <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; font-size: 12px; text-transform: uppercase; border-bottom: 1px solid #e5e7eb;">Date</th>
-                <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; font-size: 12px; text-transform: uppercase; border-bottom: 1px solid #e5e7eb;">Type</th>
-                <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; font-size: 12px; text-transform: uppercase; border-bottom: 1px solid #e5e7eb;">Description</th>
-                <th style="padding: 12px; text-align: center; font-weight: 600; color: #374151; font-size: 12px; text-transform: uppercase; border-bottom: 1px solid #e5e7eb;">Durée</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${interventionsHtml}
-            </tbody>
-          </table>
-
-          ${report.notes ? `
-          <div style="margin: 24px 0; padding: 16px; background: #fef3c7; border-radius: 8px; border-left: 4px solid #f59e0b;">
-            <p style="margin: 0; color: #92400e; font-size: 14px; line-height: 1.6;">
-              <strong>📝 Note :</strong> ${report.notes}
-            </p>
-          </div>
-          ` : ''}
-
-          <p style="font-size: 14px; line-height: 1.7; color: #6b7280; margin: 24px 0;">
-            Pour toute question concernant ce rapport, n'hésitez pas à me contacter.
-          </p>
-
-          <p style="font-size: 15px; line-height: 1.6; margin-bottom: 24px;">Bien cordialement,</p>
-
-          ${emailSignature}
-        </div>
-
-        <!-- Footer -->
-        <div style="background: #1f2937; padding: 20px; text-align: center; border-radius: 0 0 12px 12px;">
-          <p style="margin: 0; color: rgba(255,255,255,0.7); font-size: 12px;">
-            Ce rapport a été généré automatiquement par votre service de maintenance Pixfeed
-          </p>
-        </div>
-      </div>
-    `;
-
-    const attachments = [];
-    if (pdfBuffer && pdfFileName) {
-      attachments.push({
-        filename: pdfFileName,
-        content: pdfBuffer,
-        contentType: 'application/pdf'
-      });
-    }
-
-    return await this.sendEmail({
-      to,
-      subject: `🔧 Rapport de maintenance - ${report.project_name || data.project?.name || 'Votre site'} - ${this.formatDate(report.period_start)} au ${this.formatDate(report.period_end)}`,
-      html,
-      text: `Rapport de maintenance Pixfeed\n\nBonjour ${report.client_name || ''},\n\nVoici le récapitulatif des interventions du ${this.formatDate(report.period_start)} au ${this.formatDate(report.period_end)}.\n\n- ${data.summary?.interventions_count || 0} interventions\n- Temps total : ${formatDuration(data.summary?.total_duration_minutes || 0)}\n\nCordialement,\nMarc Gueffie - Pixfeed`,
       attachments,
       ccToSelf
     });
@@ -470,8 +291,230 @@ class EmailService {
     };
     return labels[status] || status;
   }
+
+  /**
+   * Envoie un rapport de maintenance par email avec PDF en pièce jointe
+   */
+  async sendMaintenanceReportEmail(report, options = {}) {
+    const { recipientEmail, customMessage = '', ccToSelf = false, pdfBuffer = null, pdfFileName = null } = options;
+
+    const data = report.report_data || {};
+    const to = recipientEmail || report.client_email;
+
+    if (!to) {
+      throw new Error('Aucun email destinataire défini pour ce client');
+    }
+
+    // Labels des types d'intervention
+    const typeLabels = {
+      'update': 'Mise à jour',
+      'backup': 'Sauvegarde',
+      'security': 'Sécurité',
+      'maintenance': 'Maintenance',
+      'support': 'Support',
+      'other': 'Autre'
+    };
+
+    // Icônes des types (emoji fallback pour compatibilité email)
+    const typeIcons = {
+      'update': '🔄',
+      'backup': '💾',
+      'security': '🔒',
+      'maintenance': '🔧',
+      'support': '💬',
+      'other': '📋'
+    };
+
+    // Formater la durée
+    const formatDuration = (minutes) => {
+      if (!minutes) return '-';
+      const hours = Math.floor(minutes / 60);
+      const mins = minutes % 60;
+      return hours > 0 ? `${hours}h${mins > 0 ? mins.toString().padStart(2, '0') : ''}` : `${mins}min`;
+    };
+
+    // Générer le tableau des interventions
+    let interventionsHtml = '';
+    if (data.interventions && data.interventions.length > 0) {
+      interventionsHtml = data.interventions.map(i => `
+        <tr>
+          <td style="padding: 14px 12px; border-bottom: 1px solid #e5e7eb; color: #374151;">${this.formatDate(i.completed_date || i.scheduled_date)}</td>
+          <td style="padding: 14px 12px; border-bottom: 1px solid #e5e7eb;">
+            <span style="display: inline-block; padding: 4px 10px; border-radius: 20px; background: #f3e8ff; color: #7c3aed; font-size: 12px; font-weight: 500;">
+              ${typeIcons[i.type] || '📋'} ${typeLabels[i.type] || i.type}
+            </span>
+          </td>
+          <td style="padding: 14px 12px; border-bottom: 1px solid #e5e7eb; color: #374151;">${i.title}</td>
+          <td style="padding: 14px 12px; border-bottom: 1px solid #e5e7eb; color: #6b7280; text-align: center;">${formatDuration(i.duration_minutes)}</td>
+        </tr>
+      `).join('');
+    } else {
+      interventionsHtml = '<tr><td colspan="4" style="padding: 30px; text-align: center; color: #9ca3af; font-style: italic;">Aucune intervention sur cette période</td></tr>';
+    }
+
+    // Déterminer le forfait mensuel
+    const forfaitMensuel = report.budget || data.project?.budget || 0;
+
+    // Construction du message HTML professionnel avec branding Pixfeed
+    const html = `
+      <!DOCTYPE html>
+      <html lang="fr">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="margin: 0; padding: 0; background: #f3f4f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+        <div style="max-width: 700px; margin: 0 auto; background: #ffffff;">
+
+          <!-- Header avec logo Pixfeed -->
+          <div style="background: linear-gradient(135deg, #7c3aed 0%, #6366f1 50%, #8b5cf6 100%); padding: 35px 30px; text-align: center;">
+            <img src="https://pixfeed.net/wp-content/uploads/2024/01/pixfeed-logo-blanc.png" alt="Pixfeed" style="height: 45px; margin-bottom: 20px;" />
+            <h1 style="margin: 0; color: #ffffff; font-size: 26px; font-weight: 600; letter-spacing: -0.5px;">Rapport de Maintenance</h1>
+            <p style="margin: 10px 0 0 0; color: rgba(255,255,255,0.9); font-size: 16px;">${report.project_name || data.project?.name || 'Votre site web'}</p>
+            <div style="margin-top: 15px; display: inline-block; background: rgba(255,255,255,0.2); padding: 8px 20px; border-radius: 25px;">
+              <span style="color: #ffffff; font-size: 14px;">📅 ${this.formatDate(report.period_start)} → ${this.formatDate(report.period_end)}</span>
+            </div>
+          </div>
+
+          <!-- Contenu principal -->
+          <div style="padding: 40px 35px;">
+
+            <!-- Message d'introduction -->
+            <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+              Bonjour <strong>${report.client_name || data.client?.name || ''}</strong>,
+            </p>
+            <p style="color: #6b7280; font-size: 15px; line-height: 1.7; margin: 0 0 30px 0;">
+              Voici le récapitulatif des interventions réalisées sur votre site durant cette période.
+              Ce rapport vous permet de suivre l'ensemble des actions effectuées dans le cadre de votre forfait de maintenance.
+            </p>
+
+            ${customMessage ? `
+            <div style="margin: 0 0 30px 0; padding: 20px; background: linear-gradient(135deg, #f3e8ff 0%, #ede9fe 100%); border-left: 4px solid #7c3aed; border-radius: 0 12px 12px 0;">
+              <p style="margin: 0; color: #5b21b6; font-size: 14px; line-height: 1.6;">${customMessage.replace(/\n/g, '<br>')}</p>
+            </div>
+            ` : ''}
+
+            <!-- Statistiques -->
+            <div style="margin: 30px 0; background: #fafafa; border-radius: 16px; padding: 5px; display: flex;">
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                  <td style="width: 33%; padding: 25px 15px; text-align: center; vertical-align: top;">
+                    <div style="font-size: 36px; font-weight: 700; color: #7c3aed; line-height: 1;">${data.summary?.interventions_count || 0}</div>
+                    <div style="color: #6b7280; font-size: 13px; margin-top: 8px; text-transform: uppercase; letter-spacing: 0.5px;">Interventions</div>
+                  </td>
+                  <td style="width: 33%; padding: 25px 15px; text-align: center; vertical-align: top; border-left: 2px solid #e5e7eb; border-right: 2px solid #e5e7eb;">
+                    <div style="font-size: 36px; font-weight: 700; color: #7c3aed; line-height: 1;">${formatDuration(data.summary?.total_duration_minutes || 0)}</div>
+                    <div style="color: #6b7280; font-size: 13px; margin-top: 8px; text-transform: uppercase; letter-spacing: 0.5px;">Temps total</div>
+                  </td>
+                  <td style="width: 33%; padding: 25px 15px; text-align: center; vertical-align: top;">
+                    <div style="font-size: 36px; font-weight: 700; color: #10b981; line-height: 1;">${forfaitMensuel}€</div>
+                    <div style="color: #6b7280; font-size: 13px; margin-top: 8px; text-transform: uppercase; letter-spacing: 0.5px;">Forfait/mois</div>
+                  </td>
+                </tr>
+              </table>
+            </div>
+
+            <!-- Tableau des interventions -->
+            <div style="margin: 35px 0;">
+              <h3 style="color: #1f2937; font-size: 18px; font-weight: 600; margin: 0 0 20px 0; padding-bottom: 10px; border-bottom: 2px solid #e5e7eb;">
+                📋 Détail des interventions
+              </h3>
+              <table style="width: 100%; border-collapse: collapse; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                <thead>
+                  <tr style="background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);">
+                    <th style="padding: 16px 12px; text-align: left; font-weight: 600; color: #374151; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">Date</th>
+                    <th style="padding: 16px 12px; text-align: left; font-weight: 600; color: #374151; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">Type</th>
+                    <th style="padding: 16px 12px; text-align: left; font-weight: 600; color: #374151; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">Description</th>
+                    <th style="padding: 16px 12px; text-align: center; font-weight: 600; color: #374151; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">Durée</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${interventionsHtml}
+                </tbody>
+              </table>
+            </div>
+
+            ${report.notes ? `
+            <div style="margin: 30px 0; padding: 20px; background: #fef3c7; border-radius: 12px; border-left: 4px solid #f59e0b;">
+              <p style="margin: 0; color: #92400e; font-size: 14px; line-height: 1.6;">
+                <strong>📝 Note importante :</strong><br>
+                ${report.notes}
+              </p>
+            </div>
+            ` : ''}
+
+            <!-- Message de conclusion -->
+            <p style="color: #6b7280; font-size: 15px; line-height: 1.7; margin: 30px 0 0 0;">
+              Pour toute question concernant ce rapport ou votre forfait de maintenance, n'hésitez pas à me contacter directement.
+            </p>
+
+            <!-- Signature Pixfeed professionnelle -->
+            <div style="margin-top: 40px; padding-top: 30px; border-top: 1px solid #e5e7eb;">
+              <table cellpadding="0" cellspacing="0" style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+                <tr>
+                  <td style="vertical-align: top; padding-right: 20px;">
+                    <img src="https://pixfeed.net/wp-content/uploads/2024/01/pixfeed-logo-couleur.png" alt="Pixfeed" style="width: 120px; height: auto;" />
+                  </td>
+                  <td style="vertical-align: top; border-left: 3px solid #7c3aed; padding-left: 20px;">
+                    <p style="margin: 0 0 5px 0; font-size: 16px; font-weight: 600; color: #1f2937;">Marc Gueffie</p>
+                    <p style="margin: 0 0 12px 0; font-size: 14px; color: #7c3aed; font-weight: 500;">Développeur chez Pixfeed</p>
+                    <p style="margin: 0 0 4px 0; font-size: 13px; color: #6b7280;">
+                      📞 <a href="tel:+33612345678" style="color: #6b7280; text-decoration: none;">06 12 34 56 78</a>
+                    </p>
+                    <p style="margin: 0 0 4px 0; font-size: 13px; color: #6b7280;">
+                      ✉️ <a href="mailto:contact@pixfeed.fr" style="color: #6b7280; text-decoration: none;">contact@pixfeed.fr</a>
+                    </p>
+                    <p style="margin: 0 0 12px 0; font-size: 13px; color: #6b7280;">
+                      🌐 <a href="https://pixfeed.net" style="color: #7c3aed; text-decoration: none; font-weight: 500;">pixfeed.net</a>
+                    </p>
+                    <p style="margin: 0; font-size: 12px; color: #9ca3af; font-style: italic;">
+                      "L'humain au cœur de nos solutions"
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </div>
+
+          </div>
+
+          <!-- Footer -->
+          <div style="background: linear-gradient(135deg, #1f2937 0%, #374151 100%); padding: 25px 35px; text-align: center;">
+            <p style="margin: 0 0 10px 0; color: rgba(255,255,255,0.9); font-size: 13px;">
+              Ce rapport a été généré automatiquement par votre service de maintenance Pixfeed
+            </p>
+            <p style="margin: 0; color: rgba(255,255,255,0.6); font-size: 12px;">
+              © ${new Date().getFullYear()} Pixfeed - Tous droits réservés
+            </p>
+          </div>
+
+        </div>
+      </body>
+      </html>
+    `;
+
+    // Préparer les pièces jointes
+    const attachments = [];
+    if (pdfBuffer && pdfFileName) {
+      attachments.push({
+        filename: pdfFileName,
+        content: pdfBuffer,
+        contentType: 'application/pdf'
+      });
+    }
+
+    // Envoi
+    return await this.sendEmail({
+      to,
+      subject: `🔧 Rapport de maintenance - ${report.project_name || data.project?.name || 'Votre site'} - ${this.formatDate(report.period_start)} au ${this.formatDate(report.period_end)}`,
+      html,
+      text: `Rapport de maintenance Pixfeed\n\nBonjour ${report.client_name || data.client?.name || ''},\n\nVoici le récapitulatif des interventions réalisées sur votre site du ${this.formatDate(report.period_start)} au ${this.formatDate(report.period_end)}.\n\nRésumé :\n- ${data.summary?.interventions_count || 0} interventions réalisées\n- Temps total : ${formatDuration(data.summary?.total_duration_minutes || 0)}\n- Forfait mensuel : ${forfaitMensuel}€\n\nVeuillez trouver le rapport détaillé en pièce jointe.\n\nCordialement,\nMarc Gueffie\nDéveloppeur chez Pixfeed\nhttps://pixfeed.net`,
+      attachments,
+      ccToSelf
+    });
+  }
 }
 
-// Export singleton
+// Export d'une instance unique (singleton)
 const emailService = new EmailService();
+
 module.exports = emailService;

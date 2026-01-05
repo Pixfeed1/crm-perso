@@ -101,86 +101,6 @@ const Settings = () => {
     }
   };
 
-  // Templates de signature email
-  const signatureTemplates = {
-    executive: `<table cellpadding="0" cellspacing="0" border="0" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.5; color: #374151;">
-  <tr>
-    <td valign="top" style="padding-right: 20px; border-right: 3px solid #6366f1;">
-      <img src="https://pixfeed.net/wp-content/uploads/2025/04/logo.png" alt="Pixfeed" width="70" style="display: block;">
-      <p style="margin: 10px 0 0 0; font-size: 10px; color: #9ca3af; font-style: italic; max-width: 70px; line-height: 1.3;">L'humain au cœur de nos solutions</p>
-    </td>
-    <td valign="top" style="padding-left: 20px;">
-      <p style="margin: 0 0 2px 0; font-size: 16px; font-weight: 600; color: #111827;">Marc Gueffie</p>
-      <p style="margin: 0 0 12px 0; font-size: 13px; color: #6366f1; font-weight: 500;">Chargé de Projet · Pixfeed</p>
-      <p style="margin: 0 0 4px 0; font-size: 13px; color: #6b7280;">📞 <a href="tel:0645373930" style="color: #6b7280; text-decoration: none;">06.45.37.39.30</a></p>
-      <p style="margin: 0 0 4px 0; font-size: 13px; color: #6b7280;">✉️ <a href="mailto:mgueffie@pixfeed.net" style="color: #6b7280; text-decoration: none;">mgueffie@pixfeed.net</a></p>
-      <p style="margin: 0 0 10px 0; font-size: 13px; color: #6b7280;">🌐 <a href="https://pixfeed.net" style="color: #6366f1; text-decoration: none; font-weight: 500;">pixfeed.net</a></p>
-      <p style="margin: 0;">
-        <a href="https://www.linkedin.com/company/pixfeed/" style="text-decoration: none; margin-right: 8px;"><img src="https://pixfeed.net/wp-content/uploads/2026/01/linkedinmail.png" alt="LinkedIn" width="20" height="20" style="vertical-align: middle;"></a>
-        <a href="https://www.facebook.com/Pixfeed" style="text-decoration: none;"><img src="https://pixfeed.net/wp-content/uploads/2026/01/fasebookmail.png" alt="Facebook" width="20" height="20" style="vertical-align: middle;"></a>
-      </p>
-    </td>
-  </tr>
-</table>`,
-
-    minimal: `<table cellpadding="0" cellspacing="0" border="0" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.5; color: #374151;">
-  <tr>
-    <td>
-      <p style="margin: 0 0 4px 0; font-size: 15px; font-weight: 600; color: #111827;">Marc Gueffie</p>
-      <p style="margin: 0 0 10px 0; font-size: 13px; color: #6b7280;">Chargé de Projet · <span style="color: #6366f1; font-weight: 500;">Pixfeed</span></p>
-      <p style="margin: 0; font-size: 12px; color: #9ca3af;">06.45.37.39.30 · mgueffie@pixfeed.net · <a href="https://pixfeed.net" style="color: #6366f1; text-decoration: none;">pixfeed.net</a></p>
-      <p style="margin: 12px 0 0 0; padding-top: 12px; border-top: 1px solid #e5e7eb; font-size: 11px; color: #9ca3af; font-style: italic;">L'humain au cœur de nos solutions</p>
-    </td>
-  </tr>
-</table>`,
-
-    modern: `<table cellpadding="0" cellspacing="0" border="0" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.5; color: #374151;">
-  <tr>
-    <td style="border-left: 4px solid #6366f1; padding-left: 16px;">
-      <img src="https://pixfeed.net/wp-content/uploads/2025/04/logo.png" alt="Pixfeed" height="28" style="display: block; height: 28px; width: auto; margin-bottom: 10px;">
-      <p style="margin: 0 0 2px 0; font-size: 16px; font-weight: 700; color: #111827;">Marc Gueffie</p>
-      <p style="margin: 0 0 12px 0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #6366f1; font-weight: 600;">Chargé de Projet</p>
-      <p style="margin: 0 0 3px 0; font-size: 13px;"><a href="mailto:mgueffie@pixfeed.net" style="color: #6b7280; text-decoration: none;">mgueffie@pixfeed.net</a></p>
-      <p style="margin: 0 0 3px 0; font-size: 13px;"><a href="tel:0645373930" style="color: #6b7280; text-decoration: none;">06.45.37.39.30</a></p>
-      <p style="margin: 0 0 10px 0; font-size: 13px;"><a href="https://pixfeed.net" style="color: #6366f1; text-decoration: none; font-weight: 500;">pixfeed.net</a></p>
-      <p style="margin: 0;">
-        <a href="https://www.linkedin.com/company/pixfeed/" style="text-decoration: none; margin-right: 6px;"><img src="https://pixfeed.net/wp-content/uploads/2026/01/linkedinmail.png" alt="LinkedIn" width="18" height="18" style="vertical-align: middle;"></a>
-        <a href="https://www.facebook.com/Pixfeed" style="text-decoration: none;"><img src="https://pixfeed.net/wp-content/uploads/2026/01/fasebookmail.png" alt="Facebook" width="18" height="18" style="vertical-align: middle;"></a>
-      </p>
-      <p style="margin: 10px 0 0 0; font-size: 10px; color: #9ca3af; font-style: italic;">L'humain au cœur de nos solutions</p>
-    </td>
-  </tr>
-</table>`,
-
-    classic: `<table cellpadding="0" cellspacing="0" border="0" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.5; color: #374151; text-align: center;">
-  <tr>
-    <td style="padding-bottom: 12px;">
-      <img src="https://pixfeed.net/wp-content/uploads/2025/04/logo.png" alt="Pixfeed" height="45" style="display: inline-block; height: 45px; width: auto;">
-    </td>
-  </tr>
-  <tr>
-    <td style="padding-bottom: 10px; border-bottom: 2px solid #6366f1;">
-      <p style="margin: 0 0 2px 0; font-size: 17px; font-weight: 600; color: #111827;">Marc Gueffie</p>
-      <p style="margin: 0; font-size: 13px; color: #6366f1;">Chargé de Projet · Pixfeed</p>
-    </td>
-  </tr>
-  <tr>
-    <td style="padding-top: 10px;">
-      <p style="margin: 0; font-size: 13px; color: #6b7280;">
-        <a href="tel:0645373930" style="color: #6b7280; text-decoration: none;">06.45.37.39.30</a> ·
-        <a href="mailto:mgueffie@pixfeed.net" style="color: #6b7280; text-decoration: none;">mgueffie@pixfeed.net</a>
-      </p>
-      <p style="margin: 6px 0 0 0;"><a href="https://pixfeed.net" style="color: #6366f1; text-decoration: none; font-weight: 500;">pixfeed.net</a></p>
-      <p style="margin: 10px 0 0 0; font-size: 11px; color: #9ca3af; font-style: italic;">L'humain au cœur de nos solutions</p>
-      <p style="margin: 10px 0 0 0;">
-        <a href="https://www.linkedin.com/company/pixfeed/" style="text-decoration: none; margin: 0 4px;"><img src="https://pixfeed.net/wp-content/uploads/2026/01/linkedinmail.png" alt="LinkedIn" width="18" height="18" style="vertical-align: middle;"></a>
-        <a href="https://www.facebook.com/Pixfeed" style="text-decoration: none; margin: 0 4px;"><img src="https://pixfeed.net/wp-content/uploads/2026/01/fasebookmail.png" alt="Facebook" width="18" height="18" style="vertical-align: middle;"></a>
-      </p>
-    </td>
-  </tr>
-</table>`
-  };
-
   // Configuration de l'éditeur Quill
   const quillModules = {
     toolbar: [
@@ -525,53 +445,114 @@ const Settings = () => {
                   Modèles de signature
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                  {/* Template Executive */}
+                  {/* Template Pixfeed */}
                   <button
                     type="button"
-                    onClick={() => handleSignatureChange(signatureTemplates.executive)}
-                    className="p-3 bg-indigo-900/30 border border-indigo-500/50 rounded-lg hover:border-indigo-400 transition-colors text-left"
+                    onClick={() => handleSignatureChange(`
+<table cellpadding="0" cellspacing="0" border="0" align="left" style="font-family: Arial, sans-serif; font-size: 14px; color: #333; line-height: 1.4;">
+<tr>
+<td valign="top" style="padding-right: 20px;">
+<strong style="font-size: 16px; color: #1a1a1a;">Marc Gueffie</strong><br />
+<span style="color: #666;">Chargé de Projet chez Pixfeed</span><br /><br />
+Tél: <a href="tel:0645373930" style="color: #4a90e2; text-decoration: none;">06.45.37.39.30</a><br />
+Email: <a href="mailto:mgueffie@pixfeed.net" style="color: #4a90e2; text-decoration: none;">mgueffie@pixfeed.net</a><br />
+Site web: <a href="https://pixfeed.net/" style="color: #4a90e2; text-decoration: none;">pixfeed.net</a><br /><br />
+<a href="https://www.facebook.com/Pixfeed" style="text-decoration: none; color: #4a90e2;"><img src="https://jurojin.net/wp-content/uploads/2026/01/fasebookmail.png" width="20" height="20" alt="Facebook" style="vertical-align: middle;" /> Facebook</a>&nbsp;&nbsp;&nbsp;
+<a href="https://www.linkedin.com/company/pixfeed/" style="text-decoration: none; color: #4a90e2;"><img src="https://jurojin.net/wp-content/uploads/2026/01/linkedinmail.png" width="20" height="20" alt="LinkedIn" style="vertical-align: middle;" /> LinkedIn</a>
+</td>
+<td valign="top" width="120" style="text-align: center;">
+<img src="https://pixfeed.net/wp-content/uploads/2025/04/logo.png" width="80" alt="Pixfeed" style="display: block; margin: 0 auto;" /><br />
+<em style="font-size: 11px; color: #666;">L'humain au cœur<br />de nos solutions</em>
+</td>
+</tr>
+</table>
+                    `)}
+                    className="p-3 bg-blue-900/30 border border-blue-500/50 rounded-lg hover:border-blue-400 transition-colors text-left"
                   >
-                    <div className="text-sm font-medium text-indigo-400 mb-1">Executive</div>
-                    <div className="text-xs text-gray-400">Logo à gauche, structuré</div>
-                    <span className="inline-block mt-2 px-2 py-0.5 bg-indigo-500/20 text-indigo-300 text-xs rounded">Recommandé</span>
+                    <div className="text-sm font-medium text-blue-400 mb-1">Pixfeed</div>
+                    <div className="text-xs text-gray-400">Signature officielle</div>
                   </button>
 
-                  {/* Template Minimal */}
                   <button
                     type="button"
-                    onClick={() => handleSignatureChange(signatureTemplates.minimal)}
+                    onClick={() => handleSignatureChange(`
+<table cellpadding="0" cellspacing="0" border="0" align="left" style="font-family: Arial, sans-serif; font-size: 14px; color: #333; line-height: 1.4;">
+  <tr>
+    <td valign="top" style="padding-right: 15px; border-right: 2px solid #6366f1;">
+      <img src="https://pixfeed.net/wp-content/uploads/2025/04/logo.png" alt="Logo" width="80" style="display: block;" />
+    </td>
+    <td valign="top" style="padding-left: 15px;">
+      <div style="font-size: 16px; font-weight: bold; color: #1f2937;">${formData.company_name || 'Votre Entreprise'}</div>
+      <div style="font-size: 13px; color: #6b7280; margin-top: 4px;">${formData.email || 'email@exemple.com'}</div>
+      <div style="font-size: 13px; color: #6b7280;">${formData.phone || '01 23 45 67 89'}</div>
+      <div style="font-size: 12px; color: #9ca3af; margin-top: 8px;">${formData.address || ''} ${formData.postal_code || ''} ${formData.city || ''}</div>
+      <div style="margin-top: 10px;">
+        <a href="https://www.facebook.com/Pixfeed" style="text-decoration: none;"><img src="https://jurojin.net/wp-content/uploads/2026/01/fasebookmail.png" width="20" height="20" alt="Facebook" style="vertical-align: middle;" /></a>&nbsp;&nbsp;
+        <a href="https://www.linkedin.com/company/pixfeed/" style="text-decoration: none;"><img src="https://jurojin.net/wp-content/uploads/2026/01/linkedinmail.png" width="20" height="20" alt="LinkedIn" style="vertical-align: middle;" /></a>
+      </div>
+    </td>
+  </tr>
+</table>
+                    `)}
                     className="p-3 bg-gray-900/50 border border-gray-700 rounded-lg hover:border-indigo-500 transition-colors text-left"
                   >
-                    <div className="text-sm font-medium text-white mb-1">Minimal</div>
-                    <div className="text-xs text-gray-400">Texte uniquement, léger</div>
-                    <span className="inline-block mt-2 px-2 py-0.5 bg-gray-700 text-gray-300 text-xs rounded">Simple</span>
+                    <div className="text-sm font-medium text-white mb-1">Professionnel</div>
+                    <div className="text-xs text-gray-400">Logo + coordonnées</div>
                   </button>
 
-                  {/* Template Modern */}
                   <button
                     type="button"
-                    onClick={() => handleSignatureChange(signatureTemplates.modern)}
+                    onClick={() => handleSignatureChange(`
+<table cellpadding="0" cellspacing="0" border="0" align="left" style="font-family: Arial, sans-serif; font-size: 14px; color: #333; line-height: 1.4;">
+  <tr>
+    <td valign="top" style="padding-right: 15px;">
+      <img src="https://pixfeed.net/wp-content/uploads/2025/04/logo.png" alt="Logo" width="60" style="display: block;" />
+    </td>
+    <td valign="top" style="border-left: 3px solid #6366f1; padding-left: 15px;">
+      <div style="font-size: 15px; font-weight: bold; color: #1f2937;">${formData.company_name || 'Votre Entreprise'}</div>
+      <div style="font-size: 13px; color: #6366f1; margin-top: 2px;">Développement Web & Digital</div>
+      <div style="margin-top: 10px; font-size: 12px; color: #6b7280;">
+        ${formData.email || 'email@exemple.com'} | ${formData.phone || '01 23 45 67 89'}
+      </div>
+      <div style="margin-top: 10px;">
+        <a href="https://www.facebook.com/Pixfeed" style="text-decoration: none;"><img src="https://jurojin.net/wp-content/uploads/2026/01/fasebookmail.png" width="20" height="20" alt="Facebook" style="vertical-align: middle;" /></a>&nbsp;&nbsp;
+        <a href="https://www.linkedin.com/company/pixfeed/" style="text-decoration: none;"><img src="https://jurojin.net/wp-content/uploads/2026/01/linkedinmail.png" width="20" height="20" alt="LinkedIn" style="vertical-align: middle;" /></a>
+      </div>
+    </td>
+  </tr>
+</table>
+                    `)}
                     className="p-3 bg-gray-900/50 border border-gray-700 rounded-lg hover:border-indigo-500 transition-colors text-left"
                   >
-                    <div className="text-sm font-medium text-white mb-1">Modern</div>
-                    <div className="text-xs text-gray-400">Bordure latérale, startup</div>
-                    <span className="inline-block mt-2 px-2 py-0.5 bg-gray-700 text-gray-300 text-xs rounded">Tendance</span>
+                    <div className="text-sm font-medium text-white mb-1">Moderne</div>
+                    <div className="text-xs text-gray-400">Style épuré avec bordure</div>
                   </button>
 
-                  {/* Template Classic */}
                   <button
                     type="button"
-                    onClick={() => handleSignatureChange(signatureTemplates.classic)}
+                    onClick={() => handleSignatureChange(`
+<table cellpadding="0" cellspacing="0" border="0" align="left" style="font-family: Arial, sans-serif; font-size: 14px; color: #333; line-height: 1.4;">
+  <tr>
+    <td>
+      <p style="font-size: 14px; color: #374151; margin: 0;">Cordialement,</p>
+      <p style="font-size: 15px; font-weight: bold; color: #1f2937; margin: 8px 0 4px 0;">${formData.company_name || 'Votre Entreprise'}</p>
+      <p style="font-size: 13px; color: #6b7280; margin: 0;">${formData.email || 'email@exemple.com'} | ${formData.phone || '01 23 45 67 89'}</p>
+      <p style="margin: 10px 0 0 0;">
+        <a href="https://www.facebook.com/Pixfeed" style="text-decoration: none;"><img src="https://jurojin.net/wp-content/uploads/2026/01/fasebookmail.png" width="18" height="18" alt="Facebook" style="vertical-align: middle;" /></a>&nbsp;&nbsp;
+        <a href="https://www.linkedin.com/company/pixfeed/" style="text-decoration: none;"><img src="https://jurojin.net/wp-content/uploads/2026/01/linkedinmail.png" width="18" height="18" alt="LinkedIn" style="vertical-align: middle;" /></a>
+      </p>
+    </td>
+  </tr>
+</table>
+                    `)}
                     className="p-3 bg-gray-900/50 border border-gray-700 rounded-lg hover:border-indigo-500 transition-colors text-left"
                   >
-                    <div className="text-sm font-medium text-white mb-1">Classic</div>
-                    <div className="text-xs text-gray-400">Logo centré, traditionnel</div>
-                    <span className="inline-block mt-2 px-2 py-0.5 bg-gray-700 text-gray-300 text-xs rounded">Universel</span>
+                    <div className="text-sm font-medium text-white mb-1">Simple</div>
+                    <div className="text-xs text-gray-400">Minimaliste</div>
                   </button>
                 </div>
               </div>
 
-              {/* Éditeur de signature */}
               <div className="bg-white rounded-lg [&_.ql-editor]:text-black [&_.ql-editor]:text-base [&_.ql-editor_*]:text-black">
                 <ReactQuill
                   theme="snow"
@@ -583,21 +564,6 @@ const Settings = () => {
                   style={{ height: '250px', marginBottom: '42px' }}
                 />
               </div>
-
-              {/* Prévisualisation */}
-              {formData.email_signature && (
-                <div className="mt-6">
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Prévisualisation
-                  </label>
-                  <div className="bg-white rounded-lg p-4 border border-gray-200">
-                    <div
-                      className="text-gray-800"
-                      dangerouslySetInnerHTML={{ __html: formData.email_signature }}
-                    />
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         )}
