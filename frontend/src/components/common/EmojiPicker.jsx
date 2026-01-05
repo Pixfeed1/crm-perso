@@ -1,7 +1,7 @@
 // src/components/common/EmojiPicker.jsx
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Smile } from 'lucide-react';
+import { FiSmile } from 'react-icons/fi';
 
 const EMOJI_CATEGORIES = {
   'Smileys': ['😀', '😃', '😄', '😁', '😅', '😂', '🤣', '😊', '😇', '🙂', '😉', '😌', '😍', '🥰', '😘', '😗', '😋', '😛', '😜', '🤪', '😝', '🤑', '🤗', '🤭', '🤫', '🤔', '🤐', '🤨', '😐', '😑', '😶', '😏', '😒', '🙄', '😬', '🤥', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤮', '🤧', '🥵', '🥶', '🥴', '😵', '🤯', '🤠', '🥳', '😎', '🤓', '🧐'],
@@ -44,7 +44,7 @@ const EmojiPicker = ({ onSelect, position = 'top' }) => {
         }`}
         title="Insérer un emoji"
       >
-        <Smile className="w-5 h-5" />
+        <FiSmile className="w-5 h-5" />
       </button>
 
       <AnimatePresence>
