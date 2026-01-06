@@ -145,10 +145,10 @@ class EmailService {
       throw new Error('Contenu email requis (html ou text)');
     }
 
-    // Wrapper HTML avec lang="fr" pour éviter détection anglais par Gmail
+    // Wrapper HTML avec lang="fr" et alignement gauche pour Gmail
     let finalHtml = html;
     if (html && !html.includes('<html')) {
-      finalHtml = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><meta http-equiv="Content-Language" content="fr"></head><body>${html}</body></html>`;
+      finalHtml = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><meta http-equiv="Content-Language" content="fr"></head><body style="margin:0;padding:0;text-align:left;">${html}</body></html>`;
     } else if (html && !html.includes('lang=')) {
       finalHtml = html.replace('<html', '<html lang="fr"');
     }
