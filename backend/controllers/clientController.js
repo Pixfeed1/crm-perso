@@ -414,26 +414,19 @@ const clientController = {
       // Le message peut contenir du HTML (venant de ReactQuill)
       const messageHtml = message.startsWith('<') ? message : message.replace(/\n/g, '<br>');
 
-      const htmlContent = `
-        <!DOCTYPE html>
-        <html lang="fr">
-        <head>
-          <meta charset="utf-8">
-          <meta http-equiv="Content-Language" content="fr">
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; text-align: left; }
-            .container { max-width: 600px; margin: 0; padding: 20px; text-align: left; }
-            .message { text-align: left; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="message">${messageHtml}</div>
-            ${signatureHtml}
-          </div>
-        </body>
-        </html>
-      `;
+      const htmlContent = `<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Language" content="fr">
+</head>
+<body style="margin:0; padding:0; font-family:Arial,sans-serif; line-height:1.6; color:#333; text-align:left;">
+  <div style="max-width:600px; margin:0; padding:20px; text-align:left;">
+    <div style="text-align:left;">${messageHtml}</div>
+    ${signatureHtml}
+  </div>
+</body>
+</html>`;
 
       // Préparer les pièces jointes
       const attachments = attachmentFiles.map(file => ({
