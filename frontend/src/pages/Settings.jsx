@@ -114,8 +114,8 @@ const Settings = () => {
       <p style="margin: 0 0 4px 0; font-size: 13px; color: #6b7280;">✉️ <a href="mailto:mgueffie@pixfeed.net" style="color: #6b7280; text-decoration: none;">mgueffie@pixfeed.net</a></p>
       <p style="margin: 0 0 10px 0; font-size: 13px; color: #6b7280;">🌐 <a href="https://pixfeed.net" style="color: #6366f1; text-decoration: none; font-weight: 500;">pixfeed.net</a></p>
       <p style="margin: 0;">
-        <a href="https://www.linkedin.com/company/pixfeed/" style="text-decoration: none; margin-right: 8px;"><img src="https://pixfeed.net/wp-content/uploads/2026/01/linkedinmail.png" alt="LinkedIn" width="20" height="20" style="vertical-align: middle;"></a>
-        <a href="https://www.facebook.com/Pixfeed" style="text-decoration: none;"><img src="https://pixfeed.net/wp-content/uploads/2026/01/fasebookmail.png" alt="Facebook" width="20" height="20" style="vertical-align: middle;"></a>
+        <a href="https://www.linkedin.com/company/pixfeed/" style="display: inline; text-decoration: none; margin-right: 8px;"><img src="https://pixfeed.net/wp-content/uploads/2026/01/linkedinmail.png" alt="LinkedIn" width="20" height="20" style="display: inline; vertical-align: middle;"></a>
+        <a href="https://www.facebook.com/Pixfeed" style="display: inline; text-decoration: none;"><img src="https://pixfeed.net/wp-content/uploads/2026/01/fasebookmail.png" alt="Facebook" width="20" height="20" style="display: inline; vertical-align: middle;"></a>
       </p>
     </td>
   </tr>
@@ -142,8 +142,8 @@ const Settings = () => {
       <p style="margin: 0 0 3px 0; font-size: 13px;"><a href="tel:0645373930" style="color: #6b7280; text-decoration: none;">06.45.37.39.30</a></p>
       <p style="margin: 0 0 10px 0; font-size: 13px;"><a href="https://pixfeed.net" style="color: #6366f1; text-decoration: none; font-weight: 500;">pixfeed.net</a></p>
       <p style="margin: 0;">
-        <a href="https://www.linkedin.com/company/pixfeed/" style="text-decoration: none; margin-right: 6px;"><img src="https://pixfeed.net/wp-content/uploads/2026/01/linkedinmail.png" alt="LinkedIn" width="18" height="18" style="vertical-align: middle;"></a>
-        <a href="https://www.facebook.com/Pixfeed" style="text-decoration: none;"><img src="https://pixfeed.net/wp-content/uploads/2026/01/fasebookmail.png" alt="Facebook" width="18" height="18" style="vertical-align: middle;"></a>
+        <a href="https://www.linkedin.com/company/pixfeed/" style="display: inline; text-decoration: none; margin-right: 6px;"><img src="https://pixfeed.net/wp-content/uploads/2026/01/linkedinmail.png" alt="LinkedIn" width="18" height="18" style="display: inline; vertical-align: middle;"></a>
+        <a href="https://www.facebook.com/Pixfeed" style="display: inline; text-decoration: none;"><img src="https://pixfeed.net/wp-content/uploads/2026/01/fasebookmail.png" alt="Facebook" width="18" height="18" style="display: inline; vertical-align: middle;"></a>
       </p>
       <p style="margin: 10px 0 0 0; font-size: 10px; color: #9ca3af; font-style: italic;">L'humain au cœur de nos solutions</p>
     </td>
@@ -171,8 +171,8 @@ const Settings = () => {
       <p style="margin: 6px 0 0 0;"><a href="https://pixfeed.net" style="color: #6366f1; text-decoration: none; font-weight: 500;">pixfeed.net</a></p>
       <p style="margin: 10px 0 0 0; font-size: 11px; color: #9ca3af; font-style: italic;">L'humain au cœur de nos solutions</p>
       <p style="margin: 10px 0 0 0;">
-        <a href="https://www.linkedin.com/company/pixfeed/" style="text-decoration: none; margin: 0 4px;"><img src="https://pixfeed.net/wp-content/uploads/2026/01/linkedinmail.png" alt="LinkedIn" width="18" height="18" style="vertical-align: middle;"></a>
-        <a href="https://www.facebook.com/Pixfeed" style="text-decoration: none; margin: 0 4px;"><img src="https://pixfeed.net/wp-content/uploads/2026/01/fasebookmail.png" alt="Facebook" width="18" height="18" style="vertical-align: middle;"></a>
+        <a href="https://www.linkedin.com/company/pixfeed/" style="display: inline; text-decoration: none; margin: 0 4px;"><img src="https://pixfeed.net/wp-content/uploads/2026/01/linkedinmail.png" alt="LinkedIn" width="18" height="18" style="display: inline; vertical-align: middle;"></a>
+        <a href="https://www.facebook.com/Pixfeed" style="display: inline; text-decoration: none; margin: 0 4px;"><img src="https://pixfeed.net/wp-content/uploads/2026/01/fasebookmail.png" alt="Facebook" width="18" height="18" style="display: inline; vertical-align: middle;"></a>
       </p>
     </td>
   </tr>
@@ -568,11 +568,11 @@ const Settings = () => {
               {formData.email_signature && (
                 <div className="mt-6">
                   <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Prévisualisation
+                    Prévisualisation (rendu email)
                   </label>
-                  <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
+                  <div className="bg-white rounded-lg p-4 border border-gray-300">
                     <div
-                      className="text-gray-200"
+                      style={{ all: 'initial', fontFamily: 'inherit' }}
                       dangerouslySetInnerHTML={{ __html: formData.email_signature }}
                     />
                   </div>

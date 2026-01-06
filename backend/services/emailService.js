@@ -104,8 +104,8 @@ class EmailService {
       <p style="margin: 0 0 4px 0; font-size: 13px; color: #6b7280;">✉️ <a href="mailto:mgueffie@pixfeed.net" style="color: #6b7280; text-decoration: none;">mgueffie@pixfeed.net</a></p>
       <p style="margin: 0 0 10px 0; font-size: 13px; color: #6b7280;">🌐 <a href="https://pixfeed.net" style="color: #6366f1; text-decoration: none; font-weight: 500;">pixfeed.net</a></p>
       <p style="margin: 0;">
-        <a href="https://www.linkedin.com/company/pixfeed/" style="text-decoration: none; margin-right: 8px;"><img src="https://pixfeed.net/wp-content/uploads/2026/01/linkedinmail.png" alt="LinkedIn" width="20" height="20" style="vertical-align: middle;"></a>
-        <a href="https://www.facebook.com/Pixfeed" style="text-decoration: none;"><img src="https://pixfeed.net/wp-content/uploads/2026/01/fasebookmail.png" alt="Facebook" width="20" height="20" style="vertical-align: middle;"></a>
+        <a href="https://www.linkedin.com/company/pixfeed/" style="display: inline; text-decoration: none; margin-right: 8px;"><img src="https://pixfeed.net/wp-content/uploads/2026/01/linkedinmail.png" alt="LinkedIn" width="20" height="20" style="display: inline; vertical-align: middle;"></a>
+        <a href="https://www.facebook.com/Pixfeed" style="display: inline; text-decoration: none;"><img src="https://pixfeed.net/wp-content/uploads/2026/01/fasebookmail.png" alt="Facebook" width="20" height="20" style="display: inline; vertical-align: middle;"></a>
       </p>
     </td>
   </tr>
