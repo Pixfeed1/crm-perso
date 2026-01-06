@@ -242,9 +242,9 @@ const clientController = {
         });
       }
 
-      // Charger les paramètres SMTP depuis la base de données
+      // Charger les paramètres SMTP et signature depuis la base de données
       const settingsResult = await db.query(
-        'SELECT smtp_host, smtp_port, smtp_secure, smtp_user, smtp_pass, smtp_from_email, smtp_from_name FROM company_settings LIMIT 1'
+        'SELECT smtp_host, smtp_port, smtp_secure, smtp_user, smtp_pass, smtp_from_email, smtp_from_name, email_signature FROM company_settings LIMIT 1'
       );
 
       if (!settingsResult.rows || settingsResult.rows.length === 0) {
@@ -274,25 +274,27 @@ const clientController = {
         }
       });
 
-      // Construire le HTML de l'email
-      const htmlContent = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="utf-8">
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .message { white-space: pre-wrap; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="message">${message.replace(/\n/g, '<br>')}</div>
-          </div>
-        </body>
-        </html>
-      `;
+      // Construire la signature HTML si elle existe
+      const signatureHtml = settings.email_signature ? `
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+          ${settings.email_signature}
+        </div>
+      ` : '';
+
+      // Construire le HTML de l'email avec styles inline (Gmail supprime les balises style)
+      const htmlContent = `<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Language" content="fr">
+</head>
+<body style="margin:0; padding:0; font-family:Arial,sans-serif; line-height:1.6; color:#333; text-align:left;">
+  <div style="max-width:600px; margin:0; padding:20px; text-align:left;">
+    <div style="text-align:left; white-space:pre-wrap;">${message.replace(/\n/g, '<br>')}</div>
+    ${signatureHtml}
+  </div>
+</body>
+</html>`;
 
       // Préparer les pièces jointes
       const attachments = [];
@@ -312,13 +314,9 @@ const clientController = {
         to: to,
         subject: subject,
         text: message,
-        html: htmlContent
+        html: htmlContent,
+        attachments: attachments
       };
-
-      // Ajouter les pièces jointes si elles existent
-      if (attachments.length > 0) {
-        mailOptions.attachments = attachments;
-      }
 
       await transporter.sendMail(mailOptions);
 

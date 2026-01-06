@@ -226,8 +226,13 @@ const Dashboard = () => {
         });
 
         if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.message || 'Erreur lors de la programmation');
+          const contentType = response.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            const error = await response.json();
+            throw new Error(error.message || 'Erreur lors de la programmation');
+          } else {
+            throw new Error(`Erreur serveur (${response.status})`);
+          }
         }
 
         const formattedDate = new Date(`${scheduledDate}T${scheduledTime}`).toLocaleString('fr-FR', {
@@ -255,8 +260,13 @@ const Dashboard = () => {
         });
 
         if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.message || 'Erreur lors de l\'envoi');
+          const contentType = response.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            const error = await response.json();
+            throw new Error(error.message || 'Erreur lors de l\'envoi');
+          } else {
+            throw new Error(`Erreur serveur (${response.status})`);
+          }
         }
 
         toast.success('Email envoyé avec succès !');

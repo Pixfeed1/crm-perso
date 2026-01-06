@@ -109,8 +109,14 @@ const EmailModal = ({ isOpen, onClose, client }) => {
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Erreur lors de l\'envoi');
+        // Gestion des erreurs non-JSON (ex: erreur proxy, 502, etc.)
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const error = await response.json();
+          throw new Error(error.message || 'Erreur lors de l\'envoi');
+        } else {
+          throw new Error(`Erreur serveur (${response.status})`);
+        }
       }
 
       toast.success('Email envoyé avec succès !');
