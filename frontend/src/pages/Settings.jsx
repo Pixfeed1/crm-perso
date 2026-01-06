@@ -570,10 +570,12 @@ const Settings = () => {
                   <label className="block text-sm font-medium text-gray-300 mb-2">
                     Prévisualisation
                   </label>
-                  <div
-                    className="p-4 bg-gray-900/50 rounded-lg border border-gray-700 overflow-hidden"
-                    dangerouslySetInnerHTML={{ __html: formData.email_signature }}
-                  />
+                  <div className="p-4 bg-gray-900/50 rounded-lg border border-gray-700 overflow-auto">
+                    <div
+                      style={{ display: 'flow-root' }}
+                      dangerouslySetInnerHTML={{ __html: formData.email_signature }}
+                    />
+                  </div>
                 </div>
               )}
             </div>
