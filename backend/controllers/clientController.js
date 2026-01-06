@@ -421,9 +421,9 @@ const clientController = {
           <meta charset="utf-8">
           <meta http-equiv="Content-Language" content="fr">
           <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .message { }
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; text-align: left; }
+            .container { max-width: 600px; margin: 0; padding: 20px; text-align: left; }
+            .message { text-align: left; }
           </style>
         </head>
         <body>
