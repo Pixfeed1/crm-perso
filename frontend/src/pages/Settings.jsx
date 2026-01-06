@@ -571,7 +571,7 @@ const Settings = () => {
                     Prévisualisation
                   </label>
                   <div
-                    className="p-4"
+                    className="p-4 bg-gray-900/50 rounded-lg border border-gray-700 overflow-hidden"
                     dangerouslySetInnerHTML={{ __html: formData.email_signature }}
                   />
                 </div>
