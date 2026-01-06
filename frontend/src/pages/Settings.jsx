@@ -568,14 +568,12 @@ const Settings = () => {
               {formData.email_signature && (
                 <div className="mt-6">
                   <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Prévisualisation (rendu email)
+                    Prévisualisation
                   </label>
-                  <div className="bg-white rounded-lg p-4 border border-gray-300">
-                    <div
-                      style={{ all: 'initial', fontFamily: 'inherit' }}
-                      dangerouslySetInnerHTML={{ __html: formData.email_signature }}
-                    />
-                  </div>
+                  <div
+                    className="p-4"
+                    dangerouslySetInnerHTML={{ __html: formData.email_signature }}
+                  />
                 </div>
               )}
             </div>
