@@ -2,8 +2,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { FiSave, FiBriefcase, FiMail, FiCheckCircle, FiXCircle, FiAlertCircle, FiVideo, FiBell } from 'react-icons/fi';
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
 import { settingsAPI } from '../services/settingsAPI';
 import { useToast } from '../hooks/useToast';
 import VideoConferenceSettings from '../components/settings/VideoConferenceSettings';
@@ -101,9 +99,9 @@ const Settings = () => {
     }
   };
 
-  // Templates de signature email
+  // Templates de signature email (avec align="left" pour éviter le centrage)
   const signatureTemplates = {
-    executive: `<table cellpadding="0" cellspacing="0" border="0" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.5; color: #374151;">
+    executive: `<table cellpadding="0" cellspacing="0" border="0" align="left" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.5; color: #374151;">
   <tr>
     <td valign="top" style="padding-right: 20px; border-right: 3px solid #6366f1;">
       <img src="https://pixfeed.net/wp-content/uploads/2025/04/logo.png" alt="Pixfeed" width="70" style="display: block;">
@@ -123,7 +121,7 @@ const Settings = () => {
   </tr>
 </table>`,
 
-    minimal: `<table cellpadding="0" cellspacing="0" border="0" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.5; color: #374151;">
+    minimal: `<table cellpadding="0" cellspacing="0" border="0" align="left" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.5; color: #374151;">
   <tr>
     <td>
       <p style="margin: 0 0 4px 0; font-size: 15px; font-weight: 600; color: #111827;">Marc Gueffie</p>
@@ -134,7 +132,7 @@ const Settings = () => {
   </tr>
 </table>`,
 
-    modern: `<table cellpadding="0" cellspacing="0" border="0" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.5; color: #374151;">
+    modern: `<table cellpadding="0" cellspacing="0" border="0" align="left" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.5; color: #374151;">
   <tr>
     <td style="border-left: 4px solid #6366f1; padding-left: 16px;">
       <img src="https://pixfeed.net/wp-content/uploads/2025/04/logo.png" alt="Pixfeed" height="28" style="display: block; height: 28px; width: auto; margin-bottom: 10px;">
@@ -152,7 +150,7 @@ const Settings = () => {
   </tr>
 </table>`,
 
-    classic: `<table cellpadding="0" cellspacing="0" border="0" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.5; color: #374151; text-align: center;">
+    classic: `<table cellpadding="0" cellspacing="0" border="0" align="left" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.5; color: #374151;">
   <tr>
     <td style="padding-bottom: 12px;">
       <img src="https://pixfeed.net/wp-content/uploads/2025/04/logo.png" alt="Pixfeed" height="45" style="display: inline-block; height: 45px; width: auto;">
@@ -181,27 +179,6 @@ const Settings = () => {
 </table>`
   };
 
-  // Configuration de l'éditeur Quill
-  const quillModules = {
-    toolbar: [
-      [{ 'header': [1, 2, 3, false] }],
-      ['bold', 'italic', 'underline', 'strike'],
-      [{ 'color': [] }, { 'background': [] }],
-      [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-      [{ 'align': [] }],
-      ['link'],
-      ['clean']
-    ],
-  };
-
-  const quillFormats = [
-    'header',
-    'bold', 'italic', 'underline', 'strike',
-    'color', 'background',
-    'list', 'bullet',
-    'align',
-    'link'
-  ];
 
   if (isLoading) {
     return (
@@ -522,14 +499,18 @@ const Settings = () => {
               {/* Templates de signature */}
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Modèles de signature
+                  Choisissez votre modèle de signature
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                   {/* Template Executive */}
                   <button
                     type="button"
                     onClick={() => handleSignatureChange(signatureTemplates.executive)}
-                    className="p-3 bg-indigo-900/30 border border-indigo-500/50 rounded-lg hover:border-indigo-400 transition-colors text-left"
+                    className={`p-3 rounded-lg transition-colors text-left ${
+                      formData.email_signature === signatureTemplates.executive
+                        ? 'bg-indigo-600/40 border-2 border-indigo-400 ring-2 ring-indigo-400/30'
+                        : 'bg-indigo-900/30 border border-indigo-500/50 hover:border-indigo-400'
+                    }`}
                   >
                     <div className="text-sm font-medium text-indigo-400 mb-1">Executive</div>
                     <div className="text-xs text-gray-400">Logo à gauche, structuré</div>
@@ -540,7 +521,11 @@ const Settings = () => {
                   <button
                     type="button"
                     onClick={() => handleSignatureChange(signatureTemplates.minimal)}
-                    className="p-3 bg-gray-900/50 border border-gray-700 rounded-lg hover:border-indigo-500 transition-colors text-left"
+                    className={`p-3 rounded-lg transition-colors text-left ${
+                      formData.email_signature === signatureTemplates.minimal
+                        ? 'bg-green-600/40 border-2 border-green-400 ring-2 ring-green-400/30'
+                        : 'bg-gray-900/50 border border-gray-700 hover:border-indigo-500'
+                    }`}
                   >
                     <div className="text-sm font-medium text-white mb-1">Minimal</div>
                     <div className="text-xs text-gray-400">Texte uniquement, léger</div>
@@ -551,7 +536,11 @@ const Settings = () => {
                   <button
                     type="button"
                     onClick={() => handleSignatureChange(signatureTemplates.modern)}
-                    className="p-3 bg-gray-900/50 border border-gray-700 rounded-lg hover:border-indigo-500 transition-colors text-left"
+                    className={`p-3 rounded-lg transition-colors text-left ${
+                      formData.email_signature === signatureTemplates.modern
+                        ? 'bg-green-600/40 border-2 border-green-400 ring-2 ring-green-400/30'
+                        : 'bg-gray-900/50 border border-gray-700 hover:border-indigo-500'
+                    }`}
                   >
                     <div className="text-sm font-medium text-white mb-1">Modern</div>
                     <div className="text-xs text-gray-400">Bordure latérale, startup</div>
@@ -562,26 +551,17 @@ const Settings = () => {
                   <button
                     type="button"
                     onClick={() => handleSignatureChange(signatureTemplates.classic)}
-                    className="p-3 bg-gray-900/50 border border-gray-700 rounded-lg hover:border-indigo-500 transition-colors text-left"
+                    className={`p-3 rounded-lg transition-colors text-left ${
+                      formData.email_signature === signatureTemplates.classic
+                        ? 'bg-green-600/40 border-2 border-green-400 ring-2 ring-green-400/30'
+                        : 'bg-gray-900/50 border border-gray-700 hover:border-indigo-500'
+                    }`}
                   >
                     <div className="text-sm font-medium text-white mb-1">Classic</div>
-                    <div className="text-xs text-gray-400">Logo centré, traditionnel</div>
+                    <div className="text-xs text-gray-400">Logo à gauche, classique</div>
                     <span className="inline-block mt-2 px-2 py-0.5 bg-gray-700 text-gray-300 text-xs rounded">Universel</span>
                   </button>
                 </div>
-              </div>
-
-              {/* Éditeur de signature */}
-              <div className="bg-white rounded-lg [&_.ql-editor]:text-black [&_.ql-editor]:text-base [&_.ql-editor_*]:text-black">
-                <ReactQuill
-                  theme="snow"
-                  value={formData.email_signature || ''}
-                  onChange={handleSignatureChange}
-                  modules={quillModules}
-                  formats={quillFormats}
-                  placeholder="Tapez votre signature ici..."
-                  style={{ height: '250px', marginBottom: '42px' }}
-                />
               </div>
 
               {/* Prévisualisation */}

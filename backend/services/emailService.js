@@ -91,7 +91,7 @@ class EmailService {
    */
   getDefaultSignature() {
     return `
-<table cellpadding="0" cellspacing="0" border="0" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.5; color: #374151;">
+<table cellpadding="0" cellspacing="0" border="0" align="left" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.5; color: #374151;">
   <tr>
     <td valign="top" style="padding-right: 20px; border-right: 3px solid #6366f1;">
       <img src="https://pixfeed.net/wp-content/uploads/2025/04/logo.png" alt="Pixfeed" width="70" style="display: block;">
