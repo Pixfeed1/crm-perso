@@ -145,10 +145,13 @@ class EmailService {
       throw new Error('Contenu email requis (html ou text)');
     }
 
-    // Wrapper HTML avec lang="fr" et alignement gauche pour Gmail
+    // Wrapper HTML pour Gmail : lang="fr", alignement gauche forcé, preheader invisible
     let finalHtml = html;
     if (html && !html.includes('<html')) {
-      finalHtml = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><meta http-equiv="Content-Language" content="fr"></head><body style="margin:0;padding:0;text-align:left;">${html}</body></html>`;
+      // Preheader invisible pour cacher la signature dans l'aperçu Gmail
+      const preheader = `<div style="display:none;font-size:1px;color:#ffffff;line-height:1px;max-height:0px;max-width:0px;opacity:0;overflow:hidden;">&#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847; &#847;</div>`;
+
+      finalHtml = `<!DOCTYPE html><html lang="fr" dir="ltr"><head><meta charset="UTF-8"><meta http-equiv="Content-Language" content="fr"><meta name="x-apple-disable-message-reformatting"></head><body style="margin:0;padding:0;text-align:left;direction:ltr;"><table width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td align="left" style="text-align:left;">${preheader}${html}</td></tr></table></body></html>`;
     } else if (html && !html.includes('lang=')) {
       finalHtml = html.replace('<html', '<html lang="fr"');
     }
