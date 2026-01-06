@@ -145,14 +145,25 @@ class EmailService {
       throw new Error('Contenu email requis (html ou text)');
     }
 
+    // Wrapper HTML avec lang="fr" pour éviter détection anglais par Gmail
+    let finalHtml = html;
+    if (html && !html.includes('<html')) {
+      finalHtml = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><meta http-equiv="Content-Language" content="fr"></head><body>${html}</body></html>`;
+    } else if (html && !html.includes('lang=')) {
+      finalHtml = html.replace('<html', '<html lang="fr"');
+    }
+
     // Configuration du mail
     const mailOptions = {
       from: `${process.env.EMAIL_FROM_NAME || 'CRM'} <${process.env.EMAIL_USER}>`,
       to,
       subject,
-      html,
+      html: finalHtml,
       text: text || '',
-      attachments
+      attachments,
+      headers: {
+        'Content-Language': 'fr'
+      }
     };
 
     // Ajouter copie à soi-même si demandé
