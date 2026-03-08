@@ -178,7 +178,7 @@ const GoalForm = ({ goal, onSave, onCancel }) => {
   return (
     <div>
       <h2 className="text-2xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-amber-300 to-orange-300">
-        {goal.id ? 'Modifier l\'objectif' : 'Nouvel objectif'}
+        {goalData.id ? 'Modifier l\'objectif' : 'Nouvel objectif'}
       </h2>
       
       <div className="space-y-6">
@@ -396,7 +396,7 @@ const GoalForm = ({ goal, onSave, onCancel }) => {
             } font-medium shadow-md transition-all`}
             disabled={!formValid || submitting}
           >
-            {submitting ? 'Enregistrement...' : goal.id ? 'Mettre à jour' : 'Enregistrer'}
+            {submitting ? 'Enregistrement...' : goalData.id ? 'Mettre à jour' : 'Enregistrer'}
           </button>
         </div>
       </div>
