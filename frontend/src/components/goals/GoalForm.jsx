@@ -3,34 +3,38 @@ import React, { useState, useEffect } from 'react';
 // Suppression de framer-motion pour éviter les conflits WebAssembly
 // import { motion } from 'framer-motion';
 
-const GoalForm = ({ goal = {}, onSave, onCancel }) => {
+const GoalForm = ({ goal, onSave, onCancel }) => {
+  // S'assurer que goal est un objet (pas null ou undefined)
+  const goalData = goal || {};
+
   const defaultStartDate = new Date();
   let defaultEndDate;
-  
+
   // Définir une date de fin par défaut (fin du mois en cours)
   if (defaultStartDate) {
     defaultEndDate = new Date(defaultStartDate);
     defaultEndDate.setMonth(defaultEndDate.getMonth() + 1);
     defaultEndDate.setDate(0); // Dernier jour du mois
   }
-  
+
   // Formatage des dates pour l'input date
   const formatDateForInput = (date) => {
     if (!date) return '';
     const d = date instanceof Date ? date : new Date(date);
+    if (isNaN(d.getTime())) return '';
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   };
-  
+
   // État du formulaire avec valeurs par défaut ou existantes
   const [formData, setFormData] = useState({
-    title: goal.title || goal.name || '',
-    description: goal.description || '',
-    target_value: goal.target_value || '',
-    current_value: goal.current_value || 0,
-    category: goal.category || 'productivity',
-    period: goal.period || 'monthly',
-    start_date: goal.start_date || formatDateForInput(defaultStartDate),
-    end_date: goal.end_date || formatDateForInput(defaultEndDate)
+    title: goalData.title || goalData.name || '',
+    description: goalData.description || '',
+    target_value: goalData.target_value || '',
+    current_value: goalData.current_value || 0,
+    category: goalData.category || 'productivity',
+    period: goalData.period || 'monthly',
+    start_date: formatDateForInput(goalData.start_date) || formatDateForInput(defaultStartDate),
+    end_date: formatDateForInput(goalData.end_date) || formatDateForInput(defaultEndDate)
   });
   
   const [errors, setErrors] = useState({});
