@@ -1,12 +1,12 @@
 // backend/models/goalModel.js
 
 /**
- * Récupère tous les objectifs (non archivés par défaut)
+ * Récupère tous les objectifs (tous, le frontend filtre)
  */
 const getAllGoals = (db) => {
   return new Promise((resolve, reject) => {
-    // Récupérer tous les objectifs, le frontend filtre les archivés
-    const query = 'SELECT * FROM goals WHERE (is_archived IS NULL OR is_archived = false) ORDER BY start_date DESC';
+    // Récupérer tous les objectifs - le filtrage par is_archived se fait côté frontend
+    const query = 'SELECT * FROM goals ORDER BY start_date DESC';
 
     db.all(query, [], (err, goals) => {
       if (err) {
@@ -509,15 +509,30 @@ const duplicateGoal = (db, id, newDates) => {
  */
 const getArchivedGoals = (db) => {
   return new Promise((resolve, reject) => {
-    const query = 'SELECT * FROM goals WHERE is_archived = true ORDER BY updated_at DESC';
-
-    db.all(query, [], (err, goals) => {
+    // Vérifier si la colonne exists
+    db.all("PRAGMA table_info(goals)", [], (err, columns) => {
       if (err) {
-        console.error('[GoalModel] Erreur lors de la récupération des objectifs archivés:', err);
-        reject(err);
-      } else {
-        resolve(goals || []);
+        console.error('[GoalModel] Erreur PRAGMA:', err);
+        return resolve([]); // Retourner vide en cas d'erreur
       }
+
+      const hasArchivedColumn = columns.some(col => col.name === 'is_archived');
+
+      if (!hasArchivedColumn) {
+        // Colonne n'existe pas encore, retourner vide
+        return resolve([]);
+      }
+
+      const query = 'SELECT * FROM goals WHERE is_archived = 1 ORDER BY updated_at DESC';
+
+      db.all(query, [], (err, goals) => {
+        if (err) {
+          console.error('[GoalModel] Erreur lors de la récupération des objectifs archivés:', err);
+          resolve([]); // Retourner vide en cas d'erreur au lieu de rejeter
+        } else {
+          resolve(goals || []);
+        }
+      });
     });
   });
 };
