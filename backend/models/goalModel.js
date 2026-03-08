@@ -305,7 +305,7 @@ const updateMilestone = (db, milestoneId, goalId, milestoneData) => {
     }
     if (milestoneData.achieved !== undefined) {
       fields.push('achieved = ?');
-      values.push(milestoneData.achieved ? 1 : 0);
+      values.push(milestoneData.achieved ? true : false);
     }
 
     if (fields.length === 0) {
@@ -387,7 +387,7 @@ const updateMilestonesAchievement = (db, goalId, current_value) => {
   return new Promise((resolve, reject) => {
     const query = `
       UPDATE milestones
-      SET achieved = CASE WHEN target <= ? THEN 1 ELSE 0 END
+      SET achieved = CASE WHEN target <= ? THEN true ELSE false END
       WHERE goal_id = ?
     `;
 
