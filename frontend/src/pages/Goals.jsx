@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { goalsAPI, exportAPI } from '../services/api';
-import { FiTarget, FiZap, FiCheckCircle, FiClock, FiDownload } from 'react-icons/fi';
+import { FiTarget, FiZap, FiCheckCircle, FiClock, FiDownload, FiArchive, FiPlus } from 'react-icons/fi';
 import { useToast } from '../hooks/useToast';
 import { useConfirm } from '../hooks/useConfirm';
 import ConfirmModal from '../components/common/ConfirmModal';
@@ -8,27 +8,27 @@ import ConfirmModal from '../components/common/ConfirmModal';
 // Composants
 import GoalStats from '../components/goals/GoalStats';
 import GoalList from '../components/goals/GoalList';
-import GoalDetails from '../components/goals/GoalDetails';
 import GoalForm from '../components/goals/GoalForm';
 import GoalFilter from '../components/goals/GoalFilter';
-import EmptyState from '../components/common/EmptyState';
 import Button from '../components/common/Button';
 
 const Goals = () => {
   const { toast } = useToast();
   const { confirm, confirmState } = useConfirm();
   const [goals, setGoals] = useState([]);
+  const [archivedGoals, setArchivedGoals] = useState([]);
   const [filteredGoals, setFilteredGoals] = useState([]);
-  const [selectedGoal, setSelectedGoal] = useState(null);
   const [isAddingGoal, setIsAddingGoal] = useState(false);
+  const [editingGoal, setEditingGoal] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [view, setView] = useState('all'); // 'all', 'active', 'completed', 'upcoming'
+  const [view, setView] = useState('active'); // 'active', 'completed', 'upcoming', 'archived'
   const [stats, setStats] = useState({
     total: 0,
     active: 0,
     completed: 0,
     progress: 0,
-    upcoming: 0
+    upcoming: 0,
+    archived: 0
   });
   const [filters, setFilters] = useState({
     search: '',
@@ -46,145 +46,154 @@ const Goals = () => {
   const fetchGoals = async () => {
     setIsLoading(true);
     try {
-      const goalsData = await goalsAPI.getAll();
-      console.log('Objectifs chargés via API:', goalsData);
-      
-      // Pour chaque objectif, récupérer ses jalons (milestones)
-      for (const goal of goalsData) {
+      // Récupérer objectifs actifs et archivés en parallèle
+      const [goalsData, archivedData] = await Promise.all([
+        goalsAPI.getAll(),
+        goalsAPI.getArchived().catch(() => [])
+      ]);
+
+      // Filtrer les objectifs non archivés
+      const activeGoalsData = goalsData.filter(g => !g.is_archived);
+
+      // Pour chaque objectif, récupérer ses jalons
+      for (const goal of activeGoalsData) {
         try {
           const milestones = await goalsAPI.getMilestones(goal.id);
           goal.milestones = milestones;
         } catch (err) {
-          console.error(`Erreur lors du chargement des jalons pour l'objectif ${goal.id}:`, err);
           goal.milestones = [];
         }
       }
-      
-      setGoals(goalsData);
-      calculateStats(goalsData);
+
+      for (const goal of archivedData) {
+        try {
+          const milestones = await goalsAPI.getMilestones(goal.id);
+          goal.milestones = milestones;
+        } catch (err) {
+          goal.milestones = [];
+        }
+      }
+
+      setGoals(activeGoalsData);
+      setArchivedGoals(archivedData);
+      calculateStats(activeGoalsData, archivedData);
     } catch (error) {
       console.error('Erreur lors du chargement des objectifs:', error);
       setGoals([]);
+      setArchivedGoals([]);
     } finally {
       setIsLoading(false);
     }
   };
 
   // Calcul des statistiques
-  const calculateStats = (goalData) => {
+  const calculateStats = (goalData, archivedData = []) => {
     const now = new Date();
-    
-    // Tri des objectifs par statut
+
     const activeGoals = goalData.filter(goal => {
       const startDate = new Date(goal.start_date);
       const endDate = new Date(goal.end_date);
-      return startDate <= now && endDate >= now;
+      return startDate <= now && endDate >= now && goal.current_value < goal.target_value;
     });
-    
+
     const completedGoals = goalData.filter(goal => {
-      return goal.current_value >= goal.target_value;
+      return goal.current_value >= goal.target_value || goal.status === 'completed';
     });
-    
+
     const upcomingGoals = goalData.filter(goal => {
       const startDate = new Date(goal.start_date);
       return startDate > now;
     });
-    
-    // Calcul du progrès global
+
     let totalProgress = 0;
     let totalTargets = 0;
-    
+
     activeGoals.forEach(goal => {
       totalProgress += goal.current_value;
       totalTargets += goal.target_value;
     });
-    
-    const progressPercentage = totalTargets > 0 
-      ? Math.round((totalProgress / totalTargets) * 100) 
+
+    const progressPercentage = totalTargets > 0
+      ? Math.round((totalProgress / totalTargets) * 100)
       : 0;
-    
+
     setStats({
       total: goalData.length,
       active: activeGoals.length,
       completed: completedGoals.length,
       progress: progressPercentage,
-      upcoming: upcomingGoals.length
+      upcoming: upcomingGoals.length,
+      archived: archivedData.length
     });
   };
 
   // Filtrage des objectifs
   useEffect(() => {
-    let result = goals;
-    
+    let result = view === 'archived' ? archivedGoals : goals;
+    const now = new Date();
+
     // Filtre par vue
     if (view === 'active') {
-      const now = new Date();
       result = result.filter(goal => {
         const startDate = new Date(goal.start_date);
         const endDate = new Date(goal.end_date);
-        return startDate <= now && endDate >= now;
+        const isCompleted = goal.current_value >= goal.target_value || goal.status === 'completed';
+        return startDate <= now && endDate >= now && !isCompleted;
       });
     } else if (view === 'completed') {
-      result = result.filter(goal => goal.current_value >= goal.target_value);
+      result = result.filter(goal => goal.current_value >= goal.target_value || goal.status === 'completed');
     } else if (view === 'upcoming') {
-      const now = new Date();
       result = result.filter(goal => {
         const startDate = new Date(goal.start_date);
         return startDate > now;
       });
     }
-    
+
     // Filtre par recherche
     if (filters.search) {
-      result = result.filter(goal => 
-        goal.title?.toLowerCase().includes(filters.search.toLowerCase()) ||
+      result = result.filter(goal =>
         goal.name?.toLowerCase().includes(filters.search.toLowerCase()) ||
         (goal.description && goal.description.toLowerCase().includes(filters.search.toLowerCase()))
       );
     }
-    
+
     // Filtre par catégorie
     if (filters.category !== 'all') {
       result = result.filter(goal => goal.category === filters.category);
     }
-    
+
     // Filtre par période
     if (filters.period !== 'all') {
       result = result.filter(goal => goal.period === filters.period);
     }
 
-    // Tri des résultats
+    // Tri
     result.sort((a, b) => {
       let aValue, bValue;
-
       switch (sortField) {
         case 'name':
-          aValue = (a.title || a.name || '').toLowerCase();
-          bValue = (b.title || b.name || '').toLowerCase();
+          aValue = (a.name || '').toLowerCase();
+          bValue = (b.name || '').toLowerCase();
           break;
         case 'deadline':
-          aValue = a.end_date ? new Date(a.end_date) : new Date(0);
-          bValue = b.end_date ? new Date(b.end_date) : new Date(0);
+          aValue = new Date(a.end_date);
+          bValue = new Date(b.end_date);
           break;
         case 'progress':
           aValue = a.target_value > 0 ? (a.current_value / a.target_value) : 0;
           bValue = b.target_value > 0 ? (b.current_value / b.target_value) : 0;
           break;
-        case 'created_at':
+        default:
           aValue = new Date(a.created_at);
           bValue = new Date(b.created_at);
-          break;
-        default:
-          return 0;
       }
-
       if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
       if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
       return 0;
     });
 
     setFilteredGoals(result);
-  }, [goals, view, filters, sortField, sortDirection]);
+  }, [goals, archivedGoals, view, filters, sortField, sortDirection]);
 
   // Gestion du tri
   const handleSort = (field) => {
@@ -196,258 +205,234 @@ const Goals = () => {
     }
   };
 
-  // Sélection d'un objectif
-  const handleSelectGoal = (goal) => {
-    setSelectedGoal(goal);
-    setIsAddingGoal(false);
+  // Mise à jour rapide de la progression
+  const handleQuickUpdateProgress = async (goalId, newValue) => {
+    try {
+      await goalsAPI.updateProgress(goalId, newValue);
+
+      const updatedGoals = goals.map(goal => {
+        if (goal.id === goalId) {
+          return { ...goal, current_value: newValue, updated_at: new Date().toISOString() };
+        }
+        return goal;
+      });
+
+      setGoals(updatedGoals);
+      calculateStats(updatedGoals, archivedGoals);
+      toast.success('Progression mise à jour !');
+    } catch (error) {
+      console.error('Erreur:', error);
+      toast.error('Erreur lors de la mise à jour');
+    }
   };
 
-  // Ajout d'un nouvel objectif
-  const handleAddGoal = () => {
-    setSelectedGoal(null);
+  // Marquer comme terminé
+  const handleComplete = async (goalId) => {
+    try {
+      await goalsAPI.complete(goalId);
+
+      const updatedGoals = goals.map(goal => {
+        if (goal.id === goalId) {
+          return { ...goal, status: 'completed', updated_at: new Date().toISOString() };
+        }
+        return goal;
+      });
+
+      setGoals(updatedGoals);
+      calculateStats(updatedGoals, archivedGoals);
+      toast.success('Objectif marqué comme terminé !');
+    } catch (error) {
+      console.error('Erreur:', error);
+      toast.error('Erreur lors de la completion');
+    }
+  };
+
+  // Archiver
+  const handleArchive = async (goalId) => {
+    try {
+      const archivedGoal = await goalsAPI.archive(goalId);
+
+      // Retirer de la liste active
+      const remainingGoals = goals.filter(g => g.id !== goalId);
+      setGoals(remainingGoals);
+
+      // Ajouter aux archives
+      const goalToArchive = goals.find(g => g.id === goalId);
+      if (goalToArchive) {
+        setArchivedGoals([{ ...goalToArchive, is_archived: true }, ...archivedGoals]);
+      }
+
+      calculateStats(remainingGoals, [...archivedGoals, goalToArchive]);
+      toast.success('Objectif archivé !');
+    } catch (error) {
+      console.error('Erreur:', error);
+      toast.error('Erreur lors de l\'archivage');
+    }
+  };
+
+  // Désarchiver
+  const handleUnarchive = async (goalId) => {
+    try {
+      await goalsAPI.unarchive(goalId);
+
+      // Retirer des archives
+      const goalToRestore = archivedGoals.find(g => g.id === goalId);
+      const remainingArchived = archivedGoals.filter(g => g.id !== goalId);
+      setArchivedGoals(remainingArchived);
+
+      // Ajouter aux actifs
+      if (goalToRestore) {
+        const restoredGoal = { ...goalToRestore, is_archived: false, status: 'active' };
+        setGoals([restoredGoal, ...goals]);
+        calculateStats([restoredGoal, ...goals], remainingArchived);
+      }
+
+      toast.success('Objectif restauré !');
+    } catch (error) {
+      console.error('Erreur:', error);
+      toast.error('Erreur lors de la restauration');
+    }
+  };
+
+  // Dupliquer
+  const handleDuplicate = async (goalId) => {
+    try {
+      // Calculer les nouvelles dates (mois suivant)
+      const originalGoal = goals.find(g => g.id === goalId) || archivedGoals.find(g => g.id === goalId);
+      if (!originalGoal) return;
+
+      const startDate = new Date(originalGoal.start_date);
+      const endDate = new Date(originalGoal.end_date);
+      const duration = endDate - startDate;
+
+      const newStartDate = new Date();
+      const newEndDate = new Date(newStartDate.getTime() + duration);
+
+      const newGoal = await goalsAPI.duplicate(goalId, {
+        start_date: newStartDate.toISOString(),
+        end_date: newEndDate.toISOString()
+      });
+
+      // Récupérer les milestones
+      try {
+        const milestones = await goalsAPI.getMilestones(newGoal.id);
+        newGoal.milestones = milestones;
+      } catch (err) {
+        newGoal.milestones = [];
+      }
+
+      setGoals([newGoal, ...goals]);
+      calculateStats([newGoal, ...goals], archivedGoals);
+      toast.success('Objectif dupliqué !');
+    } catch (error) {
+      console.error('Erreur:', error);
+      toast.error('Erreur lors de la duplication');
+    }
+  };
+
+  // Supprimer
+  const handleDelete = async (goalId) => {
+    const goalToDelete = goals.find(g => g.id === goalId) || archivedGoals.find(g => g.id === goalId);
+    if (!goalToDelete) return;
+
+    const confirmed = await confirm({
+      title: 'Supprimer cet objectif ?',
+      message: 'Cette action est irréversible.',
+      confirmText: 'Supprimer',
+      cancelText: 'Annuler',
+      variant: 'danger',
+      itemName: goalToDelete.name
+    });
+
+    if (!confirmed) return;
+
+    try {
+      await goalsAPI.delete(goalId);
+
+      if (view === 'archived') {
+        const remaining = archivedGoals.filter(g => g.id !== goalId);
+        setArchivedGoals(remaining);
+        calculateStats(goals, remaining);
+      } else {
+        const remaining = goals.filter(g => g.id !== goalId);
+        setGoals(remaining);
+        calculateStats(remaining, archivedGoals);
+      }
+
+      toast.success('Objectif supprimé');
+    } catch (error) {
+      console.error('Erreur:', error);
+      toast.error('Erreur lors de la suppression');
+    }
+  };
+
+  // Éditer
+  const handleEdit = (goal) => {
+    setEditingGoal(goal);
     setIsAddingGoal(true);
   };
 
-  // Sauvegarde d'un nouvel objectif via l'API
+  // Sauvegarder (création ou modification)
   const handleSaveGoal = async (goalData) => {
     try {
-      // Créer le format de données attendu par l'API
       const apiData = {
-        name: goalData.title, // Utiliser "name" au lieu de "nom"
+        name: goalData.title || goalData.name,
         description: goalData.description || '',
         target_value: goalData.target_value,
         current_value: goalData.current_value || 0,
-        category: goalData.category, // Utiliser "category" au lieu de "categorie"
-        period: goalData.period, // Utiliser "period" au lieu de "periode"
+        category: goalData.category,
+        period: goalData.period,
         start_date: goalData.start_date,
         end_date: goalData.end_date
       };
 
-      // Log des données pour debugging
-      console.log("Données préparées pour l'API:", JSON.stringify(apiData, null, 2));
-      
-      // Envoyer à l'API
-      const newGoal = await goalsAPI.create(apiData);
-      console.log('Objectif créé via API:', newGoal);
-      
-      // Ajouter les milestones vides par défaut
-      newGoal.milestones = [];
-      
-      // Harmoniser les noms de champs pour l'affichage frontend
-      if (newGoal.name && !newGoal.title) newGoal.title = newGoal.name;
-      
-      // Mettre à jour l'état local
-      const updatedGoals = [...goals, newGoal];
-      setGoals(updatedGoals);
-      calculateStats(updatedGoals);
-      setIsAddingGoal(false);
-      setSelectedGoal(newGoal);
+      if (editingGoal) {
+        // Mise à jour
+        const updatedGoal = await goalsAPI.update(editingGoal.id, apiData);
+        updatedGoal.milestones = editingGoal.milestones || [];
 
-      // Notification de succès
-      toast.success("Objectif créé avec succès!");
-    } catch (error) {
-      console.error('Erreur lors de la sauvegarde de l\'objectif:', error);
-      toast.error(`Erreur lors de la création de l'objectif: ${error.message || 'Une erreur est survenue'}`);
-    }
-  };
-
-  // Mise à jour d'un objectif existant via l'API
-  const handleUpdateGoal = async (id, updatedData) => {
-    try {
-      // Vérifier s'il s'agit d'une mise à jour de progression uniquement
-      if (Object.keys(updatedData).length === 1 && 'current_value' in updatedData) {
-        console.log(`Mise à jour de la progression de l'objectif ID ${id} à ${updatedData.current_value}`);
-        
-        // Envoyer uniquement la valeur current_value à l'API
-        const updatedGoal = await goalsAPI.update(id, { current_value: updatedData.current_value });
-        console.log('Progression de l\'objectif mise à jour via API:', updatedGoal);
-        
-        // Mettre à jour l'état local
-        const updatedGoals = goals.map(goal => {
-          if (goal.id === id) {
-            return {
-              ...goal,
-              current_value: updatedData.current_value,
-              updated_at: new Date().toISOString()
-            };
-          }
-          return goal;
-        });
-        
+        const updatedGoals = goals.map(g =>
+          g.id === editingGoal.id ? { ...g, ...updatedGoal } : g
+        );
         setGoals(updatedGoals);
-        calculateStats(updatedGoals);
-        setSelectedGoal(updatedGoals.find(goal => goal.id === id));
-        
-        return; // Sortir de la fonction après la mise à jour de la progression
+        calculateStats(updatedGoals, archivedGoals);
+        toast.success('Objectif mis à jour !');
+      } else {
+        // Création
+        const newGoal = await goalsAPI.create(apiData);
+        newGoal.milestones = [];
+
+        const updatedGoals = [newGoal, ...goals];
+        setGoals(updatedGoals);
+        calculateStats(updatedGoals, archivedGoals);
+        toast.success('Objectif créé !');
       }
-      
-      // Pour les autres mises à jour complètes
-      // Créer le format de données attendu par l'API
-      const apiData = {};
-      
-      // Ne prendre que les champs définis et non vides
-      if (updatedData.title || updatedData.name) apiData.name = updatedData.title || updatedData.name;
-      if (updatedData.description !== undefined) apiData.description = updatedData.description;
-      if (updatedData.target_value !== undefined) apiData.target_value = updatedData.target_value;
-      if (updatedData.current_value !== undefined) apiData.current_value = updatedData.current_value;
-      if (updatedData.category) apiData.category = updatedData.category;
-      if (updatedData.period) apiData.period = updatedData.period;
-      if (updatedData.start_date) apiData.start_date = updatedData.start_date;
-      if (updatedData.end_date) apiData.end_date = updatedData.end_date;
-      
-      // Log pour debugging
-      console.log(`Données pour la mise à jour de l'objectif ID ${id}:`, JSON.stringify(apiData, null, 2));
-      
-      // Vérifier qu'il y a des données à mettre à jour
-      if (Object.keys(apiData).length === 0) {
-        throw new Error("Aucune donnée valide à mettre à jour");
-      }
-      
-      // Envoyer à l'API
-      const updatedGoal = await goalsAPI.update(id, apiData);
-      console.log('Objectif mis à jour via API:', updatedGoal);
-      
-      // Harmoniser les noms de champs pour l'affichage frontend
-      if (updatedGoal.name && !updatedGoal.title) updatedGoal.title = updatedGoal.name;
-      
-      // Mettre à jour l'état local
-      const updatedGoals = goals.map(goal => {
-        if (goal.id === id) {
-          return {
-            ...goal,
-            ...updatedGoal,
-            milestones: updatedGoal.milestones || goal.milestones
-          };
-        }
-        return goal;
-      });
-      
-      setGoals(updatedGoals);
-      calculateStats(updatedGoals);
-      setSelectedGoal(updatedGoals.find(goal => goal.id === id));
 
-      // Notification de succès
-      toast.success("Objectif mis à jour avec succès!");
+      setIsAddingGoal(false);
+      setEditingGoal(null);
     } catch (error) {
-      console.error('Erreur lors de la mise à jour de l\'objectif:', error);
-      toast.error(`Erreur lors de la mise à jour de l'objectif: ${error.message || 'Une erreur est survenue'}`);
+      console.error('Erreur:', error);
+      toast.error('Erreur lors de la sauvegarde');
     }
   };
 
-  // Suppression d'un objectif via l'API
-  const handleDeleteGoal = async (id) => {
-    try {
-      // Trouver l'objectif à supprimer
-      const goalToDelete = goals.find(goal => goal.id === id);
-      if (!goalToDelete) return;
-
-      // Demander confirmation
-      const confirmed = await confirm({
-        title: "Supprimer cet objectif ?",
-        message: "Cette action est irréversible. Toutes les étapes associées seront également supprimées.",
-        confirmText: "Supprimer",
-        cancelText: "Annuler",
-        variant: "danger",
-        itemName: goalToDelete.title || goalToDelete.name
-      });
-
-      if (!confirmed) return;
-
-      // Utiliser l'API pour supprimer l'objectif
-      await goalsAPI.delete(id);
-      console.log('Objectif supprimé via API');
-
-      // Mettre à jour l'état local
-      const remainingGoals = goals.filter(goal => goal.id !== id);
-      setGoals(remainingGoals);
-      calculateStats(remainingGoals);
-      setSelectedGoal(null);
-
-      toast.success("Objectif supprimé avec succès");
-    } catch (error) {
-      console.error('Erreur lors de la suppression de l\'objectif:', error);
-      toast.error(`Erreur lors de la suppression de l'objectif: ${error.message || 'Une erreur est survenue'}`);
-    }
-  };
-
-  // Ajout d'une étape (milestone) à un objectif via l'API
-  const handleAddMilestone = async (goalId, milestoneData) => {
-    try {
-      // Utiliser l'API pour ajouter un jalon
-      const newMilestone = await goalsAPI.addMilestone(goalId, milestoneData);
-      console.log('Jalon ajouté via API:', newMilestone);
-      
-      // Mettre à jour l'état local
-      const updatedGoals = goals.map(goal => {
-        if (goal.id === goalId) {
-          return {
-            ...goal,
-            milestones: [...goal.milestones, newMilestone]
-          };
-        }
-        return goal;
-      });
-      
-      setGoals(updatedGoals);
-      setSelectedGoal(updatedGoals.find(goal => goal.id === goalId));
-    } catch (error) {
-      console.error('Erreur lors de l\'ajout de l\'étape:', error);
-      toast.error(`Erreur lors de l'ajout de l'étape: ${error.message || 'Une erreur est survenue'}`);
-    }
-  };
-
-  // Mise à jour d'une étape via l'API
-  const handleUpdateMilestone = async (goalId, milestoneId, achieved) => {
-    try {
-      // Utiliser l'API pour mettre à jour un jalon
-      const updatedMilestone = await goalsAPI.updateMilestone(goalId, milestoneId, { achieved });
-      console.log('Jalon mis à jour via API:', updatedMilestone);
-      
-      // Mettre à jour l'état local
-      const updatedGoals = goals.map(goal => {
-        if (goal.id === goalId) {
-          const updatedMilestones = goal.milestones.map(milestone => {
-            if (milestone.id === milestoneId) {
-              return { ...milestone, achieved };
-            }
-            return milestone;
-          });
-          
-          return {
-            ...goal,
-            milestones: updatedMilestones
-          };
-        }
-        return goal;
-      });
-      
-      setGoals(updatedGoals);
-      setSelectedGoal(updatedGoals.find(goal => goal.id === goalId));
-    } catch (error) {
-      console.error('Erreur lors de la mise à jour de l\'étape:', error);
-      toast.error(`Erreur lors de la mise à jour de l'étape: ${error.message || 'Une erreur est survenue'}`);
-    }
-  };
-
-  // Gestion de l'annulation du formulaire
-  const handleCancelGoalForm = () => {
-    console.log("Annulation du formulaire d'objectif");
+  // Annuler
+  const handleCancel = () => {
     setIsAddingGoal(false);
+    setEditingGoal(null);
   };
 
   if (isLoading) {
     return (
       <div className="h-full flex items-center justify-center">
-        <div
-          className="w-16 h-16 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"
-        />
+        <div className="w-16 h-16 border-4 border-amber-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="h-full flex flex-col overflow-y-auto p-1 sm:p-2 lg:p-4">
-      <div className="max-w-7xl mx-auto w-full">
+    <div className="h-full flex flex-col overflow-y-auto p-2 sm:p-4">
+      <div className="max-w-5xl mx-auto w-full">
         {/* En-tête */}
         <header className="mb-6 pt-16 sm:pt-0">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
@@ -455,83 +440,79 @@ const Goals = () => {
               <h1 className="text-3xl sm:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-amber-300 to-orange-300">
                 Objectifs
               </h1>
-              <p className="text-amber-200 mt-2 text-sm sm:text-base">
-                Définissez vos objectifs et suivez votre progression vers le succès
+              <p className="text-amber-200/70 mt-1 text-sm">
+                {stats.active} en cours · {stats.completed} complétés · {stats.archived} archivés
               </p>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-2">
-              {/* Toggle de vue */}
-              <div className="bg-gray-800/50 rounded-lg p-1 flex">
-                <button
-                  className={`px-3 py-1 rounded-lg text-sm flex items-center justify-center flex-1 sm:flex-none ${
-                    view === 'all'
-                      ? 'bg-amber-600 text-white'
-                      : 'text-gray-300 hover:bg-gray-700/50'
-                  }`}
-                  onClick={() => setView('all')}
-                >
-                  <FiTarget className="mr-1" />
-                  Tous
-                </button>
-                <button
-                  className={`px-3 py-1 rounded-lg text-sm flex items-center justify-center flex-1 sm:flex-none ${
-                    view === 'active'
-                      ? 'bg-amber-600 text-white'
-                      : 'text-gray-300 hover:bg-gray-700/50'
-                  }`}
-                  onClick={() => setView('active')}
-                >
-                  <FiZap className="mr-1" />
-                  En cours
-                </button>
-                <button
-                  className={`px-3 py-1 rounded-lg text-sm flex items-center justify-center flex-1 sm:flex-none ${
-                    view === 'completed'
-                      ? 'bg-amber-600 text-white'
-                      : 'text-gray-300 hover:bg-gray-700/50'
-                  }`}
-                  onClick={() => setView('completed')}
-                >
-                  <FiCheckCircle className="mr-1" />
-                  Complétés
-                </button>
-                <button
-                  className={`px-3 py-1 rounded-lg text-sm flex items-center justify-center flex-1 sm:flex-none ${
-                    view === 'upcoming'
-                      ? 'bg-amber-600 text-white'
-                      : 'text-gray-300 hover:bg-gray-700/50'
-                  }`}
-                  onClick={() => setView('upcoming')}
-                >
-                  <FiClock className="mr-1" />
-                  À venir
-                </button>
-              </div>
-              {/* Boutons actions */}
+            <div className="flex gap-2">
               <Button
                 onClick={() => exportAPI.goals()}
                 variant="secondary"
                 icon={FiDownload}
-                className="w-full sm:w-auto"
               >
                 Exporter
               </Button>
               <Button
-                onClick={handleAddGoal}
+                onClick={() => { setEditingGoal(null); setIsAddingGoal(true); }}
                 variant="primary"
-                className="w-full sm:w-auto bg-amber-600 hover:bg-amber-700"
+                icon={FiPlus}
+                className="bg-amber-600 hover:bg-amber-700"
               >
-                + Objectif
+                Objectif
               </Button>
             </div>
           </div>
+
+          {/* Toggle de vue simplifié */}
+          <div className="flex gap-2 flex-wrap">
+            <button
+              onClick={() => setView('active')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors ${
+                view === 'active'
+                  ? 'bg-amber-600 text-white'
+                  : 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50'
+              }`}
+            >
+              <FiZap /> En cours ({stats.active})
+            </button>
+            <button
+              onClick={() => setView('completed')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors ${
+                view === 'completed'
+                  ? 'bg-green-600 text-white'
+                  : 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50'
+              }`}
+            >
+              <FiCheckCircle /> Complétés ({stats.completed})
+            </button>
+            <button
+              onClick={() => setView('upcoming')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors ${
+                view === 'upcoming'
+                  ? 'bg-purple-600 text-white'
+                  : 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50'
+              }`}
+            >
+              <FiClock /> À venir ({stats.upcoming})
+            </button>
+            <button
+              onClick={() => setView('archived')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors ${
+                view === 'archived'
+                  ? 'bg-gray-600 text-white'
+                  : 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50'
+              }`}
+            >
+              <FiArchive /> Archives ({stats.archived})
+            </button>
+          </div>
         </header>
 
-        {/* Section statistiques */}
-        <GoalStats stats={stats} />
+        {/* Stats (seulement si pas en mode archives) */}
+        {view !== 'archived' && <GoalStats stats={stats} />}
 
-        {/* Filtre de recherche */}
+        {/* Filtres */}
         <div className="mb-6">
           <GoalFilter
             filters={filters}
@@ -542,39 +523,44 @@ const Goals = () => {
           />
         </div>
 
-        {/* Liste des objectifs */}
-        <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl sm:rounded-2xl p-4 sm:p-6 mb-6">
-          <h3 className="text-lg sm:text-xl font-semibold text-white mb-3 sm:mb-4">Liste des objectifs</h3>
-          <GoalList
-            goals={filteredGoals}
-            selectedGoal={selectedGoal}
-            onSelectGoal={handleSelectGoal}
-          />
-        </div>
+        {/* Formulaire d'ajout/édition */}
+        {isAddingGoal && (
+          <div className="mb-6 bg-gray-800/50 rounded-xl p-4 sm:p-6 border border-gray-700/50">
+            <h2 className="text-xl font-semibold text-white mb-4">
+              {editingGoal ? 'Modifier l\'objectif' : 'Nouvel objectif'}
+            </h2>
+            <GoalForm
+              goal={editingGoal}
+              onSave={handleSaveGoal}
+              onCancel={handleCancel}
+            />
+          </div>
+        )}
 
-        {/* Panneau de détails ou formulaire (sous la liste) */}
-        {(isAddingGoal || selectedGoal) && (
-          <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl sm:rounded-2xl p-4 sm:p-6">
-            {isAddingGoal ? (
-              <div key="add-form">
-                <GoalForm
-                  onSave={handleSaveGoal}
-                  onCancel={handleCancelGoalForm}
-                />
-              </div>
-            ) : selectedGoal ? (
-              <div key={`goal-${selectedGoal.id}`}>
-                <GoalDetails
-                  goal={selectedGoal}
-                  onUpdate={(updatedData) => handleUpdateGoal(selectedGoal.id, updatedData)}
-                  onDelete={() => handleDeleteGoal(selectedGoal.id)}
-                  onAddMilestone={(milestoneData) => handleAddMilestone(selectedGoal.id, milestoneData)}
-                  onUpdateMilestone={(milestoneId, achieved) =>
-                    handleUpdateMilestone(selectedGoal.id, milestoneId, achieved)
-                  }
-                />
-              </div>
-            ) : null}
+        {/* Liste des objectifs */}
+        <GoalList
+          goals={filteredGoals}
+          onUpdateProgress={view !== 'archived' ? handleQuickUpdateProgress : null}
+          onComplete={view !== 'archived' ? handleComplete : null}
+          onArchive={view === 'completed' ? handleArchive : null}
+          onDuplicate={handleDuplicate}
+          onDelete={handleDelete}
+          onEdit={view !== 'archived' ? handleEdit : null}
+        />
+
+        {/* Bouton restaurer pour les archives */}
+        {view === 'archived' && filteredGoals.length > 0 && (
+          <div className="mt-4 text-center text-sm text-gray-400">
+            Cliquez sur un objectif archivé pour voir ses détails.
+            {filteredGoals.map(goal => (
+              <button
+                key={goal.id}
+                onClick={() => handleUnarchive(goal.id)}
+                className="ml-2 text-amber-400 hover:text-amber-300 underline"
+              >
+                Restaurer "{goal.name}"
+              </button>
+            ))}
           </div>
         )}
 

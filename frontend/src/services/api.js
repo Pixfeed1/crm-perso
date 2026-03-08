@@ -468,6 +468,27 @@ export const goalsAPI = {
   deleteMilestone: (goalId, milestoneId) => {
     console.log(`Appel API: suppression du jalon ID ${milestoneId} de l'objectif ID ${goalId}`);
     return apiRequest(`/goals/${goalId}/milestones/${milestoneId}`, 'DELETE');
+  },
+  // Archivage
+  getArchived: () => {
+    console.log('Appel API: récupération des objectifs archivés');
+    return apiRequest('/goals/archived/list');
+  },
+  archive: (id) => {
+    console.log(`Appel API: archivage de l'objectif ID ${id}`);
+    return apiRequest(`/goals/${id}/archive`, 'PATCH');
+  },
+  unarchive: (id) => {
+    console.log(`Appel API: désarchivage de l'objectif ID ${id}`);
+    return apiRequest(`/goals/${id}/unarchive`, 'PATCH');
+  },
+  complete: (id) => {
+    console.log(`Appel API: marquer l'objectif ID ${id} comme terminé`);
+    return apiRequest(`/goals/${id}/complete`, 'PATCH');
+  },
+  duplicate: (id, newDates = {}) => {
+    console.log(`Appel API: duplication de l'objectif ID ${id}`, newDates);
+    return apiRequest(`/goals/${id}/duplicate`, 'POST', newDates);
   }
 };
 

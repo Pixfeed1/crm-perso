@@ -1,9 +1,26 @@
 // src/components/goals/GoalList.jsx
-import React from 'react';
-import { motion } from 'framer-motion';
-import { FiUsers, FiDollarSign, FiSettings, FiRadio, FiStar, FiCheckCircle, FiClock, FiZap, FiAlertCircle, FiMinusCircle, FiTarget, FiMapPin } from 'react-icons/fi';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  FiUsers, FiDollarSign, FiSettings, FiRadio, FiStar,
+  FiCheckCircle, FiClock, FiZap, FiAlertCircle, FiMinusCircle,
+  FiTarget, FiMapPin, FiPlus, FiEdit2, FiArchive, FiCopy,
+  FiChevronDown, FiChevronUp, FiTrash2
+} from 'react-icons/fi';
 
-const GoalList = ({ goals, selectedGoal, onSelectGoal }) => {
+const GoalList = ({
+  goals,
+  selectedGoal,
+  onSelectGoal,
+  onUpdateProgress,
+  onComplete,
+  onArchive,
+  onDuplicate,
+  onDelete,
+  onEdit
+}) => {
+  const [expandedGoalId, setExpandedGoalId] = useState(null);
+
   // Fonction pour calculer le pourcentage de progression
   const calculateProgress = (current, target) => {
     return Math.min(100, Math.round((current / target) * 100));
@@ -20,18 +37,20 @@ const GoalList = ({ goals, selectedGoal, onSelectGoal }) => {
 
   // Configuration des couleurs de catégorie
   const categoryConfig = {
-    'leads': { icon: <FiUsers />, label: 'Leads', color: 'text-blue-300' },
-    'revenue': { icon: <FiDollarSign />, label: 'Revenus', color: 'text-emerald-300' },
-    'productivity': { icon: <FiSettings />, label: 'Productivité', color: 'text-purple-300' },
-    'marketing': { icon: <FiRadio />, label: 'Marketing', color: 'text-amber-300' },
-    'personal': { icon: <FiStar />, label: 'Personnel', color: 'text-rose-300' }
+    'leads': { icon: <FiUsers />, label: 'Leads', color: 'text-blue-300', unit: '' },
+    'revenue': { icon: <FiDollarSign />, label: 'Revenus', color: 'text-emerald-300', unit: ' €' },
+    'productivity': { icon: <FiSettings />, label: 'Productivité', color: 'text-purple-300', unit: '' },
+    'marketing': { icon: <FiRadio />, label: 'Marketing', color: 'text-amber-300', unit: '' },
+    'personal': { icon: <FiStar />, label: 'Personnel', color: 'text-rose-300', unit: '' }
   };
 
-  // Configuration des couleurs de période
-  const periodConfig = {
-    'monthly': { label: 'Mensuel', color: 'text-blue-300' },
-    'quarterly': { label: 'Trimestriel', color: 'text-purple-300' },
-    'yearly': { label: 'Annuel', color: 'text-amber-300' }
+  // Boutons d'incrémentation rapide par catégorie
+  const quickIncrements = {
+    'leads': [1, 5, 10],
+    'revenue': [500, 1000, 5000],
+    'productivity': [1, 5, 10],
+    'marketing': [100, 500, 1000],
+    'personal': [1, 5, 10]
   };
 
   // Vérifier si un objectif est actif (en cours)
@@ -51,10 +70,10 @@ const GoalList = ({ goals, selectedGoal, onSelectGoal }) => {
 
   // Vérifier si un objectif est complété
   const isCompleted = (goal) => {
-    return goal.current_value >= goal.target_value;
+    return goal.current_value >= goal.target_value || goal.status === 'completed';
   };
 
-  // Vérifier si un objectif est expiré (passé la date de fin)
+  // Vérifier si un objectif est expiré
   const isExpired = (goal) => {
     const now = new Date();
     const endDate = new Date(goal.end_date);
@@ -64,137 +83,297 @@ const GoalList = ({ goals, selectedGoal, onSelectGoal }) => {
   // Obtenir le statut de l'objectif
   const getGoalStatus = (goal) => {
     if (isCompleted(goal)) {
-      return { text: 'Complété', color: 'bg-green-900/30 text-green-300', icon: <FiCheckCircle /> };
+      return { text: 'Complété', color: 'bg-green-500/20 text-green-300 border-green-500/30', icon: <FiCheckCircle /> };
     } else if (isUpcoming(goal)) {
-      return { text: 'À venir', color: 'bg-purple-900/30 text-purple-300', icon: <FiClock /> };
+      return { text: 'À venir', color: 'bg-purple-500/20 text-purple-300 border-purple-500/30', icon: <FiClock /> };
     } else if (isActive(goal)) {
-      return { text: 'En cours', color: 'bg-blue-900/30 text-blue-300', icon: <FiZap /> };
+      return { text: 'En cours', color: 'bg-blue-500/20 text-blue-300 border-blue-500/30', icon: <FiZap /> };
     } else if (isExpired(goal)) {
-      return { text: 'Expiré', color: 'bg-rose-900/30 text-rose-300', icon: <FiAlertCircle /> };
+      return { text: 'Expiré', color: 'bg-rose-500/20 text-rose-300 border-rose-500/30', icon: <FiAlertCircle /> };
     } else {
-      return { text: 'Inactif', color: 'bg-gray-900/30 text-gray-300', icon: <FiMinusCircle /> };
+      return { text: 'Inactif', color: 'bg-gray-500/20 text-gray-300 border-gray-500/30', icon: <FiMinusCircle /> };
     }
   };
-  
+
   // Calculer le temps restant
   const getTimeRemaining = (goal) => {
     if (!isActive(goal)) return null;
-    
+
     const now = new Date();
     const endDate = new Date(goal.end_date);
     const diffTime = endDate - now;
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    return `${diffDays} jour${diffDays > 1 ? 's' : ''} restant${diffDays > 1 ? 's' : ''}`;
+
+    if (diffDays <= 0) return 'Aujourd\'hui';
+    if (diffDays === 1) return '1 jour';
+    return `${diffDays} jours`;
   };
-  
-  // Trier les objectifs par statut puis par date de fin
+
+  // Formater la valeur avec unité
+  const formatValue = (value, category) => {
+    const config = categoryConfig[category] || { unit: '' };
+    if (category === 'revenue') {
+      return new Intl.NumberFormat('fr-FR').format(value) + config.unit;
+    }
+    return value + config.unit;
+  };
+
+  // Trier les objectifs
   const sortedGoals = [...goals].sort((a, b) => {
-    // D'abord trier par statut: en cours > à venir > expiré > complété
     const statusA = isActive(a) ? 0 : isUpcoming(a) ? 1 : isExpired(a) ? 2 : 3;
     const statusB = isActive(b) ? 0 : isUpcoming(b) ? 1 : isExpired(b) ? 2 : 3;
-    
-    if (statusA !== statusB) {
-      return statusA - statusB;
-    }
-    
-    // Ensuite trier par date de fin (la plus proche d'abord)
+
+    if (statusA !== statusB) return statusA - statusB;
     return new Date(a.end_date) - new Date(b.end_date);
   });
-  
+
   if (goals.length === 0) {
     return (
-      <div className="bg-white/10 backdrop-blur-md rounded-lg p-6 text-center">
-        <div className="text-5xl mb-4"><FiTarget /></div>
-        <h4 className="text-lg font-medium text-white mb-2">Sélectionnez un objectif dans la liste ou créez-en un nouveau</h4>
-        <p className="text-gray-300 text-sm">
-          Aucun objectif trouvé pour cette période ou avec ces filtres.
+      <div className="bg-gray-800/30 rounded-xl p-8 text-center">
+        <FiTarget className="mx-auto text-5xl text-gray-500 mb-4" />
+        <h4 className="text-lg font-medium text-white mb-2">Aucun objectif</h4>
+        <p className="text-gray-400 text-sm">
+          Créez votre premier objectif pour commencer à suivre votre progression.
         </p>
       </div>
     );
   }
-  
+
   return (
-    <div className="flex-1 space-y-4">
+    <div className="space-y-4">
       {sortedGoals.map(goal => {
-        const isSelected = selectedGoal && selectedGoal.id === goal.id;
         const progress = calculateProgress(goal.current_value, goal.target_value);
         const statusInfo = getGoalStatus(goal);
         const timeRemaining = getTimeRemaining(goal);
-        const categoryInfo = categoryConfig[goal.category] || { icon: <FiMapPin />, label: goal.category, color: 'text-gray-300' };
-        const periodInfo = periodConfig[goal.period] || { label: goal.period, color: 'text-gray-300' };
-        
+        const categoryInfo = categoryConfig[goal.category] || { icon: <FiMapPin />, label: goal.category, color: 'text-gray-300', unit: '' };
+        const isExpanded = expandedGoalId === goal.id;
+        const completed = isCompleted(goal);
+        const increments = quickIncrements[goal.category] || [1, 5, 10];
+
         return (
           <motion.div
             key={goal.id}
-            className={`p-4 rounded-xl cursor-pointer ${isSelected ? 'bg-amber-900/30' : 'bg-gray-800/50 hover:bg-gray-800/70'}`}
-            whileHover={{ scale: 1.01 }}
-            onClick={() => onSelectGoal(goal)}
             layout
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className={`rounded-xl border overflow-hidden transition-all ${
+              completed
+                ? 'bg-green-900/10 border-green-500/20'
+                : 'bg-gray-800/50 border-gray-700/50 hover:border-gray-600/50'
+            }`}
           >
-            <div className="flex justify-between">
-              <div className="flex-1">
-                <div className="flex items-center mb-2">
-                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${statusInfo.color} mr-2`}>
-                    <span className="mr-1">{statusInfo.icon}</span>
+            {/* Header de la carte */}
+            <div className="p-4">
+              {/* Ligne 1: Statut + Catégorie + Période */}
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${statusInfo.color}`}>
+                    {statusInfo.icon}
                     {statusInfo.text}
-                    {timeRemaining && <span className="ml-1">({timeRemaining})</span>}
                   </span>
-                  
-                  <span className={`flex items-center ${categoryInfo.color} text-xs mr-2 px-2 py-1 bg-gray-800/70 rounded-md`}>
-                    <span className="mr-1">{categoryInfo.icon}</span>
+
+                  <span className={`flex items-center gap-1 ${categoryInfo.color} text-xs px-2 py-1 bg-gray-800/70 rounded-md`}>
+                    {categoryInfo.icon}
                     {categoryInfo.label}
                   </span>
-                  
-                  <span className={`${periodInfo.color} text-xs px-2 py-1 bg-gray-800/70 rounded-md`}>
-                    {periodInfo.label}
+
+                  {timeRemaining && (
+                    <span className="text-xs text-gray-400 px-2 py-1 bg-gray-800/50 rounded-md">
+                      {timeRemaining} restants
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setExpandedGoalId(isExpanded ? null : goal.id); }}
+                    className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-700/50 rounded-lg transition-colors"
+                    title={isExpanded ? 'Réduire' : 'Développer'}
+                  >
+                    {isExpanded ? <FiChevronUp /> : <FiChevronDown />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Ligne 2: Nom + Valeurs */}
+              <div className="flex items-start justify-between mb-3">
+                <h3 className="font-semibold text-white text-lg leading-tight">{goal.name}</h3>
+                <div className="text-right ml-4 shrink-0">
+                  <div className="text-xl font-bold text-white">
+                    {formatValue(goal.current_value, goal.category)}
+                  </div>
+                  <div className="text-sm text-gray-400">
+                    sur {formatValue(goal.target_value, goal.category)}
+                  </div>
+                </div>
+              </div>
+
+              {/* Barre de progression */}
+              <div className="mb-3">
+                <div className="flex justify-between text-xs mb-1">
+                  <span className="text-gray-400">{formatDate(goal.start_date)} → {formatDate(goal.end_date)}</span>
+                  <span className={`font-bold ${progress >= 100 ? 'text-green-400' : progress >= 75 ? 'text-amber-400' : 'text-white'}`}>
+                    {progress}%
                   </span>
                 </div>
-                
-                <h3 className="font-medium text-white text-lg">{goal.name}</h3>
-                
-                <div className="flex justify-between text-xs text-gray-400 mt-1 mb-2">
-                  <span>{formatDate(goal.start_date)}</span>
-                  <span>→</span>
-                  <span>{formatDate(goal.end_date)}</span>
-                </div>
-                
-                {/* Barre de progression */}
-                <div className="mt-3">
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="text-gray-400">Progression</span>
-                    <span className="text-white font-medium">{progress}%</span>
-                  </div>
-                  <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
-                    <div 
-                      className={`h-full rounded-full ${
-                        progress >= 100 
-                          ? 'bg-green-500' 
-                          : progress >= 75 
-                            ? 'bg-amber-500' 
-                            : progress >= 50 
-                              ? 'bg-blue-500' 
-                              : 'bg-purple-500'
-                      }`}
-                      style={{ width: `${progress}%` }}
-                    />
-                  </div>
+                <div className="h-3 bg-gray-700/50 rounded-full overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${progress}%` }}
+                    transition={{ duration: 0.5, ease: 'easeOut' }}
+                    className={`h-full rounded-full ${
+                      progress >= 100
+                        ? 'bg-gradient-to-r from-green-500 to-emerald-400'
+                        : progress >= 75
+                          ? 'bg-gradient-to-r from-amber-500 to-yellow-400'
+                          : progress >= 50
+                            ? 'bg-gradient-to-r from-blue-500 to-cyan-400'
+                            : 'bg-gradient-to-r from-purple-500 to-pink-400'
+                    }`}
+                  />
                 </div>
               </div>
-              
-              <div className="flex flex-col justify-between items-end ml-4">
-                <div className="text-lg font-bold text-white">
-                  {goal.current_value}{goal.category === 'revenue' ? ' €' : ''}
-                  <span className="text-gray-500 text-sm"> / {goal.target_value}{goal.category === 'revenue' ? ' €' : ''}</span>
-                </div>
-                
-                {goal.milestones && goal.milestones.length > 0 && (
-                  <div className="text-xs text-gray-400 mt-2">
-                    {goal.milestones.filter(m => m.achieved).length} / {goal.milestones.length} étapes
+
+              {/* Actions rapides */}
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                {/* Boutons d'incrémentation */}
+                {!completed && onUpdateProgress && (
+                  <div className="flex items-center gap-1">
+                    {increments.map((inc) => (
+                      <button
+                        key={inc}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onUpdateProgress(goal.id, goal.current_value + inc);
+                        }}
+                        className="px-2 py-1 text-xs bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 rounded-md transition-colors flex items-center gap-1"
+                        title={`Ajouter ${formatValue(inc, goal.category)}`}
+                      >
+                        <FiPlus className="w-3 h-3" />
+                        {goal.category === 'revenue' ? `${inc}€` : inc}
+                      </button>
+                    ))}
                   </div>
                 )}
+
+                {/* Actions de l'objectif */}
+                <div className="flex items-center gap-1 ml-auto">
+                  {onEdit && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onEdit(goal); }}
+                      className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-700/50 rounded-lg transition-colors"
+                      title="Modifier"
+                    >
+                      <FiEdit2 className="w-4 h-4" />
+                    </button>
+                  )}
+
+                  {completed && onArchive && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onArchive(goal.id); }}
+                      className="p-1.5 text-amber-400 hover:text-amber-300 hover:bg-amber-900/30 rounded-lg transition-colors"
+                      title="Archiver"
+                    >
+                      <FiArchive className="w-4 h-4" />
+                    </button>
+                  )}
+
+                  {!completed && onComplete && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onComplete(goal.id); }}
+                      className="p-1.5 text-green-400 hover:text-green-300 hover:bg-green-900/30 rounded-lg transition-colors"
+                      title="Marquer comme terminé"
+                    >
+                      <FiCheckCircle className="w-4 h-4" />
+                    </button>
+                  )}
+
+                  {onDuplicate && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onDuplicate(goal.id); }}
+                      className="p-1.5 text-blue-400 hover:text-blue-300 hover:bg-blue-900/30 rounded-lg transition-colors"
+                      title="Dupliquer"
+                    >
+                      <FiCopy className="w-4 h-4" />
+                    </button>
+                  )}
+
+                  {onDelete && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onDelete(goal.id); }}
+                      className="p-1.5 text-red-400 hover:text-red-300 hover:bg-red-900/30 rounded-lg transition-colors"
+                      title="Supprimer"
+                    >
+                      <FiTrash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
+
+            {/* Section étendue avec milestones */}
+            <AnimatePresence>
+              {isExpanded && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="border-t border-gray-700/50"
+                >
+                  <div className="p-4 bg-gray-900/30">
+                    {/* Description */}
+                    {goal.description && (
+                      <div className="mb-4">
+                        <h4 className="text-xs font-medium text-gray-400 uppercase mb-1">Description</h4>
+                        <p className="text-sm text-gray-300">{goal.description}</p>
+                      </div>
+                    )}
+
+                    {/* Milestones */}
+                    {goal.milestones && goal.milestones.length > 0 && (
+                      <div>
+                        <h4 className="text-xs font-medium text-gray-400 uppercase mb-2">
+                          Étapes ({goal.milestones.filter(m => m.achieved).length}/{goal.milestones.length})
+                        </h4>
+                        <div className="space-y-2">
+                          {goal.milestones.map((milestone) => (
+                            <div
+                              key={milestone.id}
+                              className={`flex items-center justify-between p-2 rounded-lg ${
+                                milestone.achieved
+                                  ? 'bg-green-900/20 border border-green-500/20'
+                                  : 'bg-gray-800/50 border border-gray-700/30'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2">
+                                {milestone.achieved ? (
+                                  <FiCheckCircle className="text-green-400" />
+                                ) : (
+                                  <div className="w-4 h-4 rounded-full border-2 border-gray-500" />
+                                )}
+                                <span className={milestone.achieved ? 'text-green-300' : 'text-gray-300'}>
+                                  {milestone.name}
+                                </span>
+                              </div>
+                              <span className={`text-sm ${milestone.achieved ? 'text-green-400' : 'text-gray-400'}`}>
+                                {formatValue(milestone.target, goal.category)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {!goal.description && (!goal.milestones || goal.milestones.length === 0) && (
+                      <p className="text-sm text-gray-500 text-center py-2">
+                        Aucun détail supplémentaire
+                      </p>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </motion.div>
         );
       })}

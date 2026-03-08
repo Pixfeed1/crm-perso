@@ -32,7 +32,8 @@ const runMigrations = async (pool) => {
       createInitialTables,
       addGoalsTables,
       addProgressToProjects,
-      ensureActivitiesLeadNameColumn
+      ensureActivitiesLeadNameColumn,
+      addGoalsArchiveColumn
     ];
     
     // Exécuter les migrations manquantes
@@ -256,6 +257,39 @@ async function ensureActivitiesLeadNameColumn(pool) {
     console.log('[PGMigrations] Colonne lead_name ajoutée et mise à jour dans la table activities');
   } else {
     console.log('[PGMigrations] La colonne lead_name existe déjà dans la table activities');
+  }
+}
+
+// Migration 5: Ajout de la colonne is_archived et status aux objectifs
+async function addGoalsArchiveColumn(pool) {
+  console.log('[PGMigrations] Ajout des colonnes d\'archivage à la table goals...');
+
+  // Vérifier si la colonne is_archived existe déjà
+  const archivedCheck = await pool.query(`
+    SELECT column_name
+    FROM information_schema.columns
+    WHERE table_name = 'goals' AND column_name = 'is_archived'
+  `);
+
+  if (archivedCheck.rowCount === 0) {
+    await pool.query(`ALTER TABLE goals ADD COLUMN is_archived BOOLEAN DEFAULT false`);
+    console.log('[PGMigrations] Colonne is_archived ajoutée à la table goals');
+  } else {
+    console.log('[PGMigrations] La colonne is_archived existe déjà');
+  }
+
+  // Vérifier si la colonne status existe déjà
+  const statusCheck = await pool.query(`
+    SELECT column_name
+    FROM information_schema.columns
+    WHERE table_name = 'goals' AND column_name = 'status'
+  `);
+
+  if (statusCheck.rowCount === 0) {
+    await pool.query(`ALTER TABLE goals ADD COLUMN status VARCHAR(20) DEFAULT 'active'`);
+    console.log('[PGMigrations] Colonne status ajoutée à la table goals');
+  } else {
+    console.log('[PGMigrations] La colonne status existe déjà');
   }
 }
 

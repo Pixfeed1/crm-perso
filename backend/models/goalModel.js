@@ -1,11 +1,12 @@
 // backend/models/goalModel.js
 
 /**
- * Récupère tous les objectifs
+ * Récupère tous les objectifs (non archivés par défaut)
  */
 const getAllGoals = (db) => {
   return new Promise((resolve, reject) => {
-    const query = 'SELECT * FROM goals ORDER BY start_date DESC';
+    // Récupérer tous les objectifs, le frontend filtre les archivés
+    const query = 'SELECT * FROM goals WHERE (is_archived IS NULL OR is_archived = false) ORDER BY start_date DESC';
 
     db.all(query, [], (err, goals) => {
       if (err) {
@@ -402,6 +403,151 @@ const updateMilestonesAchievement = (db, goalId, current_value) => {
   });
 };
 
+/**
+ * Archiver un objectif
+ */
+const archiveGoal = (db, id) => {
+  return new Promise((resolve, reject) => {
+    const query = `
+      UPDATE goals
+      SET is_archived = true, status = 'archived', updated_at = ?
+      WHERE id = ?
+    `;
+
+    const now = new Date().toISOString();
+
+    db.run(query, [now, id], function(err) {
+      if (err) {
+        console.error('[GoalModel] Erreur lors de l\'archivage de l\'objectif:', err);
+        reject(err);
+      } else {
+        getGoalById(db, id)
+          .then(goal => resolve(goal))
+          .catch(err => reject(err));
+      }
+    });
+  });
+};
+
+/**
+ * Désarchiver un objectif
+ */
+const unarchiveGoal = (db, id) => {
+  return new Promise((resolve, reject) => {
+    const query = `
+      UPDATE goals
+      SET is_archived = false, status = 'active', updated_at = ?
+      WHERE id = ?
+    `;
+
+    const now = new Date().toISOString();
+
+    db.run(query, [now, id], function(err) {
+      if (err) {
+        console.error('[GoalModel] Erreur lors du désarchivage de l\'objectif:', err);
+        reject(err);
+      } else {
+        getGoalById(db, id)
+          .then(goal => resolve(goal))
+          .catch(err => reject(err));
+      }
+    });
+  });
+};
+
+/**
+ * Dupliquer un objectif (avec nouvelles dates)
+ */
+const duplicateGoal = (db, id, newDates) => {
+  return new Promise((resolve, reject) => {
+    // D'abord, récupérer l'objectif original
+    getGoalById(db, id)
+      .then(originalGoal => {
+        if (!originalGoal) {
+          return reject(new Error('Objectif non trouvé'));
+        }
+
+        // Créer une copie avec les nouvelles dates
+        const duplicateData = {
+          name: originalGoal.name + ' (copie)',
+          description: originalGoal.description,
+          target_value: originalGoal.target_value,
+          current_value: 0, // Réinitialiser la progression
+          category: originalGoal.category,
+          period: originalGoal.period,
+          start_date: newDates?.start_date || originalGoal.start_date,
+          end_date: newDates?.end_date || originalGoal.end_date
+        };
+
+        return createGoal(db, duplicateData);
+      })
+      .then(newGoal => {
+        // Copier les milestones
+        getGoalMilestones(db, id)
+          .then(milestones => {
+            const milestonePromises = milestones.map(m =>
+              createMilestone(db, newGoal.id, { name: m.name, target: m.target })
+            );
+            return Promise.all(milestonePromises).then(() => newGoal);
+          })
+          .then(goal => {
+            // Récupérer l'objectif avec ses milestones
+            return getGoalById(db, goal.id);
+          })
+          .then(goal => resolve(goal))
+          .catch(err => {
+            // Même si les milestones échouent, retourner l'objectif
+            resolve(newGoal);
+          });
+      })
+      .catch(err => reject(err));
+  });
+};
+
+/**
+ * Récupère les objectifs archivés
+ */
+const getArchivedGoals = (db) => {
+  return new Promise((resolve, reject) => {
+    const query = 'SELECT * FROM goals WHERE is_archived = true ORDER BY updated_at DESC';
+
+    db.all(query, [], (err, goals) => {
+      if (err) {
+        console.error('[GoalModel] Erreur lors de la récupération des objectifs archivés:', err);
+        reject(err);
+      } else {
+        resolve(goals || []);
+      }
+    });
+  });
+};
+
+/**
+ * Marquer un objectif comme terminé
+ */
+const completeGoal = (db, id) => {
+  return new Promise((resolve, reject) => {
+    const query = `
+      UPDATE goals
+      SET status = 'completed', updated_at = ?
+      WHERE id = ?
+    `;
+
+    const now = new Date().toISOString();
+
+    db.run(query, [now, id], function(err) {
+      if (err) {
+        console.error('[GoalModel] Erreur lors de la completion de l\'objectif:', err);
+        reject(err);
+      } else {
+        getGoalById(db, id)
+          .then(goal => resolve(goal))
+          .catch(err => reject(err));
+      }
+    });
+  });
+};
+
 module.exports = {
   getAllGoals,
   getGoalById,
@@ -414,5 +560,10 @@ module.exports = {
   updateMilestone,
   deleteMilestone,
   checkMilestoneExists,
-  updateMilestonesAchievement
+  updateMilestonesAchievement,
+  archiveGoal,
+  unarchiveGoal,
+  duplicateGoal,
+  getArchivedGoals,
+  completeGoal
 };

@@ -239,4 +239,94 @@ router.delete('/:goalId/milestones/:milestoneId', async (req, res) => {
   }
 });
 
+// Récupérer les objectifs archivés
+router.get('/archived/list', async (req, res) => {
+  const db = req.app.locals.db;
+
+  try {
+    const archivedGoals = await goalModel.getArchivedGoals(db);
+    res.json(archivedGoals);
+  } catch (error) {
+    console.error('Erreur lors de la récupération des objectifs archivés:', error);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
+});
+
+// Archiver un objectif
+router.patch('/:id/archive', async (req, res) => {
+  const db = req.app.locals.db;
+  const { id } = req.params;
+
+  try {
+    const existingGoal = await goalModel.getGoalById(db, id);
+    if (!existingGoal) {
+      return res.status(404).json({ message: 'Objectif non trouvé' });
+    }
+
+    const archivedGoal = await goalModel.archiveGoal(db, id);
+    res.json(archivedGoal);
+  } catch (error) {
+    console.error('Erreur lors de l\'archivage de l\'objectif:', error);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
+});
+
+// Désarchiver un objectif
+router.patch('/:id/unarchive', async (req, res) => {
+  const db = req.app.locals.db;
+  const { id } = req.params;
+
+  try {
+    const existingGoal = await goalModel.getGoalById(db, id);
+    if (!existingGoal) {
+      return res.status(404).json({ message: 'Objectif non trouvé' });
+    }
+
+    const unarchivedGoal = await goalModel.unarchiveGoal(db, id);
+    res.json(unarchivedGoal);
+  } catch (error) {
+    console.error('Erreur lors du désarchivage de l\'objectif:', error);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
+});
+
+// Marquer un objectif comme terminé
+router.patch('/:id/complete', async (req, res) => {
+  const db = req.app.locals.db;
+  const { id } = req.params;
+
+  try {
+    const existingGoal = await goalModel.getGoalById(db, id);
+    if (!existingGoal) {
+      return res.status(404).json({ message: 'Objectif non trouvé' });
+    }
+
+    const completedGoal = await goalModel.completeGoal(db, id);
+    res.json(completedGoal);
+  } catch (error) {
+    console.error('Erreur lors de la completion de l\'objectif:', error);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
+});
+
+// Dupliquer un objectif
+router.post('/:id/duplicate', async (req, res) => {
+  const db = req.app.locals.db;
+  const { id } = req.params;
+  const { start_date, end_date } = req.body;
+
+  try {
+    const existingGoal = await goalModel.getGoalById(db, id);
+    if (!existingGoal) {
+      return res.status(404).json({ message: 'Objectif non trouvé' });
+    }
+
+    const duplicatedGoal = await goalModel.duplicateGoal(db, id, { start_date, end_date });
+    res.status(201).json(duplicatedGoal);
+  } catch (error) {
+    console.error('Erreur lors de la duplication de l\'objectif:', error);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
+});
+
 module.exports = router;
