@@ -96,7 +96,7 @@ const eventController = {
       description || null,
       start_datetime,
       end_datetime || start_datetime, // Si pas de date de fin, utiliser la date de début
-      all_day ? 1 : 0,
+      all_day ? true : false,
       location || null,
       category || null,
       priority || null,
@@ -181,7 +181,7 @@ const eventController = {
       
       if (all_day !== undefined) {
         updates.push('all_day = ?');
-        params.push(all_day ? 1 : 0);
+        params.push(all_day ? true : false);
       }
       
       if (location !== undefined) {

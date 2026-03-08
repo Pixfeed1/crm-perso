@@ -307,7 +307,7 @@ const projectController = {
           title, 
           description || null, 
           deadline || null, 
-          completed ? 1 : 0
+          completed ? true : false
         ], function(insertErr) {
           if (insertErr) {
             console.error('Erreur lors de la création de la tâche:', insertErr);
@@ -373,7 +373,7 @@ updateTask: (req, res) => {
       
       if (completed !== undefined) {
         updates.push('completed = ?');
-        params.push(completed ? 1 : 0);
+        params.push(completed ? true : false);
       }
       
       // Ajouter les IDs pour la clause WHERE

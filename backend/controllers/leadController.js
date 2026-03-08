@@ -324,7 +324,7 @@ const leadController = {
             position || null, 
             email || null, 
             phone || null, 
-            is_primary ? 1 : 0, 
+            is_primary ? true : false, 
             notes || null, 
             now
           ], function(insertErr) {
@@ -432,7 +432,7 @@ const leadController = {
           
           if (is_primary !== undefined) {
             updates.push('is_primary = ?');
-            params.push(is_primary ? 1 : 0);
+            params.push(is_primary ? true : false);
           }
           
           if (notes !== undefined) {
