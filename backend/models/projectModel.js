@@ -300,7 +300,7 @@ const addTask = (db, projectId, taskData) => {
       title,
       description || null,
       deadline || null,
-      completed ? 1 : 0,
+      completed ? true : false,
       priority || 'medium'
     ], function(err) {
       if (err) {
@@ -359,7 +359,7 @@ const updateTask = (db, projectId, taskId, taskData) => {
 
     if (taskData.completed !== undefined) {
       updates.push('completed = ?');
-      params.push(taskData.completed ? 1 : 0);
+      params.push(taskData.completed ? true : false);
     }
 
     if (updates.length === 0) {

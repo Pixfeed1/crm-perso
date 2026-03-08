@@ -277,7 +277,7 @@ const createContact = (db, leadId, contactData) => {
 
       db.run(
         query,
-        [leadId, name, position || null, email || null, phone || null, is_primary ? 1 : 0, notes || null, now],
+        [leadId, name, position || null, email || null, phone || null, is_primary ? true : false, notes || null, now],
         function(err) {
           if (err) {
             console.error('[LeadModel] Erreur lors de la création du contact:', err);
@@ -324,7 +324,7 @@ const updateContact = (db, contactId, leadId, contactData) => {
     }
     if (contactData.is_primary !== undefined) {
       fields.push('is_primary = ?');
-      values.push(contactData.is_primary ? 1 : 0);
+      values.push(contactData.is_primary ? true : false);
     }
     if (contactData.notes !== undefined) {
       fields.push('notes = ?');

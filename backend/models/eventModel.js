@@ -88,7 +88,7 @@ const createEvent = (db, eventData) => {
         description || null,
         start_datetime,
         end_datetime || start_datetime, // Si pas de date de fin, utiliser la date de début
-        all_day ? 1 : 0,
+        all_day ? true : false,
         location || null,
         category || null,
         priority || null,
@@ -137,7 +137,7 @@ const updateEvent = (db, id, eventData) => {
     }
     if (eventData.all_day !== undefined) {
       fields.push('all_day = ?');
-      values.push(eventData.all_day ? 1 : 0);
+      values.push(eventData.all_day ? true : false);
     }
     if (eventData.location !== undefined) {
       fields.push('location = ?');
@@ -318,7 +318,7 @@ const createRecurringEvent = (db, eventData) => {
         description || null,
         start_datetime,
         end_datetime || start_datetime,
-        all_day ? 1 : 0,
+        all_day ? true : false,
         location || null,
         category || null,
         priority || null,
@@ -441,7 +441,7 @@ const createEventException = (db, parentEventId, exceptionDate, modifiedData) =>
         description || null,
         start_datetime,
         end_datetime || start_datetime,
-        all_day ? 1 : 0,
+        all_day ? true : false,
         location || null,
         category || null,
         priority || null,
