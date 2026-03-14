@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { FiSave, FiBriefcase, FiMail, FiCheckCircle, FiXCircle, FiAlertCircle, FiVideo, FiBell } from 'react-icons/fi';
+import DOMPurify from 'dompurify';
 import { settingsAPI } from '../services/settingsAPI';
 import { useToast } from '../hooks/useToast';
 import VideoConferenceSettings from '../components/settings/VideoConferenceSettings';
@@ -573,7 +574,7 @@ const Settings = () => {
                   <div className="p-4 bg-gray-900/50 rounded-lg border border-gray-700 overflow-auto">
                     <div
                       style={{ display: 'flow-root' }}
-                      dangerouslySetInnerHTML={{ __html: formData.email_signature }}
+                      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(formData.email_signature) }}
                     />
                   </div>
                 </div>

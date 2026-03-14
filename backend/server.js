@@ -43,8 +43,9 @@ app.use(morgan('dev'));
 
 // Vérifier si JWT_SECRET est défini
 if (!process.env.JWT_SECRET) {
-  console.warn("ATTENTION: JWT_SECRET n'est pas défini. Utilisation d'une clé par défaut pour le développement.");
-  process.env.JWT_SECRET = 'cle_secrete_temporaire_ne_pas_utiliser_en_production';
+  console.error("ERREUR CRITIQUE: JWT_SECRET n'est pas défini dans les variables d'environnement.");
+  console.error("Ajoutez JWT_SECRET dans votre fichier .env");
+  process.exit(1);
 }
 
 // Vérifier si les variables d'environnement PostgreSQL sont définies

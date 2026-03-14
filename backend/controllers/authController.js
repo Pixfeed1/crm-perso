@@ -34,9 +34,11 @@ const login = async (req, res) => {
     
     // Génération du token JWT avec gestion d'erreur spécifique
     try {
-      // Utiliser une solution de secours si JWT_SECRET n'est pas défini
-      const jwtSecret = process.env.JWT_SECRET || 'cle_secrete_temporaire_ne_pas_utiliser_en_production';
-      console.log("[AUTH] Clé secrète utilisée:", jwtSecret ? "Définie" : "Non définie");
+      const jwtSecret = process.env.JWT_SECRET;
+      if (!jwtSecret) {
+        console.error("[AUTH] ERREUR: JWT_SECRET non défini");
+        return res.status(500).json({ message: 'Configuration serveur invalide' });
+      }
       
       // Préparer le payload
       const payload = { 
