@@ -85,8 +85,8 @@ class DatabaseConfig {
   async initDefaultUser() {
     console.log('[DBConfig] Vérification de l\'utilisateur par défaut...');
     
-    const username = process.env.DEFAULT_ADMIN_USERNAME;
-    const password = process.env.DEFAULT_ADMIN_PASSWORD;
+    const username = process.env.DEFAULT_USER_USERNAME;
+    const password = process.env.DEFAULT_USER_PASSWORD;
 
     if (!username || !password) {
       console.log('[DBConfig] Variables DEFAULT_ADMIN_USERNAME/PASSWORD non définies, pas de création d\'utilisateur par défaut');
