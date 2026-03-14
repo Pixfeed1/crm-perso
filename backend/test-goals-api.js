@@ -1,9 +1,11 @@
 // test-goals-api.js
+require('dotenv').config();
 const axios = require('axios');
 
 // Configuration
-const API_URL = 'http://localhost:5000/api/goals';
-const TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MiwidXNlcm5hbWUiOiJtdmFlcnRhbiIsImlhdCI6MTc0MzUxMDA2MywiZXhwIjoxNzQzNTk2NDYzfQ.kAxhPkB6h4iIT9a3PxEW4xhL2dylpH8HMzJFKnmQNUM';
+const BASE_URL = process.env.API_TEST_URL || `http://localhost:${process.env.PORT || 5000}`;
+const API_URL = `${BASE_URL}/api/goals`;
+const TOKEN = process.env.TEST_JWT_TOKEN || 'REMPLACEZ_PAR_UN_TOKEN_VALIDE';
 
 // Données de test pour un nouvel objectif
 const goalData = {

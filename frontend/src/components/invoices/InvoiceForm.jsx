@@ -1,7 +1,7 @@
 // src/components/invoices/InvoiceForm.jsx - Version avec Stepper UX
 import React, { useState, useEffect } from 'react';
 import { FiPlus, FiTrash2, FiSave, FiX, FiChevronRight, FiChevronLeft, FiChevronDown, FiChevronUp, FiUpload } from 'react-icons/fi';
-import { clientsAPI, projectsAPI, tvaRegimesAPI, paymentMethodsAPI } from '../../services/api';
+import { clientsAPI, projectsAPI, tvaRegimesAPI, paymentMethodsAPI, API_BASE_URL } from '../../services/api';
 import { quotesAPI } from '../../services/quotesAPI';
 import FileUpload from '../common/FileUpload';
 import Stepper from '../common/Stepper';
@@ -100,7 +100,7 @@ const InvoiceForm = ({ invoice = null, onSave, onCancel }) => {
   const handleFilesUpdated = async () => {
     if (invoice && invoice.id) {
       try {
-        const response = await fetch(`http://localhost:5000/api/invoices/${invoice.id}`, {
+        const response = await fetch(`${API_BASE_URL}/invoices/${invoice.id}`, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
           }

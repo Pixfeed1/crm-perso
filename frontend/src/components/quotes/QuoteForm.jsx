@@ -1,7 +1,7 @@
 // src/components/quotes/QuoteForm.jsx - Version avec Stepper UX
 import React, { useState, useEffect } from 'react';
 import { FiPlus, FiTrash2, FiSave, FiX, FiEdit, FiChevronRight, FiChevronLeft, FiChevronDown, FiChevronUp, FiUpload } from 'react-icons/fi';
-import { clientsAPI, projectsAPI, tvaRegimesAPI, paymentMethodsAPI } from '../../services/api';
+import { clientsAPI, projectsAPI, tvaRegimesAPI, paymentMethodsAPI, API_BASE_URL } from '../../services/api';
 import FileUpload from '../common/FileUpload';
 import SignaturePad from '../common/SignaturePad';
 import Stepper from '../common/Stepper';
@@ -110,7 +110,7 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
   const handleFilesUpdated = async () => {
     if (quote && quote.id) {
       try {
-        const response = await fetch(`http://localhost:5000/api/quotes/${quote.id}`, {
+        const response = await fetch(`${API_BASE_URL}/quotes/${quote.id}`, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
           }

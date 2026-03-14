@@ -6,7 +6,7 @@
 import { getAuthToken, clearAuth, isTokenExpired } from './authService';
 
 // URL de base de l'API
-const API_BASE_URL = process.env.NODE_ENV === 'production' 
+export const API_BASE_URL = process.env.NODE_ENV === 'production'
   ? 'https://crm.pixfeed.net/api'
   : 'http://localhost:5000/api';
 

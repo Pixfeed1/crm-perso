@@ -1,9 +1,10 @@
 // backend/test-webhook-maintenance.js
 // Script de test pour le webhook maintenance WordPress
-
+require('dotenv').config();
 const axios = require('axios');
 
-const API_URL = 'http://localhost:5000/api/webhooks/maintenance';
+const BASE_URL = process.env.API_TEST_URL || `http://localhost:${process.env.PORT || 5000}`;
+const API_URL = `${BASE_URL}/api/webhooks/maintenance`;
 
 // Données de test simulant un paiement Stripe via WordPress
 const testData = {
@@ -69,13 +70,13 @@ async function testWebhook() {
 // Vérifier si le serveur est accessible
 console.log('🔍 Vérification que le serveur est accessible...\n');
 
-axios.get('http://localhost:5000/api/debug')
+axios.get(`${BASE_URL}/api/debug`)
   .then(() => {
     console.log('✅ Serveur accessible\n');
     return testWebhook();
   })
   .catch(() => {
-    console.error('❌ Le serveur n\'est pas accessible sur http://localhost:5000');
+    console.error(`❌ Le serveur n'est pas accessible sur ${BASE_URL}`);
     console.error('💡 Démarrez le serveur avec: cd backend && node server.js');
     process.exit(1);
   });
