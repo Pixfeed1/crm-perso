@@ -1,22 +1,25 @@
 // backend/models/eventModel.js
+// Converti en PostgreSQL natif ($1, $2, etc.)
+
+const EVENT_COLUMNS = 'id, title, description, start_datetime, end_datetime, all_day, location, category, priority, color, reminder_time, activity_id, recurrence_type, recurrence_interval, recurrence_days, recurrence_end_type, recurrence_end_date, recurrence_count, parent_event_id, is_exception, exception_date, created_at';
 
 /**
- * Récupère tous les événements avec filtres de date optionnels
+ * Recupere tous les evenements avec filtres de date optionnels
  */
 const getAllEvents = (db, filters = {}) => {
   return new Promise((resolve, reject) => {
-    let query = 'SELECT * FROM events';
+    let query = `SELECT ${EVENT_COLUMNS} FROM events`;
     const params = [];
+    let paramIndex = 1;
 
-    // Ajouter des filtres de date si spécifiés
     if (filters.start_date && filters.end_date) {
-      query += ' WHERE start_datetime >= ? AND end_datetime <= ?';
+      query += ` WHERE start_datetime >= $${paramIndex++} AND end_datetime <= $${paramIndex++}`;
       params.push(filters.start_date, filters.end_date);
     } else if (filters.start_date) {
-      query += ' WHERE start_datetime >= ?';
+      query += ` WHERE start_datetime >= $${paramIndex++}`;
       params.push(filters.start_date);
     } else if (filters.end_date) {
-      query += ' WHERE end_datetime <= ?';
+      query += ` WHERE end_datetime <= $${paramIndex++}`;
       params.push(filters.end_date);
     }
 
@@ -24,7 +27,6 @@ const getAllEvents = (db, filters = {}) => {
 
     db.all(query, params, (err, events) => {
       if (err) {
-        console.error('[EventModel] Erreur lors de la récupération des événements:', err);
         reject(err);
       } else {
         resolve(events || []);
@@ -34,13 +36,12 @@ const getAllEvents = (db, filters = {}) => {
 };
 
 /**
- * Récupère un événement par son ID
+ * Recupere un evenement par son ID
  */
 const getEventById = (db, id) => {
   return new Promise((resolve, reject) => {
-    db.get('SELECT * FROM events WHERE id = ?', [id], (err, event) => {
+    db.get(`SELECT ${EVENT_COLUMNS} FROM events WHERE id = $1`, [id], (err, event) => {
       if (err) {
-        console.error('[EventModel] Erreur lors de la récupération de l\'événement:', err);
         reject(err);
       } else {
         resolve(event);
@@ -50,7 +51,7 @@ const getEventById = (db, id) => {
 };
 
 /**
- * Crée un nouvel événement
+ * Cree un nouvel evenement
  */
 const createEvent = (db, eventData) => {
   return new Promise((resolve, reject) => {
@@ -69,25 +70,26 @@ const createEvent = (db, eventData) => {
     } = eventData;
 
     if (!title || !start_datetime) {
-      return reject(new Error('Titre et date de début sont requis'));
+      return reject(new Error('Titre et date de debut sont requis'));
     }
 
     const query = `
       INSERT INTO events (
         title, description, start_datetime, end_datetime, all_day,
         location, category, priority, color, reminder_time, activity_id, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      RETURNING id
     `;
 
     const now = new Date().toISOString();
 
-    db.run(
+    db.get(
       query,
       [
         title,
         description || null,
         start_datetime,
-        end_datetime || start_datetime, // Si pas de date de fin, utiliser la date de début
+        end_datetime || start_datetime,
         all_day ? true : false,
         location || null,
         category || null,
@@ -97,12 +99,12 @@ const createEvent = (db, eventData) => {
         activity_id || null,
         now
       ],
-      function(err) {
+      function(err, result) {
         if (err) {
-          console.error('[EventModel] Erreur lors de la création de l\'événement:', err);
           reject(err);
         } else {
-          getEventById(db, this.lastID)
+          const newId = result?.id || this.lastID;
+          getEventById(db, newId)
             .then(event => resolve(event))
             .catch(err => reject(err));
         }
@@ -112,70 +114,69 @@ const createEvent = (db, eventData) => {
 };
 
 /**
- * Met à jour un événement
+ * Met a jour un evenement (requete dynamique)
  */
 const updateEvent = (db, id, eventData) => {
   return new Promise((resolve, reject) => {
     const fields = [];
     const values = [];
+    let paramIndex = 1;
 
     if (eventData.title !== undefined) {
-      fields.push('title = ?');
+      fields.push(`title = $${paramIndex++}`);
       values.push(eventData.title);
     }
     if (eventData.description !== undefined) {
-      fields.push('description = ?');
+      fields.push(`description = $${paramIndex++}`);
       values.push(eventData.description);
     }
     if (eventData.start_datetime !== undefined) {
-      fields.push('start_datetime = ?');
+      fields.push(`start_datetime = $${paramIndex++}`);
       values.push(eventData.start_datetime);
     }
     if (eventData.end_datetime !== undefined) {
-      fields.push('end_datetime = ?');
+      fields.push(`end_datetime = $${paramIndex++}`);
       values.push(eventData.end_datetime);
     }
     if (eventData.all_day !== undefined) {
-      fields.push('all_day = ?');
+      fields.push(`all_day = $${paramIndex++}`);
       values.push(eventData.all_day ? true : false);
     }
     if (eventData.location !== undefined) {
-      fields.push('location = ?');
+      fields.push(`location = $${paramIndex++}`);
       values.push(eventData.location);
     }
     if (eventData.category !== undefined) {
-      fields.push('category = ?');
+      fields.push(`category = $${paramIndex++}`);
       values.push(eventData.category);
     }
     if (eventData.priority !== undefined) {
-      fields.push('priority = ?');
+      fields.push(`priority = $${paramIndex++}`);
       values.push(eventData.priority);
     }
     if (eventData.color !== undefined) {
-      fields.push('color = ?');
+      fields.push(`color = $${paramIndex++}`);
       values.push(eventData.color);
     }
     if (eventData.reminder_time !== undefined) {
-      fields.push('reminder_time = ?');
+      fields.push(`reminder_time = $${paramIndex++}`);
       values.push(eventData.reminder_time);
     }
     if (eventData.activity_id !== undefined) {
-      fields.push('activity_id = ?');
+      fields.push(`activity_id = $${paramIndex++}`);
       values.push(eventData.activity_id);
     }
 
     if (fields.length === 0) {
-      return reject(new Error('Aucun champ à mettre à jour'));
+      return reject(new Error('Aucun champ a mettre a jour'));
     }
 
-    // Ajouter l'ID pour la clause WHERE
     values.push(id);
 
-    const query = `UPDATE events SET ${fields.join(', ')} WHERE id = ?`;
+    const query = `UPDATE events SET ${fields.join(', ')} WHERE id = $${paramIndex} RETURNING id`;
 
     db.run(query, values, function(err) {
       if (err) {
-        console.error('[EventModel] Erreur lors de la mise à jour de l\'événement:', err);
         reject(err);
       } else {
         getEventById(db, id)
@@ -187,13 +188,12 @@ const updateEvent = (db, id, eventData) => {
 };
 
 /**
- * Supprime un événement
+ * Supprime un evenement
  */
 const deleteEvent = (db, id) => {
   return new Promise((resolve, reject) => {
-    db.run('DELETE FROM events WHERE id = ?', [id], function(err) {
+    db.run('DELETE FROM events WHERE id = $1', [id], function(err) {
       if (err) {
-        console.error('[EventModel] Erreur lors de la suppression de l\'événement:', err);
         reject(err);
       } else {
         resolve({ success: true, changes: this.changes });
@@ -203,15 +203,14 @@ const deleteEvent = (db, id) => {
 };
 
 /**
- * Récupère les événements d'une activité spécifique
+ * Recupere les evenements d'une activite specifique
  */
 const getEventsByActivity = (db, activityId) => {
   return new Promise((resolve, reject) => {
-    const query = 'SELECT * FROM events WHERE activity_id = ? ORDER BY start_datetime ASC';
+    const query = `SELECT ${EVENT_COLUMNS} FROM events WHERE activity_id = $1 ORDER BY start_datetime ASC`;
 
     db.all(query, [activityId], (err, events) => {
       if (err) {
-        console.error('[EventModel] Erreur lors de la récupération des événements de l\'activité:', err);
         reject(err);
       } else {
         resolve(events || []);
@@ -221,19 +220,18 @@ const getEventsByActivity = (db, activityId) => {
 };
 
 /**
- * Récupère les événements dans une plage de dates
+ * Recupere les evenements dans une plage de dates
  */
 const getEventsInRange = (db, startDate, endDate) => {
   return new Promise((resolve, reject) => {
     const query = `
-      SELECT * FROM events
-      WHERE start_datetime >= ? AND end_datetime <= ?
+      SELECT ${EVENT_COLUMNS} FROM events
+      WHERE start_datetime >= $1 AND end_datetime <= $2
       ORDER BY start_datetime ASC
     `;
 
     db.all(query, [startDate, endDate], (err, events) => {
       if (err) {
-        console.error('[EventModel] Erreur lors de la récupération des événements dans la plage:', err);
         reject(err);
       } else {
         resolve(events || []);
@@ -243,21 +241,20 @@ const getEventsInRange = (db, startDate, endDate) => {
 };
 
 /**
- * Récupère les événements à venir
+ * Recupere les evenements a venir
  */
 const getUpcomingEvents = (db, limit = 10) => {
   return new Promise((resolve, reject) => {
     const now = new Date().toISOString();
     const query = `
-      SELECT * FROM events
-      WHERE start_datetime >= ?
+      SELECT ${EVENT_COLUMNS} FROM events
+      WHERE start_datetime >= $1
       ORDER BY start_datetime ASC
-      LIMIT ?
+      LIMIT $2
     `;
 
     db.all(query, [now, limit], (err, events) => {
       if (err) {
-        console.error('[EventModel] Erreur lors de la récupération des événements à venir:', err);
         reject(err);
       } else {
         resolve(events || []);
@@ -267,7 +264,7 @@ const getUpcomingEvents = (db, limit = 10) => {
 };
 
 /**
- * Crée un événement récurrent avec ses paramètres de récurrence
+ * Cree un evenement recurrent avec ses parametres de recurrence
  */
 const createRecurringEvent = (db, eventData) => {
   return new Promise((resolve, reject) => {
@@ -292,11 +289,11 @@ const createRecurringEvent = (db, eventData) => {
     } = eventData;
 
     if (!title || !start_datetime) {
-      return reject(new Error('Titre et date de début sont requis'));
+      return reject(new Error('Titre et date de debut sont requis'));
     }
 
     if (!recurrence_type || recurrence_type === 'NONE') {
-      return reject(new Error('Type de récurrence requis pour un événement récurrent'));
+      return reject(new Error('Type de recurrence requis pour un evenement recurrent'));
     }
 
     const query = `
@@ -306,12 +303,13 @@ const createRecurringEvent = (db, eventData) => {
         recurrence_type, recurrence_interval, recurrence_days,
         recurrence_end_type, recurrence_end_date, recurrence_count,
         created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+      RETURNING id
     `;
 
     const now = new Date().toISOString();
 
-    db.run(
+    db.get(
       query,
       [
         title,
@@ -333,12 +331,12 @@ const createRecurringEvent = (db, eventData) => {
         recurrence_count || null,
         now
       ],
-      function(err) {
+      function(err, result) {
         if (err) {
-          console.error('[EventModel] Erreur lors de la création de l\'événement récurrent:', err);
           reject(err);
         } else {
-          getEventById(db, this.lastID)
+          const newId = result?.id || this.lastID;
+          getEventById(db, newId)
             .then(event => resolve(event))
             .catch(err => reject(err));
         }
@@ -348,15 +346,14 @@ const createRecurringEvent = (db, eventData) => {
 };
 
 /**
- * Récupère les exceptions (occurrences supprimées) d'un événement récurrent
+ * Recupere les exceptions d'un evenement recurrent
  */
 const getEventExceptions = (db, eventId) => {
   return new Promise((resolve, reject) => {
-    const query = 'SELECT exception_date FROM event_exceptions WHERE parent_event_id = ?';
+    const query = 'SELECT exception_date FROM event_exceptions WHERE parent_event_id = $1';
 
     db.all(query, [eventId], (err, exceptions) => {
       if (err) {
-        console.error('[EventModel] Erreur lors de la récupération des exceptions:', err);
         reject(err);
       } else {
         resolve((exceptions || []).map(e => e.exception_date));
@@ -366,38 +363,37 @@ const getEventExceptions = (db, eventId) => {
 };
 
 /**
- * Ajoute une exception (supprime une occurrence spécifique d'un événement récurrent)
+ * Ajoute une exception
  */
 const addEventException = (db, eventId, exceptionDate) => {
   return new Promise((resolve, reject) => {
     const query = `
       INSERT INTO event_exceptions (parent_event_id, exception_date, created_at)
-      VALUES (?, ?, ?)
+      VALUES ($1, $2, $3)
+      RETURNING id
     `;
 
     const now = new Date().toISOString();
 
-    db.run(query, [eventId, exceptionDate, now], function(err) {
+    db.get(query, [eventId, exceptionDate, now], function(err, result) {
       if (err) {
-        console.error('[EventModel] Erreur lors de l\'ajout de l\'exception:', err);
         reject(err);
       } else {
-        resolve({ success: true, id: this.lastID });
+        resolve({ success: true, id: result?.id || this.lastID });
       }
     });
   });
 };
 
 /**
- * Supprime une exception (restaure une occurrence supprimée)
+ * Supprime une exception
  */
 const removeEventException = (db, eventId, exceptionDate) => {
   return new Promise((resolve, reject) => {
-    const query = 'DELETE FROM event_exceptions WHERE parent_event_id = ? AND exception_date = ?';
+    const query = 'DELETE FROM event_exceptions WHERE parent_event_id = $1 AND exception_date = $2';
 
     db.run(query, [eventId, exceptionDate], function(err) {
       if (err) {
-        console.error('[EventModel] Erreur lors de la suppression de l\'exception:', err);
         reject(err);
       } else {
         resolve({ success: true, changes: this.changes });
@@ -407,7 +403,7 @@ const removeEventException = (db, eventId, exceptionDate) => {
 };
 
 /**
- * Crée une modification spécifique d'une occurrence (événement exception)
+ * Cree une modification specifique d'une occurrence
  */
 const createEventException = (db, parentEventId, exceptionDate, modifiedData) => {
   return new Promise((resolve, reject) => {
@@ -429,12 +425,13 @@ const createEventException = (db, parentEventId, exceptionDate, modifiedData) =>
         title, description, start_datetime, end_datetime, all_day,
         location, category, priority, color, reminder_time,
         parent_event_id, is_exception, exception_date, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+      RETURNING id
     `;
 
     const now = new Date().toISOString();
 
-    db.run(
+    db.get(
       query,
       [
         title,
@@ -448,16 +445,16 @@ const createEventException = (db, parentEventId, exceptionDate, modifiedData) =>
         color || null,
         reminder_time || null,
         parentEventId,
-        1, // is_exception = true
+        true,
         exceptionDate,
         now
       ],
-      function(err) {
+      function(err, result) {
         if (err) {
-          console.error('[EventModel] Erreur lors de la création de l\'exception modifiée:', err);
           reject(err);
         } else {
-          getEventById(db, this.lastID)
+          const newId = result?.id || this.lastID;
+          getEventById(db, newId)
             .then(event => resolve(event))
             .catch(err => reject(err));
         }
@@ -467,19 +464,18 @@ const createEventException = (db, parentEventId, exceptionDate, modifiedData) =>
 };
 
 /**
- * Récupère toutes les occurrences modifiées (exceptions) d'un événement récurrent
+ * Recupere toutes les occurrences modifiees d'un evenement recurrent
  */
 const getModifiedOccurrences = (db, eventId) => {
   return new Promise((resolve, reject) => {
     const query = `
-      SELECT * FROM events
-      WHERE parent_event_id = ? AND is_exception = 1
+      SELECT ${EVENT_COLUMNS} FROM events
+      WHERE parent_event_id = $1 AND is_exception = true
       ORDER BY exception_date ASC
     `;
 
     db.all(query, [eventId], (err, events) => {
       if (err) {
-        console.error('[EventModel] Erreur lors de la récupération des occurrences modifiées:', err);
         reject(err);
       } else {
         resolve(events || []);

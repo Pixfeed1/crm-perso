@@ -1,13 +1,18 @@
 // backend/models/clientModel.js
+// Converti en PostgreSQL natif ($1, $2, etc.)
+
+const CLIENT_COLUMNS = 'id, lead_id, name, company, type, email, phone, address, website, industry, source, contract_start_date, lifetime_value, notes, tags, status, created_at, updated_at';
 
 /**
- * Récupère tous les clients avec leur statut de lead d'origine
+ * Recupere tous les clients avec leur statut de lead d'origine
  */
 const getAllClients = (db) => {
   return new Promise((resolve, reject) => {
     const query = `
       SELECT
-        c.*,
+        c.id, c.lead_id, c.name, c.company, c.type, c.email, c.phone, c.address,
+        c.website, c.industry, c.source, c.contract_start_date, c.lifetime_value,
+        c.notes, c.tags, c.status, c.created_at, c.updated_at,
         l.status as original_lead_status
       FROM crm_clients c
       LEFT JOIN leads l ON c.lead_id = l.id
@@ -16,7 +21,6 @@ const getAllClients = (db) => {
 
     db.all(query, [], (err, clients) => {
       if (err) {
-        console.error('[ClientModel] Erreur lors de la récupération des clients:', err);
         reject(err);
       } else {
         resolve(clients || []);
@@ -26,13 +30,12 @@ const getAllClients = (db) => {
 };
 
 /**
- * Récupère un client par son ID avec ses projets et revenus
+ * Recupere un client par son ID avec ses projets et revenus
  */
 const getClientById = (db, id) => {
   return new Promise((resolve, reject) => {
-    db.get('SELECT * FROM crm_clients WHERE id = ?', [id], (err, client) => {
+    db.get(`SELECT ${CLIENT_COLUMNS} FROM crm_clients WHERE id = $1`, [id], (err, client) => {
       if (err) {
-        console.error('[ClientModel] Erreur lors de la récupération du client:', err);
         return reject(err);
       }
 
@@ -40,26 +43,12 @@ const getClientById = (db, id) => {
         return resolve(null);
       }
 
-      // Si le client a un lead_id, récupérer les projets et revenus associés
       if (client.lead_id) {
-        // Récupérer les projets
-        db.all('SELECT * FROM projects WHERE lead_id = ? ORDER BY name', [client.lead_id], (projectErr, projects) => {
-          if (projectErr) {
-            console.error('[ClientModel] Erreur lors de la récupération des projets:', projectErr);
-            client.projects = [];
-          } else {
-            client.projects = projects || [];
-          }
+        db.all('SELECT id, name, lead_id, client_id, status, start_date, end_date, budget, description FROM projects WHERE lead_id = $1 ORDER BY name', [client.lead_id], (projectErr, projects) => {
+          client.projects = projectErr ? [] : (projects || []);
 
-          // Récupérer les revenus
-          db.all('SELECT * FROM revenues WHERE lead_id = ? ORDER BY date DESC', [client.lead_id], (revenueErr, revenues) => {
-            if (revenueErr) {
-              console.error('[ClientModel] Erreur lors de la récupération des revenus:', revenueErr);
-              client.revenues = [];
-            } else {
-              client.revenues = revenues || [];
-            }
-
+          db.all('SELECT id, lead_id, amount, date, description, category, type FROM revenues WHERE lead_id = $1 ORDER BY date DESC', [client.lead_id], (revenueErr, revenues) => {
+            client.revenues = revenueErr ? [] : (revenues || []);
             resolve(client);
           });
         });
@@ -73,7 +62,7 @@ const getClientById = (db, id) => {
 };
 
 /**
- * Crée un nouveau client
+ * Cree un nouveau client
  */
 const createClient = (db, clientData) => {
   return new Promise((resolve, reject) => {
@@ -104,12 +93,13 @@ const createClient = (db, clientData) => {
         lead_id, name, company, type, email, phone, address,
         website, industry, source, contract_start_date,
         lifetime_value, notes, tags, status, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+      RETURNING id
     `;
 
     const now = new Date().toISOString();
 
-    db.run(
+    db.get(
       query,
       [
         lead_id || null,
@@ -130,14 +120,13 @@ const createClient = (db, clientData) => {
         now,
         now
       ],
-      function(err) {
+      function(err, result) {
         if (err) {
-          console.error('[ClientModel] Erreur lors de la création du client:', err);
           reject(err);
         } else {
-          db.get('SELECT * FROM crm_clients WHERE id = ?', [this.lastID], (err, client) => {
+          const newId = result?.id || this.lastID;
+          db.get(`SELECT ${CLIENT_COLUMNS} FROM crm_clients WHERE id = $1`, [newId], (err, client) => {
             if (err) {
-              console.error('[ClientModel] Erreur lors de la récupération du client créé:', err);
               reject(err);
             } else {
               resolve(client);
@@ -154,30 +143,25 @@ const createClient = (db, clientData) => {
  */
 const convertFromLead = (db, leadId, conversionData = {}) => {
   return new Promise((resolve, reject) => {
-    // Récupérer les informations du lead
-    db.get('SELECT * FROM leads WHERE id = ?', [leadId], (err, lead) => {
+    db.get('SELECT id, name, company, type, source, notes, email, phone FROM leads WHERE id = $1', [leadId], (err, lead) => {
       if (err) {
-        console.error('[ClientModel] Erreur lors de la récupération du lead:', err);
         return reject(err);
       }
 
       if (!lead) {
-        return reject(new Error('Lead non trouvé'));
+        return reject(new Error('Lead non trouve'));
       }
 
-      // Vérifier si le lead n'est pas déjà converti
-      db.get('SELECT id FROM crm_clients WHERE lead_id = ?', [leadId], (err, existingClient) => {
+      db.get('SELECT id FROM crm_clients WHERE lead_id = $1', [leadId], (err, existingClient) => {
         if (err) {
-          console.error('[ClientModel] Erreur lors de la vérification du client:', err);
           return reject(err);
         }
 
         if (existingClient) {
-          return reject(new Error('Ce lead a déjà été converti en client'));
+          return reject(new Error('Ce lead a deja ete converti en client'));
         }
 
-        // Récupérer l'email et le téléphone du lead (ou des contacts)
-        db.get('SELECT email, phone FROM contacts WHERE lead_id = ? LIMIT 1', [leadId], (err, contact) => {
+        db.get('SELECT email, phone FROM contacts WHERE lead_id = $1 LIMIT 1', [leadId], (err, contact) => {
           const email = lead.email || (contact ? contact.email : null);
           const phone = lead.phone || (contact ? contact.phone : null);
 
@@ -188,10 +172,11 @@ const convertFromLead = (db, leadId, conversionData = {}) => {
               lead_id, name, company, type, email, phone,
               source, contract_start_date, lifetime_value,
               notes, status, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'active', $11, $12)
+            RETURNING id
           `;
 
-          db.run(
+          db.get(
             query,
             [
               leadId,
@@ -207,49 +192,24 @@ const convertFromLead = (db, leadId, conversionData = {}) => {
               now,
               now
             ],
-            function(err) {
+            function(err, result) {
               if (err) {
-                console.error('[ClientModel] Erreur lors de la conversion du lead en client:', err);
                 return reject(err);
               }
 
-              const newClientId = this.lastID;
+              const newClientId = result?.id || this.lastID;
 
-              // Transférer les projets du lead vers le nouveau client
-              db.run(
-                'UPDATE projects SET client_id = ?, lead_id = NULL WHERE lead_id = ?',
-                [newClientId, leadId],
-                (projectErr) => {
-                  if (projectErr) {
-                    console.warn('[ClientModel] Erreur lors du transfert des projets:', projectErr);
-                    // Continuer quand même
-                  } else {
-                    console.log(`[ClientModel] Projets transférés du lead ${leadId} vers le client ${newClientId}`);
-                  }
-
-                  // Mettre à jour le statut du lead en 'won'
-                  db.run(
-                    'UPDATE leads SET status = ?, updated_at = ? WHERE id = ?',
-                    ['won', now, leadId],
-                    (err) => {
-                      if (err) {
-                        console.warn('[ClientModel] Erreur lors de la mise à jour du statut du lead:', err);
-                        // Continuer quand même
-                      }
-
-                      // Récupérer le client créé
-                      db.get('SELECT * FROM crm_clients WHERE id = ?', [newClientId], (err, client) => {
-                        if (err) {
-                          console.error('[ClientModel] Erreur lors de la récupération du client créé:', err);
-                          reject(err);
-                        } else {
-                          resolve(client);
-                        }
-                      });
+              db.run('UPDATE projects SET client_id = $1, lead_id = NULL WHERE lead_id = $2', [newClientId, leadId], () => {
+                db.run('UPDATE leads SET status = $1, updated_at = $2 WHERE id = $3', ['won', now, leadId], () => {
+                  db.get(`SELECT ${CLIENT_COLUMNS} FROM crm_clients WHERE id = $1`, [newClientId], (err, client) => {
+                    if (err) {
+                      reject(err);
+                    } else {
+                      resolve(client);
                     }
-                  );
-                }
-              );
+                  });
+                });
+              });
             }
           );
         });
@@ -259,91 +219,88 @@ const convertFromLead = (db, leadId, conversionData = {}) => {
 };
 
 /**
- * Met à jour un client
+ * Met a jour un client (requete dynamique)
  */
 const updateClient = (db, id, clientData) => {
   return new Promise((resolve, reject) => {
     const fields = [];
     const values = [];
+    let paramIndex = 1;
 
     if (clientData.name !== undefined) {
-      fields.push('name = ?');
+      fields.push(`name = $${paramIndex++}`);
       values.push(clientData.name);
     }
     if (clientData.company !== undefined) {
-      fields.push('company = ?');
+      fields.push(`company = $${paramIndex++}`);
       values.push(clientData.company);
     }
     if (clientData.type !== undefined) {
-      fields.push('type = ?');
+      fields.push(`type = $${paramIndex++}`);
       values.push(clientData.type);
     }
     if (clientData.email !== undefined) {
-      fields.push('email = ?');
+      fields.push(`email = $${paramIndex++}`);
       values.push(clientData.email);
     }
     if (clientData.phone !== undefined) {
-      fields.push('phone = ?');
+      fields.push(`phone = $${paramIndex++}`);
       values.push(clientData.phone);
     }
     if (clientData.address !== undefined) {
-      fields.push('address = ?');
+      fields.push(`address = $${paramIndex++}`);
       values.push(clientData.address);
     }
     if (clientData.website !== undefined) {
-      fields.push('website = ?');
+      fields.push(`website = $${paramIndex++}`);
       values.push(clientData.website);
     }
     if (clientData.industry !== undefined) {
-      fields.push('industry = ?');
+      fields.push(`industry = $${paramIndex++}`);
       values.push(clientData.industry);
     }
     if (clientData.source !== undefined) {
-      fields.push('source = ?');
+      fields.push(`source = $${paramIndex++}`);
       values.push(clientData.source);
     }
     if (clientData.contract_start_date !== undefined) {
-      fields.push('contract_start_date = ?');
+      fields.push(`contract_start_date = $${paramIndex++}`);
       values.push(clientData.contract_start_date);
     }
     if (clientData.lifetime_value !== undefined) {
-      fields.push('lifetime_value = ?');
+      fields.push(`lifetime_value = $${paramIndex++}`);
       values.push(clientData.lifetime_value);
     }
     if (clientData.notes !== undefined) {
-      fields.push('notes = ?');
+      fields.push(`notes = $${paramIndex++}`);
       values.push(clientData.notes);
     }
     if (clientData.tags !== undefined) {
-      fields.push('tags = ?');
+      fields.push(`tags = $${paramIndex++}`);
       values.push(clientData.tags);
     }
     if (clientData.status !== undefined) {
-      fields.push('status = ?');
+      fields.push(`status = $${paramIndex++}`);
       values.push(clientData.status);
     }
 
     if (fields.length === 0) {
-      return reject(new Error('Aucun champ à mettre à jour'));
+      return reject(new Error('Aucun champ a mettre a jour'));
     }
 
-    // Ajouter la date de mise à jour
-    fields.push('updated_at = ?');
+    fields.push(`updated_at = $${paramIndex++}`);
     values.push(new Date().toISOString());
 
-    // Ajouter l'ID pour la clause WHERE
     values.push(id);
 
-    const query = `UPDATE crm_clients SET ${fields.join(', ')} WHERE id = ?`;
+    const query = `UPDATE crm_clients SET ${fields.join(', ')} WHERE id = $${paramIndex} RETURNING id`;
 
     db.run(query, values, function(err) {
       if (err) {
-        console.error('[ClientModel] Erreur lors de la mise à jour du client:', err);
         reject(err);
       } else {
-        db.get('SELECT * FROM crm_clients WHERE id = ?', [id], (err, client) => {
+        db.get(`SELECT ${CLIENT_COLUMNS} FROM crm_clients WHERE id = $1`, [id], (err, client) => {
           if (err) {
-            console.error('[ClientModel] Erreur lors de la récupération du client mis à jour:', err);
             reject(err);
           } else {
             resolve(client);
@@ -359,9 +316,8 @@ const updateClient = (db, id, clientData) => {
  */
 const deleteClient = (db, id) => {
   return new Promise((resolve, reject) => {
-    db.run('DELETE FROM crm_clients WHERE id = ?', [id], function(err) {
+    db.run('DELETE FROM crm_clients WHERE id = $1', [id], function(err) {
       if (err) {
-        console.error('[ClientModel] Erreur lors de la suppression du client:', err);
         reject(err);
       } else {
         resolve({ success: true, changes: this.changes });
@@ -371,7 +327,7 @@ const deleteClient = (db, id) => {
 };
 
 /**
- * Récupère les statistiques des clients
+ * Recupere les statistiques des clients
  */
 const getClientStats = (db) => {
   return new Promise((resolve, reject) => {
@@ -387,11 +343,9 @@ const getClientStats = (db) => {
 
     db.get(statsQuery, [], (err, stats) => {
       if (err) {
-        console.error('[ClientModel] Erreur lors de la récupération des statistiques:', err);
         return reject(err);
       }
 
-      // Statistiques par type
       const typeQuery = `
         SELECT
           type,
@@ -403,7 +357,6 @@ const getClientStats = (db) => {
 
       db.all(typeQuery, [], (err, typeStats) => {
         if (err) {
-          console.error('[ClientModel] Erreur lors de la récupération des stats par type:', err);
           return resolve(stats);
         }
 
@@ -417,13 +370,12 @@ const getClientStats = (db) => {
 };
 
 /**
- * Vérifie si un client existe
+ * Verifie si un client existe
  */
 const checkClientExists = (db, id) => {
   return new Promise((resolve, reject) => {
-    db.get('SELECT * FROM crm_clients WHERE id = ?', [id], (err, client) => {
+    db.get(`SELECT ${CLIENT_COLUMNS} FROM crm_clients WHERE id = $1`, [id], (err, client) => {
       if (err) {
-        console.error('[ClientModel] Erreur lors de la vérification du client:', err);
         reject(err);
       } else {
         resolve(client);

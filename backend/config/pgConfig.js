@@ -1,19 +1,9 @@
 // backend/config/pgConfig.js
 const { Pool } = require('pg');
 const dotenv = require('dotenv');
-const path = require('path');
 const bcrypt = require('bcrypt');
-const runMigrations = require('./pgMigrations');
 
-// Charger les variables d'environnement
 dotenv.config();
-
-console.log('[DBConfig] Initialisation de la connexion PostgreSQL');
-console.log('[DBConfig] DB_USER:', process.env.DB_USER);
-console.log('[DBConfig] DB_HOST:', process.env.DB_HOST);
-console.log('[DBConfig] DB_NAME:', process.env.DB_NAME);
-console.log('[DBConfig] DB_PORT:', process.env.DB_PORT);
-// Ne pas afficher le mot de passe en production pour des raisons de sécurité
 
 /**
  * Configuration et initialisation de la base de données PostgreSQL
@@ -34,95 +24,53 @@ class DatabaseConfig {
   }
 
   /**
-   * Teste la connexion à PostgreSQL
+   * Teste la connexion a PostgreSQL
    */
   async testConnection() {
     try {
-      const res = await this.pool.query('SELECT NOW()');
-      console.log('[DBConfig] Connexion à PostgreSQL établie:', res.rows[0]);
-      
-      // Initialiser la base de données après une connexion réussie
+      await this.pool.query('SELECT 1');
       this.initDatabase();
     } catch (err) {
-      console.error('[DBConfig] Erreur de connexion à PostgreSQL:', err);
+      console.error('[DBConfig] Erreur connexion PostgreSQL:', err.message);
     }
   }
 
   /**
-   * Initialise la connexion à la base de données
-   *
-   * NOTE: Les migrations ont été DÉSACTIVÉES car elles entrent en conflit
-   * avec le système autoInitDatabase.js qui gère automatiquement
-   * la création et mise à jour de TOUTES les tables et colonnes.
-   *
-   * autoInitDatabase.js est plus robuste car il :
-   * - Vérifie l'existence de chaque table/colonne avant de la créer
-   * - Est idempotent (peut tourner plusieurs fois sans erreur)
-   * - Gère automatiquement les dépendances (foreign keys)
-   * - Ne nécessite pas de fichiers de migration manuels
+   * Initialise la base de donnees (utilisateur par defaut)
    */
   async initDatabase() {
-    console.log('[DBConfig] Démarrage de l\'initialisation de la base de données...');
-    console.log('[DBConfig] ℹ️  Migrations désactivées - autoInitDatabase.js gère la structure de la BDD');
-
     try {
-      // Les migrations ont été désactivées - voir autoInitDatabase.js dans server.js
-      // await runMigrations(this.pool);
-
-      // Initialiser l'utilisateur par défaut
       await this.initDefaultUser();
-
-      console.log('[DBConfig] Initialisation de la base de données terminée avec succès');
     } catch (error) {
-      console.error('[DBConfig] Erreur lors de l\'initialisation de la base de données:', error);
+      console.error('[DBConfig] Erreur initialisation:', error.message);
     }
   }
 
   /**
-   * Initialise l'utilisateur par défaut si nécessaire
-   * @returns {Promise} Promesse résolue une fois l'utilisateur vérifié/créé
+   * Initialise l'utilisateur par defaut si necessaire
    */
   async initDefaultUser() {
-    console.log('[DBConfig] Vérification de l\'utilisateur par défaut...');
-    
     const username = process.env.DEFAULT_USER_USERNAME;
     const password = process.env.DEFAULT_USER_PASSWORD;
 
     if (!username || !password) {
-      console.log('[DBConfig] Variables DEFAULT_ADMIN_USERNAME/PASSWORD non définies, pas de création d\'utilisateur par défaut');
       return;
     }
-    
-    try {
-      // Vérifier si l'utilisateur existe déjà
-      const userCheck = await this.pool.query(
-        'SELECT id, username FROM users WHERE username = $1', 
-        [username]
-      );
-      
-      if (userCheck.rowCount > 0) {
-        console.log('[DBConfig] Utilisateur par défaut déjà existant:', 
-          userCheck.rows[0].id, userCheck.rows[0].username);
-        return;
-      }
-      
-      console.log('[DBConfig] Création de l\'utilisateur par défaut...');
-      
-      // Hacher le mot de passe
-      const hash = await bcrypt.hash(password, 10);
-      
-      // Insérer l'utilisateur dans la base de données
-      const insertResult = await this.pool.query(
-        'INSERT INTO users (username, password) VALUES ($1, $2) RETURNING id', 
-        [username, hash]
-      );
-      
-      console.log('[DBConfig] Utilisateur par défaut créé avec succès, ID:', 
-        insertResult.rows[0].id);
-    } catch (error) {
-      console.error('[DBConfig] Erreur lors de la création de l\'utilisateur:', error.message);
-      throw error;
+
+    const userCheck = await this.pool.query(
+      'SELECT id FROM users WHERE username = $1',
+      [username]
+    );
+
+    if (userCheck.rowCount > 0) {
+      return;
     }
+
+    const hash = await bcrypt.hash(password, 10);
+    await this.pool.query(
+      'INSERT INTO users (username, password) VALUES ($1, $2)',
+      [username, hash]
+    );
   }
 
   // Méthodes pour maintenir la compatibilité avec les contrôleurs existants

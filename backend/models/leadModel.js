@@ -1,19 +1,19 @@
 // backend/models/leadModel.js
+// Converti en PostgreSQL natif ($1, $2, etc.)
 
 /**
- * Récupère tous les leads
+ * Recupere tous les leads
  */
 const getAllLeads = (db) => {
   return new Promise((resolve, reject) => {
     const query = `
-      SELECT *
+      SELECT id, name, company, type, status, source, notes, budget, created_at, updated_at
       FROM leads
       ORDER BY name ASC
     `;
 
     db.all(query, [], (err, leads) => {
       if (err) {
-        console.error('[LeadModel] Erreur lors de la récupération des leads:', err);
         reject(err);
       } else {
         resolve(leads || []);
@@ -23,13 +23,12 @@ const getAllLeads = (db) => {
 };
 
 /**
- * Récupère un lead par son ID avec ses contacts et projets
+ * Recupere un lead par son ID avec ses contacts et projets
  */
 const getLeadById = (db, id) => {
   return new Promise((resolve, reject) => {
-    db.get('SELECT * FROM leads WHERE id = ?', [id], (err, lead) => {
+    db.get('SELECT id, name, company, type, status, source, notes, budget, created_at, updated_at FROM leads WHERE id = $1', [id], (err, lead) => {
       if (err) {
-        console.error('[LeadModel] Erreur lors de la récupération du lead:', err);
         return reject(err);
       }
 
@@ -37,37 +36,24 @@ const getLeadById = (db, id) => {
         return resolve(null);
       }
 
-      // Récupérer les contacts associés avec leurs informations de client
       const contactsQuery = `
         SELECT
-          c.*,
+          c.id, c.lead_id, c.client_id, c.name, c.position, c.email, c.phone, c.is_primary, c.notes, c.created_at,
           cl.id as client_id,
           cl.name as client_name,
           cl.status as client_status,
           cl.type as client_type
         FROM contacts c
         LEFT JOIN crm_clients cl ON c.client_id = cl.id
-        WHERE c.lead_id = ?
+        WHERE c.lead_id = $1
         ORDER BY c.name
       `;
 
       db.all(contactsQuery, [id], (contactErr, contacts) => {
-        if (contactErr) {
-          console.error('[LeadModel] Erreur lors de la récupération des contacts:', contactErr);
-          lead.contacts = [];
-        } else {
-          lead.contacts = contacts || [];
-        }
+        lead.contacts = contactErr ? [] : (contacts || []);
 
-        // Récupérer les projets associés
-        db.all('SELECT * FROM projects WHERE lead_id = ? ORDER BY name', [id], (projectErr, projects) => {
-          if (projectErr) {
-            console.error('[LeadModel] Erreur lors de la récupération des projets:', projectErr);
-            lead.projects = [];
-          } else {
-            lead.projects = projects || [];
-          }
-
+        db.all('SELECT id, name, lead_id, client_id, status, start_date, end_date, budget, description, created_at, updated_at FROM projects WHERE lead_id = $1 ORDER BY name', [id], (projectErr, projects) => {
+          lead.projects = projectErr ? [] : (projects || []);
           resolve(lead);
         });
       });
@@ -76,7 +62,7 @@ const getLeadById = (db, id) => {
 };
 
 /**
- * Crée un nouveau lead
+ * Cree un nouveau lead
  */
 const createLead = (db, leadData) => {
   return new Promise((resolve, reject) => {
@@ -96,20 +82,21 @@ const createLead = (db, leadData) => {
     const query = `
       INSERT INTO leads (
         name, company, type, status, source, notes, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      RETURNING id
     `;
 
     const now = new Date().toISOString();
 
-    db.run(
+    db.get(
       query,
       [name, company || null, type, status, source || null, notes || null, now, now],
-      function(err) {
+      function(err, result) {
         if (err) {
-          console.error('[LeadModel] Erreur lors de la création du lead:', err);
           reject(err);
         } else {
-          getLeadById(db, this.lastID)
+          const newId = result?.id || this.lastID;
+          getLeadById(db, newId)
             .then(lead => resolve(lead))
             .catch(err => reject(err));
         }
@@ -119,60 +106,56 @@ const createLead = (db, leadData) => {
 };
 
 /**
- * Met à jour un lead
+ * Met a jour un lead (requete dynamique)
  */
 const updateLead = (db, id, leadData) => {
   return new Promise((resolve, reject) => {
     const fields = [];
     const values = [];
+    let paramIndex = 1;
 
     if (leadData.name !== undefined) {
-      fields.push('name = ?');
+      fields.push(`name = $${paramIndex++}`);
       values.push(leadData.name);
     }
     if (leadData.company !== undefined) {
-      fields.push('company = ?');
+      fields.push(`company = $${paramIndex++}`);
       values.push(leadData.company);
     }
     if (leadData.type !== undefined) {
-      fields.push('type = ?');
+      fields.push(`type = $${paramIndex++}`);
       values.push(leadData.type);
     }
     if (leadData.status !== undefined) {
-      fields.push('status = ?');
+      fields.push(`status = $${paramIndex++}`);
       values.push(leadData.status);
     }
     if (leadData.source !== undefined) {
-      fields.push('source = ?');
+      fields.push(`source = $${paramIndex++}`);
       values.push(leadData.source);
     }
     if (leadData.notes !== undefined) {
-      fields.push('notes = ?');
+      fields.push(`notes = $${paramIndex++}`);
       values.push(leadData.notes);
     }
 
     if (fields.length === 0) {
-      return reject(new Error('Aucun champ à mettre à jour'));
+      return reject(new Error('Aucun champ a mettre a jour'));
     }
 
-    // Ajouter la date de mise à jour
-    fields.push('updated_at = ?');
+    fields.push(`updated_at = $${paramIndex++}`);
     values.push(new Date().toISOString());
 
-    // Ajouter l'ID pour la clause WHERE
     values.push(id);
 
-    const query = `UPDATE leads SET ${fields.join(', ')} WHERE id = ?`;
+    const query = `UPDATE leads SET ${fields.join(', ')} WHERE id = $${paramIndex} RETURNING id`;
 
     db.run(query, values, function(err) {
       if (err) {
-        console.error('[LeadModel] Erreur lors de la mise à jour du lead:', err);
         reject(err);
       } else {
-        // Récupérer juste le lead sans les relations pour la mise à jour simple
-        db.get('SELECT * FROM leads WHERE id = ?', [id], (err, lead) => {
+        db.get('SELECT id, name, company, type, status, source, notes, budget, created_at, updated_at FROM leads WHERE id = $1', [id], (err, lead) => {
           if (err) {
-            console.error('[LeadModel] Erreur lors de la récupération du lead mis à jour:', err);
             reject(err);
           } else {
             resolve(lead);
@@ -188,9 +171,8 @@ const updateLead = (db, id, leadData) => {
  */
 const deleteLead = (db, id) => {
   return new Promise((resolve, reject) => {
-    db.run('DELETE FROM leads WHERE id = ?', [id], function(err) {
+    db.run('DELETE FROM leads WHERE id = $1', [id], function(err) {
       if (err) {
-        console.error('[LeadModel] Erreur lors de la suppression du lead:', err);
         reject(err);
       } else {
         resolve({ success: true, changes: this.changes });
@@ -200,26 +182,25 @@ const deleteLead = (db, id) => {
 };
 
 /**
- * Récupère tous les contacts d'un lead avec leurs informations de client si liés
+ * Recupere tous les contacts d'un lead
  */
 const getLeadContacts = (db, leadId) => {
   return new Promise((resolve, reject) => {
     const query = `
       SELECT
-        c.*,
+        c.id, c.lead_id, c.client_id, c.name, c.position, c.email, c.phone, c.is_primary, c.notes, c.created_at,
         cl.id as client_id,
         cl.name as client_name,
         cl.status as client_status,
         cl.type as client_type
       FROM contacts c
       LEFT JOIN crm_clients cl ON c.client_id = cl.id
-      WHERE c.lead_id = ?
+      WHERE c.lead_id = $1
       ORDER BY c.name
     `;
 
     db.all(query, [leadId], (err, contacts) => {
       if (err) {
-        console.error('[LeadModel] Erreur lors de la récupération des contacts:', err);
         reject(err);
       } else {
         resolve(contacts || []);
@@ -229,7 +210,7 @@ const getLeadContacts = (db, leadId) => {
 };
 
 /**
- * Crée un nouveau contact pour un lead
+ * Cree un nouveau contact pour un lead
  */
 const createContact = (db, leadId, contactData) => {
   return new Promise((resolve, reject) => {
@@ -246,20 +227,10 @@ const createContact = (db, leadId, contactData) => {
       return reject(new Error('Nom du contact requis'));
     }
 
-    // Si le contact est principal, mettre à jour les autres contacts
     const handlePrimary = () => {
       return new Promise((resolvePrimary) => {
         if (is_primary) {
-          db.run(
-            'UPDATE contacts SET is_primary = 0 WHERE lead_id = ?',
-            [leadId],
-            (err) => {
-              if (err) {
-                console.error('[LeadModel] Erreur lors de la mise à jour des contacts principaux:', err);
-              }
-              resolvePrimary();
-            }
-          );
+          db.run('UPDATE contacts SET is_primary = false WHERE lead_id = $1', [leadId], () => resolvePrimary());
         } else {
           resolvePrimary();
         }
@@ -270,22 +241,22 @@ const createContact = (db, leadId, contactData) => {
       const query = `
         INSERT INTO contacts (
           lead_id, name, position, email, phone, is_primary, notes, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        RETURNING id
       `;
 
       const now = new Date().toISOString();
 
-      db.run(
+      db.get(
         query,
         [leadId, name, position || null, email || null, phone || null, is_primary ? true : false, notes || null, now],
-        function(err) {
+        function(err, result) {
           if (err) {
-            console.error('[LeadModel] Erreur lors de la création du contact:', err);
             reject(err);
           } else {
-            db.get('SELECT * FROM contacts WHERE id = ?', [this.lastID], (err, contact) => {
+            const newId = result?.id || this.lastID;
+            db.get('SELECT id, lead_id, client_id, name, position, email, phone, is_primary, notes, created_at FROM contacts WHERE id = $1', [newId], (err, contact) => {
               if (err) {
-                console.error('[LeadModel] Erreur lors de la récupération du contact créé:', err);
                 reject(err);
               } else {
                 resolve(contact);
@@ -299,56 +270,47 @@ const createContact = (db, leadId, contactData) => {
 };
 
 /**
- * Met à jour un contact
+ * Met a jour un contact (requete dynamique)
  */
 const updateContact = (db, contactId, leadId, contactData) => {
   return new Promise((resolve, reject) => {
     const fields = [];
     const values = [];
+    let paramIndex = 1;
 
     if (contactData.name !== undefined) {
-      fields.push('name = ?');
+      fields.push(`name = $${paramIndex++}`);
       values.push(contactData.name);
     }
     if (contactData.position !== undefined) {
-      fields.push('position = ?');
+      fields.push(`position = $${paramIndex++}`);
       values.push(contactData.position);
     }
     if (contactData.email !== undefined) {
-      fields.push('email = ?');
+      fields.push(`email = $${paramIndex++}`);
       values.push(contactData.email);
     }
     if (contactData.phone !== undefined) {
-      fields.push('phone = ?');
+      fields.push(`phone = $${paramIndex++}`);
       values.push(contactData.phone);
     }
     if (contactData.is_primary !== undefined) {
-      fields.push('is_primary = ?');
+      fields.push(`is_primary = $${paramIndex++}`);
       values.push(contactData.is_primary ? true : false);
     }
     if (contactData.notes !== undefined) {
-      fields.push('notes = ?');
+      fields.push(`notes = $${paramIndex++}`);
       values.push(contactData.notes);
     }
 
     if (fields.length === 0) {
-      return reject(new Error('Aucun champ à mettre à jour'));
+      return reject(new Error('Aucun champ a mettre a jour'));
     }
 
-    // Si le contact devient principal, mettre à jour les autres contacts
     const handlePrimary = () => {
       return new Promise((resolvePrimary) => {
         if (contactData.is_primary) {
-          db.run(
-            'UPDATE contacts SET is_primary = 0 WHERE lead_id = ? AND id != ?',
-            [leadId, contactId],
-            (err) => {
-              if (err) {
-                console.error('[LeadModel] Erreur lors de la mise à jour des contacts principaux:', err);
-              }
-              resolvePrimary();
-            }
-          );
+          db.run('UPDATE contacts SET is_primary = false WHERE lead_id = $1 AND id != $2', [leadId, contactId], () => resolvePrimary());
         } else {
           resolvePrimary();
         }
@@ -356,24 +318,22 @@ const updateContact = (db, contactId, leadId, contactData) => {
     };
 
     handlePrimary().then(() => {
-      // Ajouter les IDs pour la clause WHERE
       values.push(contactId);
       values.push(leadId);
 
       const query = `
         UPDATE contacts
         SET ${fields.join(', ')}
-        WHERE id = ? AND lead_id = ?
+        WHERE id = $${paramIndex++} AND lead_id = $${paramIndex}
+        RETURNING id
       `;
 
       db.run(query, values, function(err) {
         if (err) {
-          console.error('[LeadModel] Erreur lors de la mise à jour du contact:', err);
           reject(err);
         } else {
-          db.get('SELECT * FROM contacts WHERE id = ?', [contactId], (err, contact) => {
+          db.get('SELECT id, lead_id, client_id, name, position, email, phone, is_primary, notes, created_at FROM contacts WHERE id = $1', [contactId], (err, contact) => {
             if (err) {
-              console.error('[LeadModel] Erreur lors de la récupération du contact mis à jour:', err);
               reject(err);
             } else {
               resolve(contact);
@@ -390,43 +350,33 @@ const updateContact = (db, contactId, leadId, contactData) => {
  */
 const deleteContact = (db, contactId, leadId) => {
   return new Promise((resolve, reject) => {
-    db.run(
-      'DELETE FROM contacts WHERE id = ? AND lead_id = ?',
-      [contactId, leadId],
-      function(err) {
-        if (err) {
-          console.error('[LeadModel] Erreur lors de la suppression du contact:', err);
-          reject(err);
-        } else {
-          resolve({ success: true, changes: this.changes });
-        }
+    db.run('DELETE FROM contacts WHERE id = $1 AND lead_id = $2', [contactId, leadId], function(err) {
+      if (err) {
+        reject(err);
+      } else {
+        resolve({ success: true, changes: this.changes });
       }
-    );
+    });
   });
 };
 
 /**
- * Vérifie si un contact existe et appartient au lead
+ * Verifie si un contact existe et appartient au lead
  */
 const checkContactExists = (db, contactId, leadId) => {
   return new Promise((resolve, reject) => {
-    db.get(
-      'SELECT * FROM contacts WHERE id = ? AND lead_id = ?',
-      [contactId, leadId],
-      (err, contact) => {
-        if (err) {
-          console.error('[LeadModel] Erreur lors de la vérification du contact:', err);
-          reject(err);
-        } else {
-          resolve(contact);
-        }
+    db.get('SELECT id, lead_id, client_id, name, position, email, phone, is_primary, notes, created_at FROM contacts WHERE id = $1 AND lead_id = $2', [contactId, leadId], (err, contact) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(contact);
       }
-    );
+    });
   });
 };
 
 /**
- * Récupère les statistiques Kanban (nombre de leads par statut + taux de conversion)
+ * Recupere les statistiques Kanban
  */
 const getKanbanStats = (db) => {
   return new Promise((resolve, reject) => {
@@ -441,11 +391,9 @@ const getKanbanStats = (db) => {
 
     db.all(query, [], (err, stats) => {
       if (err) {
-        console.error('[LeadModel] Erreur lors de la récupération des statistiques Kanban:', err);
         return reject(err);
       }
 
-      // Créer un objet avec les statistiques par statut
       const statsByStatus = {
         new: { count: 0, total_budget: 0 },
         contacted: { count: 0, total_budget: 0 },
@@ -455,21 +403,18 @@ const getKanbanStats = (db) => {
         lost: { count: 0, total_budget: 0 }
       };
 
-      // Remplir avec les données de la base
       stats.forEach(stat => {
         if (statsByStatus[stat.status]) {
           statsByStatus[stat.status] = {
-            count: stat.count,
-            total_budget: stat.total_budget
+            count: parseInt(stat.count),
+            total_budget: parseFloat(stat.total_budget) || 0
           };
         }
       });
 
-      // Calculer les totaux
-      const totalLeads = stats.reduce((sum, stat) => sum + stat.count, 0);
-      const totalBudget = stats.reduce((sum, stat) => sum + stat.total_budget, 0);
+      const totalLeads = stats.reduce((sum, stat) => sum + parseInt(stat.count), 0);
+      const totalBudget = stats.reduce((sum, stat) => sum + (parseFloat(stat.total_budget) || 0), 0);
 
-      // Calculer les taux de conversion
       const activeLeads = statsByStatus.new.count +
                           statsByStatus.contacted.count +
                           statsByStatus.proposal.count +
@@ -501,15 +446,12 @@ const getKanbanStats = (db) => {
 };
 
 /**
- * Lie un contact existant à un client existant
- * Permet à un contact (personne dans une entreprise) d'avoir aussi un profil client particulier
+ * Lie un contact existant a un client existant
  */
 const linkContactToClient = (db, contactId, clientId) => {
   return new Promise((resolve, reject) => {
-    // Vérifier que le client existe
-    db.get('SELECT * FROM crm_clients WHERE id = ?', [clientId], (err, client) => {
+    db.get('SELECT id, name, status FROM crm_clients WHERE id = $1', [clientId], (err, client) => {
       if (err) {
-        console.error('[LeadModel] Erreur lors de la vérification du client:', err);
         return reject(err);
       }
 
@@ -517,48 +459,38 @@ const linkContactToClient = (db, contactId, clientId) => {
         return reject(new Error('Client introuvable'));
       }
 
-      // Mettre à jour le contact
-      db.run(
-        'UPDATE contacts SET client_id = ? WHERE id = ?',
-        [clientId, contactId],
-        function(err) {
-          if (err) {
-            console.error('[LeadModel] Erreur lors de la liaison contact-client:', err);
-            reject(err);
-          } else {
-            // Récupérer le contact mis à jour avec les infos du client
-            db.get(
-              `SELECT c.*, cl.name as client_name, cl.status as client_status
-               FROM contacts c
-               LEFT JOIN crm_clients cl ON c.client_id = cl.id
-               WHERE c.id = ?`,
-              [contactId],
-              (err, contact) => {
-                if (err) {
-                  console.error('[LeadModel] Erreur lors de la récupération du contact:', err);
-                  reject(err);
-                } else {
-                  resolve(contact);
-                }
+      db.run('UPDATE contacts SET client_id = $1 WHERE id = $2', [clientId, contactId], function(err) {
+        if (err) {
+          reject(err);
+        } else {
+          db.get(
+            `SELECT c.id, c.lead_id, c.client_id, c.name, c.position, c.email, c.phone, c.is_primary, c.notes, c.created_at,
+                    cl.name as client_name, cl.status as client_status
+             FROM contacts c
+             LEFT JOIN crm_clients cl ON c.client_id = cl.id
+             WHERE c.id = $1`,
+            [contactId],
+            (err, contact) => {
+              if (err) {
+                reject(err);
+              } else {
+                resolve(contact);
               }
-            );
-          }
+            }
+          );
         }
-      );
+      });
     });
   });
 };
 
 /**
- * Crée un nouveau client à partir d'un contact existant
- * Pré-remplit les informations du client avec celles du contact
+ * Cree un nouveau client a partir d'un contact existant
  */
 const createClientFromContact = (db, contactId, additionalData = {}) => {
   return new Promise((resolve, reject) => {
-    // Récupérer le contact
-    db.get('SELECT * FROM contacts WHERE id = ?', [contactId], (err, contact) => {
+    db.get('SELECT id, lead_id, name, position, email, phone FROM contacts WHERE id = $1', [contactId], (err, contact) => {
       if (err) {
-        console.error('[LeadModel] Erreur lors de la récupération du contact:', err);
         return reject(err);
       }
 
@@ -566,65 +498,57 @@ const createClientFromContact = (db, contactId, additionalData = {}) => {
         return reject(new Error('Contact introuvable'));
       }
 
-      // Créer le client avec les données du contact
       const now = new Date().toISOString();
       const query = `
         INSERT INTO crm_clients (
           name, email, phone, type, status, notes, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        RETURNING id
       `;
 
       const clientData = {
         name: additionalData.name || contact.name,
         email: additionalData.email || contact.email,
         phone: additionalData.phone || contact.phone,
-        type: 'individual', // Un contact devient toujours un client particulier
+        type: 'individual',
         status: 'active',
-        notes: additionalData.notes || `Créé depuis le contact: ${contact.name}${contact.position ? ' (' + contact.position + ')' : ''}`
+        notes: additionalData.notes || `Cree depuis le contact: ${contact.name}${contact.position ? ' (' + contact.position + ')' : ''}`
       };
 
-      db.run(
+      db.get(
         query,
         [clientData.name, clientData.email, clientData.phone, clientData.type, clientData.status, clientData.notes, now, now],
-        function(err) {
+        function(err, result) {
           if (err) {
-            console.error('[LeadModel] Erreur lors de la création du client:', err);
             return reject(err);
           }
 
-          const newClientId = this.lastID;
+          const newClientId = result?.id || this.lastID;
 
-          // Lier le contact au nouveau client
-          db.run(
-            'UPDATE contacts SET client_id = ? WHERE id = ?',
-            [newClientId, contactId],
-            (err) => {
-              if (err) {
-                console.error('[LeadModel] Erreur lors de la liaison contact-client:', err);
-                return reject(err);
-              }
-
-              // Récupérer le client créé avec le contact lié
-              db.get(
-                `SELECT c.*, cl.name as client_name, cl.status as client_status
-                 FROM contacts c
-                 LEFT JOIN crm_clients cl ON c.client_id = cl.id
-                 WHERE c.id = ?`,
-                [contactId],
-                (err, updatedContact) => {
-                  if (err) {
-                    console.error('[LeadModel] Erreur lors de la récupération du contact:', err);
-                    reject(err);
-                  } else {
-                    resolve({
-                      contact: updatedContact,
-                      client_id: newClientId
-                    });
-                  }
-                }
-              );
+          db.run('UPDATE contacts SET client_id = $1 WHERE id = $2', [newClientId, contactId], (err) => {
+            if (err) {
+              return reject(err);
             }
-          );
+
+            db.get(
+              `SELECT c.id, c.lead_id, c.client_id, c.name, c.position, c.email, c.phone,
+                      cl.name as client_name, cl.status as client_status
+               FROM contacts c
+               LEFT JOIN crm_clients cl ON c.client_id = cl.id
+               WHERE c.id = $1`,
+              [contactId],
+              (err, updatedContact) => {
+                if (err) {
+                  reject(err);
+                } else {
+                  resolve({
+                    contact: updatedContact,
+                    client_id: newClientId
+                  });
+                }
+              }
+            );
+          });
         }
       );
     });
@@ -632,40 +556,34 @@ const createClientFromContact = (db, contactId, additionalData = {}) => {
 };
 
 /**
- * Délie un contact de son client
+ * Delie un contact de son client
  */
 const unlinkContactFromClient = (db, contactId) => {
   return new Promise((resolve, reject) => {
-    db.run(
-      'UPDATE contacts SET client_id = NULL WHERE id = ?',
-      [contactId],
-      function(err) {
-        if (err) {
-          console.error('[LeadModel] Erreur lors du déliaison contact-client:', err);
-          reject(err);
-        } else {
-          db.get('SELECT * FROM contacts WHERE id = ?', [contactId], (err, contact) => {
-            if (err) {
-              console.error('[LeadModel] Erreur lors de la récupération du contact:', err);
-              reject(err);
-            } else {
-              resolve(contact);
-            }
-          });
-        }
+    db.run('UPDATE contacts SET client_id = NULL WHERE id = $1', [contactId], function(err) {
+      if (err) {
+        reject(err);
+      } else {
+        db.get('SELECT id, lead_id, client_id, name, position, email, phone, is_primary, notes, created_at FROM contacts WHERE id = $1', [contactId], (err, contact) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(contact);
+          }
+        });
       }
-    );
+    });
   });
 };
 
 /**
- * Récupère un contact avec les informations de son client associé
+ * Recupere un contact avec les informations de son client associe
  */
 const getContactWithClient = (db, contactId) => {
   return new Promise((resolve, reject) => {
     const query = `
       SELECT
-        c.*,
+        c.id, c.lead_id, c.client_id, c.name, c.position, c.email, c.phone, c.is_primary, c.notes, c.created_at,
         cl.id as client_id,
         cl.name as client_name,
         cl.email as client_email,
@@ -674,12 +592,11 @@ const getContactWithClient = (db, contactId) => {
         cl.lifetime_value as client_lifetime_value
       FROM contacts c
       LEFT JOIN crm_clients cl ON c.client_id = cl.id
-      WHERE c.id = ?
+      WHERE c.id = $1
     `;
 
     db.get(query, [contactId], (err, contact) => {
       if (err) {
-        console.error('[LeadModel] Erreur lors de la récupération du contact avec client:', err);
         reject(err);
       } else {
         resolve(contact);
