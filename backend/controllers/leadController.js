@@ -1,4 +1,5 @@
 // backend/controllers/leadController.js
+const { handleError } = require('../utils/errorHandler');
 
 /**
  * Contrôleur pour la gestion des leads (prospects)
@@ -18,8 +19,7 @@ const leadController = {
     
     db.all(query, [], (err, leads) => {
       if (err) {
-        console.error('Erreur lors de la récupération des leads:', err);
-        return res.status(500).json({ message: 'Erreur serveur' });
+        return handleError(res, err, 'la récupération des leads');
       }
       res.json(leads);
     });
@@ -34,8 +34,7 @@ const leadController = {
     
     db.get('SELECT * FROM leads WHERE id = ?', [id], (err, lead) => {
       if (err) {
-        console.error('Erreur lors de la récupération du lead:', err);
-        return res.status(500).json({ message: 'Erreur serveur' });
+        return handleError(res, err, 'la récupération du lead');
       }
       
       if (!lead) {
@@ -99,8 +98,7 @@ const leadController = {
       now
     ], function(err) {
       if (err) {
-        console.error('Erreur lors de la création du lead:', err);
-        return res.status(500).json({ message: 'Erreur serveur' });
+        return handleError(res, err, 'la création du lead');
       }
       
       const newLeadId = this.lastID;
@@ -128,8 +126,7 @@ const leadController = {
     // Vérifier si le lead existe
     db.get('SELECT * FROM leads WHERE id = ?', [id], (err, lead) => {
       if (err) {
-        console.error('Erreur lors de la vérification du lead:', err);
-        return res.status(500).json({ message: 'Erreur serveur' });
+        return handleError(res, err, 'la vérification du lead');
       }
       
       if (!lead) {
@@ -185,8 +182,7 @@ const leadController = {
       
       db.run(query, params, function(err) {
         if (err) {
-          console.error('Erreur lors de la mise à jour du lead:', err);
-          return res.status(500).json({ message: 'Erreur serveur' });
+          return handleError(res, err, 'la mise à jour du lead');
         }
         
         // Récupérer le lead mis à jour
@@ -212,8 +208,7 @@ const leadController = {
     // Vérifier si le lead existe
     db.get('SELECT * FROM leads WHERE id = ?', [id], (err, lead) => {
       if (err) {
-        console.error('Erreur lors de la vérification du lead:', err);
-        return res.status(500).json({ message: 'Erreur serveur' });
+        return handleError(res, err, 'la vérification du lead');
       }
       
       if (!lead) {
@@ -223,8 +218,7 @@ const leadController = {
       // Supprimer le lead (les contacts seront supprimés automatiquement grâce à ON DELETE CASCADE)
       db.run('DELETE FROM leads WHERE id = ?', [id], function(err) {
         if (err) {
-          console.error('Erreur lors de la suppression du lead:', err);
-          return res.status(500).json({ message: 'Erreur serveur' });
+          return handleError(res, err, 'la suppression du lead');
         }
         
         res.json({ message: 'Lead supprimé avec succès' });
@@ -242,8 +236,7 @@ const leadController = {
     // Vérifier si le lead existe
     db.get('SELECT * FROM leads WHERE id = ?', [id], (err, lead) => {
       if (err) {
-        console.error('Erreur lors de la vérification du lead:', err);
-        return res.status(500).json({ message: 'Erreur serveur' });
+        return handleError(res, err, 'la vérification du lead');
       }
       
       if (!lead) {
@@ -253,8 +246,7 @@ const leadController = {
       // Récupérer les contacts
       db.all('SELECT * FROM contacts WHERE lead_id = ? ORDER BY name', [id], (err, contacts) => {
         if (err) {
-          console.error('Erreur lors de la récupération des contacts:', err);
-          return res.status(500).json({ message: 'Erreur serveur' });
+          return handleError(res, err, 'la récupération des contacts');
         }
         
         res.json(contacts || []);
@@ -277,8 +269,7 @@ const leadController = {
     // Vérifier si le lead existe
     db.get('SELECT * FROM leads WHERE id = ?', [id], (err, lead) => {
       if (err) {
-        console.error('Erreur lors de la vérification du lead:', err);
-        return res.status(500).json({ message: 'Erreur serveur' });
+        return handleError(res, err, 'la vérification du lead');
       }
       
       if (!lead) {
@@ -301,8 +292,7 @@ const leadController = {
         )
       `, (tableErr) => {
         if (tableErr) {
-          console.error('Erreur lors de la création de la table contacts:', tableErr);
-          return res.status(500).json({ message: 'Erreur serveur' });
+          return handleError(res, tableErr, 'la création de la table contacts');
         }
         
         // Si ce contact est défini comme principal, mettre à jour les autres contacts
@@ -329,8 +319,7 @@ const leadController = {
             now
           ], function(insertErr) {
             if (insertErr) {
-              console.error('Erreur lors de la création du contact:', insertErr);
-              return res.status(500).json({ message: 'Erreur serveur' });
+              return handleError(res, insertErr, 'la création du contact');
             }
             
             const newContactId = this.lastID;
@@ -378,8 +367,7 @@ const leadController = {
       [contactId, leadId], 
       (err, contact) => {
         if (err) {
-          console.error('Erreur lors de la vérification du contact:', err);
-          return res.status(500).json({ message: 'Erreur serveur' });
+          return handleError(res, err, 'la vérification du contact');
         }
         
         if (!contact) {
@@ -452,8 +440,7 @@ const leadController = {
           
           db.run(query, params, function(updateErr) {
             if (updateErr) {
-              console.error('Erreur lors de la mise à jour du contact:', updateErr);
-              return res.status(500).json({ message: 'Erreur serveur' });
+              return handleError(res, updateErr, 'la mise à jour du contact');
             }
             
             // Récupérer le contact mis à jour
@@ -467,8 +454,7 @@ const leadController = {
             });
           });
         }).catch(error => {
-          console.error('Erreur lors de la mise à jour du contact:', error);
-          res.status(500).json({ message: 'Erreur serveur' });
+          handleError(res, error, 'la mise à jour du contact');
         });
       }
     );
@@ -487,8 +473,7 @@ const leadController = {
       [contactId, leadId],
       (err, contact) => {
         if (err) {
-          console.error('Erreur lors de la vérification du contact:', err);
-          return res.status(500).json({ message: 'Erreur serveur' });
+          return handleError(res, err, 'la vérification du contact');
         }
 
         if (!contact) {
@@ -501,8 +486,7 @@ const leadController = {
           [contactId, leadId],
           function(deleteErr) {
             if (deleteErr) {
-              console.error('Erreur lors de la suppression du contact:', deleteErr);
-              return res.status(500).json({ message: 'Erreur serveur' });
+              return handleError(res, deleteErr, 'la suppression du contact');
             }
 
             res.json({ message: 'Contact supprimé avec succès' });

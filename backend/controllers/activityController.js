@@ -1,4 +1,5 @@
 // backend/controllers/activityController.js
+const { handleError } = require('../utils/errorHandler');
 
 /**
  * Contrôleur pour gérer les routes liées aux activités
@@ -379,8 +380,7 @@ const activityController = {
         // Vérifier si l'activité existe
         db.get("SELECT * FROM activities WHERE id = $1", [id], (err, activity) => {
           if (err) {
-            console.error('[ActivityController] Erreur lors de la vérification de l\'activité:', err);
-            return res.status(500).json({ message: 'Erreur serveur' });
+            return handleError(res, err, 'la vérification de l\'activité');
           }
           
           if (!activity) {
@@ -543,8 +543,7 @@ const activityController = {
         // Vérifier si l'activité existe
         db.get("SELECT * FROM activities WHERE id = $1", [id], (err, activity) => {
           if (err) {
-            console.error('[ActivityController] Erreur lors de la vérification de l\'activité:', err);
-            return res.status(500).json({ message: 'Erreur serveur' });
+            return handleError(res, err, 'la vérification de l\'activité');
           }
           
           if (!activity) {
@@ -624,8 +623,7 @@ const activityController = {
         // Vérifier si l'activité existe
         db.get("SELECT * FROM activities WHERE id = $1", [id], (err, activity) => {
           if (err) {
-            console.error('[ActivityController] Erreur lors de la vérification de l\'activité:', err);
-            return res.status(500).json({ message: 'Erreur serveur' });
+            return handleError(res, err, 'la vérification de l\'activité');
           }
           
           if (!activity) {
