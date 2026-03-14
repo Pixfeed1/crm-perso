@@ -12,50 +12,25 @@ const Login = () => {
   const navigate = useNavigate();
   const { login, isAuthenticated } = useAuth();
 
-  // Log initial
-  console.log("=== RENDU DU COMPOSANT LOGIN ===");
-  console.log("État initial:", {
-    usernameLength: username.length,
-    passwordEntered: !!password,
-    hasError: !!error,
-    isLoading,
-    isAuthenticated
-  });
-
-  // Rediriger si déjà connecté
+  // Rediriger si deja connecte
   useEffect(() => {
-    console.log("useEffect - Vérification d'authentification");
-    console.log("État d'authentification actuel:", isAuthenticated);
-
     if (isAuthenticated) {
-      console.log("Utilisateur déjà authentifié, redirection vers dashboard");
       navigate('/dashboard');
-    } else {
-      console.log("Utilisateur non authentifié, affichage du formulaire de connexion");
     }
   }, [isAuthenticated, navigate]);
 
   const handleSubmit = async (e) => {
-    console.log("=== SOUMISSION DU FORMULAIRE DE CONNEXION ===");
     e.preventDefault();
-    console.log("Identifiants soumis:", { username, passwordLength: password.length });
-
     setError('');
     setIsLoading(true);
-    console.log("État mis à jour: isLoading=true, error=''");
 
     if (!username || !password) {
-      console.log("Validation: Champs manquants détectés");
       setError('Veuillez entrer un identifiant et un mot de passe');
       setIsLoading(false);
-      console.log("État mis à jour: isLoading=false, error='Veuillez entrer un identifiant et un mot de passe'");
       return;
     }
 
     try {
-      console.log("Validation réussie, tentative de connexion...");
-      console.log("Envoi de la requête d'authentification à /api/auth/login");
-
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
@@ -65,45 +40,21 @@ const Login = () => {
         body: JSON.stringify({ username, password })
       });
 
-      console.log("Réponse reçue du serveur:", {
-        status: response.status,
-        ok: response.ok
-      });
-
       const data = await response.json();
-      console.log("Données de réponse:", {
-        hasToken: !!data.token,
-        hasUserData: !!data.user,
-        message: data.message || 'Pas de message'
-      });
 
       if (response.ok) {
-        console.log("Connexion réussie côté serveur, appel de la fonction login");
         login(data.token, data.user);
-        console.log("Redirection vers le dashboard");
         navigate('/dashboard');
       } else {
-        console.log("Échec de la connexion côté serveur:", data.message);
         setError(data.message || 'Identifiants incorrects');
       }
     } catch (error) {
-      console.error("ERREUR lors de la tentative de connexion:", error);
+      console.error("Erreur de connexion:", error);
       setError('Erreur de connexion au serveur');
     } finally {
       setIsLoading(false);
-      console.log("État mis à jour: isLoading=false");
     }
   };
-
-  // Log avant rendu
-  console.log("Préparation du rendu avec état:", {
-    usernameLength: username.length,
-    passwordEntered: !!password,
-    hasError: !!error,
-    errorMessage: error,
-    isLoading,
-    isAuthenticated
-  });
 
   return (
     <div className="min-h-screen w-full bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900 flex items-center justify-center overflow-hidden relative px-4 sm:px-6 lg:px-8">
@@ -173,7 +124,7 @@ const Login = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
         >
-          {/* Effet de gradient décoratif */}
+          {/* Effet de gradient decoratif */}
           <div className="absolute -top-1/2 -left-1/2 w-full h-full bg-gradient-to-br from-transparent via-transparent to-purple-600/10 transform rotate-30 pointer-events-none" />
 
           {/* Header */}
@@ -192,7 +143,7 @@ const Login = () => {
               animate={{ opacity: 1 }}
               transition={{ delay: 0.4, duration: 0.5 }}
             >
-              Connectez-vous pour accéder à votre espace
+              Connectez-vous pour acceder a votre espace
             </motion.p>
           </div>
 
@@ -208,10 +159,7 @@ const Login = () => {
                 id="username"
                 name="username"
                 value={username}
-                onChange={(e) => {
-                  console.log("Mise à jour du champ username:", e.target.value);
-                  setUsername(e.target.value);
-                }}
+                onChange={(e) => setUsername(e.target.value)}
                 className="w-full px-3 py-2.5 sm:px-4 sm:py-3 rounded-lg bg-gray-900/70 border border-white/10 text-gray-100 text-sm sm:text-base focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-600/30 transition-all"
                 required
                 autoComplete="username"
@@ -228,10 +176,7 @@ const Login = () => {
                 id="password"
                 name="password"
                 value={password}
-                onChange={(e) => {
-                  console.log("Mise à jour du champ password (longueur):", e.target.value.length);
-                  setPassword(e.target.value);
-                }}
+                onChange={(e) => setPassword(e.target.value)}
                 className="w-full px-3 py-2.5 sm:px-4 sm:py-3 rounded-lg bg-gray-900/70 border border-white/10 text-gray-100 text-sm sm:text-base focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-600/30 transition-all"
                 required
                 autoComplete="current-password"
@@ -243,7 +188,7 @@ const Login = () => {
               )}
             </div>
 
-            {/* Lien mot de passe oublié */}
+            {/* Lien mot de passe oublie */}
             <div className="text-right">
               <a
                 href="/forgot-password"
@@ -253,7 +198,7 @@ const Login = () => {
                   navigate('/forgot-password');
                 }}
               >
-                Mot de passe oublié ?
+                Mot de passe oublie ?
               </a>
             </div>
 
@@ -264,7 +209,6 @@ const Login = () => {
               className="w-full py-2.5 sm:py-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg font-semibold text-sm sm:text-base hover:from-purple-700 hover:to-purple-800 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-gray-900 disabled:opacity-60 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-purple-500/50 relative overflow-hidden"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              onClick={() => console.log("Bouton de connexion cliqué")}
             >
               {/* Effet de brillance au hover */}
               <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
