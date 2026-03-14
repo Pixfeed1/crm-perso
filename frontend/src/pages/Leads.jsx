@@ -1,7 +1,7 @@
 // src/pages/Leads.jsx
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiUsers, FiPlus, FiDownload, FiGrid, FiList, FiTrello, FiSearch } from 'react-icons/fi';
+import { FiUsers, FiPlus, FiDownload, FiGrid, FiList, FiTrello, FiSearch, FiSend } from 'react-icons/fi';
 import { leadsAPI, exportAPI } from '../services/api';
 import { useToast } from '../hooks/useToast';
 import { useConfirm } from '../hooks/useConfirm';
@@ -14,6 +14,7 @@ import LeadForm from '../components/leads/LeadForm';
 import LeadFilter from '../components/leads/LeadFilter';
 import KanbanView from '../components/kanban/KanbanView';
 import ProspectionPanel from '../components/leads/ProspectionPanel';
+import OutreachPanel from '../components/leads/OutreachPanel';
 import EmptyState from '../components/common/EmptyState';
 import ConfirmModal from '../components/common/ConfirmModal';
 
@@ -531,6 +532,17 @@ const Leads = () => {
                 >
                   <FiSearch />
                 </button>
+                <button
+                  onClick={() => setView('outreach')}
+                  className={`p-2 rounded transition-colors ${
+                    view === 'outreach'
+                      ? 'bg-emerald-600 text-white'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                  title="Outreach (Email, Facebook, Instagram)"
+                >
+                  <FiSend />
+                </button>
               </div>
 
               <motion.button
@@ -594,6 +606,13 @@ const Leads = () => {
             onLeadCreated={(newLead) => {
               setLeads([...leads, newLead]);
               toast.success('Lead créé avec succès depuis la prospection');
+            }}
+          />
+        ) : view === 'outreach' ? (
+          <OutreachPanel
+            leads={filteredLeads}
+            onLeadUpdated={(updatedLead) => {
+              setLeads(leads.map(l => l.id === updatedLead.id ? updatedLead : l));
             }}
           />
         ) : view === 'kanban' ? (
