@@ -6,6 +6,7 @@ import { quotesAPI } from '../services/quotesAPI';
 import { scheduledEmailsAPI } from '../services/api';
 import { useToast } from '../hooks/useToast';
 import { useConfirm } from '../hooks/useConfirm';
+import { useAuth } from '../contexts/AuthContext';
 import QuoteForm from '../components/quotes/QuoteForm';
 import ConfirmModal from '../components/common/ConfirmModal';
 import SendEmailModal from '../components/common/SendEmailModal';
@@ -15,6 +16,7 @@ import { exportQuoteToPDF } from '../services/exportPDF';
 const Quotes = () => {
   const { toast } = useToast();
   const { confirm, confirmState } = useConfirm();
+  const { user } = useAuth();
   const [quotes, setQuotes] = useState([]);
   const [filteredQuotes, setFilteredQuotes] = useState([]);
   const [selectedQuote, setSelectedQuote] = useState(null);
@@ -190,7 +192,7 @@ const Quotes = () => {
         email_type: 'quote',
         related_type: 'quote',
         related_id: quoteToSend.id,
-        cc_email: scheduleData.ccToSelf ? null : null // TODO: récupérer l'email de l'utilisateur
+        cc_email: scheduleData.ccToSelf ? (user?.email || user?.username) : null
       });
       toast.success(`Email programmé pour le ${new Date(scheduleData.scheduledAt).toLocaleString('fr-FR')}`);
     } catch (error) {

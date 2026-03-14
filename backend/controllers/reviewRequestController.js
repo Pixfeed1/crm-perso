@@ -1,5 +1,5 @@
 // backend/controllers/reviewRequestController.js
-const nodemailer = require('nodemailer');
+const emailService = require('../services/emailService');
 
 /**
  * Contrôleur pour gérer les demandes d'avis clients
@@ -112,8 +112,21 @@ exports.sendReviewRequest = async (req, res) => {
       .replace(/{nom_contact}/g, contact_name || clientName)
       .replace(/{société}/g, clientName);
 
-    // TODO: Configurer nodemailer avec les paramètres SMTP de l'utilisateur
-    // Pour l'instant, on enregistre juste la demande dans la BDD
+    // Envoyer l'email via le service email
+    let emailSent = false;
+    let emailError = null;
+
+    try {
+      await emailService.sendEmail({
+        to: contact_email,
+        subject: emailSubject,
+        html: emailBody
+      });
+      emailSent = true;
+    } catch (err) {
+      console.error('Erreur envoi email review request:', err.message);
+      emailError = err.message;
+    }
 
     // Enregistrer la demande dans la base de données
     const result = await db.pool.query(`
@@ -141,13 +154,16 @@ exports.sendReviewRequest = async (req, res) => {
       platforms.includes('google') ? PLATFORM_URLS.google : null,
       platforms.includes('facebook') ? PLATFORM_URLS.facebook : null,
       platforms.includes('instagram') ? PLATFORM_URLS.instagram : null,
-      'pending', // On met en 'pending' au lieu de 'sent' car l'email n'est pas encore envoyé
+      emailSent ? 'sent' : 'pending',
       req.user?.id || null
     ]);
 
     res.status(201).json({
       success: true,
-      message: 'Demande d\'avis enregistrée. L\'email sera envoyé prochainement.',
+      message: emailSent
+        ? 'Demande d\'avis envoyée avec succès.'
+        : `Demande enregistrée mais email non envoyé: ${emailError || 'Configuration SMTP manquante'}`,
+      emailSent,
       data: result.rows[0],
       // Informations pour l'utilisateur
       info: {
