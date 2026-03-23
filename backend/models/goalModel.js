@@ -1,7 +1,7 @@
 // backend/models/goalModel.js
 // Converti en PostgreSQL natif ($1, $2, etc.)
 
-const GOAL_COLUMNS = 'id, name, description, target_value, current_value, category, period, start_date, end_date, status, is_archived, created_at, updated_at';
+const GOAL_COLUMNS = 'id, name, description, target_value, current_value, category, period, start_date, end_date, created_at, updated_at';
 const MILESTONE_COLUMNS = 'id, goal_id, name, target, achieved';
 
 /**
@@ -469,14 +469,26 @@ const duplicateGoal = (db, id, newDates) => {
  */
 const getArchivedGoals = (db) => {
   return new Promise((resolve, reject) => {
-    const query = `SELECT ${GOAL_COLUMNS} FROM goals WHERE is_archived = true ORDER BY updated_at DESC`;
+    // Verifier si la colonne is_archived existe
+    const checkQuery = `
+      SELECT column_name FROM information_schema.columns
+      WHERE table_name = 'goals' AND column_name = 'is_archived'
+    `;
 
-    db.all(query, [], (err, goals) => {
-      if (err) {
-        resolve([]);
-      } else {
-        resolve(goals || []);
+    db.get(checkQuery, [], (checkErr, col) => {
+      if (checkErr || !col) {
+        return resolve([]);
       }
+
+      const query = `SELECT ${GOAL_COLUMNS} FROM goals WHERE is_archived = true ORDER BY updated_at DESC`;
+
+      db.all(query, [], (err, goals) => {
+        if (err) {
+          resolve([]);
+        } else {
+          resolve(goals || []);
+        }
+      });
     });
   });
 };
