@@ -22,6 +22,56 @@ router.get('/', clientController.getAllClients);
 // GET /api/clients/:id - Récupérer un client spécifique
 router.get('/:id', clientController.getClientById);
 
+// POST /api/clients/import - Importer plusieurs clients depuis JSON
+router.post('/import', async (req, res) => {
+  const db = req.app.locals.db;
+  const clientModel = require('../models/clientModel');
+  const { clients: clientsToImport } = req.body;
+
+  if (!Array.isArray(clientsToImport) || clientsToImport.length === 0) {
+    return res.status(400).json({ message: 'Un tableau de clients est requis' });
+  }
+
+  const results = { success: [], errors: [] };
+
+  for (const clientData of clientsToImport) {
+    try {
+      if (!clientData.name) {
+        results.errors.push({ client: clientData, error: 'Nom requis' });
+        continue;
+      }
+
+      const client = await clientModel.createClient(db, {
+        name: clientData.name,
+        company: clientData.company || null,
+        type: clientData.type || 'individual',
+        status: clientData.status || 'active',
+        email: clientData.email || null,
+        phone: clientData.phone || null,
+        address: clientData.address || null,
+        website: clientData.website || null,
+        industry: clientData.industry || null,
+        source: clientData.source || null,
+        contract_start_date: clientData.contract_start_date || null,
+        lifetime_value: clientData.lifetime_value || 0,
+        notes: clientData.notes || null,
+        tags: clientData.tags || null,
+        lead_id: clientData.lead_id || null
+      });
+
+      results.success.push(client);
+    } catch (error) {
+      results.errors.push({ client: clientData, error: error.message });
+    }
+  }
+
+  res.status(201).json({
+    message: `${results.success.length} client(s) importé(s), ${results.errors.length} erreur(s)`,
+    imported: results.success,
+    errors: results.errors
+  });
+});
+
 // POST /api/clients - Créer un nouveau client
 router.post('/', clientController.createClient);
 

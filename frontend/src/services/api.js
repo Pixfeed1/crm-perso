@@ -302,6 +302,10 @@ export const clientsAPI = {
     console.log(`Appel API: suppression du client ID ${id}`);
     return apiRequest(`/clients/${id}`, 'DELETE');
   },
+  import: (clients) => {
+    console.log('Appel API: import de clients', clients);
+    return apiRequest('/clients/import', 'POST', { clients });
+  },
   convertFromLead: (leadId, data = {}) => {
     console.log(`Appel API: conversion du lead ID ${leadId} en client`, data);
     return apiRequest(`/clients/convert/${leadId}`, 'POST', data);

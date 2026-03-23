@@ -1,7 +1,7 @@
 // src/pages/Clients.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiUsers, FiPlus, FiArrowLeft, FiDownload, FiGrid, FiList } from 'react-icons/fi';
+import { FiUsers, FiPlus, FiArrowLeft, FiDownload, FiUpload, FiGrid, FiList } from 'react-icons/fi';
 import { clientsAPI, exportAPI } from '../services/api';
 import { useToast } from '../hooks/useToast';
 import { useConfirm } from '../hooks/useConfirm';
@@ -18,6 +18,7 @@ import ConfirmModal from '../components/common/ConfirmModal';
 const Clients = () => {
   const { toast } = useToast();
   const { confirm, confirmState } = useConfirm();
+  const fileInputRef = useRef(null);
   const [clients, setClients] = useState([]);
   const [filteredClients, setFilteredClients] = useState([]);
   const [selectedClient, setSelectedClient] = useState(null);
@@ -69,6 +70,45 @@ const Clients = () => {
       setStats(statsData);
     } catch (error) {
       console.error('Erreur lors du chargement des statistiques:', error);
+    }
+  };
+
+  // Import de clients depuis un fichier JSON
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleImportFile = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+
+      const clientsToImport = Array.isArray(data) ? data : data.clients;
+
+      if (!Array.isArray(clientsToImport) || clientsToImport.length === 0) {
+        toast.error("Le fichier doit contenir un tableau de clients");
+        return;
+      }
+
+      const result = await clientsAPI.import(clientsToImport);
+
+      // Rafraîchir la liste
+      await fetchClients();
+      await fetchStats();
+
+      toast.success(result.message);
+
+      if (result.errors?.length > 0) {
+        console.warn('Erreurs d\'import:', result.errors);
+      }
+    } catch (error) {
+      console.error('Erreur import:', error);
+      toast.error("Erreur lors de l'import: " + (error.message || "fichier JSON invalide"));
+    } finally {
+      event.target.value = '';
     }
   };
 
@@ -311,6 +351,24 @@ const Clients = () => {
                 </button>
               </div>
 
+              {/* Input fichier caché pour l'import */}
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleImportFile}
+                accept=".json"
+                className="hidden"
+              />
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={handleImportClick}
+                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg flex items-center gap-2 transition-colors"
+                title="Importer des clients depuis un fichier JSON"
+              >
+                <FiUpload />
+                <span className="hidden sm:inline">Importer</span>
+              </motion.button>
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
