@@ -5,9 +5,9 @@
  * Pattern standardise: chaque fonction prend db comme premier parametre
  */
 
-// Colonnes utilisateur (sans password pour les requetes normales)
-const USER_COLUMNS = 'id, username, email, reset_token, reset_token_expires, created_at, updated_at';
-const USER_COLUMNS_WITH_PASSWORD = 'id, username, email, password, reset_token, reset_token_expires, created_at, updated_at';
+// Colonnes de base (garanties d'exister)
+const USER_COLUMNS = 'id, username, email, role, created_at, updated_at';
+const USER_COLUMNS_WITH_PASSWORD = 'id, username, email, password, role, created_at, updated_at';
 
 /**
  * Obtenir un utilisateur par son nom d'utilisateur (avec password pour auth)
