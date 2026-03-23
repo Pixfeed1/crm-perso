@@ -1,7 +1,7 @@
 // src/pages/Leads.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiUsers, FiPlus, FiDownload, FiGrid, FiList, FiTrello, FiSearch, FiSend } from 'react-icons/fi';
+import { FiUsers, FiPlus, FiDownload, FiUpload, FiGrid, FiList, FiTrello, FiSearch, FiSend } from 'react-icons/fi';
 import { leadsAPI, exportAPI } from '../services/api';
 import { useToast } from '../hooks/useToast';
 import { useConfirm } from '../hooks/useConfirm';
@@ -21,6 +21,7 @@ import ConfirmModal from '../components/common/ConfirmModal';
 const Leads = () => {
   const { toast } = useToast();
   const { confirm, confirmState } = useConfirm();
+  const fileInputRef = useRef(null);
   const [leads, setLeads] = useState([]);
   const [filteredLeads, setFilteredLeads] = useState([]);
   const [selectedLead, setSelectedLead] = useState(null);
@@ -208,6 +209,49 @@ const Leads = () => {
       setSelectedLead(lead);
       setIsAddingLead(false);
       setShowDetails(true); // Afficher les détails sur mobile
+    }
+  };
+
+  // Import de leads depuis un fichier JSON
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleImportFile = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+
+      // Accepter soit un tableau direct, soit un objet avec propriété "leads"
+      const leadsToImport = Array.isArray(data) ? data : data.leads;
+
+      if (!Array.isArray(leadsToImport) || leadsToImport.length === 0) {
+        toast.error("Le fichier doit contenir un tableau de leads");
+        return;
+      }
+
+      const result = await leadsAPI.import(leadsToImport);
+
+      // Rafraîchir la liste
+      const updatedLeads = await leadsAPI.getAll();
+      setLeads(updatedLeads);
+      setFilteredLeads(updatedLeads);
+      calculateStats(updatedLeads);
+
+      toast.success(result.message);
+
+      if (result.errors?.length > 0) {
+        console.warn('Erreurs d\'import:', result.errors);
+      }
+    } catch (error) {
+      console.error('Erreur import:', error);
+      toast.error("Erreur lors de l'import: " + (error.message || "fichier JSON invalide"));
+    } finally {
+      // Reset le input pour permettre de réimporter le même fichier
+      event.target.value = '';
     }
   };
 
@@ -545,6 +589,24 @@ const Leads = () => {
                 </button>
               </div>
 
+              {/* Input fichier caché pour l'import */}
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleImportFile}
+                accept=".json"
+                className="hidden"
+              />
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={handleImportClick}
+                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg flex items-center gap-2 transition-colors"
+                title="Importer des leads depuis un fichier JSON"
+              >
+                <FiUpload />
+                <span className="hidden sm:inline">Importer</span>
+              </motion.button>
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}

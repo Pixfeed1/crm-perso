@@ -69,6 +69,51 @@ router.post('/', async (req, res) => {
   }
 });
 
+// Importer plusieurs leads depuis JSON
+router.post('/import', async (req, res) => {
+  const db = req.app.locals.db;
+  const { leads: leadsToImport } = req.body;
+
+  if (!Array.isArray(leadsToImport) || leadsToImport.length === 0) {
+    return res.status(400).json({ message: 'Un tableau de leads est requis' });
+  }
+
+  const results = {
+    success: [],
+    errors: []
+  };
+
+  for (const leadData of leadsToImport) {
+    try {
+      // Valider les champs requis
+      if (!leadData.name) {
+        results.errors.push({ lead: leadData, error: 'Nom requis' });
+        continue;
+      }
+
+      // Créer le lead avec des valeurs par défaut
+      const lead = await leadModel.createLead(db, {
+        name: leadData.name,
+        company: leadData.company || null,
+        type: leadData.type || 'individual',
+        status: leadData.status || 'new',
+        source: leadData.source || null,
+        notes: leadData.notes || null
+      });
+
+      results.success.push(lead);
+    } catch (error) {
+      results.errors.push({ lead: leadData, error: error.message });
+    }
+  }
+
+  res.status(201).json({
+    message: `${results.success.length} lead(s) importé(s), ${results.errors.length} erreur(s)`,
+    imported: results.success,
+    errors: results.errors
+  });
+});
+
 // Mettre à jour un lead
 router.put('/:id', async (req, res) => {
   const db = req.app.locals.db;

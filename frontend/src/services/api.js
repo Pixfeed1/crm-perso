@@ -223,6 +223,10 @@ export const leadsAPI = {
     console.log(`Appel API: suppression du lead ID ${id}`);
     return apiRequest(`/leads/${id}`, 'DELETE');
   },
+  import: (leads) => {
+    console.log('Appel API: import de leads', leads);
+    return apiRequest('/leads/import', 'POST', { leads });
+  },
   getContacts: (leadId) => {
     console.log(`Appel API: récupération des contacts du lead ID ${leadId}`);
     return apiRequest(`/leads/${leadId}/contacts`);
