@@ -46,7 +46,7 @@ router.get('/:id', async (req, res) => {
 // Créer un nouveau lead
 router.post('/', async (req, res) => {
   const db = req.app.locals.db;
-  const { name, company, type, status, source, notes } = req.body;
+  const { name, company, type, status, source, notes, email, phone, score, tags, assigned_to } = req.body;
 
   if (!name || !status) {
     return res.status(400).json({ message: 'Nom et statut sont requis' });
@@ -59,7 +59,12 @@ router.post('/', async (req, res) => {
       type,
       status,
       source,
-      notes
+      notes,
+      email,
+      phone,
+      score,
+      tags,
+      assigned_to
     });
 
     res.status(201).json(lead);
@@ -91,14 +96,19 @@ router.post('/import', async (req, res) => {
         continue;
       }
 
-      // Créer le lead avec des valeurs par défaut
+      // Créer le lead avec toutes les infos
       const lead = await leadModel.createLead(db, {
         name: leadData.name,
         company: leadData.company || null,
         type: leadData.type || 'individual',
         status: leadData.status || 'new',
         source: leadData.source || null,
-        notes: leadData.notes || null
+        notes: leadData.notes || null,
+        email: leadData.email || null,
+        phone: leadData.phone || null,
+        score: leadData.score || 0,
+        tags: leadData.tags || null,
+        assigned_to: leadData.assigned_to || null
       });
 
       results.success.push(lead);

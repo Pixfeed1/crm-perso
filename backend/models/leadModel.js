@@ -71,7 +71,12 @@ const createLead = (db, leadData) => {
       type = 'individual',
       status,
       source,
-      notes
+      notes,
+      email,
+      phone,
+      score = 0,
+      tags,
+      assigned_to
     } = leadData;
 
     if (!name || !status) {
@@ -80,8 +85,8 @@ const createLead = (db, leadData) => {
 
     const query = `
       INSERT INTO leads (
-        name, company, type, status, source, notes, created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        name, company, type, status, source, notes, email, phone, score, tags, assigned_to, created_at, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
       RETURNING id
     `;
 
@@ -89,7 +94,7 @@ const createLead = (db, leadData) => {
 
     db.get(
       query,
-      [name, company || null, type, status, source || null, notes || null, now, now],
+      [name, company || null, type, status, source || null, notes || null, email || null, phone || null, score, tags || null, assigned_to || null, now, now],
       function(err, result) {
         if (err) {
           reject(err);
