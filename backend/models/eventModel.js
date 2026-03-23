@@ -1,14 +1,13 @@
 // backend/models/eventModel.js
 // Converti en PostgreSQL natif ($1, $2, etc.)
 
-const EVENT_COLUMNS = 'id, title, description, start_datetime, end_datetime, all_day, location, category, priority, color, reminder_time, activity_id, recurrence_type, recurrence_interval, recurrence_days, recurrence_end_type, recurrence_end_date, recurrence_count, parent_event_id, is_exception, exception_date, created_at';
 
 /**
  * Recupere tous les evenements avec filtres de date optionnels
  */
 const getAllEvents = (db, filters = {}) => {
   return new Promise((resolve, reject) => {
-    let query = `SELECT ${EVENT_COLUMNS} FROM events`;
+    let query = `SELECT * FROM events`;
     const params = [];
     let paramIndex = 1;
 
@@ -40,7 +39,7 @@ const getAllEvents = (db, filters = {}) => {
  */
 const getEventById = (db, id) => {
   return new Promise((resolve, reject) => {
-    db.get(`SELECT ${EVENT_COLUMNS} FROM events WHERE id = $1`, [id], (err, event) => {
+    db.get(`SELECT * FROM events WHERE id = $1`, [id], (err, event) => {
       if (err) {
         reject(err);
       } else {
@@ -207,7 +206,7 @@ const deleteEvent = (db, id) => {
  */
 const getEventsByActivity = (db, activityId) => {
   return new Promise((resolve, reject) => {
-    const query = `SELECT ${EVENT_COLUMNS} FROM events WHERE activity_id = $1 ORDER BY start_datetime ASC`;
+    const query = `SELECT * FROM events WHERE activity_id = $1 ORDER BY start_datetime ASC`;
 
     db.all(query, [activityId], (err, events) => {
       if (err) {
@@ -225,7 +224,7 @@ const getEventsByActivity = (db, activityId) => {
 const getEventsInRange = (db, startDate, endDate) => {
   return new Promise((resolve, reject) => {
     const query = `
-      SELECT ${EVENT_COLUMNS} FROM events
+      SELECT * FROM events
       WHERE start_datetime >= $1 AND end_datetime <= $2
       ORDER BY start_datetime ASC
     `;
@@ -247,7 +246,7 @@ const getUpcomingEvents = (db, limit = 10) => {
   return new Promise((resolve, reject) => {
     const now = new Date().toISOString();
     const query = `
-      SELECT ${EVENT_COLUMNS} FROM events
+      SELECT * FROM events
       WHERE start_datetime >= $1
       ORDER BY start_datetime ASC
       LIMIT $2
@@ -469,7 +468,7 @@ const createEventException = (db, parentEventId, exceptionDate, modifiedData) =>
 const getModifiedOccurrences = (db, eventId) => {
   return new Promise((resolve, reject) => {
     const query = `
-      SELECT ${EVENT_COLUMNS} FROM events
+      SELECT * FROM events
       WHERE parent_event_id = $1 AND is_exception = true
       ORDER BY exception_date ASC
     `;

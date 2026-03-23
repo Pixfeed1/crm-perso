@@ -1,8 +1,6 @@
 // backend/models/projectModel.js
 // Converti en PostgreSQL natif ($1, $2, etc.)
 
-const PROJECT_COLUMNS = 'id, name, type, description, start_date, end_date, status, amount, lead_id, client_id, progress, created_at, updated_at';
-const TASK_COLUMNS = 'id, project_id, title, description, deadline, completed, priority';
 
 /**
  * Recuperer tous les projets
@@ -11,8 +9,7 @@ const getAllProjects = (db) => {
   return new Promise((resolve, reject) => {
     const query = `
       SELECT
-        p.id, p.name, p.type, p.description, p.start_date, p.end_date,
-        p.status, p.amount, p.lead_id, p.client_id, p.progress, p.created_at, p.updated_at,
+        p.*,
         l.name as lead_name,
         c.name as client_name,
         COALESCE(c.name, l.name) as display_name
@@ -36,8 +33,7 @@ const getProjectById = (db, id) => {
   return new Promise((resolve, reject) => {
     const query = `
       SELECT
-        p.id, p.name, p.type, p.description, p.start_date, p.end_date,
-        p.status, p.amount, p.lead_id, p.client_id, p.progress, p.created_at, p.updated_at,
+        p.*,
         l.name as lead_name,
         c.name as client_name,
         COALESCE(c.name, l.name) as display_name
@@ -53,7 +49,7 @@ const getProjectById = (db, id) => {
       } else if (!project) {
         resolve(null);
       } else {
-        db.all(`SELECT ${TASK_COLUMNS} FROM tasks WHERE project_id = $1 ORDER BY id`, [id], (taskErr, tasks) => {
+        db.all(`SELECT * FROM tasks WHERE project_id = $1 ORDER BY id`, [id], (taskErr, tasks) => {
           project.tasks = taskErr ? [] : (tasks || []);
 
           if (project.tasks.length > 0) {
@@ -272,7 +268,7 @@ const addTask = (db, projectId, taskData) => {
       } else {
         const newTaskId = result?.id || this.lastID;
 
-        db.get(`SELECT ${TASK_COLUMNS} FROM tasks WHERE id = $1`, [newTaskId], (getErr, task) => {
+        db.get(`SELECT * FROM tasks WHERE id = $1`, [newTaskId], (getErr, task) => {
           if (getErr) {
             resolve({
               id: newTaskId,
@@ -317,7 +313,7 @@ const updateTask = (db, projectId, taskId, taskData) => {
     }
 
     if (updates.length === 0) {
-      return db.get(`SELECT ${TASK_COLUMNS} FROM tasks WHERE id = $1 AND project_id = $2`, [taskId, projectId], (err, task) => {
+      return db.get(`SELECT * FROM tasks WHERE id = $1 AND project_id = $2`, [taskId, projectId], (err, task) => {
         if (err) reject(err);
         else if (!task) reject(new Error('Tache non trouvee'));
         else resolve(task);
@@ -340,7 +336,7 @@ const updateTask = (db, projectId, taskId, taskData) => {
       } else if (this.changes === 0) {
         reject(new Error('Tache non trouvee'));
       } else {
-        db.get(`SELECT ${TASK_COLUMNS} FROM tasks WHERE id = $1`, [taskId], (getErr, task) => {
+        db.get(`SELECT * FROM tasks WHERE id = $1`, [taskId], (getErr, task) => {
           if (getErr) {
             reject(getErr);
           } else {
@@ -378,7 +374,7 @@ const deleteTask = (db, projectId, taskId) => {
  */
 const updateProjectProgress = (db, projectId) => {
   return new Promise((resolve, reject) => {
-    db.all(`SELECT ${TASK_COLUMNS} FROM tasks WHERE project_id = $1`, [projectId], (err, tasks) => {
+    db.all(`SELECT * FROM tasks WHERE project_id = $1`, [projectId], (err, tasks) => {
       if (err) {
         return reject(err);
       }

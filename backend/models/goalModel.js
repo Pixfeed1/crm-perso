@@ -1,15 +1,13 @@
 // backend/models/goalModel.js
 // Converti en PostgreSQL natif ($1, $2, etc.)
 
-const GOAL_COLUMNS = 'id, name, description, target_value, current_value, category, period, start_date, end_date, created_at, updated_at';
-const MILESTONE_COLUMNS = 'id, goal_id, name, target, achieved';
 
 /**
  * Recupere tous les objectifs
  */
 const getAllGoals = (db) => {
   return new Promise((resolve, reject) => {
-    const query = `SELECT ${GOAL_COLUMNS} FROM goals ORDER BY start_date DESC`;
+    const query = `SELECT * FROM goals ORDER BY start_date DESC`;
 
     db.all(query, [], (err, goals) => {
       if (err) {
@@ -26,7 +24,7 @@ const getAllGoals = (db) => {
  */
 const getGoalById = (db, id) => {
   return new Promise((resolve, reject) => {
-    db.get(`SELECT ${GOAL_COLUMNS} FROM goals WHERE id = $1`, [id], (err, goal) => {
+    db.get(`SELECT * FROM goals WHERE id = $1`, [id], (err, goal) => {
       if (err) {
         return reject(err);
       }
@@ -35,7 +33,7 @@ const getGoalById = (db, id) => {
         return resolve(null);
       }
 
-      db.all(`SELECT ${MILESTONE_COLUMNS} FROM milestones WHERE goal_id = $1 ORDER BY id`, [id], (milestoneErr, milestones) => {
+      db.all(`SELECT * FROM milestones WHERE goal_id = $1 ORDER BY id`, [id], (milestoneErr, milestones) => {
         goal.milestones = milestoneErr ? [] : (milestones || []);
         resolve(goal);
       });
@@ -211,7 +209,7 @@ const deleteGoal = (db, id) => {
  */
 const getGoalMilestones = (db, goalId) => {
   return new Promise((resolve, reject) => {
-    const query = `SELECT ${MILESTONE_COLUMNS} FROM milestones WHERE goal_id = $1 ORDER BY id`;
+    const query = `SELECT * FROM milestones WHERE goal_id = $1 ORDER BY id`;
 
     db.all(query, [goalId], (err, milestones) => {
       if (err) {
@@ -256,7 +254,7 @@ const createMilestone = (db, goalId, milestoneData) => {
           reject(err);
         } else {
           const newId = result?.id || this.lastID;
-          db.get(`SELECT ${MILESTONE_COLUMNS} FROM milestones WHERE id = $1`, [newId], (err, milestone) => {
+          db.get(`SELECT * FROM milestones WHERE id = $1`, [newId], (err, milestone) => {
             if (err) {
               reject(err);
             } else {
@@ -309,7 +307,7 @@ const updateMilestone = (db, milestoneId, goalId, milestoneData) => {
       if (err) {
         reject(err);
       } else {
-        db.get(`SELECT ${MILESTONE_COLUMNS} FROM milestones WHERE id = $1`, [milestoneId], (err, milestone) => {
+        db.get(`SELECT * FROM milestones WHERE id = $1`, [milestoneId], (err, milestone) => {
           if (err) {
             reject(err);
           } else {
@@ -341,7 +339,7 @@ const deleteMilestone = (db, milestoneId, goalId) => {
  */
 const checkMilestoneExists = (db, milestoneId, goalId) => {
   return new Promise((resolve, reject) => {
-    db.get(`SELECT ${MILESTONE_COLUMNS} FROM milestones WHERE id = $1 AND goal_id = $2`, [milestoneId, goalId], (err, milestone) => {
+    db.get(`SELECT * FROM milestones WHERE id = $1 AND goal_id = $2`, [milestoneId, goalId], (err, milestone) => {
       if (err) {
         reject(err);
       } else {
@@ -480,7 +478,7 @@ const getArchivedGoals = (db) => {
         return resolve([]);
       }
 
-      const query = `SELECT ${GOAL_COLUMNS} FROM goals WHERE is_archived = true ORDER BY updated_at DESC`;
+      const query = `SELECT * FROM goals WHERE is_archived = true ORDER BY updated_at DESC`;
 
       db.all(query, [], (err, goals) => {
         if (err) {

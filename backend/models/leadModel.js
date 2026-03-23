@@ -7,8 +7,7 @@
 const getAllLeads = (db) => {
   return new Promise((resolve, reject) => {
     const query = `
-      SELECT id, name, company, type, status, source, notes, budget, created_at, updated_at
-      FROM leads
+      SELECT * FROM leads
       ORDER BY name ASC
     `;
 
@@ -27,7 +26,7 @@ const getAllLeads = (db) => {
  */
 const getLeadById = (db, id) => {
   return new Promise((resolve, reject) => {
-    db.get('SELECT id, name, company, type, status, source, notes, budget, created_at, updated_at FROM leads WHERE id = $1', [id], (err, lead) => {
+    db.get('SELECT * FROM leads WHERE id = $1', [id], (err, lead) => {
       if (err) {
         return reject(err);
       }
@@ -38,7 +37,7 @@ const getLeadById = (db, id) => {
 
       const contactsQuery = `
         SELECT
-          c.id, c.lead_id, c.client_id, c.name, c.position, c.email, c.phone, c.is_primary, c.notes, c.created_at,
+          c.*,
           cl.id as client_id,
           cl.name as client_name,
           cl.status as client_status,
@@ -52,7 +51,7 @@ const getLeadById = (db, id) => {
       db.all(contactsQuery, [id], (contactErr, contacts) => {
         lead.contacts = contactErr ? [] : (contacts || []);
 
-        db.all('SELECT id, name, lead_id, client_id, status, start_date, end_date, budget, description, created_at, updated_at FROM projects WHERE lead_id = $1 ORDER BY name', [id], (projectErr, projects) => {
+        db.all('SELECT * FROM projects WHERE lead_id = $1 ORDER BY name', [id], (projectErr, projects) => {
           lead.projects = projectErr ? [] : (projects || []);
           resolve(lead);
         });
@@ -154,7 +153,7 @@ const updateLead = (db, id, leadData) => {
       if (err) {
         reject(err);
       } else {
-        db.get('SELECT id, name, company, type, status, source, notes, budget, created_at, updated_at FROM leads WHERE id = $1', [id], (err, lead) => {
+        db.get('SELECT * FROM leads WHERE id = $1', [id], (err, lead) => {
           if (err) {
             reject(err);
           } else {
@@ -188,7 +187,7 @@ const getLeadContacts = (db, leadId) => {
   return new Promise((resolve, reject) => {
     const query = `
       SELECT
-        c.id, c.lead_id, c.client_id, c.name, c.position, c.email, c.phone, c.is_primary, c.notes, c.created_at,
+        c.*,
         cl.id as client_id,
         cl.name as client_name,
         cl.status as client_status,
@@ -255,7 +254,7 @@ const createContact = (db, leadId, contactData) => {
             reject(err);
           } else {
             const newId = result?.id || this.lastID;
-            db.get('SELECT id, lead_id, client_id, name, position, email, phone, is_primary, notes, created_at FROM contacts WHERE id = $1', [newId], (err, contact) => {
+            db.get('SELECT * FROM contacts WHERE id = $1', [newId], (err, contact) => {
               if (err) {
                 reject(err);
               } else {
@@ -332,7 +331,7 @@ const updateContact = (db, contactId, leadId, contactData) => {
         if (err) {
           reject(err);
         } else {
-          db.get('SELECT id, lead_id, client_id, name, position, email, phone, is_primary, notes, created_at FROM contacts WHERE id = $1', [contactId], (err, contact) => {
+          db.get('SELECT * FROM contacts WHERE id = $1', [contactId], (err, contact) => {
             if (err) {
               reject(err);
             } else {
@@ -365,7 +364,7 @@ const deleteContact = (db, contactId, leadId) => {
  */
 const checkContactExists = (db, contactId, leadId) => {
   return new Promise((resolve, reject) => {
-    db.get('SELECT id, lead_id, client_id, name, position, email, phone, is_primary, notes, created_at FROM contacts WHERE id = $1 AND lead_id = $2', [contactId, leadId], (err, contact) => {
+    db.get('SELECT * FROM contacts WHERE id = $1 AND lead_id = $2', [contactId, leadId], (err, contact) => {
       if (err) {
         reject(err);
       } else {
@@ -450,7 +449,7 @@ const getKanbanStats = (db) => {
  */
 const linkContactToClient = (db, contactId, clientId) => {
   return new Promise((resolve, reject) => {
-    db.get('SELECT id, name, status FROM crm_clients WHERE id = $1', [clientId], (err, client) => {
+    db.get('SELECT * FROM crm_clients WHERE id = $1', [clientId], (err, client) => {
       if (err) {
         return reject(err);
       }
@@ -464,8 +463,7 @@ const linkContactToClient = (db, contactId, clientId) => {
           reject(err);
         } else {
           db.get(
-            `SELECT c.id, c.lead_id, c.client_id, c.name, c.position, c.email, c.phone, c.is_primary, c.notes, c.created_at,
-                    cl.name as client_name, cl.status as client_status
+            `SELECT c.*, cl.name as client_name, cl.status as client_status
              FROM contacts c
              LEFT JOIN crm_clients cl ON c.client_id = cl.id
              WHERE c.id = $1`,
@@ -489,7 +487,7 @@ const linkContactToClient = (db, contactId, clientId) => {
  */
 const createClientFromContact = (db, contactId, additionalData = {}) => {
   return new Promise((resolve, reject) => {
-    db.get('SELECT id, lead_id, name, position, email, phone FROM contacts WHERE id = $1', [contactId], (err, contact) => {
+    db.get('SELECT * FROM contacts WHERE id = $1', [contactId], (err, contact) => {
       if (err) {
         return reject(err);
       }
@@ -531,8 +529,7 @@ const createClientFromContact = (db, contactId, additionalData = {}) => {
             }
 
             db.get(
-              `SELECT c.id, c.lead_id, c.client_id, c.name, c.position, c.email, c.phone,
-                      cl.name as client_name, cl.status as client_status
+              `SELECT c.*, cl.name as client_name, cl.status as client_status
                FROM contacts c
                LEFT JOIN crm_clients cl ON c.client_id = cl.id
                WHERE c.id = $1`,
@@ -564,7 +561,7 @@ const unlinkContactFromClient = (db, contactId) => {
       if (err) {
         reject(err);
       } else {
-        db.get('SELECT id, lead_id, client_id, name, position, email, phone, is_primary, notes, created_at FROM contacts WHERE id = $1', [contactId], (err, contact) => {
+        db.get('SELECT * FROM contacts WHERE id = $1', [contactId], (err, contact) => {
           if (err) {
             reject(err);
           } else {
@@ -583,7 +580,7 @@ const getContactWithClient = (db, contactId) => {
   return new Promise((resolve, reject) => {
     const query = `
       SELECT
-        c.id, c.lead_id, c.client_id, c.name, c.position, c.email, c.phone, c.is_primary, c.notes, c.created_at,
+        c.*,
         cl.id as client_id,
         cl.name as client_name,
         cl.email as client_email,

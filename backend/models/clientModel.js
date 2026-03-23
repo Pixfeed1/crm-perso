@@ -1,7 +1,6 @@
 // backend/models/clientModel.js
 // Converti en PostgreSQL natif ($1, $2, etc.)
 
-const CLIENT_COLUMNS = 'id, lead_id, name, company, type, email, phone, address, website, industry, source, contract_start_date, lifetime_value, notes, tags, status, created_at, updated_at';
 
 /**
  * Recupere tous les clients avec leur statut de lead d'origine
@@ -10,9 +9,7 @@ const getAllClients = (db) => {
   return new Promise((resolve, reject) => {
     const query = `
       SELECT
-        c.id, c.lead_id, c.name, c.company, c.type, c.email, c.phone, c.address,
-        c.website, c.industry, c.source, c.contract_start_date, c.lifetime_value,
-        c.notes, c.tags, c.status, c.created_at, c.updated_at,
+        c.*,
         l.status as original_lead_status
       FROM crm_clients c
       LEFT JOIN leads l ON c.lead_id = l.id
@@ -34,7 +31,7 @@ const getAllClients = (db) => {
  */
 const getClientById = (db, id) => {
   return new Promise((resolve, reject) => {
-    db.get(`SELECT ${CLIENT_COLUMNS} FROM crm_clients WHERE id = $1`, [id], (err, client) => {
+    db.get(`SELECT * FROM crm_clients WHERE id = $1`, [id], (err, client) => {
       if (err) {
         return reject(err);
       }
@@ -44,10 +41,10 @@ const getClientById = (db, id) => {
       }
 
       if (client.lead_id) {
-        db.all('SELECT id, name, lead_id, client_id, status, start_date, end_date, budget, description FROM projects WHERE lead_id = $1 ORDER BY name', [client.lead_id], (projectErr, projects) => {
+        db.all('SELECT * FROM projects WHERE lead_id = $1 ORDER BY name', [client.lead_id], (projectErr, projects) => {
           client.projects = projectErr ? [] : (projects || []);
 
-          db.all('SELECT id, lead_id, amount, date, description, category, type FROM revenues WHERE lead_id = $1 ORDER BY date DESC', [client.lead_id], (revenueErr, revenues) => {
+          db.all('SELECT * FROM revenues WHERE lead_id = $1 ORDER BY date DESC', [client.lead_id], (revenueErr, revenues) => {
             client.revenues = revenueErr ? [] : (revenues || []);
             resolve(client);
           });
@@ -125,7 +122,7 @@ const createClient = (db, clientData) => {
           reject(err);
         } else {
           const newId = result?.id || this.lastID;
-          db.get(`SELECT ${CLIENT_COLUMNS} FROM crm_clients WHERE id = $1`, [newId], (err, client) => {
+          db.get(`SELECT * FROM crm_clients WHERE id = $1`, [newId], (err, client) => {
             if (err) {
               reject(err);
             } else {
@@ -143,7 +140,7 @@ const createClient = (db, clientData) => {
  */
 const convertFromLead = (db, leadId, conversionData = {}) => {
   return new Promise((resolve, reject) => {
-    db.get('SELECT id, name, company, type, source, notes, email, phone FROM leads WHERE id = $1', [leadId], (err, lead) => {
+    db.get('SELECT * FROM leads WHERE id = $1', [leadId], (err, lead) => {
       if (err) {
         return reject(err);
       }
@@ -201,7 +198,7 @@ const convertFromLead = (db, leadId, conversionData = {}) => {
 
               db.run('UPDATE projects SET client_id = $1, lead_id = NULL WHERE lead_id = $2', [newClientId, leadId], () => {
                 db.run('UPDATE leads SET status = $1, updated_at = $2 WHERE id = $3', ['won', now, leadId], () => {
-                  db.get(`SELECT ${CLIENT_COLUMNS} FROM crm_clients WHERE id = $1`, [newClientId], (err, client) => {
+                  db.get(`SELECT * FROM crm_clients WHERE id = $1`, [newClientId], (err, client) => {
                     if (err) {
                       reject(err);
                     } else {
@@ -299,7 +296,7 @@ const updateClient = (db, id, clientData) => {
       if (err) {
         reject(err);
       } else {
-        db.get(`SELECT ${CLIENT_COLUMNS} FROM crm_clients WHERE id = $1`, [id], (err, client) => {
+        db.get(`SELECT * FROM crm_clients WHERE id = $1`, [id], (err, client) => {
           if (err) {
             reject(err);
           } else {
@@ -374,7 +371,7 @@ const getClientStats = (db) => {
  */
 const checkClientExists = (db, id) => {
   return new Promise((resolve, reject) => {
-    db.get(`SELECT ${CLIENT_COLUMNS} FROM crm_clients WHERE id = $1`, [id], (err, client) => {
+    db.get(`SELECT * FROM crm_clients WHERE id = $1`, [id], (err, client) => {
       if (err) {
         reject(err);
       } else {

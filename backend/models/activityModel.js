@@ -1,7 +1,6 @@
 // backend/models/activityModel.js
 // Converti en PostgreSQL natif ($1, $2, etc.)
 
-const ACTIVITY_COLUMNS = 'id, type, description, planned_time, actual_time, date, priority, status, project_id, lead_id, created_at, updated_at';
 
 /**
  * Recuperer toutes les activites
@@ -10,8 +9,7 @@ const getAllActivities = (db) => {
   return new Promise((resolve, reject) => {
     const query = `
       SELECT
-        a.id, a.type, a.description, a.planned_time, a.actual_time, a.date,
-        a.priority, a.status, a.project_id, a.lead_id, a.created_at, a.updated_at,
+        a.*,
         p.name as project_name,
         l.name as lead_name
       FROM activities a
@@ -34,8 +32,7 @@ const getActivityById = (db, id) => {
   return new Promise((resolve, reject) => {
     const query = `
       SELECT
-        a.id, a.type, a.description, a.planned_time, a.actual_time, a.date,
-        a.priority, a.status, a.project_id, a.lead_id, a.created_at, a.updated_at,
+        a.*,
         p.name as project_name,
         l.name as lead_name
       FROM activities a
@@ -236,8 +233,7 @@ const getRecentActivities = (db, limit = 5) => {
   return new Promise((resolve, reject) => {
     const query = `
       SELECT
-        a.id, a.type, a.description, a.planned_time, a.actual_time, a.date,
-        a.priority, a.status, a.project_id, a.lead_id, a.created_at, a.updated_at,
+        a.*,
         p.name as project_name,
         l.name as lead_name
       FROM activities a
