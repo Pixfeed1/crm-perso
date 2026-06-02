@@ -2,6 +2,10 @@
 const express = require('express');
 const router = express.Router();
 const quoteController = require('../controllers/quoteController');
+const authMiddleware = require('../middleware/authMiddleware');
+
+// Authentification requise pour toutes les routes
+router.use(authMiddleware);
 
 /**
  * Routes pour la gestion des devis

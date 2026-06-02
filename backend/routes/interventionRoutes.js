@@ -2,6 +2,10 @@
 const express = require('express');
 const router = express.Router();
 const interventionController = require('../controllers/interventionController');
+const authMiddleware = require('../middleware/authMiddleware');
+
+// Authentification requise pour toutes les routes
+router.use(authMiddleware);
 
 // Routes pour les interventions d'un projet
 router.get('/project/:projectId', interventionController.getInterventionsByProject);

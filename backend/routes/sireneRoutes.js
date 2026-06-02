@@ -2,6 +2,10 @@
 const express = require('express');
 const router = express.Router();
 const sireneController = require('../controllers/sireneController');
+const authMiddleware = require('../middleware/authMiddleware');
+
+// Authentification requise pour toutes les routes
+router.use(authMiddleware);
 
 /**
  * @route   GET /api/sirene/search

@@ -3,6 +3,10 @@
 const express = require('express');
 const router = express.Router();
 const exportController = require('../controllers/exportController');
+const authMiddleware = require('../middleware/authMiddleware');
+
+// Authentification requise pour toutes les routes
+router.use(authMiddleware);
 
 // Routes d'export par entité
 router.get('/leads', exportController.exportLeads);

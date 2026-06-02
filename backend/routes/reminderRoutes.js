@@ -3,6 +3,10 @@
 const express = require('express');
 const router = express.Router();
 const reminderController = require('../controllers/reminderController');
+const authMiddleware = require('../middleware/authMiddleware');
+
+// Authentification requise pour toutes les routes
+router.use(authMiddleware);
 
 /**
  * ROUTES DES RELANCES AUTOMATIQUES DE FACTURES

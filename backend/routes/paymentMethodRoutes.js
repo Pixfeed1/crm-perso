@@ -2,6 +2,10 @@
 const express = require('express');
 const router = express.Router();
 const paymentMethodController = require('../controllers/paymentMethodController');
+const authMiddleware = require('../middleware/authMiddleware');
+
+// Authentification requise pour toutes les routes
+router.use(authMiddleware);
 
 // GET /api/payment-methods - Récupérer tous les moyens de paiement
 router.get('/', paymentMethodController.getAll);

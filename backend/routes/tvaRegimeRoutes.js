@@ -1,6 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const tvaRegimeController = require('../controllers/tvaRegimeController');
+const authMiddleware = require('../middleware/authMiddleware');
+
+// Authentification requise pour toutes les routes
+router.use(authMiddleware);
 
 /**
  * Routes pour les régimes de TVA

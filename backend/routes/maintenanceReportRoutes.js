@@ -2,6 +2,10 @@
 const express = require('express');
 const router = express.Router();
 const reportController = require('../controllers/maintenanceReportController');
+const authMiddleware = require('../middleware/authMiddleware');
+
+// Authentification requise pour toutes les routes
+router.use(authMiddleware);
 
 // Générer un rapport pour un projet
 router.post('/project/:projectId/generate', reportController.generateReport);

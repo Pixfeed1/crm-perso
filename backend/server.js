@@ -71,32 +71,6 @@ console.log('Chemin build frontend:', buildPath);
 console.log('index.html existe:', fs.existsSync(indexPath), '(chemin:', indexPath, ')');
 console.log('===============================');
 
-// Route de débogage
-app.get('/api/debug', (req, res) => {
-  res.json({
-    env: process.env.NODE_ENV,
-    database: {
-      type: 'PostgreSQL',
-      host: process.env.DB_HOST || 'localhost',
-      database: process.env.DB_NAME || 'mcrm',
-      user: process.env.DB_USER || 'postgres'
-    },
-    paths: {
-      dirname: __dirname,
-      publicPath,
-      buildPath,
-      indexPath
-    },
-    fileExists: {
-      index: fs.existsSync(indexPath)
-    },
-    auth: {
-      cookie: req.cookies.token ? 'Présent' : 'Absent'
-    },
-    headers: req.headers
-  });
-});
-
 // 1. Routes d'API - /api/*
 // Routes publiques (AVANT authMiddleware)
 app.use('/api/public', require('./routes/publicRoutes'));

@@ -3,6 +3,10 @@
 const express = require('express');
 const router = express.Router();
 const scheduledEmailController = require('../controllers/scheduledEmailController');
+const authMiddleware = require('../middleware/authMiddleware');
+
+// Authentification requise pour toutes les routes
+router.use(authMiddleware);
 
 /**
  * ROUTES DES EMAILS PROGRAMMÉS

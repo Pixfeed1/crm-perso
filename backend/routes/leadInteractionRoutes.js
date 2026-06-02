@@ -3,6 +3,10 @@
 const express = require('express');
 const router = express.Router();
 const leadInteractionController = require('../controllers/leadInteractionController');
+const authMiddleware = require('../middleware/authMiddleware');
+
+// Authentification requise pour toutes les routes
+router.use(authMiddleware);
 
 // Routes pour les interactions des leads
 // Toutes les routes sont préfixées par /api/leads/:leadId/interactions

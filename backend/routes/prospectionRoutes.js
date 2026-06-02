@@ -1,6 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const prospectionController = require('../controllers/prospectionController');
+const authMiddleware = require('../middleware/authMiddleware');
+
+// Authentification requise pour toutes les routes
+router.use(authMiddleware);
 
 /**
  * Routes pour la prospection automatisée
