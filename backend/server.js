@@ -1,6 +1,8 @@
 // backend/server.js
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const morgan = require('morgan');
 const path = require('path');
 const dotenv = require('dotenv');
@@ -17,6 +19,10 @@ dotenv.config();
 // Initialiser l'application Express
 const app = express();
 
+// Derriere le reverse-proxy Apache (cPanel) : faire confiance au premier proxy
+// pour recuperer l'IP reelle (X-Forwarded-For/Proto). Requis AVANT le rate-limit.
+app.set('trust proxy', 1);
+
 // Configuration du logger
 const logFormat = process.env.NODE_ENV === 'development' ? 'dev' : 'combined';
 const accessLogStream = fs.createWriteStream(
@@ -30,9 +36,26 @@ app.use((req, res, next) => {
   next();
 });
 
+// Securite des en-tetes HTTP. CSP desactivee pour l'instant (une CSP stricte
+// casserait le SPA React) : a regler plus tard, separement.
+app.use(helmet({ contentSecurityPolicy: false }));
+
 // Middleware standard
+// CORS : liste blanche explicite via ALLOWED_ORIGINS (origines separees par des
+// virgules), sans aucun fallback permissif. Les credentials restent autorises.
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
+  .split(',')
+  .map((o) => o.trim())
+  .filter(Boolean);
+
 app.use(cors({
-  origin: process.env.NODE_ENV === 'development' ? true : process.env.ALLOWED_ORIGINS || true, 
+  origin: (origin, callback) => {
+    // Pas d'en-tete Origin (same-origin, curl, health checks) ou origine listee : autorise
+    if (!origin || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error('Origine non autorisee par CORS'));
+  },
   credentials: true
 }));
 app.use(cookieParser());
@@ -75,6 +98,18 @@ console.log('===============================');
 // Routes publiques (AVANT authMiddleware)
 app.use('/api/public', require('./routes/publicRoutes'));
 app.use('/api/webhooks', require('./routes/webhookRoutes'));
+
+// Rate-limit cible sur les routes d'authentification sensibles (10 tentatives / 15 min / IP).
+// Applique uniquement sur les POST concernes, pas en global.
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Trop de tentatives. Veuillez reessayer dans 15 minutes.' }
+});
+app.post('/api/auth/login', authLimiter);
+app.post('/api/auth/forgot-password', authLimiter);
 
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/activities', require('./routes/activitiesRoutes'));
