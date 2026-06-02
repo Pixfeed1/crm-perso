@@ -2,6 +2,10 @@
 const express = require('express');
 const router = express.Router();
 const webhookController = require('../controllers/webhookController');
+const verifyWebhookSecret = require('../middleware/verifyWebhookSecret');
+
+// Toutes les routes webhook exigent le secret partage (en-tete X-Webhook-Secret)
+router.use(verifyWebhookSecret);
 
 /**
  * Routes webhook publiques (sans authentification)
