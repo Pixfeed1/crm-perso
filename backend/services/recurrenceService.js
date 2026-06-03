@@ -125,13 +125,32 @@ function getNextOccurrence(currentDate, event) {
       }
       break;
 
-    case 'MONTHLY':
+    case 'MONTHLY': {
+      // Ancrer sur le jour d'origine de l'evenement (pas sur currentDate, qui a pu deriver)
+      const anchorDay = new Date(event.start_date).getDate();
+      // Mettre le jour a 1 AVANT d'ajouter les mois pour eviter le debordement (ex: 31 jan + 1 mois)
+      nextDate.setDate(1);
       nextDate.setMonth(nextDate.getMonth() + interval);
+      // Fixer le jour a min(jourAncre, dernier jour du mois cible)
+      const lastDayOfMonth = new Date(nextDate.getFullYear(), nextDate.getMonth() + 1, 0).getDate();
+      nextDate.setDate(Math.min(anchorDay, lastDayOfMonth));
       break;
+    }
 
-    case 'YEARLY':
+    case 'YEARLY': {
+      // Ancrer sur le jour ET le mois d'origine (clamp pour le 29 fevrier des annees non bissextiles)
+      const anchor = new Date(event.start_date);
+      const anchorDay = anchor.getDate();
+      const anchorMonth = anchor.getMonth();
+      // Mettre le jour a 1 AVANT de changer annee/mois pour eviter tout debordement
+      nextDate.setDate(1);
       nextDate.setFullYear(nextDate.getFullYear() + interval);
+      nextDate.setMonth(anchorMonth);
+      // Fixer le jour a min(jourAncre, dernier jour du mois cible)
+      const lastDayOfMonth = new Date(nextDate.getFullYear(), nextDate.getMonth() + 1, 0).getDate();
+      nextDate.setDate(Math.min(anchorDay, lastDayOfMonth));
       break;
+    }
 
     default:
       return null;
