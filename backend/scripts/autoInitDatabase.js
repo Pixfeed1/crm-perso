@@ -859,6 +859,25 @@ async function dropLeadIdForeignKey(client) {
 }
 
 /**
+ * Migration idempotente : colonnes Stripe pour l'idempotence des webhooks maintenance.
+ * - projects.stripe_subscription_id : identifie l'abonnement Stripe ayant cree le projet
+ * - revenues.stripe_invoice_id      : identifie la facture Stripe ayant cree le revenu
+ * - index UNIQUE PARTIEL sur revenues(stripe_invoice_id) : empeche les doublons de revenus
+ *   pour une meme facture Stripe, sans bloquer les revenus sans Stripe (NULL autorises en double).
+ */
+async function ensureStripeIdempotencyColumns(client) {
+  console.log('\n🔧 Vérification colonnes Stripe (idempotence webhooks)...');
+  await client.query('ALTER TABLE projects ADD COLUMN IF NOT EXISTS stripe_subscription_id TEXT;');
+  await client.query('ALTER TABLE revenues ADD COLUMN IF NOT EXISTS stripe_invoice_id TEXT;');
+  await client.query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_revenues_stripe_invoice_id
+    ON revenues(stripe_invoice_id)
+    WHERE stripe_invoice_id IS NOT NULL;
+  `);
+  console.log('  ✓ Colonnes/index Stripe vérifiés');
+}
+
+/**
  * Fonction principale d'auto-initialisation
  */
 async function autoInitDatabase(pool) {
@@ -878,6 +897,9 @@ async function autoInitDatabase(pool) {
     for (const [tableName, schema] of Object.entries(DATABASE_SCHEMA)) {
       await ensureTable(client, tableName, schema);
     }
+
+    // Colonnes/index Stripe pour l'idempotence des webhooks (après création des tables)
+    await ensureStripeIdempotencyColumns(client);
 
     // Insérer les données de référence
     await ensureTvaRegimes(client);

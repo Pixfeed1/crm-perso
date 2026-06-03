@@ -63,103 +63,123 @@ const handleMaintenanceWebhook = async (req, res) => {
       });
     }
 
-    // 1. Créer le client dans crm_clients
-    console.log('[Webhook Maintenance] Création du client...');
+    // 0. Idempotence : si un projet existe déjà pour cet abonnement Stripe, ne rien créer (rejeu)
+    if (stripe_subscription_id) {
+      const existing = await db.pool.query(
+        'SELECT id, name, client_id FROM projects WHERE stripe_subscription_id = $1 LIMIT 1',
+        [stripe_subscription_id]
+      );
+      if (existing.rows.length > 0) {
+        const existingProject = existing.rows[0];
+        console.log('[Webhook Maintenance] Abonnement déjà traité, aucun doublon créé:', stripe_subscription_id);
+        return res.status(200).json({
+          success: true,
+          message: 'Abonnement déjà enregistré (aucun doublon créé)',
+          duplicate: true,
+          client_id: existingProject.client_id,
+          project_id: existingProject.id,
+          project: { id: existingProject.id, name: existingProject.name }
+        });
+      }
+    }
 
-    // Enrichir les notes avec les IDs Stripe
+    // Notes enrichies (préparées hors transaction)
     const enrichedNotes = `${notes || ''}\n\n--- INFORMATIONS STRIPE ---\nClient ID: ${stripe_customer_id || 'N/A'}\nSubscription ID: ${stripe_subscription_id || 'N/A'}\nPayment Intent: ${stripe_payment_intent_id || 'N/A'}\nInvoice ID: ${stripe_invoice_id || 'N/A'}\nProchaine facturation: ${next_billing_date ? new Date(next_billing_date).toLocaleDateString('fr-FR') : 'N/A'}${invoice_url ? '\nLien facture: ' + invoice_url : ''}`.trim();
-
-    const clientQuery = `
-      INSERT INTO crm_clients (
-        name, company, type, email, phone,
-        source, contract_start_date, lifetime_value,
-        notes, tags, status, created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())
-      RETURNING id, name, email
-    `;
-
-    const clientResult = await db.pool.query(clientQuery, [
-      name,
-      company || null,
-      type,
-      email || null,
-      phone || null,
-      source,
-      contract_start_date || new Date().toISOString(),
-      lifetime_value,
-      enrichedNotes,
-      tags || null,
-      status
-    ]);
-
-    const client = clientResult.rows[0];
-    const clientId = client.id;
-
-    console.log('[Webhook Maintenance] Client créé avec succès:', clientId, client.name);
-
-    // 2. Créer le projet maintenance associé
-    console.log('[Webhook Maintenance] Création du projet maintenance...');
 
     const projectName = `Maintenance WordPress - ${plan}`;
     const projectDescription = `Contrat de maintenance WordPress - Forfait ${plan}\nClient: ${name}\nPrix: ${plan_price}€/mois\nDébut: ${new Date(contract_start_date || Date.now()).toLocaleDateString('fr-FR')}\n\nTags: maintenance, wordpress, ${plan.toLowerCase()}, ${tags || ''}\n\n--- STRIPE ---\nClient: ${stripe_customer_id || 'N/A'}\nAbonnement: ${stripe_subscription_id || 'N/A'}\nStatut: ${subscription_status || 'active'}\nProchaine facturation: ${next_billing_date ? new Date(next_billing_date).toLocaleDateString('fr-FR') : 'N/A'}${invoice_url ? '\nFacture: ' + invoice_url : ''}\n\nSource: Stripe (WordPress)`;
-
-    const projectQuery = `
-      INSERT INTO projects (
-        name, type, description, client_id, status,
-        start_date, budget, progress, color,
-        created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
-      RETURNING id, name
-    `;
-
-    const projectResult = await db.pool.query(projectQuery, [
-      projectName,
-      'maintenance', // Type de projet
-      projectDescription,
-      clientId,
-      'en-cours', // Statut: en cours (compatible frontend)
-      contract_start_date || new Date().toISOString(),
-      plan_price, // Budget mensuel
-      0, // Progression initiale
-      '#10B981' // Couleur verte pour maintenance
-    ]);
-
-    const project = projectResult.rows[0];
-    const projectId = project.id;
-
-    console.log('[Webhook Maintenance] Projet créé avec succès:', projectId, project.name);
-
-    // 3. Créer le premier paiement (revenue) dans la trésorerie
-    console.log('[Webhook Maintenance] Création du premier paiement...');
-
     const revenueDescription = `Paiement initial - Abonnement maintenance ${plan}`;
     const revenueNotes = `Stripe Invoice: ${stripe_invoice_id || 'N/A'}\nPayment Intent: ${stripe_payment_intent_id || 'N/A'}\nProchain paiement: ${next_billing_date ? new Date(next_billing_date).toLocaleDateString('fr-FR') : 'N/A'}`;
 
-    const revenueQuery = `
-      INSERT INTO revenues (
-        amount, date, description, project_id, client_id,
-        type, status, payment_method, invoice_number, notes,
-        created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
-      RETURNING id
-    `;
+    // 1-3. Création client + projet + revenu dans UNE transaction (tout ou rien)
+    const dbClient = await db.pool.connect();
+    let client, clientId, project, projectId, revenueId;
+    try {
+      await dbClient.query('BEGIN');
 
-    const revenueResult = await db.pool.query(revenueQuery, [
-      plan_price,
-      new Date().toISOString(),
-      revenueDescription,
-      projectId,
-      clientId,
-      'subscription', // Type
-      'paid', // Statut (déjà payé via Stripe)
-      'stripe',
-      stripe_invoice_id || null,
-      revenueNotes
-    ]);
+      // 1. Client
+      console.log('[Webhook Maintenance] Création du client...');
+      const clientResult = await dbClient.query(`
+        INSERT INTO crm_clients (
+          name, company, type, email, phone,
+          source, contract_start_date, lifetime_value,
+          notes, tags, status, created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())
+        RETURNING id, name, email
+      `, [
+        name,
+        company || null,
+        type,
+        email || null,
+        phone || null,
+        source,
+        contract_start_date || new Date().toISOString(),
+        lifetime_value,
+        enrichedNotes,
+        tags || null,
+        status
+      ]);
+      client = clientResult.rows[0];
+      clientId = client.id;
+      console.log('[Webhook Maintenance] Client créé avec succès:', clientId, client.name);
 
-    const revenueId = revenueResult.rows[0].id;
+      // 2. Projet maintenance (avec stripe_subscription_id pour l'idempotence)
+      console.log('[Webhook Maintenance] Création du projet maintenance...');
+      const projectResult = await dbClient.query(`
+        INSERT INTO projects (
+          name, type, description, client_id, status,
+          start_date, budget, progress, color, stripe_subscription_id,
+          created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
+        RETURNING id, name
+      `, [
+        projectName,
+        'maintenance', // Type de projet
+        projectDescription,
+        clientId,
+        'en-cours', // Statut: en cours (compatible frontend)
+        contract_start_date || new Date().toISOString(),
+        plan_price, // Budget mensuel
+        0, // Progression initiale
+        '#10B981', // Couleur verte pour maintenance
+        stripe_subscription_id || null
+      ]);
+      project = projectResult.rows[0];
+      projectId = project.id;
+      console.log('[Webhook Maintenance] Projet créé avec succès:', projectId, project.name);
 
-    console.log('[Webhook Maintenance] Paiement créé avec succès:', revenueId);
+      // 3. Premier paiement (revenu) (avec stripe_invoice_id pour l'idempotence)
+      console.log('[Webhook Maintenance] Création du premier paiement...');
+      const revenueResult = await dbClient.query(`
+        INSERT INTO revenues (
+          amount, date, description, project_id, client_id,
+          type, status, payment_method, invoice_number, notes, stripe_invoice_id,
+          created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())
+        RETURNING id
+      `, [
+        plan_price,
+        new Date().toISOString(),
+        revenueDescription,
+        projectId,
+        clientId,
+        'subscription', // Type
+        'paid', // Statut (déjà payé via Stripe)
+        'stripe',
+        stripe_invoice_id || null,
+        revenueNotes,
+        stripe_invoice_id || null
+      ]);
+      revenueId = revenueResult.rows[0].id;
+      console.log('[Webhook Maintenance] Paiement créé avec succès:', revenueId);
+
+      await dbClient.query('COMMIT');
+    } catch (txError) {
+      await dbClient.query('ROLLBACK');
+      throw txError; // géré par le catch externe (réponse 500, aucune donnée partielle)
+    } finally {
+      dbClient.release();
+    }
 
     // 4. Envoyer notification email à l'admin
     try {
@@ -274,6 +294,24 @@ const handleStripePayment = async (req, res) => {
     const project = projectResult.rows[0];
     console.log('[Webhook Stripe Payment] Projet trouvé:', project.id, project.name);
 
+    // Idempotence : si ce paiement (stripe_invoice_id) est déjà enregistré, ne pas réinsérer (rejeu)
+    if (stripe_invoice_id) {
+      const existingRevenue = await db.pool.query(
+        'SELECT id FROM revenues WHERE stripe_invoice_id = $1 LIMIT 1',
+        [stripe_invoice_id]
+      );
+      if (existingRevenue.rows.length > 0) {
+        console.log('[Webhook Stripe Payment] Paiement déjà enregistré, aucun doublon créé:', stripe_invoice_id);
+        return res.status(200).json({
+          success: true,
+          message: 'Paiement déjà enregistré (aucun doublon créé)',
+          duplicate: true,
+          revenue_id: existingRevenue.rows[0].id,
+          project_id: project.id
+        });
+      }
+    }
+
     // 2. Créer le revenue (paiement mensuel)
     const revenueDescription = `Paiement mensuel - ${project.name}`;
     const revenueNotes = `Stripe Invoice: ${stripe_invoice_id || 'N/A'}\nPayment Intent: ${stripe_payment_intent_id || 'N/A'}\nProchain paiement: ${next_billing_date ? new Date(next_billing_date).toLocaleDateString('fr-FR') : 'N/A'}${invoice_url ? '\nFacture: ' + invoice_url : ''}`;
@@ -281,9 +319,9 @@ const handleStripePayment = async (req, res) => {
     const revenueQuery = `
       INSERT INTO revenues (
         amount, date, description, project_id, client_id,
-        type, status, payment_method, invoice_number, notes,
+        type, status, payment_method, invoice_number, notes, stripe_invoice_id,
         created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())
       RETURNING id
     `;
 
@@ -297,7 +335,8 @@ const handleStripePayment = async (req, res) => {
       'paid',
       'stripe',
       stripe_invoice_id || null,
-      revenueNotes
+      revenueNotes,
+      stripe_invoice_id || null
     ]);
 
     const revenueId = revenueResult.rows[0].id;
