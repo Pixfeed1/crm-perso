@@ -16,6 +16,26 @@
     font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
       monospace;
   }
+
+  /* Normalise les inputs date : leur largeur vient du shadow DOM WebKit
+     (::-webkit-datetime-edit + icône calendrier), inatteignable via Tailwind.
+     On force une boîte standard pour qu'ils respectent la largeur de leur colonne,
+     tout en gardant l'icône calendrier cliquable. */
+  input[type="date"] {
+    min-width: 0;
+    width: 100%;
+    box-sizing: border-box;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  input[type="date"]::-webkit-datetime-edit {
+    min-width: 0;
+    overflow: hidden;
+  }
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    flex: 0 0 auto;
+    cursor: pointer;
+  }
 }
 
 /* ============================================================
