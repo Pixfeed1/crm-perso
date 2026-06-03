@@ -5,6 +5,12 @@ import { FiX, FiGlobe, FiUser, FiChevronDown } from 'react-icons/fi';
 import { clientsAPI } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
 
+const MAINTENANCE_PLANS = [
+  { value: 'Essentiel', price: 150 },
+  { value: 'Professionnel', price: 300 },
+  { value: 'Sur mesure', price: null },
+];
+
 const MaintenanceForm = ({ contract = {}, onSave, onCancel }) => {
   const { toast } = useToast();
   const [clients, setClients] = useState([]);
@@ -17,6 +23,7 @@ const MaintenanceForm = ({ contract = {}, onSave, onCancel }) => {
     site_url: contract.site_url || '',
     contract_start_date: contract.contract_start_date ? contract.contract_start_date.split('T')[0] : '',
     monthly_amount: contract.monthly_amount || '',
+    plan: contract?.plan || '',
     status: contract.status || 'active',
     wordpress_version: contract.wordpress_version || '',
     php_version: contract.php_version || '',
@@ -66,6 +73,18 @@ const MaintenanceForm = ({ contract = {}, onSave, onCancel }) => {
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: null }));
     }
+  };
+
+  // Changement de formule : met à jour le plan et préremplit le montant si la formule
+  // a un prix fixe. "Sur mesure" (price null) laisse le montant mensuel inchangé/éditable.
+  const handlePlanChange = (e) => {
+    const value = e.target.value;
+    const selected = MAINTENANCE_PLANS.find(p => p.value === value);
+    setFormData(prev => ({
+      ...prev,
+      plan: value,
+      ...(selected && selected.price !== null ? { monthly_amount: selected.price } : {})
+    }));
   };
 
   // Validation
@@ -195,7 +214,7 @@ const MaintenanceForm = ({ contract = {}, onSave, onCancel }) => {
         </div>
 
         {/* Contrat */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="min-w-0">
             <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">Date début contrat</label>
             <input
@@ -205,6 +224,24 @@ const MaintenanceForm = ({ contract = {}, onSave, onCancel }) => {
               onChange={handleInputChange}
               className="w-full min-w-0 h-11 box-border px-4 bg-gray-900/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
             />
+          </div>
+
+          <div>
+            <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">Formule</label>
+            <div className="relative">
+              <select
+                name="plan"
+                value={formData.plan}
+                onChange={handlePlanChange}
+                className="w-full h-11 box-border px-4 pr-10 appearance-none bg-gray-900/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+              >
+                <option value="">— Choisir —</option>
+                {MAINTENANCE_PLANS.map(p => (
+                  <option key={p.value} value={p.value}>{p.value}</option>
+                ))}
+              </select>
+              <FiChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+            </div>
           </div>
 
           <div>

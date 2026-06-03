@@ -91,7 +91,7 @@ const getContractById = async (db, id) => {
  */
 const createContract = async (db, contractData) => {
   const {
-    client_id, site_name, site_url, contract_start_date, monthly_amount,
+    client_id, site_name, site_url, contract_start_date, monthly_amount, plan,
     status, wordpress_version, php_version, hosting_provider, admin_url,
     pagespeed_mobile, pagespeed_desktop, plugins_count, notes
   } = contractData;
@@ -104,8 +104,8 @@ const createContract = async (db, contractData) => {
     INSERT INTO maintenance_contracts (
       client_id, site_name, site_url, contract_start_date, monthly_amount,
       status, wordpress_version, php_version, hosting_provider, admin_url,
-      pagespeed_mobile, pagespeed_desktop, plugins_count, notes, next_report_due
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+      pagespeed_mobile, pagespeed_desktop, plugins_count, notes, next_report_due, plan
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
     RETURNING *
   `;
 
@@ -124,7 +124,8 @@ const createContract = async (db, contractData) => {
     pagespeed_desktop || null,
     plugins_count || 0,
     notes || null,
-    nextReportDue.toISOString().split('T')[0]
+    nextReportDue.toISOString().split('T')[0],
+    plan || null
   ];
 
   const result = await db.query(query, values);
@@ -140,7 +141,7 @@ const updateContract = async (db, id, contractData) => {
     status, wordpress_version, php_version, hosting_provider, admin_url,
     pagespeed_mobile, pagespeed_desktop, last_pagespeed_date,
     last_backup_date, last_update_date, last_report_date, next_report_due,
-    plugins_count, notes
+    plugins_count, notes, plan
   } = contractData;
 
   const query = `
@@ -164,8 +165,9 @@ const updateContract = async (db, id, contractData) => {
       next_report_due = COALESCE($17, next_report_due),
       plugins_count = COALESCE($18, plugins_count),
       notes = COALESCE($19, notes),
+      plan = COALESCE($20, plan),
       updated_at = CURRENT_TIMESTAMP
-    WHERE id = $20
+    WHERE id = $21
     RETURNING *
   `;
 
@@ -174,7 +176,7 @@ const updateContract = async (db, id, contractData) => {
     status, wordpress_version, php_version, hosting_provider, admin_url,
     pagespeed_mobile, pagespeed_desktop, last_pagespeed_date,
     last_backup_date, last_update_date, last_report_date, next_report_due,
-    plugins_count, notes, id
+    plugins_count, notes, plan, id
   ];
 
   const result = await db.query(query, values);
