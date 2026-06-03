@@ -429,8 +429,8 @@ exports.importOpportunityAsLead = async (req, res) => {
       db.run(
         `INSERT INTO leads (
           company_name, email, phone, city, postal_code, department,
-          country, sector, website, source, status, notes, user_id, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
+          country, sector, website, source, status, notes, user_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           leadData.company_name,
           leadData.email,
