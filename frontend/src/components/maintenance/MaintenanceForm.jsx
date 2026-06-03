@@ -1,7 +1,7 @@
 // src/components/maintenance/MaintenanceForm.jsx
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FiX, FiGlobe, FiUser } from 'react-icons/fi';
+import { FiX, FiGlobe, FiUser, FiChevronDown } from 'react-icons/fi';
 import { clientsAPI } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
 
@@ -130,7 +130,7 @@ const MaintenanceForm = ({ contract = {}, onSave, onCancel }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Nom du site */}
           <div>
-            <label className="block text-gray-300 mb-2 font-medium">
+            <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">
               Nom du site <span className="text-rose-400">*</span>
             </label>
             <input
@@ -138,7 +138,7 @@ const MaintenanceForm = ({ contract = {}, onSave, onCancel }) => {
               name="site_name"
               value={formData.site_name}
               onChange={handleInputChange}
-              className={`w-full px-4 py-2 bg-gray-900/50 border ${
+              className={`w-full h-11 box-border px-4 bg-gray-900/50 border ${
                 errors.site_name ? 'border-rose-500' : 'border-gray-700'
               } rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500`}
               placeholder="Mon Site WordPress"
@@ -148,44 +148,47 @@ const MaintenanceForm = ({ contract = {}, onSave, onCancel }) => {
 
           {/* Client */}
           <div>
-            <label className="block text-gray-300 mb-2 font-medium">Client</label>
-            <select
-              name="client_id"
-              value={formData.client_id}
-              onChange={handleInputChange}
-              className="w-full px-4 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
-              disabled={loadingClients}
-            >
-              <option value="">{loadingClients ? 'Chargement...' : 'Sélectionner un client'}</option>
-              {clients.map(client => (
-                <option key={client.id} value={client.id}>{client.name}</option>
-              ))}
-            </select>
+            <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">Client</label>
+            <div className="relative">
+              <select
+                name="client_id"
+                value={formData.client_id}
+                onChange={handleInputChange}
+                className="w-full h-11 box-border px-4 pr-10 appearance-none bg-gray-900/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+                disabled={loadingClients}
+              >
+                <option value="">{loadingClients ? 'Chargement...' : 'Sélectionner un client'}</option>
+                {clients.map(client => (
+                  <option key={client.id} value={client.id}>{client.name}</option>
+                ))}
+              </select>
+              <FiChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+            </div>
           </div>
         </div>
 
         {/* URL et Admin */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-gray-300 mb-2 font-medium">URL du site</label>
+            <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">URL du site</label>
             <input
               type="text"
               name="site_url"
               value={formData.site_url}
               onChange={handleInputChange}
-              className="w-full px-4 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+              className="w-full h-11 box-border px-4 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
               placeholder="https://monsite.com"
             />
           </div>
 
           <div>
-            <label className="block text-gray-300 mb-2 font-medium">URL Admin WordPress</label>
+            <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">URL Admin WordPress</label>
             <input
               type="text"
               name="admin_url"
               value={formData.admin_url}
               onChange={handleInputChange}
-              className="w-full px-4 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+              className="w-full h-11 box-border px-4 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
               placeholder="https://monsite.com/wp-admin"
             />
           </div>
@@ -194,25 +197,25 @@ const MaintenanceForm = ({ contract = {}, onSave, onCancel }) => {
         {/* Contrat */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="block text-gray-300 mb-2 font-medium">Date début contrat</label>
+            <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">Date début contrat</label>
             <input
               type="date"
               name="contract_start_date"
               value={formData.contract_start_date}
               onChange={handleInputChange}
-              className="w-full px-4 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+              className="w-full h-11 box-border px-4 bg-gray-900/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
             />
           </div>
 
           <div>
-            <label className="block text-gray-300 mb-2 font-medium">Montant mensuel</label>
+            <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">Montant mensuel</label>
             <div className="relative">
               <input
                 type="number"
                 name="monthly_amount"
                 value={formData.monthly_amount}
                 onChange={handleInputChange}
-                className="w-full px-4 py-2 pl-8 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                className="w-full h-11 box-border px-4 pl-8 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
                 placeholder="0"
                 min="0"
                 step="0.01"
@@ -222,66 +225,69 @@ const MaintenanceForm = ({ contract = {}, onSave, onCancel }) => {
           </div>
 
           <div>
-            <label className="block text-gray-300 mb-2 font-medium">Statut</label>
-            <select
-              name="status"
-              value={formData.status}
-              onChange={handleInputChange}
-              className="w-full px-4 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
-            >
-              {statusOptions.map(option => (
-                <option key={option.value} value={option.value}>{option.label}</option>
-              ))}
-            </select>
+            <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">Statut</label>
+            <div className="relative">
+              <select
+                name="status"
+                value={formData.status}
+                onChange={handleInputChange}
+                className="w-full h-11 box-border px-4 pr-10 appearance-none bg-gray-900/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+              >
+                {statusOptions.map(option => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+              <FiChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+            </div>
           </div>
         </div>
 
         {/* Technique */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
-            <label className="block text-gray-300 mb-2 font-medium">Version WordPress</label>
+            <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">Version WordPress</label>
             <input
               type="text"
               name="wordpress_version"
               value={formData.wordpress_version}
               onChange={handleInputChange}
-              className="w-full px-4 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+              className="w-full h-11 box-border px-4 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
               placeholder="6.4.2"
             />
           </div>
 
           <div>
-            <label className="block text-gray-300 mb-2 font-medium">Version PHP</label>
+            <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">Version PHP</label>
             <input
               type="text"
               name="php_version"
               value={formData.php_version}
               onChange={handleInputChange}
-              className="w-full px-4 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+              className="w-full h-11 box-border px-4 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
               placeholder="8.2"
             />
           </div>
 
           <div>
-            <label className="block text-gray-300 mb-2 font-medium">Hébergeur</label>
+            <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">Hébergeur</label>
             <input
               type="text"
               name="hosting_provider"
               value={formData.hosting_provider}
               onChange={handleInputChange}
-              className="w-full px-4 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+              className="w-full h-11 box-border px-4 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
               placeholder="OVH, o2switch..."
             />
           </div>
 
           <div>
-            <label className="block text-gray-300 mb-2 font-medium">Nb plugins</label>
+            <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">Nb plugins</label>
             <input
               type="number"
               name="plugins_count"
               value={formData.plugins_count}
               onChange={handleInputChange}
-              className="w-full px-4 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+              className="w-full h-11 box-border px-4 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
               placeholder="0"
               min="0"
             />
@@ -291,13 +297,13 @@ const MaintenanceForm = ({ contract = {}, onSave, onCancel }) => {
         {/* PageSpeed */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-gray-300 mb-2 font-medium">PageSpeed Mobile</label>
+            <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">PageSpeed Mobile</label>
             <input
               type="number"
               name="pagespeed_mobile"
               value={formData.pagespeed_mobile}
               onChange={handleInputChange}
-              className="w-full px-4 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+              className="w-full h-11 box-border px-4 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
               placeholder="0-100"
               min="0"
               max="100"
@@ -305,13 +311,13 @@ const MaintenanceForm = ({ contract = {}, onSave, onCancel }) => {
           </div>
 
           <div>
-            <label className="block text-gray-300 mb-2 font-medium">PageSpeed Desktop</label>
+            <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">PageSpeed Desktop</label>
             <input
               type="number"
               name="pagespeed_desktop"
               value={formData.pagespeed_desktop}
               onChange={handleInputChange}
-              className="w-full px-4 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+              className="w-full h-11 box-border px-4 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
               placeholder="0-100"
               min="0"
               max="100"
@@ -321,7 +327,7 @@ const MaintenanceForm = ({ contract = {}, onSave, onCancel }) => {
 
         {/* Notes */}
         <div>
-          <label className="block text-gray-300 mb-2 font-medium">Notes</label>
+          <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">Notes</label>
           <textarea
             name="notes"
             value={formData.notes}
