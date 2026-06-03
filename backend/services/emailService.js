@@ -24,10 +24,12 @@ class EmailService {
       }
 
       // Configuration du transporteur
+      const port = parseInt(process.env.EMAIL_PORT) || 587;
+      const secure = process.env.EMAIL_USE_SSL === 'true' || port === 465;
       this.transporter = nodemailer.createTransport({
         host: process.env.EMAIL_HOST,
-        port: parseInt(process.env.EMAIL_PORT) || 587,
-        secure: process.env.EMAIL_SECURE === 'true',
+        port: port,
+        secure: secure,
         auth: {
           user: process.env.EMAIL_USER,
           pass: process.env.EMAIL_PASSWORD
@@ -67,14 +69,16 @@ class EmailService {
 
     try {
       await this.transporter.verify();
+      const port = parseInt(process.env.EMAIL_PORT) || 587;
+      const secure = process.env.EMAIL_USE_SSL === 'true' || port === 465;
       return {
         success: true,
         message: 'Configuration email valide',
         config: {
           host: process.env.EMAIL_HOST,
-          port: process.env.EMAIL_PORT || 587,
+          port: port,
           user: process.env.EMAIL_USER,
-          secure: process.env.EMAIL_SECURE === 'true'
+          secure: secure
         }
       };
     } catch (error) {
