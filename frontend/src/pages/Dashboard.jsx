@@ -39,7 +39,6 @@ import KPIOrb from '../components/dashboard/KPIOrb';
 import ActivityStream from '../components/dashboard/ActivityStream';
 import GoalProgress from '../components/dashboard/GoalProgress';
 import EmailAutocomplete from '../components/common/EmailAutocomplete';
-import EmojiPicker from '../components/common/EmojiPicker';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { dashboardAPI, reviewRequestsAPI, clientsAPI } from '../services/api';
@@ -161,16 +160,6 @@ const Dashboard = () => {
     if (bytes < 1024) return bytes + ' B';
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-  };
-
-  // Insérer emoji dans l'éditeur
-  const handleInsertEmoji = (emoji) => {
-    const quill = quillRef.current?.getEditor();
-    if (quill) {
-      const range = quill.getSelection(true);
-      quill.insertText(range.index, emoji);
-      quill.setSelection(range.index + emoji.length);
-    }
   };
 
   // Réinitialiser le modal email
@@ -1241,7 +1230,6 @@ const Dashboard = () => {
                     <label className="text-sm font-medium text-gray-300">
                       Message <span className="text-red-400">*</span>
                     </label>
-                    <EmojiPicker onSelect={handleInsertEmoji} position="bottom" />
                   </div>
                   <div className="rounded-lg border border-gray-700 overflow-hidden email-editor-dark">
                     <ReactQuill

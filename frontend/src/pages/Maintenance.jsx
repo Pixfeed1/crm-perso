@@ -299,7 +299,7 @@ const Maintenance = () => {
               </div>
             ) : filteredContracts.length === 0 ? (
               <EmptyState
-                icon="🔧"
+                icon={<FiTool />}
                 title="Aucun contrat"
                 description={searchQuery || statusFilter !== 'all'
                   ? "Aucun contrat ne correspond à vos critères"

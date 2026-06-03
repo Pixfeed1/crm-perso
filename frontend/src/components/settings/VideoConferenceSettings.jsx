@@ -6,7 +6,9 @@ import {
   FiX,
   FiSettings,
   FiExternalLink,
-  FiAlertCircle
+  FiAlertCircle,
+  FiUsers,
+  FiLink
 } from 'react-icons/fi';
 
 const VideoConferenceSettings = () => {
@@ -122,11 +124,11 @@ const VideoConferenceSettings = () => {
 
   const getProviderIcon = (providerId) => {
     const icons = {
-      google_meet: '📹',
-      zoom: '🎥',
-      teams: '👥'
+      google_meet: <FiVideo />,
+      zoom: <FiVideo />,
+      teams: <FiUsers />
     };
-    return icons[providerId] || '🔗';
+    return icons[providerId] || <FiLink />;
   };
 
   const getProviderColor = (providerId) => {

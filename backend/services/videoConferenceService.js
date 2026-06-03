@@ -327,7 +327,7 @@ async function generateVideoLink(db, userId, event, provider = null, accessToken
 /**
  * Génère un lien simple sans API (pour démo/développement)
  *
- * ⚠️ ATTENTION : Cette fonction génère des liens de démonstration NON FONCTIONNELS
+ * ATTENTION : Cette fonction génère des liens de démonstration NON FONCTIONNELS
  * Elle est utilisée pour les tests et le développement uniquement.
  *
  * Les liens générés :

@@ -351,12 +351,12 @@ const previewReport = async (req, res) => {
     };
 
     const typeIcons = {
-      'update': '🔄',
-      'backup': '💾',
-      'security': '🔒',
-      'maintenance': '🔧',
-      'support': '💬',
-      'other': '📋'
+      'update': '',
+      'backup': '',
+      'security': '',
+      'maintenance': '',
+      'support': '',
+      'other': ''
     };
 
     const formatDuration = (minutes) => {
@@ -391,7 +391,7 @@ const previewReport = async (req, res) => {
           <td style="padding: 14px 12px; border-bottom: 1px solid #e5e7eb; color: #374151;">${formatDateShort(i.completed_date || i.scheduled_date)}</td>
           <td style="padding: 14px 12px; border-bottom: 1px solid #e5e7eb;">
             <span style="display: inline-block; padding: 4px 10px; border-radius: 20px; background: #f3e8ff; color: #7c3aed; font-size: 12px; font-weight: 500;">
-              ${typeIcons[i.type] || '📋'} ${typeLabels[i.type] || i.type}
+              ${typeLabels[i.type] || i.type}
             </span>
           </td>
           <td style="padding: 14px 12px; border-bottom: 1px solid #e5e7eb; color: #374151;">${i.title}</td>
@@ -420,7 +420,7 @@ const previewReport = async (req, res) => {
   </style>
 </head>
 <body>
-  <div class="preview-badge">📧 Prévisualisation du rapport</div>
+  <div class="preview-badge">Prévisualisation du rapport</div>
 
   <div class="container">
     <!-- Header avec logo Pixfeed -->
@@ -429,7 +429,7 @@ const previewReport = async (req, res) => {
       <h1 style="margin: 0; color: #ffffff; font-size: 26px; font-weight: 600; letter-spacing: -0.5px;">Rapport de Maintenance</h1>
       <p style="margin: 10px 0 0 0; color: rgba(255,255,255,0.9); font-size: 16px;">${report.project_name}</p>
       <div style="margin-top: 15px; display: inline-block; background: rgba(255,255,255,0.2); padding: 8px 20px; border-radius: 25px;">
-        <span style="color: #ffffff; font-size: 14px;">📅 ${formatDate(report.period_start)} → ${formatDate(report.period_end)}</span>
+        <span style="color: #ffffff; font-size: 14px;">${formatDate(report.period_start)} → ${formatDate(report.period_end)}</span>
       </div>
     </div>
 
@@ -468,7 +468,7 @@ const previewReport = async (req, res) => {
       <!-- Tableau des interventions -->
       <div style="margin: 35px 0;">
         <h3 style="color: #1f2937; font-size: 18px; font-weight: 600; margin: 0 0 20px 0; padding-bottom: 10px; border-bottom: 2px solid #e5e7eb;">
-          📋 Détail des interventions
+          Détail des interventions
         </h3>
         <table style="width: 100%; border-collapse: collapse; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
           <thead>
@@ -488,7 +488,7 @@ const previewReport = async (req, res) => {
       ${report.notes ? `
       <div style="margin: 30px 0; padding: 20px; background: #fef3c7; border-radius: 12px; border-left: 4px solid #f59e0b;">
         <p style="margin: 0; color: #92400e; font-size: 14px; line-height: 1.6;">
-          <strong>📝 Note importante :</strong><br>
+          <strong>Note importante :</strong><br>
           ${report.notes}
         </p>
       </div>
@@ -510,13 +510,13 @@ const previewReport = async (req, res) => {
               <p style="margin: 0 0 5px 0; font-size: 16px; font-weight: 600; color: #1f2937;">Marc Gueffie</p>
               <p style="margin: 0 0 12px 0; font-size: 14px; color: #7c3aed; font-weight: 500;">Développeur chez Pixfeed</p>
               <p style="margin: 0 0 4px 0; font-size: 13px; color: #6b7280;">
-                📞 <a href="tel:+33612345678" style="color: #6b7280;">06 12 34 56 78</a>
+                <a href="tel:+33612345678" style="color: #6b7280;">06 12 34 56 78</a>
               </p>
               <p style="margin: 0 0 4px 0; font-size: 13px; color: #6b7280;">
-                ✉️ <a href="mailto:contact@pixfeed.fr" style="color: #6b7280;">contact@pixfeed.fr</a>
+                <a href="mailto:contact@pixfeed.fr" style="color: #6b7280;">contact@pixfeed.fr</a>
               </p>
               <p style="margin: 0 0 12px 0; font-size: 13px; color: #6b7280;">
-                🌐 <a href="https://pixfeed.net" style="color: #7c3aed; font-weight: 500;">pixfeed.net</a>
+                <a href="https://pixfeed.net" style="color: #7c3aed; font-weight: 500;">pixfeed.net</a>
               </p>
               <p style="margin: 0; font-size: 12px; color: #9ca3af; font-style: italic;">
                 "L'humain au cœur de nos solutions"

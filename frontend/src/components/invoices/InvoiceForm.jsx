@@ -1,6 +1,6 @@
 // src/components/invoices/InvoiceForm.jsx - Version avec Stepper UX
 import React, { useState, useEffect } from 'react';
-import { FiPlus, FiTrash2, FiSave, FiX, FiChevronRight, FiChevronLeft, FiChevronDown, FiChevronUp, FiUpload } from 'react-icons/fi';
+import { FiPlus, FiTrash2, FiSave, FiX, FiChevronRight, FiChevronLeft, FiChevronDown, FiChevronUp, FiUpload, FiFileText } from 'react-icons/fi';
 import { clientsAPI, projectsAPI, tvaRegimesAPI, paymentMethodsAPI, API_BASE_URL } from '../../services/api';
 import { quotesAPI } from '../../services/quotesAPI';
 import FileUpload from '../common/FileUpload';
@@ -1104,7 +1104,7 @@ const InvoiceForm = ({ invoice = null, onSave, onCancel }) => {
             {formData.cgv_pdf && (
               <div className="mt-4 flex items-center justify-between p-3 bg-gray-700/30 rounded-lg">
                 <div className="flex items-center gap-2">
-                  <span className="text-2xl">📄</span>
+                  <FiFileText className="text-2xl text-gray-300" />
                   <span className="text-sm text-white">{formData.cgv_pdf.name}</span>
                 </div>
                 <button

@@ -427,7 +427,7 @@ const handleStripePaymentFailed = async (req, res) => {
     console.log('[Webhook Stripe Payment Failed] Projet trouvé:', project.id, project.name);
 
     // 2. Créer un revenue avec statut "failed"
-    const revenueDescription = `⚠️ ÉCHEC PAIEMENT - ${project.name}`;
+    const revenueDescription = `ÉCHEC PAIEMENT - ${project.name}`;
     const revenueNotes = `Stripe Invoice: ${stripe_invoice_id || 'N/A'}\nRaison: ${failure_reason || 'Non spécifiée'}\nProchaine tentative: ${next_retry_date ? new Date(next_retry_date).toLocaleDateString('fr-FR') : 'N/A'}\nClient: ${project.client_name || 'N/A'}\nEmail: ${project.client_email || 'N/A'}`;
 
     const revenueQuery = `
@@ -460,7 +460,7 @@ const handleStripePaymentFailed = async (req, res) => {
       `UPDATE crm_clients
        SET notes = notes || $1, updated_at = NOW()
        WHERE id = $2`,
-      [`\n\n⚠️ [${new Date().toLocaleDateString('fr-FR')}] Échec de paiement - ${failure_reason || 'Raison non spécifiée'}`, project.client_id]
+      [`\n\n[${new Date().toLocaleDateString('fr-FR')}] Échec de paiement - ${failure_reason || 'Raison non spécifiée'}`, project.client_id]
     );
 
     return res.status(201).json({
@@ -557,7 +557,7 @@ const handleStripeCancel = async (req, res) => {
       `UPDATE crm_clients
        SET notes = notes || $1, updated_at = NOW()
        WHERE id = $2`,
-      [`\n\n🔴 [${cancelDate.toLocaleDateString('fr-FR')}] Résiliation abonnement maintenance - ${cancellation_reason || 'Raison non spécifiée'}`, project.client_id]
+      [`\n\n[${cancelDate.toLocaleDateString('fr-FR')}] Résiliation abonnement maintenance - ${cancellation_reason || 'Raison non spécifiée'}`, project.client_id]
     );
 
     console.log('[Webhook Stripe Cancel] Client mis à jour:', project.client_id);

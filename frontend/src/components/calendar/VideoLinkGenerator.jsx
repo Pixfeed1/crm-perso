@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FiVideo, FiRefreshCw, FiExternalLink, FiCheck, FiX } from 'react-icons/fi';
+import { FiVideo, FiRefreshCw, FiExternalLink, FiCheck, FiX, FiUsers, FiLink } from 'react-icons/fi';
 
 const VideoLinkGenerator = ({ value, onChange, eventData }) => {
   const [providers, setProviders] = useState([]);
@@ -78,21 +78,21 @@ const VideoLinkGenerator = ({ value, onChange, eventData }) => {
     const info = {
       google_meet: {
         name: 'Google Meet',
-        icon: '📹',
+        icon: <FiVideo />,
         color: 'green'
       },
       zoom: {
         name: 'Zoom',
-        icon: '🎥',
+        icon: <FiVideo />,
         color: 'blue'
       },
       teams: {
         name: 'Microsoft Teams',
-        icon: '👥',
+        icon: <FiUsers />,
         color: 'purple'
       }
     };
-    return info[providerId] || { name: providerId, icon: '🔗', color: 'gray' };
+    return info[providerId] || { name: providerId, icon: <FiLink />, color: 'gray' };
   };
 
   // Mapping statique pour les classes Tailwind (nécessaire pour le JIT compiler)

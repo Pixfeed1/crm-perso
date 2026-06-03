@@ -36,13 +36,13 @@ Merci d'avoir fait confiance à Pixfeed pour votre projet !
 Votre satisfaction est notre priorité et votre avis nous aide à nous améliorer continuellement. Pourriez-vous prendre quelques instants pour partager votre expérience sur ${platformsList} ?
 
 ${platforms.includes('google') ? `
-📍 Google My Business :
+Google My Business :
 ${PLATFORM_URLS.google}
 ` : ''}${platforms.includes('facebook') ? `
-👍 Facebook :
+Facebook :
 ${PLATFORM_URLS.facebook}
 ` : ''}${platforms.includes('instagram') ? `
-📸 Instagram :
+Instagram :
 ${PLATFORM_URLS.instagram}
 ` : ''}
 

@@ -55,7 +55,7 @@ Bien cordialement`
       {
         id: 1,
         name: 'Premier DM',
-        body: `Salut {{prénom}} ! 👋
+        body: `Salut {{prénom}} !
 
 Je viens de découvrir {{entreprise}} et j'adore ce que vous faites !
 
@@ -64,7 +64,7 @@ Je travaille dans [ton domaine] et je pense qu'on pourrait faire des trucs cool 
       {
         id: 2,
         name: 'Relance friendly',
-        body: `Hey {{prénom}} ! J'espère que tu vas bien 😊
+        body: `Hey {{prénom}} ! J'espère que tu vas bien
 
 Je te relance juste pour savoir si t'avais vu mon message ?`
       }
@@ -73,7 +73,7 @@ Je te relance juste pour savoir si t'avais vu mon message ?`
       {
         id: 1,
         name: 'Premier DM',
-        body: `Hey {{prénom}} ! 🔥
+        body: `Hey {{prénom}} !
 
 Je kiffe trop ce que tu fais avec {{entreprise}} !
 
@@ -82,7 +82,7 @@ Je bosse dans [ton domaine] et j'ai une idée qui pourrait t'intéresser. On en 
       {
         id: 2,
         name: 'Relance',
-        body: `Yo {{prénom}} ! 👋 T'as vu mon message ? 😊`
+        body: `Yo {{prénom}} ! T'as vu mon message ?`
       }
     ]
   });

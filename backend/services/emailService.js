@@ -104,9 +104,9 @@ class EmailService {
     <td valign="top" style="padding-left: 20px;">
       <p style="margin: 0 0 2px 0; font-size: 16px; font-weight: 600; color: #111827;">Marc Gueffie</p>
       <p style="margin: 0 0 12px 0; font-size: 13px; color: #6366f1; font-weight: 500;">Chargé de Projet · Pixfeed</p>
-      <p style="margin: 0 0 4px 0; font-size: 13px; color: #6b7280;">📞 <a href="tel:0645373930" style="color: #6b7280; text-decoration: none;">06.45.37.39.30</a></p>
-      <p style="margin: 0 0 4px 0; font-size: 13px; color: #6b7280;">✉️ <a href="mailto:mgueffie@pixfeed.net" style="color: #6b7280; text-decoration: none;">mgueffie@pixfeed.net</a></p>
-      <p style="margin: 0 0 10px 0; font-size: 13px; color: #6b7280;">🌐 <a href="https://pixfeed.net" style="color: #6366f1; text-decoration: none; font-weight: 500;">pixfeed.net</a></p>
+      <p style="margin: 0 0 4px 0; font-size: 13px; color: #6b7280;"><a href="tel:0645373930" style="color: #6b7280; text-decoration: none;">06.45.37.39.30</a></p>
+      <p style="margin: 0 0 4px 0; font-size: 13px; color: #6b7280;"><a href="mailto:mgueffie@pixfeed.net" style="color: #6b7280; text-decoration: none;">mgueffie@pixfeed.net</a></p>
+      <p style="margin: 0 0 10px 0; font-size: 13px; color: #6b7280;"><a href="https://pixfeed.net" style="color: #6366f1; text-decoration: none; font-weight: 500;">pixfeed.net</a></p>
       <p style="margin: 0;">
         <a href="https://www.linkedin.com/company/pixfeed/" style="display: inline; text-decoration: none; margin-right: 8px;"><img src="https://pixfeed.net/wp-content/uploads/2026/01/linkedinmail.png" alt="LinkedIn" width="20" height="20" style="display: inline; vertical-align: middle;"></a>
         <a href="https://www.facebook.com/Pixfeed" style="display: inline; text-decoration: none;"><img src="https://pixfeed.net/wp-content/uploads/2026/01/fasebookmail.png" alt="Facebook" width="20" height="20" style="display: inline; vertical-align: middle;"></a>
@@ -360,7 +360,7 @@ class EmailService {
           <img src="https://pixfeed.net/wp-content/uploads/2025/04/logo.png" alt="Pixfeed" height="40" style="margin-bottom: 16px;">
           <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">Rapport de Maintenance</h1>
           <p style="margin: 8px 0 0 0; color: rgba(255,255,255,0.9); font-size: 15px;">${report.project_name || data.project?.name || 'Votre site web'}</p>
-          <p style="margin: 12px 0 0 0; color: rgba(255,255,255,0.8); font-size: 13px;">📅 ${this.formatDate(report.period_start)} → ${this.formatDate(report.period_end)}</p>
+          <p style="margin: 12px 0 0 0; color: rgba(255,255,255,0.8); font-size: 13px;">${this.formatDate(report.period_start)} → ${this.formatDate(report.period_end)}</p>
         </div>
 
         <!-- Contenu -->
@@ -398,7 +398,7 @@ class EmailService {
           </table>
 
           <!-- Tableau interventions -->
-          <h3 style="color: #111827; font-size: 16px; font-weight: 600; margin: 32px 0 16px 0;">📋 Détail des interventions</h3>
+          <h3 style="color: #111827; font-size: 16px; font-weight: 600; margin: 32px 0 16px 0;">Détail des interventions</h3>
           <table style="width: 100%; border-collapse: collapse; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px;">
             <thead>
               <tr style="background: #f9fafb;">
@@ -416,7 +416,7 @@ class EmailService {
           ${report.notes ? `
           <div style="margin: 24px 0; padding: 16px; background: #fef3c7; border-radius: 8px; border-left: 4px solid #f59e0b;">
             <p style="margin: 0; color: #92400e; font-size: 14px; line-height: 1.6;">
-              <strong>📝 Note :</strong> ${report.notes}
+              <strong>Note :</strong> ${report.notes}
             </p>
           </div>
           ` : ''}
@@ -450,7 +450,7 @@ class EmailService {
 
     return await this.sendEmail({
       to,
-      subject: `🔧 Rapport de maintenance - ${report.project_name || data.project?.name || 'Votre site'} - ${this.formatDate(report.period_start)} au ${this.formatDate(report.period_end)}`,
+      subject: `Rapport de maintenance - ${report.project_name || data.project?.name || 'Votre site'} - ${this.formatDate(report.period_start)} au ${this.formatDate(report.period_end)}`,
       html,
       text: `Rapport de maintenance Pixfeed\n\nBonjour ${report.client_name || ''},\n\nVoici le récapitulatif des interventions du ${this.formatDate(report.period_start)} au ${this.formatDate(report.period_end)}.\n\n- ${data.summary?.interventions_count || 0} interventions\n- Temps total : ${formatDuration(data.summary?.total_duration_minutes || 0)}\n\nCordialement,\nMarc Gueffie - Pixfeed`,
       attachments,
@@ -519,7 +519,7 @@ class EmailService {
               <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                 <tr>
                   <td style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px; border-radius: 8px 8px 0 0; text-align: center;">
-                    <h1 style="margin: 0; color: #ffffff; font-size: 24px;">🎉 Nouvel Abonnement !</h1>
+                    <h1 style="margin: 0; color: #ffffff; font-size: 24px;">Nouvel Abonnement !</h1>
                   </td>
                 </tr>
                 <tr>
@@ -590,7 +590,7 @@ class EmailService {
 
     return await this.sendEmail({
       to: adminEmail,
-      subject: `🎉 Nouvel abonnement : ${clientName} - ${plan} (${this.formatAmount(planPrice)}/mois)`,
+      subject: `Nouvel abonnement : ${clientName} - ${plan} (${this.formatAmount(planPrice)}/mois)`,
       html
     });
   }
@@ -622,7 +622,7 @@ class EmailService {
               <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                 <tr>
                   <td style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 30px; border-radius: 8px 8px 0 0; text-align: center;">
-                    <h1 style="margin: 0; color: #ffffff; font-size: 24px;">📋 Rappel : Rapports de maintenance</h1>
+                    <h1 style="margin: 0; color: #ffffff; font-size: 24px;">Rappel : Rapports de maintenance</h1>
                   </td>
                 </tr>
                 <tr>
@@ -666,7 +666,7 @@ class EmailService {
 
     return await this.sendEmail({
       to: adminEmail,
-      subject: `📋 Rappel : ${contracts.length} rapport(s) de maintenance à envoyer`,
+      subject: `Rappel : ${contracts.length} rapport(s) de maintenance à envoyer`,
       html
     });
   }

@@ -23,7 +23,7 @@ export const templates = {
       id: 'lead-first-contact',
       name: 'Premier contact',
       category: 'lead',
-      content: `📞 Premier contact - ${new Date().toLocaleDateString('fr-FR')}
+      content: `Premier contact - ${new Date().toLocaleDateString('fr-FR')}
 
 Contact établi avec : [Nom du contact]
 Entreprise : [Nom de l'entreprise]
@@ -45,7 +45,7 @@ Notes complémentaires :
       id: 'lead-qualification',
       name: 'Qualification du lead',
       category: 'lead',
-      content: `✅ Qualification - ${new Date().toLocaleDateString('fr-FR')}
+      content: `Qualification - ${new Date().toLocaleDateString('fr-FR')}
 
 BANT Analysis :
 Budget : [Montant estimé]
@@ -69,7 +69,7 @@ Actions à mener :
       id: 'lead-meeting-notes',
       name: 'Notes de réunion',
       category: 'lead',
-      content: `📋 Réunion - ${new Date().toLocaleDateString('fr-FR')}
+      content: `Réunion - ${new Date().toLocaleDateString('fr-FR')}
 
 Participants :
 -
@@ -97,7 +97,7 @@ Prochaine réunion : [Date]
       id: 'lead-lost',
       name: 'Lead perdu - Analyse',
       category: 'lead',
-      content: `❌ Lead perdu - ${new Date().toLocaleDateString('fr-FR')}
+      content: `Lead perdu - ${new Date().toLocaleDateString('fr-FR')}
 
 Raison de la perte :
 [ ] Prix trop élevé
@@ -124,7 +124,7 @@ Relance prévue le :
       id: 'client-onboarding',
       name: 'Onboarding client',
       category: 'client',
-      content: `🎉 Nouveau client - ${new Date().toLocaleDateString('fr-FR')}
+      content: `Nouveau client - ${new Date().toLocaleDateString('fr-FR')}
 
 Documents reçus :
 - [ ] Contrat signé
@@ -152,7 +152,7 @@ Notes :
       id: 'client-meeting-report',
       name: 'Compte-rendu réunion client',
       category: 'client',
-      content: `📊 Compte-rendu réunion - ${new Date().toLocaleDateString('fr-FR')}
+      content: `Compte-rendu réunion - ${new Date().toLocaleDateString('fr-FR')}
 
 Client : [Nom]
 Participants : [Liste]
@@ -171,7 +171,7 @@ Décisions validées :
 -
 
 Points d'attention :
-⚠️
+-
 
 Prochaines étapes :
 - [ ]
@@ -184,7 +184,7 @@ Prochaine réunion : [Date et heure]
       id: 'client-issue',
       name: 'Signalement problème',
       category: 'client',
-      content: `🚨 Incident client - ${new Date().toLocaleDateString('fr-FR')}
+      content: `Incident client - ${new Date().toLocaleDateString('fr-FR')}
 
 Nature du problème :
 Priorité : [ ] Faible [ ] Moyenne [ ] Élevée [ ] Critique
@@ -213,7 +213,7 @@ Statut : [ ] En cours [ ] Résolu [ ] En attente client
       id: 'project-kickoff',
       name: 'Kick-off projet',
       category: 'project',
-      content: `🚀 Lancement projet - ${new Date().toLocaleDateString('fr-FR')}
+      content: `Lancement projet - ${new Date().toLocaleDateString('fr-FR')}
 
 Objectif du projet :
 
@@ -242,24 +242,24 @@ Budget alloué :
       id: 'project-status',
       name: 'Point d\'avancement',
       category: 'project',
-      content: `📈 Point d'avancement - ${new Date().toLocaleDateString('fr-FR')}
+      content: `Point d'avancement - ${new Date().toLocaleDateString('fr-FR')}
 
 Avancement global : [%]
 
 Réalisé cette semaine :
-✅
-✅
+-
+-
 
 En cours :
-🔄
-🔄
+-
+-
 
 Prévu semaine prochaine :
-📌
-📌
+-
+-
 
 Risques identifiés :
-⚠️
+-
 
 Besoins / Blocages :
 -
@@ -272,7 +272,7 @@ Respect du planning : [ ] Oui [ ] Retard de [X jours]
       id: 'project-delivery',
       name: 'Livraison projet',
       category: 'project',
-      content: `✅ Livraison projet - ${new Date().toLocaleDateString('fr-FR')}
+      content: `Livraison projet - ${new Date().toLocaleDateString('fr-FR')}
 
 Livrables :
 - [ ]
@@ -296,7 +296,7 @@ Durée :
 Contact support :
 
 Retours client :
-Satisfaction : [ ] 😊 Excellent [ ] 🙂 Bien [ ] 😐 Moyen [ ] 😞 Insuffisant
+Satisfaction : [ ] Excellent [ ] Bien [ ] Moyen [ ] Insuffisant
 `
     }
   ],
@@ -307,7 +307,7 @@ Satisfaction : [ ] 😊 Excellent [ ] 🙂 Bien [ ] 😐 Moyen [ ] 😞 Insuffis
       id: 'interaction-call',
       name: 'Note d\'appel',
       category: 'interaction',
-      content: `☎️ Appel téléphonique - ${new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+      content: `Appel téléphonique - ${new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
 
 Interlocuteur :
 Durée : [minutes]
@@ -332,7 +332,7 @@ Relance prévue :
       id: 'interaction-email-sent',
       name: 'Email envoyé',
       category: 'interaction',
-      content: `📧 Email envoyé - ${new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+      content: `Email envoyé - ${new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
 
 Destinataire :
 Objet :
