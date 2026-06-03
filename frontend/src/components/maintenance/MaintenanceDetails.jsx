@@ -148,7 +148,7 @@ const MaintenanceDetails = ({ contract, onUpdate, onDelete, onClose, onRefresh }
           </div>
         </div>
         <div className="bg-gray-900/40 rounded-lg p-3">
-          <div className="text-xs text-gray-400 mb-1">WordPress</div>
+          <div className="text-xs text-gray-400 mb-1">Version CMS / App</div>
           <div className="text-lg font-medium text-white">
             {contract.wordpress_version || '-'}
           </div>

@@ -160,7 +160,7 @@ const MaintenanceForm = ({ contract = {}, onSave, onCancel }) => {
               className={`w-full h-11 box-border px-4 bg-gray-900/50 border ${
                 errors.site_name ? 'border-rose-500' : 'border-gray-700'
               } rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500`}
-              placeholder="Mon Site WordPress"
+              placeholder="Nom du site / projet"
             />
             {errors.site_name && <p className="mt-1 text-rose-400 text-sm">{errors.site_name}</p>}
           </div>
@@ -201,14 +201,14 @@ const MaintenanceForm = ({ contract = {}, onSave, onCancel }) => {
           </div>
 
           <div>
-            <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">URL Admin WordPress</label>
+            <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">URL Admin</label>
             <input
               type="text"
               name="admin_url"
               value={formData.admin_url}
               onChange={handleInputChange}
               className="w-full h-11 box-border px-4 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
-              placeholder="https://monsite.com/wp-admin"
+              placeholder="https://monsite.com/admin"
             />
           </div>
         </div>
@@ -282,7 +282,7 @@ const MaintenanceForm = ({ contract = {}, onSave, onCancel }) => {
         {/* Technique */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
-            <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">Version</label>
+            <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">Version CMS / App</label>
             <input
               type="text"
               name="wordpress_version"
@@ -318,7 +318,7 @@ const MaintenanceForm = ({ contract = {}, onSave, onCancel }) => {
           </div>
 
           <div>
-            <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">Nb plugins</label>
+            <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">Nb extensions</label>
             <input
               type="number"
               name="plugins_count"

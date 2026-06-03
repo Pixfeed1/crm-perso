@@ -180,7 +180,7 @@ const Maintenance = () => {
                 <FiTool className="text-white text-2xl" />
               </div>
               <div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-white">Maintenance WordPress</h1>
+                <h1 className="text-2xl sm:text-3xl font-bold text-white">Maintenance</h1>
                 <p className="text-gray-400 text-sm">
                   {filteredContracts.length} contrat{filteredContracts.length !== 1 ? 's' : ''}
                 </p>
@@ -303,7 +303,7 @@ const Maintenance = () => {
                 title="Aucun contrat"
                 description={searchQuery || statusFilter !== 'all'
                   ? "Aucun contrat ne correspond à vos critères"
-                  : "Créez votre premier contrat de maintenance WordPress"}
+                  : "Créez votre premier contrat de maintenance"}
                 action={
                   !searchQuery && statusFilter === 'all' && (
                     <motion.button

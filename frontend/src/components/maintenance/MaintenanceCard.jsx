@@ -110,7 +110,7 @@ const MaintenanceCard = ({ contract, isSelected, onClick }) => {
           </div>
           {contract.wordpress_version && (
             <span className="text-xs text-gray-400 bg-gray-700/50 px-2 py-0.5 rounded">
-              WP {contract.wordpress_version}
+              v{contract.wordpress_version}
             </span>
           )}
         </div>

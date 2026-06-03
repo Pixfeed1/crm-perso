@@ -161,7 +161,7 @@ const MaintenanceReportForm = ({ contract, onClose, onSuccess }) => {
         {/* Mises à jour */}
         <div className="grid grid-cols-3 gap-4">
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Version WordPress</label>
+            <label className="block text-sm text-gray-400 mb-1">Version CMS / App</label>
             <input
               type="text"
               name="wordpress_version"
@@ -240,7 +240,7 @@ const MaintenanceReportForm = ({ contract, onClose, onSuccess }) => {
             onChange={handleInputChange}
             rows={4}
             className="w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
-            placeholder="Mise à jour WordPress 6.4.2&#10;Mise à jour de 5 plugins&#10;Optimisation des images&#10;Nettoyage du cache"
+            placeholder="Mise à jour CMS&#10;Mise à jour des extensions&#10;Optimisation des images&#10;Nettoyage du cache"
           />
         </div>
 
