@@ -160,6 +160,12 @@ class DatabaseConfig {
   }
 
   // Convertir les requêtes SQLite en PostgreSQL
+  //
+  // LIMITE CONNUE : ce shim convertit tout littéral "= 0" / "= 1" isolé en booléen
+  // (= false / = true). Il ne faut donc PAS comparer une colonne ENTIÈRE (numérique)
+  // à un littéral 0 ou 1 directement dans une requête passée par ce shim, sous peine
+  // de la voir transformée en comparaison booléenne. Pour ce cas, utiliser
+  // db.pool.query avec un paramètre lié ($1) au lieu de la valeur en dur.
   convertQuery(query) {
     let pgQuery = query;
     
@@ -177,20 +183,25 @@ class DatabaseConfig {
     pgQuery = pgQuery.replace(/INTEGER PRIMARY KEY AUTOINCREMENT/g, 'SERIAL PRIMARY KEY');
     
     // Remplacer les comportements SQLite de LIKE (case sensitive/insensitive)
-    pgQuery = pgQuery.replace(/LIKE/g, 'ILIKE');
-    
+    // \bLIKE\b : seul le mot-clé LIKE isolé est converti (n'altère plus ILIKE -> IILIKE
+    // ni une sous-chaîne contenant "like")
+    pgQuery = pgQuery.replace(/\bLIKE\b/g, 'ILIKE');
+
     // Gérer les INSERTS et UPDATES avec RETURNING
-    if (pgQuery.toLowerCase().includes('insert into') && !pgQuery.toLowerCase().includes('returning')) {
+    // On vérifie que la requête COMMENCE par insert into / update (regex ancrées),
+    // pour ne pas ajouter RETURNING id à un SELECT contenant le mot "update" dans une chaîne.
+    if (/^\s*insert\s+into/i.test(pgQuery) && !pgQuery.toLowerCase().includes('returning')) {
       pgQuery += ' RETURNING id';
     }
 
-    if (pgQuery.toLowerCase().includes('update ') && !pgQuery.toLowerCase().includes('returning')) {
+    if (/^\s*update\s+/i.test(pgQuery) && !pgQuery.toLowerCase().includes('returning')) {
       pgQuery += ' RETURNING id';
     }
 
     // Adapter les expressions booléennes (0/1 à false/true)
-    pgQuery = pgQuery.replace(/= 0/g, '= false');
-    pgQuery = pgQuery.replace(/= 1/g, '= true');
+    // (?![\d.]) : ne convertit que les 0/1 isolés (ne corrompt plus = 100, = 10, = 0.5)
+    pgQuery = pgQuery.replace(/= 0(?![\d.])/g, '= false');
+    pgQuery = pgQuery.replace(/= 1(?![\d.])/g, '= true');
     
     return pgQuery;
   }
