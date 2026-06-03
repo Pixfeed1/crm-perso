@@ -145,220 +145,235 @@ const MaintenanceForm = ({ contract = {}, onSave, onCancel }) => {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Informations principales */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Nom du site */}
-          <div>
-            <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">
-              Nom du site <span className="text-rose-400">*</span>
-            </label>
-            <input
-              type="text"
-              name="site_name"
-              value={formData.site_name}
-              onChange={handleInputChange}
-              className={`w-full h-11 box-border px-4 bg-gray-900/50 border ${
-                errors.site_name ? 'border-rose-500' : 'border-gray-700'
-              } rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500`}
-              placeholder="Nom du site / projet"
-            />
-            {errors.site_name && <p className="mt-1 text-rose-400 text-sm">{errors.site_name}</p>}
-          </div>
+        {/* Section : Le contrat */}
+        <div className="space-y-4">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-3 pb-2 border-b border-gray-700/60">Le contrat</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Client */}
+            <div className="min-w-0">
+              <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">Client</label>
+              <div className="relative">
+                <select
+                  name="client_id"
+                  value={formData.client_id}
+                  onChange={handleInputChange}
+                  className="w-full min-w-0 h-11 box-border px-4 pr-10 appearance-none bg-gray-900/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+                  disabled={loadingClients}
+                >
+                  <option value="">{loadingClients ? 'Chargement...' : 'Sélectionner un client'}</option>
+                  {clients.map(client => (
+                    <option key={client.id} value={client.id}>{client.name}</option>
+                  ))}
+                </select>
+                <FiChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+              </div>
+            </div>
 
-          {/* Client */}
-          <div>
-            <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">Client</label>
-            <div className="relative">
-              <select
-                name="client_id"
-                value={formData.client_id}
+            {/* Nom du site / projet */}
+            <div className="min-w-0">
+              <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">
+                Nom du site / projet <span className="text-rose-400">*</span>
+              </label>
+              <input
+                type="text"
+                name="site_name"
+                value={formData.site_name}
                 onChange={handleInputChange}
-                className="w-full h-11 box-border px-4 pr-10 appearance-none bg-gray-900/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
-                disabled={loadingClients}
-              >
-                <option value="">{loadingClients ? 'Chargement...' : 'Sélectionner un client'}</option>
-                {clients.map(client => (
-                  <option key={client.id} value={client.id}>{client.name}</option>
-                ))}
-              </select>
-              <FiChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                className={`w-full min-w-0 h-11 box-border px-4 bg-gray-900/50 border ${
+                  errors.site_name ? 'border-rose-500' : 'border-gray-700'
+                } rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500`}
+                placeholder="Nom du site / projet"
+              />
+              {errors.site_name && <p className="mt-1 text-rose-400 text-sm">{errors.site_name}</p>}
+            </div>
+
+            {/* Formule */}
+            <div className="min-w-0">
+              <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">Formule</label>
+              <div className="relative">
+                <select
+                  name="plan"
+                  value={formData.plan}
+                  onChange={handlePlanChange}
+                  className="w-full min-w-0 h-11 box-border px-4 pr-10 appearance-none bg-gray-900/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+                >
+                  <option value="">— Choisir —</option>
+                  {MAINTENANCE_PLANS.map(p => (
+                    <option key={p.value} value={p.value}>{p.value}</option>
+                  ))}
+                </select>
+                <FiChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+              </div>
+            </div>
+
+            {/* Montant mensuel */}
+            <div className="min-w-0">
+              <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">Montant mensuel</label>
+              <div className="relative">
+                <input
+                  type="number"
+                  name="monthly_amount"
+                  value={formData.monthly_amount}
+                  onChange={handleInputChange}
+                  className="w-full min-w-0 h-11 box-border px-4 pl-8 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                  placeholder="0"
+                  min="0"
+                  step="0.01"
+                />
+                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">€</span>
+              </div>
+            </div>
+
+            {/* Date de début */}
+            <div className="min-w-0">
+              <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">Date de début</label>
+              <input
+                type="date"
+                name="contract_start_date"
+                value={formData.contract_start_date}
+                onChange={handleInputChange}
+                className="w-full min-w-0 h-11 box-border px-4 bg-gray-900/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+
+            {/* Statut */}
+            <div className="min-w-0">
+              <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">Statut</label>
+              <div className="relative">
+                <select
+                  name="status"
+                  value={formData.status}
+                  onChange={handleInputChange}
+                  className="w-full min-w-0 h-11 box-border px-4 pr-10 appearance-none bg-gray-900/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+                >
+                  {statusOptions.map(option => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+                <FiChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+              </div>
             </div>
           </div>
         </div>
 
-        {/* URL et Admin */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">URL du site</label>
-            <input
-              type="text"
-              name="site_url"
-              value={formData.site_url}
-              onChange={handleInputChange}
-              className="w-full h-11 box-border px-4 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
-              placeholder="https://monsite.com"
-            />
-          </div>
-
-          <div>
-            <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">URL Admin</label>
-            <input
-              type="text"
-              name="admin_url"
-              value={formData.admin_url}
-              onChange={handleInputChange}
-              className="w-full h-11 box-border px-4 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
-              placeholder="https://monsite.com/admin"
-            />
-          </div>
-        </div>
-
-        {/* Contrat */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="min-w-0">
-            <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">Date début contrat</label>
-            <input
-              type="date"
-              name="contract_start_date"
-              value={formData.contract_start_date}
-              onChange={handleInputChange}
-              className="w-full min-w-0 h-11 box-border px-4 bg-gray-900/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">Formule</label>
-            <div className="relative">
-              <select
-                name="plan"
-                value={formData.plan}
-                onChange={handlePlanChange}
-                className="w-full h-11 box-border px-4 pr-10 appearance-none bg-gray-900/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
-              >
-                <option value="">— Choisir —</option>
-                {MAINTENANCE_PLANS.map(p => (
-                  <option key={p.value} value={p.value}>{p.value}</option>
-                ))}
-              </select>
-              <FiChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+        {/* Section : Le site (technique) */}
+        <div className="space-y-4">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-3 pb-2 border-b border-gray-700/60">Le site (technique)</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* URL du site */}
+            <div className="min-w-0">
+              <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">URL du site</label>
+              <input
+                type="text"
+                name="site_url"
+                value={formData.site_url}
+                onChange={handleInputChange}
+                className="w-full min-w-0 h-11 box-border px-4 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                placeholder="https://monsite.com"
+              />
             </div>
-          </div>
 
-          <div>
-            <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">Montant mensuel</label>
-            <div className="relative">
+            {/* URL Admin */}
+            <div className="min-w-0">
+              <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">URL Admin</label>
+              <input
+                type="text"
+                name="admin_url"
+                value={formData.admin_url}
+                onChange={handleInputChange}
+                className="w-full min-w-0 h-11 box-border px-4 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                placeholder="https://monsite.com/admin"
+              />
+            </div>
+
+            {/* Version CMS / App */}
+            <div className="min-w-0">
+              <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">Version CMS / App</label>
+              <input
+                type="text"
+                name="wordpress_version"
+                value={formData.wordpress_version}
+                onChange={handleInputChange}
+                className="w-full min-w-0 h-11 box-border px-4 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                placeholder="6.4.2"
+              />
+            </div>
+
+            {/* Version PHP */}
+            <div className="min-w-0">
+              <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">Version PHP</label>
+              <input
+                type="text"
+                name="php_version"
+                value={formData.php_version}
+                onChange={handleInputChange}
+                className="w-full min-w-0 h-11 box-border px-4 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                placeholder="8.2"
+              />
+            </div>
+
+            {/* Hébergeur */}
+            <div className="min-w-0">
+              <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">Hébergeur</label>
+              <input
+                type="text"
+                name="hosting_provider"
+                value={formData.hosting_provider}
+                onChange={handleInputChange}
+                className="w-full min-w-0 h-11 box-border px-4 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                placeholder="OVH, o2switch..."
+              />
+            </div>
+
+            {/* Nb extensions */}
+            <div className="min-w-0">
+              <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">Nb extensions</label>
               <input
                 type="number"
-                name="monthly_amount"
-                value={formData.monthly_amount}
+                name="plugins_count"
+                value={formData.plugins_count}
                 onChange={handleInputChange}
-                className="w-full h-11 box-border px-4 pl-8 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                className="w-full min-w-0 h-11 box-border px-4 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
                 placeholder="0"
                 min="0"
-                step="0.01"
               />
-              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">€</span>
             </div>
           </div>
+        </div>
 
-          <div>
-            <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">Statut</label>
-            <div className="relative">
-              <select
-                name="status"
-                value={formData.status}
+        {/* Section : Métriques (mises à jour automatiquement) */}
+        <div className="space-y-4">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3 pb-2 border-b border-gray-700/60">Métriques (mises à jour automatiquement)</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* PageSpeed Mobile */}
+            <div className="min-w-0">
+              <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">PageSpeed Mobile</label>
+              <input
+                type="number"
+                name="pagespeed_mobile"
+                value={formData.pagespeed_mobile}
                 onChange={handleInputChange}
-                className="w-full h-11 box-border px-4 pr-10 appearance-none bg-gray-900/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
-              >
-                {statusOptions.map(option => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
-                ))}
-              </select>
-              <FiChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                className="w-full min-w-0 h-11 box-border px-4 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                placeholder="0-100"
+                min="0"
+                max="100"
+              />
             </div>
-          </div>
-        </div>
 
-        {/* Technique */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div>
-            <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">Version CMS / App</label>
-            <input
-              type="text"
-              name="wordpress_version"
-              value={formData.wordpress_version}
-              onChange={handleInputChange}
-              className="w-full h-11 box-border px-4 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
-              placeholder="6.4.2"
-            />
-          </div>
-
-          <div>
-            <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">Version PHP</label>
-            <input
-              type="text"
-              name="php_version"
-              value={formData.php_version}
-              onChange={handleInputChange}
-              className="w-full h-11 box-border px-4 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
-              placeholder="8.2"
-            />
-          </div>
-
-          <div>
-            <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">Hébergeur</label>
-            <input
-              type="text"
-              name="hosting_provider"
-              value={formData.hosting_provider}
-              onChange={handleInputChange}
-              className="w-full h-11 box-border px-4 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
-              placeholder="OVH, o2switch..."
-            />
-          </div>
-
-          <div>
-            <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">Nb extensions</label>
-            <input
-              type="number"
-              name="plugins_count"
-              value={formData.plugins_count}
-              onChange={handleInputChange}
-              className="w-full h-11 box-border px-4 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
-              placeholder="0"
-              min="0"
-            />
-          </div>
-        </div>
-
-        {/* PageSpeed */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">PageSpeed Mobile</label>
-            <input
-              type="number"
-              name="pagespeed_mobile"
-              value={formData.pagespeed_mobile}
-              onChange={handleInputChange}
-              className="w-full h-11 box-border px-4 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
-              placeholder="0-100"
-              min="0"
-              max="100"
-            />
-          </div>
-
-          <div>
-            <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">PageSpeed Desktop</label>
-            <input
-              type="number"
-              name="pagespeed_desktop"
-              value={formData.pagespeed_desktop}
-              onChange={handleInputChange}
-              className="w-full h-11 box-border px-4 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
-              placeholder="0-100"
-              min="0"
-              max="100"
-            />
+            {/* PageSpeed Desktop */}
+            <div className="min-w-0">
+              <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">PageSpeed Desktop</label>
+              <input
+                type="number"
+                name="pagespeed_desktop"
+                value={formData.pagespeed_desktop}
+                onChange={handleInputChange}
+                className="w-full min-w-0 h-11 box-border px-4 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                placeholder="0-100"
+                min="0"
+                max="100"
+              />
+            </div>
           </div>
         </div>
 
