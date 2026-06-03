@@ -196,14 +196,14 @@ const MaintenanceForm = ({ contract = {}, onSave, onCancel }) => {
 
         {/* Contrat */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
+          <div className="min-w-0">
             <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">Date début contrat</label>
             <input
               type="date"
               name="contract_start_date"
               value={formData.contract_start_date}
               onChange={handleInputChange}
-              className="w-full h-11 box-border px-4 bg-gray-900/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+              className="w-full min-w-0 h-11 box-border px-4 bg-gray-900/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
             />
           </div>
 
@@ -245,7 +245,7 @@ const MaintenanceForm = ({ contract = {}, onSave, onCancel }) => {
         {/* Technique */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
-            <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">Version WordPress</label>
+            <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">Version</label>
             <input
               type="text"
               name="wordpress_version"
