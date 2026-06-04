@@ -29,6 +29,9 @@ router.put('/:id', contractController.updateContract);
 // PUT /api/maintenance-contracts/:id/pagespeed - Mettre à jour les scores PageSpeed
 router.put('/:id/pagespeed', contractController.updatePageSpeed);
 
+// POST /api/maintenance-contracts/:id/billing/checkout - Créer la session de prélèvement SEPA (Stripe)
+router.post('/:id/billing/checkout', contractController.createBillingCheckout);
+
 // DELETE /api/maintenance-contracts/:id - Supprimer un contrat
 router.delete('/:id', contractController.deleteContract);
 

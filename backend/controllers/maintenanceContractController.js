@@ -1,5 +1,6 @@
 // backend/controllers/maintenanceContractController.js
 const maintenanceContractModel = require('../models/maintenanceContractModel');
+const maintenanceBillingService = require('../services/maintenanceBillingService');
 
 /**
  * Contrôleur pour la gestion des contrats de maintenance WordPress
@@ -151,6 +152,26 @@ const maintenanceContractController = {
     } catch (error) {
       console.error('[MaintenanceContract] Erreur lors de la suppression du contrat:', error);
       res.status(500).json({ message: 'Erreur serveur' });
+    }
+  },
+
+  /**
+   * Crée une Checkout Session Stripe (prélèvement SEPA mensuel) pour le contrat
+   * et renvoie l'URL de paiement.
+   */
+  createBillingCheckout: async (req, res) => {
+    const db = req.app.locals.db;
+    const { id } = req.params;
+
+    try {
+      const { url } = await maintenanceBillingService.createCheckoutForContract(db, id);
+      res.json({ url });
+    } catch (error) {
+      const status = error.statusCode || 500;
+      if (status >= 500) {
+        console.error('[MaintenanceContract] Erreur création checkout Stripe:', error);
+      }
+      res.status(status).json({ message: error.message || 'Erreur lors de la création du prélèvement' });
     }
   }
 };

@@ -497,6 +497,10 @@ const DATABASE_SCHEMA = {
       monthly_amount: 'NUMERIC(10,2) DEFAULT 0',
       plan: 'VARCHAR(50)',
       report_frequency: "VARCHAR(20) DEFAULT 'mensuel'",
+      stripe_customer_id: 'VARCHAR(255)',
+      stripe_subscription_id: 'VARCHAR(255)',
+      billing_day: 'INTEGER', // jour de prélèvement (1..28, borné côté service)
+      billing_status: "VARCHAR(20) DEFAULT 'none'", // none/pending/active/past_due/canceled
       status: "VARCHAR(50) DEFAULT 'active'", // active, paused, cancelled
       wordpress_version: 'VARCHAR(20)',
       php_version: 'VARCHAR(20)',
@@ -891,6 +895,21 @@ async function ensureMaintenanceReportConstraints(client) {
 }
 
 /**
+ * Migration idempotente : colonnes de facturation Stripe SEPA sur maintenance_contracts.
+ * - stripe_customer_id / stripe_subscription_id : liens Stripe
+ * - billing_day : jour de prélèvement (1..28, borné côté service)
+ * - billing_status : none/pending/active/past_due/canceled
+ */
+async function ensureMaintenanceBillingColumns(client) {
+  console.log('\n🔧 Vérification colonnes facturation maintenance (Stripe SEPA)...');
+  await client.query('ALTER TABLE maintenance_contracts ADD COLUMN IF NOT EXISTS stripe_customer_id VARCHAR(255);');
+  await client.query('ALTER TABLE maintenance_contracts ADD COLUMN IF NOT EXISTS stripe_subscription_id VARCHAR(255);');
+  await client.query('ALTER TABLE maintenance_contracts ADD COLUMN IF NOT EXISTS billing_day INTEGER;');
+  await client.query("ALTER TABLE maintenance_contracts ADD COLUMN IF NOT EXISTS billing_status VARCHAR(20) DEFAULT 'none';");
+  console.log('  ✓ Colonnes facturation maintenance vérifiées');
+}
+
+/**
  * Fonction principale d'auto-initialisation
  */
 async function autoInitDatabase(pool) {
@@ -916,6 +935,9 @@ async function autoInitDatabase(pool) {
 
     // project_id nullable sur maintenance_reports (rapports de contrat sans projet)
     await ensureMaintenanceReportConstraints(client);
+
+    // Colonnes de facturation Stripe SEPA sur maintenance_contracts
+    await ensureMaintenanceBillingColumns(client);
 
     // Insérer les données de référence
     await ensureTvaRegimes(client);
