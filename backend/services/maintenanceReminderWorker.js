@@ -14,7 +14,7 @@ let cronJob = null;
 /**
  * Récupère les contrats dont le rapport est dû bientôt (dans les X prochains jours)
  */
-const getContractsNeedingReport = async (daysAhead = 2) => {
+const getContractsNeedingReport = async (daysAhead = 1) => {
   const query = `
     SELECT
       mc.id,
@@ -77,8 +77,9 @@ const checkAndSendReminders = async () => {
   console.log('[MaintenanceReminder] Vérification des rapports à envoyer...');
 
   try {
-    // Récupérer les contrats dont le rapport est dû bientôt (2 jours)
-    const upcomingContracts = await getContractsNeedingReport(2);
+    // Récupérer les contrats dont le rapport est dû bientôt (J-1 par défaut, configurable)
+    const daysAhead = parseInt(process.env.REPORT_REMINDER_DAYS_AHEAD, 10) || 1;
+    const upcomingContracts = await getContractsNeedingReport(daysAhead);
 
     // Récupérer les contrats en retard
     const overdueContracts = await getOverdueContracts();

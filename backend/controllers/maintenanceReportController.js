@@ -282,6 +282,44 @@ const sendReport = async (req, res) => {
 
     const result = await db.pool.query(updateQuery, [sendTo, id]);
 
+    // Avancer automatiquement l'échéance du contrat selon sa périodicité (après envoi réussi)
+    if (report.maintenance_contract_id) {
+      try {
+        const cRes = await db.pool.query(
+          'SELECT status, report_frequency, next_report_due FROM maintenance_contracts WHERE id = $1',
+          [report.maintenance_contract_id]
+        );
+        const contract = cRes.rows[0];
+        const monthsByFreq = { mensuel: 1, trimestriel: 3 };
+        const months = contract ? monthsByFreq[contract.report_frequency] : undefined;
+
+        // 'aucun' ou contrat non actif -> on ne touche pas à l'échéance
+        if (contract && contract.status === 'active' && months) {
+          // Base : échéance actuelle, sinon fin de période du rapport, sinon aujourd'hui
+          const base = contract.next_report_due
+            ? new Date(contract.next_report_due)
+            : (report.period_end ? new Date(report.period_end) : new Date());
+          // Ajout de mois avec gestion des fins de mois (clamp, pas de débordement)
+          const anchorDay = base.getDate();
+          base.setDate(1);
+          base.setMonth(base.getMonth() + months);
+          const lastDay = new Date(base.getFullYear(), base.getMonth() + 1, 0).getDate();
+          base.setDate(Math.min(anchorDay, lastDay));
+          const pad = (n) => String(n).padStart(2, '0');
+          const nextDue = `${base.getFullYear()}-${pad(base.getMonth() + 1)}-${pad(base.getDate())}`;
+
+          await db.pool.query(
+            'UPDATE maintenance_contracts SET next_report_due = $1, updated_at = NOW() WHERE id = $2',
+            [nextDue, report.maintenance_contract_id]
+          );
+          console.log(`[Rapport] Échéance avancée pour le contrat ${report.maintenance_contract_id} -> ${nextDue} (${contract.report_frequency})`);
+        }
+      } catch (advanceError) {
+        // Ne bloque pas la réponse de succès si l'avancement échoue
+        console.error('[Rapport] Erreur avancement échéance:', advanceError.message);
+      }
+    }
+
     res.json({
       success: true,
       message: `Rapport envoyé avec succès à ${sendTo}` + (pdfBuffer ? ' (avec PDF)' : ' (sans PDF)'),

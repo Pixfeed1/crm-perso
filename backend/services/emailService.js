@@ -500,12 +500,18 @@ class EmailService {
    * Envoie un rappel pour les rapports de maintenance à envoyer
    */
   async sendMaintenanceReportReminder(contracts) {
-    const adminEmail = process.env.ADMIN_EMAIL || 'mgueffie@pixfeed.net';
+    // Destinataire = moi (alerte interne), jamais le client
+    const to = process.env.ALERT_EMAIL || process.env.REPORT_REPLY_TO || process.env.EMAIL_USER;
+    const prepareUrl = `${process.env.FRONTEND_URL || 'https://crm.pixfeed.net'}/maintenance`;
+    const single = contracts.length === 1;
+    const firstSite = contracts[0] ? (contracts[0].site_name || contracts[0].project_name || 'site') : '';
+    const firstDue = contracts[0] && contracts[0].next_report_due ? this.formatDate(contracts[0].next_report_due) : '';
 
     const contractsList = contracts.map(c => `
       <tr>
         <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">${c.client_name || 'Client'}</td>
         <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">${c.site_name || c.project_name || 'Site'}</td>
+        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">${c.next_report_due ? this.formatDate(c.next_report_due) : '-'}</td>
         <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">${c.last_report_date ? this.formatDate(c.last_report_date) : 'Jamais'}</td>
       </tr>
     `).join('');
@@ -529,7 +535,9 @@ class EmailService {
                 <tr>
                   <td style="padding: 30px;">
                     <p style="margin: 0 0 20px 0; font-size: 16px; color: #374151;">
-                      Il est temps d'envoyer les rapports de maintenance mensuels pour les clients suivants :
+                      ${single
+                        ? `Rapport de <strong>${firstSite}</strong> à préparer pour demain (${firstDue}).`
+                        : `${contracts.length} rapports de maintenance sont à préparer (échéance imminente) :`}
                     </p>
 
                     <table width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
@@ -537,6 +545,7 @@ class EmailService {
                         <tr style="background-color: #f9fafb;">
                           <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; border-bottom: 2px solid #e5e7eb;">Client</th>
                           <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; border-bottom: 2px solid #e5e7eb;">Site</th>
+                          <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; border-bottom: 2px solid #e5e7eb;">Échéance</th>
                           <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; border-bottom: 2px solid #e5e7eb;">Dernier rapport</th>
                         </tr>
                       </thead>
@@ -545,8 +554,8 @@ class EmailService {
                       </tbody>
                     </table>
 
-                    <p style="margin: 25px 0 0 0; font-size: 14px; color: #6b7280;">
-                      Connectez-vous au CRM pour générer et envoyer les rapports.
+                    <p style="margin: 25px 0 0 0; text-align: center;">
+                      <a href="${prepareUrl}" style="display: inline-block; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #ffffff; text-decoration: none; font-weight: 600; font-size: 15px; padding: 12px 24px; border-radius: 8px;">Préparer le rapport →</a>
                     </p>
                   </td>
                 </tr>
@@ -566,8 +575,10 @@ class EmailService {
     `;
 
     return await this.sendEmail({
-      to: adminEmail,
-      subject: `Rappel : ${contracts.length} rapport(s) de maintenance à envoyer`,
+      to,
+      subject: single
+        ? `Rapport de ${firstSite} à préparer pour demain (${firstDue})`
+        : `${contracts.length} rapports de maintenance à préparer`,
       html
     });
   }
