@@ -59,6 +59,12 @@ app.use(cors({
   credentials: true
 }));
 app.use(cookieParser());
+
+// Webhook Stripe (prélèvement maintenance) : monté AVANT express.json() car la
+// vérification de signature exige le corps BRUT (express.raw dans ce routeur).
+// Route publique serveur-à-serveur, sans authMiddleware.
+app.use('/api/maintenance-billing', require('./routes/maintenanceBillingRoutes'));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(morgan(logFormat, { stream: accessLogStream }));

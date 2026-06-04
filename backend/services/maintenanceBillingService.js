@@ -4,6 +4,7 @@
 // Réutilise le client Stripe partagé (config/stripe.js) — aucune init parallèle.
 
 const { getStripe } = require('../config/stripe');
+const emailService = require('./emailService');
 
 /**
  * Calcule le timestamp UNIX (secondes) de la prochaine occurrence du jour de
@@ -121,7 +122,109 @@ async function createCheckoutForContract(db, contractId) {
   };
 }
 
+/**
+ * Retrouve un contrat de maintenance par metadata.maintenance_contract_id,
+ * sinon par stripe_subscription_id, sinon par stripe_customer_id.
+ */
+async function findContract(db, { contractId, subscriptionId, customerId }) {
+  if (contractId) {
+    const r = await db.pool.query('SELECT * FROM maintenance_contracts WHERE id = $1', [contractId]);
+    if (r.rows[0]) return r.rows[0];
+  }
+  if (subscriptionId) {
+    const r = await db.pool.query('SELECT * FROM maintenance_contracts WHERE stripe_subscription_id = $1', [subscriptionId]);
+    if (r.rows[0]) return r.rows[0];
+  }
+  if (customerId) {
+    const r = await db.pool.query('SELECT * FROM maintenance_contracts WHERE stripe_customer_id = $1 ORDER BY id DESC LIMIT 1', [customerId]);
+    if (r.rows[0]) return r.rows[0];
+  }
+  return null;
+}
+
+/**
+ * Applique l'effet d'un événement Stripe (déjà vérifié + dédupliqué) sur le contrat.
+ * Met à jour billing_status / stripe_subscription_id et alerte en cas d'échec.
+ */
+async function applyStripeEvent(db, event) {
+  const obj = (event.data && event.data.object) || {};
+  const contractId = obj.metadata && obj.metadata.maintenance_contract_id;
+  const subscriptionId = obj.subscription || (obj.object === 'subscription' ? obj.id : null);
+  const customerId = obj.customer || null;
+
+  switch (event.type) {
+    case 'checkout.session.completed': {
+      const contract = await findContract(db, { contractId, customerId });
+      if (!contract) return;
+      await db.pool.query(
+        "UPDATE maintenance_contracts SET stripe_subscription_id = COALESCE($1, stripe_subscription_id), billing_status = 'active', updated_at = NOW() WHERE id = $2",
+        [obj.subscription || null, contract.id]
+      );
+      console.log(`[Billing] checkout.session.completed -> contrat ${contract.id} actif (sub ${obj.subscription || 'n/a'})`);
+      break;
+    }
+
+    case 'invoice.paid': {
+      const contract = await findContract(db, { contractId, subscriptionId, customerId });
+      if (!contract) return;
+      await db.pool.query(
+        "UPDATE maintenance_contracts SET billing_status = 'active', updated_at = NOW() WHERE id = $1",
+        [contract.id]
+      );
+      const paidAt = (obj.status_transitions && obj.status_transitions.paid_at)
+        ? new Date(obj.status_transitions.paid_at * 1000).toISOString()
+        : new Date().toISOString();
+      console.log(`[Billing] invoice.paid -> contrat ${contract.id} (dernier paiement: ${paidAt})`);
+      break;
+    }
+
+    case 'invoice.payment_failed': {
+      const contract = await findContract(db, { contractId, subscriptionId, customerId });
+      if (!contract) return;
+      await db.pool.query(
+        "UPDATE maintenance_contracts SET billing_status = 'past_due', updated_at = NOW() WHERE id = $1",
+        [contract.id]
+      );
+      // Récupérer les infos client pour l'alerte
+      const cr = await db.pool.query(
+        `SELECT mc.site_name, c.name AS client_name, c.email AS client_email
+         FROM maintenance_contracts mc LEFT JOIN crm_clients c ON mc.client_id = c.id
+         WHERE mc.id = $1`,
+        [contract.id]
+      );
+      const info = cr.rows[0] || {};
+      try {
+        await emailService.sendMaintenanceBillingFailedAlert({
+          siteName: info.site_name || contract.site_name,
+          clientName: info.client_name,
+          clientEmail: info.client_email
+        });
+      } catch (e) {
+        console.error('[Billing] Échec envoi alerte prélèvement:', e.message);
+      }
+      console.log(`[Billing] invoice.payment_failed -> contrat ${contract.id} en past_due`);
+      break;
+    }
+
+    case 'customer.subscription.deleted': {
+      const contract = await findContract(db, { contractId, subscriptionId: obj.id, customerId });
+      if (!contract) return;
+      await db.pool.query(
+        "UPDATE maintenance_contracts SET billing_status = 'canceled', updated_at = NOW() WHERE id = $1",
+        [contract.id]
+      );
+      console.log(`[Billing] customer.subscription.deleted -> contrat ${contract.id} canceled`);
+      break;
+    }
+
+    default:
+      // Événement non géré : ignoré.
+      break;
+  }
+}
+
 module.exports = {
   createCheckoutForContract,
-  nextBillingAnchor
+  nextBillingAnchor,
+  applyStripeEvent
 };

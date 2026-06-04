@@ -649,6 +649,16 @@ const DATABASE_SCHEMA = {
       'CREATE INDEX IF NOT EXISTS idx_scheduled_emails_related ON scheduled_emails(related_type, related_id)',
       'CREATE INDEX IF NOT EXISTS idx_scheduled_emails_pending ON scheduled_emails(status, scheduled_at) WHERE status = \'pending\''
     ]
+  },
+
+  // Table stripe_webhook_events (idempotence des webhooks Stripe : un event traité une seule fois)
+  stripe_webhook_events: {
+    columns: {
+      event_id: 'TEXT PRIMARY KEY',
+      type: 'TEXT',
+      received_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'
+    },
+    indexes: []
   }
 };
 

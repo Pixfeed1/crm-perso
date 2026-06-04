@@ -608,6 +608,33 @@ class EmailService {
       text: `Bonjour ${clientName || ''},\n\nVoici le lien pour mettre en place le prélèvement de votre maintenance :\n${url}\n\nBien à vous,\nL'équipe Pixfeed`
     });
   }
+
+  /**
+   * Alerte interne : un prélèvement de maintenance a échoué (vers ALERT_EMAIL).
+   */
+  async sendMaintenanceBillingFailedAlert({ siteName, clientName, clientEmail }) {
+    const to = process.env.ALERT_EMAIL || process.env.REPORT_REPLY_TO || process.env.EMAIL_USER;
+    const site = siteName || 'maintenance';
+    const client = clientName || '';
+
+    const html = `
+      <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.6;color:#374151;">
+        <p style="margin:0 0 14px 0;"><strong>Prélèvement de maintenance échoué.</strong></p>
+        <ul style="margin:0 0 14px 0;padding-left:18px;">
+          <li>Site : ${site}</li>
+          <li>Client : ${client || '-'}${clientEmail ? ` (${clientEmail})` : ''}</li>
+        </ul>
+        <p style="margin:0;">Le contrat est passé en statut « Impayé » (past_due).</p>
+      </div>
+    `;
+
+    return await this.sendEmail({
+      to,
+      subject: `Prélèvement échoué — ${site}${client ? ` / ${client}` : ''}`,
+      html,
+      text: `Prélèvement de maintenance échoué.\nSite : ${site}\nClient : ${client || '-'}${clientEmail ? ` (${clientEmail})` : ''}\nLe contrat est passé en statut Impayé (past_due).`
+    });
+  }
 }
 
 // Export singleton
