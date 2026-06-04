@@ -136,7 +136,7 @@ class EmailService {
       throw new Error('Service email non initialisé. Vérifiez votre configuration .env');
     }
 
-    const { to, subject, html, text, attachments = [], ccToSelf = false } = options;
+    const { to, subject, html, text, attachments = [], ccToSelf = false, from = null, replyTo = null } = options;
 
     // Validation
     if (!to) {
@@ -162,7 +162,7 @@ class EmailService {
 
     // Configuration du mail
     const mailOptions = {
-      from: `${process.env.EMAIL_FROM_NAME || 'CRM'} <${process.env.EMAIL_USER}>`,
+      from: from || `${process.env.EMAIL_FROM_NAME || 'CRM'} <${process.env.EMAIL_USER}>`,
       to,
       subject,
       html: finalHtml,
@@ -172,6 +172,10 @@ class EmailService {
         'Content-Language': 'fr'
       }
     };
+
+    if (replyTo) {
+      mailOptions.replyTo = replyTo;
+    }
 
     // Ajouter copie à soi-même si demandé
     if (ccToSelf) {
@@ -311,131 +315,23 @@ class EmailService {
       throw new Error('Aucun email destinataire défini pour ce client');
     }
 
-    const emailSignature = signature || this.getDefaultSignature();
+    const clientName = report.client_name || data.client?.name || '';
+    const interventionsCount = (report.interventions_count != null)
+      ? report.interventions_count
+      : (data.summary?.interventions_count || 0);
+    const periodLabel = `${this.formatDate(report.period_start)} au ${this.formatDate(report.period_end)}`;
+    const recap = interventionsCount > 0
+      ? `${interventionsCount} intervention${interventionsCount > 1 ? 's' : ''} ${interventionsCount > 1 ? 'ont' : 'a'} été réalisée${interventionsCount > 1 ? 's' : ''} ce mois-ci. Tout est à jour.`
+      : `Aucune intervention n'a été nécessaire ce mois-ci, votre site a fonctionné normalement.`;
 
-    // Labels des types d'intervention
-    const typeLabels = {
-      'update': 'Mise à jour',
-      'backup': 'Sauvegarde',
-      'security': 'Sécurité',
-      'maintenance': 'Maintenance',
-      'support': 'Support',
-      'other': 'Autre'
-    };
-
-    // Formater la durée
-    const formatDuration = (minutes) => {
-      if (!minutes) return '-';
-      const hours = Math.floor(minutes / 60);
-      const mins = minutes % 60;
-      return hours > 0 ? `${hours}h${mins > 0 ? mins.toString().padStart(2, '0') : ''}` : `${mins}min`;
-    };
-
-    // Générer le tableau des interventions
-    let interventionsHtml = '';
-    if (data.interventions && data.interventions.length > 0) {
-      interventionsHtml = data.interventions.map(i => `
-        <tr>
-          <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; color: #374151; font-size: 13px;">${this.formatDate(i.completed_date || i.scheduled_date)}</td>
-          <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">
-            <span style="display: inline-block; padding: 4px 10px; border-radius: 20px; background: #ede9fe; color: #6366f1; font-size: 11px; font-weight: 500;">
-              ${typeLabels[i.type] || i.type}
-            </span>
-          </td>
-          <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; color: #374151; font-size: 13px;">${i.title}</td>
-          <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; color: #6b7280; text-align: center; font-size: 13px;">${formatDuration(i.duration_minutes)}</td>
-        </tr>
-      `).join('');
-    } else {
-      interventionsHtml = '<tr><td colspan="4" style="padding: 24px; text-align: center; color: #9ca3af; font-style: italic;">Aucune intervention sur cette période</td></tr>';
-    }
-
-    const forfaitMensuel = report.budget || data.project?.budget || 0;
-
+    // Court mot d'accompagnement : le rapport détaillé est dans le PDF joint.
     const html = `
-      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 650px; margin: 0 auto; color: #374151;">
-
-        <!-- Header -->
-        <div style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); padding: 32px; border-radius: 12px 12px 0 0; text-align: center;">
-          <img src="https://pixfeed.net/wp-content/uploads/2025/04/logo.png" alt="Pixfeed" height="40" style="margin-bottom: 16px;">
-          <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">Rapport de Maintenance</h1>
-          <p style="margin: 8px 0 0 0; color: rgba(255,255,255,0.9); font-size: 15px;">${report.project_name || data.project?.name || 'Votre site web'}</p>
-          <p style="margin: 12px 0 0 0; color: rgba(255,255,255,0.8); font-size: 13px;">${this.formatDate(report.period_start)} → ${this.formatDate(report.period_end)}</p>
-        </div>
-
-        <!-- Contenu -->
-        <div style="padding: 32px; background: #ffffff; border: 1px solid #e5e7eb; border-top: none;">
-
-          <p style="font-size: 15px; line-height: 1.6; margin: 0 0 16px 0;">
-            Bonjour <strong>${report.client_name || data.client?.name || ''}</strong>,
-          </p>
-          <p style="font-size: 14px; line-height: 1.7; color: #6b7280; margin: 0 0 24px 0;">
-            Voici le récapitulatif des interventions réalisées sur votre site durant cette période.
-          </p>
-
-          ${customMessage ? `
-          <div style="margin: 0 0 24px 0; padding: 16px; background: #f5f3ff; border-left: 4px solid #6366f1; border-radius: 0 8px 8px 0;">
-            <p style="margin: 0; color: #5b21b6; font-size: 14px; line-height: 1.6;">${customMessage.replace(/\n/g, '<br>')}</p>
-          </div>
-          ` : ''}
-
-          <!-- Stats -->
-          <table style="width: 100%; margin: 24px 0; background: #f9fafb; border-radius: 12px;" cellpadding="0" cellspacing="0">
-            <tr>
-              <td style="width: 33%; padding: 20px; text-align: center;">
-                <div style="font-size: 28px; font-weight: 700; color: #6366f1;">${data.summary?.interventions_count || 0}</div>
-                <div style="color: #6b7280; font-size: 12px; margin-top: 4px; text-transform: uppercase;">Interventions</div>
-              </td>
-              <td style="width: 33%; padding: 20px; text-align: center; border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb;">
-                <div style="font-size: 28px; font-weight: 700; color: #6366f1;">${formatDuration(data.summary?.total_duration_minutes || 0)}</div>
-                <div style="color: #6b7280; font-size: 12px; margin-top: 4px; text-transform: uppercase;">Temps total</div>
-              </td>
-              <td style="width: 33%; padding: 20px; text-align: center;">
-                <div style="font-size: 28px; font-weight: 700; color: #10b981;">${forfaitMensuel}€</div>
-                <div style="color: #6b7280; font-size: 12px; margin-top: 4px; text-transform: uppercase;">Forfait/mois</div>
-              </td>
-            </tr>
-          </table>
-
-          <!-- Tableau interventions -->
-          <h3 style="color: #111827; font-size: 16px; font-weight: 600; margin: 32px 0 16px 0;">Détail des interventions</h3>
-          <table style="width: 100%; border-collapse: collapse; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px;">
-            <thead>
-              <tr style="background: #f9fafb;">
-                <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; font-size: 12px; text-transform: uppercase; border-bottom: 1px solid #e5e7eb;">Date</th>
-                <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; font-size: 12px; text-transform: uppercase; border-bottom: 1px solid #e5e7eb;">Type</th>
-                <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; font-size: 12px; text-transform: uppercase; border-bottom: 1px solid #e5e7eb;">Description</th>
-                <th style="padding: 12px; text-align: center; font-weight: 600; color: #374151; font-size: 12px; text-transform: uppercase; border-bottom: 1px solid #e5e7eb;">Durée</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${interventionsHtml}
-            </tbody>
-          </table>
-
-          ${report.notes ? `
-          <div style="margin: 24px 0; padding: 16px; background: #fef3c7; border-radius: 8px; border-left: 4px solid #f59e0b;">
-            <p style="margin: 0; color: #92400e; font-size: 14px; line-height: 1.6;">
-              <strong>Note :</strong> ${report.notes}
-            </p>
-          </div>
-          ` : ''}
-
-          <p style="font-size: 14px; line-height: 1.7; color: #6b7280; margin: 24px 0;">
-            Pour toute question concernant ce rapport, n'hésitez pas à me contacter.
-          </p>
-
-          <p style="font-size: 15px; line-height: 1.6; margin-bottom: 24px;">Bien cordialement,</p>
-
-          ${emailSignature}
-        </div>
-
-        <!-- Footer -->
-        <div style="background: #1f2937; padding: 20px; text-align: center; border-radius: 0 0 12px 12px;">
-          <p style="margin: 0; color: rgba(255,255,255,0.7); font-size: 12px;">
-            Ce rapport a été généré automatiquement par votre service de maintenance Pixfeed
-          </p>
-        </div>
+      <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.6;color:#374151;">
+        <p style="margin:0 0 14px 0;">Bonjour ${clientName ? `<strong>${clientName}</strong>` : ''},</p>
+        <p style="margin:0 0 14px 0;">Voici votre rapport de maintenance pour la période du ${periodLabel}.</p>
+        <p style="margin:0 0 14px 0;">${recap}</p>
+        <p style="margin:0 0 18px 0;">Le détail complet est disponible dans le PDF joint à cet email. Pour toute question, vous pouvez répondre directement à ce message.</p>
+        <p style="margin:0;">Bien à vous,<br><strong>L'équipe Pixfeed</strong></p>
       </div>
     `;
 
@@ -448,11 +344,16 @@ class EmailService {
       });
     }
 
+    const fromName = process.env.REPORT_FROM_NAME || 'Pixfeed';
+    const fromEmail = process.env.REPORT_FROM || 'contact@pixfeed.net';
+
     return await this.sendEmail({
       to,
-      subject: `Rapport de maintenance - ${report.project_name || data.project?.name || 'Votre site'} - ${this.formatDate(report.period_start)} au ${this.formatDate(report.period_end)}`,
+      from: `${fromName} <${fromEmail}>`,
+      replyTo: process.env.REPORT_REPLY_TO || 'moosyne@gmail.com',
+      subject: `Votre rapport de maintenance — ${periodLabel}`,
       html,
-      text: `Rapport de maintenance Pixfeed\n\nBonjour ${report.client_name || ''},\n\nVoici le récapitulatif des interventions du ${this.formatDate(report.period_start)} au ${this.formatDate(report.period_end)}.\n\n- ${data.summary?.interventions_count || 0} interventions\n- Temps total : ${formatDuration(data.summary?.total_duration_minutes || 0)}\n\nCordialement,\nMarc Gueffie - Pixfeed`,
+      text: `Bonjour ${clientName},\n\nVoici votre rapport de maintenance pour la période du ${periodLabel}.\n${recap}\nLe détail complet est dans le PDF joint.\n\nBien à vous,\nL'équipe Pixfeed`,
       attachments,
       ccToSelf
     });
