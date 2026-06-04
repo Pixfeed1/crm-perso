@@ -292,7 +292,7 @@ const Maintenance = () => {
         {/* Contenu principal */}
         <div className="flex flex-col lg:flex-row gap-6">
           {/* Liste des contrats */}
-          <div className={`${showDetails ? 'hidden lg:block lg:w-1/2' : 'w-full'}`}>
+          <div className={`${showDetails ? 'hidden lg:block lg:w-1/3' : 'w-full'}`}>
             {isLoading ? (
               <div className="flex justify-center items-center h-64">
                 <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-purple-500"></div>
@@ -343,7 +343,7 @@ const Maintenance = () => {
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 20 }}
-                className="w-full lg:w-1/2"
+                className="w-full lg:w-2/3"
               >
                 {/* Bouton retour mobile */}
                 <button
