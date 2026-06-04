@@ -1,6 +1,7 @@
 // backend/controllers/maintenanceContractController.js
 const maintenanceContractModel = require('../models/maintenanceContractModel');
 const maintenanceBillingService = require('../services/maintenanceBillingService');
+const emailService = require('../services/emailService');
 
 /**
  * Contrôleur pour la gestion des contrats de maintenance WordPress
@@ -63,7 +64,7 @@ const maintenanceContractController = {
   createContract: async (req, res) => {
     const db = req.app.locals.db;
     const {
-      client_id, site_name, site_url, contract_start_date, monthly_amount, plan, report_frequency,
+      client_id, site_name, site_url, contract_start_date, monthly_amount, plan, report_frequency, billing_day,
       status, wordpress_version, php_version, hosting_provider, admin_url,
       pagespeed_mobile, pagespeed_desktop, plugins_count, notes
     } = req.body;
@@ -74,7 +75,7 @@ const maintenanceContractController = {
 
     try {
       const contract = await maintenanceContractModel.createContract(db, {
-        client_id, site_name, site_url, contract_start_date, monthly_amount, plan, report_frequency,
+        client_id, site_name, site_url, contract_start_date, monthly_amount, plan, report_frequency, billing_day,
         status, wordpress_version, php_version, hosting_provider, admin_url,
         pagespeed_mobile, pagespeed_desktop, plugins_count, notes
       });
@@ -172,6 +173,26 @@ const maintenanceContractController = {
         console.error('[MaintenanceContract] Erreur création checkout Stripe:', error);
       }
       res.status(status).json({ message: error.message || 'Erreur lors de la création du prélèvement' });
+    }
+  },
+
+  /**
+   * Génère le lien de checkout et l'envoie au client par email.
+   */
+  sendBillingLink: async (req, res) => {
+    const db = req.app.locals.db;
+    const { id } = req.params;
+
+    try {
+      const { url, clientEmail, clientName } = await maintenanceBillingService.createCheckoutForContract(db, id);
+      await emailService.sendMaintenanceBillingLink({ to: clientEmail, clientName, url });
+      res.json({ success: true, sentTo: clientEmail });
+    } catch (error) {
+      const status = error.statusCode || 500;
+      if (status >= 500) {
+        console.error('[MaintenanceContract] Erreur envoi lien prélèvement:', error);
+      }
+      res.status(status).json({ message: error.message || "Erreur lors de l'envoi du lien" });
     }
   }
 };

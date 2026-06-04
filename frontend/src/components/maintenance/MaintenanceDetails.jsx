@@ -3,15 +3,19 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   FiEdit2, FiTrash2, FiGlobe, FiUser, FiCalendar, FiZap,
-  FiExternalLink, FiFileText, FiPlus, FiSend, FiEye, FiDownload
+  FiExternalLink, FiFileText, FiPlus, FiSend, FiEye, FiDownload, FiCreditCard, FiCopy
 } from 'react-icons/fi';
 import { formatDate, formatAmount } from '../../utils/formatters';
-import { maintenanceReportsAPI } from '../../services/api';
+import { maintenanceReportsAPI, maintenanceContractsAPI } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
 
 const MaintenanceDetails = ({ contract, onDelete, onRefresh, onEdit, onGenerateReport }) => {
   const { toast } = useToast();
   const [sendingReport, setSendingReport] = useState(null);
+  const [billingUrl, setBillingUrl] = useState(null);
+  const [billingLoading, setBillingLoading] = useState(false);
+  const [billingSending, setBillingSending] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   // Configuration des statuts
   const statusConfig = {
@@ -19,6 +23,16 @@ const MaintenanceDetails = ({ contract, onDelete, onRefresh, onEdit, onGenerateR
     paused: { bg: 'bg-amber-500/20', text: 'text-amber-300', label: 'En pause' },
     cancelled: { bg: 'bg-gray-500/20', text: 'text-gray-300', label: 'Annulé' }
   };
+
+  // Statut du prélèvement
+  const billingStatusConfig = {
+    none: { bg: 'bg-gray-500/20', text: 'text-gray-300', label: 'Pas de prélèvement' },
+    pending: { bg: 'bg-amber-500/20', text: 'text-amber-300', label: "En attente d'autorisation" },
+    active: { bg: 'bg-green-500/20', text: 'text-green-300', label: 'Prélèvement actif' },
+    past_due: { bg: 'bg-rose-500/20', text: 'text-rose-300', label: 'Impayé' },
+    canceled: { bg: 'bg-gray-500/20', text: 'text-gray-300', label: 'Annulé' }
+  };
+  const billingStyle = billingStatusConfig[contract.billing_status] || billingStatusConfig.none;
 
   const statusStyle = statusConfig[contract.status] || statusConfig.active;
 
@@ -72,6 +86,45 @@ const MaintenanceDetails = ({ contract, onDelete, onRefresh, onEdit, onGenerateR
       toast.error('Erreur lors de l\'envoi du rapport');
     } finally {
       setSendingReport(null);
+    }
+  };
+
+  // Mise en place du prélèvement : crée la session Stripe et récupère le lien
+  const handleSetupBilling = async () => {
+    try {
+      setBillingLoading(true);
+      const { url } = await maintenanceContractsAPI.createBillingCheckout(contract.id);
+      setBillingUrl(url);
+      onRefresh();
+    } catch (error) {
+      console.error('Erreur création prélèvement:', error);
+      toast.error(error.message || 'Erreur lors de la création du prélèvement');
+    } finally {
+      setBillingLoading(false);
+    }
+  };
+
+  const handleCopyBillingLink = async () => {
+    if (!billingUrl) return;
+    try {
+      await navigator.clipboard.writeText(billingUrl);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+    } catch (error) {
+      toast.error('Impossible de copier le lien');
+    }
+  };
+
+  const handleSendBillingLink = async () => {
+    try {
+      setBillingSending(true);
+      const res = await maintenanceContractsAPI.sendBillingLink(contract.id);
+      toast.success(`Lien envoyé à ${res.sentTo || 'au client'}`);
+    } catch (error) {
+      console.error('Erreur envoi lien prélèvement:', error);
+      toast.error(error.message || "Erreur lors de l'envoi du lien");
+    } finally {
+      setBillingSending(false);
     }
   };
 
@@ -203,6 +256,68 @@ const MaintenanceDetails = ({ contract, onDelete, onRefresh, onEdit, onGenerateR
             </span>
           </div>
         </div>
+      </div>
+
+      {/* Section Prélèvement */}
+      <div className="border-t border-gray-700 pt-6">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-medium text-gray-200 flex items-center gap-2">
+            <FiCreditCard />
+            Prélèvement automatique
+          </h3>
+          <span className={`text-xs px-3 py-1 rounded-full font-medium ${billingStyle.bg} ${billingStyle.text}`}>
+            {billingStyle.label}
+          </span>
+        </div>
+
+        <motion.button
+          whileHover={{ scale: 1.03 }}
+          whileTap={{ scale: 0.97 }}
+          onClick={handleSetupBilling}
+          disabled={billingLoading}
+          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm flex items-center gap-2 disabled:opacity-50"
+        >
+          {billingLoading ? (
+            <motion.div
+              className="w-4 h-4 border-2 border-white border-t-transparent rounded-full"
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+            />
+          ) : (
+            <FiCreditCard size={16} />
+          )}
+          Mettre en place le prélèvement
+        </motion.button>
+
+        {billingUrl && (
+          <div className="mt-4 bg-gray-900/40 rounded-lg p-3">
+            <p className="text-xs text-gray-400 mb-2">Lien de paiement (carte ou SEPA) :</p>
+            <input
+              type="text"
+              readOnly
+              value={billingUrl}
+              onFocus={(e) => e.target.select()}
+              className="w-full min-w-0 bg-gray-800/60 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-300 mb-3"
+            />
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={handleCopyBillingLink}
+                className="px-3 py-1.5 bg-gray-700/50 hover:bg-gray-700 text-gray-200 rounded-lg text-sm flex items-center gap-1"
+              >
+                <FiCopy size={14} /> {linkCopied ? 'Copié !' : 'Copier le lien'}
+              </button>
+              <button
+                type="button"
+                onClick={handleSendBillingLink}
+                disabled={billingSending}
+                className="px-3 py-1.5 bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-300 rounded-lg text-sm flex items-center gap-1 disabled:opacity-50"
+              >
+                <FiSend size={14} /> {billingSending ? 'Envoi…' : 'Envoyer au client par email'}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Section Rapports */}

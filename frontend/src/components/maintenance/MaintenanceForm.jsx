@@ -25,6 +25,7 @@ const MaintenanceForm = ({ contract = {}, onSave, onCancel }) => {
     monthly_amount: contract.monthly_amount || '',
     plan: contract?.plan || '',
     report_frequency: contract?.report_frequency || 'mensuel',
+    billing_day: contract?.billing_day || 1,
     status: contract.status || 'active',
     wordpress_version: contract.wordpress_version || '',
     php_version: contract.php_version || '',
@@ -271,6 +272,21 @@ const MaintenanceForm = ({ contract = {}, onSave, onCancel }) => {
                 </select>
                 <FiChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
               </div>
+            </div>
+
+            {/* Jour de prélèvement */}
+            <div className="min-w-0">
+              <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">Jour de prélèvement</label>
+              <input
+                type="number"
+                name="billing_day"
+                value={formData.billing_day}
+                onChange={handleInputChange}
+                min="1"
+                max="28"
+                className="w-full min-w-0 h-11 box-border px-4 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                placeholder="1"
+              />
             </div>
           </div>
         </div>

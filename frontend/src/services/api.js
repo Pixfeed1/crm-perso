@@ -1098,6 +1098,18 @@ export const maintenanceContractsAPI = {
   delete: (id) => {
     console.log(`Appel API: suppression contrat ${id}`);
     return apiRequest(`/maintenance-contracts/${id}`, 'DELETE');
+  },
+
+  // Créer la session de prélèvement (Stripe Checkout) -> { url }
+  createBillingCheckout: (id) => {
+    console.log(`Appel API: création checkout prélèvement contrat ${id}`);
+    return apiRequest(`/maintenance-contracts/${id}/billing/checkout`, 'POST');
+  },
+
+  // Envoyer le lien de prélèvement au client par email
+  sendBillingLink: (id) => {
+    console.log(`Appel API: envoi lien prélèvement contrat ${id}`);
+    return apiRequest(`/maintenance-contracts/${id}/billing/send-link`, 'POST');
   }
 };
 

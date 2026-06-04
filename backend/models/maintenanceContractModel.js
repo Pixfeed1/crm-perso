@@ -91,7 +91,7 @@ const getContractById = async (db, id) => {
  */
 const createContract = async (db, contractData) => {
   const {
-    client_id, site_name, site_url, contract_start_date, monthly_amount, plan, report_frequency,
+    client_id, site_name, site_url, contract_start_date, monthly_amount, plan, report_frequency, billing_day,
     status, wordpress_version, php_version, hosting_provider, admin_url,
     pagespeed_mobile, pagespeed_desktop, plugins_count, notes
   } = contractData;
@@ -104,8 +104,8 @@ const createContract = async (db, contractData) => {
     INSERT INTO maintenance_contracts (
       client_id, site_name, site_url, contract_start_date, monthly_amount,
       status, wordpress_version, php_version, hosting_provider, admin_url,
-      pagespeed_mobile, pagespeed_desktop, plugins_count, notes, next_report_due, plan, report_frequency
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+      pagespeed_mobile, pagespeed_desktop, plugins_count, notes, next_report_due, plan, report_frequency, billing_day
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
     RETURNING *
   `;
 
@@ -126,7 +126,8 @@ const createContract = async (db, contractData) => {
     notes || null,
     nextReportDue.toISOString().split('T')[0],
     plan || null,
-    report_frequency || 'mensuel'
+    report_frequency || 'mensuel',
+    billing_day || null
   ];
 
   const result = await db.query(query, values);
@@ -142,7 +143,7 @@ const updateContract = async (db, id, contractData) => {
     status, wordpress_version, php_version, hosting_provider, admin_url,
     pagespeed_mobile, pagespeed_desktop, last_pagespeed_date,
     last_backup_date, last_update_date, last_report_date, next_report_due,
-    plugins_count, notes, plan, report_frequency
+    plugins_count, notes, plan, report_frequency, billing_day
   } = contractData;
 
   const query = `
@@ -168,8 +169,9 @@ const updateContract = async (db, id, contractData) => {
       notes = COALESCE($19, notes),
       plan = COALESCE($20, plan),
       report_frequency = COALESCE($21, report_frequency),
+      billing_day = COALESCE($22, billing_day),
       updated_at = CURRENT_TIMESTAMP
-    WHERE id = $22
+    WHERE id = $23
     RETURNING *
   `;
 
@@ -178,7 +180,7 @@ const updateContract = async (db, id, contractData) => {
     status, wordpress_version, php_version, hosting_provider, admin_url,
     pagespeed_mobile, pagespeed_desktop, last_pagespeed_date,
     last_backup_date, last_update_date, last_report_date, next_report_due,
-    plugins_count, notes, plan, report_frequency, id
+    plugins_count, notes, plan, report_frequency, billing_day, id
   ];
 
   const result = await db.query(query, values);

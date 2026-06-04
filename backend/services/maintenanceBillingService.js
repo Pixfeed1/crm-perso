@@ -113,7 +113,12 @@ async function createCheckoutForContract(db, contractId) {
     [contract.id]
   );
 
-  return { url: session.url, sessionId: session.id };
+  return {
+    url: session.url,
+    sessionId: session.id,
+    clientEmail: contract.client_email,
+    clientName: contract.client_name
+  };
 }
 
 module.exports = {
