@@ -126,8 +126,7 @@ function renderMaintenanceReport(data) {
   const hasExt = extCount !== null && extCount !== undefined && extCount !== '';
 
   // --- Interventions ---
-  const interventionsHtml = interventions.length
-    ? interventions.map(iv => `
+  const interventionsHtml = interventions.map(iv => `
         <div class="intervention">
           <div class="iv-head">
             <span class="iv-title">${escapeHtml(iv.title)}</span>
@@ -135,8 +134,14 @@ function renderMaintenanceReport(data) {
           </div>
           ${iv.description ? `<p class="iv-desc">${escapeHtml(iv.description)}</p>` : ''}
           ${iv.impact ? `<p class="iv-impact">${escapeHtml(iv.impact)}</p>` : ''}
-        </div>`).join('')
-    : `<p class="iv-empty">Aucune intervention sur cette période.</p>`;
+        </div>`).join('');
+  // Section masquée entièrement (titre compris) s'il n'y a aucune intervention
+  const interventionsSectionHtml = interventions.length
+    ? `<section class="section">
+        <h2 class="serif">Détail des interventions</h2>
+        ${interventionsHtml}
+      </section>`
+    : '';
 
   // --- Scores PageSpeed ---
   const scoreCell = (label, iconSvg, value) => `
@@ -165,9 +170,9 @@ function renderMaintenanceReport(data) {
     ? `<div class="line-check">${icon.check()}<span>Sauvegardes quotidiennes automatiques — vos données sont protégées.</span></div>`
     : '';
 
-  // --- Extensions ---
+  // --- Extensions (masqué si 0 ou absent) ---
   let extHtml = '';
-  if (hasExt) {
+  if (hasExt && Number(extCount) > 0) {
     const n = Number(extCount);
     if (n <= 10) {
       extHtml = `<div class="line-check">${icon.check()}<span>${escapeHtml(n)} extensions installées — sous le seuil de 10, configuration saine.</span></div>`;
@@ -205,6 +210,17 @@ function renderMaintenanceReport(data) {
       </section>`
     : '';
 
+  // --- Bandeau de chiffres : masque un indicateur à 0 (et tout le bandeau si les deux sont à 0) ---
+  const ivCount = d.interventions_count != null ? Number(d.interventions_count) : 0;
+  const upCount = d.updates_count != null ? Number(d.updates_count) : 0;
+  const statCells = [];
+  if (ivCount > 0) statCells.push(`<div class="stat"><div class="num">${escapeHtml(ivCount)}</div><div class="lbl">Interventions</div></div>`);
+  if (upCount > 0) statCells.push(`<div class="stat"><div class="num">${escapeHtml(upCount)}</div><div class="lbl">Mises à jour</div></div>`);
+  const statsHtml = statCells.length ? `<div class="stats">${statCells.join('')}</div>` : '';
+
+  // --- Greeting (masqué si pas de nom client) ---
+  const greetingHtml = d.client_name ? `<div class="greeting">Bonjour ${escapeHtml(d.client_name)},</div>` : '';
+
   const planBadge = (d.plan_label || d.plan_price || d.plan_price === 0)
     ? `<div class="badge">${escapeHtml(d.plan_label || 'Forfait')}${(d.plan_price || d.plan_price === 0) ? ` · ${escapeHtml(d.plan_price)} €/mois` : ''}</div>`
     : '';
@@ -222,6 +238,7 @@ body{background:${BRAND.bg};color:${BRAND.ink};font-family:-apple-system,BlinkMa
 .head-sub{font-size:13px;color:${BRAND.subMuted};margin-top:8px;}
 .badge{display:inline-block;margin-top:18px;background:${BRAND.badgeBg};border:1px solid ${BRAND.badgeBorder};color:${BRAND.violetDark};font-size:12.5px;font-weight:600;padding:6px 14px;border-radius:999px;}
 .rule-violet{width:46px;height:2px;background:${BRAND.violet};margin-top:16px;}
+.greeting{font-family:${serif};font-size:16.5px;color:${BRAND.ink};padding:6px 38px 0;}
 .synthese{display:flex;align-items:flex-start;gap:10px;padding:4px 38px 4px;}
 .synthese .txt{font-family:${serif};font-size:16.5px;line-height:1.4;color:${BRAND.ink};}
 .stats{display:flex;border-top:1px solid ${BRAND.rule};border-bottom:1px solid ${BRAND.rule};margin:18px 0;}
@@ -238,11 +255,10 @@ body{background:${BRAND.bg};color:${BRAND.ink};font-family:-apple-system,BlinkMa
 .iv-date{font-size:11px;color:${BRAND.faint};white-space:nowrap;}
 .iv-desc{font-size:13px;color:${BRAND.muted};margin-top:5px;}
 .iv-impact{font-size:12px;font-style:italic;color:${BRAND.impact};margin-top:4px;}
-.iv-empty{font-size:13px;color:${BRAND.muted};font-style:italic;}
-.scores{display:flex;gap:28px;page-break-inside:avoid;margin-bottom:6px;}
+.scores{display:flex;gap:28px;page-break-inside:avoid;margin-bottom:18px;}
 .score{flex:1;}
 .score-lbl{display:flex;align-items:center;gap:6px;font-size:11.5px;color:${BRAND.muted};}
-.score-val{font-family:${serif};font-weight:600;font-size:29px;margin-top:4px;line-height:1;}
+.score-val{font-family:${serif};font-weight:600;font-size:29px;margin-top:9px;line-height:1;}
 .score-val .slash{color:${BRAND.faint};font-size:15px;font-weight:500;font-family:-apple-system,'Segoe UI',sans-serif;}
 .block{page-break-inside:avoid;border-left:3px solid ${BRAND.perfBorder};padding:8px 0 8px 14px;margin-top:16px;}
 .block-lbl{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:${BRAND.violetDark};}
@@ -257,10 +273,6 @@ body{background:${BRAND.bg};color:${BRAND.ink};font-family:-apple-system,BlinkMa
 .line-check{color:${BRAND.ink};}
 .line-alert{color:${BRAND.orange};}
 .closing{padding:18px 38px;border-top:1px solid ${BRAND.rule};font-size:13px;color:${BRAND.muted};}
-.rep-footer{background:${BRAND.footerBg};padding:22px 38px;page-break-inside:avoid;}
-.rep-footer .fname{color:#ffffff;font-size:11.5px;font-weight:600;}
-.rep-footer .fcontact{color:rgba(255,255,255,0.55);font-size:11px;margin-top:4px;}
-.rep-footer .fedit{color:rgba(255,255,255,0.55);font-size:10.5px;margin-top:10px;}
 `;
 
   const body = `
@@ -277,27 +289,16 @@ body{background:${BRAND.bg};color:${BRAND.ink};font-family:-apple-system,BlinkMa
       <div class="rule-violet"></div>
     </header>
 
+    ${greetingHtml}
     ${d.synthese ? `<div class="synthese">${icon.check()}<div class="txt">${escapeHtml(d.synthese)}</div></div>` : ''}
 
-    <div class="stats">
-      <div class="stat"><div class="num">${escapeHtml(d.interventions_count != null ? d.interventions_count : 0)}</div><div class="lbl">Interventions</div></div>
-      <div class="stat"><div class="num">${escapeHtml(d.updates_count != null ? d.updates_count : 0)}</div><div class="lbl">Mises à jour</div></div>
-    </div>
+    ${statsHtml}
 
-    <section class="section">
-      <h2 class="serif">Détail des interventions</h2>
-      ${interventionsHtml}
-    </section>
+    ${interventionsSectionHtml}
 
     ${siteSectionHtml}
 
     ${d.closing_text ? `<div class="closing">${escapeHtml(d.closing_text)}</div>` : ''}
-
-    <footer class="rep-footer">
-      <div class="fname">Pixfeed</div>
-      <div class="fcontact">${escapeHtml([d.phone, d.email, d.site].filter(Boolean).join(' · '))}</div>
-      <div class="fedit">Édité le ${escapeHtml(d.edited_date || '')} · © ${escapeHtml(d.year || new Date().getFullYear())} Pixfeed</div>
-    </footer>
   </div>`;
 
   return `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Rapport de maintenance${d.site_url ? ' — ' + escapeHtml(d.site_url) : ''}</title><style>${css}</style></head><body>${body}</body></html>`;
@@ -360,6 +361,7 @@ function buildMaintenanceReportData(report = {}, reportData = {}) {
   };
 
   return {
+    client_name: report.client_name || (rd.client && rd.client.name) || '',
     site_url: rd.site_url || contract.site_url || contract.site_name || (rd.project && rd.project.url) || report.site_url || report.project_name || 'votre site',
     period_label: rd.period_label || fmtMonthLabel(report.period_start),
     plan_label: rd.plan_label || report.plan || contract.plan || 'Maintenance',
