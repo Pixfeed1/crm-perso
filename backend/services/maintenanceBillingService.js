@@ -82,7 +82,7 @@ async function createCheckoutForContract(db, contractId) {
 
   const session = await stripe.checkout.sessions.create({
     mode: 'subscription',
-    payment_method_types: ['sepa_debit'],
+    payment_method_types: ['card', 'sepa_debit'],
     customer: customerId,
     line_items: [
       {
