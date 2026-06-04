@@ -24,6 +24,7 @@ const MaintenanceForm = ({ contract = {}, onSave, onCancel }) => {
     contract_start_date: contract.contract_start_date ? contract.contract_start_date.split('T')[0] : '',
     monthly_amount: contract.monthly_amount || '',
     plan: contract?.plan || '',
+    report_frequency: contract?.report_frequency || 'mensuel',
     status: contract.status || 'active',
     wordpress_version: contract.wordpress_version || '',
     php_version: contract.php_version || '',
@@ -249,6 +250,24 @@ const MaintenanceForm = ({ contract = {}, onSave, onCancel }) => {
                   {statusOptions.map(option => (
                     <option key={option.value} value={option.value}>{option.label}</option>
                   ))}
+                </select>
+                <FiChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+              </div>
+            </div>
+
+            {/* Périodicité du rapport */}
+            <div className="min-w-0">
+              <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">Périodicité du rapport</label>
+              <div className="relative">
+                <select
+                  name="report_frequency"
+                  value={formData.report_frequency}
+                  onChange={handleInputChange}
+                  className="w-full min-w-0 h-11 box-border px-4 pr-10 appearance-none bg-gray-900/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+                >
+                  <option value="mensuel">Mensuel</option>
+                  <option value="trimestriel">Trimestriel</option>
+                  <option value="aucun">Aucun</option>
                 </select>
                 <FiChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
               </div>

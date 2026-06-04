@@ -1,9 +1,21 @@
 // src/components/maintenance/MaintenanceReportForm.jsx
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { FiX, FiCheckCircle } from 'react-icons/fi';
+import { FiX, FiCheckCircle, FiPlus, FiTrash2 } from 'react-icons/fi';
 import { maintenanceReportsAPI, maintenanceContractsAPI } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
+
+const DEFAULT_SYNTHESE = "Ce mois-ci, votre site est à jour et aucun incident de sécurité n'a été détecté.";
+const DEFAULT_CLOSING = "Prochain rapport le mois prochain. Pour toute question, je reste à votre disposition.";
+
+const RECO_LEVELS = [
+  { value: 'bonne_pratique', label: 'Bonne pratique' },
+  { value: 'conseil', label: 'Conseil' },
+  { value: 'alerte', label: 'Alerte' }
+];
+
+const inputCls = "w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500";
+const labelCls = "block text-sm text-gray-400 mb-1";
 
 const MaintenanceReportForm = ({ contract, onClose, onSuccess }) => {
   const { toast } = useToast();
@@ -16,17 +28,18 @@ const MaintenanceReportForm = ({ contract, onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
     period_start: firstDay.toISOString().split('T')[0],
     period_end: lastDay.toISOString().split('T')[0],
+    synthese: DEFAULT_SYNTHESE,
+    updates_count: '',
     pagespeed_mobile: contract.pagespeed_mobile || '',
     pagespeed_desktop: contract.pagespeed_desktop || '',
-    wordpress_version: contract.wordpress_version || '',
-    plugins_updated: '',
-    theme_updated: false,
-    security_scan: true,
-    backup_done: true,
-    database_optimized: true,
-    actions_list: '',
-    notes: ''
+    perf_tips: '',
+    perf_link: '',
+    show_backups: true,
+    closing_text: DEFAULT_CLOSING
   });
+
+  // Liste dynamique des recommandations : { niveau, texte, lien }
+  const [recommendations, setRecommendations] = useState([]);
 
   const [submitting, setSubmitting] = useState(false);
 
@@ -38,13 +51,25 @@ const MaintenanceReportForm = ({ contract, onClose, onSuccess }) => {
     }));
   };
 
+  const addRecommendation = () => {
+    setRecommendations(prev => [...prev, { niveau: 'conseil', texte: '', lien: '' }]);
+  };
+
+  const removeRecommendation = (index) => {
+    setRecommendations(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const updateRecommendation = (index, field, value) => {
+    setRecommendations(prev => prev.map((r, i) => (i === index ? { ...r, [field]: value } : r)));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     try {
       setSubmitting(true);
 
-      // Mettre à jour les scores PageSpeed du contrat
+      // Mettre à jour les scores PageSpeed du contrat (comportement existant conservé)
       if (formData.pagespeed_mobile && formData.pagespeed_desktop) {
         await maintenanceContractsAPI.updatePageSpeed(
           contract.id,
@@ -53,25 +78,28 @@ const MaintenanceReportForm = ({ contract, onClose, onSuccess }) => {
         );
       }
 
-      // Générer le rapport
+      // report_data aux clés EXACTES attendues par reportTemplate
       const reportData = {
         period_start: formData.period_start,
         period_end: formData.period_end,
-        notes: formData.notes,
         report_data: {
+          synthese: formData.synthese,
+          updates_count: formData.updates_count === '' ? 0 : parseInt(formData.updates_count),
           pagespeed_mobile: formData.pagespeed_mobile ? parseInt(formData.pagespeed_mobile) : null,
           pagespeed_desktop: formData.pagespeed_desktop ? parseInt(formData.pagespeed_desktop) : null,
-          wordpress_version: formData.wordpress_version,
-          plugins_updated: formData.plugins_updated ? parseInt(formData.plugins_updated) : 0,
-          theme_updated: formData.theme_updated,
-          security_scan: formData.security_scan,
-          backup_done: formData.backup_done,
-          database_optimized: formData.database_optimized,
-          actions_list: formData.actions_list.split('\n').filter(a => a.trim())
+          perf_tips: formData.perf_tips.split('\n').map(t => t.trim()).filter(Boolean),
+          perf_link: formData.perf_link.trim(),
+          recommendations: recommendations
+            .filter(r => r.texte && r.texte.trim())
+            .map(r => ({ niveau: r.niveau, texte: r.texte.trim(), lien: (r.lien || '').trim() })),
+          show_backups: formData.show_backups,
+          closing_text: formData.closing_text,
+          extensions_count: (contract.plugins_count !== null && contract.plugins_count !== undefined && contract.plugins_count !== '')
+            ? parseInt(contract.plugins_count)
+            : null
         }
       };
 
-      // Utiliser l'endpoint dédié aux contrats de maintenance
       await maintenanceReportsAPI.generateForContract(contract.id, reportData);
 
       toast.success('Rapport généré avec succès');
@@ -107,31 +135,56 @@ const MaintenanceReportForm = ({ contract, onClose, onSuccess }) => {
         {/* Période */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Début de période</label>
+            <label className={labelCls}>Début de période</label>
             <input
               type="date"
               name="period_start"
               value={formData.period_start}
               onChange={handleInputChange}
-              className="w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className={inputCls}
             />
           </div>
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Fin de période</label>
+            <label className={labelCls}>Fin de période</label>
             <input
               type="date"
               name="period_end"
               value={formData.period_end}
               onChange={handleInputChange}
-              className="w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className={inputCls}
             />
           </div>
         </div>
 
-        {/* Performance */}
-        <div className="grid grid-cols-2 gap-4">
+        {/* Synthèse */}
+        <div>
+          <label className={labelCls}>Synthèse</label>
+          <textarea
+            name="synthese"
+            value={formData.synthese}
+            onChange={handleInputChange}
+            rows={2}
+            className={inputCls}
+            placeholder={DEFAULT_SYNTHESE}
+          />
+        </div>
+
+        {/* Chiffres */}
+        <div className="grid grid-cols-3 gap-4">
           <div>
-            <label className="block text-sm text-gray-400 mb-1">PageSpeed Mobile</label>
+            <label className={labelCls}>Nombre de mises à jour</label>
+            <input
+              type="number"
+              name="updates_count"
+              value={formData.updates_count}
+              onChange={handleInputChange}
+              min="0"
+              className={inputCls}
+              placeholder="0"
+            />
+          </div>
+          <div>
+            <label className={labelCls}>PageSpeed Mobile</label>
             <input
               type="number"
               name="pagespeed_mobile"
@@ -139,12 +192,12 @@ const MaintenanceReportForm = ({ contract, onClose, onSuccess }) => {
               onChange={handleInputChange}
               min="0"
               max="100"
-              className="w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className={inputCls}
               placeholder="0-100"
             />
           </div>
           <div>
-            <label className="block text-sm text-gray-400 mb-1">PageSpeed Desktop</label>
+            <label className={labelCls}>PageSpeed Desktop</label>
             <input
               type="number"
               name="pagespeed_desktop"
@@ -152,108 +205,114 @@ const MaintenanceReportForm = ({ contract, onClose, onSuccess }) => {
               onChange={handleInputChange}
               min="0"
               max="100"
-              className="w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className={inputCls}
               placeholder="0-100"
             />
           </div>
         </div>
 
-        {/* Mises à jour */}
-        <div className="grid grid-cols-3 gap-4">
+        {/* Performance */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Version CMS / App</label>
-            <input
-              type="text"
-              name="wordpress_version"
-              value={formData.wordpress_version}
+            <label className={labelCls}>Pistes de performance (une par ligne)</label>
+            <textarea
+              name="perf_tips"
+              value={formData.perf_tips}
               onChange={handleInputChange}
-              className="w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
-              placeholder="6.4.2"
+              rows={3}
+              className={inputCls}
+              placeholder="Activer la mise en cache navigateur&#10;Compresser les images au format WebP"
             />
           </div>
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Plugins mis à jour</label>
+            <label className={labelCls}>Lien rapport PageSpeed (URL)</label>
             <input
-              type="number"
-              name="plugins_updated"
-              value={formData.plugins_updated}
+              type="url"
+              name="perf_link"
+              value={formData.perf_link}
               onChange={handleInputChange}
-              min="0"
-              className="w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
-              placeholder="0"
+              className={inputCls}
+              placeholder="https://pagespeed.web.dev/..."
             />
-          </div>
-          <div className="flex items-end">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                name="theme_updated"
-                checked={formData.theme_updated}
-                onChange={handleInputChange}
-                className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-purple-600 focus:ring-purple-500"
-              />
-              <span className="text-sm text-gray-300">Thème mis à jour</span>
-            </label>
           </div>
         </div>
 
-        {/* Sécurité & Sauvegardes */}
-        <div className="flex flex-wrap gap-4">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              name="security_scan"
-              checked={formData.security_scan}
-              onChange={handleInputChange}
-              className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-purple-600 focus:ring-purple-500"
-            />
-            <span className="text-sm text-gray-300">Scan sécurité effectué</span>
-          </label>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              name="backup_done"
-              checked={formData.backup_done}
-              onChange={handleInputChange}
-              className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-purple-600 focus:ring-purple-500"
-            />
-            <span className="text-sm text-gray-300">Sauvegarde effectuée</span>
-          </label>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              name="database_optimized"
-              checked={formData.database_optimized}
-              onChange={handleInputChange}
-              className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-purple-600 focus:ring-purple-500"
-            />
-            <span className="text-sm text-gray-300">Base de données optimisée</span>
-          </label>
-        </div>
-
-        {/* Actions réalisées */}
+        {/* Recommandations (liste dynamique) */}
         <div>
-          <label className="block text-sm text-gray-400 mb-1">Actions réalisées (une par ligne)</label>
-          <textarea
-            name="actions_list"
-            value={formData.actions_list}
+          <div className="flex items-center justify-between mb-1">
+            <label className={labelCls + ' mb-0'}>Recommandations</label>
+            <button
+              type="button"
+              onClick={addRecommendation}
+              className="flex items-center gap-1 text-sm text-purple-300 hover:text-purple-200"
+            >
+              <FiPlus size={14} /> Ajouter
+            </button>
+          </div>
+          {recommendations.length === 0 && (
+            <p className="text-xs text-gray-500">Aucune recommandation. Cliquez sur « Ajouter » pour en créer une.</p>
+          )}
+          <div className="space-y-2">
+            {recommendations.map((reco, index) => (
+              <div key={index} className="grid grid-cols-1 md:grid-cols-12 gap-2 items-start">
+                <select
+                  value={reco.niveau}
+                  onChange={(e) => updateRecommendation(index, 'niveau', e.target.value)}
+                  className={inputCls + ' md:col-span-3'}
+                >
+                  {RECO_LEVELS.map(l => (
+                    <option key={l.value} value={l.value}>{l.label}</option>
+                  ))}
+                </select>
+                <input
+                  type="text"
+                  value={reco.texte}
+                  onChange={(e) => updateRecommendation(index, 'texte', e.target.value)}
+                  className={inputCls + ' md:col-span-5'}
+                  placeholder="Texte de la recommandation"
+                />
+                <input
+                  type="url"
+                  value={reco.lien}
+                  onChange={(e) => updateRecommendation(index, 'lien', e.target.value)}
+                  className={inputCls + ' md:col-span-3'}
+                  placeholder="Lien (optionnel)"
+                />
+                <button
+                  type="button"
+                  onClick={() => removeRecommendation(index)}
+                  className="md:col-span-1 flex items-center justify-center h-10 rounded-lg border border-gray-700 text-gray-400 hover:text-rose-400 hover:border-rose-500"
+                  aria-label="Supprimer la recommandation"
+                >
+                  <FiTrash2 size={16} />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Sauvegardes */}
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            name="show_backups"
+            checked={formData.show_backups}
             onChange={handleInputChange}
-            rows={4}
-            className="w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
-            placeholder="Mise à jour CMS&#10;Mise à jour des extensions&#10;Optimisation des images&#10;Nettoyage du cache"
+            className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-purple-600 focus:ring-purple-500"
           />
-        </div>
+          <span className="text-sm text-gray-300">Afficher les sauvegardes quotidiennes</span>
+        </label>
 
-        {/* Notes */}
+        {/* Mot de clôture */}
         <div>
-          <label className="block text-sm text-gray-400 mb-1">Notes pour le client (optionnel)</label>
+          <label className={labelCls}>Mot de clôture</label>
           <textarea
-            name="notes"
-            value={formData.notes}
+            name="closing_text"
+            value={formData.closing_text}
             onChange={handleInputChange}
             rows={2}
-            className="w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
-            placeholder="Message personnalisé..."
+            className={inputCls}
+            placeholder={DEFAULT_CLOSING}
           />
         </div>
 

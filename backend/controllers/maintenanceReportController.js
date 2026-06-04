@@ -444,7 +444,9 @@ const generateContractReport = async (req, res) => {
         site_name: contract.site_name,
         site_url: contract.site_url,
         wordpress_version: contract.wordpress_version,
-        monthly_amount: contract.monthly_amount
+        monthly_amount: contract.monthly_amount,
+        plan: contract.plan,
+        plugins_count: contract.plugins_count
       },
       client: {
         name: contract.client_name,

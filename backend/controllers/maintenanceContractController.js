@@ -62,7 +62,7 @@ const maintenanceContractController = {
   createContract: async (req, res) => {
     const db = req.app.locals.db;
     const {
-      client_id, site_name, site_url, contract_start_date, monthly_amount, plan,
+      client_id, site_name, site_url, contract_start_date, monthly_amount, plan, report_frequency,
       status, wordpress_version, php_version, hosting_provider, admin_url,
       pagespeed_mobile, pagespeed_desktop, plugins_count, notes
     } = req.body;
@@ -73,7 +73,7 @@ const maintenanceContractController = {
 
     try {
       const contract = await maintenanceContractModel.createContract(db, {
-        client_id, site_name, site_url, contract_start_date, monthly_amount, plan,
+        client_id, site_name, site_url, contract_start_date, monthly_amount, plan, report_frequency,
         status, wordpress_version, php_version, hosting_provider, admin_url,
         pagespeed_mobile, pagespeed_desktop, plugins_count, notes
       });

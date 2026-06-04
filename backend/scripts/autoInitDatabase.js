@@ -496,6 +496,7 @@ const DATABASE_SCHEMA = {
       contract_start_date: 'DATE',
       monthly_amount: 'NUMERIC(10,2) DEFAULT 0',
       plan: 'VARCHAR(50)',
+      report_frequency: "VARCHAR(20) DEFAULT 'mensuel'",
       status: "VARCHAR(50) DEFAULT 'active'", // active, paused, cancelled
       wordpress_version: 'VARCHAR(20)',
       php_version: 'VARCHAR(20)',

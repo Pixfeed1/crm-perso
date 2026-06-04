@@ -56,7 +56,9 @@ const icon = {
   mobile: (color = BRAND.muted) =>
     `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto;"><rect x="7" y="2" width="10" height="20" rx="2"></rect><path d="M11 19h2"></path></svg>`,
   desktop: (color = BRAND.muted) =>
-    `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto;"><rect x="3" y="4" width="18" height="12" rx="2"></rect><path d="M8 20h8"></path><path d="M12 16v4"></path></svg>`
+    `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto;"><rect x="3" y="4" width="18" height="12" rx="2"></rect><path d="M8 20h8"></path><path d="M12 16v4"></path></svg>`,
+  list: (color = BRAND.violetDark) =>
+    `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto;"><path d="M8 6h13"></path><path d="M8 12h13"></path><path d="M8 18h13"></path><path d="M3 6h.01"></path><path d="M3 12h.01"></path><path d="M3 18h.01"></path></svg>`
 };
 
 /** Couleur d'un score PageSpeed selon les seuils */
@@ -174,12 +176,20 @@ function renderMaintenanceReport(data) {
     }
   }
 
-  // --- Recommandations de suppression ---
+  // --- Recommandations (niveau / texte / lien) ---
+  const recoIcon = (niveau) => {
+    if (niveau === 'alerte') return icon.alert();
+    if (niveau === 'bonne_pratique') return icon.check();
+    return icon.bolt(); // conseil (défaut)
+  };
   const recoHtml = recommendations.length
     ? `<div class="block">
-        <div class="block-lbl">${icon.trash()}<span>À optimiser · extensions à supprimer</span></div>
-        <ul>${recommendations.map(r => `<li>${escapeHtml(r.name)} — ${escapeHtml(r.reason)}</li>`).join('')}</ul>
-        ${d.discuss_link ? `<a class="link" href="${escapeHtml(d.discuss_link)}">En discuter →</a>` : ''}
+        <div class="block-lbl">${icon.list()}<span>Recommandations</span></div>
+        <ul class="reco-list">${recommendations.map(r => {
+          const texte = r.texte != null ? r.texte : (r.text != null ? r.text : [r.name, r.reason].filter(Boolean).join(' — '));
+          const lien = r.lien || r.link || '';
+          return `<li class="reco-item">${recoIcon(r.niveau)}<span>${escapeHtml(texte)}${lien ? ` <a class="link" href="${escapeHtml(lien)}">En savoir plus →</a>` : ''}</span></li>`;
+        }).join('')}</ul>
       </div>`
     : '';
 
@@ -240,6 +250,9 @@ body{background:${BRAND.bg};color:${BRAND.ink};font-family:-apple-system,BlinkMa
 .block li{position:relative;padding-left:16px;font-size:13px;color:${BRAND.muted};margin-bottom:4px;}
 .block li::before{content:'•';position:absolute;left:0;color:${BRAND.violet};}
 .link{display:inline-block;margin-top:8px;color:${BRAND.violet};font-size:13px;font-weight:500;text-decoration:none;}
+.reco-list li{display:flex;align-items:flex-start;gap:8px;padding-left:0;color:${BRAND.muted};}
+.reco-list li::before{content:none;}
+.reco-list .link{margin-top:0;}
 .line-check,.line-alert{display:flex;align-items:flex-start;gap:8px;font-size:13px;margin-top:12px;page-break-inside:avoid;}
 .line-check{color:${BRAND.ink};}
 .line-alert{color:${BRAND.orange};}
@@ -324,9 +337,13 @@ function buildMaintenanceReportData(report = {}, reportData = {}) {
     ? report.interventions_count
     : (rd.summary && rd.summary.interventions_count != null ? rd.summary.interventions_count : interventions.length);
 
-  const updatesCount = (rd.summary && rd.summary.by_type && rd.summary.by_type.update != null)
-    ? rd.summary.by_type.update
-    : rawInterventions.filter(i => i.type === 'update').length;
+  const updatesCount = (rd.updates_count !== null && rd.updates_count !== undefined && rd.updates_count !== '')
+    ? Number(rd.updates_count)
+    : ((rd.summary && rd.summary.by_type && rd.summary.by_type.update != null)
+        ? rd.summary.by_type.update
+        : rawInterventions.filter(i => i.type === 'update').length);
+
+  const contract = rd.contract || {};
 
   let synthese = rd.synthese;
   if (!synthese) {
@@ -343,10 +360,10 @@ function buildMaintenanceReportData(report = {}, reportData = {}) {
   };
 
   return {
-    site_url: rd.site_url || (rd.project && rd.project.url) || report.site_url || report.project_name || 'votre site',
+    site_url: rd.site_url || contract.site_url || contract.site_name || (rd.project && rd.project.url) || report.site_url || report.project_name || 'votre site',
     period_label: rd.period_label || fmtMonthLabel(report.period_start),
-    plan_label: rd.plan_label || report.plan || 'Maintenance',
-    plan_price: pickNum(rd.plan_price, report.budget, rd.project && rd.project.budget) ,
+    plan_label: rd.plan_label || report.plan || contract.plan || 'Maintenance',
+    plan_price: pickNum(rd.plan_price, report.budget, contract.monthly_amount, rd.project && rd.project.budget),
     synthese,
     interventions_count: interventionsCount,
     updates_count: updatesCount,
@@ -356,7 +373,7 @@ function buildMaintenanceReportData(report = {}, reportData = {}) {
     perf_tips: Array.isArray(rd.perf_tips) ? rd.perf_tips : [],
     perf_link: rd.perf_link || '',
     show_backups: rd.show_backups === true,
-    extensions_count: pickNum(rd.extensions_count, report.plugins_count),
+    extensions_count: pickNum(rd.extensions_count, report.plugins_count, contract.plugins_count),
     recommendations: Array.isArray(rd.recommendations) ? rd.recommendations : [],
     discuss_link: rd.discuss_link || '',
     closing_text: rd.closing_text || 'Pour toute question concernant ce rapport ou votre contrat de maintenance, vous pouvez répondre directement à cet email.',
