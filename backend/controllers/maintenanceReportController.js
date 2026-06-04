@@ -243,24 +243,28 @@ const sendReport = async (req, res) => {
       });
     }
 
-    // Générer le PDF
+    // Générer le PDF (nom de fichier robuste, même pour un contrat sans projet lié)
     let pdfBuffer = null;
     let pdfFileName = null;
     try {
       pdfBuffer = await pdfService.generateMaintenanceReportPDF(report, data);
       const formatDate = (d) => new Date(d).toLocaleDateString('fr-FR').replace(/\//g, '-');
-      pdfFileName = `Rapport_Maintenance_${report.project_name.replace(/[^a-zA-Z0-9]/g, '_')}_${formatDate(report.period_start)}.pdf`;
-      console.log('✅ PDF généré avec succès');
+      const base = report.project_name || report.site_name
+        || (data && (data.contract?.site_name || data.site_name)) || 'site';
+      pdfFileName = `Rapport_Maintenance_${String(base).replace(/[^a-zA-Z0-9]/g, '_')}_${formatDate(report.period_start)}.pdf`;
+      console.log('✅ PDF généré avec succès:', pdfFileName);
     } catch (pdfError) {
-      console.warn('⚠️ Impossible de générer le PDF:', pdfError.message);
-      // Continuer sans PDF si erreur
+      // Erreur réelle de génération (ex. Chromium) : on la loggue clairement (visible dans error.log)
+      console.error('[Rapport] Échec génération PDF (pièce jointe non incluse):', pdfError);
+      pdfBuffer = null;
+      pdfFileName = null;
     }
 
-    // Envoyer l'email via emailService
+    // Envoyer l'email via emailService (pas de CC à la boîte d'envoi pour un email client)
     try {
       await emailService.sendMaintenanceReportEmail(report, {
         recipientEmail: sendTo,
-        ccToSelf: true,
+        ccToSelf: false,
         pdfBuffer: pdfBuffer,
         pdfFileName: pdfFileName
       });
