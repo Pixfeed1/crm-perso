@@ -515,15 +515,16 @@ const generateContractReport = async (req, res) => {
     // 5. Sauvegarder le rapport
     const insertQuery = `
       INSERT INTO maintenance_reports (
-        maintenance_contract_id, client_id, period_start, period_end,
+        maintenance_contract_id, project_id, client_id, period_start, period_end,
         interventions_count, total_duration_minutes, report_data,
         status, notes, created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'draft', $8, NOW(), NOW())
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'draft', $9, NOW(), NOW())
       RETURNING *
     `;
 
     const insertResult = await db.pool.query(insertQuery, [
       contractId,
+      contract.project_id || null, // contrat manuel sans projet -> NULL (pas de project_id inventé)
       contract.client_id,
       period_start,
       period_end,

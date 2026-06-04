@@ -525,7 +525,7 @@ const DATABASE_SCHEMA = {
   maintenance_reports: {
     columns: {
       id: 'SERIAL PRIMARY KEY',
-      project_id: 'INTEGER REFERENCES projects(id) ON DELETE CASCADE',
+      project_id: 'INTEGER REFERENCES projects(id) ON DELETE CASCADE', // nullable : rapport de contrat sans projet lié
       maintenance_contract_id: 'INTEGER REFERENCES maintenance_contracts(id) ON DELETE CASCADE',
       client_id: 'INTEGER REFERENCES crm_clients(id) ON DELETE SET NULL',
       period_start: 'DATE NOT NULL',
@@ -880,6 +880,17 @@ async function ensureStripeIdempotencyColumns(client) {
 }
 
 /**
+ * Migration idempotente : un rapport de maintenance peut etre lie a un contrat seul
+ * (cree manuellement, sans projet). On relache le NOT NULL historique sur project_id.
+ * DROP NOT NULL est idempotent (no-op si la colonne est deja nullable).
+ */
+async function ensureMaintenanceReportConstraints(client) {
+  console.log('\n🔧 Vérification contraintes maintenance_reports...');
+  await client.query('ALTER TABLE maintenance_reports ALTER COLUMN project_id DROP NOT NULL;');
+  console.log('  ✓ project_id nullable (rapports de contrat sans projet)');
+}
+
+/**
  * Fonction principale d'auto-initialisation
  */
 async function autoInitDatabase(pool) {
@@ -902,6 +913,9 @@ async function autoInitDatabase(pool) {
 
     // Colonnes/index Stripe pour l'idempotence des webhooks (après création des tables)
     await ensureStripeIdempotencyColumns(client);
+
+    // project_id nullable sur maintenance_reports (rapports de contrat sans projet)
+    await ensureMaintenanceReportConstraints(client);
 
     // Insérer les données de référence
     await ensureTvaRegimes(client);
