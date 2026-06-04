@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   FiEdit2, FiTrash2, FiGlobe, FiUser, FiCalendar, FiZap,
-  FiExternalLink, FiFileText, FiPlus, FiSend, FiEye
+  FiExternalLink, FiFileText, FiPlus, FiSend, FiEye, FiDownload
 } from 'react-icons/fi';
 import { formatDate, formatAmount } from '../../utils/formatters';
 import { maintenanceReportsAPI } from '../../services/api';
@@ -30,9 +30,30 @@ const MaintenanceDetails = ({ contract, onDelete, onRefresh, onEdit, onGenerateR
     return 'text-rose-400';
   };
 
-  const handlePreviewReport = (reportId) => {
-    const url = maintenanceReportsAPI.getPreviewUrl(reportId);
-    window.open(url, '_blank');
+  // Aperçu HTML : récupéré via le client authentifié (token attaché), affiché via un blob
+  const handlePreviewReport = async (reportId) => {
+    try {
+      const html = await maintenanceReportsAPI.getPreviewHtml(reportId);
+      const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
+      window.open(url, '_blank');
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch (error) {
+      console.error('Erreur aperçu rapport:', error);
+      toast.error('Erreur lors de l\'ouverture de l\'aperçu');
+    }
+  };
+
+  // PDF : récupéré en blob via le client authentifié, ouvert dans un nouvel onglet
+  const handleOpenPdf = async (reportId) => {
+    try {
+      const blob = await maintenanceReportsAPI.getPdfBlob(reportId);
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch (error) {
+      console.error('Erreur PDF rapport:', error);
+      toast.error('Erreur lors de l\'ouverture du PDF');
+    }
   };
 
   const handleSendReport = async (reportId) => {
@@ -231,6 +252,15 @@ const MaintenanceDetails = ({ contract, onDelete, onRefresh, onEdit, onGenerateR
                     title="Prévisualiser"
                   >
                     <FiEye size={14} />
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => handleOpenPdf(report.id)}
+                    className="p-2 rounded-lg bg-purple-600/30 hover:bg-purple-600/50 text-purple-300"
+                    title="Ouvrir le PDF"
+                  >
+                    <FiDownload size={14} />
                   </motion.button>
                   {report.status === 'draft' && (
                     <motion.button

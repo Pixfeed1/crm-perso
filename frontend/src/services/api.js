@@ -111,6 +111,35 @@ export const apiRequest = async (endpoint, method = 'GET', data = null) => {
   }
 };
 
+/**
+ * Requête GET authentifiée renvoyant la réponse brute (pour blob/texte :
+ * PDF, aperçu HTML). Attache le token comme apiRequest, mais ne fait pas .json().
+ */
+export const apiRequestRaw = async (endpoint) => {
+  const token = getAuthToken();
+
+  if (token && isTokenExpired(token)) {
+    clearAuth();
+    window.location.href = '/login?session=expired';
+    throw new Error('Session expirée. Redirection vers la page de connexion...');
+  }
+
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    method: 'GET',
+    headers: {
+      'Authorization': token ? `Bearer ${token}` : '',
+    },
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => '');
+    throw new Error(`Erreur ${response.status}: ${text}`);
+  }
+
+  return response;
+};
+
 // ===== ACTIVITÉS =====
 export const activitiesAPI = {
   getAll: () => {
@@ -994,12 +1023,18 @@ export const maintenanceReportsAPI = {
     return apiRequest(`/maintenance-reports/${id}`);
   },
 
-  // URL de prévisualisation
-  getPreviewUrl: (id) => {
-    const baseUrl = process.env.NODE_ENV === 'production'
-      ? 'https://crm.pixfeed.net/api'
-      : 'http://localhost:5000/api';
-    return `${baseUrl}/maintenance-reports/${id}/preview`;
+  // Aperçu HTML du rapport (via client authentifié, token attaché)
+  getPreviewHtml: async (id) => {
+    console.log(`Appel API: aperçu HTML rapport ${id}`);
+    const response = await apiRequestRaw(`/maintenance-reports/${id}/preview`);
+    return response.text();
+  },
+
+  // PDF du rapport en blob (via client authentifié, token attaché)
+  getPdfBlob: async (id) => {
+    console.log(`Appel API: PDF rapport ${id}`);
+    const response = await apiRequestRaw(`/maintenance-reports/${id}/pdf`);
+    return response.blob();
   },
 
   // Mettre à jour un rapport
