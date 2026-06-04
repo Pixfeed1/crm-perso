@@ -1,20 +1,16 @@
 // src/components/maintenance/MaintenanceDetails.jsx
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   FiEdit2, FiTrash2, FiGlobe, FiUser, FiCalendar, FiZap,
   FiExternalLink, FiFileText, FiPlus, FiSend, FiEye
 } from 'react-icons/fi';
-import MaintenanceForm from './MaintenanceForm';
-import MaintenanceReportForm from './MaintenanceReportForm';
 import { formatDate, formatAmount } from '../../utils/formatters';
 import { maintenanceReportsAPI } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
 
-const MaintenanceDetails = ({ contract, onUpdate, onDelete, onClose, onRefresh }) => {
+const MaintenanceDetails = ({ contract, onDelete, onRefresh, onEdit, onGenerateReport }) => {
   const { toast } = useToast();
-  const [isEditing, setIsEditing] = useState(false);
-  const [showReportForm, setShowReportForm] = useState(false);
   const [sendingReport, setSendingReport] = useState(null);
 
   // Configuration des statuts
@@ -32,11 +28,6 @@ const MaintenanceDetails = ({ contract, onUpdate, onDelete, onClose, onRefresh }
     if (score >= 90) return 'text-green-400';
     if (score >= 50) return 'text-amber-400';
     return 'text-rose-400';
-  };
-
-  const handleSaveEdit = async (updatedData) => {
-    await onUpdate(contract.id, updatedData);
-    setIsEditing(false);
   };
 
   const handlePreviewReport = (reportId) => {
@@ -62,16 +53,6 @@ const MaintenanceDetails = ({ contract, onUpdate, onDelete, onClose, onRefresh }
       setSendingReport(null);
     }
   };
-
-  if (isEditing) {
-    return (
-      <MaintenanceForm
-        contract={contract}
-        onSave={handleSaveEdit}
-        onCancel={() => setIsEditing(false)}
-      />
-    );
-  }
 
   return (
     <motion.div
@@ -115,7 +96,7 @@ const MaintenanceDetails = ({ contract, onUpdate, onDelete, onClose, onRefresh }
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => setIsEditing(true)}
+            onClick={onEdit}
             className="p-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
             title="Modifier"
           >
@@ -213,27 +194,13 @@ const MaintenanceDetails = ({ contract, onUpdate, onDelete, onClose, onRefresh }
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => setShowReportForm(true)}
+            onClick={onGenerateReport}
             className="px-3 py-1.5 bg-purple-600/30 hover:bg-purple-600/50 text-purple-300 rounded-lg text-sm flex items-center gap-1"
           >
             <FiPlus size={14} />
             Générer un rapport
           </motion.button>
         </div>
-
-        {/* Formulaire de génération de rapport */}
-        <AnimatePresence>
-          {showReportForm && (
-            <MaintenanceReportForm
-              contract={contract}
-              onClose={() => setShowReportForm(false)}
-              onSuccess={() => {
-                setShowReportForm(false);
-                onRefresh();
-              }}
-            />
-          )}
-        </AnimatePresence>
 
         {/* Liste des rapports */}
         {contract.reports && contract.reports.length > 0 ? (

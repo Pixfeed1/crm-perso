@@ -10,8 +10,10 @@ import { useConfirm } from '../hooks/useConfirm';
 import MaintenanceCard from '../components/maintenance/MaintenanceCard';
 import MaintenanceDetails from '../components/maintenance/MaintenanceDetails';
 import MaintenanceForm from '../components/maintenance/MaintenanceForm';
+import MaintenanceReportForm from '../components/maintenance/MaintenanceReportForm';
 import EmptyState from '../components/common/EmptyState';
 import ConfirmModal from '../components/common/ConfirmModal';
+import Modal from '../components/common/Modal';
 
 const Maintenance = () => {
   const { toast } = useToast();
@@ -21,9 +23,11 @@ const Maintenance = () => {
   const [contracts, setContracts] = useState([]);
   const [filteredContracts, setFilteredContracts] = useState([]);
   const [selectedContract, setSelectedContract] = useState(null);
-  const [isAddingContract, setIsAddingContract] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [showDetails, setShowDetails] = useState(false);
+  const [contractModalOpen, setContractModalOpen] = useState(false);
+  const [editingContract, setEditingContract] = useState(null); // null = création
+  const [reportModalOpen, setReportModalOpen] = useState(false);
   const [stats, setStats] = useState(null);
   const [viewMode, setViewMode] = useState('cards');
   const [searchQuery, setSearchQuery] = useState('');
@@ -79,7 +83,6 @@ const Maintenance = () => {
     try {
       const contractDetails = await maintenanceContractsAPI.getById(contract.id);
       setSelectedContract(contractDetails);
-      setIsAddingContract(false);
       setShowDetails(true);
     } catch (error) {
       console.error('Erreur chargement détails:', error);
@@ -87,11 +90,37 @@ const Maintenance = () => {
     }
   };
 
-  // Création
+  // Ouverture de la modale de contrat (création)
   const handleAddContract = () => {
+    setEditingContract(null);
+    setContractModalOpen(true);
+  };
+
+  // Ouverture de la modale de contrat (édition)
+  const handleEditContract = (contract) => {
+    setEditingContract(contract);
+    setContractModalOpen(true);
+  };
+
+  const closeContractModal = () => {
+    setContractModalOpen(false);
+    setEditingContract(null);
+  };
+
+  // Soumission de la modale (création ou édition selon editingContract)
+  const handleContractSubmit = async (data) => {
+    if (editingContract) {
+      await handleUpdateContract(editingContract.id, data);
+    } else {
+      await handleSaveContract(data);
+    }
+    closeContractModal();
+  };
+
+  // Fermer le détail et revenir à la liste
+  const closeDetails = () => {
+    setShowDetails(false);
     setSelectedContract(null);
-    setIsAddingContract(true);
-    setShowDetails(true);
   };
 
   // Sauvegarde nouveau contrat
@@ -99,8 +128,8 @@ const Maintenance = () => {
     try {
       const newContract = await maintenanceContractsAPI.create(contractData);
       setContracts([...contracts, newContract]);
-      setIsAddingContract(false);
       setSelectedContract(newContract);
+      setShowDetails(true);
       fetchStats();
       toast.success('Contrat créé avec succès');
     } catch (error) {
@@ -289,99 +318,102 @@ const Maintenance = () => {
           </div>
         </div>
 
-        {/* Contenu principal */}
-        <div className="flex flex-col lg:flex-row gap-6">
-          {/* Liste des contrats */}
-          <div className={`${showDetails ? 'hidden lg:block lg:w-1/3' : 'w-full'}`}>
-            {isLoading ? (
-              <div className="flex justify-center items-center h-64">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-purple-500"></div>
-              </div>
-            ) : filteredContracts.length === 0 ? (
-              <EmptyState
-                icon={<FiTool />}
-                title="Aucun contrat"
-                description={searchQuery || statusFilter !== 'all'
-                  ? "Aucun contrat ne correspond à vos critères"
-                  : "Créez votre premier contrat de maintenance"}
-                action={
-                  !searchQuery && statusFilter === 'all' && (
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={handleAddContract}
-                      className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg"
-                    >
-                      Créer un contrat
-                    </motion.button>
-                  )
-                }
-              />
-            ) : (
-              <div className={viewMode === 'cards'
-                ? 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4'
-                : 'space-y-2'
-              }>
-                <AnimatePresence>
-                  {filteredContracts.map(contract => (
-                    <MaintenanceCard
-                      key={contract.id}
-                      contract={contract}
-                      isSelected={selectedContract?.id === contract.id}
-                      onClick={() => handleSelectContract(contract)}
-                    />
-                  ))}
-                </AnimatePresence>
-              </div>
-            )}
-          </div>
-
-          {/* Panneau de détails */}
-          <AnimatePresence>
-            {showDetails && (
+        {/* Contenu principal : bascule liste / détail en pleine largeur */}
+        <div className="w-full">
+          {showDetails && selectedContract ? (
+            <AnimatePresence mode="wait">
               <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                className="w-full lg:w-2/3"
+                key="details"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 20 }}
+                className="w-full"
               >
-                {/* Bouton retour mobile */}
+                {/* Bouton retour toujours visible */}
                 <button
-                  onClick={() => {
-                    setShowDetails(false);
-                    setSelectedContract(null);
-                    setIsAddingContract(false);
-                  }}
-                  className="lg:hidden mb-4 text-gray-400 hover:text-white flex items-center gap-2"
+                  onClick={closeDetails}
+                  className="mb-4 text-gray-400 hover:text-white flex items-center gap-2"
                 >
                   ← Retour à la liste
                 </button>
 
-                {isAddingContract ? (
-                  <MaintenanceForm
-                    onSave={handleSaveContract}
-                    onCancel={() => {
-                      setIsAddingContract(false);
-                      setShowDetails(false);
-                    }}
-                  />
-                ) : selectedContract ? (
-                  <MaintenanceDetails
-                    contract={selectedContract}
-                    onUpdate={handleUpdateContract}
-                    onDelete={handleDeleteContract}
-                    onClose={() => {
-                      setShowDetails(false);
-                      setSelectedContract(null);
-                    }}
-                    onRefresh={handleRefreshContract}
-                  />
-                ) : null}
+                <MaintenanceDetails
+                  contract={selectedContract}
+                  onUpdate={handleUpdateContract}
+                  onDelete={handleDeleteContract}
+                  onClose={closeDetails}
+                  onRefresh={handleRefreshContract}
+                  onEdit={() => handleEditContract(selectedContract)}
+                  onGenerateReport={() => setReportModalOpen(true)}
+                />
               </motion.div>
-            )}
-          </AnimatePresence>
+            </AnimatePresence>
+          ) : isLoading ? (
+            <div className="flex justify-center items-center h-64">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-purple-500"></div>
+            </div>
+          ) : filteredContracts.length === 0 ? (
+            <EmptyState
+              icon={<FiTool />}
+              title="Aucun contrat"
+              description={searchQuery || statusFilter !== 'all'
+                ? "Aucun contrat ne correspond à vos critères"
+                : "Créez votre premier contrat de maintenance"}
+              action={
+                !searchQuery && statusFilter === 'all' && (
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={handleAddContract}
+                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg"
+                  >
+                    Créer un contrat
+                  </motion.button>
+                )
+              }
+            />
+          ) : (
+            <div className={viewMode === 'cards'
+              ? 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4'
+              : 'space-y-2'
+            }>
+              <AnimatePresence>
+                {filteredContracts.map(contract => (
+                  <MaintenanceCard
+                    key={contract.id}
+                    contract={contract}
+                    isSelected={selectedContract?.id === contract.id}
+                    onClick={() => handleSelectContract(contract)}
+                  />
+                ))}
+              </AnimatePresence>
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Modale formulaire de contrat (création / édition) */}
+      <Modal isOpen={contractModalOpen} onClose={closeContractModal} maxWidth="max-w-[720px]">
+        <MaintenanceForm
+          contract={editingContract || {}}
+          onSave={handleContractSubmit}
+          onCancel={closeContractModal}
+        />
+      </Modal>
+
+      {/* Modale formulaire de rapport */}
+      <Modal isOpen={reportModalOpen} onClose={() => setReportModalOpen(false)} maxWidth="max-w-[720px]">
+        {selectedContract && (
+          <MaintenanceReportForm
+            contract={selectedContract}
+            onClose={() => setReportModalOpen(false)}
+            onSuccess={() => {
+              setReportModalOpen(false);
+              handleRefreshContract();
+            }}
+          />
+        )}
+      </Modal>
 
       {/* Modal de confirmation */}
       <ConfirmModal {...confirmState} />
