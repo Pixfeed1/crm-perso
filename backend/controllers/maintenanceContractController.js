@@ -185,7 +185,8 @@ const maintenanceContractController = {
 
     try {
       const { url, clientEmail, clientName } = await maintenanceBillingService.createCheckoutForContract(db, id);
-      await emailService.sendMaintenanceBillingLink({ to: clientEmail, clientName, url });
+      const signature = await emailService.getSelectedSignature(db);
+      await emailService.sendMaintenanceBillingLink({ to: clientEmail, clientName, url, signature });
       res.json({ success: true, sentTo: clientEmail });
     } catch (error) {
       const status = error.statusCode || 500;

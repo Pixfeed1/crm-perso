@@ -618,13 +618,14 @@ class EmailService {
   /**
    * Envoie au client le lien Stripe Checkout pour mettre en place le prélèvement.
    */
-  async sendMaintenanceBillingLink({ to, clientName, url }) {
+  async sendMaintenanceBillingLink({ to, clientName, url, signature }) {
+    const emailSignature = signature || this.getDefaultSignature();
     const html = `
       <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.6;color:#374151;">
         <p style="margin:0 0 14px 0;">Bonjour ${clientName ? `<strong>${clientName}</strong>` : ''},</p>
         <p style="margin:0 0 14px 0;">Voici le lien pour mettre en place le prélèvement de votre maintenance :</p>
         <p style="margin:0 0 18px 0;"><a href="${url}" style="color:#6366f1;font-weight:600;">${url}</a></p>
-        <p style="margin:0;">Bien à vous,<br><strong>L'équipe Pixfeed</strong></p>
+        ${emailSignature}
       </div>
     `;
 
@@ -633,7 +634,7 @@ class EmailService {
       to,
       subject: 'Mise en place du prélèvement de votre maintenance',
       html,
-      text: `Bonjour ${clientName || ''},\n\nVoici le lien pour mettre en place le prélèvement de votre maintenance :\n${url}\n\nBien à vous,\nMarc Gueffie - Pixfeed`
+      text: `Bonjour ${clientName || ''},\n\nVoici le lien pour mettre en place le prélèvement de votre maintenance :\n${url}`
     });
   }
 
