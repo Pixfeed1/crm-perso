@@ -3,8 +3,70 @@
 // Prélèvement récurrent SEPA via Stripe pour les contrats de maintenance.
 // Réutilise le client Stripe partagé (config/stripe.js) — aucune init parallèle.
 
+const crypto = require('crypto');
 const { getStripe } = require('../config/stripe');
 const emailService = require('./emailService');
+
+/**
+ * Base publique du CRM pour construire le lien court de paiement (/pay/:token).
+ */
+function publicBaseUrl() {
+  return (process.env.PUBLIC_BASE_URL || process.env.FRONTEND_URL || 'https://crm.pixfeed.net').replace(/\/+$/, '');
+}
+
+/**
+ * Garantit qu'un token public de paiement existe pour ce contrat (réutilisable),
+ * et renvoie le lien court https://<base>/pay/:token.
+ * Le token est aléatoire et non devinable (crypto.randomBytes).
+ *
+ * @param {object} db - app.locals.db
+ * @param {number|string} contractId
+ * @returns {Promise<{ token: string, url: string }>}
+ */
+async function ensurePayLink(db, contractId) {
+  const { rows } = await db.pool.query(
+    'SELECT id, billing_pay_token FROM maintenance_contracts WHERE id = $1',
+    [contractId]
+  );
+  if (rows.length === 0) {
+    const err = new Error('Contrat de maintenance introuvable.');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  let token = rows[0].billing_pay_token;
+  if (!token) {
+    token = crypto.randomBytes(24).toString('hex'); // 48 caractères hex, non devinable
+    await db.pool.query(
+      'UPDATE maintenance_contracts SET billing_pay_token = $1, updated_at = NOW() WHERE id = $2',
+      [token, contractId]
+    );
+  }
+
+  return { token, url: `${publicBaseUrl()}/pay/${token}` };
+}
+
+/**
+ * Retrouve un contrat via son token public de paiement, puis crée une session
+ * Checkout Stripe FRAÎCHE pour ce contrat. Utilisé par la route publique /pay/:token.
+ *
+ * @param {object} db - app.locals.db
+ * @param {string} token
+ * @returns {Promise<{ url: string }>} - URL Stripe Checkout fraîche
+ */
+async function createCheckoutByPayToken(db, token) {
+  const { rows } = await db.pool.query(
+    'SELECT id FROM maintenance_contracts WHERE billing_pay_token = $1',
+    [token]
+  );
+  if (rows.length === 0) {
+    const err = new Error('Lien de paiement inconnu.');
+    err.statusCode = 404;
+    throw err;
+  }
+  const { url } = await createCheckoutForContract(db, rows[0].id);
+  return { url };
+}
 
 /**
  * Calcule le timestamp UNIX (secondes) de la prochaine occurrence du jour de
@@ -348,6 +410,8 @@ async function resumeSubscriptionForContract(db, contractId) {
 
 module.exports = {
   createCheckoutForContract,
+  ensurePayLink,
+  createCheckoutByPayToken,
   nextBillingAnchor,
   applyStripeEvent,
   cancelSubscriptionForContract,

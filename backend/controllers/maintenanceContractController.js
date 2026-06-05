@@ -165,35 +165,80 @@ const maintenanceContractController = {
     const { id } = req.params;
 
     try {
-      const { url } = await maintenanceBillingService.createCheckoutForContract(db, id);
+      // Lien COURT sur notre domaine. La session Stripe est créée au clic via /pay/:token.
+      const { url } = await maintenanceBillingService.ensurePayLink(db, id);
       res.json({ url });
     } catch (error) {
       const status = error.statusCode || 500;
       if (status >= 500) {
-        console.error('[MaintenanceContract] Erreur création checkout Stripe:', error);
+        console.error('[MaintenanceContract] Erreur création lien de paiement:', error);
       }
       res.status(status).json({ message: error.message || 'Erreur lors de la création du prélèvement' });
     }
   },
 
   /**
-   * Génère le lien de checkout et l'envoie au client par email.
+   * Génère le lien COURT (/pay/:token) et l'envoie au client par email.
+   * La session Stripe n'est créée qu'au clic du client sur le lien.
    */
   sendBillingLink: async (req, res) => {
     const db = req.app.locals.db;
     const { id } = req.params;
 
     try {
-      const { url, clientEmail, clientName } = await maintenanceBillingService.createCheckoutForContract(db, id);
+      const { url } = await maintenanceBillingService.ensurePayLink(db, id);
+
+      // Récupérer les coordonnées du client pour l'envoi
+      const { rows } = await db.pool.query(
+        `SELECT c.name AS client_name, c.email AS client_email
+         FROM maintenance_contracts mc
+         LEFT JOIN crm_clients c ON mc.client_id = c.id
+         WHERE mc.id = $1`,
+        [id]
+      );
+      const contract = rows[0];
+      if (!contract) {
+        return res.status(404).json({ message: 'Contrat de maintenance introuvable.' });
+      }
+      if (!contract.client_email) {
+        return res.status(400).json({ message: "Le client de ce contrat n'a pas d'adresse email." });
+      }
+
       const signature = await emailService.getSelectedSignature(db);
-      await emailService.sendMaintenanceBillingLink({ to: clientEmail, clientName, url, signature });
-      res.json({ success: true, sentTo: clientEmail });
+      await emailService.sendMaintenanceBillingLink({
+        to: contract.client_email,
+        clientName: contract.client_name,
+        url,
+        signature
+      });
+      res.json({ success: true, sentTo: contract.client_email });
     } catch (error) {
       const status = error.statusCode || 500;
       if (status >= 500) {
         console.error('[MaintenanceContract] Erreur envoi lien prélèvement:', error);
       }
       res.status(status).json({ message: error.message || "Erreur lors de l'envoi du lien" });
+    }
+  },
+
+  /**
+   * Route PUBLIQUE (sans auth) : GET /pay/:token
+   * Crée une session Checkout Stripe fraîche et redirige (302) vers session.url.
+   */
+  payRedirect: async (req, res) => {
+    const db = req.app.locals.db;
+    const { token } = req.params;
+
+    try {
+      const { url } = await maintenanceBillingService.createCheckoutByPayToken(db, token);
+      return res.redirect(302, url);
+    } catch (error) {
+      const status = error.statusCode || 500;
+      if (status === 404) {
+        return res.status(404).send('Lien de paiement invalide ou expiré.');
+      }
+      console.error('[MaintenanceContract] Erreur redirection lien de paiement:', error);
+      return res.status(500).send('Une erreur est survenue lors de la préparation du paiement. Veuillez réessayer.');
     }
   },
 

@@ -147,6 +147,10 @@ app.use('/api/maintenance-reports', require('./routes/maintenanceReportRoutes'))
 app.use('/api/maintenance-contracts', require('./routes/maintenanceContractRoutes'));
 app.use('/api/scheduled-emails', require('./routes/scheduledEmailRoutes'));
 
+// Lien court PUBLIC de paiement de maintenance (/pay/:token) : crée une session
+// Stripe fraîche au clic et redirige vers Checkout. Monté AVANT le catch-all SPA.
+app.use('/pay', require('./routes/maintenancePayRoutes'));
+
 // Servir les fichiers uploadés en statique (protégés par auth si nécessaire)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 

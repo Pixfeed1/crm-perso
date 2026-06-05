@@ -502,6 +502,7 @@ const DATABASE_SCHEMA = {
       billing_day: 'INTEGER', // jour de prélèvement (1..28, borné côté service)
       billing_status: "VARCHAR(20) DEFAULT 'none'", // none/pending/active/past_due/canceling/canceled
       billing_cancel_at: 'TIMESTAMP', // fin de période prévue si résiliation programmée
+      billing_pay_token: 'VARCHAR(64)', // token public du lien court de paiement (/pay/:token)
       status: "VARCHAR(50) DEFAULT 'active'", // active, paused, cancelled
       wordpress_version: 'VARCHAR(20)',
       php_version: 'VARCHAR(20)',
@@ -918,6 +919,8 @@ async function ensureMaintenanceBillingColumns(client) {
   await client.query('ALTER TABLE maintenance_contracts ADD COLUMN IF NOT EXISTS billing_day INTEGER;');
   await client.query("ALTER TABLE maintenance_contracts ADD COLUMN IF NOT EXISTS billing_status VARCHAR(20) DEFAULT 'none';");
   await client.query('ALTER TABLE maintenance_contracts ADD COLUMN IF NOT EXISTS billing_cancel_at TIMESTAMP;');
+  await client.query('ALTER TABLE maintenance_contracts ADD COLUMN IF NOT EXISTS billing_pay_token VARCHAR(64);');
+  await client.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_maintenance_contracts_billing_pay_token ON maintenance_contracts(billing_pay_token);');
   console.log('  ✓ Colonnes facturation maintenance vérifiées');
 }
 
