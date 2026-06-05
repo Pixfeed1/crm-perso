@@ -287,6 +287,18 @@ const clientController = {
         attachments
       });
 
+      // Suivi automatique : enregistre une interaction 'email' (notes = objet).
+      // Best-effort : ne doit jamais faire échouer l'envoi de l'email.
+      try {
+        await db.pool.query(
+          `INSERT INTO interactions (contact_type, contact_id, type, date, notes, followup_done)
+           VALUES ('client', $1, 'email', NOW(), $2, FALSE)`,
+          [id, subject]
+        );
+      } catch (logErr) {
+        console.error('[Interaction] Echec enregistrement auto email client:', logErr.message);
+      }
+
       res.json({
         success: true,
         message: 'Email envoyé avec succès'

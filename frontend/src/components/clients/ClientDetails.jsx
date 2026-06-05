@@ -10,6 +10,7 @@ import ReviewRequestModal from './ReviewRequestModal';
 import EmailModal from './EmailModal';
 import QuickQuoteModal from './QuickQuoteModal';
 import QuickInvoiceModal from './QuickInvoiceModal';
+import ContactFollowup from '../common/ContactFollowup';
 import { formatLongDate, formatValue } from '../../utils/formatters';
 
 const ClientDetails = ({ client, onUpdate, onDelete, onClose }) => {
@@ -340,6 +341,9 @@ const ClientDetails = ({ client, onUpdate, onDelete, onClose }) => {
           </div>
         </div>
       )}
+
+      {/* Suivi des prises de contact */}
+      <ContactFollowup contactType="client" contactId={client.id} phone={client.phone} />
 
       {/* Modal de demande d'avis */}
       <ReviewRequestModal

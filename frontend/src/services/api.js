@@ -1140,6 +1140,15 @@ export const subscriptionsAPI = {
   resumeBilling: (id) => apiRequest(`/subscriptions/${id}/billing/resume`, 'POST')
 };
 
+// API pour le suivi des prises de contact (interactions leads + clients)
+export const interactionsAPI = {
+  getByContact: (contactType, contactId) => apiRequest(`/interactions/contact/${contactType}/${contactId}`),
+  create: (data) => apiRequest('/interactions', 'POST', data),
+  markFollowupDone: (id, done = true) => apiRequest(`/interactions/${id}/followup-done`, 'PATCH', { done }),
+  delete: (id) => apiRequest(`/interactions/${id}`, 'DELETE'),
+  getFollowups: () => apiRequest('/interactions/followups')
+};
+
 // API pour les emails programmés
 export const scheduledEmailsAPI = {
   // Récupérer tous les emails programmés

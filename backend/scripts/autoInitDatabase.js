@@ -59,6 +59,27 @@ const DATABASE_SCHEMA = {
     ]
   },
 
+  // Table interactions (suivi des prises de contact : leads ET clients)
+  // Polymorphe (contact_type + contact_id), sans FK car pointe sur leads OU crm_clients.
+  interactions: {
+    columns: {
+      id: 'SERIAL PRIMARY KEY',
+      contact_type: "VARCHAR(10) NOT NULL DEFAULT 'client'", // 'lead' | 'client'
+      contact_id: 'INTEGER NOT NULL',
+      type: "VARCHAR(20) NOT NULL DEFAULT 'note'", // email | appel | sms | note | rdv
+      date: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP',
+      notes: 'TEXT',
+      result: 'TEXT',
+      next_followup_date: 'DATE',
+      followup_done: 'BOOLEAN DEFAULT FALSE',
+      created_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'
+    },
+    indexes: [
+      'CREATE INDEX IF NOT EXISTS idx_interactions_contact ON interactions(contact_type, contact_id)',
+      'CREATE INDEX IF NOT EXISTS idx_interactions_followup ON interactions(next_followup_date, followup_done)'
+    ]
+  },
+
   // Table projects
   projects: {
     columns: {
@@ -978,6 +999,24 @@ async function ensureSubscriptionColumns(client) {
 }
 
 /**
+ * Migration idempotente : table interactions (suivi des prises de contact, leads + clients).
+ */
+async function ensureInteractionsColumns(client) {
+  console.log('\n🔧 Vérification colonnes interactions (suivi des contacts)...');
+  await client.query("ALTER TABLE interactions ADD COLUMN IF NOT EXISTS contact_type VARCHAR(10) NOT NULL DEFAULT 'client';");
+  await client.query('ALTER TABLE interactions ADD COLUMN IF NOT EXISTS contact_id INTEGER;');
+  await client.query("ALTER TABLE interactions ADD COLUMN IF NOT EXISTS type VARCHAR(20) NOT NULL DEFAULT 'note';");
+  await client.query('ALTER TABLE interactions ADD COLUMN IF NOT EXISTS date TIMESTAMP DEFAULT CURRENT_TIMESTAMP;');
+  await client.query('ALTER TABLE interactions ADD COLUMN IF NOT EXISTS notes TEXT;');
+  await client.query('ALTER TABLE interactions ADD COLUMN IF NOT EXISTS result TEXT;');
+  await client.query('ALTER TABLE interactions ADD COLUMN IF NOT EXISTS next_followup_date DATE;');
+  await client.query('ALTER TABLE interactions ADD COLUMN IF NOT EXISTS followup_done BOOLEAN DEFAULT FALSE;');
+  await client.query('CREATE INDEX IF NOT EXISTS idx_interactions_contact ON interactions(contact_type, contact_id);');
+  await client.query('CREATE INDEX IF NOT EXISTS idx_interactions_followup ON interactions(next_followup_date, followup_done);');
+  console.log('  ✓ Colonnes interactions vérifiées');
+}
+
+/**
  * Migration idempotente : met à jour le titre dans les signatures email DÉJÀ enregistrées
  * (company_settings.email_signature) — l'ancien HTML figé n'est pas régénéré sinon.
  * 'Chargé de Projet' (et la variante 'web') -> 'Fondateur & développeur'.
@@ -1031,6 +1070,9 @@ async function autoInitDatabase(pool) {
 
     // Colonnes de facturation Stripe sur subscriptions (abonnements libres)
     await ensureSubscriptionColumns(client);
+
+    // Table interactions (suivi des prises de contact, leads + clients)
+    await ensureInteractionsColumns(client);
 
     // Mise à jour du titre dans les signatures email déjà enregistrées
     await ensureSignatureTitleUpdate(client);

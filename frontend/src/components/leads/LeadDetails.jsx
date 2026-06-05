@@ -11,6 +11,7 @@ import ContactList from './ContactList';
 import ContactForm from './ContactForm';
 import InteractionTimeline from './InteractionTimeline';
 import InteractionForm from './InteractionForm';
+import ContactFollowup from '../common/ContactFollowup';
 import LeadForm from './LeadForm';
 import ConfirmModal from '../common/ConfirmModal';
 
@@ -508,7 +509,10 @@ const LeadDetails = ({ lead, onUpdate, onDelete, onAddContact, onUpdateContact, 
           )}
         </AnimatePresence>
       </div>
-      
+
+      {/* Suivi des prises de contact (table interactions unifiée) */}
+      <ContactFollowup contactType="lead" contactId={lead.id} phone={lead.phone} />
+
       {/* Popup de confirmation de suppression */}
       <AnimatePresence>
         {showDeleteConfirm && (
