@@ -262,11 +262,14 @@ const sendReport = async (req, res) => {
 
     // Envoyer l'email via emailService (pas de CC à la boîte d'envoi pour un email client)
     try {
+      // Signature sélectionnée dans les Paramètres (source unique, repli défaut)
+      const signature = await emailService.getSelectedSignature(db);
       await emailService.sendMaintenanceReportEmail(report, {
         recipientEmail: sendTo,
         ccToSelf: false,
         pdfBuffer: pdfBuffer,
-        pdfFileName: pdfFileName
+        pdfFileName: pdfFileName,
+        signature
       });
     } catch (emailError) {
       console.error('Erreur envoi email:', emailError);

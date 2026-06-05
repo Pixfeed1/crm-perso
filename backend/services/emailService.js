@@ -103,7 +103,7 @@ class EmailService {
     </td>
     <td valign="top" style="padding-left: 20px;">
       <p style="margin: 0 0 2px 0; font-size: 16px; font-weight: 600; color: #111827;">Marc Gueffie</p>
-      <p style="margin: 0 0 12px 0; font-size: 13px; color: #6366f1; font-weight: 500;">Chargé de Projet · Pixfeed</p>
+      <p style="margin: 0 0 12px 0; font-size: 13px; color: #6366f1; font-weight: 500;">Fondateur &amp; développeur web · Pixfeed</p>
       <p style="margin: 0 0 4px 0; font-size: 13px; color: #6b7280;"><a href="tel:0645373930" style="color: #6b7280; text-decoration: none;">06.45.37.39.30</a></p>
       <p style="margin: 0 0 4px 0; font-size: 13px; color: #6b7280;"><a href="mailto:mgueffie@pixfeed.net" style="color: #6b7280; text-decoration: none;">mgueffie@pixfeed.net</a></p>
       <p style="margin: 0 0 10px 0; font-size: 13px; color: #6b7280;"><a href="https://pixfeed.net" style="color: #6366f1; text-decoration: none; font-weight: 500;">pixfeed.net</a></p>
@@ -114,6 +114,22 @@ class EmailService {
     </td>
   </tr>
 </table>`;
+  }
+
+  /**
+   * Signature SÉLECTIONNÉE dans les Paramètres (company_settings.email_signature).
+   * Source unique pour tous les emails sortants ; repli sur la signature par défaut.
+   * @param {object} db - app.locals.db
+   */
+  async getSelectedSignature(db) {
+    try {
+      const result = await db.query('SELECT email_signature FROM company_settings LIMIT 1');
+      const sig = result && result.rows && result.rows[0] && result.rows[0].email_signature;
+      if (sig) return sig;
+    } catch (e) {
+      // En cas d'erreur de lecture, on retombe sur la signature par défaut.
+    }
+    return this.getDefaultSignature();
   }
 
   /**
@@ -161,8 +177,10 @@ class EmailService {
     }
 
     // Configuration du mail
+    // Adresse d'envoi unifiée : "Pixfeed" <EMAIL_USER> (adresse authentifiée sur le SMTP),
+    // Reply-To = EMAIL_USER par défaut. Tout appel peut surcharger from/replyTo.
     const mailOptions = {
-      from: from || `${process.env.EMAIL_FROM_NAME || 'CRM'} <${process.env.EMAIL_USER}>`,
+      from: from || `"Pixfeed" <${process.env.EMAIL_USER}>`,
       to,
       subject,
       html: finalHtml,
@@ -173,9 +191,7 @@ class EmailService {
       }
     };
 
-    if (replyTo) {
-      mailOptions.replyTo = replyTo;
-    }
+    mailOptions.replyTo = replyTo || process.env.EMAIL_USER;
 
     // Ajouter copie à soi-même si demandé
     if (ccToSelf) {
@@ -324,6 +340,9 @@ class EmailService {
       ? `${interventionsCount} intervention${interventionsCount > 1 ? 's' : ''} ${interventionsCount > 1 ? 'ont' : 'a'} été réalisée${interventionsCount > 1 ? 's' : ''} ce mois-ci. Tout est à jour.`
       : `Aucune intervention n'a été nécessaire ce mois-ci, votre site a fonctionné normalement.`;
 
+    // Signature sélectionnée dans les Paramètres (fournie par l'appelant), repli défaut.
+    const emailSignature = signature || this.getDefaultSignature();
+
     // Court mot d'accompagnement : le rapport détaillé est dans le PDF joint.
     const html = `
       <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.6;color:#374151;">
@@ -331,7 +350,8 @@ class EmailService {
         <p style="margin:0 0 14px 0;">Voici votre rapport de maintenance pour la période du ${periodLabel}.</p>
         <p style="margin:0 0 14px 0;">${recap}</p>
         <p style="margin:0 0 18px 0;">Le détail complet est disponible dans le PDF joint à cet email. Pour toute question, vous pouvez répondre directement à ce message.</p>
-        <p style="margin:0;">Bien à vous,<br><strong>L'équipe Pixfeed</strong></p>
+        <p style="margin:0 0 18px 0;">Bien à vous,</p>
+        ${emailSignature}
       </div>
     `;
 
@@ -344,16 +364,12 @@ class EmailService {
       });
     }
 
-    const fromName = process.env.REPORT_FROM_NAME || 'Pixfeed';
-    const fromEmail = process.env.REPORT_FROM || 'contact@pixfeed.net';
-
+    // From / Reply-To : valeurs unifiées par défaut de sendEmail ("Pixfeed" <EMAIL_USER>).
     return await this.sendEmail({
       to,
-      from: `${fromName} <${fromEmail}>`,
-      replyTo: process.env.REPORT_REPLY_TO || 'moosyne@gmail.com',
       subject: `Votre rapport de maintenance — ${periodLabel}`,
       html,
-      text: `Bonjour ${clientName},\n\nVoici votre rapport de maintenance pour la période du ${periodLabel}.\n${recap}\nLe détail complet est dans le PDF joint.\n\nBien à vous,\nL'équipe Pixfeed`,
+      text: `Bonjour ${clientName},\n\nVoici votre rapport de maintenance pour la période du ${periodLabel}.\n${recap}\nLe détail complet est dans le PDF joint.\n\nBien à vous,\nMarc Gueffie - Pixfeed`,
       attachments,
       ccToSelf
     });
@@ -587,9 +603,6 @@ class EmailService {
    * Envoie au client le lien Stripe Checkout pour mettre en place le prélèvement.
    */
   async sendMaintenanceBillingLink({ to, clientName, url }) {
-    const fromName = process.env.REPORT_FROM_NAME || 'Pixfeed';
-    const fromEmail = process.env.REPORT_FROM || 'contact@pixfeed.net';
-
     const html = `
       <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.6;color:#374151;">
         <p style="margin:0 0 14px 0;">Bonjour ${clientName ? `<strong>${clientName}</strong>` : ''},</p>
@@ -599,13 +612,12 @@ class EmailService {
       </div>
     `;
 
+    // From / Reply-To : valeurs unifiées par défaut de sendEmail ("Pixfeed" <EMAIL_USER>).
     return await this.sendEmail({
       to,
-      from: `${fromName} <${fromEmail}>`,
-      replyTo: process.env.REPORT_REPLY_TO || 'moosyne@gmail.com',
       subject: 'Mise en place du prélèvement de votre maintenance',
       html,
-      text: `Bonjour ${clientName || ''},\n\nVoici le lien pour mettre en place le prélèvement de votre maintenance :\n${url}\n\nBien à vous,\nL'équipe Pixfeed`
+      text: `Bonjour ${clientName || ''},\n\nVoici le lien pour mettre en place le prélèvement de votre maintenance :\n${url}\n\nBien à vous,\nMarc Gueffie - Pixfeed`
     });
   }
 

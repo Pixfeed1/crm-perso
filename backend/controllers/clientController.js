@@ -243,21 +243,12 @@ const clientController = {
         });
       }
 
-      // Signature personnalisée : best-effort depuis company_settings (optionnelle, ne bloque pas).
-      let signatureHtml = '';
-      try {
-        const settingsResult = await db.query('SELECT email_signature FROM company_settings LIMIT 1');
-        const signature = settingsResult.rows && settingsResult.rows[0] && settingsResult.rows[0].email_signature;
-        if (signature) {
-          signatureHtml = `
+      // Signature sélectionnée dans les Paramètres (source unique, centralisée via emailService)
+      const signatureHtml = `
         <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
-          ${signature}
+          ${await emailService.getSelectedSignature(db)}
         </div>
       `;
-        }
-      } catch (e) {
-        // Signature optionnelle : on continue sans en cas d'erreur de lecture.
-      }
 
       // Construire le HTML de l'email avec styles inline (Gmail supprime les balises style)
       const htmlContent = `<!DOCTYPE html>
