@@ -264,12 +264,15 @@ const sendReport = async (req, res) => {
     try {
       // Signature sélectionnée dans les Paramètres (source unique, repli défaut)
       const signature = await emailService.getSelectedSignature(db);
+      // Message saisi dans le formulaire (report_data.email_message) ; sinon corps par défaut
+      const message = (report.report_data && report.report_data.email_message) || '';
       await emailService.sendMaintenanceReportEmail(report, {
         recipientEmail: sendTo,
         ccToSelf: false,
         pdfBuffer: pdfBuffer,
         pdfFileName: pdfFileName,
-        signature
+        signature,
+        message
       });
     } catch (emailError) {
       console.error('Erreur envoi email:', emailError);

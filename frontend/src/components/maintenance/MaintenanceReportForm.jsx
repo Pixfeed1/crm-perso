@@ -8,6 +8,23 @@ import { useToast } from '../../hooks/useToast';
 const DEFAULT_SYNTHESE = "Ce mois-ci, votre site est à jour et aucun incident de sécurité n'a été détecté.";
 const DEFAULT_CLOSING = "Prochain rapport le mois prochain. Pour toute question, je reste à votre disposition.";
 
+// Format JJ/MM/AAAA depuis une date ISO 'AAAA-MM-JJ'
+const fmtFr = (iso) => {
+  if (!iso) return '';
+  const [y, m, d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+};
+
+// Corps d'email par défaut (modifiable), dates de période injectées automatiquement.
+const buildDefaultEmailMessage = (startIso, endIso, clientName) =>
+`Bonjour${clientName ? ' ' + clientName : ''},
+
+Voici votre rapport de maintenance pour la période du ${fmtFr(startIso)} au ${fmtFr(endIso)}.
+
+Le détail complet est disponible dans le PDF joint à cet email. Pour toute question, vous pouvez répondre directement à ce message.
+
+Bien à vous,`;
+
 const RECO_LEVELS = [
   { value: 'bonne_pratique', label: 'Bonne pratique' },
   { value: 'conseil', label: 'Conseil' },
@@ -35,7 +52,12 @@ const MaintenanceReportForm = ({ contract, onClose, onSuccess }) => {
     perf_tips: '',
     perf_link: '',
     show_backups: true,
-    closing_text: DEFAULT_CLOSING
+    closing_text: DEFAULT_CLOSING,
+    email_message: buildDefaultEmailMessage(
+      firstDay.toISOString().split('T')[0],
+      lastDay.toISOString().split('T')[0],
+      contract.client_name
+    )
   });
 
   // Liste dynamique des recommandations : { niveau, texte, lien }
@@ -94,6 +116,7 @@ const MaintenanceReportForm = ({ contract, onClose, onSuccess }) => {
             .map(r => ({ niveau: r.niveau, texte: r.texte.trim(), lien: (r.lien || '').trim() })),
           show_backups: formData.show_backups,
           closing_text: formData.closing_text,
+          email_message: formData.email_message,
           extensions_count: (contract.plugins_count !== null && contract.plugins_count !== undefined && contract.plugins_count !== '')
             ? parseInt(contract.plugins_count)
             : null
@@ -314,6 +337,21 @@ const MaintenanceReportForm = ({ contract, onClose, onSuccess }) => {
             className={inputCls}
             placeholder={DEFAULT_CLOSING}
           />
+        </div>
+
+        {/* Message de l'email (corps du mail envoyé au client) */}
+        <div>
+          <label className={labelCls}>Message de l'email</label>
+          <textarea
+            name="email_message"
+            value={formData.email_message}
+            onChange={handleInputChange}
+            rows={7}
+            className={inputCls}
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            Corps de l'email envoyé au client. Le PDF du rapport est joint et la signature ajoutée automatiquement.
+          </p>
         </div>
 
         {/* Boutons */}

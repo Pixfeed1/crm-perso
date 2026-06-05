@@ -322,7 +322,8 @@ class EmailService {
    * Envoie un rapport de maintenance par email avec PDF en pièce jointe
    */
   async sendMaintenanceReportEmail(report, options = {}) {
-    const { recipientEmail, customMessage = '', ccToSelf = false, pdfBuffer = null, pdfFileName = null, signature = null } = options;
+    // `message` (saisie côté formulaire) prime sur le corps par défaut.
+    const { recipientEmail, message = '', ccToSelf = false, pdfBuffer = null, pdfFileName = null, signature = null } = options;
 
     const data = report.report_data || {};
     const to = recipientEmail || report.client_email;
@@ -343,14 +344,29 @@ class EmailService {
     // Signature sélectionnée dans les Paramètres (fournie par l'appelant), repli défaut.
     const emailSignature = signature || this.getDefaultSignature();
 
-    // Court mot d'accompagnement : le rapport détaillé est dans le PDF joint.
-    const html = `
-      <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.6;color:#374151;">
-        <p style="margin:0 0 14px 0;">Bonjour ${clientName ? `<strong>${clientName}</strong>` : ''},</p>
+    const escapeHtml = (s) => String(s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+    // Corps : la saisie du formulaire prime ; sinon, texte par défaut (greeting + récap + clôture).
+    let bodyHtml;
+    let bodyText;
+    if (message && message.trim()) {
+      bodyText = message;
+      bodyHtml = `<div style="white-space:pre-wrap;margin:0 0 18px 0;">${escapeHtml(message)}</div>`;
+    } else {
+      bodyText = `Bonjour ${clientName},\n\nVoici votre rapport de maintenance pour la période du ${periodLabel}.\n${recap}\nLe détail complet est dans le PDF joint.\n\nBien à vous,`;
+      bodyHtml = `
+        <p style="margin:0 0 14px 0;">Bonjour ${clientName ? `<strong>${escapeHtml(clientName)}</strong>` : ''},</p>
         <p style="margin:0 0 14px 0;">Voici votre rapport de maintenance pour la période du ${periodLabel}.</p>
         <p style="margin:0 0 14px 0;">${recap}</p>
         <p style="margin:0 0 18px 0;">Le détail complet est disponible dans le PDF joint à cet email. Pour toute question, vous pouvez répondre directement à ce message.</p>
-        <p style="margin:0 0 18px 0;">Bien à vous,</p>
+        <p style="margin:0 0 18px 0;">Bien à vous,</p>`;
+    }
+
+    // Le PDF reste joint automatiquement, la signature est ajoutée en bas automatiquement.
+    const html = `
+      <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.6;color:#374151;">
+        ${bodyHtml}
         ${emailSignature}
       </div>
     `;
@@ -369,7 +385,7 @@ class EmailService {
       to,
       subject: `Votre rapport de maintenance — ${periodLabel}`,
       html,
-      text: `Bonjour ${clientName},\n\nVoici votre rapport de maintenance pour la période du ${periodLabel}.\n${recap}\nLe détail complet est dans le PDF joint.\n\nBien à vous,\nMarc Gueffie - Pixfeed`,
+      text: bodyText,
       attachments,
       ccToSelf
     });
