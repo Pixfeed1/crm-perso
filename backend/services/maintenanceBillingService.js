@@ -102,7 +102,7 @@ async function createCheckoutForContract(db, contractId) {
       // du Checkout, puis se répète chaque mois à cette même date (proration par défaut).
       metadata: { maintenance_contract_id: String(contract.id) }
     },
-    success_url: `${frontendUrl}/maintenance`,
+    success_url: 'https://pixfeed.net/merci-maintenance',
     cancel_url: `${frontendUrl}/maintenance`,
     metadata: { maintenance_contract_id: String(contract.id) }
   });
@@ -140,6 +140,19 @@ async function findContract(db, { contractId, subscriptionId, customerId }) {
   }
   return null;
 }
+
+/**
+ * Mappe le statut Stripe d'un abonnement (source de vérité) vers billing_status.
+ */
+const SUBSCRIPTION_STATUS_MAP = {
+  active: 'active',
+  trialing: 'active',
+  past_due: 'past_due',
+  unpaid: 'past_due',
+  canceled: 'canceled',
+  incomplete: 'pending',
+  incomplete_expired: 'pending'
+};
 
 /**
  * Applique l'effet d'un événement Stripe (déjà vérifié + dédupliqué) sur le contrat.
@@ -180,6 +193,20 @@ async function applyStripeEvent(db, event) {
     case 'invoice.payment_failed': {
       const contract = await findContract(db, { contractId, subscriptionId, customerId });
       if (!contract) return;
+
+      // Échec transitoire à ne PAS traiter comme un impayé :
+      // - SCA/3DS en cours (authentication_required) avant validation du paiement ;
+      // - nouvelle tentative déjà programmée par Stripe (dunning).
+      const reasonCode =
+        (obj.last_finalization_error && obj.last_finalization_error.code) ||
+        (obj.last_payment_error && obj.last_payment_error.code) ||
+        null;
+      const retryImminent = !!obj.next_payment_attempt;
+      if (reasonCode === 'authentication_required' || retryImminent) {
+        console.log(`[Billing] invoice.payment_failed transitoire ignoré (contrat ${contract.id}) raison=${reasonCode || 'n/a'} retry=${retryImminent}`);
+        break;
+      }
+
       await db.pool.query(
         "UPDATE maintenance_contracts SET billing_status = 'past_due', updated_at = NOW() WHERE id = $1",
         [contract.id]
@@ -202,6 +229,28 @@ async function applyStripeEvent(db, event) {
         console.error('[Billing] Échec envoi alerte prélèvement:', e.message);
       }
       console.log(`[Billing] invoice.payment_failed -> contrat ${contract.id} en past_due`);
+      break;
+    }
+
+    case 'customer.subscription.created':
+    case 'customer.subscription.updated': {
+      // subscription.status est la SOURCE DE VÉRITÉ du statut de facturation
+      const contract = await findContract(db, { contractId, subscriptionId: obj.id, customerId });
+      if (!contract) return;
+      const mapped = SUBSCRIPTION_STATUS_MAP[obj.status];
+      if (mapped) {
+        await db.pool.query(
+          "UPDATE maintenance_contracts SET billing_status = $1, stripe_subscription_id = COALESCE(stripe_subscription_id, $2), updated_at = NOW() WHERE id = $3",
+          [mapped, obj.id, contract.id]
+        );
+      } else {
+        // Statut non mappé : on stocke au moins l'id d'abonnement si absent
+        await db.pool.query(
+          "UPDATE maintenance_contracts SET stripe_subscription_id = COALESCE(stripe_subscription_id, $1), updated_at = NOW() WHERE id = $2",
+          [obj.id, contract.id]
+        );
+      }
+      console.log(`[Billing] ${event.type} -> contrat ${contract.id} status=${obj.status} -> ${mapped || 'inchangé'}`);
       break;
     }
 
