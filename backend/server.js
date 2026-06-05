@@ -151,6 +151,13 @@ app.use('/api/scheduled-emails', require('./routes/scheduledEmailRoutes'));
 // Stripe fraîche au clic et redirige vers Checkout. Monté AVANT le catch-all SPA.
 app.use('/pay', require('./routes/maintenancePayRoutes'));
 
+// Lien court via le sous-domaine pay.pixfeed.net : https://pay.pixfeed.net/{token}
+// Ne matche QUE un token hexadécimal long (>=40 [a-f0-9]) directement à la racine,
+// pour ne jamais entrer en conflit avec les routes du SPA (clients, maintenance, etc.).
+// Monté AVANT le catch-all SPA. La logique est identique à /pay/:token.
+const maintenanceContractController = require('./controllers/maintenanceContractController');
+app.get(/^\/([a-f0-9]{40,})$/i, maintenanceContractController.payRedirect);
+
 // Servir les fichiers uploadés en statique (protégés par auth si nécessaire)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 

@@ -227,7 +227,8 @@ const maintenanceContractController = {
    */
   payRedirect: async (req, res) => {
     const db = req.app.locals.db;
-    const { token } = req.params;
+    // token via /pay/:token (params.token) ou via la route racine hex (params[0])
+    const token = req.params.token || req.params[0];
 
     try {
       const { url } = await maintenanceBillingService.createCheckoutByPayToken(db, token);

@@ -8,10 +8,11 @@ const { getStripe } = require('../config/stripe');
 const emailService = require('./emailService');
 
 /**
- * Base publique du CRM pour construire le lien court de paiement (/pay/:token).
+ * Base publique du lien court de paiement. Le sous-domaine pay.pixfeed.net
+ * proxy vers la même app : le lien est https://pay.pixfeed.net/{token} (sans /pay/).
  */
-function publicBaseUrl() {
-  return (process.env.PUBLIC_BASE_URL || process.env.FRONTEND_URL || 'https://crm.pixfeed.net').replace(/\/+$/, '');
+function payBaseUrl() {
+  return (process.env.PAY_BASE_URL || 'https://pay.pixfeed.net').replace(/\/+$/, '');
 }
 
 /**
@@ -43,7 +44,7 @@ async function ensurePayLink(db, contractId) {
     );
   }
 
-  return { token, url: `${publicBaseUrl()}/pay/${token}` };
+  return { token, url: `${payBaseUrl()}/${token}` };
 }
 
 /**
