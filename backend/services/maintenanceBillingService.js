@@ -284,7 +284,7 @@ async function createCheckoutForSubscription(db, subscriptionId) {
     subscription_data: {
       metadata: { subscription_id: String(sub.id) }
     },
-    success_url: 'https://pixfeed.net/merci-maintenance',
+    success_url: 'https://pixfeed.net/merci-abonnement',
     cancel_url: `${frontendUrl}/invoices`,
     metadata: { subscription_id: String(sub.id) }
   });
