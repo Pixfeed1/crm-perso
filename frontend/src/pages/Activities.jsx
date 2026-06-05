@@ -14,6 +14,7 @@ import ActivityList from '../components/activities/ActivityList';
 import ActivityForm from '../components/activities/ActivityForm';
 import ActivityFilter from '../components/activities/ActivityFilter';
 import ActivityCalendar from '../components/activities/ActivityCalendar';
+import FollowupsPanel from '../components/activities/FollowupsPanel';
 import EmptyState from '../components/common/EmptyState';
 import Button from '../components/common/Button';
 
@@ -418,6 +419,9 @@ const Activities = () => {
             </div>
           </div>
         </header>
+
+        {/* Vue "À relancer" (suivi des prises de contact) */}
+        <FollowupsPanel />
 
         {/* Statistiques globales */}
         <ActivityStats stats={stats} />
