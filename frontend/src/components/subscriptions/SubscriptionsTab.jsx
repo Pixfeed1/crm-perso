@@ -395,16 +395,18 @@ const SubscriptionsTab = () => {
               initial={{ scale: 0.95, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: 20 }}
-              className="bg-gray-900 border border-gray-700 rounded-2xl max-w-lg w-full"
+              className="bg-gray-900 border border-gray-700 rounded-2xl max-w-lg w-full flex flex-col max-h-[90vh] overflow-hidden"
+              style={{ maxHeight: '90dvh' }}
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex justify-between items-center px-6 py-4 border-b border-gray-700">
+              <div className="flex justify-between items-center px-6 py-4 border-b border-gray-700 shrink-0">
                 <h2 className="text-xl font-bold text-white">Nouvel abonnement</h2>
                 <button onClick={() => setFormOpen(false)} className="text-gray-400 hover:text-white">
                   <FiX size={22} />
                 </button>
               </div>
-              <form onSubmit={handleCreate} className="p-6 space-y-4">
+              <form onSubmit={handleCreate} className="flex flex-col min-h-0 flex-1">
+                <div className="p-6 space-y-4 overflow-y-auto flex-1 min-h-0">
                 <div>
                   <label className="block text-sm text-gray-300 mb-1">Client</label>
                   <select
@@ -521,8 +523,9 @@ const SubscriptionsTab = () => {
                     <p className="text-xs text-gray-500 mt-1">Pré-rempli selon la périodicité (engagement, facturation, résiliation, responsabilité).</p>
                   </div>
                 </div>
+                </div>
 
-                <div className="flex gap-3 pt-2">
+                <div className="flex gap-3 px-6 py-4 border-t border-gray-700 shrink-0 bg-gray-900">
                   <button
                     type="button"
                     onClick={() => setFormOpen(false)}

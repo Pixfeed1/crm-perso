@@ -104,17 +104,18 @@ const BillingLinkEmailModal = ({
             initial={{ scale: 0.95, y: 20 }}
             animate={{ scale: 1, y: 0 }}
             exit={{ scale: 0.95, y: 20 }}
-            className="bg-gray-900 border border-gray-700 rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto"
+            className="bg-gray-900 border border-gray-700 rounded-2xl max-w-lg w-full flex flex-col max-h-[90vh] overflow-hidden"
+            style={{ maxHeight: '90dvh' }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex justify-between items-center px-6 py-4 border-b border-gray-700 sticky top-0 bg-gray-900">
+            <div className="flex justify-between items-center px-6 py-4 border-b border-gray-700 shrink-0 bg-gray-900">
               <h2 className="text-xl font-bold text-white">{title}</h2>
               <button onClick={onClose} className="text-gray-400 hover:text-white">
                 <FiX size={22} />
               </button>
             </div>
 
-            <div className="p-6 space-y-4">
+            <div className="p-6 space-y-4 overflow-y-auto flex-1 min-h-0">
               {/* Modèles de texte */}
               <div>
                 <label className="block text-sm text-gray-300 mb-2">Modèle de texte</label>
@@ -182,25 +183,25 @@ const BillingLinkEmailModal = ({
                   </ul>
                 )}
               </div>
+            </div>
 
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="flex-1 px-4 py-2.5 border-2 border-white/20 text-white hover:bg-white/10 rounded-lg font-medium transition-all"
-                >
-                  Annuler
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSend}
-                  disabled={sending}
-                  className="flex-1 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  <FiSend size={16} />
-                  {sending ? 'Envoi...' : 'Envoyer'}
-                </button>
-              </div>
+            <div className="flex gap-3 px-6 py-4 border-t border-gray-700 shrink-0 bg-gray-900">
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 px-4 py-2.5 border-2 border-white/20 text-white hover:bg-white/10 rounded-lg font-medium transition-all"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={handleSend}
+                disabled={sending}
+                className="flex-1 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                <FiSend size={16} />
+                {sending ? 'Envoi...' : 'Envoyer'}
+              </button>
             </div>
           </motion.div>
         </motion.div>
