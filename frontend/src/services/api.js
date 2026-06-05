@@ -1110,6 +1110,18 @@ export const maintenanceContractsAPI = {
   sendBillingLink: (id) => {
     console.log(`Appel API: envoi lien prélèvement contrat ${id}`);
     return apiRequest(`/maintenance-contracts/${id}/billing/send-link`, 'POST');
+  },
+
+  // Résilier l'abonnement (immediate=true -> immédiat, sinon fin de période)
+  cancelBilling: (id, immediate = false) => {
+    console.log(`Appel API: résiliation prélèvement contrat ${id}`, { immediate });
+    return apiRequest(`/maintenance-contracts/${id}/billing/cancel`, 'POST', { immediate });
+  },
+
+  // Réactiver l'abonnement (annule la résiliation programmée)
+  resumeBilling: (id) => {
+    console.log(`Appel API: réactivation prélèvement contrat ${id}`);
+    return apiRequest(`/maintenance-contracts/${id}/billing/resume`, 'POST');
   }
 };
 

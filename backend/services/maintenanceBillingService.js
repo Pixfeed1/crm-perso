@@ -238,19 +238,33 @@ async function applyStripeEvent(db, event) {
       const contract = await findContract(db, { contractId, subscriptionId: obj.id, customerId });
       if (!contract) return;
       const mapped = SUBSCRIPTION_STATUS_MAP[obj.status];
-      if (mapped) {
+      const activeLike = obj.status === 'active' || obj.status === 'trialing';
+
+      if (obj.cancel_at_period_end === true && activeLike) {
+        // Résiliation programmée en fin de période
+        const cancelAt = obj.current_period_end ? new Date(obj.current_period_end * 1000).toISOString() : null;
         await db.pool.query(
-          "UPDATE maintenance_contracts SET billing_status = $1, stripe_subscription_id = COALESCE(stripe_subscription_id, $2), updated_at = NOW() WHERE id = $3",
+          "UPDATE maintenance_contracts SET billing_status = 'canceling', billing_cancel_at = $1, stripe_subscription_id = COALESCE(stripe_subscription_id, $2), updated_at = NOW() WHERE id = $3",
+          [cancelAt, obj.id, contract.id]
+        );
+        console.log(`[Billing] ${event.type} -> contrat ${contract.id} canceling (fin ${cancelAt})`);
+      } else if (mapped) {
+        // cancel_at_period_end=false ou statut non-actif : statut Stripe = source de vérité.
+        // Retour en 'active' (resume) : on efface la date de résiliation prévue.
+        const clearCancel = mapped === 'active';
+        await db.pool.query(
+          `UPDATE maintenance_contracts SET billing_status = $1, ${clearCancel ? 'billing_cancel_at = NULL, ' : ''}stripe_subscription_id = COALESCE(stripe_subscription_id, $2), updated_at = NOW() WHERE id = $3`,
           [mapped, obj.id, contract.id]
         );
+        console.log(`[Billing] ${event.type} -> contrat ${contract.id} status=${obj.status} -> ${mapped}`);
       } else {
         // Statut non mappé : on stocke au moins l'id d'abonnement si absent
         await db.pool.query(
           "UPDATE maintenance_contracts SET stripe_subscription_id = COALESCE(stripe_subscription_id, $1), updated_at = NOW() WHERE id = $2",
           [obj.id, contract.id]
         );
+        console.log(`[Billing] ${event.type} -> contrat ${contract.id} status=${obj.status} -> inchangé`);
       }
-      console.log(`[Billing] ${event.type} -> contrat ${contract.id} status=${obj.status} -> ${mapped || 'inchangé'}`);
       break;
     }
 
@@ -271,8 +285,71 @@ async function applyStripeEvent(db, event) {
   }
 }
 
+/**
+ * Récupère le contrat + son stripe_subscription_id, ou throw (404/400).
+ */
+async function getContractWithSubscription(db, contractId) {
+  const { rows } = await db.pool.query('SELECT * FROM maintenance_contracts WHERE id = $1', [contractId]);
+  if (rows.length === 0) {
+    const err = new Error('Contrat de maintenance introuvable.');
+    err.statusCode = 404;
+    throw err;
+  }
+  const contract = rows[0];
+  if (!contract.stripe_subscription_id) {
+    const err = new Error('Aucun abonnement actif pour ce contrat.');
+    err.statusCode = 400;
+    throw err;
+  }
+  return contract;
+}
+
+/**
+ * Résilie l'abonnement Stripe d'un contrat.
+ * - immediate=true  : annulation immédiate (billing_status='canceled').
+ * - immediate=false : annulation en fin de période (billing_status='canceling').
+ */
+async function cancelSubscriptionForContract(db, contractId, { immediate = false } = {}) {
+  const stripe = getStripe();
+  const contract = await getContractWithSubscription(db, contractId);
+  const subId = contract.stripe_subscription_id;
+
+  if (immediate) {
+    await stripe.subscriptions.cancel(subId);
+    await db.pool.query(
+      "UPDATE maintenance_contracts SET billing_status = 'canceled', billing_cancel_at = NOW(), updated_at = NOW() WHERE id = $1",
+      [contract.id]
+    );
+    return { billing_status: 'canceled' };
+  }
+
+  const sub = await stripe.subscriptions.update(subId, { cancel_at_period_end: true });
+  const cancelAt = sub.current_period_end ? new Date(sub.current_period_end * 1000).toISOString() : null;
+  await db.pool.query(
+    "UPDATE maintenance_contracts SET billing_status = 'canceling', billing_cancel_at = $1, updated_at = NOW() WHERE id = $2",
+    [cancelAt, contract.id]
+  );
+  return { billing_status: 'canceling', billing_cancel_at: cancelAt };
+}
+
+/**
+ * Réactive un abonnement dont la résiliation en fin de période était programmée.
+ */
+async function resumeSubscriptionForContract(db, contractId) {
+  const stripe = getStripe();
+  const contract = await getContractWithSubscription(db, contractId);
+  await stripe.subscriptions.update(contract.stripe_subscription_id, { cancel_at_period_end: false });
+  await db.pool.query(
+    "UPDATE maintenance_contracts SET billing_status = 'active', billing_cancel_at = NULL, updated_at = NOW() WHERE id = $1",
+    [contract.id]
+  );
+  return { billing_status: 'active' };
+}
+
 module.exports = {
   createCheckoutForContract,
   nextBillingAnchor,
-  applyStripeEvent
+  applyStripeEvent,
+  cancelSubscriptionForContract,
+  resumeSubscriptionForContract
 };

@@ -500,7 +500,8 @@ const DATABASE_SCHEMA = {
       stripe_customer_id: 'VARCHAR(255)',
       stripe_subscription_id: 'VARCHAR(255)',
       billing_day: 'INTEGER', // jour de prélèvement (1..28, borné côté service)
-      billing_status: "VARCHAR(20) DEFAULT 'none'", // none/pending/active/past_due/canceled
+      billing_status: "VARCHAR(20) DEFAULT 'none'", // none/pending/active/past_due/canceling/canceled
+      billing_cancel_at: 'TIMESTAMP', // fin de période prévue si résiliation programmée
       status: "VARCHAR(50) DEFAULT 'active'", // active, paused, cancelled
       wordpress_version: 'VARCHAR(20)',
       php_version: 'VARCHAR(20)',
@@ -916,6 +917,7 @@ async function ensureMaintenanceBillingColumns(client) {
   await client.query('ALTER TABLE maintenance_contracts ADD COLUMN IF NOT EXISTS stripe_subscription_id VARCHAR(255);');
   await client.query('ALTER TABLE maintenance_contracts ADD COLUMN IF NOT EXISTS billing_day INTEGER;');
   await client.query("ALTER TABLE maintenance_contracts ADD COLUMN IF NOT EXISTS billing_status VARCHAR(20) DEFAULT 'none';");
+  await client.query('ALTER TABLE maintenance_contracts ADD COLUMN IF NOT EXISTS billing_cancel_at TIMESTAMP;');
   console.log('  ✓ Colonnes facturation maintenance vérifiées');
 }
 

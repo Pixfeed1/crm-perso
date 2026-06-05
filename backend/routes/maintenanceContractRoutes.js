@@ -35,6 +35,12 @@ router.post('/:id/billing/checkout', contractController.createBillingCheckout);
 // POST /api/maintenance-contracts/:id/billing/send-link - Envoyer le lien de prélèvement au client
 router.post('/:id/billing/send-link', contractController.sendBillingLink);
 
+// POST /api/maintenance-contracts/:id/billing/cancel - Résilier l'abonnement (body { immediate? })
+router.post('/:id/billing/cancel', contractController.cancelBilling);
+
+// POST /api/maintenance-contracts/:id/billing/resume - Réactiver l'abonnement (annule la résiliation programmée)
+router.post('/:id/billing/resume', contractController.resumeBilling);
+
 // DELETE /api/maintenance-contracts/:id - Supprimer un contrat
 router.delete('/:id', contractController.deleteContract);
 

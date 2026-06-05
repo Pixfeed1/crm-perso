@@ -3,11 +3,13 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   FiEdit2, FiTrash2, FiGlobe, FiUser, FiCalendar, FiZap,
-  FiExternalLink, FiFileText, FiPlus, FiSend, FiEye, FiDownload, FiCreditCard, FiCopy
+  FiExternalLink, FiFileText, FiPlus, FiSend, FiEye, FiDownload, FiCreditCard, FiCopy,
+  FiXCircle, FiRotateCcw
 } from 'react-icons/fi';
 import { formatDate, formatAmount } from '../../utils/formatters';
 import { maintenanceReportsAPI, maintenanceContractsAPI } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
+import Modal from '../common/Modal';
 
 const MaintenanceDetails = ({ contract, onDelete, onRefresh, onEdit, onGenerateReport }) => {
   const { toast } = useToast();
@@ -16,6 +18,10 @@ const MaintenanceDetails = ({ contract, onDelete, onRefresh, onEdit, onGenerateR
   const [billingLoading, setBillingLoading] = useState(false);
   const [billingSending, setBillingSending] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [cancelModalOpen, setCancelModalOpen] = useState(false);
+  const [cancelImmediate, setCancelImmediate] = useState(false);
+  const [cancelLoading, setCancelLoading] = useState(false);
+  const [resumeLoading, setResumeLoading] = useState(false);
 
   // Configuration des statuts
   const statusConfig = {
@@ -30,7 +36,8 @@ const MaintenanceDetails = ({ contract, onDelete, onRefresh, onEdit, onGenerateR
     pending: { bg: 'bg-amber-500/20', text: 'text-amber-300', label: "En attente d'autorisation" },
     active: { bg: 'bg-green-500/20', text: 'text-green-300', label: 'Prélèvement actif' },
     past_due: { bg: 'bg-rose-500/20', text: 'text-rose-300', label: 'Impayé' },
-    canceled: { bg: 'bg-gray-500/20', text: 'text-gray-300', label: 'Annulé' }
+    canceling: { bg: 'bg-amber-500/20', text: 'text-amber-300', label: 'Résiliation prévue' },
+    canceled: { bg: 'bg-gray-500/20', text: 'text-gray-300', label: 'Résilié' }
   };
   const billingStyle = billingStatusConfig[contract.billing_status] || billingStatusConfig.none;
 
@@ -125,6 +132,36 @@ const MaintenanceDetails = ({ contract, onDelete, onRefresh, onEdit, onGenerateR
       toast.error(error.message || "Erreur lors de l'envoi du lien");
     } finally {
       setBillingSending(false);
+    }
+  };
+
+  const handleConfirmCancel = async () => {
+    try {
+      setCancelLoading(true);
+      await maintenanceContractsAPI.cancelBilling(contract.id, cancelImmediate);
+      toast.success(cancelImmediate ? 'Prélèvement arrêté immédiatement' : 'Résiliation programmée en fin de période');
+      setCancelModalOpen(false);
+      setCancelImmediate(false);
+      onRefresh();
+    } catch (error) {
+      console.error('Erreur résiliation prélèvement:', error);
+      toast.error(error.message || 'Erreur lors de la résiliation');
+    } finally {
+      setCancelLoading(false);
+    }
+  };
+
+  const handleResumeBilling = async () => {
+    try {
+      setResumeLoading(true);
+      await maintenanceContractsAPI.resumeBilling(contract.id);
+      toast.success('Prélèvement réactivé');
+      onRefresh();
+    } catch (error) {
+      console.error('Erreur réactivation prélèvement:', error);
+      toast.error(error.message || 'Erreur lors de la réactivation');
+    } finally {
+      setResumeLoading(false);
     }
   };
 
@@ -270,24 +307,26 @@ const MaintenanceDetails = ({ contract, onDelete, onRefresh, onEdit, onGenerateR
           </span>
         </div>
 
-        <motion.button
-          whileHover={{ scale: 1.03 }}
-          whileTap={{ scale: 0.97 }}
-          onClick={handleSetupBilling}
-          disabled={billingLoading}
-          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm flex items-center gap-2 disabled:opacity-50"
-        >
-          {billingLoading ? (
-            <motion.div
-              className="w-4 h-4 border-2 border-white border-t-transparent rounded-full"
-              animate={{ rotate: 360 }}
-              transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-            />
-          ) : (
-            <FiCreditCard size={16} />
-          )}
-          Mettre en place le prélèvement
-        </motion.button>
+        {(contract.billing_status === 'none' || contract.billing_status === 'pending') && (
+          <motion.button
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
+            onClick={handleSetupBilling}
+            disabled={billingLoading}
+            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm flex items-center gap-2 disabled:opacity-50"
+          >
+            {billingLoading ? (
+              <motion.div
+                className="w-4 h-4 border-2 border-white border-t-transparent rounded-full"
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+              />
+            ) : (
+              <FiCreditCard size={16} />
+            )}
+            Mettre en place le prélèvement
+          </motion.button>
+        )}
 
         {billingUrl && (
           <div className="mt-4 bg-gray-900/40 rounded-lg p-3">
@@ -316,6 +355,48 @@ const MaintenanceDetails = ({ contract, onDelete, onRefresh, onEdit, onGenerateR
                 <FiSend size={14} /> {billingSending ? 'Envoi…' : 'Envoyer au client par email'}
               </button>
             </div>
+          </div>
+        )}
+
+        {/* Arrêter le prélèvement (actif ou impayé) */}
+        {(contract.billing_status === 'active' || contract.billing_status === 'past_due') && (
+          <div className="mt-3">
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => { setCancelImmediate(false); setCancelModalOpen(true); }}
+              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm flex items-center gap-2"
+            >
+              <FiXCircle size={16} />
+              Arrêter le prélèvement
+            </motion.button>
+          </div>
+        )}
+
+        {/* Résiliation programmée : bandeau + réactivation */}
+        {contract.billing_status === 'canceling' && (
+          <div className="mt-4 bg-amber-500/10 border border-amber-500/30 rounded-lg p-3">
+            <p className="text-sm text-amber-200 mb-3">
+              Résiliation prévue le {contract.billing_cancel_at ? formatDate(contract.billing_cancel_at) : '—'}.
+            </p>
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={handleResumeBilling}
+              disabled={resumeLoading}
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm flex items-center gap-2 disabled:opacity-50"
+            >
+              {resumeLoading ? (
+                <motion.div
+                  className="w-4 h-4 border-2 border-white border-t-transparent rounded-full"
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                />
+              ) : (
+                <FiRotateCcw size={16} />
+              )}
+              Réactiver le prélèvement
+            </motion.button>
           </div>
         )}
       </div>
@@ -416,6 +497,50 @@ const MaintenanceDetails = ({ contract, onDelete, onRefresh, onEdit, onGenerateR
           <p className="text-gray-300 whitespace-pre-wrap">{contract.notes}</p>
         </div>
       )}
+
+      {/* Modale de confirmation d'arrêt du prélèvement */}
+      <Modal isOpen={cancelModalOpen} onClose={() => setCancelModalOpen(false)} maxWidth="max-w-md">
+        <div className="bg-gray-800 border border-gray-700 rounded-2xl p-6">
+          <h3 className="text-lg font-semibold text-white mb-3">Arrêter le prélèvement</h3>
+          <p className="text-sm text-gray-300 mb-4">
+            Arrêter le prélèvement de ce contrat ? Le service reste actif jusqu'à la fin de la
+            période déjà payée, puis plus aucun prélèvement ne sera effectué.
+          </p>
+          <label className="flex items-start gap-2 cursor-pointer mb-5">
+            <input
+              type="checkbox"
+              checked={cancelImmediate}
+              onChange={(e) => setCancelImmediate(e.target.checked)}
+              className="mt-0.5 w-4 h-4 rounded border-gray-600 bg-gray-700 text-red-600 focus:ring-red-500"
+            />
+            <span className="text-sm text-gray-300">Arrêter immédiatement (sans attendre la fin de la période)</span>
+          </label>
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setCancelModalOpen(false)}
+              className="px-4 py-2 rounded-lg border border-gray-600 text-gray-300 hover:bg-gray-700/50"
+            >
+              Annuler
+            </button>
+            <button
+              type="button"
+              onClick={handleConfirmCancel}
+              disabled={cancelLoading}
+              className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white flex items-center gap-2 disabled:opacity-50"
+            >
+              {cancelLoading && (
+                <motion.div
+                  className="w-4 h-4 border-2 border-white border-t-transparent rounded-full"
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                />
+              )}
+              Confirmer
+            </button>
+          </div>
+        </div>
+      </Modal>
     </motion.div>
   );
 };

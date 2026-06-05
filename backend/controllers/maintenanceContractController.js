@@ -194,6 +194,45 @@ const maintenanceContractController = {
       }
       res.status(status).json({ message: error.message || "Erreur lors de l'envoi du lien" });
     }
+  },
+
+  /**
+   * Résilie l'abonnement Stripe du contrat (immédiat ou en fin de période).
+   */
+  cancelBilling: async (req, res) => {
+    const db = req.app.locals.db;
+    const { id } = req.params;
+    const immediate = req.body && req.body.immediate === true;
+
+    try {
+      const result = await maintenanceBillingService.cancelSubscriptionForContract(db, id, { immediate });
+      res.json({ success: true, ...result });
+    } catch (error) {
+      const status = error.statusCode || 500;
+      if (status >= 500) {
+        console.error('[MaintenanceContract] Erreur résiliation prélèvement:', error);
+      }
+      res.status(status).json({ message: error.message || 'Erreur lors de la résiliation' });
+    }
+  },
+
+  /**
+   * Réactive un abonnement dont la résiliation en fin de période était programmée.
+   */
+  resumeBilling: async (req, res) => {
+    const db = req.app.locals.db;
+    const { id } = req.params;
+
+    try {
+      const result = await maintenanceBillingService.resumeSubscriptionForContract(db, id);
+      res.json({ success: true, ...result });
+    } catch (error) {
+      const status = error.statusCode || 500;
+      if (status >= 500) {
+        console.error('[MaintenanceContract] Erreur réactivation prélèvement:', error);
+      }
+      res.status(status).json({ message: error.message || 'Erreur lors de la réactivation' });
+    }
   }
 };
 
