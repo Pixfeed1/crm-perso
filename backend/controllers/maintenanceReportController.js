@@ -427,9 +427,11 @@ const downloadPDF = async (req, res) => {
     // Générer le PDF
     const pdfBuffer = await pdfService.generateMaintenanceReportPDF(report, data);
 
-    // Formater le nom du fichier
+    // Formater le nom du fichier (robuste : project_name est null pour un rapport de contrat sans projet lié)
     const formatDate = (d) => new Date(d).toLocaleDateString('fr-FR').replace(/\//g, '-');
-    const fileName = `Rapport_Maintenance_${report.project_name.replace(/[^a-zA-Z0-9]/g, '_')}_${formatDate(report.period_start)}_${formatDate(report.period_end)}.pdf`;
+    const base = report.project_name || report.site_name
+      || (data && (data.contract?.site_name || data.site_name)) || 'site';
+    const fileName = `Rapport_Maintenance_${String(base).replace(/[^a-zA-Z0-9]/g, '_')}_${formatDate(report.period_start)}_${formatDate(report.period_end)}.pdf`;
 
     // Envoyer le PDF
     res.setHeader('Content-Type', 'application/pdf');
