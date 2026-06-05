@@ -9,10 +9,13 @@ import {
 import { formatDate, formatAmount } from '../../utils/formatters';
 import { maintenanceReportsAPI, maintenanceContractsAPI } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
+import { useConfirm } from '../../hooks/useConfirm';
 import Modal from '../common/Modal';
+import ConfirmModal from '../common/ConfirmModal';
 
 const MaintenanceDetails = ({ contract, onDelete, onRefresh, onEdit, onGenerateReport }) => {
   const { toast } = useToast();
+  const { confirm, confirmState } = useConfirm();
   const [sendingReport, setSendingReport] = useState(null);
   const [billingUrl, setBillingUrl] = useState(null);
   const [billingLoading, setBillingLoading] = useState(false);
@@ -93,6 +96,30 @@ const MaintenanceDetails = ({ contract, onDelete, onRefresh, onEdit, onGenerateR
       toast.error('Erreur lors de l\'envoi du rapport');
     } finally {
       setSendingReport(null);
+    }
+  };
+
+  // Suppression d'un rapport : confirmation simple si brouillon, avertissement explicite si envoyé.
+  const handleDeleteReport = async (report) => {
+    const isSent = report.status === 'sent';
+    const confirmed = await confirm({
+      title: 'Supprimer ce rapport ?',
+      message: isSent
+        ? "Ce rapport a déjà été envoyé au client ; le supprimer ne le retire que du CRM, pas de la boîte mail du client."
+        : 'Cette action supprimera définitivement ce rapport. Cette opération est irréversible.',
+      confirmText: 'Supprimer',
+      cancelText: 'Annuler',
+      variant: 'danger'
+    });
+    if (!confirmed) return;
+
+    try {
+      await maintenanceReportsAPI.delete(report.id);
+      toast.success('Rapport supprimé');
+      onRefresh();
+    } catch (error) {
+      console.error('Erreur suppression rapport:', error);
+      toast.error(error.message || 'Erreur lors de la suppression du rapport');
     }
   };
 
@@ -478,6 +505,15 @@ const MaintenanceDetails = ({ contract, onDelete, onRefresh, onEdit, onGenerateR
                       )}
                     </motion.button>
                   )}
+                  <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => handleDeleteReport(report)}
+                    className="p-2 rounded-lg bg-red-600/30 hover:bg-red-600/50 text-red-300"
+                    title="Supprimer"
+                  >
+                    <FiTrash2 size={14} />
+                  </motion.button>
                 </div>
               </div>
             ))}
@@ -541,6 +577,9 @@ const MaintenanceDetails = ({ contract, onDelete, onRefresh, onEdit, onGenerateR
           </div>
         </div>
       </Modal>
+
+      {/* Confirmation de suppression de rapport */}
+      <ConfirmModal {...confirmState} />
     </motion.div>
   );
 };
