@@ -1,6 +1,7 @@
 // backend/controllers/clientController.js
 const clientModel = require('../models/clientModel');
 const multer = require('multer');
+const emailService = require('../services/emailService');
 
 // Configuration multer pour les pièces jointes email
 const storage = multer.memoryStorage();
@@ -242,44 +243,21 @@ const clientController = {
         });
       }
 
-      // Charger les paramètres SMTP et signature depuis la base de données
-      const settingsResult = await db.query(
-        'SELECT smtp_host, smtp_port, smtp_secure, smtp_user, smtp_pass, smtp_from_email, smtp_from_name, email_signature FROM company_settings LIMIT 1'
-      );
-
-      if (!settingsResult.rows || settingsResult.rows.length === 0) {
-        return res.status(500).json({
-          message: 'Configuration SMTP non trouvée. Veuillez configurer vos paramètres d\'envoi d\'emails.'
-        });
-      }
-
-      const settings = settingsResult.rows[0];
-
-      // Vérifier que la configuration SMTP est complète
-      if (!settings.smtp_host || !settings.smtp_user || !settings.smtp_pass) {
-        return res.status(500).json({
-          message: 'Configuration SMTP incomplète. Veuillez configurer vos paramètres SMTP dans les réglages.'
-        });
-      }
-
-      // Configurer nodemailer
-      const nodemailer = require('nodemailer');
-      const transporter = nodemailer.createTransport({
-        host: settings.smtp_host,
-        port: settings.smtp_port || 587,
-        secure: settings.smtp_secure || false,
-        auth: {
-          user: settings.smtp_user,
-          pass: settings.smtp_pass
-        }
-      });
-
-      // Construire la signature HTML si elle existe
-      const signatureHtml = settings.email_signature ? `
+      // Signature personnalisée : best-effort depuis company_settings (optionnelle, ne bloque pas).
+      let signatureHtml = '';
+      try {
+        const settingsResult = await db.query('SELECT email_signature FROM company_settings LIMIT 1');
+        const signature = settingsResult.rows && settingsResult.rows[0] && settingsResult.rows[0].email_signature;
+        if (signature) {
+          signatureHtml = `
         <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
-          ${settings.email_signature}
+          ${signature}
         </div>
-      ` : '';
+      `;
+        }
+      } catch (e) {
+        // Signature optionnelle : on continue sans en cas d'erreur de lecture.
+      }
 
       // Construire le HTML de l'email avec styles inline (Gmail supprime les balises style)
       const htmlContent = `<!DOCTYPE html>
@@ -308,17 +286,15 @@ const clientController = {
         });
       }
 
-      // Envoyer l'email
-      const mailOptions = {
-        from: `"${settings.smtp_from_name || 'CRM'}" <${settings.smtp_from_email || settings.smtp_user}>`,
-        to: to,
-        subject: subject,
+      // Envoi via le MÊME transporteur que le test SMTP et les rapports (emailService, basé sur .env).
+      // Le From par défaut d'emailService retombe sur EMAIL_USER si EMAIL_FROM_NAME est absent.
+      await emailService.sendEmail({
+        to,
+        subject,
         text: message,
         html: htmlContent,
-        attachments: attachments
-      };
-
-      await transporter.sendMail(mailOptions);
+        attachments
+      });
 
       res.json({
         success: true,
