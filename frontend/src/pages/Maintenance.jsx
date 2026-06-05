@@ -460,7 +460,7 @@ const Maintenance = () => {
       </Modal>
 
       {/* Modal de confirmation */}
-      <ConfirmModal {...confirmState} />
+      <ConfirmModal {...confirmState.config} isOpen={confirmState.isOpen} />
     </div>
   );
 };

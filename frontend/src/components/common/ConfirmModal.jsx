@@ -33,6 +33,12 @@ const ConfirmModal = ({
 
   const currentConfig = config[variant] || config.danger;
 
+  const handleClose = () => {
+    if (typeof onClose === 'function') {
+      onClose();
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -42,7 +48,7 @@ const ConfirmModal = ({
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[10000] flex items-center justify-center p-4"
-        onClick={onClose}
+        onClick={handleClose}
       >
         <motion.div
           initial={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -85,7 +91,7 @@ const ConfirmModal = ({
               <motion.button
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
-                onClick={onClose}
+                onClick={handleClose}
                 className="text-gray-400 hover:text-white transition-colors flex-shrink-0"
               >
                 <FiX className="text-xl" />
@@ -98,7 +104,7 @@ const ConfirmModal = ({
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              onClick={onClose}
+              onClick={handleClose}
               className="flex-1 px-4 py-2.5 border-2 border-white/30 text-white hover:bg-white/10 hover:border-white/40 rounded-lg font-medium transition-all"
             >
               {cancelText}
@@ -107,8 +113,12 @@ const ConfirmModal = ({
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => {
-                onConfirm();
-                onClose();
+                if (typeof onConfirm === 'function') {
+                  onConfirm();
+                }
+                if (typeof onClose === 'function') {
+                  onClose();
+                }
               }}
               className={`flex-1 px-4 py-2.5 ${currentConfig.confirmBg} text-white rounded-lg font-medium transition-colors`}
             >

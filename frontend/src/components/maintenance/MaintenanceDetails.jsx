@@ -579,7 +579,7 @@ const MaintenanceDetails = ({ contract, onDelete, onRefresh, onEdit, onGenerateR
       </Modal>
 
       {/* Confirmation de suppression de rapport */}
-      <ConfirmModal {...confirmState} />
+      <ConfirmModal {...confirmState.config} isOpen={confirmState.isOpen} />
     </motion.div>
   );
 };

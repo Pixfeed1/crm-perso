@@ -538,7 +538,7 @@ const Quotes = () => {
       </AnimatePresence>
 
       {/* Modal de confirmation */}
-      <ConfirmModal {...confirmState} />
+      <ConfirmModal {...confirmState.config} isOpen={confirmState.isOpen} />
 
       {/* Modal d'envoi email */}
       <SendEmailModal

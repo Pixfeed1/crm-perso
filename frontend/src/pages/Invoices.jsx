@@ -363,7 +363,7 @@ const Invoices = () => {
         )}
       </AnimatePresence>
 
-      <ConfirmModal {...confirmState} />
+      <ConfirmModal {...confirmState.config} isOpen={confirmState.isOpen} />
 
       {/* Modal gestion des paiements */}
       <AnimatePresence>
