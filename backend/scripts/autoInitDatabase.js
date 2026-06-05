@@ -922,6 +922,28 @@ async function ensureMaintenanceBillingColumns(client) {
 }
 
 /**
+ * Migration idempotente : met à jour le titre dans les signatures email DÉJÀ enregistrées
+ * (company_settings.email_signature) — l'ancien HTML figé n'est pas régénéré sinon.
+ * 'Chargé de Projet' (et la variante 'web') -> 'Fondateur & développeur'.
+ */
+async function ensureSignatureTitleUpdate(client) {
+  console.log('\n🔧 Mise à jour du titre dans les signatures email enregistrées...');
+  const replacements = [
+    ['Chargé de Projet · ', 'Fondateur &amp; développeur - '],
+    ['Chargé de Projet', 'Fondateur &amp; développeur'],
+    ['Fondateur &amp; développeur web · ', 'Fondateur &amp; développeur - '],
+    ['Fondateur &amp; développeur web', 'Fondateur &amp; développeur']
+  ];
+  for (const [from, to] of replacements) {
+    await client.query(
+      'UPDATE company_settings SET email_signature = REPLACE(email_signature, $1, $2) WHERE email_signature LIKE $3',
+      [from, to, `%${from}%`]
+    );
+  }
+  console.log('  ✓ Signatures email mises à jour');
+}
+
+/**
  * Fonction principale d'auto-initialisation
  */
 async function autoInitDatabase(pool) {
@@ -950,6 +972,9 @@ async function autoInitDatabase(pool) {
 
     // Colonnes de facturation Stripe SEPA sur maintenance_contracts
     await ensureMaintenanceBillingColumns(client);
+
+    // Mise à jour du titre dans les signatures email déjà enregistrées
+    await ensureSignatureTitleUpdate(client);
 
     // Insérer les données de référence
     await ensureTvaRegimes(client);

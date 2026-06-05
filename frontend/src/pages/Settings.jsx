@@ -110,7 +110,7 @@ const Settings = () => {
     </td>
     <td valign="top" style="padding-left: 20px;">
       <p style="margin: 0 0 2px 0; font-size: 16px; font-weight: 600; color: #111827;">Marc Gueffie</p>
-      <p style="margin: 0 0 12px 0; font-size: 13px; color: #6366f1; font-weight: 500;">Fondateur &amp; développeur web · Pixfeed</p>
+      <p style="margin: 0 0 12px 0; font-size: 13px; color: #6366f1; font-weight: 500;">Fondateur &amp; développeur - Pixfeed</p>
       <p style="margin: 0 0 4px 0; font-size: 13px; color: #6b7280;"><a href="tel:0645373930" style="color: #6b7280; text-decoration: none;">06.45.37.39.30</a></p>
       <p style="margin: 0 0 4px 0; font-size: 13px; color: #6b7280;"><a href="mailto:mgueffie@pixfeed.net" style="color: #6b7280; text-decoration: none;">mgueffie@pixfeed.net</a></p>
       <p style="margin: 0 0 10px 0; font-size: 13px; color: #6b7280;"><a href="https://pixfeed.net" style="color: #6366f1; text-decoration: none; font-weight: 500;">pixfeed.net</a></p>
@@ -126,7 +126,7 @@ const Settings = () => {
   <tr>
     <td>
       <p style="margin: 0 0 4px 0; font-size: 15px; font-weight: 600; color: #111827;">Marc Gueffie</p>
-      <p style="margin: 0 0 10px 0; font-size: 13px; color: #6b7280;">Fondateur &amp; développeur web · <span style="color: #6366f1; font-weight: 500;">Pixfeed</span></p>
+      <p style="margin: 0 0 10px 0; font-size: 13px; color: #6b7280;">Fondateur &amp; développeur - <span style="color: #6366f1; font-weight: 500;">Pixfeed</span></p>
       <p style="margin: 0; font-size: 12px; color: #9ca3af;">06.45.37.39.30 · mgueffie@pixfeed.net · <a href="https://pixfeed.net" style="color: #6366f1; text-decoration: none;">pixfeed.net</a></p>
       <p style="margin: 12px 0 0 0; padding-top: 12px; border-top: 1px solid #e5e7eb; font-size: 11px; color: #9ca3af; font-style: italic;">L'humain au cœur de nos solutions</p>
     </td>
@@ -138,7 +138,7 @@ const Settings = () => {
     <td style="border-left: 4px solid #6366f1; padding-left: 16px;">
       <img src="https://pixfeed.net/wp-content/uploads/2025/04/logo.png" alt="Pixfeed" height="28" style="display: block; height: 28px; width: auto; margin-bottom: 10px;">
       <p style="margin: 0 0 2px 0; font-size: 16px; font-weight: 700; color: #111827;">Marc Gueffie</p>
-      <p style="margin: 0 0 12px 0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #6366f1; font-weight: 600;">Fondateur &amp; développeur web</p>
+      <p style="margin: 0 0 12px 0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #6366f1; font-weight: 600;">Fondateur &amp; développeur</p>
       <p style="margin: 0 0 3px 0; font-size: 13px;"><a href="mailto:mgueffie@pixfeed.net" style="color: #6b7280; text-decoration: none;">mgueffie@pixfeed.net</a></p>
       <p style="margin: 0 0 3px 0; font-size: 13px;"><a href="tel:0645373930" style="color: #6b7280; text-decoration: none;">06.45.37.39.30</a></p>
       <p style="margin: 0 0 10px 0; font-size: 13px;"><a href="https://pixfeed.net" style="color: #6366f1; text-decoration: none; font-weight: 500;">pixfeed.net</a></p>
@@ -160,7 +160,7 @@ const Settings = () => {
   <tr>
     <td style="padding-bottom: 10px; border-bottom: 2px solid #6366f1;">
       <p style="margin: 0 0 2px 0; font-size: 17px; font-weight: 600; color: #111827;">Marc Gueffie</p>
-      <p style="margin: 0; font-size: 13px; color: #6366f1;">Fondateur &amp; développeur web · Pixfeed</p>
+      <p style="margin: 0; font-size: 13px; color: #6366f1;">Fondateur &amp; développeur - Pixfeed</p>
     </td>
   </tr>
   <tr>
