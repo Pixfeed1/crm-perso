@@ -3,6 +3,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiX, FiMail, FiSend, FiUser, FiBriefcase, FiPaperclip, FiTrash2, FiFile } from 'react-icons/fi';
 import { useToast } from '../../hooks/useToast';
+import { API_BASE_URL } from '../../services/api';
+import { getAuthToken } from '../../services/authService';
 
 const EmailModal = ({ isOpen, onClose, client }) => {
   const { toast } = useToast();
@@ -82,8 +84,6 @@ const EmailModal = ({ isOpen, onClose, client }) => {
     setIsSending(true);
 
     try {
-      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-
       // Utiliser FormData pour envoyer les fichiers
       const formData = new FormData();
       formData.append('to', client.email);
@@ -99,10 +99,11 @@ const EmailModal = ({ isOpen, onClose, client }) => {
         formData.append('attachments', file);
       });
 
-      const response = await fetch(`${API_URL}/api/clients/${client.id}/send-email`, {
+      // Base partagée (API_BASE_URL se termine déjà par /api) : chemin SANS /api en tête
+      const response = await fetch(`${API_BASE_URL}/clients/${client.id}/send-email`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${getAuthToken()}`
           // Ne pas définir Content-Type, le navigateur le fera automatiquement avec boundary
         },
         body: formData
