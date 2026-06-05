@@ -542,6 +542,10 @@ const DATABASE_SCHEMA = {
       billing_pay_token: 'VARCHAR(64)', // token public du lien court de paiement
       billing_status: "VARCHAR(20) DEFAULT 'none'", // none/pending/active/past_due/canceling/canceled
       billing_cancel_at: 'TIMESTAMP', // fin de période prévue si résiliation programmée
+      cond_intro: 'TEXT', // conditions PDF : intro
+      cond_included: 'TEXT', // conditions PDF : lignes incluses (une par ligne)
+      cond_excluded: 'TEXT', // conditions PDF : lignes exclues (une par ligne)
+      cond_modalites: 'TEXT', // conditions PDF : modalités (Clé : valeur par ligne)
       created_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP',
       updated_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'
     },
@@ -965,6 +969,10 @@ async function ensureSubscriptionColumns(client) {
   await client.query('ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS billing_pay_token VARCHAR(64);');
   await client.query("ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS billing_status VARCHAR(20) DEFAULT 'none';");
   await client.query('ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS billing_cancel_at TIMESTAMP;');
+  await client.query('ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS cond_intro TEXT;');
+  await client.query('ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS cond_included TEXT;');
+  await client.query('ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS cond_excluded TEXT;');
+  await client.query('ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS cond_modalites TEXT;');
   await client.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_subscriptions_pay_token ON subscriptions(billing_pay_token);');
   console.log('  ✓ Colonnes abonnements vérifiées');
 }

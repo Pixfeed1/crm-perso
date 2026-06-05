@@ -5,17 +5,41 @@
 
 const maintenanceBillingService = require('../services/maintenanceBillingService');
 const emailService = require('../services/emailService');
+const conditionsService = require('../services/conditionsService');
 
 // 'interval' est un mot réservé PostgreSQL -> colonne billing_interval, exposée 'interval'.
 const SELECT_WITH_CLIENT = `
   SELECT s.id, s.client_id, s.label, s.amount_eur,
          s.billing_interval AS interval, s.interval_count,
          s.stripe_customer_id, s.stripe_subscription_id, s.billing_pay_token,
-         s.billing_status, s.billing_cancel_at, s.created_at,
+         s.billing_status, s.billing_cancel_at,
+         s.cond_intro, s.cond_included, s.cond_excluded, s.cond_modalites, s.created_at,
          c.name AS client_name, c.email AS client_email
   FROM subscriptions s
   LEFT JOIN crm_clients c ON s.client_id = c.id
 `;
+
+const formatEur = (amount) =>
+  new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(Number(amount) || 0);
+
+// Libellé de période pour le PDF de conditions (ex. "/ mois", "/ an", "/ tous les 2 mois").
+function periodLabel(interval, intervalCount) {
+  const count = Math.max(parseInt(intervalCount, 10) || 1, 1);
+  if (count === 1) return interval === 'year' ? '/ an' : '/ mois';
+  return interval === 'year' ? `/ tous les ${count} ans` : `/ tous les ${count} mois`;
+}
+
+// Convertit les pièces jointes reçues du front (base64) en pièces jointes nodemailer.
+function parseClientAttachments(list) {
+  if (!Array.isArray(list)) return [];
+  return list
+    .filter((a) => a && a.filename && a.contentBase64)
+    .map((a) => ({
+      filename: a.filename,
+      content: Buffer.from(a.contentBase64, 'base64'),
+      contentType: a.contentType || undefined
+    }));
+}
 
 module.exports = {
   /**
@@ -37,7 +61,10 @@ module.exports = {
    */
   createSubscription: async (req, res) => {
     const db = req.app.locals.db;
-    const { client_id, label, amount_eur, interval, interval_count } = req.body || {};
+    const {
+      client_id, label, amount_eur, interval, interval_count,
+      cond_intro = null, cond_included = null, cond_excluded = null, cond_modalites = null
+    } = req.body || {};
 
     if (!client_id || !label || !amount_eur) {
       return res.status(400).json({ message: 'Client, libellé et montant sont obligatoires.' });
@@ -53,9 +80,10 @@ module.exports = {
 
     try {
       const { rows } = await db.pool.query(
-        `INSERT INTO subscriptions (client_id, label, amount_eur, billing_interval, interval_count, billing_status)
-         VALUES ($1, $2, $3, $4, $5, 'none') RETURNING id`,
-        [client_id, label, amount, billingInterval, intervalCount]
+        `INSERT INTO subscriptions (client_id, label, amount_eur, billing_interval, interval_count, billing_status,
+                                    cond_intro, cond_included, cond_excluded, cond_modalites)
+         VALUES ($1, $2, $3, $4, $5, 'none', $6, $7, $8, $9) RETURNING id`,
+        [client_id, label, amount, billingInterval, intervalCount, cond_intro, cond_included, cond_excluded, cond_modalites]
       );
       const created = await db.pool.query(`${SELECT_WITH_CLIENT} WHERE s.id = $1`, [rows[0].id]);
       res.status(201).json(created.rows[0]);
@@ -91,11 +119,14 @@ module.exports = {
   sendBillingLink: async (req, res) => {
     const db = req.app.locals.db;
     const { id } = req.params;
+    const { message = '', includeConditions = true, attachments: clientAttachments } = req.body || {};
     try {
       const { url } = await maintenanceBillingService.ensureSubscriptionPayLink(db, id);
 
       const { rows } = await db.pool.query(
-        `SELECT s.label, c.name AS client_name, c.email AS client_email
+        `SELECT s.label, s.amount_eur, s.billing_interval, s.interval_count,
+                s.cond_intro, s.cond_included, s.cond_excluded, s.cond_modalites,
+                c.name AS client_name, c.email AS client_email
          FROM subscriptions s LEFT JOIN crm_clients c ON s.client_id = c.id
          WHERE s.id = $1`,
         [id]
@@ -108,13 +139,40 @@ module.exports = {
         return res.status(400).json({ message: "Le client de cet abonnement n'a pas d'adresse email." });
       }
 
+      // Pièces jointes : conditions de l'abonnement (auto) + éventuelles pièces ajoutées
+      const attachments = parseClientAttachments(clientAttachments);
+      if (includeConditions !== false) {
+        try {
+          const pdf = await conditionsService.renderConditionsPdf('abonnement', {
+            label: sub.label,
+            price: formatEur(sub.amount_eur),
+            period: periodLabel(sub.billing_interval, sub.interval_count),
+            date: new Date().toLocaleDateString('fr-FR'),
+            client_name: sub.client_name || '',
+            intro: sub.cond_intro || '',
+            included: sub.cond_included || '',
+            excluded: sub.cond_excluded || '',
+            modalites: sub.cond_modalites || ''
+          });
+          attachments.push({
+            filename: 'Conditions_Abonnement.pdf',
+            content: pdf,
+            contentType: 'application/pdf'
+          });
+        } catch (pdfErr) {
+          console.error('[Subscription] Échec génération PDF conditions (lien envoyé sans conditions):', pdfErr.message);
+        }
+      }
+
       const signature = await emailService.getSelectedSignature(db);
       await emailService.sendSubscriptionLink({
         to: sub.client_email,
         clientName: sub.client_name,
         label: sub.label,
         url,
-        signature
+        signature,
+        message,
+        attachments
       });
       res.json({ success: true, sentTo: sub.client_email });
     } catch (error) {

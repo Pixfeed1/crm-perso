@@ -617,13 +617,28 @@ class EmailService {
 
   /**
    * Envoie au client le lien Stripe Checkout pour mettre en place le prélèvement.
+   * `message` (saisie côté formulaire) prime sur le corps par défaut.
+   * `attachments` : pièces jointes (ex. PDF de conditions).
    */
-  async sendMaintenanceBillingLink({ to, clientName, url, signature }) {
+  async sendMaintenanceBillingLink({ to, clientName, url, signature, message = '', attachments = [] }) {
     const emailSignature = signature || this.getDefaultSignature();
+    const escapeHtml = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+    let intro;
+    let introText;
+    if (message && message.trim()) {
+      intro = `<div style="white-space:pre-wrap;margin:0 0 18px 0;">${escapeHtml(message)}</div>`;
+      introText = message;
+    } else {
+      intro = `
+        <p style="margin:0 0 14px 0;">Bonjour ${clientName ? `<strong>${escapeHtml(clientName)}</strong>` : ''},</p>
+        <p style="margin:0 0 14px 0;">Voici le lien pour mettre en place le prélèvement de votre maintenance :</p>`;
+      introText = `Bonjour ${clientName || ''},\n\nVoici le lien pour mettre en place le prélèvement de votre maintenance :`;
+    }
+
     const html = `
       <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.6;color:#374151;">
-        <p style="margin:0 0 14px 0;">Bonjour ${clientName ? `<strong>${clientName}</strong>` : ''},</p>
-        <p style="margin:0 0 14px 0;">Voici le lien pour mettre en place le prélèvement de votre maintenance :</p>
+        ${intro}
         <p style="margin:0 0 18px 0;"><a href="${url}" style="color:#6366f1;font-weight:600;">${url}</a></p>
         ${emailSignature}
       </div>
@@ -634,20 +649,35 @@ class EmailService {
       to,
       subject: 'Mise en place du prélèvement de votre maintenance',
       html,
-      text: `Bonjour ${clientName || ''},\n\nVoici le lien pour mettre en place le prélèvement de votre maintenance :\n${url}`
+      text: `${introText}\n${url}`,
+      attachments
     });
   }
 
   /**
    * Envoie au client le lien de paiement (récurrent) d'un abonnement libre.
+   * `message` prime sur le corps par défaut ; `attachments` pour les pièces jointes.
    */
-  async sendSubscriptionLink({ to, clientName, url, label, signature }) {
+  async sendSubscriptionLink({ to, clientName, url, label, signature, message = '', attachments = [] }) {
     const emailSignature = signature || this.getDefaultSignature();
-    const what = label ? `votre abonnement « ${label} »` : 'votre abonnement';
+    const escapeHtml = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const what = label ? `votre abonnement « ${escapeHtml(label)} »` : 'votre abonnement';
+
+    let intro;
+    let introText;
+    if (message && message.trim()) {
+      intro = `<div style="white-space:pre-wrap;margin:0 0 18px 0;">${escapeHtml(message)}</div>`;
+      introText = message;
+    } else {
+      intro = `
+        <p style="margin:0 0 14px 0;">Bonjour ${clientName ? `<strong>${escapeHtml(clientName)}</strong>` : ''},</p>
+        <p style="margin:0 0 14px 0;">Voici le lien pour mettre en place le paiement de ${what} :</p>`;
+      introText = `Bonjour ${clientName || ''},\n\nVoici le lien pour mettre en place le paiement de ${label ? `« ${label} »` : 'votre abonnement'} :`;
+    }
+
     const html = `
       <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.6;color:#374151;">
-        <p style="margin:0 0 14px 0;">Bonjour ${clientName ? `<strong>${clientName}</strong>` : ''},</p>
-        <p style="margin:0 0 14px 0;">Voici le lien pour mettre en place le paiement de ${what} :</p>
+        ${intro}
         <p style="margin:0 0 18px 0;"><a href="${url}" style="color:#6366f1;font-weight:600;">${url}</a></p>
         ${emailSignature}
       </div>
@@ -657,7 +687,8 @@ class EmailService {
       to,
       subject: `Mise en place du paiement de ${label ? `« ${label} »` : 'votre abonnement'}`,
       html,
-      text: `Bonjour ${clientName || ''},\n\nVoici le lien pour mettre en place le paiement de ${what} :\n${url}`
+      text: `${introText}\n${url}`,
+      attachments
     });
   }
 

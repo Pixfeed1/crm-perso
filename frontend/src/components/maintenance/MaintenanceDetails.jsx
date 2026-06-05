@@ -12,11 +12,13 @@ import { useToast } from '../../hooks/useToast';
 import { useConfirm } from '../../hooks/useConfirm';
 import Modal from '../common/Modal';
 import ConfirmModal from '../common/ConfirmModal';
+import BillingLinkEmailModal from '../billing/BillingLinkEmailModal';
 
 const MaintenanceDetails = ({ contract, onDelete, onRefresh, onEdit, onGenerateReport }) => {
   const { toast } = useToast();
   const { confirm, confirmState } = useConfirm();
   const [sendingReport, setSendingReport] = useState(null);
+  const [billingEmailOpen, setBillingEmailOpen] = useState(false);
   const [billingUrl, setBillingUrl] = useState(null);
   const [billingLoading, setBillingLoading] = useState(false);
   const [billingSending, setBillingSending] = useState(false);
@@ -149,11 +151,12 @@ const MaintenanceDetails = ({ contract, onDelete, onRefresh, onEdit, onGenerateR
     }
   };
 
-  const handleSendBillingLink = async () => {
+  const handleSendBillingEmail = async (payload) => {
     try {
       setBillingSending(true);
-      const res = await maintenanceContractsAPI.sendBillingLink(contract.id);
+      const res = await maintenanceContractsAPI.sendBillingLink(contract.id, payload);
       toast.success(`Lien envoyé à ${res.sentTo || 'au client'}`);
+      setBillingEmailOpen(false);
     } catch (error) {
       console.error('Erreur envoi lien prélèvement:', error);
       toast.error(error.message || "Erreur lors de l'envoi du lien");
@@ -161,6 +164,13 @@ const MaintenanceDetails = ({ contract, onDelete, onRefresh, onEdit, onGenerateR
       setBillingSending(false);
     }
   };
+
+  const isPro = String(contract.plan || '').toLowerCase().includes('pro');
+  const conditionsLabel = `Conditions Maintenance ${isPro ? 'Professionnel' : 'Essentiel'}`;
+  const defaultBillingMessage =
+    `Bonjour ${contract.client_name || ''},\n\n` +
+    `Comme convenu, voici le lien pour mettre en place le prélèvement de la maintenance de votre site. ` +
+    `Vous trouverez les conditions détaillées en pièce jointe.\n\nBien à vous,`;
 
   const handleConfirmCancel = async () => {
     try {
@@ -375,7 +385,7 @@ const MaintenanceDetails = ({ contract, onDelete, onRefresh, onEdit, onGenerateR
               </button>
               <button
                 type="button"
-                onClick={handleSendBillingLink}
+                onClick={() => setBillingEmailOpen(true)}
                 disabled={billingSending}
                 className="px-3 py-1.5 bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-300 rounded-lg text-sm flex items-center gap-1 disabled:opacity-50"
               >
@@ -580,6 +590,16 @@ const MaintenanceDetails = ({ contract, onDelete, onRefresh, onEdit, onGenerateR
 
       {/* Confirmation de suppression de rapport */}
       <ConfirmModal {...confirmState.config} isOpen={confirmState.isOpen} />
+
+      <BillingLinkEmailModal
+        isOpen={billingEmailOpen}
+        onClose={() => setBillingEmailOpen(false)}
+        onSend={handleSendBillingEmail}
+        title="Envoyer le lien de prélèvement"
+        clientName={contract.client_name || ''}
+        defaultMessage={defaultBillingMessage}
+        conditionsLabel={conditionsLabel}
+      />
     </motion.div>
   );
 };

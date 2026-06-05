@@ -2,6 +2,22 @@
 const maintenanceContractModel = require('../models/maintenanceContractModel');
 const maintenanceBillingService = require('../services/maintenanceBillingService');
 const emailService = require('../services/emailService');
+const conditionsService = require('../services/conditionsService');
+
+// Convertit les pièces jointes reçues du front (base64) en pièces jointes nodemailer.
+function parseClientAttachments(list) {
+  if (!Array.isArray(list)) return [];
+  return list
+    .filter((a) => a && a.filename && a.contentBase64)
+    .map((a) => ({
+      filename: a.filename,
+      content: Buffer.from(a.contentBase64, 'base64'),
+      contentType: a.contentType || undefined
+    }));
+}
+
+const formatEur = (amount) =>
+  new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(Number(amount) || 0);
 
 /**
  * Contrôleur pour la gestion des contrats de maintenance WordPress
@@ -185,12 +201,15 @@ const maintenanceContractController = {
     const db = req.app.locals.db;
     const { id } = req.params;
 
+    const { message = '', includeConditions = true, attachments: clientAttachments } = req.body || {};
+
     try {
       const { url } = await maintenanceBillingService.ensurePayLink(db, id);
 
-      // Récupérer les coordonnées du client pour l'envoi
+      // Récupérer les coordonnées + la formule (plan) et le montant pour les conditions
       const { rows } = await db.pool.query(
-        `SELECT c.name AS client_name, c.email AS client_email
+        `SELECT mc.plan, mc.site_url, mc.monthly_amount,
+                c.name AS client_name, c.email AS client_email
          FROM maintenance_contracts mc
          LEFT JOIN crm_clients c ON mc.client_id = c.id
          WHERE mc.id = $1`,
@@ -204,12 +223,36 @@ const maintenanceContractController = {
         return res.status(400).json({ message: "Le client de ce contrat n'a pas d'adresse email." });
       }
 
+      // Pièces jointes : conditions de la formule (auto) + éventuelles pièces ajoutées
+      const attachments = parseClientAttachments(clientAttachments);
+      if (includeConditions !== false) {
+        const isPro = String(contract.plan || '').toLowerCase().includes('pro');
+        const type = isPro ? 'maintenance-pro' : 'maintenance-essentiel';
+        try {
+          const pdf = await conditionsService.renderConditionsPdf(type, {
+            client_name: contract.client_name || '',
+            site_url: contract.site_url || '',
+            price: formatEur(contract.monthly_amount),
+            date: new Date().toLocaleDateString('fr-FR')
+          });
+          attachments.push({
+            filename: `Conditions_Maintenance_${isPro ? 'Professionnel' : 'Essentiel'}.pdf`,
+            content: pdf,
+            contentType: 'application/pdf'
+          });
+        } catch (pdfErr) {
+          console.error('[MaintenanceContract] Échec génération PDF conditions (lien envoyé sans conditions):', pdfErr.message);
+        }
+      }
+
       const signature = await emailService.getSelectedSignature(db);
       await emailService.sendMaintenanceBillingLink({
         to: contract.client_email,
         clientName: contract.client_name,
         url,
-        signature
+        signature,
+        message,
+        attachments
       });
       res.json({ success: true, sentTo: contract.client_email });
     } catch (error) {

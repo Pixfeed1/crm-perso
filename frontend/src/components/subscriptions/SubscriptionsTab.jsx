@@ -11,6 +11,23 @@ import {
 } from 'react-icons/fi';
 import { subscriptionsAPI, clientsAPI } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
+import BillingLinkEmailModal from '../billing/BillingLinkEmailModal';
+
+// Modalités par défaut, adaptées à la périodicité (même esprit que les docs maintenance).
+const buildDefaultModalites = (periodicity, intervalCount) => {
+  const n = Math.max(parseInt(intervalCount, 10) || 1, 1);
+  const periodWord = periodicity === 'year'
+    ? 'annuel'
+    : periodicity === 'custom'
+      ? `tous les ${n} mois`
+      : 'mensuel';
+  return [
+    'Engagement : Sans engagement de durée. Résiliable à tout moment ; la résiliation prend effet à la fin de la période en cours, sans remboursement au prorata.',
+    `Facturation : Prélèvement ${periodWord} automatique par carte via Stripe, à la date anniversaire de souscription. Facture transmise par email.`,
+    'Résiliation : Effective à la fin de la période en cours.',
+    'Responsabilité : Pixfeed met en œuvre les moyens nécessaires à la bonne exécution de la prestation, sans garantie de résultat absolu inhérente à la nature du web.'
+  ].join('\n');
+};
 
 const billingStatusConfig = {
   none: { bg: 'bg-gray-500/20', text: 'text-gray-300', label: 'Pas de paiement' },
@@ -26,7 +43,6 @@ const formatAmount = (amount) =>
 
 const periodicityLabel = (sub) => {
   const count = parseInt(sub.interval_count, 10) || 1;
-  const unit = sub.interval === 'year' ? 'an' : 'mois';
   if (count === 1) return sub.interval === 'year' ? 'Annuel' : 'Mensuel';
   return `Tous les ${count} ${sub.interval === 'year' ? 'ans' : 'mois'}`;
 };
@@ -41,8 +57,31 @@ const SubscriptionsTab = () => {
   const [formOpen, setFormOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
-    client_id: '', label: '', amount_eur: '', periodicity: 'month', interval_count: 2
+    client_id: '', label: '', amount_eur: '', periodicity: 'month', interval_count: 2,
+    cond_intro: '', cond_included: '', cond_excluded: '', cond_modalites: ''
   });
+  const [modalitesTouched, setModalitesTouched] = useState(false);
+
+  // Email d'envoi du lien
+  const [emailTarget, setEmailTarget] = useState(null);
+
+  const openForm = () => {
+    setForm({
+      client_id: '', label: '', amount_eur: '', periodicity: 'month', interval_count: 2,
+      cond_intro: '', cond_included: '', cond_excluded: '',
+      cond_modalites: buildDefaultModalites('month', 2)
+    });
+    setModalitesTouched(false);
+    setFormOpen(true);
+  };
+
+  // Régénère les modalités par défaut quand la périodicité change (si non éditées à la main).
+  useEffect(() => {
+    if (formOpen && !modalitesTouched) {
+      setForm((prev) => ({ ...prev, cond_modalites: buildDefaultModalites(prev.periodicity, prev.interval_count) }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.periodicity, form.interval_count, formOpen]);
 
   // Liens de paiement générés (par abonnement) + état copie
   const [payLinks, setPayLinks] = useState({});
@@ -102,11 +141,14 @@ const SubscriptionsTab = () => {
         label: form.label,
         amount_eur: Number(form.amount_eur),
         interval,
-        interval_count
+        interval_count,
+        cond_intro: form.cond_intro || null,
+        cond_included: form.cond_included || null,
+        cond_excluded: form.cond_excluded || null,
+        cond_modalites: form.cond_modalites || null
       });
       toast.success('Abonnement créé');
       setFormOpen(false);
-      setForm({ client_id: '', label: '', amount_eur: '', periodicity: 'month', interval_count: 2 });
       fetchSubscriptions();
     } catch (error) {
       console.error('Erreur création abonnement:', error);
@@ -142,11 +184,13 @@ const SubscriptionsTab = () => {
     }
   };
 
-  const handleSendLink = async (sub) => {
+  const handleSendEmail = async (payload) => {
+    if (!emailTarget) return;
     try {
-      setSendingLink(sub.id);
-      const res = await subscriptionsAPI.sendBillingLink(sub.id);
+      setSendingLink(emailTarget.id);
+      const res = await subscriptionsAPI.sendBillingLink(emailTarget.id, payload);
       toast.success(`Lien envoyé à ${res.sentTo || 'au client'}`);
+      setEmailTarget(null);
       fetchSubscriptions();
     } catch (error) {
       console.error('Erreur envoi lien:', error);
@@ -209,7 +253,7 @@ const SubscriptionsTab = () => {
         <motion.button
           whileHover={{ scale: 1.03 }}
           whileTap={{ scale: 0.97 }}
-          onClick={() => setFormOpen(true)}
+          onClick={openForm}
           className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
         >
           <FiPlus />
@@ -268,7 +312,7 @@ const SubscriptionsTab = () => {
                     <motion.button
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
-                      onClick={() => handleSendLink(sub)}
+                      onClick={() => setEmailTarget(sub)}
                       disabled={sendingLink === sub.id}
                       className="p-2 bg-blue-600/30 hover:bg-blue-600/50 text-blue-300 rounded-lg transition-colors disabled:opacity-50"
                       title="Envoyer le lien par email"
@@ -429,6 +473,55 @@ const SubscriptionsTab = () => {
                   </div>
                 )}
 
+                {/* Conditions (PDF joint à l'envoi du lien) */}
+                <div className="pt-2 border-t border-gray-700/60">
+                  <p className="text-sm font-semibold text-gray-200 mb-3">Conditions (PDF joint à l'email)</p>
+
+                  <div className="mb-3">
+                    <label className="block text-sm text-gray-300 mb-1">Intro</label>
+                    <textarea
+                      value={form.cond_intro}
+                      onChange={(e) => setForm({ ...form, cond_intro: e.target.value })}
+                      rows={2}
+                      placeholder="Texte d'introduction du document de conditions..."
+                      className="w-full px-3 py-2 bg-gray-800/60 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 resize-y"
+                    />
+                  </div>
+
+                  <div className="mb-3">
+                    <label className="block text-sm text-gray-300 mb-1">Inclus <span className="text-gray-500">(une ligne par élément)</span></label>
+                    <textarea
+                      value={form.cond_included}
+                      onChange={(e) => setForm({ ...form, cond_included: e.target.value })}
+                      rows={3}
+                      placeholder={"Hébergement et nom de domaine\nSupport par email\n..."}
+                      className="w-full px-3 py-2 bg-gray-800/60 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 resize-y"
+                    />
+                  </div>
+
+                  <div className="mb-3">
+                    <label className="block text-sm text-gray-300 mb-1">Exclus <span className="text-gray-500">(une ligne par élément)</span></label>
+                    <textarea
+                      value={form.cond_excluded}
+                      onChange={(e) => setForm({ ...form, cond_excluded: e.target.value })}
+                      rows={3}
+                      placeholder={"Développements spécifiques\nRefonte graphique\n..."}
+                      className="w-full px-3 py-2 bg-gray-800/60 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 resize-y"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm text-gray-300 mb-1">Modalités <span className="text-gray-500">(« Clé : valeur » par ligne)</span></label>
+                    <textarea
+                      value={form.cond_modalites}
+                      onChange={(e) => { setForm({ ...form, cond_modalites: e.target.value }); setModalitesTouched(true); }}
+                      rows={5}
+                      className="w-full px-3 py-2 bg-gray-800/60 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 resize-y"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Pré-rempli selon la périodicité (engagement, facturation, résiliation, responsabilité).</p>
+                  </div>
+                </div>
+
                 <div className="flex gap-3 pt-2">
                   <button
                     type="button"
@@ -560,6 +653,18 @@ const SubscriptionsTab = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <BillingLinkEmailModal
+        isOpen={!!emailTarget}
+        onClose={() => setEmailTarget(null)}
+        onSend={handleSendEmail}
+        title="Envoyer le lien de paiement"
+        clientName={emailTarget?.client_name || ''}
+        defaultMessage={emailTarget
+          ? `Bonjour ${emailTarget.client_name || ''},\n\nComme convenu, voici le lien pour mettre en place le paiement de votre abonnement « ${emailTarget.label} ». Vous trouverez les conditions détaillées en pièce jointe.\n\nBien à vous,`
+          : ''}
+        conditionsLabel="Conditions de l'abonnement"
+      />
     </div>
   );
 };

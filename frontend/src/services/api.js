@@ -1106,10 +1106,10 @@ export const maintenanceContractsAPI = {
     return apiRequest(`/maintenance-contracts/${id}/billing/checkout`, 'POST');
   },
 
-  // Envoyer le lien de prélèvement au client par email
-  sendBillingLink: (id) => {
+  // Envoyer le lien de prélèvement au client par email (payload: { message, includeConditions, attachments })
+  sendBillingLink: (id, payload = {}) => {
     console.log(`Appel API: envoi lien prélèvement contrat ${id}`);
-    return apiRequest(`/maintenance-contracts/${id}/billing/send-link`, 'POST');
+    return apiRequest(`/maintenance-contracts/${id}/billing/send-link`, 'POST', payload);
   },
 
   // Résilier l'abonnement (immediate=true -> immédiat, sinon fin de période)
@@ -1132,8 +1132,8 @@ export const subscriptionsAPI = {
   delete: (id) => apiRequest(`/subscriptions/${id}`, 'DELETE'),
   // Lien court de paiement (pay.pixfeed.net/{token}) -> { url }
   createBillingCheckout: (id) => apiRequest(`/subscriptions/${id}/billing/checkout`, 'POST'),
-  // Envoyer le lien au client par email
-  sendBillingLink: (id) => apiRequest(`/subscriptions/${id}/billing/send-link`, 'POST'),
+  // Envoyer le lien au client par email (payload: { message, includeConditions, attachments })
+  sendBillingLink: (id, payload = {}) => apiRequest(`/subscriptions/${id}/billing/send-link`, 'POST', payload),
   // Résilier (immediate=true -> immédiat, sinon fin de période)
   cancelBilling: (id, immediate = false) => apiRequest(`/subscriptions/${id}/billing/cancel`, 'POST', { immediate }),
   // Réactiver
