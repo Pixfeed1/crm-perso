@@ -1,5 +1,6 @@
 // src/pages/Maintenance.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiTool, FiPlus, FiGrid, FiList, FiSearch, FiX } from 'react-icons/fi';
 import { maintenanceContractsAPI } from '../services/api';
@@ -33,6 +34,11 @@ const Maintenance = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
+  // Deep-link depuis la liste Clients (?contract=ID ouvre le détail, ?client=ID pré-filtre)
+  const [searchParams] = useSearchParams();
+  const [clientFilterId, setClientFilterId] = useState(searchParams.get('client') || '');
+  const deepLinkApplied = useRef(false);
+
   // Chargement initial
   useEffect(() => {
     fetchContracts();
@@ -49,11 +55,34 @@ const Maintenance = () => {
 
       const statusMatch = statusFilter === 'all' || contract.status === statusFilter;
 
-      return searchMatch && statusMatch;
+      const clientMatch = !clientFilterId || String(contract.client_id) === String(clientFilterId);
+
+      return searchMatch && statusMatch && clientMatch;
     });
 
     setFilteredContracts(result);
-  }, [contracts, searchQuery, statusFilter]);
+  }, [contracts, searchQuery, statusFilter, clientFilterId]);
+
+  // Application du deep-link (une seule fois, après chargement des contrats)
+  useEffect(() => {
+    if (deepLinkApplied.current || isLoading) return;
+    const contractParam = searchParams.get('contract');
+    if (contractParam) {
+      deepLinkApplied.current = true;
+      const existing = contracts.find(c => String(c.id) === String(contractParam));
+      if (existing) {
+        handleSelectContract(existing);
+      } else {
+        maintenanceContractsAPI.getById(contractParam)
+          .then(cd => { setSelectedContract(cd); setShowDetails(true); })
+          .catch(() => {});
+      }
+    } else if (searchParams.get('client')) {
+      deepLinkApplied.current = true;
+      setClientFilterId(searchParams.get('client'));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading, contracts]);
 
   const fetchContracts = async () => {
     setIsLoading(true);
@@ -317,6 +346,21 @@ const Maintenance = () => {
             </div>
           </div>
         </div>
+
+        {/* Chip de filtre par client (deep-link depuis la fiche client) */}
+        {clientFilterId && !showDetails && (
+          <div className="mb-4">
+            <button
+              type="button"
+              onClick={() => setClientFilterId('')}
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 hover:bg-indigo-500/30"
+            >
+              Contrats d'un client
+              {filteredContracts[0]?.client_name ? ` · ${filteredContracts[0].client_name}` : ''}
+              <FiX size={14} />
+            </button>
+          </div>
+        )}
 
         {/* Contenu principal : bascule liste / détail en pleine largeur */}
         <div className="w-full">

@@ -1,10 +1,10 @@
 // src/components/clients/ClientCard.jsx
 import React from 'react';
 import { motion } from 'framer-motion';
-import { FiBriefcase, FiUser, FiMail, FiPhone } from 'react-icons/fi';
+import { FiBriefcase, FiUser, FiMail, FiPhone, FiTool } from 'react-icons/fi';
 import { formatDate, formatValue } from '../../utils/formatters';
 
-const ClientCard = ({ client, isSelected, onClick }) => {
+const ClientCard = ({ client, isSelected, onClick, onMaintenanceClick }) => {
   // Configuration des couleurs de statut
   const statusConfig = {
     active: {
@@ -22,6 +22,13 @@ const ClientCard = ({ client, isSelected, onClick }) => {
   };
 
   const statusStyle = statusConfig[client.status] || statusConfig.active;
+
+  // Badge maintenance selon le statut prioritaire (past_due > canceling > active)
+  const maintenanceBadge = {
+    active: { bg: 'bg-indigo-500/20', text: 'text-indigo-300', border: 'border-indigo-500/30' },
+    canceling: { bg: 'bg-amber-500/20', text: 'text-amber-300', border: 'border-amber-500/30' },
+    past_due: { bg: 'bg-rose-500/20', text: 'text-rose-300', border: 'border-rose-500/30' }
+  }[client.maintenance_status];
 
   // Configuration des types
   const typeConfig = {
@@ -60,8 +67,20 @@ const ClientCard = ({ client, isSelected, onClick }) => {
               <TypeIcon className="text-indigo-400 text-sm" />
             </div>
           </div>
-          <div className={`text-xs px-2.5 py-1 rounded-full ${statusStyle.bg} ${statusStyle.text} ${statusStyle.border} border font-medium`}>
-            {statusStyle.label}
+          <div className="flex items-center gap-2">
+            {client.maintenance_count > 0 && maintenanceBadge && (
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); if (onMaintenanceClick) onMaintenanceClick(client, e); }}
+                title="Voir le(s) contrat(s) de maintenance"
+                className={`text-xs px-2.5 py-1 rounded-full border font-medium flex items-center gap-1 transition hover:brightness-110 ${maintenanceBadge.bg} ${maintenanceBadge.text} ${maintenanceBadge.border}`}
+              >
+                <FiTool size={11} /> Maintenance{client.maintenance_count > 1 ? ` (${client.maintenance_count})` : ''}
+              </button>
+            )}
+            <div className={`text-xs px-2.5 py-1 rounded-full ${statusStyle.bg} ${statusStyle.text} ${statusStyle.border} border font-medium`}>
+              {statusStyle.label}
+            </div>
           </div>
         </div>
 

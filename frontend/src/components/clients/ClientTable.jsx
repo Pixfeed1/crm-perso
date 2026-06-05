@@ -1,9 +1,9 @@
 // src/components/clients/ClientTable.jsx
 import React from 'react';
 import { motion } from 'framer-motion';
-import { FiBriefcase, FiUser, FiMail, FiPhone, FiMapPin } from 'react-icons/fi';
+import { FiBriefcase, FiUser, FiMail, FiPhone, FiMapPin, FiTool } from 'react-icons/fi';
 
-const ClientTable = ({ clients, selectedClient, onSelectClient }) => {
+const ClientTable = ({ clients, selectedClient, onSelectClient, onMaintenanceClick }) => {
   return (
     <div className="bg-gray-800/30 backdrop-blur rounded-xl overflow-hidden border border-gray-700">
       <div className="overflow-x-auto">
@@ -101,13 +101,31 @@ const ClientTable = ({ clients, selectedClient, onSelectClient }) => {
 
                 {/* Statut */}
                 <td className="px-4 py-4">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    client.status === 'active'
-                      ? 'bg-green-500/20 text-green-300 border border-green-500/30'
-                      : 'bg-gray-500/20 text-gray-300 border border-gray-500/30'
-                  }`}>
-                    {client.status === 'active' ? 'Actif' : 'Inactif'}
-                  </span>
+                  <div className="flex flex-col items-start gap-1">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      client.status === 'active'
+                        ? 'bg-green-500/20 text-green-300 border border-green-500/30'
+                        : 'bg-gray-500/20 text-gray-300 border border-gray-500/30'
+                    }`}>
+                      {client.status === 'active' ? 'Actif' : 'Inactif'}
+                    </span>
+                    {client.maintenance_count > 0 && client.maintenance_status && (
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); if (onMaintenanceClick) onMaintenanceClick(client, e); }}
+                        title="Voir le(s) contrat(s) de maintenance"
+                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border transition hover:brightness-110 ${
+                          client.maintenance_status === 'past_due'
+                            ? 'bg-rose-500/20 text-rose-300 border-rose-500/30'
+                            : client.maintenance_status === 'canceling'
+                              ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                              : 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30'
+                        }`}
+                      >
+                        <FiTool size={11} /> Maintenance{client.maintenance_count > 1 ? ` (${client.maintenance_count})` : ''}
+                      </button>
+                    )}
+                  </div>
                 </td>
               </motion.tr>
             ))}

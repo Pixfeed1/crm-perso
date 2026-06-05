@@ -10,9 +10,28 @@ const getAllClients = (db) => {
     const query = `
       SELECT
         c.*,
-        l.status as original_lead_status
+        l.status as original_lead_status,
+        COALESCE(mc.maintenance_count, 0) AS maintenance_count,
+        mc.maintenance_status,
+        mc.maintenance_contract_id
       FROM crm_clients c
       LEFT JOIN leads l ON c.lead_id = l.id
+      LEFT JOIN (
+        SELECT
+          client_id,
+          COUNT(*) AS maintenance_count,
+          MIN(id) AS maintenance_contract_id,
+          CASE
+            WHEN bool_or(billing_status = 'past_due') THEN 'past_due'
+            WHEN bool_or(billing_status = 'canceling') THEN 'canceling'
+            WHEN bool_or(billing_status = 'active') THEN 'active'
+            ELSE NULL
+          END AS maintenance_status
+        FROM maintenance_contracts
+        WHERE client_id IS NOT NULL
+          AND billing_status IN ('active', 'canceling', 'past_due')
+        GROUP BY client_id
+      ) mc ON mc.client_id = c.id
       ORDER BY c.name ASC
     `;
 

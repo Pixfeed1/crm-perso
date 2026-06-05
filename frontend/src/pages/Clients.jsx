@@ -1,5 +1,6 @@
 // src/pages/Clients.jsx
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiUsers, FiPlus, FiArrowLeft, FiDownload, FiUpload, FiGrid, FiList } from 'react-icons/fi';
 import { clientsAPI, exportAPI } from '../services/api';
@@ -18,6 +19,17 @@ import ConfirmModal from '../components/common/ConfirmModal';
 const Clients = () => {
   const { toast } = useToast();
   const { confirm, confirmState } = useConfirm();
+  const navigate = useNavigate();
+
+  // Clic sur le badge Maintenance d'un client -> page Maintenance (deep-link)
+  const handleMaintenanceClick = (client, e) => {
+    if (e && e.stopPropagation) e.stopPropagation();
+    if (client.maintenance_count === 1 && client.maintenance_contract_id) {
+      navigate(`/maintenance?contract=${client.maintenance_contract_id}`);
+    } else {
+      navigate(`/maintenance?client=${client.id}`);
+    }
+  };
   const fileInputRef = useRef(null);
   const [clients, setClients] = useState([]);
   const [filteredClients, setFilteredClients] = useState([]);
@@ -451,6 +463,7 @@ const Clients = () => {
                       client={client}
                       isSelected={selectedClient && selectedClient.id === client.id}
                       onClick={() => handleSelectClient(client)}
+                      onMaintenanceClick={handleMaintenanceClick}
                     />
                   ))}
                 </AnimatePresence>
@@ -463,6 +476,7 @@ const Clients = () => {
                 clients={paginatedClients}
                 selectedClient={selectedClient}
                 onSelectClient={handleSelectClient}
+                onMaintenanceClick={handleMaintenanceClick}
               />
             )}
 
