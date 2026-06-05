@@ -527,6 +527,31 @@ const DATABASE_SCHEMA = {
     ]
   },
 
+  // Table subscriptions (abonnements libres : facturation récurrente Stripe)
+  // Note : 'interval' est un mot réservé PostgreSQL -> colonne nommée billing_interval.
+  subscriptions: {
+    columns: {
+      id: 'SERIAL PRIMARY KEY',
+      client_id: 'INTEGER REFERENCES crm_clients(id) ON DELETE SET NULL',
+      label: 'VARCHAR(255) NOT NULL',
+      amount_eur: 'NUMERIC(10,2) DEFAULT 0', // montant en euros
+      billing_interval: "VARCHAR(10) DEFAULT 'month'", // 'month' | 'year' (exposé 'interval' dans l'API)
+      interval_count: 'INTEGER DEFAULT 1', // tous les N mois/ans
+      stripe_customer_id: 'VARCHAR(255)',
+      stripe_subscription_id: 'VARCHAR(255)',
+      billing_pay_token: 'VARCHAR(64)', // token public du lien court de paiement
+      billing_status: "VARCHAR(20) DEFAULT 'none'", // none/pending/active/past_due/canceling/canceled
+      billing_cancel_at: 'TIMESTAMP', // fin de période prévue si résiliation programmée
+      created_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP',
+      updated_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'
+    },
+    indexes: [
+      'CREATE INDEX IF NOT EXISTS idx_subscriptions_client_id ON subscriptions(client_id)',
+      'CREATE INDEX IF NOT EXISTS idx_subscriptions_status ON subscriptions(billing_status)',
+      'CREATE UNIQUE INDEX IF NOT EXISTS idx_subscriptions_pay_token ON subscriptions(billing_pay_token)'
+    ]
+  },
+
   // Table maintenance_reports (rapports de maintenance envoyés aux clients)
   maintenance_reports: {
     columns: {
@@ -925,6 +950,26 @@ async function ensureMaintenanceBillingColumns(client) {
 }
 
 /**
+ * Migration idempotente : colonnes de facturation Stripe sur la table subscriptions
+ * (abonnements libres). 'interval' réservé -> colonne billing_interval.
+ */
+async function ensureSubscriptionColumns(client) {
+  console.log('\n🔧 Vérification colonnes abonnements (Stripe)...');
+  await client.query('ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS client_id INTEGER;');
+  await client.query('ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS label VARCHAR(255);');
+  await client.query('ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS amount_eur NUMERIC(10,2) DEFAULT 0;');
+  await client.query("ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS billing_interval VARCHAR(10) DEFAULT 'month';");
+  await client.query('ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS interval_count INTEGER DEFAULT 1;');
+  await client.query('ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS stripe_customer_id VARCHAR(255);');
+  await client.query('ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS stripe_subscription_id VARCHAR(255);');
+  await client.query('ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS billing_pay_token VARCHAR(64);');
+  await client.query("ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS billing_status VARCHAR(20) DEFAULT 'none';");
+  await client.query('ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS billing_cancel_at TIMESTAMP;');
+  await client.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_subscriptions_pay_token ON subscriptions(billing_pay_token);');
+  console.log('  ✓ Colonnes abonnements vérifiées');
+}
+
+/**
  * Migration idempotente : met à jour le titre dans les signatures email DÉJÀ enregistrées
  * (company_settings.email_signature) — l'ancien HTML figé n'est pas régénéré sinon.
  * 'Chargé de Projet' (et la variante 'web') -> 'Fondateur & développeur'.
@@ -975,6 +1020,9 @@ async function autoInitDatabase(pool) {
 
     // Colonnes de facturation Stripe SEPA sur maintenance_contracts
     await ensureMaintenanceBillingColumns(client);
+
+    // Colonnes de facturation Stripe sur subscriptions (abonnements libres)
+    await ensureSubscriptionColumns(client);
 
     // Mise à jour du titre dans les signatures email déjà enregistrées
     await ensureSignatureTitleUpdate(client);

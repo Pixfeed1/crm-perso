@@ -24,13 +24,13 @@ function payBaseUrl() {
  * @param {number|string} contractId
  * @returns {Promise<{ token: string, url: string }>}
  */
-async function ensurePayLink(db, contractId) {
+async function ensurePayLinkFor(db, table, id, notFoundMsg) {
   const { rows } = await db.pool.query(
-    'SELECT id, billing_pay_token FROM maintenance_contracts WHERE id = $1',
-    [contractId]
+    `SELECT id, billing_pay_token FROM ${table} WHERE id = $1`,
+    [id]
   );
   if (rows.length === 0) {
-    const err = new Error('Contrat de maintenance introuvable.');
+    const err = new Error(notFoundMsg);
     err.statusCode = 404;
     throw err;
   }
@@ -39,34 +39,55 @@ async function ensurePayLink(db, contractId) {
   if (!token) {
     token = crypto.randomBytes(24).toString('hex'); // 48 caractères hex, non devinable
     await db.pool.query(
-      'UPDATE maintenance_contracts SET billing_pay_token = $1, updated_at = NOW() WHERE id = $2',
-      [token, contractId]
+      `UPDATE ${table} SET billing_pay_token = $1, updated_at = NOW() WHERE id = $2`,
+      [token, id]
     );
   }
 
   return { token, url: `${payBaseUrl()}/${token}` };
 }
 
+// Lien court d'un contrat de maintenance.
+async function ensurePayLink(db, contractId) {
+  return ensurePayLinkFor(db, 'maintenance_contracts', contractId, 'Contrat de maintenance introuvable.');
+}
+
+// Lien court d'un abonnement libre.
+async function ensureSubscriptionPayLink(db, subscriptionId) {
+  return ensurePayLinkFor(db, 'subscriptions', subscriptionId, 'Abonnement introuvable.');
+}
+
 /**
- * Retrouve un contrat via son token public de paiement, puis crée une session
- * Checkout Stripe FRAÎCHE pour ce contrat. Utilisé par la route publique /pay/:token.
+ * Retrouve l'entité (contrat de maintenance OU abonnement) via son token public,
+ * puis crée une session Checkout Stripe FRAÎCHE. Route publique /pay/:token et /:token.
+ * Cherche d'ABORD dans maintenance_contracts, sinon dans subscriptions.
  *
  * @param {object} db - app.locals.db
  * @param {string} token
  * @returns {Promise<{ url: string }>} - URL Stripe Checkout fraîche
  */
 async function createCheckoutByPayToken(db, token) {
-  const { rows } = await db.pool.query(
+  const mc = await db.pool.query(
     'SELECT id FROM maintenance_contracts WHERE billing_pay_token = $1',
     [token]
   );
-  if (rows.length === 0) {
-    const err = new Error('Lien de paiement inconnu.');
-    err.statusCode = 404;
-    throw err;
+  if (mc.rows.length > 0) {
+    const { url } = await createCheckoutForContract(db, mc.rows[0].id);
+    return { url };
   }
-  const { url } = await createCheckoutForContract(db, rows[0].id);
-  return { url };
+
+  const sub = await db.pool.query(
+    'SELECT id FROM subscriptions WHERE billing_pay_token = $1',
+    [token]
+  );
+  if (sub.rows.length > 0) {
+    const { url } = await createCheckoutForSubscription(db, sub.rows[0].id);
+    return { url };
+  }
+
+  const err = new Error('Lien de paiement inconnu.');
+  err.statusCode = 404;
+  throw err;
 }
 
 /**
@@ -185,23 +206,144 @@ async function createCheckoutForContract(db, contractId) {
 }
 
 /**
- * Retrouve un contrat de maintenance par metadata.maintenance_contract_id,
- * sinon par stripe_subscription_id, sinon par stripe_customer_id.
+ * Crée (ou réutilise) le Customer Stripe d'un abonnement libre, puis une Checkout
+ * Session d'abonnement récurrent (price_data EUR dynamique). Passe billing_status='pending'.
+ * metadata.subscription_id différencie des contrats de maintenance dans le webhook.
+ *
+ * @param {object} db - app.locals.db
+ * @param {number|string} subscriptionId
+ * @returns {Promise<{ url, sessionId, clientEmail, clientName }>}
  */
-async function findContract(db, { contractId, subscriptionId, customerId }) {
-  if (contractId) {
-    const r = await db.pool.query('SELECT * FROM maintenance_contracts WHERE id = $1', [contractId]);
-    if (r.rows[0]) return r.rows[0];
+async function createCheckoutForSubscription(db, subscriptionId) {
+  const stripe = getStripe();
+
+  const { rows } = await db.pool.query(
+    `SELECT s.*, c.name AS client_name, c.email AS client_email
+     FROM subscriptions s
+     LEFT JOIN crm_clients c ON s.client_id = c.id
+     WHERE s.id = $1`,
+    [subscriptionId]
+  );
+
+  if (rows.length === 0) {
+    const err = new Error('Abonnement introuvable.');
+    err.statusCode = 404;
+    throw err;
   }
-  if (subscriptionId) {
-    const r = await db.pool.query('SELECT * FROM maintenance_contracts WHERE stripe_subscription_id = $1', [subscriptionId]);
-    if (r.rows[0]) return r.rows[0];
+
+  const sub = rows[0];
+
+  if (!sub.client_email) {
+    const err = new Error("Le client de cet abonnement n'a pas d'adresse email : impossible de créer le paiement.");
+    err.statusCode = 400;
+    throw err;
   }
+
+  const amount = Number(sub.amount_eur);
+  if (!amount || amount <= 0) {
+    const err = new Error("Le montant de l'abonnement doit être supérieur à 0.");
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const interval = sub.billing_interval === 'year' ? 'year' : 'month';
+  const intervalCount = Math.max(parseInt(sub.interval_count, 10) || 1, 1);
+
+  // Customer Stripe (créé ou réutilisé)
+  let customerId = sub.stripe_customer_id;
+  if (!customerId) {
+    const customer = await stripe.customers.create({
+      email: sub.client_email,
+      name: sub.client_name || undefined,
+      metadata: { subscription_id: String(sub.id) }
+    });
+    customerId = customer.id;
+    await db.pool.query(
+      'UPDATE subscriptions SET stripe_customer_id = $1, updated_at = NOW() WHERE id = $2',
+      [customerId, sub.id]
+    );
+  }
+
+  const frontendUrl = process.env.FRONTEND_URL || 'https://crm.pixfeed.net';
+
+  const session = await stripe.checkout.sessions.create({
+    mode: 'subscription',
+    payment_method_types: ['card', 'sepa_debit'],
+    customer: customerId,
+    line_items: [
+      {
+        quantity: 1,
+        price_data: {
+          currency: 'eur',
+          unit_amount: Math.round(amount * 100),
+          recurring: { interval, interval_count: intervalCount },
+          product_data: { name: sub.label || 'Abonnement' }
+        }
+      }
+    ],
+    subscription_data: {
+      metadata: { subscription_id: String(sub.id) }
+    },
+    success_url: 'https://pixfeed.net/merci-maintenance',
+    cancel_url: `${frontendUrl}/invoices`,
+    metadata: { subscription_id: String(sub.id) }
+  });
+
+  await db.pool.query(
+    "UPDATE subscriptions SET billing_status = 'pending', updated_at = NOW() WHERE id = $1",
+    [sub.id]
+  );
+
+  return {
+    url: session.url,
+    sessionId: session.id,
+    clientEmail: sub.client_email,
+    clientName: sub.client_name
+  };
+}
+
+/**
+ * Résout l'entité de facturation visée par un objet Stripe, à travers les DEUX
+ * tables (maintenance_contracts et subscriptions). Retourne { table, row } ou null.
+ * Priorité : metadata explicite -> stripe_subscription_id -> stripe_customer_id.
+ */
+async function resolveBillingTarget(db, obj) {
+  const md = obj.metadata || {};
+  const stripeSubId = obj.subscription || (obj.object === 'subscription' ? obj.id : null);
+  const customerId = obj.customer || null;
+
+  // 1. metadata explicite (différencie maintenance vs abonnement libre)
+  if (md.maintenance_contract_id) {
+    const r = await db.pool.query('SELECT * FROM maintenance_contracts WHERE id = $1', [md.maintenance_contract_id]);
+    if (r.rows[0]) return { table: 'maintenance_contracts', row: r.rows[0] };
+  }
+  if (md.subscription_id) {
+    const r = await db.pool.query('SELECT * FROM subscriptions WHERE id = $1', [md.subscription_id]);
+    if (r.rows[0]) return { table: 'subscriptions', row: r.rows[0] };
+  }
+
+  // 2. par stripe_subscription_id (cherche dans les deux tables)
+  if (stripeSubId) {
+    let r = await db.pool.query('SELECT * FROM maintenance_contracts WHERE stripe_subscription_id = $1', [stripeSubId]);
+    if (r.rows[0]) return { table: 'maintenance_contracts', row: r.rows[0] };
+    r = await db.pool.query('SELECT * FROM subscriptions WHERE stripe_subscription_id = $1', [stripeSubId]);
+    if (r.rows[0]) return { table: 'subscriptions', row: r.rows[0] };
+  }
+
+  // 3. par stripe_customer_id (dernier recours)
   if (customerId) {
-    const r = await db.pool.query('SELECT * FROM maintenance_contracts WHERE stripe_customer_id = $1 ORDER BY id DESC LIMIT 1', [customerId]);
-    if (r.rows[0]) return r.rows[0];
+    let r = await db.pool.query('SELECT * FROM maintenance_contracts WHERE stripe_customer_id = $1 ORDER BY id DESC LIMIT 1', [customerId]);
+    if (r.rows[0]) return { table: 'maintenance_contracts', row: r.rows[0] };
+    r = await db.pool.query('SELECT * FROM subscriptions WHERE stripe_customer_id = $1 ORDER BY id DESC LIMIT 1', [customerId]);
+    if (r.rows[0]) return { table: 'subscriptions', row: r.rows[0] };
   }
+
   return null;
+}
+
+// Libellé d'affichage pour les logs/alertes selon le type d'entité.
+function targetLabel(table, row) {
+  return table === 'maintenance_contracts' ? (row.site_name || 'maintenance') : (row.label || 'abonnement');
 }
 
 /**
@@ -218,45 +360,38 @@ const SUBSCRIPTION_STATUS_MAP = {
 };
 
 /**
- * Applique l'effet d'un événement Stripe (déjà vérifié + dédupliqué) sur le contrat.
- * Met à jour billing_status / stripe_subscription_id et alerte en cas d'échec.
+ * Applique l'effet d'un événement Stripe (déjà vérifié + dédupliqué) sur l'entité
+ * de facturation visée (contrat de maintenance OU abonnement libre). Même mapping de
+ * statut pour les deux : la table cible est résolue dynamiquement.
  */
 async function applyStripeEvent(db, event) {
   const obj = (event.data && event.data.object) || {};
-  const contractId = obj.metadata && obj.metadata.maintenance_contract_id;
-  const subscriptionId = obj.subscription || (obj.object === 'subscription' ? obj.id : null);
-  const customerId = obj.customer || null;
+
+  const target = await resolveBillingTarget(db, obj);
+  if (!target) return;
+  const { table, row } = target;
+  const tag = `${table === 'subscriptions' ? 'abonnement' : 'contrat'} ${row.id}`;
 
   switch (event.type) {
     case 'checkout.session.completed': {
-      const contract = await findContract(db, { contractId, customerId });
-      if (!contract) return;
       await db.pool.query(
-        "UPDATE maintenance_contracts SET stripe_subscription_id = COALESCE($1, stripe_subscription_id), billing_status = 'active', updated_at = NOW() WHERE id = $2",
-        [obj.subscription || null, contract.id]
+        `UPDATE ${table} SET stripe_subscription_id = COALESCE($1, stripe_subscription_id), billing_status = 'active', updated_at = NOW() WHERE id = $2`,
+        [obj.subscription || null, row.id]
       );
-      console.log(`[Billing] checkout.session.completed -> contrat ${contract.id} actif (sub ${obj.subscription || 'n/a'})`);
+      console.log(`[Billing] checkout.session.completed -> ${tag} actif (sub ${obj.subscription || 'n/a'})`);
       break;
     }
 
     case 'invoice.paid': {
-      const contract = await findContract(db, { contractId, subscriptionId, customerId });
-      if (!contract) return;
       await db.pool.query(
-        "UPDATE maintenance_contracts SET billing_status = 'active', updated_at = NOW() WHERE id = $1",
-        [contract.id]
+        `UPDATE ${table} SET billing_status = 'active', updated_at = NOW() WHERE id = $1`,
+        [row.id]
       );
-      const paidAt = (obj.status_transitions && obj.status_transitions.paid_at)
-        ? new Date(obj.status_transitions.paid_at * 1000).toISOString()
-        : new Date().toISOString();
-      console.log(`[Billing] invoice.paid -> contrat ${contract.id} (dernier paiement: ${paidAt})`);
+      console.log(`[Billing] invoice.paid -> ${tag}`);
       break;
     }
 
     case 'invoice.payment_failed': {
-      const contract = await findContract(db, { contractId, subscriptionId, customerId });
-      if (!contract) return;
-
       // Échec transitoire à ne PAS traiter comme un impayé :
       // - SCA/3DS en cours (authentication_required) avant validation du paiement ;
       // - nouvelle tentative déjà programmée par Stripe (dunning).
@@ -266,79 +401,71 @@ async function applyStripeEvent(db, event) {
         null;
       const retryImminent = !!obj.next_payment_attempt;
       if (reasonCode === 'authentication_required' || retryImminent) {
-        console.log(`[Billing] invoice.payment_failed transitoire ignoré (contrat ${contract.id}) raison=${reasonCode || 'n/a'} retry=${retryImminent}`);
+        console.log(`[Billing] invoice.payment_failed transitoire ignoré (${tag}) raison=${reasonCode || 'n/a'} retry=${retryImminent}`);
         break;
       }
 
       await db.pool.query(
-        "UPDATE maintenance_contracts SET billing_status = 'past_due', updated_at = NOW() WHERE id = $1",
-        [contract.id]
+        `UPDATE ${table} SET billing_status = 'past_due', updated_at = NOW() WHERE id = $1`,
+        [row.id]
       );
-      // Récupérer les infos client pour l'alerte
+      // Récupérer les infos client pour l'alerte interne
       const cr = await db.pool.query(
-        `SELECT mc.site_name, c.name AS client_name, c.email AS client_email
-         FROM maintenance_contracts mc LEFT JOIN crm_clients c ON mc.client_id = c.id
-         WHERE mc.id = $1`,
-        [contract.id]
+        `SELECT c.name AS client_name, c.email AS client_email
+         FROM ${table} t LEFT JOIN crm_clients c ON t.client_id = c.id
+         WHERE t.id = $1`,
+        [row.id]
       );
       const info = cr.rows[0] || {};
       try {
         await emailService.sendMaintenanceBillingFailedAlert({
-          siteName: info.site_name || contract.site_name,
+          siteName: targetLabel(table, row),
           clientName: info.client_name,
           clientEmail: info.client_email
         });
       } catch (e) {
-        console.error('[Billing] Échec envoi alerte prélèvement:', e.message);
+        console.error('[Billing] Échec envoi alerte paiement:', e.message);
       }
-      console.log(`[Billing] invoice.payment_failed -> contrat ${contract.id} en past_due`);
+      console.log(`[Billing] invoice.payment_failed -> ${tag} en past_due`);
       break;
     }
 
     case 'customer.subscription.created':
     case 'customer.subscription.updated': {
       // subscription.status est la SOURCE DE VÉRITÉ du statut de facturation
-      const contract = await findContract(db, { contractId, subscriptionId: obj.id, customerId });
-      if (!contract) return;
       const mapped = SUBSCRIPTION_STATUS_MAP[obj.status];
       const activeLike = obj.status === 'active' || obj.status === 'trialing';
 
       if (obj.cancel_at_period_end === true && activeLike) {
-        // Résiliation programmée en fin de période
         const cancelAt = obj.current_period_end ? new Date(obj.current_period_end * 1000).toISOString() : null;
         await db.pool.query(
-          "UPDATE maintenance_contracts SET billing_status = 'canceling', billing_cancel_at = $1, stripe_subscription_id = COALESCE(stripe_subscription_id, $2), updated_at = NOW() WHERE id = $3",
-          [cancelAt, obj.id, contract.id]
+          `UPDATE ${table} SET billing_status = 'canceling', billing_cancel_at = $1, stripe_subscription_id = COALESCE(stripe_subscription_id, $2), updated_at = NOW() WHERE id = $3`,
+          [cancelAt, obj.id, row.id]
         );
-        console.log(`[Billing] ${event.type} -> contrat ${contract.id} canceling (fin ${cancelAt})`);
+        console.log(`[Billing] ${event.type} -> ${tag} canceling (fin ${cancelAt})`);
       } else if (mapped) {
-        // cancel_at_period_end=false ou statut non-actif : statut Stripe = source de vérité.
-        // Retour en 'active' (resume) : on efface la date de résiliation prévue.
         const clearCancel = mapped === 'active';
         await db.pool.query(
-          `UPDATE maintenance_contracts SET billing_status = $1, ${clearCancel ? 'billing_cancel_at = NULL, ' : ''}stripe_subscription_id = COALESCE(stripe_subscription_id, $2), updated_at = NOW() WHERE id = $3`,
-          [mapped, obj.id, contract.id]
+          `UPDATE ${table} SET billing_status = $1, ${clearCancel ? 'billing_cancel_at = NULL, ' : ''}stripe_subscription_id = COALESCE(stripe_subscription_id, $2), updated_at = NOW() WHERE id = $3`,
+          [mapped, obj.id, row.id]
         );
-        console.log(`[Billing] ${event.type} -> contrat ${contract.id} status=${obj.status} -> ${mapped}`);
+        console.log(`[Billing] ${event.type} -> ${tag} status=${obj.status} -> ${mapped}`);
       } else {
-        // Statut non mappé : on stocke au moins l'id d'abonnement si absent
         await db.pool.query(
-          "UPDATE maintenance_contracts SET stripe_subscription_id = COALESCE(stripe_subscription_id, $1), updated_at = NOW() WHERE id = $2",
-          [obj.id, contract.id]
+          `UPDATE ${table} SET stripe_subscription_id = COALESCE(stripe_subscription_id, $1), updated_at = NOW() WHERE id = $2`,
+          [obj.id, row.id]
         );
-        console.log(`[Billing] ${event.type} -> contrat ${contract.id} status=${obj.status} -> inchangé`);
+        console.log(`[Billing] ${event.type} -> ${tag} status=${obj.status} -> inchangé`);
       }
       break;
     }
 
     case 'customer.subscription.deleted': {
-      const contract = await findContract(db, { contractId, subscriptionId: obj.id, customerId });
-      if (!contract) return;
       await db.pool.query(
-        "UPDATE maintenance_contracts SET billing_status = 'canceled', updated_at = NOW() WHERE id = $1",
-        [contract.id]
+        `UPDATE ${table} SET billing_status = 'canceled', updated_at = NOW() WHERE id = $1`,
+        [row.id]
       );
-      console.log(`[Billing] customer.subscription.deleted -> contrat ${contract.id} canceled`);
+      console.log(`[Billing] customer.subscription.deleted -> ${tag} canceled`);
       break;
     }
 
@@ -349,39 +476,39 @@ async function applyStripeEvent(db, event) {
 }
 
 /**
- * Récupère le contrat + son stripe_subscription_id, ou throw (404/400).
+ * Récupère une ligne (table générique) + son stripe_subscription_id, ou throw (404/400).
  */
-async function getContractWithSubscription(db, contractId) {
-  const { rows } = await db.pool.query('SELECT * FROM maintenance_contracts WHERE id = $1', [contractId]);
+async function getRowWithStripeSub(db, table, id, notFoundMsg) {
+  const { rows } = await db.pool.query(`SELECT * FROM ${table} WHERE id = $1`, [id]);
   if (rows.length === 0) {
-    const err = new Error('Contrat de maintenance introuvable.');
+    const err = new Error(notFoundMsg);
     err.statusCode = 404;
     throw err;
   }
-  const contract = rows[0];
-  if (!contract.stripe_subscription_id) {
-    const err = new Error('Aucun abonnement actif pour ce contrat.');
+  const row = rows[0];
+  if (!row.stripe_subscription_id) {
+    const err = new Error('Aucun abonnement actif pour cet élément.');
     err.statusCode = 400;
     throw err;
   }
-  return contract;
+  return row;
 }
 
 /**
- * Résilie l'abonnement Stripe d'un contrat.
+ * Résilie l'abonnement Stripe d'une ligne (maintenance ou abonnement libre).
  * - immediate=true  : annulation immédiate (billing_status='canceled').
  * - immediate=false : annulation en fin de période (billing_status='canceling').
  */
-async function cancelSubscriptionForContract(db, contractId, { immediate = false } = {}) {
+async function cancelStripeSubRow(db, table, id, { immediate = false } = {}, notFoundMsg) {
   const stripe = getStripe();
-  const contract = await getContractWithSubscription(db, contractId);
-  const subId = contract.stripe_subscription_id;
+  const row = await getRowWithStripeSub(db, table, id, notFoundMsg);
+  const subId = row.stripe_subscription_id;
 
   if (immediate) {
     await stripe.subscriptions.cancel(subId);
     await db.pool.query(
-      "UPDATE maintenance_contracts SET billing_status = 'canceled', billing_cancel_at = NOW(), updated_at = NOW() WHERE id = $1",
-      [contract.id]
+      `UPDATE ${table} SET billing_status = 'canceled', billing_cancel_at = NOW(), updated_at = NOW() WHERE id = $1`,
+      [row.id]
     );
     return { billing_status: 'canceled' };
   }
@@ -389,32 +516,52 @@ async function cancelSubscriptionForContract(db, contractId, { immediate = false
   const sub = await stripe.subscriptions.update(subId, { cancel_at_period_end: true });
   const cancelAt = sub.current_period_end ? new Date(sub.current_period_end * 1000).toISOString() : null;
   await db.pool.query(
-    "UPDATE maintenance_contracts SET billing_status = 'canceling', billing_cancel_at = $1, updated_at = NOW() WHERE id = $2",
-    [cancelAt, contract.id]
+    `UPDATE ${table} SET billing_status = 'canceling', billing_cancel_at = $1, updated_at = NOW() WHERE id = $2`,
+    [cancelAt, row.id]
   );
   return { billing_status: 'canceling', billing_cancel_at: cancelAt };
 }
 
 /**
- * Réactive un abonnement dont la résiliation en fin de période était programmée.
+ * Réactive un abonnement Stripe dont la résiliation en fin de période était programmée.
  */
-async function resumeSubscriptionForContract(db, contractId) {
+async function resumeStripeSubRow(db, table, id, notFoundMsg) {
   const stripe = getStripe();
-  const contract = await getContractWithSubscription(db, contractId);
-  await stripe.subscriptions.update(contract.stripe_subscription_id, { cancel_at_period_end: false });
+  const row = await getRowWithStripeSub(db, table, id, notFoundMsg);
+  await stripe.subscriptions.update(row.stripe_subscription_id, { cancel_at_period_end: false });
   await db.pool.query(
-    "UPDATE maintenance_contracts SET billing_status = 'active', billing_cancel_at = NULL, updated_at = NOW() WHERE id = $1",
-    [contract.id]
+    `UPDATE ${table} SET billing_status = 'active', billing_cancel_at = NULL, updated_at = NOW() WHERE id = $1`,
+    [row.id]
   );
   return { billing_status: 'active' };
 }
 
+// --- Wrappers maintenance (comportement inchangé) ---
+function cancelSubscriptionForContract(db, contractId, opts = {}) {
+  return cancelStripeSubRow(db, 'maintenance_contracts', contractId, opts, 'Contrat de maintenance introuvable.');
+}
+function resumeSubscriptionForContract(db, contractId) {
+  return resumeStripeSubRow(db, 'maintenance_contracts', contractId, 'Contrat de maintenance introuvable.');
+}
+
+// --- Wrappers abonnements libres ---
+function cancelSubscription(db, subscriptionId, opts = {}) {
+  return cancelStripeSubRow(db, 'subscriptions', subscriptionId, opts, 'Abonnement introuvable.');
+}
+function resumeSubscription(db, subscriptionId) {
+  return resumeStripeSubRow(db, 'subscriptions', subscriptionId, 'Abonnement introuvable.');
+}
+
 module.exports = {
   createCheckoutForContract,
+  createCheckoutForSubscription,
   ensurePayLink,
+  ensureSubscriptionPayLink,
   createCheckoutByPayToken,
   nextBillingAnchor,
   applyStripeEvent,
   cancelSubscriptionForContract,
-  resumeSubscriptionForContract
+  resumeSubscriptionForContract,
+  cancelSubscription,
+  resumeSubscription
 };

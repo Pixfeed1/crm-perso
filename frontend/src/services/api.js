@@ -1125,6 +1125,21 @@ export const maintenanceContractsAPI = {
   }
 };
 
+// API pour les abonnements libres (facturation récurrente Stripe)
+export const subscriptionsAPI = {
+  getAll: () => apiRequest('/subscriptions'),
+  create: (data) => apiRequest('/subscriptions', 'POST', data),
+  delete: (id) => apiRequest(`/subscriptions/${id}`, 'DELETE'),
+  // Lien court de paiement (pay.pixfeed.net/{token}) -> { url }
+  createBillingCheckout: (id) => apiRequest(`/subscriptions/${id}/billing/checkout`, 'POST'),
+  // Envoyer le lien au client par email
+  sendBillingLink: (id) => apiRequest(`/subscriptions/${id}/billing/send-link`, 'POST'),
+  // Résilier (immediate=true -> immédiat, sinon fin de période)
+  cancelBilling: (id, immediate = false) => apiRequest(`/subscriptions/${id}/billing/cancel`, 'POST', { immediate }),
+  // Réactiver
+  resumeBilling: (id) => apiRequest(`/subscriptions/${id}/billing/resume`, 'POST')
+};
+
 // API pour les emails programmés
 export const scheduledEmailsAPI = {
   // Récupérer tous les emails programmés
