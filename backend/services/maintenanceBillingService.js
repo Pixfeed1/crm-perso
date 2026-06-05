@@ -79,7 +79,6 @@ async function createCheckoutForContract(db, contractId) {
 
   // 3. Créer la Checkout Session (abonnement SEPA)
   const frontendUrl = process.env.FRONTEND_URL || 'https://crm.pixfeed.net';
-  const anchor = nextBillingAnchor(contract.billing_day);
 
   const session = await stripe.checkout.sessions.create({
     mode: 'subscription',
@@ -99,8 +98,8 @@ async function createCheckoutForContract(db, contractId) {
       }
     ],
     subscription_data: {
-      billing_cycle_anchor: anchor,
-      proration_behavior: 'none',
+      // Pas de billing_cycle_anchor : la facturation démarre immédiatement à la validation
+      // du Checkout, puis se répète chaque mois à cette même date (proration par défaut).
       metadata: { maintenance_contract_id: String(contract.id) }
     },
     success_url: `${frontendUrl}/maintenance`,
