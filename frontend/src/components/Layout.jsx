@@ -148,7 +148,7 @@ const Layout = ({ children }) => {
 
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900 text-white overflow-hidden">
+    <div className="flex h-screen app-bg text-white overflow-hidden">
       {/* Barre de recherche en haut à gauche - Position fixe pour visibilité constante */}
       <motion.button
         className="fixed top-4 left-4 z-50 px-4 py-2 sm:px-6 sm:py-3 bg-gray-800/80 backdrop-blur-md border border-purple-500/30 rounded-full flex items-center gap-2 sm:gap-3 shadow-xl hover:bg-gray-800/90 transition-all"
