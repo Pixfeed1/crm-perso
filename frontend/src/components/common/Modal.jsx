@@ -42,7 +42,7 @@ const Modal = ({ isOpen, onClose, maxWidth = 'max-w-[720px]', children }) => {
             <button
               type="button"
               onClick={onClose}
-              className="absolute -top-3 -right-3 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-gray-800 border border-gray-600 text-gray-300 hover:text-white hover:bg-gray-700 shadow-lg"
+              className="absolute -top-3 -right-3 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-surface border border-border-strong text-text-secondary hover:text-text-primary hover:bg-surface-strong shadow-lg"
               aria-label="Fermer"
             >
               <FiX size={18} />

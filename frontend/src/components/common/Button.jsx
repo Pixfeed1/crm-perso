@@ -16,10 +16,10 @@ const Button = ({
   // Variantes de couleur
   const variants = {
     primary: 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white',
-    secondary: 'bg-gray-700 hover:bg-gray-600 text-white',
+    secondary: 'bg-surface-strong hover:bg-border-strong text-text-primary',
     danger: 'bg-red-600 hover:bg-red-700 text-white',
     success: 'bg-green-600 hover:bg-green-700 text-white',
-    outline: 'border border-gray-600 hover:bg-gray-700 text-white bg-transparent',
+    outline: 'border border-border-strong hover:bg-surface-strong text-text-primary bg-transparent',
   };
 
   // Tailles

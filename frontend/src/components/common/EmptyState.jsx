@@ -20,7 +20,7 @@ const EmptyState = ({ icon, title, description, action }) => {
       </motion.div>
       
       <motion.h3
-        className="text-xl font-semibold text-white mb-2"
+        className="text-xl font-semibold text-text-primary mb-2"
         initial={{ y: 10, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.5, delay: 0.3 }}
@@ -29,7 +29,7 @@ const EmptyState = ({ icon, title, description, action }) => {
       </motion.h3>
       
       <motion.p
-        className="text-gray-300 max-w-sm"
+        className="text-text-secondary max-w-sm"
         initial={{ y: 10, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.5, delay: 0.4 }}

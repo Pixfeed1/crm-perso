@@ -14,12 +14,23 @@
 [data-theme="classique"] {
   --surface: 31 41 55;          /* gray-800 */
   --surface-muted: 17 24 39;    /* gray-900 */
+  --surface-strong: 55 65 81;   /* gray-700 (hover, boutons secondaires) */
   --text-primary: 255 255 255;  /* white */
+  --text-secondary: 209 213 219;/* gray-300 */
   --text-muted: 156 163 175;    /* gray-400 */
   --border: 55 65 81;           /* gray-700 */
+  --border-strong: 75 85 99;    /* gray-600 */
   --accent: 79 70 229;          /* indigo-600 */
+  --accent-text: 255 255 255;   /* texte sur l'accent */
 
-  /* Fond global de l'app (degrade actuel). Non applique au lot 1. */
+  /* Overlay subtil : BLANC en classique (reproduit exactement bg-white/X et
+     border-white/X), devient FONCE en clair pour rester un voile discret. */
+  --overlay: 255 255 255;
+
+  /* Fond des panneaux de modale (degrade subtil actuel en classique). */
+  --panel-bg: linear-gradient(to bottom right, rgb(17 24 39), rgb(31 41 55), rgb(17 24 39));
+
+  /* Fond global de l'app (degrade actuel). */
   --bg-app: linear-gradient(to bottom right, rgb(17 24 39), rgb(88 28 135), rgb(76 29 149));
 
   /* Champs de formulaire (bloc !important ci-dessous) */
@@ -30,27 +41,49 @@
   --field-autofill-shadow: rgba(17, 24, 39, 0.5);
 }
 
-/* PLACEHOLDER theme clair (style Notion) - affine au lot 2. */
+/* Theme clair (style Notion). */
 [data-theme="clair"] {
-  --surface: 255 255 255;
-  --surface-muted: 247 247 245;
-  --text-primary: 55 53 47;
-  --text-muted: 120 119 116;
-  --border: 233 233 231;
-  --accent: 79 70 229;
+  --surface: 255 255 255;        /* cartes blanches */
+  --surface-muted: 247 246 243;  /* fond casse type Notion */
+  --surface-strong: 237 237 236; /* survols, boutons secondaires */
+  --text-primary: 55 53 47;      /* ardoise fonce #37352f */
+  --text-secondary: 95 94 91;    /* gris doux */
+  --text-muted: 120 119 116;     /* gris secondaire #787774 */
+  --border: 237 237 236;         /* bordures gris clair #ededec */
+  --border-strong: 220 219 216;
+  --accent: 79 70 229;           /* indigo de marque (lisible sur clair) */
+  --accent-text: 255 255 255;
 
-  --bg-app: linear-gradient(to bottom right, rgb(255 255 255), rgb(247 247 245), rgb(241 240 238));
+  --overlay: 17 24 39;           /* voile fonce discret sur surfaces claires */
+  --panel-bg: rgb(255 255 255);  /* panneaux de modale blancs */
+
+  --bg-app: linear-gradient(to bottom right, rgb(255 255 255), rgb(247 246 243), rgb(241 240 238));
 
   --field-text: 55 53 47;
-  --field-placeholder: 155 154 151;
+  --field-placeholder: 145 144 140;
   --field-label: 71 70 66;
   --field-option-bg: 255 255 255;
   --field-autofill-shadow: rgba(255, 255, 255, 0.5);
 }
 
-/* Fond global pilote par le theme (utilisable au lot 2 via la classe bg-app). */
+/* Theme clair : fond et bordure clairs FORCES sur les champs (lisibilite,
+   aucun blanc sur blanc) sans toucher au theme classique. Le texte est deja
+   pilote par le bloc !important plus bas (var --field-text). */
+[data-theme="clair"] input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+[data-theme="clair"] textarea,
+[data-theme="clair"] select {
+  background-color: rgb(var(--surface-muted)) !important;
+  border-color: rgb(var(--border)) !important;
+}
+
+/* Fond global pilote par le theme (classe bg-app). */
 .app-bg {
   background: var(--bg-app);
+}
+
+/* Fond des panneaux de modale pilote par le theme. */
+.panel-bg {
+  background: var(--panel-bg);
 }
 
 @layer base {

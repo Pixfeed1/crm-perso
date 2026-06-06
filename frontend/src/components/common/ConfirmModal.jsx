@@ -56,7 +56,7 @@ const ConfirmModal = ({
           exit={{ opacity: 0, scale: 0.9, y: 20 }}
           transition={{ type: 'spring', duration: 0.3 }}
           className={`
-            bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900
+            panel-bg
             border ${currentConfig.borderColor}
             rounded-2xl shadow-2xl
             max-w-md w-full
@@ -74,15 +74,15 @@ const ConfirmModal = ({
 
               {/* Contenu */}
               <div className="flex-1 min-w-0">
-                <h3 className="text-xl font-bold text-white mb-2">
+                <h3 className="text-xl font-bold text-text-primary mb-2">
                   {title}
                 </h3>
-                <p className="text-gray-300 text-sm leading-relaxed">
+                <p className="text-text-secondary text-sm leading-relaxed">
                   {message}
                 </p>
                 {itemName && (
-                  <div className="mt-3 p-3 bg-white/5 rounded-lg border border-white/10">
-                    <p className="text-white font-medium text-sm">{itemName}</p>
+                  <div className="mt-3 p-3 bg-overlay/5 rounded-lg border border-overlay/10">
+                    <p className="text-text-primary font-medium text-sm">{itemName}</p>
                   </div>
                 )}
               </div>
@@ -92,7 +92,7 @@ const ConfirmModal = ({
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
                 onClick={handleClose}
-                className="text-gray-400 hover:text-white transition-colors flex-shrink-0"
+                className="text-text-muted hover:text-text-primary transition-colors flex-shrink-0"
               >
                 <FiX className="text-xl" />
               </motion.button>
@@ -100,12 +100,12 @@ const ConfirmModal = ({
           </div>
 
           {/* Footer avec boutons */}
-          <div className="px-6 py-4 bg-black/20 border-t border-white/10 flex gap-3">
+          <div className="px-6 py-4 bg-black/20 border-t border-overlay/10 flex gap-3">
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={handleClose}
-              className="flex-1 px-4 py-2.5 border-2 border-white/30 text-white hover:bg-white/10 hover:border-white/40 rounded-lg font-medium transition-all"
+              className="flex-1 px-4 py-2.5 border-2 border-overlay/30 text-text-primary hover:bg-overlay/10 hover:border-overlay/40 rounded-lg font-medium transition-all"
             >
               {cancelText}
             </motion.button>

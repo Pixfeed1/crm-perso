@@ -148,24 +148,24 @@ const Layout = ({ children }) => {
 
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900 text-white overflow-hidden">
+    <div className="flex h-screen app-bg text-text-primary overflow-hidden">
       {/* Barre de recherche en haut à gauche - Position fixe pour visibilité constante */}
       <motion.button
-        className="fixed top-4 left-4 z-50 px-4 py-2 sm:px-6 sm:py-3 bg-gray-800/80 backdrop-blur-md border border-purple-500/30 rounded-full flex items-center gap-2 sm:gap-3 shadow-xl hover:bg-gray-800/90 transition-all"
+        className="fixed top-4 left-4 z-50 px-4 py-2 sm:px-6 sm:py-3 bg-surface/80 backdrop-blur-md border border-purple-500/30 rounded-full flex items-center gap-2 sm:gap-3 shadow-xl hover:bg-surface/90 transition-all"
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={() => setSearchOpen(true)}
       >
         <FiSearch className="text-lg sm:text-xl text-indigo-300" />
-        <span className="hidden sm:inline text-sm text-gray-400">Rechercher...</span>
-        <kbd className="hidden sm:inline px-2 py-1 bg-gray-900/50 border border-gray-700 rounded text-xs text-gray-500">
+        <span className="hidden sm:inline text-sm text-text-muted">Rechercher...</span>
+        <kbd className="hidden sm:inline px-2 py-1 bg-surface-muted/50 border border-border rounded text-xs text-text-muted">
           Ctrl+K
         </kbd>
       </motion.button>
 
       {/* Bouton Paramètres en haut à droite */}
       <motion.button
-        className="fixed top-4 right-20 z-50 w-12 h-12 sm:w-14 sm:h-14 bg-gray-700 rounded-full flex items-center justify-center shadow-xl hover:bg-gray-600 transition-all"
+        className="fixed top-4 right-20 z-50 w-12 h-12 sm:w-14 sm:h-14 bg-surface-strong rounded-full flex items-center justify-center shadow-xl hover:bg-border-strong transition-all"
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.95 }}
         onClick={() => navigate('/settings')}
@@ -293,7 +293,7 @@ const Layout = ({ children }) => {
                     >
                       {item.icon}
                       <motion.span
-                        className="absolute top-full mt-2 whitespace-nowrap text-sm font-medium bg-gray-800/70 px-2 py-1 rounded-md"
+                        className="absolute top-full mt-2 whitespace-nowrap text-sm font-medium text-text-primary bg-surface/70 px-2 py-1 rounded-md"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ delay: 0.1 }}
@@ -318,10 +318,10 @@ const Layout = ({ children }) => {
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
             >
-              <div className="bg-gray-900/95 backdrop-blur-xl border-t border-gray-700 rounded-t-3xl p-4 pb-8 max-h-[70vh] overflow-y-auto">
+              <div className="bg-surface-muted/95 backdrop-blur-xl border-t border-border rounded-t-3xl p-4 pb-8 max-h-[70vh] overflow-y-auto">
                 {/* Indicateur de glissement */}
                 <div className="flex justify-center mb-4">
-                  <div className="w-12 h-1 bg-gray-600 rounded-full" />
+                  <div className="w-12 h-1 bg-border-strong rounded-full" />
                 </div>
 
                 {/* Grille de navigation */}
@@ -341,7 +341,7 @@ const Layout = ({ children }) => {
                             ? 'bg-rose-600/20 text-rose-300'
                             : isActive
                               ? 'bg-indigo-600 text-white'
-                              : 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50'
+                              : 'bg-surface/50 text-text-secondary hover:bg-surface-strong/50'
                         }`}
                       >
                         <span className="text-xl mb-1">{item.icon}</span>
