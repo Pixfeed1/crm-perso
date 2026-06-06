@@ -30,8 +30,9 @@ const Portefeuille = () => {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Barre d'onglets */}
-      <div className="flex gap-1 px-2 sm:px-4 pt-16 sm:pt-2 border-b border-gray-700/50 shrink-0 overflow-x-auto">
+      {/* Barre d'onglets — décalée à droite en desktop (lg+) pour ne pas passer sous
+          la barre de recherche globale fixe (top-4 left-4). Inchangée en mobile/tablette. */}
+      <div className="flex gap-1 px-2 sm:px-4 lg:pl-72 pt-16 sm:pt-2 border-b border-gray-700/50 shrink-0 overflow-x-auto">
         {TABS.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.key;
