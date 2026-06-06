@@ -2,6 +2,57 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================================
+   TOKENS DE THEME (LOT 1 - fondations)
+   Variables CSS en canaux "R G B" pour conserver les modificateurs
+   d'opacite Tailwind (ex bg-surface puis /50). Le theme bascule via
+   l'attribut data-theme sur <html>. Defaut = "classique" (sombre actuel).
+   - classique : valeurs EXACTES du theme sombre d'aujourd'hui (rendu inchange).
+   - clair : PLACEHOLDER style Notion, affine au lot 2 (pas encore applique partout).
+   ============================================================ */
+:root,
+[data-theme="classique"] {
+  --surface: 31 41 55;          /* gray-800 */
+  --surface-muted: 17 24 39;    /* gray-900 */
+  --text-primary: 255 255 255;  /* white */
+  --text-muted: 156 163 175;    /* gray-400 */
+  --border: 55 65 81;           /* gray-700 */
+  --accent: 79 70 229;          /* indigo-600 */
+
+  /* Fond global de l'app (degrade actuel). Non applique au lot 1. */
+  --bg-app: linear-gradient(to bottom right, rgb(17 24 39), rgb(88 28 135), rgb(76 29 149));
+
+  /* Champs de formulaire (bloc !important ci-dessous) */
+  --field-text: 255 255 255;
+  --field-placeholder: 156 163 175;   /* gray-400 */
+  --field-label: 209 213 219;         /* gray-300 */
+  --field-option-bg: 17 24 39;        /* gray-900 */
+  --field-autofill-shadow: rgba(17, 24, 39, 0.5);
+}
+
+/* PLACEHOLDER theme clair (style Notion) - affine au lot 2. */
+[data-theme="clair"] {
+  --surface: 255 255 255;
+  --surface-muted: 247 247 245;
+  --text-primary: 55 53 47;
+  --text-muted: 120 119 116;
+  --border: 233 233 231;
+  --accent: 79 70 229;
+
+  --bg-app: linear-gradient(to bottom right, rgb(255 255 255), rgb(247 247 245), rgb(241 240 238));
+
+  --field-text: 55 53 47;
+  --field-placeholder: 155 154 151;
+  --field-label: 71 70 66;
+  --field-option-bg: 255 255 255;
+  --field-autofill-shadow: rgba(255, 255, 255, 0.5);
+}
+
+/* Fond global pilote par le theme (utilisable au lot 2 via la classe bg-app). */
+.app-bg {
+  background: var(--bg-app);
+}
+
 @layer base {
   body {
     margin: 0;
@@ -52,9 +103,9 @@ textarea,
 textarea:not([disabled]),
 select,
 select:not([disabled]) {
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
-  caret-color: #ffffff !important;
+  color: rgb(var(--field-text)) !important;
+  -webkit-text-fill-color: rgb(var(--field-text)) !important;
+  caret-color: rgb(var(--field-text)) !important;
 }
 
 /* États focus, hover, active */
@@ -67,9 +118,9 @@ textarea:active,
 select:focus,
 select:hover,
 select:active {
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
-  caret-color: #ffffff !important;
+  color: rgb(var(--field-text)) !important;
+  -webkit-text-fill-color: rgb(var(--field-text)) !important;
+  caret-color: rgb(var(--field-text)) !important;
 }
 
 /* Correction spéciale pour l'autocomplete des navigateurs */
@@ -77,9 +128,9 @@ input:not([type="checkbox"]):not([type="radio"]):-webkit-autofill,
 input:not([type="checkbox"]):not([type="radio"]):-webkit-autofill:hover,
 input:not([type="checkbox"]):not([type="radio"]):-webkit-autofill:focus,
 input:not([type="checkbox"]):not([type="radio"]):-webkit-autofill:active {
-  -webkit-text-fill-color: #ffffff !important;
-  -webkit-box-shadow: 0 0 0 1000px rgb(17 24 39 / 0.5) inset !important;
-  box-shadow: 0 0 0 1000px rgb(17 24 39 / 0.5) inset !important;
+  -webkit-text-fill-color: rgb(var(--field-text)) !important;
+  -webkit-box-shadow: 0 0 0 1000px var(--field-autofill-shadow) inset !important;
+  box-shadow: 0 0 0 1000px var(--field-autofill-shadow) inset !important;
   transition: background-color 5000s ease-in-out 0s;
 }
 
@@ -94,20 +145,20 @@ textarea::-webkit-input-placeholder,
 textarea::-moz-placeholder,
 textarea:-ms-input-placeholder,
 textarea::-ms-input-placeholder {
-  color: rgb(156, 163, 175) !important; /* gray-400 */
+  color: rgb(var(--field-placeholder)) !important;
   opacity: 1 !important;
 }
 
-/* Labels en gris clair */
+/* Labels */
 label,
 label:not([disabled]) {
-  color: rgb(209, 213, 219) !important; /* gray-300 */
+  color: rgb(var(--field-label)) !important;
 }
 
 /* Options dans les select */
 select option {
-  background-color: rgb(17 24 39) !important; /* gray-900 */
-  color: #ffffff !important;
+  background-color: rgb(var(--field-option-bg)) !important;
+  color: rgb(var(--field-text)) !important;
 }
 
 /* SPÉCIFICITÉ ENCORE PLUS FORTE - Cibler tous les éléments avec des classes spécifiques */
@@ -123,7 +174,7 @@ div input[type="number"],
 div input[type="date"],
 div textarea,
 div select {
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
-  caret-color: #ffffff !important;
+  color: rgb(var(--field-text)) !important;
+  -webkit-text-fill-color: rgb(var(--field-text)) !important;
+  caret-color: rgb(var(--field-text)) !important;
 }

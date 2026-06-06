@@ -1,15 +1,17 @@
 // src/pages/Settings.jsx
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FiSave, FiBriefcase, FiMail, FiCheckCircle, FiXCircle, FiAlertCircle, FiVideo, FiBell } from 'react-icons/fi';
+import { FiSave, FiBriefcase, FiMail, FiCheckCircle, FiXCircle, FiAlertCircle, FiVideo, FiBell, FiSun, FiMoon } from 'react-icons/fi';
 import DOMPurify from 'dompurify';
 import { settingsAPI } from '../services/settingsAPI';
 import { useToast } from '../hooks/useToast';
+import { useTheme } from '../contexts/ThemeContext';
 import VideoConferenceSettings from '../components/settings/VideoConferenceSettings';
 import ReminderSettings from '../components/settings/ReminderSettings';
 
 const Settings = () => {
   const { toast } = useToast();
+  const { theme, setTheme } = useTheme();
   const [activeTab, setActiveTab] = useState('company');
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -259,6 +261,17 @@ const Settings = () => {
         >
           <FiBell />
           <span>Relances automatiques</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('appearance')}
+          className={`px-4 py-2 flex items-center gap-2 border-b-2 transition-colors whitespace-nowrap ${
+            activeTab === 'appearance'
+              ? 'border-indigo-500 text-indigo-300'
+              : 'border-transparent text-gray-400 hover:text-gray-300'
+          }`}
+        >
+          <FiSun />
+          <span>Apparence</span>
         </button>
       </div>
 
@@ -589,6 +602,49 @@ const Settings = () => {
 
         {activeTab === 'reminders' && (
           <ReminderSettings />
+        )}
+
+        {activeTab === 'appearance' && (
+          <div className="bg-gray-800/30 rounded-lg border border-gray-700/50 p-6">
+            <h2 className="text-lg font-semibold text-white mb-1">Thème de l'interface</h2>
+            <p className="text-gray-400 text-sm mb-6">Choisissez l'apparence du CRM. Votre choix est mémorisé sur cet appareil.</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-xl">
+              <button
+                type="button"
+                onClick={() => setTheme('classique')}
+                className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left ${
+                  theme === 'classique' ? 'border-indigo-500 bg-indigo-500/10' : 'border-gray-700 hover:border-gray-600'
+                }`}
+              >
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900 flex items-center justify-center text-white">
+                  <FiMoon />
+                </div>
+                <div>
+                  <div className="text-white font-medium">Classique</div>
+                  <div className="text-gray-400 text-xs">Thème sombre (par défaut)</div>
+                </div>
+                {theme === 'classique' && <FiCheckCircle className="ml-auto text-indigo-400" />}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setTheme('clair')}
+                className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left ${
+                  theme === 'clair' ? 'border-indigo-500 bg-indigo-500/10' : 'border-gray-700 hover:border-gray-600'
+                }`}
+              >
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center text-gray-700" style={{ background: 'linear-gradient(to bottom right, #ffffff, #f1f0ee)', border: '1px solid #e9e9e7' }}>
+                  <FiSun />
+                </div>
+                <div>
+                  <div className="text-white font-medium">Clair</div>
+                  <div className="text-gray-400 text-xs">Style Notion (en cours)</div>
+                </div>
+                {theme === 'clair' && <FiCheckCircle className="ml-auto text-indigo-400" />}
+              </button>
+            </div>
+            <p className="text-gray-500 text-xs mt-4">Le thème clair est en cours de finalisation : certaines zones resteront sombres pour l'instant.</p>
+          </div>
         )}
       </motion.div>
     </div>
