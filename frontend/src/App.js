@@ -1,6 +1,6 @@
 // src/App.jsx
 import React, { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ToastProvider } from './contexts/ToastContext';
 
@@ -14,9 +14,7 @@ import Layout from './components/Layout';
 
 // Pages
 import Dashboard from './pages/Dashboard';
-import Leads from './pages/Leads';
-import Clients from './pages/Clients';
-import Projects from './pages/Projects';
+import Portefeuille from './pages/Portefeuille';
 import Calendar from './pages/Calendar';
 import Revenues from './pages/Revenues';
 import Activities from './pages/Activities';
@@ -61,6 +59,16 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
+// Redirige une ancienne route (/leads, /clients, /projects) vers l'onglet correspondant
+// de /portefeuille, en PRÉSERVANT les query params existants (ex. ?id=123, ?filter=new)
+// pour que les deep-links et l'ouverture de fiche continuent de fonctionner.
+const RedirectToPortefeuille = ({ tab }) => {
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  params.set('tab', tab);
+  return <Navigate to={`/portefeuille?${params.toString()}`} replace />;
+};
+
 const App = () => {
   return (
     <AuthProvider>
@@ -81,27 +89,32 @@ const App = () => {
             </ProtectedRoute>
           } />
 
-          <Route path="/leads" element={
+          {/* Portefeuille : hub Prospects / Clients / Projets */}
+          <Route path="/portefeuille" element={
             <ProtectedRoute>
               <Layout>
-                <Leads />
+                <Portefeuille />
               </Layout>
+            </ProtectedRoute>
+          } />
+
+          {/* Anciennes routes conservées : redirigées vers le bon onglet de /portefeuille
+              en préservant les query params (deep-links, ouverture de fiche). */}
+          <Route path="/leads" element={
+            <ProtectedRoute>
+              <RedirectToPortefeuille tab="prospects" />
             </ProtectedRoute>
           } />
 
           <Route path="/clients" element={
             <ProtectedRoute>
-              <Layout>
-                <Clients />
-              </Layout>
+              <RedirectToPortefeuille tab="clients" />
             </ProtectedRoute>
           } />
 
           <Route path="/projects" element={
             <ProtectedRoute>
-              <Layout>
-                <Projects />
-              </Layout>
+              <RedirectToPortefeuille tab="projets" />
             </ProtectedRoute>
           } />
 
