@@ -2,71 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ============================================================
-   TOKENS DE THÈME (variables CSS, canaux R G B pour le support
-   des modificateurs d'opacité Tailwind ex: opacites).
-   - Thème SOMBRE = valeurs par défaut (identiques à l'existant).
-   - Thème CLAIR ("Notion") = palette inversée via [data-theme="light"].
-   La config Tailwind mappe gray, white, black sur ces variables, donc
-   les classes existantes (bg-gray-900, text-white, ...) suivent le thème.
-   ============================================================ */
-:root,
-[data-theme="dark"] {
-  --white: 255 255 255;
-  --black: 0 0 0;
-  --gray-50: 249 250 251;
-  --gray-100: 243 244 246;
-  --gray-200: 229 231 235;
-  --gray-300: 209 213 219;
-  --gray-400: 156 163 175;
-  --gray-500: 107 114 128;
-  --gray-600: 75 85 99;
-  --gray-700: 55 65 81;
-  --gray-800: 31 41 55;
-  --gray-900: 17 24 39;
-
-  /* Fond global de l'application (Layout) */
-  --app-gradient: linear-gradient(to bottom right, rgb(17 24 39), rgb(88 28 135), rgb(76 29 149));
-
-  /* Champs de formulaire (règles !important ci-dessous) */
-  --input-text: 255 255 255;
-  --input-autofill-shadow: rgba(17, 24, 39, 0.5);
-  --placeholder: 156 163 175;
-  --label: 209 213 219;
-  --select-option-bg: 17 24 39;
-}
-
-[data-theme="light"] {
-  /* "white" devient le texte principal (quasi-noir Notion), "black" devient blanc */
-  --white: 55 53 47;
-  --black: 255 255 255;
-  /* Échelle de gris INVERSÉE : les surfaces sombres deviennent claires,
-     les textes gris clairs deviennent foncés. */
-  --gray-900: 255 255 255;
-  --gray-800: 247 247 245;
-  --gray-700: 233 233 231;
-  --gray-600: 211 211 208;
-  --gray-500: 155 154 151;
-  --gray-400: 120 119 116;
-  --gray-300: 55 53 47;
-  --gray-200: 47 46 41;
-  --gray-100: 33 31 28;
-  --gray-50: 25 24 21;
-
-  --app-gradient: linear-gradient(to bottom right, rgb(255 255 255), rgb(247 247 245), rgb(241 240 238));
-
-  --input-text: 55 53 47;
-  --input-autofill-shadow: rgba(255, 255, 255, 0.5);
-  --placeholder: 155 154 151;
-  --label: 71 70 66;
-  --select-option-bg: 255 255 255;
-}
-
-/* Fond global de l'application, piloté par le thème (utilisé par Layout). */
-.app-bg {
-  background: var(--app-gradient);
-}
-
 @layer base {
   body {
     margin: 0;
@@ -117,9 +52,9 @@ textarea,
 textarea:not([disabled]),
 select,
 select:not([disabled]) {
-  color: rgb(var(--input-text)) !important;
-  -webkit-text-fill-color: rgb(var(--input-text)) !important;
-  caret-color: rgb(var(--input-text)) !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  caret-color: #ffffff !important;
 }
 
 /* États focus, hover, active */
@@ -132,9 +67,9 @@ textarea:active,
 select:focus,
 select:hover,
 select:active {
-  color: rgb(var(--input-text)) !important;
-  -webkit-text-fill-color: rgb(var(--input-text)) !important;
-  caret-color: rgb(var(--input-text)) !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  caret-color: #ffffff !important;
 }
 
 /* Correction spéciale pour l'autocomplete des navigateurs */
@@ -142,9 +77,9 @@ input:not([type="checkbox"]):not([type="radio"]):-webkit-autofill,
 input:not([type="checkbox"]):not([type="radio"]):-webkit-autofill:hover,
 input:not([type="checkbox"]):not([type="radio"]):-webkit-autofill:focus,
 input:not([type="checkbox"]):not([type="radio"]):-webkit-autofill:active {
-  -webkit-text-fill-color: rgb(var(--input-text)) !important;
-  -webkit-box-shadow: 0 0 0 1000px var(--input-autofill-shadow) inset !important;
-  box-shadow: 0 0 0 1000px var(--input-autofill-shadow) inset !important;
+  -webkit-text-fill-color: #ffffff !important;
+  -webkit-box-shadow: 0 0 0 1000px rgb(17 24 39 / 0.5) inset !important;
+  box-shadow: 0 0 0 1000px rgb(17 24 39 / 0.5) inset !important;
   transition: background-color 5000s ease-in-out 0s;
 }
 
@@ -159,20 +94,20 @@ textarea::-webkit-input-placeholder,
 textarea::-moz-placeholder,
 textarea:-ms-input-placeholder,
 textarea::-ms-input-placeholder {
-  color: rgb(var(--placeholder)) !important;
+  color: rgb(156, 163, 175) !important; /* gray-400 */
   opacity: 1 !important;
 }
 
-/* Labels */
+/* Labels en gris clair */
 label,
 label:not([disabled]) {
-  color: rgb(var(--label)) !important;
+  color: rgb(209, 213, 219) !important; /* gray-300 */
 }
 
 /* Options dans les select */
 select option {
-  background-color: rgb(var(--select-option-bg)) !important;
-  color: rgb(var(--input-text)) !important;
+  background-color: rgb(17 24 39) !important; /* gray-900 */
+  color: #ffffff !important;
 }
 
 /* SPÉCIFICITÉ ENCORE PLUS FORTE - Cibler tous les éléments avec des classes spécifiques */
@@ -188,7 +123,7 @@ div input[type="number"],
 div input[type="date"],
 div textarea,
 div select {
-  color: rgb(var(--input-text)) !important;
-  -webkit-text-fill-color: rgb(var(--input-text)) !important;
-  caret-color: rgb(var(--input-text)) !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  caret-color: #ffffff !important;
 }

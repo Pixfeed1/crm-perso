@@ -3,7 +3,6 @@ import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ToastProvider } from './contexts/ToastContext';
-import { ThemeProvider } from './contexts/ThemeContext';
 
 // Importation du composant Login et pages de récupération de mot de passe
 import Login from './pages/Login';
@@ -43,7 +42,7 @@ const ProtectedRoute = ({ children }) => {
   // Pendant le chargement, afficher un indicateur
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-screen app-bg">
+      <div className="flex items-center justify-center h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
         <p className="ml-2 text-white">Vérification de l'authentification...</p>
       </div>
@@ -80,7 +79,6 @@ const RedirectToInvoicesTab = ({ tab }) => {
 
 const App = () => {
   return (
-    <ThemeProvider>
     <AuthProvider>
       <ToastProvider>
         <Router>
@@ -215,7 +213,6 @@ const App = () => {
       </Router>
       </ToastProvider>
     </AuthProvider>
-    </ThemeProvider>
   );
 };
 
