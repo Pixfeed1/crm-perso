@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { remindersAPI } from '../services/api';
 
 // Utiliser les icônes de React Icons (Feather Icons)
@@ -27,6 +28,7 @@ const Layout = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { logout } = useAuth();
+  const { theme } = useTheme();
   const [activeModule, setActiveModule] = useState('/dashboard');
   const [menuOpen, setMenuOpen] = useState(false);
   const [remindersOpen, setRemindersOpen] = useState(false);
@@ -273,11 +275,18 @@ const Layout = ({ children }) => {
 
                   // Style spécial pour le bouton de déconnexion
                   const isLogoutButton = item.isLogout === true;
-                  const buttonStyle = isLogoutButton
-                    ? 'bg-rose-600 text-white hover:bg-rose-700'
-                    : activeModule === item.path
-                      ? 'bg-white text-indigo-800'
-                      : 'bg-indigo-700 text-white';
+                  const isItemActive = activeModule === item.path;
+                  let buttonStyle;
+                  if (isLogoutButton) {
+                    buttonStyle = 'bg-rose-600 text-white hover:bg-rose-700';
+                  } else if (theme === 'clair') {
+                    // Clair : cercle blanc + bordure + icone violette ; actif = violet plein.
+                    buttonStyle = isItemActive
+                      ? 'bg-accent text-white'
+                      : 'bg-surface border border-border text-accent hover:bg-surface-muted';
+                  } else {
+                    buttonStyle = isItemActive ? 'bg-white text-indigo-800' : 'bg-indigo-700 text-white';
+                  }
 
                   return (
                     <motion.div

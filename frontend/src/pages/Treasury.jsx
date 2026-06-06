@@ -15,8 +15,10 @@ import { invoicesAPI } from '../services/quotesAPI';
 import { useToast } from '../hooks/useToast';
 import Button from '../components/common/Button';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { useChartColors } from '../utils/chartTheme';
 
 const Treasury = () => {
+  const chartColors = useChartColors();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
@@ -270,24 +272,24 @@ const Treasury = () => {
           {chartData.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
                 <XAxis
                   dataKey="date"
-                  stroke="#9CA3AF"
+                  stroke={chartColors.axis}
                   style={{ fontSize: '12px' }}
                 />
                 <YAxis
-                  stroke="#9CA3AF"
+                  stroke={chartColors.axis}
                   style={{ fontSize: '12px' }}
                   tickFormatter={(value) => `${value.toLocaleString()}€`}
                 />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: '#1F2937',
-                    border: '1px solid #374151',
+                    backgroundColor: chartColors.tooltipBg,
+                    border: `1px solid ${chartColors.tooltipBorder}`,
                     borderRadius: '8px'
                   }}
-                  labelStyle={{ color: '#F9FAFB' }}
+                  labelStyle={{ color: chartColors.tooltipText }}
                   formatter={(value, name) => {
                     if (name === 'montant') return [formatAmount(value), 'Montant'];
                     return [value, 'Paiements'];

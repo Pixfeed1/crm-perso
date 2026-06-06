@@ -21,7 +21,16 @@
   --border: 55 65 81;           /* gray-700 */
   --border-strong: 75 85 99;    /* gray-600 */
   --accent: 79 70 229;          /* indigo-600 */
+  --accent-hover: 67 56 202;    /* indigo-700 */
   --accent-text: 255 255 255;   /* texte sur l'accent */
+  --accent-ring: rgba(99, 102, 241, 0.45);
+
+  /* Couleurs semantiques (chips/badges) - valeurs theme sombre. */
+  --success-bg: 6 95 70;     --success-text: 110 231 183;
+  --danger-bg: 127 29 29;    --danger-text: 252 165 165;
+  --warning-bg: 120 53 15;   --warning-text: 253 230 138;
+  --info-bg: 30 58 138;      --info-text: 147 197 253;
+  --neutral-bg: 55 65 81;    --neutral-text: 209 213 219;
 
   /* Overlay subtil : BLANC en classique (reproduit exactement bg-white/X et
      border-white/X), devient FONCE en clair pour rester un voile discret. */
@@ -41,23 +50,32 @@
   --field-autofill-shadow: rgba(17, 24, 39, 0.5);
 }
 
-/* Theme clair (style Notion). */
+/* Theme clair (style Notion) - palette exacte. */
 [data-theme="clair"] {
-  --surface: 255 255 255;        /* cartes blanches */
-  --surface-muted: 247 246 243;  /* fond casse type Notion */
-  --surface-strong: 237 237 236; /* survols, boutons secondaires */
+  --surface: 255 255 255;        /* cartes blanches #ffffff */
+  --surface-muted: 247 246 243;  /* fond casse #f7f6f3 */
+  --surface-strong: 237 237 236; /* survols, boutons secondaires #ededec */
   --text-primary: 55 53 47;      /* ardoise fonce #37352f */
-  --text-secondary: 95 94 91;    /* gris doux */
+  --text-secondary: 95 94 90;    /* gris doux */
   --text-muted: 120 119 116;     /* gris secondaire #787774 */
   --border: 237 237 236;         /* bordures gris clair #ededec */
   --border-strong: 220 219 216;
-  --accent: 79 70 229;           /* indigo de marque (lisible sur clair) */
+  --accent: 109 90 230;          /* #6d5ae6 */
+  --accent-hover: 91 73 214;     /* #5b49d6 */
   --accent-text: 255 255 255;
+  --accent-ring: rgba(109, 90, 230, 0.30);
+
+  --success-bg: 234 250 243;  --success-text: 15 110 86;    /* #eafaf3 / #0f6e56 */
+  --danger-bg: 252 236 235;   --danger-text: 163 45 45;     /* #fceceb / #a32d2d */
+  --warning-bg: 250 238 218;  --warning-text: 133 79 11;    /* #faeeda / #854f0b */
+  --info-bg: 230 241 251;     --info-text: 24 95 165;       /* #e6f1fb / #185fa5 */
+  --neutral-bg: 241 241 239;  --neutral-text: 95 94 90;     /* #f1f1ef / #5f5e5a */
 
   --overlay: 17 24 39;           /* voile fonce discret sur surfaces claires */
   --panel-bg: rgb(255 255 255);  /* panneaux de modale blancs */
 
-  --bg-app: linear-gradient(to bottom right, rgb(255 255 255), rgb(247 246 243), rgb(241 240 238));
+  /* Surface unie (jamais de degrade sombre en clair) #fbfbfa */
+  --bg-app: rgb(251 251 250);
 
   --field-text: 55 53 47;
   --field-placeholder: 145 144 140;
@@ -66,14 +84,20 @@
   --field-autofill-shadow: rgba(255, 255, 255, 0.5);
 }
 
-/* Theme clair : fond et bordure clairs FORCES sur les champs (lisibilite,
-   aucun blanc sur blanc) sans toucher au theme classique. Le texte est deja
-   pilote par le bloc !important plus bas (var --field-text). */
+/* Theme clair : champs blancs, bordure claire, focus ring violet.
+   Texte deja pilote par --field-text (bloc !important plus bas). */
 [data-theme="clair"] input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
 [data-theme="clair"] textarea,
 [data-theme="clair"] select {
-  background-color: rgb(var(--surface-muted)) !important;
+  background-color: rgb(var(--surface)) !important;
   border-color: rgb(var(--border)) !important;
+}
+[data-theme="clair"] input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):focus,
+[data-theme="clair"] textarea:focus,
+[data-theme="clair"] select:focus {
+  border-color: rgb(var(--accent)) !important;
+  box-shadow: 0 0 0 3px var(--accent-ring) !important;
+  outline: none !important;
 }
 
 /* Fond global pilote par le theme (classe bg-app). */

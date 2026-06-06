@@ -1,8 +1,10 @@
 // src/components/revenues/RevenueChart.jsx
 import React, { useMemo } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { useChartColors } from '../../utils/chartTheme';
 
 const RevenueChart = ({ revenues, period, currentDate }) => {
+  const chartColors = useChartColors();
   // Préparer les données pour le graphique en fonction de la période
   const chartData = useMemo(() => {
     if (!revenues || revenues.length === 0) {
@@ -188,15 +190,15 @@ const RevenueChart = ({ revenues, period, currentDate }) => {
                   <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-              <XAxis 
-                dataKey="name" 
-                stroke="#9CA3AF"
-                tick={{ fill: '#9CA3AF' }}
+              <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
+              <XAxis
+                dataKey="name"
+                stroke={chartColors.axis}
+                tick={{ fill: chartColors.axis }}
               />
-              <YAxis 
-                stroke="#9CA3AF"
-                tick={{ fill: '#9CA3AF' }}
+              <YAxis
+                stroke={chartColors.axis}
+                tick={{ fill: chartColors.axis }}
                 tickFormatter={formatMontant}
                 width={80}
               />
