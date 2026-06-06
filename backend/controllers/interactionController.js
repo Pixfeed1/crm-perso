@@ -133,15 +133,20 @@ const interactionController = {
 
   /**
    * GET /api/interactions/cockpit?filter=all|relance_today|overdue|prospects|clients
-   * Cockpit "Suivi" : un contact par ligne (prospects + clients ayant au moins un
-   * échange), avec dernier échange + prochaine relance. UNE seule requête (pas de N+1).
+   * Cockpit "Suivi" : TOUS les prospects + clients (même sans échange), avec leur
+   * dernière interaction et prochaine relance si elles existent. UNE seule requête.
    */
   getCockpit: async (req, res) => {
     const db = req.app.locals.db;
     const filter = (req.query.filter || 'all').toString();
     try {
       const { rows } = await db.pool.query(
-        `WITH agg AS (
+        `WITH contacts AS (
+           SELECT 'client'::text AS contact_type, id AS contact_id, name AS contact_name, email AS contact_email, phone AS contact_phone FROM crm_clients
+           UNION ALL
+           SELECT 'lead'::text, id, name, email, phone FROM leads
+         ),
+         agg AS (
            SELECT contact_type, contact_id,
                   COUNT(*) FILTER (WHERE date >= NOW() - INTERVAL '7 days') AS exchanges_7d
            FROM interactions
@@ -160,18 +165,15 @@ const interactionController = {
            WHERE followup_done = FALSE AND next_followup_date IS NOT NULL
            ORDER BY contact_type, contact_id, next_followup_date ASC
          )
-         SELECT a.contact_type, a.contact_id, a.exchanges_7d,
+         SELECT c.contact_type, c.contact_id, c.contact_name, c.contact_email, c.contact_phone,
+                COALESCE(a.exchanges_7d, 0) AS exchanges_7d,
                 n.next_followup, n.followup_id,
-                l.last_type, l.last_date, l.last_result,
-                COALESCE(cl.name, le.name) AS contact_name,
-                COALESCE(cl.email, le.email) AS contact_email,
-                COALESCE(cl.phone, le.phone) AS contact_phone
-         FROM agg a
-         JOIN last_ex l ON l.contact_type = a.contact_type AND l.contact_id = a.contact_id
-         LEFT JOIN next_ex n ON n.contact_type = a.contact_type AND n.contact_id = a.contact_id
-         LEFT JOIN crm_clients cl ON a.contact_type = 'client' AND cl.id = a.contact_id
-         LEFT JOIN leads le ON a.contact_type = 'lead' AND le.id = a.contact_id
-         ORDER BY (n.next_followup IS NULL), n.next_followup ASC, l.last_date DESC`
+                l.last_type, l.last_date, l.last_result
+         FROM contacts c
+         LEFT JOIN agg a ON a.contact_type = c.contact_type AND a.contact_id = c.contact_id
+         LEFT JOIN last_ex l ON l.contact_type = c.contact_type AND l.contact_id = c.contact_id
+         LEFT JOIN next_ex n ON n.contact_type = c.contact_type AND n.contact_id = c.contact_id
+         ORDER BY (n.next_followup IS NULL), n.next_followup ASC, l.last_date DESC NULLS LAST, c.contact_name ASC`
       );
 
       // Stats focus (calculées sur le jeu déjà chargé, sans requête supplémentaire)

@@ -165,40 +165,39 @@ const SuiviCockpit = () => {
                         <span className="text-xs text-text-muted">{c.contact_type === 'lead' ? 'Prospect' : 'Client'}</span>
                       </div>
                       <div className="flex items-center gap-2 text-xs text-text-muted mt-0.5">
-                        <LastIcon size={12} />
-                        <span>{relativeDate(c.last_date)}</span>
-                        {c.last_result && <span className="px-1.5 py-0.5 rounded-full bg-neutral-bg text-neutral-text">{c.last_result}</span>}
+                        {c.last_date ? (
+                          <>
+                            <LastIcon size={12} />
+                            <span>{relativeDate(c.last_date)}</span>
+                            {c.last_result && <span className="px-1.5 py-0.5 rounded-full bg-neutral-bg text-neutral-text">{c.last_result}</span>}
+                          </>
+                        ) : (
+                          <span>Aucun échange</span>
+                        )}
                       </div>
                     </div>
                   </button>
 
                   {/* Prochaine relance */}
                   <div className="hidden sm:block flex-shrink-0 w-28 text-right">
-                    {urg ? (
+                    {urg && (
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${urg.cls}`}>{urg.label}</span>
-                    ) : (
-                      <span className="text-xs text-text-muted">—</span>
                     )}
                   </div>
 
-                  {/* Actions rapides */}
+                  {/* Actions rapides : un jeu clair, sans doublon */}
                   <div className="flex items-center gap-1 flex-shrink-0">
-                    {c.contact_phone && (
-                      <a href={`tel:${c.contact_phone}`} className="p-2 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-strong" title="Appeler">
-                        <FiPhone size={15} />
-                      </a>
-                    )}
-                    <button onClick={() => openLog(c, 'appel')} className="p-2 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-strong" title="Noter un appel">
+                    <button onClick={() => openLog(c, 'appel')} className="p-2 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-strong" title="Enregistrer un appel">
                       <FiPhone size={15} />
                     </button>
-                    <button onClick={() => openLog(c, 'sms')} className="p-2 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-strong" title="Noter un SMS">
+                    <button onClick={() => openLog(c, 'sms')} className="p-2 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-strong" title="Enregistrer un SMS">
                       <FiMessageSquare size={15} />
                     </button>
-                    <button onClick={() => openLog(c, 'note')} className="p-2 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-strong" title="Note">
+                    <button onClick={() => openLog(c, 'note')} className="p-2 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-strong" title="Ajouter une note">
                       <FiFileText size={15} />
                     </button>
                     {c.followup_id && (
-                      <button onClick={() => markDone(c.followup_id)} className="p-2 rounded-lg text-success-text hover:bg-success-bg" title="Marquer la relance faite">
+                      <button onClick={() => markDone(c.followup_id)} className="p-2 rounded-lg text-success-text hover:bg-success-bg" title="Marquer la relance comme faite">
                         <FiCheck size={15} />
                       </button>
                     )}
