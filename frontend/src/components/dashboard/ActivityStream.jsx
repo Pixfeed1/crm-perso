@@ -2,12 +2,23 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiMonitor, FiEdit2, FiUsers, FiPhone, FiRadio, FiTool, FiClipboard, FiZap, FiUser } from 'react-icons/fi';
+import { useTheme } from '../../contexts/ThemeContext';
 
 const ActivityStream = ({ activities = [], projects = [], showTitle = true, maxItems = 7 }) => {
   const [expanded, setExpanded] = useState(false);
+  const { theme } = useTheme();
+  const clair = theme === 'clair';
 
   // Configuration des couleurs de type
-  const typeConfig = {
+  // Chips de catégorie : meme teinte dans les 2 themes, mais en clair fond pale + texte fonce.
+  const typeConfig = clair ? {
+    'development': { icon: <FiMonitor />, label: 'Développement', bg: 'bg-blue-50', text: 'text-blue-700' },
+    'design': { icon: <FiEdit2 />, label: 'Design', bg: 'bg-purple-50', text: 'text-purple-700' },
+    'meeting': { icon: <FiUsers />, label: 'Réunion', bg: 'bg-indigo-50', text: 'text-indigo-700' },
+    'call': { icon: <FiPhone />, label: 'Appel', bg: 'bg-green-50', text: 'text-green-700' },
+    'marketing': { icon: <FiRadio />, label: 'Marketing', bg: 'bg-amber-50', text: 'text-amber-700' },
+    'maintenance': { icon: <FiTool />, label: 'Maintenance', bg: 'bg-teal-50', text: 'text-teal-700' }
+  } : {
     'development': { icon: <FiMonitor />, label: 'Développement', bg: 'bg-blue-900/20', text: 'text-blue-300' },
     'design': { icon: <FiEdit2 />, label: 'Design', bg: 'bg-purple-900/20', text: 'text-purple-300' },
     'meeting': { icon: <FiUsers />, label: 'Réunion', bg: 'bg-indigo-900/20', text: 'text-indigo-300' },
@@ -15,9 +26,13 @@ const ActivityStream = ({ activities = [], projects = [], showTitle = true, maxI
     'marketing': { icon: <FiRadio />, label: 'Marketing', bg: 'bg-amber-900/20', text: 'text-amber-300' },
     'maintenance': { icon: <FiTool />, label: 'Maintenance', bg: 'bg-teal-900/20', text: 'text-teal-300' }
   };
-  
+
   // Configuration des couleurs de priorité
-  const priorityConfig = {
+  const priorityConfig = clair ? {
+    'high': { color: 'text-rose-600', label: 'Haute' },
+    'medium': { color: 'text-amber-600', label: 'Moyenne' },
+    'low': { color: 'text-blue-600', label: 'Basse' }
+  } : {
     'high': { color: 'text-rose-300', label: 'Haute' },
     'medium': { color: 'text-amber-300', label: 'Moyenne' },
     'low': { color: 'text-blue-300', label: 'Basse' }

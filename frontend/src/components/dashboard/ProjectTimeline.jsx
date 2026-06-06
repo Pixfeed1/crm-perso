@@ -2,8 +2,10 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { FiCalendar, FiClock } from 'react-icons/fi';
+import { useTheme } from '../../contexts/ThemeContext';
 
 const ProjectTimeline = ({ project }) => {
+  const clair = useTheme().theme === 'clair';
   // Vérifier si le projet est valide
   if (!project || !project.tasks || project.tasks.length === 0) {
     return (
@@ -124,8 +126,8 @@ const ProjectTimeline = ({ project }) => {
               </div>
               <div className="ml-auto">
                 <span className={`text-xs px-2 py-1 rounded-full ${
-                  task.completed 
-                    ? 'bg-emerald-900/30 text-emerald-300' 
+                  task.completed
+                    ? (clair ? 'bg-emerald-50 text-emerald-700' : 'bg-emerald-900/30 text-emerald-300')
                     : 'bg-surface text-text-muted'
                 }`}>
                   {task.completed ? 'Terminé' : 'En attente'}

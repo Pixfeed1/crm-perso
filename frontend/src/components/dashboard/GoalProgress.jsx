@@ -1,16 +1,18 @@
 // src/components/dashboard/GoalProgress.jsx
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import { useTheme } from '../../contexts/ThemeContext';
 
-const GoalProgress = ({ 
-  title, 
-  current, 
-  target, 
+const GoalProgress = ({
+  title,
+  current,
+  target,
   period,
   color = "blue",
-  format = "number" 
+  format = "number"
 }) => {
   const [isHovered, setIsHovered] = useState(false);
+  const clair = useTheme().theme === 'clair';
   
   // Calcul du pourcentage de progression
   const percentage = Math.min(100, Math.round((current / target) * 100));
@@ -21,31 +23,31 @@ const GoalProgress = ({
       light: 'rgba(59, 130, 246, 0.2)',
       medium: 'rgba(59, 130, 246, 0.5)',
       strong: 'rgba(59, 130, 246, 1)',
-      text: 'text-blue-300'
+      text: clair ? 'text-blue-700' : 'text-blue-300'
     },
     purple: {
       light: 'rgba(168, 85, 247, 0.2)',
       medium: 'rgba(168, 85, 247, 0.5)',
       strong: 'rgba(168, 85, 247, 1)',
-      text: 'text-purple-300'
+      text: clair ? 'text-purple-700' : 'text-purple-300'
     },
     emerald: {
       light: 'rgba(16, 185, 129, 0.2)',
       medium: 'rgba(16, 185, 129, 0.5)',
       strong: 'rgba(16, 185, 129, 1)',
-      text: 'text-emerald-300'
+      text: clair ? 'text-emerald-700' : 'text-emerald-300'
     },
     amber: {
       light: 'rgba(245, 158, 11, 0.2)',
       medium: 'rgba(245, 158, 11, 0.5)',
       strong: 'rgba(245, 158, 11, 1)',
-      text: 'text-amber-300'
+      text: clair ? 'text-amber-700' : 'text-amber-300'
     },
     rose: {
       light: 'rgba(244, 63, 94, 0.2)',
       medium: 'rgba(244, 63, 94, 0.5)',
       strong: 'rgba(244, 63, 94, 1)',
-      text: 'text-rose-300'
+      text: clair ? 'text-rose-700' : 'text-rose-300'
     }
   };
   
