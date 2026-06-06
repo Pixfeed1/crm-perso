@@ -67,9 +67,11 @@ const DATABASE_SCHEMA = {
       contact_type: "VARCHAR(10) NOT NULL DEFAULT 'client'", // 'lead' | 'client'
       contact_id: 'INTEGER NOT NULL',
       type: "VARCHAR(20) NOT NULL DEFAULT 'note'", // email | appel | sms | note | rdv
+      reached: 'VARCHAR(20)', // joint | pas_reponse | message (contact joint ?)
       date: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP',
       notes: 'TEXT',
       result: 'TEXT',
+      relation_status: 'VARCHAR(20)', // statut de relation appliqué lors de cet échange (historique)
       next_followup_date: 'DATE',
       followup_done: 'BOOLEAN DEFAULT FALSE',
       created_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'
@@ -1006,13 +1008,18 @@ async function ensureInteractionsColumns(client) {
   await client.query("ALTER TABLE interactions ADD COLUMN IF NOT EXISTS contact_type VARCHAR(10) NOT NULL DEFAULT 'client';");
   await client.query('ALTER TABLE interactions ADD COLUMN IF NOT EXISTS contact_id INTEGER;');
   await client.query("ALTER TABLE interactions ADD COLUMN IF NOT EXISTS type VARCHAR(20) NOT NULL DEFAULT 'note';");
+  await client.query('ALTER TABLE interactions ADD COLUMN IF NOT EXISTS reached VARCHAR(20);');
   await client.query('ALTER TABLE interactions ADD COLUMN IF NOT EXISTS date TIMESTAMP DEFAULT CURRENT_TIMESTAMP;');
   await client.query('ALTER TABLE interactions ADD COLUMN IF NOT EXISTS notes TEXT;');
   await client.query('ALTER TABLE interactions ADD COLUMN IF NOT EXISTS result TEXT;');
+  await client.query('ALTER TABLE interactions ADD COLUMN IF NOT EXISTS relation_status VARCHAR(20);');
   await client.query('ALTER TABLE interactions ADD COLUMN IF NOT EXISTS next_followup_date DATE;');
   await client.query('ALTER TABLE interactions ADD COLUMN IF NOT EXISTS followup_done BOOLEAN DEFAULT FALSE;');
   await client.query('CREATE INDEX IF NOT EXISTS idx_interactions_contact ON interactions(contact_type, contact_id);');
   await client.query('CREATE INDEX IF NOT EXISTS idx_interactions_followup ON interactions(next_followup_date, followup_done);');
+  // Statut de relation (suivi/prospection) sur les contacts : leads ET clients.
+  await client.query("ALTER TABLE leads ADD COLUMN IF NOT EXISTS relation_status VARCHAR(20) DEFAULT 'nouveau';");
+  await client.query("ALTER TABLE crm_clients ADD COLUMN IF NOT EXISTS relation_status VARCHAR(20) DEFAULT 'nouveau';");
   console.log('  ✓ Colonnes interactions vérifiées');
 }
 

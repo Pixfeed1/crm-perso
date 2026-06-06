@@ -5,11 +5,13 @@
 
 const VALID_TYPES = ['email', 'appel', 'sms', 'note', 'rdv'];
 const VALID_CONTACT_TYPES = ['lead', 'client'];
+const VALID_REACHED = ['joint', 'pas_reponse', 'message'];
+const VALID_STATUS = ['nouveau', 'a_contacter', 'en_discussion', 'devis_envoye', 'gagne', 'perdu'];
 
 const interactionController = {
   /**
    * GET /api/interactions/contact/:contactType/:contactId
-   * Liste des interactions d'un contact (plus récent en haut).
+   * Renvoie { relation_status, items } : statut de relation du contact + ses interactions.
    */
   getByContact: async (req, res) => {
     const db = req.app.locals.db;
@@ -24,7 +26,10 @@ const interactionController = {
          ORDER BY date DESC, created_at DESC`,
         [contactType, contactId]
       );
-      res.json(rows);
+      const table = contactType === 'lead' ? 'leads' : 'crm_clients';
+      const sr = await db.pool.query(`SELECT relation_status FROM ${table} WHERE id = $1`, [contactId]);
+      const relation_status = (sr.rows[0] && sr.rows[0].relation_status) || 'nouveau';
+      res.json({ relation_status, items: rows });
     } catch (error) {
       console.error('[Interaction] Erreur liste:', error);
       res.status(500).json({ message: 'Erreur serveur' });
@@ -33,13 +38,15 @@ const interactionController = {
 
   /**
    * POST /api/interactions
-   * Crée une interaction (appel / sms / note / rdv / email).
+   * Crée une interaction (moyen, joint?, date éditable, notes, statut de relation, relance).
+   * Si relation_status est fourni, met à jour le statut du contact (leads / crm_clients).
    */
   create: async (req, res) => {
     const db = req.app.locals.db;
     const {
       contact_type, contact_id, type,
-      date, notes = null, result = null, next_followup_date = null
+      reached = null, date, notes = null, result = null,
+      relation_status = null, next_followup_date = null
     } = req.body || {};
 
     if (!VALID_CONTACT_TYPES.includes(contact_type) || !contact_id) {
@@ -48,14 +55,27 @@ const interactionController = {
     if (!VALID_TYPES.includes(type)) {
       return res.status(400).json({ message: `Type invalide (${VALID_TYPES.join(', ')})` });
     }
+    const reachedVal = reached && VALID_REACHED.includes(reached) ? reached : null;
+    const statusVal = relation_status && VALID_STATUS.includes(relation_status) ? relation_status : null;
 
     try {
       const { rows } = await db.pool.query(
-        `INSERT INTO interactions (contact_type, contact_id, type, date, notes, result, next_followup_date, followup_done)
-         VALUES ($1, $2, $3, COALESCE($4, NOW()), $5, $6, $7, FALSE)
+        `INSERT INTO interactions (contact_type, contact_id, type, reached, date, notes, result, relation_status, next_followup_date, followup_done)
+         VALUES ($1, $2, $3, $4, COALESCE($5, NOW()), $6, $7, $8, $9, FALSE)
          RETURNING *`,
-        [contact_type, contact_id, type, date || null, notes, result, next_followup_date || null]
+        [contact_type, contact_id, type, reachedVal, date || null, notes, result, statusVal, next_followup_date || null]
       );
+
+      // Mise à jour du statut de relation du contact (best-effort).
+      if (statusVal) {
+        const table = contact_type === 'lead' ? 'leads' : 'crm_clients';
+        try {
+          await db.pool.query(`UPDATE ${table} SET relation_status = $1 WHERE id = $2`, [statusVal, contact_id]);
+        } catch (e) {
+          console.error('[Interaction] Echec maj relation_status:', e.message);
+        }
+      }
+
       res.status(201).json(rows[0]);
     } catch (error) {
       console.error('[Interaction] Erreur création:', error);
@@ -142,9 +162,9 @@ const interactionController = {
     try {
       const { rows } = await db.pool.query(
         `WITH contacts AS (
-           SELECT 'client'::text AS contact_type, id AS contact_id, name AS contact_name, email AS contact_email, phone AS contact_phone FROM crm_clients
+           SELECT 'client'::text AS contact_type, id AS contact_id, name AS contact_name, email AS contact_email, phone AS contact_phone, COALESCE(relation_status, 'nouveau') AS relation_status FROM crm_clients
            UNION ALL
-           SELECT 'lead'::text, id, name, email, phone FROM leads
+           SELECT 'lead'::text, id, name, email, phone, COALESCE(relation_status, 'nouveau') FROM leads
          ),
          agg AS (
            SELECT contact_type, contact_id,
@@ -154,7 +174,7 @@ const interactionController = {
          ),
          last_ex AS (
            SELECT DISTINCT ON (contact_type, contact_id)
-                  contact_type, contact_id, type AS last_type, date AS last_date, result AS last_result
+                  contact_type, contact_id, type AS last_type, reached AS last_reached, date AS last_date, result AS last_result
            FROM interactions
            ORDER BY contact_type, contact_id, date DESC, created_at DESC
          ),
@@ -165,10 +185,10 @@ const interactionController = {
            WHERE followup_done = FALSE AND next_followup_date IS NOT NULL
            ORDER BY contact_type, contact_id, next_followup_date ASC
          )
-         SELECT c.contact_type, c.contact_id, c.contact_name, c.contact_email, c.contact_phone,
+         SELECT c.contact_type, c.contact_id, c.contact_name, c.contact_email, c.contact_phone, c.relation_status,
                 COALESCE(a.exchanges_7d, 0) AS exchanges_7d,
                 n.next_followup, n.followup_id,
-                l.last_type, l.last_date, l.last_result
+                l.last_type, l.last_reached, l.last_date, l.last_result
          FROM contacts c
          LEFT JOIN agg a ON a.contact_type = c.contact_type AND a.contact_id = c.contact_id
          LEFT JOIN last_ex l ON l.contact_type = c.contact_type AND l.contact_id = c.contact_id
@@ -194,6 +214,8 @@ const interactionController = {
         contacts = rows.filter((r) => r.contact_type === 'lead');
       } else if (filter === 'clients') {
         contacts = rows.filter((r) => r.contact_type === 'client');
+      } else if (VALID_STATUS.includes(filter)) {
+        contacts = rows.filter((r) => r.relation_status === filter);
       }
 
       res.json({ stats, contacts });

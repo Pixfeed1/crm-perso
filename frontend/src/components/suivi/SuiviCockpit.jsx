@@ -13,6 +13,7 @@ import {
 import { interactionsAPI } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
 import LogExchangeModal from '../common/LogExchangeModal';
+import { RELATION_STATUSES, statusMeta, reachedMeta } from '../../utils/relationStatus';
 
 const TYPE_ICON = { email: FiMail, appel: FiPhone, sms: FiMessageSquare, note: FiFileText, rdv: FiCalendar };
 
@@ -86,7 +87,8 @@ const SuiviCockpit = () => {
   };
 
   const openLog = (c, type) => setLogTarget({
-    contact_type: c.contact_type, contact_id: c.contact_id, name: c.contact_name, phone: c.contact_phone, type
+    contact_type: c.contact_type, contact_id: c.contact_id, name: c.contact_name,
+    phone: c.contact_phone, type, relation_status: c.relation_status
   });
 
   const goToContact = (c) => navigate(`/portefeuille?tab=${c.contact_type === 'lead' ? 'prospects' : 'clients'}`);
@@ -120,8 +122,8 @@ const SuiviCockpit = () => {
         })}
       </div>
 
-      {/* Filtres */}
-      <div className="flex flex-wrap gap-2 mb-4">
+      {/* Filtres principaux */}
+      <div className="flex flex-wrap gap-2 mb-2">
         {FILTERS.map((f) => (
           <button
             key={f.key}
@@ -131,6 +133,21 @@ const SuiviCockpit = () => {
             }`}
           >
             {f.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Filtres par statut de relation */}
+      <div className="flex flex-wrap gap-2 mb-4">
+        {RELATION_STATUSES.map((s) => (
+          <button
+            key={s.key}
+            onClick={() => setFilter(s.key)}
+            className={`text-xs px-2.5 py-1 rounded-full font-medium transition-all ${s.cls} ${
+              filter === s.key ? 'ring-2 ring-accent' : 'opacity-80 hover:opacity-100'
+            }`}
+          >
+            {s.label}
           </button>
         ))}
       </div>
@@ -160,15 +177,16 @@ const SuiviCockpit = () => {
                       {initials(c.contact_name)}
                     </div>
                     <div className="min-w-0">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-sm font-medium text-text-primary truncate">{c.contact_name || 'Contact'}</span>
                         <span className="text-xs text-text-muted">{c.contact_type === 'lead' ? 'Prospect' : 'Client'}</span>
+                        {(() => { const sm = statusMeta(c.relation_status); return <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${sm.cls}`}>{sm.label}</span>; })()}
                       </div>
                       <div className="flex items-center gap-2 text-xs text-text-muted mt-0.5">
                         {c.last_date ? (
                           <>
                             <LastIcon size={12} />
-                            <span>{relativeDate(c.last_date)}</span>
+                            {(() => { const rm = reachedMeta(c.last_reached); return <span>{rm ? `${rm.verb} ` : ''}{relativeDate(c.last_date)}</span>; })()}
                             {c.last_result && <span className="px-1.5 py-0.5 rounded-full bg-neutral-bg text-neutral-text">{c.last_result}</span>}
                           </>
                         ) : (
@@ -218,6 +236,7 @@ const SuiviCockpit = () => {
         contactName={logTarget?.name}
         phone={logTarget?.phone}
         defaultType={logTarget?.type || 'appel'}
+        currentStatus={logTarget?.relation_status || 'nouveau'}
       />
     </div>
   );
