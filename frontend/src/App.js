@@ -22,7 +22,6 @@ import Goals from './pages/Goals';
 import Reports from './pages/Reports';
 import Quotes from './pages/Quotes';
 import Invoices from './pages/Invoices';
-import Treasury from './pages/Treasury';
 import Settings from './pages/Settings';
 import Maintenance from './pages/Maintenance';
 
@@ -67,6 +66,15 @@ const RedirectToPortefeuille = ({ tab }) => {
   const params = new URLSearchParams(location.search);
   params.set('tab', tab);
   return <Navigate to={`/portefeuille?${params.toString()}`} replace />;
+};
+
+// Redirige /treasury vers l'onglet correspondant du hub Finances (/invoices),
+// en préservant les query params éventuels.
+const RedirectToInvoicesTab = ({ tab }) => {
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  params.set('tab', tab);
+  return <Navigate to={`/invoices?${params.toString()}`} replace />;
 };
 
 const App = () => {
@@ -174,11 +182,11 @@ const App = () => {
             </ProtectedRoute>
           } />
 
+          {/* Trésorerie : désormais un onglet du hub Finances. Route conservée et
+              redirigée vers /invoices?tab=treasury (params préservés). */}
           <Route path="/treasury" element={
             <ProtectedRoute>
-              <Layout>
-                <Treasury />
-              </Layout>
+              <RedirectToInvoicesTab tab="treasury" />
             </ProtectedRoute>
           } />
 

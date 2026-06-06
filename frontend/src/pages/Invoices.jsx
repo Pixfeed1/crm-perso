@@ -1,7 +1,8 @@
 // src/pages/Invoices.jsx
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiFileText, FiPlus, FiEdit2, FiTrash2, FiDollarSign, FiAlertCircle, FiDownload, FiSend, FiX, FiCreditCard, FiRepeat } from 'react-icons/fi';
+import { FiFileText, FiPlus, FiEdit2, FiTrash2, FiDollarSign, FiAlertCircle, FiDownload, FiSend, FiX, FiCreditCard, FiRepeat, FiTrendingUp } from 'react-icons/fi';
 import { invoicesAPI } from '../services/quotesAPI';
 import { paymentsAPI, scheduledEmailsAPI } from '../services/api';
 import { useToast } from '../hooks/useToast';
@@ -15,11 +16,18 @@ import SendEmailModal from '../components/common/SendEmailModal';
 import Button from '../components/common/Button';
 import { exportInvoiceToPDF } from '../services/exportPDF';
 import SubscriptionsTab from '../components/subscriptions/SubscriptionsTab';
+import Treasury from './Treasury';
+
+const VALID_TABS = ['invoices', 'subscriptions', 'treasury'];
 
 const Invoices = () => {
   const { toast } = useToast();
   const { confirm, confirmState } = useConfirm();
-  const [activeTab, setActiveTab] = useState('invoices');
+  // Onglet actif piloté par le query param ?tab= (comme le hub Portefeuille).
+  const [searchParams, setSearchParams] = useSearchParams();
+  const rawTab = searchParams.get('tab');
+  const activeTab = VALID_TABS.includes(rawTab) ? rawTab : 'invoices';
+  const setActiveTab = (tab) => setSearchParams({ tab });
   const [invoices, setInvoices] = useState([]);
   const [filteredInvoices, setFilteredInvoices] = useState([]);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
@@ -196,7 +204,7 @@ const Invoices = () => {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 pt-16 sm:pt-0">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-300 to-purple-300">
-              Factures & Abonnements
+              Finances
             </h1>
             {activeTab === 'invoices' && (
               <p className="text-gray-400 text-sm mt-1">
@@ -243,7 +251,20 @@ const Invoices = () => {
             <FiRepeat size={16} />
             Abonnements
           </button>
+          <button
+            onClick={() => setActiveTab('treasury')}
+            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
+              activeTab === 'treasury'
+                ? 'border-indigo-500 text-indigo-300'
+                : 'border-transparent text-gray-400 hover:text-gray-200'
+            }`}
+          >
+            <FiTrendingUp size={16} />
+            Trésorerie
+          </button>
         </div>
+
+        {activeTab === 'treasury' && <Treasury />}
 
         {activeTab === 'subscriptions' && <SubscriptionsTab />}
 
