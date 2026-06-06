@@ -129,6 +129,76 @@ const interactionController = {
       console.error('[Interaction] Erreur relances:', error);
       res.status(500).json({ message: 'Erreur serveur' });
     }
+  },
+
+  /**
+   * GET /api/interactions/cockpit?filter=all|relance_today|overdue|prospects|clients
+   * Cockpit "Suivi" : un contact par ligne (prospects + clients ayant au moins un
+   * échange), avec dernier échange + prochaine relance. UNE seule requête (pas de N+1).
+   */
+  getCockpit: async (req, res) => {
+    const db = req.app.locals.db;
+    const filter = (req.query.filter || 'all').toString();
+    try {
+      const { rows } = await db.pool.query(
+        `WITH agg AS (
+           SELECT contact_type, contact_id,
+                  COUNT(*) FILTER (WHERE date >= NOW() - INTERVAL '7 days') AS exchanges_7d
+           FROM interactions
+           GROUP BY contact_type, contact_id
+         ),
+         last_ex AS (
+           SELECT DISTINCT ON (contact_type, contact_id)
+                  contact_type, contact_id, type AS last_type, date AS last_date, result AS last_result
+           FROM interactions
+           ORDER BY contact_type, contact_id, date DESC, created_at DESC
+         ),
+         next_ex AS (
+           SELECT DISTINCT ON (contact_type, contact_id)
+                  contact_type, contact_id, id AS followup_id, next_followup_date AS next_followup
+           FROM interactions
+           WHERE followup_done = FALSE AND next_followup_date IS NOT NULL
+           ORDER BY contact_type, contact_id, next_followup_date ASC
+         )
+         SELECT a.contact_type, a.contact_id, a.exchanges_7d,
+                n.next_followup, n.followup_id,
+                l.last_type, l.last_date, l.last_result,
+                COALESCE(cl.name, le.name) AS contact_name,
+                COALESCE(cl.email, le.email) AS contact_email,
+                COALESCE(cl.phone, le.phone) AS contact_phone
+         FROM agg a
+         JOIN last_ex l ON l.contact_type = a.contact_type AND l.contact_id = a.contact_id
+         LEFT JOIN next_ex n ON n.contact_type = a.contact_type AND n.contact_id = a.contact_id
+         LEFT JOIN crm_clients cl ON a.contact_type = 'client' AND cl.id = a.contact_id
+         LEFT JOIN leads le ON a.contact_type = 'lead' AND le.id = a.contact_id
+         ORDER BY (n.next_followup IS NULL), n.next_followup ASC, l.last_date DESC`
+      );
+
+      // Stats focus (calculées sur le jeu déjà chargé, sans requête supplémentaire)
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      const dayOf = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
+      const stats = {
+        relance_today: rows.filter((r) => r.next_followup && dayOf(r.next_followup).getTime() === today.getTime()).length,
+        overdue: rows.filter((r) => r.next_followup && dayOf(r.next_followup) < today).length,
+        exchanges_7d: rows.reduce((s, r) => s + Number(r.exchanges_7d || 0), 0)
+      };
+
+      let contacts = rows;
+      if (filter === 'relance_today') {
+        contacts = rows.filter((r) => r.next_followup && dayOf(r.next_followup).getTime() === today.getTime());
+      } else if (filter === 'overdue') {
+        contacts = rows.filter((r) => r.next_followup && dayOf(r.next_followup) < today);
+      } else if (filter === 'prospects') {
+        contacts = rows.filter((r) => r.contact_type === 'lead');
+      } else if (filter === 'clients') {
+        contacts = rows.filter((r) => r.contact_type === 'client');
+      }
+
+      res.json({ stats, contacts });
+    } catch (error) {
+      console.error('[Interaction] Erreur cockpit suivi:', error);
+      res.status(500).json({ message: 'Erreur serveur' });
+    }
   }
 };
 

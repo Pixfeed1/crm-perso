@@ -11,6 +11,9 @@ router.use(authMiddleware);
 // GET /api/interactions/followups - relances dues/en retard non faites (vue "À relancer")
 router.get('/followups', interactionController.getFollowups);
 
+// GET /api/interactions/cockpit - cockpit "Suivi" (1 ligne par contact, filtrable)
+router.get('/cockpit', interactionController.getCockpit);
+
 // GET /api/interactions/contact/:contactType/:contactId - timeline d'un contact
 router.get('/contact/:contactType/:contactId', interactionController.getByContact);
 

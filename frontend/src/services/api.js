@@ -1146,7 +1146,8 @@ export const interactionsAPI = {
   create: (data) => apiRequest('/interactions', 'POST', data),
   markFollowupDone: (id, done = true) => apiRequest(`/interactions/${id}/followup-done`, 'PATCH', { done }),
   delete: (id) => apiRequest(`/interactions/${id}`, 'DELETE'),
-  getFollowups: () => apiRequest('/interactions/followups')
+  getFollowups: () => apiRequest('/interactions/followups'),
+  getCockpit: (filter = 'all') => apiRequest(`/interactions/cockpit?filter=${encodeURIComponent(filter)}`)
 };
 
 // API pour les emails programmés

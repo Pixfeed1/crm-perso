@@ -6,16 +6,18 @@
 import React from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { FiUsers, FiUserCheck, FiBriefcase } from 'react-icons/fi';
+import { FiUsers, FiUserCheck, FiBriefcase, FiClock } from 'react-icons/fi';
 
 import Leads from './Leads';
 import Clients from './Clients';
 import Projects from './Projects';
+import SuiviCockpit from '../components/suivi/SuiviCockpit';
 
 const TABS = [
   { key: 'prospects', label: 'Prospects', icon: FiUsers },
   { key: 'clients', label: 'Clients', icon: FiUserCheck },
-  { key: 'projets', label: 'Projets', icon: FiBriefcase }
+  { key: 'projets', label: 'Projets', icon: FiBriefcase },
+  { key: 'suivi', label: 'Suivi', icon: FiClock }
 ];
 
 const Portefeuille = () => {
@@ -62,6 +64,13 @@ const Portefeuille = () => {
         {activeTab === 'prospects' && <Leads />}
         {activeTab === 'clients' && <Clients />}
         {activeTab === 'projets' && <Projects />}
+        {activeTab === 'suivi' && (
+          <div className="h-full overflow-y-auto p-2 sm:p-4 lg:p-6">
+            <div className="max-w-5xl mx-auto w-full">
+              <SuiviCockpit />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
