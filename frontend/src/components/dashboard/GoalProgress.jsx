@@ -95,7 +95,7 @@ const GoalProgress = ({
 
   return (
     <motion.div 
-      className="relative bg-gray-800/50 rounded-xl p-4 overflow-hidden"
+      className="relative bg-surface/50 rounded-xl p-4 overflow-hidden"
       onHoverStart={() => setIsHovered(true)}
       onHoverEnd={() => setIsHovered(false)}
       whileHover={{ scale: 1.02 }}
@@ -109,10 +109,10 @@ const GoalProgress = ({
         <div className="flex justify-between items-start mb-2">
           <div>
             <h3 className={`font-semibold ${colorConfig[color].text}`}>{title}</h3>
-            <p className="text-xs text-gray-400">{period}</p>
+            <p className="text-xs text-text-muted">{period}</p>
           </div>
           <motion.div 
-            className="text-xl font-bold text-white"
+            className="text-xl font-bold text-text-primary"
             animate={{ scale: isHovered ? 1.1 : 1 }}
           >
             {percentage}%
@@ -120,7 +120,7 @@ const GoalProgress = ({
         </div>
         
         {/* Barre de progression stylisée */}
-        <div className="mt-4 h-3 bg-gray-700/50 rounded-full overflow-hidden">
+        <div className="mt-4 h-3 bg-surface-strong/50 rounded-full overflow-hidden">
           <motion.div
             className="h-full rounded-full"
             style={{ backgroundColor: colorConfig[color].strong }}
@@ -133,12 +133,12 @@ const GoalProgress = ({
         {/* Valeurs actuelles et cibles */}
         <div className="flex justify-between mt-2 text-sm">
           <div>
-            <span className="text-gray-400">Actuel: </span>
-            <span className="text-white font-medium">{formatValue(current)}</span>
+            <span className="text-text-muted">Actuel: </span>
+            <span className="text-text-primary font-medium">{formatValue(current)}</span>
           </div>
           <div>
-            <span className="text-gray-400">Cible: </span>
-            <span className="text-white font-medium">{formatValue(target)}</span>
+            <span className="text-text-muted">Cible: </span>
+            <span className="text-text-primary font-medium">{formatValue(target)}</span>
           </div>
         </div>
         
@@ -151,7 +151,7 @@ const GoalProgress = ({
           <span className={colorConfig[color].text}>
             {percentage < 50 ? 'En retard' : percentage < 80 ? 'En progression' : 'En bonne voie'}
           </span>
-          <span className="text-gray-400 ml-1">
+          <span className="text-text-muted ml-1">
             {percentage < 50 
               ? '- Besoin d\'intensifier les efforts' 
               : percentage < 80 

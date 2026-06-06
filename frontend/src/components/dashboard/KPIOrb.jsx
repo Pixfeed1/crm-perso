@@ -54,7 +54,7 @@ const KPIOrb = ({
         {Array.from({ length: 5 }).map((_, index) => (
           <motion.div
             key={index}
-            className="absolute w-2 h-2 rounded-full bg-white/30"
+            className="absolute w-2 h-2 rounded-full bg-overlay/30"
             initial={{ 
               x: 0, 
               y: 0, 
@@ -84,7 +84,7 @@ const KPIOrb = ({
 
         {/* Valeur principale */}
         <motion.span 
-          className="font-bold text-white"
+          className="font-bold text-text-primary"
           animate={{ scale: pulsing ? 1.1 : 1 }}
           transition={{ duration: 0.3 }}
         >

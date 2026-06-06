@@ -77,9 +77,9 @@ const ActivityStream = ({ activities = [], projects = [], showTitle = true, maxI
   const displayedActivities = expanded ? sortedActivities : sortedActivities.slice(0, maxItems);
   
   return (
-    <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl p-5">
+    <div className="bg-surface/30 backdrop-blur-sm rounded-xl p-5">
       {showTitle && (
-        <h3 className="text-lg font-medium text-white mb-4 flex items-center gap-2">
+        <h3 className="text-lg font-medium text-text-primary mb-4 flex items-center gap-2">
           <FiClipboard />
           Flux d'activités récentes
         </h3>
@@ -90,8 +90,8 @@ const ActivityStream = ({ activities = [], projects = [], showTitle = true, maxI
           <>
             <AnimatePresence initial={false}>
               {displayedActivities.map((activity, index) => {
-                const typeInfo = typeConfig[activity.type] || { icon: <FiClipboard />, label: activity.type, bg: 'bg-gray-900/20', text: 'text-gray-300' };
-                const priorityInfo = priorityConfig[activity.priority] || { color: 'text-gray-300', label: activity.priority };
+                const typeInfo = typeConfig[activity.type] || { icon: <FiClipboard />, label: activity.type, bg: 'bg-surface-muted/20', text: 'text-text-secondary' };
+                const priorityInfo = priorityConfig[activity.priority] || { color: 'text-text-secondary', label: activity.priority };
                 const projectInfo = getProjectInfo(activity);
                 
                 return (
@@ -115,8 +115,8 @@ const ActivityStream = ({ activities = [], projects = [], showTitle = true, maxI
                       {/* Contenu principal */}
                       <div className="flex-1 min-w-0">
                         <div className="flex flex-wrap justify-between items-start">
-                          <h4 className="text-white font-medium truncate">{activity.description}</h4>
-                          <span className="text-xs text-gray-400 ml-2 whitespace-nowrap">{formatDate(activity.date)}</span>
+                          <h4 className="text-text-primary font-medium truncate">{activity.description}</h4>
+                          <span className="text-xs text-text-muted ml-2 whitespace-nowrap">{formatDate(activity.date)}</span>
                         </div>
                         
                         <div className="flex flex-wrap items-center mt-1 gap-2">
@@ -127,7 +127,7 @@ const ActivityStream = ({ activities = [], projects = [], showTitle = true, maxI
                           <span className={`text-xs ${priorityInfo.color}`}>{priorityInfo.label}</span>
                           
                           {/* Temps */}
-                          <span className="text-xs text-gray-400">
+                          <span className="text-xs text-text-muted">
                             {activity.status === 'completed' 
                               ? `Terminé (${formatTime(activity.actual_time)})`
                               : `Prévu: ${formatTime(activity.planned_time)}`}
@@ -158,7 +158,7 @@ const ActivityStream = ({ activities = [], projects = [], showTitle = true, maxI
             {sortedActivities.length > maxItems && (
               <motion.button
                 onClick={() => setExpanded(!expanded)}
-                className="w-full py-2 text-sm text-indigo-300 hover:text-indigo-200 bg-gray-800/50 hover:bg-gray-700/50 rounded-lg"
+                className="w-full py-2 text-sm text-indigo-300 hover:text-indigo-200 bg-surface/50 hover:bg-surface-strong/50 rounded-lg"
                 whileHover={{ y: -2 }}
                 whileTap={{ y: 0 }}
               >
@@ -169,8 +169,8 @@ const ActivityStream = ({ activities = [], projects = [], showTitle = true, maxI
         ) : (
           <div className="py-8 text-center">
             <div className="text-4xl mb-3"><FiClipboard /></div>
-            <h4 className="text-lg font-medium text-gray-300 mb-2">Aucune activité récente</h4>
-            <p className="text-gray-400 text-sm">
+            <h4 className="text-lg font-medium text-text-secondary mb-2">Aucune activité récente</h4>
+            <p className="text-text-muted text-sm">
               Les activités récentes apparaîtront ici lorsque vous en ajouterez.
             </p>
           </div>

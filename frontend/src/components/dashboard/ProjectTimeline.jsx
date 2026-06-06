@@ -7,15 +7,15 @@ const ProjectTimeline = ({ project }) => {
   // Vérifier si le projet est valide
   if (!project || !project.tasks || project.tasks.length === 0) {
     return (
-      <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl p-5">
-        <h3 className="text-lg font-medium text-gray-200 mb-4 flex items-center gap-2">
+      <div className="bg-surface/30 backdrop-blur-sm rounded-xl p-5">
+        <h3 className="text-lg font-medium text-text-primary mb-4 flex items-center gap-2">
           <FiCalendar />
           Chronologie du projet
         </h3>
-        <div className="bg-gray-900/30 rounded-lg p-6 text-center">
+        <div className="bg-surface-muted/30 rounded-lg p-6 text-center">
           <div className="text-4xl mb-3"><FiClock /></div>
-          <h4 className="text-lg font-medium text-gray-300 mb-2">Pas de chronologie disponible</h4>
-          <p className="text-gray-400 text-sm">
+          <h4 className="text-lg font-medium text-text-secondary mb-2">Pas de chronologie disponible</h4>
+          <p className="text-text-muted text-sm">
             Ajoutez des tâches au projet pour visualiser sa chronologie.
           </p>
         </div>
@@ -73,19 +73,19 @@ const ProjectTimeline = ({ project }) => {
   const todayPosition = calculateTodayPosition();
 
   return (
-    <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl p-5">
-      <h3 className="text-lg font-medium text-gray-200 mb-4 flex items-center gap-2">
+    <div className="bg-surface/30 backdrop-blur-sm rounded-xl p-5">
+      <h3 className="text-lg font-medium text-text-primary mb-4 flex items-center gap-2">
         <FiCalendar />
         Chronologie du projet
       </h3>
       
       {/* Barre de progression globale */}
       <div className="mb-6">
-        <div className="flex justify-between text-xs text-gray-400 mb-1">
+        <div className="flex justify-between text-xs text-text-muted mb-1">
           <span>{formatDate(project.start_date)}</span>
           <span>{formatDate(project.end_date)}</span>
         </div>
-        <div className="relative h-2 bg-gray-900 rounded-full overflow-hidden">
+        <div className="relative h-2 bg-surface-muted rounded-full overflow-hidden">
           {/* Barre de progression jusqu'à aujourd'hui */}
           <div 
             className="absolute h-full bg-purple-600/50"
@@ -115,18 +115,18 @@ const ProjectTimeline = ({ project }) => {
             <div className="flex items-center">
               <div className={`w-4 h-4 rounded-full ${getTaskStatusColor(task.completed)}`} />
               <div className="ml-3">
-                <h4 className={`font-medium ${task.completed ? 'text-gray-400' : 'text-white'}`}>
+                <h4 className={`font-medium ${task.completed ? 'text-text-muted' : 'text-text-primary'}`}>
                   {task.name}
                 </h4>
                 {task.description && (
-                  <p className="text-xs text-gray-400 mt-1">{task.description}</p>
+                  <p className="text-xs text-text-muted mt-1">{task.description}</p>
                 )}
               </div>
               <div className="ml-auto">
                 <span className={`text-xs px-2 py-1 rounded-full ${
                   task.completed 
                     ? 'bg-emerald-900/30 text-emerald-300' 
-                    : 'bg-gray-800 text-gray-400'
+                    : 'bg-surface text-text-muted'
                 }`}>
                   {task.completed ? 'Terminé' : 'En attente'}
                 </span>
@@ -134,7 +134,7 @@ const ProjectTimeline = ({ project }) => {
             </div>
             
             {/* Représentation visuelle de la tâche dans la chronologie */}
-            <div className="mt-2 relative h-8 bg-gray-900/50 rounded-lg overflow-hidden">
+            <div className="mt-2 relative h-8 bg-surface-muted/50 rounded-lg overflow-hidden">
               <motion.div 
                 className={`absolute top-0 bottom-0 ${getTaskStatusColor(task.completed)}/30 backdrop-blur-sm`}
                 style={{ 
@@ -160,7 +160,7 @@ const ProjectTimeline = ({ project }) => {
       </div>
       
       {/* Légende */}
-      <div className="mt-6 flex items-center justify-end text-xs text-gray-400">
+      <div className="mt-6 flex items-center justify-end text-xs text-text-muted">
         <div className="flex items-center mr-4">
           <div className="w-3 h-3 bg-purple-600/50 rounded-sm mr-1" />
           <span>Période écoulée</span>

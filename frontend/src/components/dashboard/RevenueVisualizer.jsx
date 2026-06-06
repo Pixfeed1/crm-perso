@@ -157,15 +157,15 @@ const RevenueVisualizer = ({ revenues = [], projects = [], showTitle = true, max
       const percentage = Math.round((data.value / totalRevenue) * 100);
       
       return (
-        <div className="bg-gray-900/90 backdrop-blur-sm border border-gray-700 rounded-lg p-3 shadow-xl">
-          <p className="text-white font-medium">{data.name}</p>
+        <div className="bg-surface-muted/90 backdrop-blur-sm border border-border rounded-lg p-3 shadow-xl">
+          <p className="text-text-primary font-medium">{data.name}</p>
           <p className="text-sm mt-1">
-            <span className="text-gray-300">Montant: </span>
-            <span className="text-white font-medium">{formatAmount(data.value)}</span>
+            <span className="text-text-secondary">Montant: </span>
+            <span className="text-text-primary font-medium">{formatAmount(data.value)}</span>
           </p>
           <p className="text-sm">
-            <span className="text-gray-300">Pourcentage: </span>
-            <span className="text-white font-medium">{percentage}%</span>
+            <span className="text-text-secondary">Pourcentage: </span>
+            <span className="text-text-primary font-medium">{percentage}%</span>
           </p>
         </div>
       );
@@ -176,10 +176,10 @@ const RevenueVisualizer = ({ revenues = [], projects = [], showTitle = true, max
   
   // Rendu du composant
   return (
-    <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl p-5">
+    <div className="bg-surface/30 backdrop-blur-sm rounded-xl p-5">
       {showTitle && (
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-medium text-white flex items-center gap-2">
+          <h3 className="text-lg font-medium text-text-primary flex items-center gap-2">
             <FiDollarSign />
             Répartition des revenus
           </h3>
@@ -188,8 +188,8 @@ const RevenueVisualizer = ({ revenues = [], projects = [], showTitle = true, max
             <motion.button
               className={`px-3 py-1 rounded-lg text-xs ${
                 visualizationType === 'status' 
-                  ? 'bg-teal-600 text-white' 
-                  : 'bg-gray-700/50 text-gray-300 hover:bg-gray-700'
+                  ? 'bg-teal-600 text-text-primary' 
+                  : 'bg-surface-strong/50 text-text-secondary hover:bg-surface-strong'
               }`}
               whileHover={{ y: -2 }}
               whileTap={{ y: 0 }}
@@ -200,8 +200,8 @@ const RevenueVisualizer = ({ revenues = [], projects = [], showTitle = true, max
             <motion.button
               className={`px-3 py-1 rounded-lg text-xs ${
                 visualizationType === 'type' 
-                  ? 'bg-teal-600 text-white' 
-                  : 'bg-gray-700/50 text-gray-300 hover:bg-gray-700'
+                  ? 'bg-teal-600 text-text-primary' 
+                  : 'bg-surface-strong/50 text-text-secondary hover:bg-surface-strong'
               }`}
               whileHover={{ y: -2 }}
               whileTap={{ y: 0 }}
@@ -212,8 +212,8 @@ const RevenueVisualizer = ({ revenues = [], projects = [], showTitle = true, max
             <motion.button
               className={`px-3 py-1 rounded-lg text-xs ${
                 visualizationType === 'project' 
-                  ? 'bg-teal-600 text-white' 
-                  : 'bg-gray-700/50 text-gray-300 hover:bg-gray-700'
+                  ? 'bg-teal-600 text-text-primary' 
+                  : 'bg-surface-strong/50 text-text-secondary hover:bg-surface-strong'
               }`}
               whileHover={{ y: -2 }}
               whileTap={{ y: 0 }}
@@ -252,7 +252,7 @@ const RevenueVisualizer = ({ revenues = [], projects = [], showTitle = true, max
           
           {/* Liste des sources de revenus */}
           <div className="space-y-3">
-            <h4 className="text-sm font-medium text-white mb-2">
+            <h4 className="text-sm font-medium text-text-primary mb-2">
               {visualizationType === 'status' ? 'Par statut' : 
                visualizationType === 'type' ? 'Par type' : 'Par projet'}
             </h4>
@@ -266,16 +266,16 @@ const RevenueVisualizer = ({ revenues = [], projects = [], showTitle = true, max
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3, delay: index * 0.1 }}
-                  className="bg-gray-900/30 rounded-lg p-3"
+                  className="bg-surface-muted/30 rounded-lg p-3"
                 >
                   <div className="flex justify-between items-center">
                     <div className="flex items-center space-x-2">
                       <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }}></div>
-                      <span className="text-white font-medium truncate max-w-[150px]">{item.name}</span>
+                      <span className="text-text-primary font-medium truncate max-w-[150px]">{item.name}</span>
                     </div>
-                    <span className="text-white font-medium">{formatAmount(item.value)}</span>
+                    <span className="text-text-primary font-medium">{formatAmount(item.value)}</span>
                   </div>
-                  <div className="mt-2 h-1.5 bg-gray-700 rounded-full overflow-hidden">
+                  <div className="mt-2 h-1.5 bg-surface-strong rounded-full overflow-hidden">
                     <motion.div 
                       className="h-full rounded-full"
                       style={{ backgroundColor: item.color }}
@@ -285,7 +285,7 @@ const RevenueVisualizer = ({ revenues = [], projects = [], showTitle = true, max
                     ></motion.div>
                   </div>
                   <div className="flex justify-end mt-1">
-                    <span className="text-xs text-gray-400">{percentage}%</span>
+                    <span className="text-xs text-text-muted">{percentage}%</span>
                   </div>
                 </motion.div>
               );
@@ -295,8 +295,8 @@ const RevenueVisualizer = ({ revenues = [], projects = [], showTitle = true, max
       ) : (
         <div className="py-8 text-center">
           <div className="text-4xl mb-3"><FiDollarSign /></div>
-          <h4 className="text-lg font-medium text-gray-300 mb-2">Aucun revenu</h4>
-          <p className="text-gray-400 text-sm">
+          <h4 className="text-lg font-medium text-text-secondary mb-2">Aucun revenu</h4>
+          <p className="text-text-muted text-sm">
             Les revenus apparaîtront ici lorsque vous en ajouterez.
           </p>
         </div>
