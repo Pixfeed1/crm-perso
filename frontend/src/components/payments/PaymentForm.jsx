@@ -125,16 +125,16 @@ const PaymentForm = ({ invoice, payment = null, onSuccess, onCancel }) => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
-      className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6"
+      className="bg-surface/50 backdrop-blur-sm rounded-xl p-6"
     >
       <div className="flex justify-between items-center mb-6">
-        <h3 className="text-xl font-semibold text-white">
+        <h3 className="text-xl font-semibold text-text-primary">
           {payment ? 'Modifier le paiement' : 'Enregistrer un paiement'}
         </h3>
         {onCancel && (
           <button
             onClick={onCancel}
-            className="text-gray-400 hover:text-white transition-colors"
+            className="text-text-muted hover:text-text-primary transition-colors"
           >
             <FiX size={24} />
           </button>
@@ -142,18 +142,18 @@ const PaymentForm = ({ invoice, payment = null, onSuccess, onCancel }) => {
       </div>
 
       {/* Informations facture */}
-      <div className="bg-gray-900/50 rounded-lg p-4 mb-6">
+      <div className="bg-surface-muted/50 rounded-lg p-4 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
           <div>
-            <span className="text-gray-400">Facture :</span>
-            <span className="text-white ml-2 font-medium">{invoice?.invoice_number}</span>
+            <span className="text-text-muted">Facture :</span>
+            <span className="text-text-primary ml-2 font-medium">{invoice?.invoice_number}</span>
           </div>
           <div>
-            <span className="text-gray-400">Montant total :</span>
-            <span className="text-white ml-2 font-medium">{invoice?.total_ttc?.toFixed(2)} €</span>
+            <span className="text-text-muted">Montant total :</span>
+            <span className="text-text-primary ml-2 font-medium">{invoice?.total_ttc?.toFixed(2)} €</span>
           </div>
           <div>
-            <span className="text-gray-400">Reste à payer :</span>
+            <span className="text-text-muted">Reste à payer :</span>
             <span className="text-green-400 ml-2 font-medium">{maxAmount.toFixed(2)} €</span>
           </div>
         </div>
@@ -162,11 +162,11 @@ const PaymentForm = ({ invoice, payment = null, onSuccess, onCancel }) => {
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Montant */}
         <div>
-          <label htmlFor="amount" className="block text-sm font-medium text-gray-300 mb-1">
+          <label htmlFor="amount" className="block text-sm font-medium text-text-secondary mb-1">
             Montant du paiement <span className="text-rose-500">*</span>
           </label>
           <div className="relative">
-            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-text-muted">
               <FiDollarSign />
             </span>
             <input
@@ -178,7 +178,7 @@ const PaymentForm = ({ invoice, payment = null, onSuccess, onCancel }) => {
               step="0.01"
               min="0.01"
               max={maxAmount}
-              className={`w-full bg-gray-900/50 border ${errors.amount ? 'border-rose-500' : 'border-gray-700'} rounded-lg px-4 py-2 pl-10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
+              className={`w-full bg-surface-muted/50 border ${errors.amount ? 'border-rose-500' : 'border-border'} rounded-lg px-4 py-2 pl-10 text-text-primary placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
               placeholder="0.00"
             />
           </div>
@@ -191,18 +191,18 @@ const PaymentForm = ({ invoice, payment = null, onSuccess, onCancel }) => {
               {errors.amount}
             </motion.p>
           )}
-          <p className="mt-1 text-xs text-gray-400">
+          <p className="mt-1 text-xs text-text-muted">
             Montant maximum : {maxAmount.toFixed(2)} €
           </p>
         </div>
 
         {/* Date de paiement */}
         <div>
-          <label htmlFor="payment_date" className="block text-sm font-medium text-gray-300 mb-1">
+          <label htmlFor="payment_date" className="block text-sm font-medium text-text-secondary mb-1">
             Date du paiement <span className="text-rose-500">*</span>
           </label>
           <div className="relative">
-            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-text-muted">
               <FiCalendar />
             </span>
             <input
@@ -211,7 +211,7 @@ const PaymentForm = ({ invoice, payment = null, onSuccess, onCancel }) => {
               name="payment_date"
               value={formData.payment_date}
               onChange={handleChange}
-              className={`w-full bg-gray-900/50 border ${errors.payment_date ? 'border-rose-500' : 'border-gray-700'} rounded-lg px-4 py-2 pl-10 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
+              className={`w-full bg-surface-muted/50 border ${errors.payment_date ? 'border-rose-500' : 'border-border'} rounded-lg px-4 py-2 pl-10 text-text-primary focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
             />
           </div>
           {errors.payment_date && (
@@ -227,11 +227,11 @@ const PaymentForm = ({ invoice, payment = null, onSuccess, onCancel }) => {
 
         {/* Moyen de paiement */}
         <div>
-          <label htmlFor="payment_method" className="block text-sm font-medium text-gray-300 mb-1">
+          <label htmlFor="payment_method" className="block text-sm font-medium text-text-secondary mb-1">
             Moyen de paiement <span className="text-rose-500">*</span>
           </label>
           <div className="relative">
-            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-text-muted">
               <FiCreditCard />
             </span>
             <select
@@ -239,7 +239,7 @@ const PaymentForm = ({ invoice, payment = null, onSuccess, onCancel }) => {
               name="payment_method"
               value={formData.payment_method}
               onChange={handleChange}
-              className={`w-full bg-gray-900/50 border ${errors.payment_method ? 'border-rose-500' : 'border-gray-700'} rounded-lg px-4 py-2 pl-10 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
+              className={`w-full bg-surface-muted/50 border ${errors.payment_method ? 'border-rose-500' : 'border-border'} rounded-lg px-4 py-2 pl-10 text-text-primary focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
             >
               <option value="">Sélectionner un moyen de paiement</option>
               {paymentMethods.map(method => (
@@ -262,7 +262,7 @@ const PaymentForm = ({ invoice, payment = null, onSuccess, onCancel }) => {
 
         {/* Référence */}
         <div>
-          <label htmlFor="reference" className="block text-sm font-medium text-gray-300 mb-1">
+          <label htmlFor="reference" className="block text-sm font-medium text-text-secondary mb-1">
             Référence / N° de transaction
           </label>
           <input
@@ -271,17 +271,17 @@ const PaymentForm = ({ invoice, payment = null, onSuccess, onCancel }) => {
             name="reference"
             value={formData.reference}
             onChange={handleChange}
-            className="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            className="w-full bg-surface-muted/50 border border-border rounded-lg px-4 py-2 text-text-primary placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             placeholder="Ex: CHQ-2024-001, VIREMENT-12345"
           />
-          <p className="mt-1 text-xs text-gray-400">
+          <p className="mt-1 text-xs text-text-muted">
             Numéro de chèque, référence de virement, ID transaction, etc.
           </p>
         </div>
 
         {/* Statut */}
         <div>
-          <label htmlFor="status" className="block text-sm font-medium text-gray-300 mb-1">
+          <label htmlFor="status" className="block text-sm font-medium text-text-secondary mb-1">
             Statut
           </label>
           <select
@@ -289,7 +289,7 @@ const PaymentForm = ({ invoice, payment = null, onSuccess, onCancel }) => {
             name="status"
             value={formData.status}
             onChange={handleChange}
-            className="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            className="w-full bg-surface-muted/50 border border-border rounded-lg px-4 py-2 text-text-primary focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
           >
             <option value="completed">Paiement reçu</option>
             <option value="pending">En attente</option>
@@ -299,11 +299,11 @@ const PaymentForm = ({ invoice, payment = null, onSuccess, onCancel }) => {
 
         {/* Notes */}
         <div>
-          <label htmlFor="notes" className="block text-sm font-medium text-gray-300 mb-1">
+          <label htmlFor="notes" className="block text-sm font-medium text-text-secondary mb-1">
             Notes
           </label>
           <div className="relative">
-            <span className="absolute left-3 top-3 text-gray-400">
+            <span className="absolute left-3 top-3 text-text-muted">
               <FiFileText />
             </span>
             <textarea
@@ -312,7 +312,7 @@ const PaymentForm = ({ invoice, payment = null, onSuccess, onCancel }) => {
               value={formData.notes}
               onChange={handleChange}
               rows="3"
-              className="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-4 py-2 pl-10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="w-full bg-surface-muted/50 border border-border rounded-lg px-4 py-2 pl-10 text-text-primary placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               placeholder="Informations complémentaires..."
             />
           </div>
@@ -324,7 +324,7 @@ const PaymentForm = ({ invoice, payment = null, onSuccess, onCancel }) => {
             <motion.button
               type="button"
               onClick={onCancel}
-              className="px-4 py-2 rounded-lg border-2 border-white/30 text-white hover:bg-white/10 hover:border-white/40 font-medium transition-all"
+              className="px-4 py-2 rounded-lg border-2 border-overlay/30 text-text-primary hover:bg-overlay/10 hover:border-overlay/40 font-medium transition-all"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
@@ -338,7 +338,7 @@ const PaymentForm = ({ invoice, payment = null, onSuccess, onCancel }) => {
               loading
                 ? 'bg-purple-600/50 cursor-not-allowed'
                 : 'bg-purple-600 hover:bg-purple-700'
-            } text-white`}
+            } text-text-primary`}
             whileHover={!loading ? { scale: 1.02 } : {}}
             whileTap={!loading ? { scale: 0.98 } : {}}
           >

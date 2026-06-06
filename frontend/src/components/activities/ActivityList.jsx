@@ -49,10 +49,10 @@ const ActivityList = ({ activities, selectedActivity, onSelectActivity, onComple
   
   if (activities.length === 0) {
     return (
-      <div className="bg-gray-900/30 rounded-lg p-6 text-center">
+      <div className="bg-surface-muted/30 rounded-lg p-6 text-center">
         <div className="text-4xl mb-3"><FiClipboard /></div>
-        <h4 className="text-lg font-medium text-gray-300 mb-2">Aucune activité</h4>
-        <p className="text-gray-400 text-sm">
+        <h4 className="text-lg font-medium text-text-secondary mb-2">Aucune activité</h4>
+        <p className="text-text-muted text-sm">
           Aucune activité trouvée pour cette période ou avec ces filtres.
         </p>
       </div>
@@ -63,21 +63,21 @@ const ActivityList = ({ activities, selectedActivity, onSelectActivity, onComple
     <div className="flex-1 overflow-visible space-y-6">
       {sortedDates.map(date => (
         <div key={date} className="space-y-2">
-          <div className="sticky top-0 bg-gray-900/70 backdrop-blur-sm px-3 py-2 rounded-lg z-10">
-            <h3 className="text-md font-medium text-gray-300">
+          <div className="sticky top-0 bg-surface-muted/70 backdrop-blur-sm px-3 py-2 rounded-lg z-10">
+            <h3 className="text-md font-medium text-text-secondary">
               {formatDate(date)}
             </h3>
           </div>
           
           {groupedActivities[date].map(activity => {
             const isSelected = selectedActivity && selectedActivity.id === activity.id;
-            const typeInfo = typeConfig[activity.type] || { icon: <FiClipboard />, label: activity.type, bg: 'bg-gray-900/20' };
-            const priorityInfo = priorityConfig[activity.priority] || { color: 'bg-gray-500/20 text-gray-300', label: activity.priority };
+            const typeInfo = typeConfig[activity.type] || { icon: <FiClipboard />, label: activity.type, bg: 'bg-surface-muted/20' };
+            const priorityInfo = priorityConfig[activity.priority] || { color: 'bg-gray-500/20 text-text-secondary', label: activity.priority };
             
             return (
               <motion.div
                 key={activity.id}
-                className={`p-4 rounded-xl cursor-pointer ${isSelected ? 'bg-indigo-900/30' : 'bg-gray-800/50 hover:bg-gray-800/70'}`}
+                className={`p-4 rounded-xl cursor-pointer ${isSelected ? 'bg-indigo-900/30' : 'bg-surface/50 hover:bg-surface/70'}`}
                 whileHover={{ scale: 1.01 }}
                 onClick={() => onSelectActivity(activity)}
                 layout
@@ -91,7 +91,7 @@ const ActivityList = ({ activities, selectedActivity, onSelectActivity, onComple
                     
                     {/* Description et détails */}
                     <div className="overflow-hidden">
-                      <h4 className="font-medium text-white break-words">{activity.description}</h4>
+                      <h4 className="font-medium text-text-primary break-words">{activity.description}</h4>
                       <div className="mt-2 flex flex-wrap gap-2">
                         {/* Priorité */}
                         <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${priorityInfo.color}`}>
@@ -115,7 +115,7 @@ const ActivityList = ({ activities, selectedActivity, onSelectActivity, onComple
                   
                   {/* Temps et statut */}
                   <div className="flex flex-col items-end">
-                    <div className="text-sm text-gray-300">
+                    <div className="text-sm text-text-secondary">
                       {formatTime(activity.planned_time)}
                     </div>
                     {activity.status === 'completed' ? (

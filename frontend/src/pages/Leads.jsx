@@ -519,11 +519,11 @@ const Leads = () => {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center">
-                <FiUsers className="text-white text-2xl" />
+                <FiUsers className="text-text-primary text-2xl" />
               </div>
               <div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-white">Leads</h1>
-                <p className="text-gray-400 text-sm">
+                <h1 className="text-2xl sm:text-3xl font-bold text-text-primary">Leads</h1>
+                <p className="text-text-muted text-sm">
                   {filteredLeads.length} lead{filteredLeads.length !== 1 ? 's' : ''}
                 </p>
               </div>
@@ -531,13 +531,13 @@ const Leads = () => {
 
             <div className="flex flex-col sm:flex-row gap-2">
               {/* Toggle vue cartes/table/kanban/prospection */}
-              <div className="flex bg-gray-700 rounded-lg p-1">
+              <div className="flex bg-surface-strong rounded-lg p-1">
                 <button
                   onClick={() => setView('cards')}
                   className={`p-2 rounded transition-colors ${
                     view === 'cards'
-                      ? 'bg-indigo-600 text-white'
-                      : 'text-gray-400 hover:text-white'
+                      ? 'bg-accent text-white'
+                      : 'text-text-muted hover:text-text-primary'
                   }`}
                   title="Vue cartes"
                 >
@@ -547,8 +547,8 @@ const Leads = () => {
                   onClick={() => setView('table')}
                   className={`p-2 rounded transition-colors ${
                     view === 'table'
-                      ? 'bg-indigo-600 text-white'
-                      : 'text-gray-400 hover:text-white'
+                      ? 'bg-accent text-white'
+                      : 'text-text-muted hover:text-text-primary'
                   }`}
                   title="Vue liste"
                 >
@@ -558,8 +558,8 @@ const Leads = () => {
                   onClick={() => setView('kanban')}
                   className={`p-2 rounded transition-colors ${
                     view === 'kanban'
-                      ? 'bg-indigo-600 text-white'
-                      : 'text-gray-400 hover:text-white'
+                      ? 'bg-accent text-white'
+                      : 'text-text-muted hover:text-text-primary'
                   }`}
                   title="Vue Kanban"
                 >
@@ -569,8 +569,8 @@ const Leads = () => {
                   onClick={() => setView('prospection')}
                   className={`p-2 rounded transition-colors ${
                     view === 'prospection'
-                      ? 'bg-indigo-600 text-white'
-                      : 'text-gray-400 hover:text-white'
+                      ? 'bg-accent text-white'
+                      : 'text-text-muted hover:text-text-primary'
                   }`}
                   title="Prospection"
                 >
@@ -581,7 +581,7 @@ const Leads = () => {
                   className={`p-2 rounded transition-colors ${
                     view === 'outreach'
                       ? 'bg-emerald-600 text-white'
-                      : 'text-gray-400 hover:text-white'
+                      : 'text-text-muted hover:text-text-primary'
                   }`}
                   title="Outreach (Email, Facebook, Instagram)"
                 >
@@ -601,7 +601,7 @@ const Leads = () => {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={handleImportClick}
-                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg flex items-center gap-2 transition-colors"
+                className="px-4 py-2 bg-surface-strong hover:bg-border-strong text-text-primary rounded-lg flex items-center gap-2 transition-colors"
                 title="Importer des leads depuis un fichier JSON"
               >
                 <FiUpload />
@@ -611,7 +611,7 @@ const Leads = () => {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => exportAPI.leads()}
-                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg flex items-center gap-2 transition-colors"
+                className="px-4 py-2 bg-surface-strong hover:bg-border-strong text-text-primary rounded-lg flex items-center gap-2 transition-colors"
               >
                 <FiDownload />
                 <span className="hidden sm:inline">Exporter</span>
@@ -631,21 +631,21 @@ const Leads = () => {
           {/* Statistiques */}
           {stats && (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-4">
-                <div className="text-gray-400 text-xs mb-1">Total</div>
-                <div className="text-white text-2xl font-bold">{stats.total || 0}</div>
+              <div className="bg-surface/50 border border-border rounded-xl p-4">
+                <div className="text-text-muted text-xs mb-1">Total</div>
+                <div className="text-text-primary text-2xl font-bold">{stats.total || 0}</div>
               </div>
               <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4">
                 <div className="text-green-400 text-xs mb-1">Nouveaux</div>
-                <div className="text-white text-2xl font-bold">{stats.newThisMonth || 0}</div>
+                <div className="text-text-primary text-2xl font-bold">{stats.newThisMonth || 0}</div>
               </div>
               <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4">
                 <div className="text-blue-400 text-xs mb-1">Gagnés</div>
-                <div className="text-white text-2xl font-bold">{stats.byStatus?.won || 0}</div>
+                <div className="text-text-primary text-2xl font-bold">{stats.byStatus?.won || 0}</div>
               </div>
               <div className="bg-purple-500/10 border border-purple-500/30 rounded-xl p-4">
                 <div className="text-purple-400 text-xs mb-1">Taux conversion</div>
-                <div className="text-white text-2xl font-bold">{stats.conversionRate || 0}%</div>
+                <div className="text-text-primary text-2xl font-bold">{stats.conversionRate || 0}%</div>
               </div>
             </div>
           )}
@@ -688,7 +688,7 @@ const Leads = () => {
           <>
             {/* Contenu principal */}
             {isLoading ? (
-              <div className="text-center text-gray-400 py-8">Chargement...</div>
+              <div className="text-center text-text-muted py-8">Chargement...</div>
             ) : filteredLeads.length === 0 ? (
               <EmptyState
                 icon={FiUsers}
@@ -727,25 +727,25 @@ const Leads = () => {
                 {/* Pagination */}
                 {filteredLeads.length > itemsPerPage && (
                   <div className="mt-6">
-                    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-gray-800/40 backdrop-blur-sm rounded-xl p-4 border border-gray-700/50">
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-surface/40 backdrop-blur-sm rounded-xl p-4 border border-border/50">
                       {/* Sélecteur nombre d'items */}
                       <div className="flex items-center gap-2 text-sm">
-                        <span className="text-gray-400">Afficher</span>
+                        <span className="text-text-muted">Afficher</span>
                         <select
                           value={itemsPerPage}
                           onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
-                          className="px-3 py-1.5 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          className="px-3 py-1.5 bg-surface-strong border border-border-strong rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-indigo-500"
                         >
                           <option value={10}>10</option>
                           <option value={20}>20</option>
                           <option value={50}>50</option>
                           <option value={100}>100</option>
                         </select>
-                        <span className="text-gray-400">par page</span>
+                        <span className="text-text-muted">par page</span>
                       </div>
 
                       {/* Info pagination */}
-                      <div className="text-sm text-gray-400">
+                      <div className="text-sm text-text-muted">
                         {startIndex + 1}-{Math.min(endIndex, filteredLeads.length)} sur {filteredLeads.length}
                       </div>
 
@@ -754,17 +754,17 @@ const Leads = () => {
                         <button
                           onClick={() => handlePageChange(currentPage - 1)}
                           disabled={currentPage === 1}
-                          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm font-medium disabled:opacity-50"
+                          className="px-4 py-2 bg-surface-strong hover:bg-border-strong disabled:bg-surface disabled:cursor-not-allowed text-text-primary rounded-lg transition-colors text-sm font-medium disabled:opacity-50"
                         >
                           Précédent
                         </button>
-                        <span className="px-4 py-2 text-sm text-white font-medium min-w-[80px] text-center">
+                        <span className="px-4 py-2 text-sm text-text-primary font-medium min-w-[80px] text-center">
                           Page {currentPage} / {totalPages}
                         </span>
                         <button
                           onClick={() => handlePageChange(currentPage + 1)}
                           disabled={currentPage === totalPages}
-                          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm font-medium disabled:opacity-50"
+                          className="px-4 py-2 bg-surface-strong hover:bg-border-strong disabled:bg-surface disabled:cursor-not-allowed text-text-primary rounded-lg transition-colors text-sm font-medium disabled:opacity-50"
                         >
                           Suivant
                         </button>

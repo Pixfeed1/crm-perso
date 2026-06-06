@@ -103,22 +103,22 @@ const RemindersModal = ({ onClose }) => {
       onClick={onClose}
     >
       <motion.div
-        className="bg-gray-900 border border-gray-700 rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col"
+        className="bg-surface-muted border border-border rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col"
         initial={{ scale: 0.9, y: 20 }}
         animate={{ scale: 1, y: 0 }}
         exit={{ scale: 0.9, y: 20 }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="p-4 sm:p-6 border-b border-gray-700">
+        <div className="p-4 sm:p-6 border-b border-border">
           <div className="flex justify-between items-center">
-            <h2 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+            <h2 className="text-xl sm:text-2xl font-bold text-text-primary flex items-center gap-2">
               <FiClock className="text-indigo-400" />
               Rappels
             </h2>
             <div className="flex items-center gap-2">
               <motion.button
-                className="px-3 py-2 sm:px-4 sm:py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg flex items-center gap-2 text-sm sm:text-base"
+                className="px-3 py-2 sm:px-4 sm:py-2 bg-accent hover:bg-indigo-700 text-white rounded-lg flex items-center gap-2 text-sm sm:text-base"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => setIsAddingReminder(true)}
@@ -127,7 +127,7 @@ const RemindersModal = ({ onClose }) => {
                 <span className="hidden sm:inline">Nouveau</span>
               </motion.button>
               <motion.button
-                className="p-2 hover:bg-gray-800 rounded-lg"
+                className="p-2 hover:bg-surface rounded-lg"
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={onClose}
@@ -142,8 +142,8 @@ const RemindersModal = ({ onClose }) => {
             <button
               className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm flex items-center gap-2 transition-colors ${
                 activeTab === 'all'
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                  ? 'bg-accent text-white'
+                  : 'bg-surface text-text-secondary hover:bg-surface-strong'
               }`}
               onClick={() => setActiveTab('all')}
             >
@@ -154,7 +154,7 @@ const RemindersModal = ({ onClose }) => {
               className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm flex items-center gap-2 transition-colors ${
                 activeTab === 'overdue'
                   ? 'bg-rose-600 text-white'
-                  : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                  : 'bg-surface text-text-secondary hover:bg-surface-strong'
               }`}
               onClick={() => setActiveTab('overdue')}
             >
@@ -170,7 +170,7 @@ const RemindersModal = ({ onClose }) => {
               className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm flex items-center gap-2 transition-colors ${
                 activeTab === 'upcoming'
                   ? 'bg-blue-600 text-white'
-                  : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                  : 'bg-surface text-text-secondary hover:bg-surface-strong'
               }`}
               onClick={() => setActiveTab('upcoming')}
             >
@@ -213,7 +213,7 @@ const RemindersModal = ({ onClose }) => {
             ) : reminders.length === 0 ? (
               <motion.div
                 key="empty"
-                className="flex flex-col items-center justify-center py-12 text-gray-400"
+                className="flex flex-col items-center justify-center py-12 text-text-muted"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}

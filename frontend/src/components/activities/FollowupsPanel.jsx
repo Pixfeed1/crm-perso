@@ -64,8 +64,8 @@ const FollowupsPanel = () => {
   if (items.length === 0) return null;
 
   return (
-    <div className="mb-6 bg-gray-800/30 border border-rose-500/30 rounded-2xl p-5">
-      <h3 className="text-lg font-semibold text-white flex items-center gap-2 mb-4">
+    <div className="mb-6 bg-surface/30 border border-rose-500/30 rounded-2xl p-5">
+      <h3 className="text-lg font-semibold text-text-primary flex items-center gap-2 mb-4">
         <FiBell className="text-rose-400" />
         À relancer
         <span className="text-xs px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300">{items.length}</span>
@@ -81,22 +81,22 @@ const FollowupsPanel = () => {
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, x: -20 }}
-                className="bg-gray-900/40 border border-gray-700/50 rounded-xl p-3 flex items-center gap-3"
+                className="bg-surface-muted/40 border border-border/50 rounded-xl p-3 flex items-center gap-3"
               >
-                <div className="w-9 h-9 rounded-lg bg-gray-700/50 text-gray-300 flex items-center justify-center flex-shrink-0">
+                <div className="w-9 h-9 rounded-lg bg-surface-strong/50 text-text-secondary flex items-center justify-center flex-shrink-0">
                   <Icon size={16} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm text-white font-medium flex items-center gap-1">
-                      <FiUser size={12} className="text-gray-400" />
+                    <span className="text-sm text-text-primary font-medium flex items-center gap-1">
+                      <FiUser size={12} className="text-text-muted" />
                       {it.contact_name || 'Contact'}
                     </span>
                     <span className="text-xs text-gray-500">
                       {it.contact_type === 'lead' ? 'Lead' : 'Client'}
                     </span>
                   </div>
-                  {it.notes && <p className="text-xs text-gray-400 truncate mt-0.5">{it.notes}</p>}
+                  {it.notes && <p className="text-xs text-text-muted truncate mt-0.5">{it.notes}</p>}
                   <span className={`text-xs ${overdue ? 'text-rose-300' : 'text-amber-300'}`}>
                     {overdue ? 'En retard — ' : 'Aujourd’hui — '}relance prévue le {formatDate(it.next_followup_date)}
                   </span>
@@ -114,7 +114,7 @@ const FollowupsPanel = () => {
                   <button
                     onClick={() => markDone(it.id)}
                     disabled={marking === it.id}
-                    className="px-3 py-2 bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-200 rounded-lg text-sm flex items-center gap-1 disabled:opacity-50"
+                    className="px-3 py-2 bg-accent/30 hover:bg-accent/50 text-indigo-200 rounded-lg text-sm flex items-center gap-1 disabled:opacity-50"
                   >
                     <FiCheck size={14} /> Faite
                   </button>

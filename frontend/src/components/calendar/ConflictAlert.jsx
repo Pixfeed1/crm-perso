@@ -15,7 +15,7 @@ const ConflictAlert = ({ conflicts, onClose, onViewAlternatives }) => {
       case 'low':
         return 'bg-blue-500/10 border-blue-500/50 text-blue-400';
       default:
-        return 'bg-gray-500/10 border-gray-500/50 text-gray-400';
+        return 'bg-gray-500/10 border-gray-500/50 text-text-muted';
     }
   };
 
@@ -60,7 +60,7 @@ const ConflictAlert = ({ conflicts, onClose, onViewAlternatives }) => {
               <h3 className="text-lg font-bold text-red-400">
                 {conflicts.length} Conflit{conflicts.length > 1 ? 's' : ''} détecté{conflicts.length > 1 ? 's' : ''}
               </h3>
-              <p className="text-sm text-gray-300">
+              <p className="text-sm text-text-secondary">
                 Cet événement chevauche d'autres événements existants
               </p>
             </div>
@@ -68,7 +68,7 @@ const ConflictAlert = ({ conflicts, onClose, onViewAlternatives }) => {
           {onClose && (
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-white transition-colors"
+              className="text-text-muted hover:text-text-primary transition-colors"
             >
               <FiX className="text-xl" />
             </button>
@@ -89,12 +89,12 @@ const ConflictAlert = ({ conflicts, onClose, onViewAlternatives }) => {
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
                     {getSeverityIcon(conflict.severity)}
-                    <h4 className="font-semibold text-white">{conflict.eventTitle}</h4>
+                    <h4 className="font-semibold text-text-primary">{conflict.eventTitle}</h4>
                   </div>
 
                   <div className="space-y-1 text-sm">
                     {conflict.eventStart && conflict.eventEnd && (
-                      <div className="flex items-center gap-2 text-gray-300">
+                      <div className="flex items-center gap-2 text-text-secondary">
                         <FiClock className="flex-shrink-0" />
                         <span>
                           {formatDateTime(conflict.eventStart)} - {formatDateTime(conflict.eventEnd).split(' ').pop()}
@@ -103,17 +103,17 @@ const ConflictAlert = ({ conflicts, onClose, onViewAlternatives }) => {
                     )}
 
                     {conflict.eventLocation && (
-                      <div className="flex items-center gap-2 text-gray-300">
+                      <div className="flex items-center gap-2 text-text-secondary">
                         <FiMapPin className="flex-shrink-0" />
                         <span>{conflict.eventLocation}</span>
                       </div>
                     )}
 
                     {conflict.overlapDuration && (
-                      <div className="mt-2 pt-2 border-t border-gray-600">
-                        <span className="text-xs text-gray-400">
+                      <div className="mt-2 pt-2 border-t border-border-strong">
+                        <span className="text-xs text-text-muted">
                           Chevauchement :{' '}
-                          <span className="font-semibold text-white">
+                          <span className="font-semibold text-text-primary">
                             {formatDuration(conflict.overlapDuration)}
                           </span>
                         {conflict.conflictType === 'location' && (
@@ -137,7 +137,7 @@ const ConflictAlert = ({ conflicts, onClose, onViewAlternatives }) => {
             onClick={onViewAlternatives}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            className="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
+            className="flex-1 px-4 py-2 bg-accent hover:bg-indigo-700 text-white rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
           >
             <FiClock />
             <span>Voir les créneaux disponibles</span>
@@ -147,7 +147,7 @@ const ConflictAlert = ({ conflicts, onClose, onViewAlternatives }) => {
             onClick={onClose}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-semibold transition-colors"
+            className="px-4 py-2 bg-surface-strong hover:bg-border-strong text-text-primary rounded-lg font-semibold transition-colors"
           >
             Continuer quand même
           </motion.button>

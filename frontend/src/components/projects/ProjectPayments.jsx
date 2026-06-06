@@ -153,10 +153,10 @@ const ProjectPayments = ({ project }) => {
   };
 
   return (
-    <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl p-5 mb-6">
+    <div className="bg-surface/30 backdrop-blur-sm rounded-xl p-5 mb-6">
       {/* En-tête */}
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-medium text-gray-200 flex items-center">
+        <h3 className="text-lg font-medium text-text-primary flex items-center">
           <FiDollarSign className="mr-2" />
           Paiements
         </h3>
@@ -197,11 +197,11 @@ const ProjectPayments = ({ project }) => {
           <div className="text-xs text-emerald-400 mt-1">{pourcentageEncaisse.toFixed(0)}%</div>
         </div>
 
-        <div className={`${montantRestant > 0 ? 'bg-amber-900/20 border-amber-500/30' : 'bg-gray-900/20 border-gray-500/30'} border rounded-lg p-3`}>
-          <div className={`text-xs ${montantRestant > 0 ? 'text-amber-300' : 'text-gray-300'} mb-1`}>
+        <div className={`${montantRestant > 0 ? 'bg-amber-900/20 border-amber-500/30' : 'bg-surface-muted/20 border-gray-500/30'} border rounded-lg p-3`}>
+          <div className={`text-xs ${montantRestant > 0 ? 'text-amber-300' : 'text-text-secondary'} mb-1`}>
             Montant restant
           </div>
-          <div className={`text-xl font-bold ${montantRestant > 0 ? 'text-amber-200' : 'text-gray-200'}`}>
+          <div className={`text-xl font-bold ${montantRestant > 0 ? 'text-amber-200' : 'text-text-primary'}`}>
             {formatCurrency(montantRestant)}
           </div>
           {montantRestant <= 0 && (
@@ -214,7 +214,7 @@ const ProjectPayments = ({ project }) => {
 
       {/* Barre de progression */}
       <div className="mb-4">
-        <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+        <div className="h-2 bg-surface-strong rounded-full overflow-hidden">
           <motion.div
             className="h-full bg-gradient-to-r from-purple-500 to-emerald-500"
             initial={{ width: 0 }}
@@ -232,14 +232,14 @@ const ProjectPayments = ({ project }) => {
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
             onSubmit={handleAddPayment}
-            className="bg-gray-900/50 border border-purple-500/30 rounded-lg p-4 mb-4"
+            className="bg-surface-muted/50 border border-purple-500/30 rounded-lg p-4 mb-4"
           >
             <div className="flex justify-between items-center mb-3">
               <h4 className="text-sm font-medium text-purple-300">Nouveau paiement</h4>
               <button
                 type="button"
                 onClick={() => setShowPaymentForm(false)}
-                className="text-gray-400 hover:text-white"
+                className="text-text-muted hover:text-text-primary"
               >
                 <FiX />
               </button>
@@ -247,7 +247,7 @@ const ProjectPayments = ({ project }) => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs text-gray-300 mb-1">Montant (€) *</label>
+                <label className="block text-xs text-text-secondary mb-1">Montant (€) *</label>
                 <input
                   type="number"
                   name="amount"
@@ -256,30 +256,30 @@ const ProjectPayments = ({ project }) => {
                   step="0.01"
                   min="0"
                   required
-                  className="w-full bg-gray-800 text-gray-100 border border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full bg-surface text-gray-100 border border-border-strong rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
                   placeholder="380.00"
                 />
               </div>
 
               <div>
-                <label className="block text-xs text-gray-300 mb-1">Date *</label>
+                <label className="block text-xs text-text-secondary mb-1">Date *</label>
                 <input
                   type="date"
                   name="payment_date"
                   value={paymentFormData.payment_date}
                   onChange={handlePaymentFormChange}
                   required
-                  className="w-full bg-gray-800 text-gray-100 border border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full bg-surface text-gray-100 border border-border-strong rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
                 />
               </div>
 
               <div>
-                <label className="block text-xs text-gray-300 mb-1">Moyen de paiement</label>
+                <label className="block text-xs text-text-secondary mb-1">Moyen de paiement</label>
                 <select
                   name="payment_method"
                   value={paymentFormData.payment_method}
                   onChange={handlePaymentFormChange}
-                  className="w-full bg-gray-800 text-gray-100 border border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full bg-surface text-gray-100 border border-border-strong rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
                 >
                   {paymentMethods.map(method => (
                     <option key={method.value} value={method.value}>
@@ -290,25 +290,25 @@ const ProjectPayments = ({ project }) => {
               </div>
 
               <div>
-                <label className="block text-xs text-gray-300 mb-1">Référence</label>
+                <label className="block text-xs text-text-secondary mb-1">Référence</label>
                 <input
                   type="text"
                   name="reference"
                   value={paymentFormData.reference}
                   onChange={handlePaymentFormChange}
-                  className="w-full bg-gray-800 text-gray-100 border border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full bg-surface text-gray-100 border border-border-strong rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
                   placeholder="Numéro de transaction..."
                 />
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-xs text-gray-300 mb-1">Notes</label>
+                <label className="block text-xs text-text-secondary mb-1">Notes</label>
                 <textarea
                   name="notes"
                   value={paymentFormData.notes}
                   onChange={handlePaymentFormChange}
                   rows={2}
-                  className="w-full bg-gray-800 text-gray-100 border border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full bg-surface text-gray-100 border border-border-strong rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
                   placeholder="Informations supplémentaires..."
                 />
               </div>
@@ -318,7 +318,7 @@ const ProjectPayments = ({ project }) => {
               <button
                 type="button"
                 onClick={() => setShowPaymentForm(false)}
-                className="px-3 py-1.5 rounded-lg border border-gray-600 text-gray-300 hover:bg-gray-700 text-sm"
+                className="px-3 py-1.5 rounded-lg border border-border-strong text-text-secondary hover:bg-surface-strong text-sm"
               >
                 Annuler
               </button>
@@ -336,11 +336,11 @@ const ProjectPayments = ({ project }) => {
 
       {/* Liste des paiements */}
       {loading ? (
-        <div className="text-center text-gray-400 py-4">
+        <div className="text-center text-text-muted py-4">
           Chargement des paiements...
         </div>
       ) : payments.length === 0 ? (
-        <div className="text-center text-gray-400 py-8">
+        <div className="text-center text-text-muted py-8">
           <FiDollarSign className="w-12 h-12 mx-auto mb-2 opacity-30" />
           <p>Aucun paiement enregistré</p>
           <p className="text-sm mt-1">Cliquez sur "Ajouter un paiement" pour commencer</p>
@@ -352,7 +352,7 @@ const ProjectPayments = ({ project }) => {
               key={payment.id}
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
-              className="bg-gray-900/30 border border-gray-700 rounded-lg p-3 flex items-center justify-between"
+              className="bg-surface-muted/30 border border-border rounded-lg p-3 flex items-center justify-between"
             >
               <div className="flex items-center gap-3 flex-1">
                 <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
@@ -361,18 +361,18 @@ const ProjectPayments = ({ project }) => {
 
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    <span className="font-semibold text-white">
+                    <span className="font-semibold text-text-primary">
                       {formatCurrency(payment.amount)}
                     </span>
-                    <span className="text-xs text-gray-400">•</span>
-                    <span className="text-sm text-gray-400 flex items-center">
+                    <span className="text-xs text-text-muted">•</span>
+                    <span className="text-sm text-text-muted flex items-center">
                       <FiCalendar className="w-3 h-3 mr-1" />
                       {formatDate(payment.payment_date)}
                     </span>
                     {payment.payment_method && (
                       <>
-                        <span className="text-xs text-gray-400">•</span>
-                        <span className="text-xs text-gray-400 flex items-center">
+                        <span className="text-xs text-text-muted">•</span>
+                        <span className="text-xs text-text-muted flex items-center">
                           <FiCreditCard className="w-3 h-3 mr-1" />
                           {paymentMethods.find(m => m.value === payment.payment_method)?.label || payment.payment_method}
                         </span>
@@ -387,7 +387,7 @@ const ProjectPayments = ({ project }) => {
                   )}
 
                   {payment.notes && (
-                    <div className="text-xs text-gray-400 mt-1">
+                    <div className="text-xs text-text-muted mt-1">
                       {payment.notes}
                     </div>
                   )}
@@ -396,7 +396,7 @@ const ProjectPayments = ({ project }) => {
 
               <button
                 onClick={() => handleDeletePayment(payment.id)}
-                className="text-gray-400 hover:text-rose-400 p-2 rounded transition-colors"
+                className="text-text-muted hover:text-rose-400 p-2 rounded transition-colors"
                 title="Supprimer"
               >
                 <FiTrash2 className="w-4 h-4" />

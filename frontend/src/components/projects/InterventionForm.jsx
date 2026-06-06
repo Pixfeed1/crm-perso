@@ -31,7 +31,7 @@ const InterventionForm = ({ intervention = {}, onSave, onCancel }) => {
 
   // Options de priorité
   const priorityOptions = [
-    { value: 'low', label: 'Basse', color: 'bg-gray-600 text-gray-200' },
+    { value: 'low', label: 'Basse', color: 'bg-border-strong text-text-primary' },
     { value: 'normal', label: 'Normale', color: 'bg-blue-600 text-blue-100' },
     { value: 'high', label: 'Haute', color: 'bg-amber-600 text-amber-100' },
     { value: 'urgent', label: 'Urgente', color: 'bg-rose-600 text-rose-100' }
@@ -95,7 +95,7 @@ const InterventionForm = ({ intervention = {}, onSave, onCancel }) => {
   };
 
   return (
-    <div className="bg-gray-900/40 rounded-lg p-5 w-full max-w-full">
+    <div className="bg-surface-muted/40 rounded-lg p-5 w-full max-w-full">
       <h4 className="text-lg font-medium text-purple-300 mb-4">
         {intervention.id ? 'Modifier l\'intervention' : 'Nouvelle intervention'}
       </h4>
@@ -103,7 +103,7 @@ const InterventionForm = ({ intervention = {}, onSave, onCancel }) => {
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Titre */}
         <div>
-          <label htmlFor="intervention-title" className="block text-sm font-medium text-gray-300 mb-1">
+          <label htmlFor="intervention-title" className="block text-sm font-medium text-text-secondary mb-1">
             Titre<span className="text-rose-500 ml-1">*</span>
           </label>
           <input
@@ -112,8 +112,8 @@ const InterventionForm = ({ intervention = {}, onSave, onCancel }) => {
             name="title"
             value={formData.title}
             onChange={handleInputChange}
-            className={`w-full bg-gray-800/50 text-white border ${
-              errors.title ? 'border-rose-500' : 'border-gray-700'
+            className={`w-full bg-surface/50 text-text-primary border ${
+              errors.title ? 'border-rose-500' : 'border-border'
             } rounded-lg px-4 py-2 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
             placeholder="Ex: Mise à jour CMS / plugin sécurité"
           />
@@ -130,7 +130,7 @@ const InterventionForm = ({ intervention = {}, onSave, onCancel }) => {
 
         {/* Type d'intervention */}
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
+          <label className="block text-sm font-medium text-text-secondary mb-2">
             Type d'intervention
           </label>
           <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
@@ -140,7 +140,7 @@ const InterventionForm = ({ intervention = {}, onSave, onCancel }) => {
                 className={`py-2 px-3 rounded-lg cursor-pointer transition-colors text-center text-sm flex flex-col items-center gap-1 ${
                   formData.type === option.value
                     ? 'bg-purple-600 text-white'
-                    : 'bg-gray-800/50 text-gray-400 hover:bg-gray-700/50'
+                    : 'bg-surface/50 text-text-muted hover:bg-surface-strong/50'
                 }`}
               >
                 <input
@@ -160,7 +160,7 @@ const InterventionForm = ({ intervention = {}, onSave, onCancel }) => {
 
         {/* Description */}
         <div>
-          <label htmlFor="intervention-description" className="block text-sm font-medium text-gray-300 mb-1">
+          <label htmlFor="intervention-description" className="block text-sm font-medium text-text-secondary mb-1">
             Description
           </label>
           <textarea
@@ -169,7 +169,7 @@ const InterventionForm = ({ intervention = {}, onSave, onCancel }) => {
             value={formData.description}
             onChange={handleInputChange}
             rows={2}
-            className="w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg px-4 py-2 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            className="w-full bg-surface/50 text-text-primary border border-border rounded-lg px-4 py-2 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             placeholder="Détails de l'intervention..."
           />
         </div>
@@ -177,7 +177,7 @@ const InterventionForm = ({ intervention = {}, onSave, onCancel }) => {
         {/* Date et durée */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label htmlFor="scheduled-date" className="block text-sm font-medium text-gray-300 mb-1">
+            <label htmlFor="scheduled-date" className="block text-sm font-medium text-text-secondary mb-1">
               Date planifiée
             </label>
             <input
@@ -186,12 +186,12 @@ const InterventionForm = ({ intervention = {}, onSave, onCancel }) => {
               name="scheduled_date"
               value={formData.scheduled_date}
               onChange={handleInputChange}
-              className="w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="w-full bg-surface/50 text-text-primary border border-border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             />
           </div>
 
           <div>
-            <label htmlFor="duration" className="block text-sm font-medium text-gray-300 mb-1">
+            <label htmlFor="duration" className="block text-sm font-medium text-text-secondary mb-1">
               Durée (minutes)
             </label>
             <input
@@ -202,7 +202,7 @@ const InterventionForm = ({ intervention = {}, onSave, onCancel }) => {
               onChange={handleInputChange}
               min="0"
               step="5"
-              className="w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg px-4 py-2 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="w-full bg-surface/50 text-text-primary border border-border rounded-lg px-4 py-2 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               placeholder="30"
             />
           </div>
@@ -211,7 +211,7 @@ const InterventionForm = ({ intervention = {}, onSave, onCancel }) => {
         {/* Statut et Priorité */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label htmlFor="status" className="block text-sm font-medium text-gray-300 mb-1">
+            <label htmlFor="status" className="block text-sm font-medium text-text-secondary mb-1">
               Statut
             </label>
             <select
@@ -219,7 +219,7 @@ const InterventionForm = ({ intervention = {}, onSave, onCancel }) => {
               name="status"
               value={formData.status}
               onChange={handleInputChange}
-              className="w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="w-full bg-surface/50 text-text-primary border border-border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             >
               {statusOptions.map(option => (
                 <option key={option.value} value={option.value}>
@@ -230,7 +230,7 @@ const InterventionForm = ({ intervention = {}, onSave, onCancel }) => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-text-secondary mb-2">
               Priorité
             </label>
             <div className="grid grid-cols-4 gap-2">
@@ -240,7 +240,7 @@ const InterventionForm = ({ intervention = {}, onSave, onCancel }) => {
                   className={`py-2 rounded-lg cursor-pointer transition-colors text-center text-sm ${
                     formData.priority === option.value
                       ? option.color
-                      : 'bg-gray-800/50 text-gray-400 hover:bg-gray-700/50'
+                      : 'bg-surface/50 text-text-muted hover:bg-surface-strong/50'
                   }`}
                 >
                   <input
@@ -260,7 +260,7 @@ const InterventionForm = ({ intervention = {}, onSave, onCancel }) => {
 
         {/* Technicien */}
         <div>
-          <label htmlFor="technician" className="block text-sm font-medium text-gray-300 mb-1">
+          <label htmlFor="technician" className="block text-sm font-medium text-text-secondary mb-1">
             Technicien
           </label>
           <input
@@ -269,14 +269,14 @@ const InterventionForm = ({ intervention = {}, onSave, onCancel }) => {
             name="technician"
             value={formData.technician}
             onChange={handleInputChange}
-            className="w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg px-4 py-2 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            className="w-full bg-surface/50 text-text-primary border border-border rounded-lg px-4 py-2 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             placeholder="Nom du technicien"
           />
         </div>
 
         {/* Notes */}
         <div>
-          <label htmlFor="notes" className="block text-sm font-medium text-gray-300 mb-1">
+          <label htmlFor="notes" className="block text-sm font-medium text-text-secondary mb-1">
             Notes internes
           </label>
           <textarea
@@ -285,7 +285,7 @@ const InterventionForm = ({ intervention = {}, onSave, onCancel }) => {
             value={formData.notes}
             onChange={handleInputChange}
             rows={2}
-            className="w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg px-4 py-2 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            className="w-full bg-surface/50 text-text-primary border border-border rounded-lg px-4 py-2 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             placeholder="Notes internes (non visibles dans le rapport client)..."
           />
         </div>
@@ -295,7 +295,7 @@ const InterventionForm = ({ intervention = {}, onSave, onCancel }) => {
           <motion.button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 rounded-lg border-2 border-white/30 text-white hover:bg-white/10 hover:border-white/40 font-medium transition-all"
+            className="px-4 py-2 rounded-lg border-2 border-overlay/30 text-text-primary hover:bg-overlay/10 hover:border-overlay/40 font-medium transition-all"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             disabled={submitting}

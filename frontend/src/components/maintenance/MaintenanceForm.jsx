@@ -130,7 +130,7 @@ const MaintenanceForm = ({ contract = {}, onSave, onCancel }) => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 20 }}
-      className="bg-gray-800/30 border border-gray-700 rounded-2xl p-6"
+      className="bg-surface/30 border border-border rounded-2xl p-6"
     >
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-300 to-purple-300">
@@ -140,7 +140,7 @@ const MaintenanceForm = ({ contract = {}, onSave, onCancel }) => {
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
           onClick={onCancel}
-          className="text-gray-400 hover:text-white transition-colors"
+          className="text-text-muted hover:text-text-primary transition-colors"
         >
           <FiX className="text-xl" />
         </motion.button>
@@ -149,17 +149,17 @@ const MaintenanceForm = ({ contract = {}, onSave, onCancel }) => {
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Section : Le contrat */}
         <div className="space-y-4">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-3 pb-2 border-b border-gray-700/60">Le contrat</h3>
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-text-muted mb-3 pb-2 border-b border-border/60">Le contrat</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Client */}
             <div className="min-w-0">
-              <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">Client</label>
+              <label className="block text-text-secondary mb-2 font-medium whitespace-nowrap">Client</label>
               <div className="relative">
                 <select
                   name="client_id"
                   value={formData.client_id}
                   onChange={handleInputChange}
-                  className="w-full min-w-0 h-11 box-border px-4 pr-10 appearance-none bg-gray-900/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full min-w-0 h-11 box-border px-4 pr-10 appearance-none bg-surface-muted/50 border border-border rounded-lg text-text-primary focus:outline-none focus:border-indigo-500"
                   disabled={loadingClients}
                 >
                   <option value="">{loadingClients ? 'Chargement...' : 'Sélectionner un client'}</option>
@@ -167,13 +167,13 @@ const MaintenanceForm = ({ contract = {}, onSave, onCancel }) => {
                     <option key={client.id} value={client.id}>{client.name}</option>
                   ))}
                 </select>
-                <FiChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                <FiChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
               </div>
             </div>
 
             {/* Nom du site / projet */}
             <div className="min-w-0">
-              <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">
+              <label className="block text-text-secondary mb-2 font-medium whitespace-nowrap">
                 Nom du site / projet <span className="text-rose-400">*</span>
               </label>
               <input
@@ -181,9 +181,9 @@ const MaintenanceForm = ({ contract = {}, onSave, onCancel }) => {
                 name="site_name"
                 value={formData.site_name}
                 onChange={handleInputChange}
-                className={`w-full min-w-0 h-11 box-border px-4 bg-gray-900/50 border ${
-                  errors.site_name ? 'border-rose-500' : 'border-gray-700'
-                } rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500`}
+                className={`w-full min-w-0 h-11 box-border px-4 bg-surface-muted/50 border ${
+                  errors.site_name ? 'border-rose-500' : 'border-border'
+                } rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-indigo-500`}
                 placeholder="Nom du site / projet"
               />
               {errors.site_name && <p className="mt-1 text-rose-400 text-sm">{errors.site_name}</p>}
@@ -191,92 +191,92 @@ const MaintenanceForm = ({ contract = {}, onSave, onCancel }) => {
 
             {/* Formule */}
             <div className="min-w-0">
-              <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">Formule</label>
+              <label className="block text-text-secondary mb-2 font-medium whitespace-nowrap">Formule</label>
               <div className="relative">
                 <select
                   name="plan"
                   value={formData.plan}
                   onChange={handlePlanChange}
-                  className="w-full min-w-0 h-11 box-border px-4 pr-10 appearance-none bg-gray-900/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full min-w-0 h-11 box-border px-4 pr-10 appearance-none bg-surface-muted/50 border border-border rounded-lg text-text-primary focus:outline-none focus:border-indigo-500"
                 >
                   <option value="">— Choisir —</option>
                   {MAINTENANCE_PLANS.map(p => (
                     <option key={p.value} value={p.value}>{p.value}</option>
                   ))}
                 </select>
-                <FiChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                <FiChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
               </div>
             </div>
 
             {/* Montant mensuel */}
             <div className="min-w-0">
-              <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">Montant mensuel</label>
+              <label className="block text-text-secondary mb-2 font-medium whitespace-nowrap">Montant mensuel</label>
               <div className="relative">
                 <input
                   type="number"
                   name="monthly_amount"
                   value={formData.monthly_amount}
                   onChange={handleInputChange}
-                  className="w-full min-w-0 h-11 box-border px-4 pl-8 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                  className="w-full min-w-0 h-11 box-border px-4 pl-8 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-indigo-500"
                   placeholder="0"
                   min="0"
                   step="0.01"
                 />
-                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">€</span>
+                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-text-muted">€</span>
               </div>
             </div>
 
             {/* Date de début */}
             <div className="min-w-0">
-              <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">Date de début</label>
+              <label className="block text-text-secondary mb-2 font-medium whitespace-nowrap">Date de début</label>
               <input
                 type="date"
                 name="contract_start_date"
                 value={formData.contract_start_date}
                 onChange={handleInputChange}
-                className="w-full min-w-0 h-11 box-border px-4 bg-gray-900/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+                className="w-full min-w-0 h-11 box-border px-4 bg-surface-muted/50 border border-border rounded-lg text-text-primary focus:outline-none focus:border-indigo-500"
               />
             </div>
 
             {/* Statut */}
             <div className="min-w-0">
-              <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">Statut</label>
+              <label className="block text-text-secondary mb-2 font-medium whitespace-nowrap">Statut</label>
               <div className="relative">
                 <select
                   name="status"
                   value={formData.status}
                   onChange={handleInputChange}
-                  className="w-full min-w-0 h-11 box-border px-4 pr-10 appearance-none bg-gray-900/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full min-w-0 h-11 box-border px-4 pr-10 appearance-none bg-surface-muted/50 border border-border rounded-lg text-text-primary focus:outline-none focus:border-indigo-500"
                 >
                   {statusOptions.map(option => (
                     <option key={option.value} value={option.value}>{option.label}</option>
                   ))}
                 </select>
-                <FiChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                <FiChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
               </div>
             </div>
 
             {/* Périodicité du rapport */}
             <div className="min-w-0">
-              <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">Périodicité du rapport</label>
+              <label className="block text-text-secondary mb-2 font-medium whitespace-nowrap">Périodicité du rapport</label>
               <div className="relative">
                 <select
                   name="report_frequency"
                   value={formData.report_frequency}
                   onChange={handleInputChange}
-                  className="w-full min-w-0 h-11 box-border px-4 pr-10 appearance-none bg-gray-900/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full min-w-0 h-11 box-border px-4 pr-10 appearance-none bg-surface-muted/50 border border-border rounded-lg text-text-primary focus:outline-none focus:border-indigo-500"
                 >
                   <option value="mensuel">Mensuel</option>
                   <option value="trimestriel">Trimestriel</option>
                   <option value="aucun">Aucun</option>
                 </select>
-                <FiChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                <FiChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
               </div>
             </div>
 
             {/* Jour de prélèvement */}
             <div className="min-w-0">
-              <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">Jour de prélèvement</label>
+              <label className="block text-text-secondary mb-2 font-medium whitespace-nowrap">Jour de prélèvement</label>
               <input
                 type="number"
                 name="billing_day"
@@ -284,7 +284,7 @@ const MaintenanceForm = ({ contract = {}, onSave, onCancel }) => {
                 onChange={handleInputChange}
                 min="1"
                 max="28"
-                className="w-full min-w-0 h-11 box-border px-4 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                className="w-full min-w-0 h-11 box-border px-4 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-indigo-500"
                 placeholder="1"
               />
             </div>
@@ -293,82 +293,82 @@ const MaintenanceForm = ({ contract = {}, onSave, onCancel }) => {
 
         {/* Section : Le site (technique) */}
         <div className="space-y-4">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-3 pb-2 border-b border-gray-700/60">Le site (technique)</h3>
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-text-muted mb-3 pb-2 border-b border-border/60">Le site (technique)</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* URL du site */}
             <div className="min-w-0">
-              <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">URL du site</label>
+              <label className="block text-text-secondary mb-2 font-medium whitespace-nowrap">URL du site</label>
               <input
                 type="text"
                 name="site_url"
                 value={formData.site_url}
                 onChange={handleInputChange}
-                className="w-full min-w-0 h-11 box-border px-4 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                className="w-full min-w-0 h-11 box-border px-4 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-indigo-500"
                 placeholder="https://monsite.com"
               />
             </div>
 
             {/* URL Admin */}
             <div className="min-w-0">
-              <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">URL Admin</label>
+              <label className="block text-text-secondary mb-2 font-medium whitespace-nowrap">URL Admin</label>
               <input
                 type="text"
                 name="admin_url"
                 value={formData.admin_url}
                 onChange={handleInputChange}
-                className="w-full min-w-0 h-11 box-border px-4 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                className="w-full min-w-0 h-11 box-border px-4 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-indigo-500"
                 placeholder="https://monsite.com/admin"
               />
             </div>
 
             {/* Version CMS / App */}
             <div className="min-w-0">
-              <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">Version CMS / App</label>
+              <label className="block text-text-secondary mb-2 font-medium whitespace-nowrap">Version CMS / App</label>
               <input
                 type="text"
                 name="wordpress_version"
                 value={formData.wordpress_version}
                 onChange={handleInputChange}
-                className="w-full min-w-0 h-11 box-border px-4 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                className="w-full min-w-0 h-11 box-border px-4 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-indigo-500"
                 placeholder="6.4.2"
               />
             </div>
 
             {/* Version PHP */}
             <div className="min-w-0">
-              <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">Version PHP</label>
+              <label className="block text-text-secondary mb-2 font-medium whitespace-nowrap">Version PHP</label>
               <input
                 type="text"
                 name="php_version"
                 value={formData.php_version}
                 onChange={handleInputChange}
-                className="w-full min-w-0 h-11 box-border px-4 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                className="w-full min-w-0 h-11 box-border px-4 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-indigo-500"
                 placeholder="8.2"
               />
             </div>
 
             {/* Hébergeur */}
             <div className="min-w-0">
-              <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">Hébergeur</label>
+              <label className="block text-text-secondary mb-2 font-medium whitespace-nowrap">Hébergeur</label>
               <input
                 type="text"
                 name="hosting_provider"
                 value={formData.hosting_provider}
                 onChange={handleInputChange}
-                className="w-full min-w-0 h-11 box-border px-4 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                className="w-full min-w-0 h-11 box-border px-4 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-indigo-500"
                 placeholder="OVH, o2switch..."
               />
             </div>
 
             {/* Nb extensions */}
             <div className="min-w-0">
-              <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">Nb extensions</label>
+              <label className="block text-text-secondary mb-2 font-medium whitespace-nowrap">Nb extensions</label>
               <input
                 type="number"
                 name="plugins_count"
                 value={formData.plugins_count}
                 onChange={handleInputChange}
-                className="w-full min-w-0 h-11 box-border px-4 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                className="w-full min-w-0 h-11 box-border px-4 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-indigo-500"
                 placeholder="0"
                 min="0"
               />
@@ -378,17 +378,17 @@ const MaintenanceForm = ({ contract = {}, onSave, onCancel }) => {
 
         {/* Section : Métriques (mises à jour automatiquement) */}
         <div className="space-y-4">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3 pb-2 border-b border-gray-700/60">Métriques (mises à jour automatiquement)</h3>
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3 pb-2 border-b border-border/60">Métriques (mises à jour automatiquement)</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* PageSpeed Mobile */}
             <div className="min-w-0">
-              <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">PageSpeed Mobile</label>
+              <label className="block text-text-secondary mb-2 font-medium whitespace-nowrap">PageSpeed Mobile</label>
               <input
                 type="number"
                 name="pagespeed_mobile"
                 value={formData.pagespeed_mobile}
                 onChange={handleInputChange}
-                className="w-full min-w-0 h-11 box-border px-4 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                className="w-full min-w-0 h-11 box-border px-4 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-indigo-500"
                 placeholder="0-100"
                 min="0"
                 max="100"
@@ -397,13 +397,13 @@ const MaintenanceForm = ({ contract = {}, onSave, onCancel }) => {
 
             {/* PageSpeed Desktop */}
             <div className="min-w-0">
-              <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">PageSpeed Desktop</label>
+              <label className="block text-text-secondary mb-2 font-medium whitespace-nowrap">PageSpeed Desktop</label>
               <input
                 type="number"
                 name="pagespeed_desktop"
                 value={formData.pagespeed_desktop}
                 onChange={handleInputChange}
-                className="w-full min-w-0 h-11 box-border px-4 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                className="w-full min-w-0 h-11 box-border px-4 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-indigo-500"
                 placeholder="0-100"
                 min="0"
                 max="100"
@@ -414,13 +414,13 @@ const MaintenanceForm = ({ contract = {}, onSave, onCancel }) => {
 
         {/* Notes */}
         <div>
-          <label className="block text-gray-300 mb-2 font-medium whitespace-nowrap">Notes</label>
+          <label className="block text-text-secondary mb-2 font-medium whitespace-nowrap">Notes</label>
           <textarea
             name="notes"
             value={formData.notes}
             onChange={handleInputChange}
             rows={3}
-            className="w-full px-4 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 resize-none"
+            className="w-full px-4 py-2 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-indigo-500 resize-none"
             placeholder="Notes internes sur ce contrat..."
           />
         </div>
@@ -432,7 +432,7 @@ const MaintenanceForm = ({ contract = {}, onSave, onCancel }) => {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={onCancel}
-            className="flex-1 px-4 py-2.5 border-2 border-white/30 text-white hover:bg-white/10 hover:border-white/40 rounded-lg font-medium transition-all"
+            className="flex-1 px-4 py-2.5 border-2 border-overlay/30 text-text-primary hover:bg-overlay/10 hover:border-overlay/40 rounded-lg font-medium transition-all"
           >
             Annuler
           </motion.button>

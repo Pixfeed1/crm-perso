@@ -374,12 +374,12 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
 
   const renderInfoStep = () => (
     <div className="space-y-6 animate-fadeIn">
-      <h3 className="text-lg font-semibold text-white mb-4">Informations générales</h3>
+      <h3 className="text-lg font-semibold text-text-primary mb-4">Informations générales</h3>
 
       {/* Titre et Projet */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-1">
+          <label className="block text-sm font-medium text-text-secondary mb-1">
             Titre du devis
           </label>
           <input
@@ -387,18 +387,18 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
             value={formData.title}
             onChange={(e) => setFormData({ ...formData, title: e.target.value })}
             placeholder="Ex: Site web e-commerce, Refonte graphique..."
-            className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+            className="w-full px-4 py-2 bg-surface/50 border border-border rounded-lg text-text-primary focus:outline-none focus:border-indigo-500"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-1">
+          <label className="block text-sm font-medium text-text-secondary mb-1">
             Projet associé
           </label>
           <select
             value={formData.project_id || ''}
             onChange={(e) => setFormData({ ...formData, project_id: e.target.value ? parseInt(e.target.value) : null })}
-            className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+            className="w-full px-4 py-2 bg-surface/50 border border-border rounded-lg text-text-primary focus:outline-none focus:border-indigo-500"
           >
             <option value="">-- Aucun projet --</option>
             {projects.map(project => (
@@ -412,17 +412,17 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
 
       {/* Informations client */}
       <div className="space-y-4 mt-6">
-        <h4 className="text-md font-semibold text-white">Informations client</h4>
+        <h4 className="text-md font-semibold text-text-primary">Informations client</h4>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-text-secondary mb-1">
               Sélectionner un client
             </label>
             <select
               value={formData.client_id}
               onChange={handleClientChange}
-              className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+              className="w-full px-4 py-2 bg-surface/50 border border-border rounded-lg text-text-primary focus:outline-none focus:border-indigo-500"
             >
               <option value="">-- Nouveau client --</option>
               {clients.map(client => (
@@ -434,7 +434,7 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-text-secondary mb-1">
               Nom du client <span className="text-red-500">*</span>
             </label>
             <input
@@ -442,13 +442,13 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
               value={formData.client_name}
               onChange={(e) => setFormData({ ...formData, client_name: e.target.value })}
               placeholder="Nom ou raison sociale"
-              className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+              className="w-full px-4 py-2 bg-surface/50 border border-border rounded-lg text-text-primary focus:outline-none focus:border-indigo-500"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-text-secondary mb-1">
               Email
             </label>
             <input
@@ -456,12 +456,12 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
               value={formData.client_email}
               onChange={(e) => setFormData({ ...formData, client_email: e.target.value })}
               placeholder="email@example.com"
-              className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+              className="w-full px-4 py-2 bg-surface/50 border border-border rounded-lg text-text-primary focus:outline-none focus:border-indigo-500"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-text-secondary mb-1">
               SIRET
             </label>
             <input
@@ -469,12 +469,12 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
               value={formData.client_siret}
               onChange={(e) => setFormData({ ...formData, client_siret: e.target.value })}
               placeholder="123 456 789 00010"
-              className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+              className="w-full px-4 py-2 bg-surface/50 border border-border rounded-lg text-text-primary focus:outline-none focus:border-indigo-500"
             />
           </div>
 
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-text-secondary mb-1">
               Adresse
             </label>
             <textarea
@@ -482,7 +482,7 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
               onChange={(e) => setFormData({ ...formData, client_address: e.target.value })}
               rows={3}
               placeholder="Adresse complète du client"
-              className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+              className="w-full px-4 py-2 bg-surface/50 border border-border rounded-lg text-text-primary focus:outline-none focus:border-indigo-500"
             />
           </div>
         </div>
@@ -496,11 +496,11 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
     return (
       <div className="space-y-6 animate-fadeIn">
         <div className="flex justify-between items-center">
-          <h3 className="text-lg font-semibold text-white">Articles / Services</h3>
+          <h3 className="text-lg font-semibold text-text-primary">Articles / Services</h3>
           <button
             type="button"
             onClick={addItem}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors text-sm shadow-lg"
+            className="flex items-center gap-2 px-4 py-2 bg-accent hover:bg-indigo-700 text-white rounded-lg transition-colors text-sm shadow-lg"
           >
             <FiPlus className="w-4 h-4" />
             Ajouter un produit
@@ -525,7 +525,7 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
                         placeholder="Ajoutez des précisions, conditions, notes..."
                         value={item.description}
                         onChange={(e) => handleItemChange(index, 'description', e.target.value)}
-                        className="w-full px-3 py-2 bg-gray-800/30 border border-amber-700/30 rounded text-amber-100 text-sm focus:outline-none focus:border-amber-500 min-h-[50px] placeholder-amber-700/50"
+                        className="w-full px-3 py-2 bg-surface/30 border border-amber-700/30 rounded text-amber-100 text-sm focus:outline-none focus:border-amber-500 min-h-[50px] placeholder-amber-700/50"
                         rows={2}
                       />
                     </div>
@@ -542,20 +542,20 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
               ) : (
                 // Ligne produit (avec quantité et prix)
                 <>
-                  <div className="grid grid-cols-12 gap-3 items-start bg-gray-800/30 p-4 rounded-lg border border-gray-700/50 hover:border-gray-600 transition-colors">
+                  <div className="grid grid-cols-12 gap-3 items-start bg-surface/30 p-4 rounded-lg border border-border/50 hover:border-border-strong transition-colors">
                     <div className="col-span-12 sm:col-span-5">
-                      <label className="block text-xs font-medium text-gray-400 mb-1">Description</label>
+                      <label className="block text-xs font-medium text-text-muted mb-1">Description</label>
                       <input
                         type="text"
                         placeholder="Ex: Développement site web"
                         value={item.description}
                         onChange={(e) => handleItemChange(index, 'description', e.target.value)}
-                        className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-white text-sm focus:outline-none focus:border-indigo-500"
+                        className="w-full px-3 py-2 bg-surface border border-border rounded text-text-primary text-sm focus:outline-none focus:border-indigo-500"
                         required
                       />
                     </div>
                     <div className="col-span-5 sm:col-span-3">
-                      <label className="block text-xs font-medium text-gray-400 mb-1">Quantité</label>
+                      <label className="block text-xs font-medium text-text-muted mb-1">Quantité</label>
                       <input
                         type="number"
                         placeholder="1"
@@ -563,12 +563,12 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
                         onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
                         min="0"
                         step="0.01"
-                        className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-white text-sm focus:outline-none focus:border-indigo-500"
+                        className="w-full px-3 py-2 bg-surface border border-border rounded text-text-primary text-sm focus:outline-none focus:border-indigo-500"
                         required
                       />
                     </div>
                     <div className="col-span-5 sm:col-span-3">
-                      <label className="block text-xs font-medium text-gray-400 mb-1">Prix unitaire (€)</label>
+                      <label className="block text-xs font-medium text-text-muted mb-1">Prix unitaire (€)</label>
                       <input
                         type="number"
                         placeholder="0.00"
@@ -576,7 +576,7 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
                         onChange={(e) => handleItemChange(index, 'unit_price', e.target.value)}
                         min="0"
                         step="0.01"
-                        className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-white text-sm focus:outline-none focus:border-indigo-500"
+                        className="w-full px-3 py-2 bg-surface border border-border rounded text-text-primary text-sm focus:outline-none focus:border-indigo-500"
                         required
                       />
                     </div>
@@ -603,8 +603,8 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
                         <FiEdit className="w-3 h-3" />
                         <span>Ajouter une note</span>
                       </button>
-                      <div className="text-sm text-gray-400">
-                        Total: <span className="text-white font-semibold">{((item.quantity || 0) * (item.unit_price || 0)).toFixed(2)} €</span>
+                      <div className="text-sm text-text-muted">
+                        Total: <span className="text-text-primary font-semibold">{((item.quantity || 0) * (item.unit_price || 0)).toFixed(2)} €</span>
                       </div>
                     </div>
                   </div>
@@ -615,17 +615,17 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
         </div>
 
         {/* Remise */}
-        <div className="bg-gray-800/30 border border-gray-700/50 rounded-lg p-4 space-y-4">
-          <h4 className="text-md font-medium text-white">Remise</h4>
+        <div className="bg-surface/30 border border-border/50 rounded-lg p-4 space-y-4">
+          <h4 className="text-md font-medium text-text-primary">Remise</h4>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-text-secondary mb-1">
                 Type de remise
               </label>
               <select
                 value={formData.discount_type}
                 onChange={(e) => setFormData({ ...formData, discount_type: e.target.value })}
-                className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+                className="w-full px-4 py-2 bg-surface/50 border border-border rounded-lg text-text-primary focus:outline-none focus:border-indigo-500"
               >
                 <option value="none">Aucune</option>
                 <option value="percent">Pourcentage</option>
@@ -635,7 +635,7 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
 
             {formData.discount_type !== 'none' && (
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-text-secondary mb-1">
                   {formData.discount_type === 'percent' ? 'Pourcentage (%)' : 'Montant (€)'}
                 </label>
                 <input
@@ -644,7 +644,7 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
                   onChange={(e) => setFormData({ ...formData, discount_value: parseFloat(e.target.value) || 0 })}
                   min="0"
                   step="0.01"
-                  className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full px-4 py-2 bg-surface/50 border border-border rounded-lg text-text-primary focus:outline-none focus:border-indigo-500"
                 />
               </div>
             )}
@@ -652,17 +652,17 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
         </div>
 
         {/* TVA */}
-        <div className="bg-gray-800/30 border border-gray-700/50 rounded-lg p-4 space-y-4">
-          <h4 className="text-md font-medium text-white">TVA</h4>
+        <div className="bg-surface/30 border border-border/50 rounded-lg p-4 space-y-4">
+          <h4 className="text-md font-medium text-text-primary">TVA</h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-text-secondary mb-1">
                 Régime TVA
               </label>
               <select
                 value={formData.tva_regime}
                 onChange={handleTvaRegimeChange}
-                className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+                className="w-full px-4 py-2 bg-surface/50 border border-border rounded-lg text-text-primary focus:outline-none focus:border-indigo-500"
               >
                 {tvaRegimes.grouped && (
                   <>
@@ -743,7 +743,7 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
                 const currentRegime = tvaRegimes.regimes?.find(r => r.code === formData.tva_regime) ||
                                     tvaRegimes.find(r => r.code === formData.tva_regime);
                 return currentRegime?.mention_legale && (
-                  <p className="text-xs text-gray-400 mt-1 italic">
+                  <p className="text-xs text-text-muted mt-1 italic">
                     Mention légale : {currentRegime.mention_legale}
                   </p>
                 );
@@ -752,10 +752,10 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
 
             {formData.tva_applicable && (
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-text-secondary mb-1">
                   Taux TVA
                 </label>
-                <div className="px-4 py-2 bg-gray-700/50 border border-gray-600 rounded-lg text-white">
+                <div className="px-4 py-2 bg-surface-strong/50 border border-border-strong rounded-lg text-text-primary">
                   {formData.tva_rate}%
                 </div>
               </div>
@@ -766,27 +766,27 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
         {/* Mini récapitulatif */}
         <div className="bg-indigo-900/20 border border-indigo-500/30 rounded-lg p-4 space-y-2">
           <div className="flex justify-between text-sm">
-            <span className="text-gray-300">Sous-total</span>
-            <span className="text-white">{totals.subtotal.toFixed(2)} €</span>
+            <span className="text-text-secondary">Sous-total</span>
+            <span className="text-text-primary">{totals.subtotal.toFixed(2)} €</span>
           </div>
           {formData.discount_type !== 'none' && totals.discount_amount > 0 && (
             <div className="flex justify-between text-sm">
-              <span className="text-gray-300">Remise</span>
+              <span className="text-text-secondary">Remise</span>
               <span className="text-red-400">- {totals.discount_amount.toFixed(2)} €</span>
             </div>
           )}
           <div className="flex justify-between text-sm font-semibold border-t border-indigo-500/30 pt-2">
-            <span className="text-gray-200">Total HT</span>
-            <span className="text-white">{totals.total_ht.toFixed(2)} €</span>
+            <span className="text-text-primary">Total HT</span>
+            <span className="text-text-primary">{totals.total_ht.toFixed(2)} €</span>
           </div>
           {formData.tva_applicable && (
             <div className="flex justify-between text-sm">
-              <span className="text-gray-300">TVA ({formData.tva_rate}%)</span>
-              <span className="text-white">{totals.tva_amount.toFixed(2)} €</span>
+              <span className="text-text-secondary">TVA ({formData.tva_rate}%)</span>
+              <span className="text-text-primary">{totals.tva_amount.toFixed(2)} €</span>
             </div>
           )}
           <div className="flex justify-between text-lg font-bold border-t border-indigo-500/30 pt-2">
-            <span className="text-white">Total TTC</span>
+            <span className="text-text-primary">Total TTC</span>
             <span className="text-indigo-300">{totals.total_ttc.toFixed(2)} €</span>
           </div>
         </div>
@@ -796,20 +796,20 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
 
   const renderConditionsStep = () => (
     <div className="space-y-6 animate-fadeIn">
-      <h3 className="text-lg font-semibold text-white mb-4">Conditions commerciales</h3>
+      <h3 className="text-lg font-semibold text-text-primary mb-4">Conditions commerciales</h3>
 
       {/* Acompte */}
-      <div className="bg-gray-800/30 border border-gray-700/50 rounded-lg p-4 space-y-4">
-        <h4 className="text-md font-medium text-white">Acompte</h4>
+      <div className="bg-surface/30 border border-border/50 rounded-lg p-4 space-y-4">
+        <h4 className="text-md font-medium text-text-primary">Acompte</h4>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-text-secondary mb-1">
               Type d'acompte
             </label>
             <select
               value={formData.acompte_type}
               onChange={(e) => setFormData({ ...formData, acompte_type: e.target.value })}
-              className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+              className="w-full px-4 py-2 bg-surface/50 border border-border rounded-lg text-text-primary focus:outline-none focus:border-indigo-500"
             >
               <option value="none">Aucun</option>
               <option value="percent">Pourcentage</option>
@@ -819,7 +819,7 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
 
           {formData.acompte_type !== 'none' && (
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-text-secondary mb-1">
                 {formData.acompte_type === 'percent' ? 'Pourcentage (%)' : 'Montant (€)'}
               </label>
               <input
@@ -828,7 +828,7 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
                 onChange={(e) => setFormData({ ...formData, acompte_value: parseFloat(e.target.value) || 0 })}
                 min="0"
                 step="0.01"
-                className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+                className="w-full px-4 py-2 bg-surface/50 border border-border rounded-lg text-text-primary focus:outline-none focus:border-indigo-500"
               />
             </div>
           )}
@@ -836,25 +836,25 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
       </div>
 
       {/* Options avancées - Collapsible */}
-      <div className="bg-gray-800/30 border border-gray-700/50 rounded-lg overflow-hidden">
+      <div className="bg-surface/30 border border-border/50 rounded-lg overflow-hidden">
         <button
           type="button"
           onClick={() => setShowAdvancedOptions(!showAdvancedOptions)}
-          className="w-full flex items-center justify-between p-4 hover:bg-gray-800/50 transition-colors"
+          className="w-full flex items-center justify-between p-4 hover:bg-surface/50 transition-colors"
         >
-          <h4 className="text-md font-medium text-white">Escompte (optionnel)</h4>
+          <h4 className="text-md font-medium text-text-primary">Escompte (optionnel)</h4>
           {showAdvancedOptions ? (
-            <FiChevronUp className="w-5 h-5 text-gray-400" />
+            <FiChevronUp className="w-5 h-5 text-text-muted" />
           ) : (
-            <FiChevronDown className="w-5 h-5 text-gray-400" />
+            <FiChevronDown className="w-5 h-5 text-text-muted" />
           )}
         </button>
 
         {showAdvancedOptions && (
-          <div className="p-4 pt-0 space-y-4 border-t border-gray-700/50">
+          <div className="p-4 pt-0 space-y-4 border-t border-border/50">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-text-secondary mb-1">
                   Pourcentage (%)
                 </label>
                 <input
@@ -863,12 +863,12 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
                   onChange={(e) => setFormData({ ...formData, escompte_percent: parseFloat(e.target.value) || 0 })}
                   min="0"
                   step="0.1"
-                  className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full px-4 py-2 bg-surface/50 border border-border rounded-lg text-text-primary focus:outline-none focus:border-indigo-500"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-text-secondary mb-1">
                   Si paiement sous (jours)
                 </label>
                 <input
@@ -876,7 +876,7 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
                   value={formData.escompte_days}
                   onChange={(e) => setFormData({ ...formData, escompte_days: parseInt(e.target.value) || 0 })}
                   min="0"
-                  className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full px-4 py-2 bg-surface/50 border border-border rounded-lg text-text-primary focus:outline-none focus:border-indigo-500"
                 />
               </div>
             </div>
@@ -885,8 +885,8 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
       </div>
 
       {/* Validité */}
-      <div className="bg-gray-800/30 border border-gray-700/50 rounded-lg p-4">
-        <label className="block text-sm font-medium text-gray-300 mb-2">
+      <div className="bg-surface/30 border border-border/50 rounded-lg p-4">
+        <label className="block text-sm font-medium text-text-secondary mb-2">
           Validité du devis (jours)
         </label>
         <input
@@ -894,72 +894,72 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
           value={formData.validity_days}
           onChange={(e) => setFormData({ ...formData, validity_days: parseInt(e.target.value) || 30 })}
           min="1"
-          className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+          className="w-full px-4 py-2 bg-surface/50 border border-border rounded-lg text-text-primary focus:outline-none focus:border-indigo-500"
         />
       </div>
 
       {/* Moyens de paiement */}
-      <div className="bg-gray-800/30 border border-gray-700/50 rounded-lg p-4 space-y-4">
-        <h4 className="text-md font-medium text-white">Moyens de paiement acceptés</h4>
+      <div className="bg-surface/30 border border-border/50 rounded-lg p-4 space-y-4">
+        <h4 className="text-md font-medium text-text-primary">Moyens de paiement acceptés</h4>
 
         {/* Checkboxes */}
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
           {paymentMethods.map(method => (
-            <label key={method.id} className="flex items-center gap-2 p-3 bg-gray-700/30 rounded-lg cursor-pointer hover:bg-gray-700/50 transition-colors">
+            <label key={method.id} className="flex items-center gap-2 p-3 bg-surface-strong/30 rounded-lg cursor-pointer hover:bg-surface-strong/50 transition-colors">
               <input
                 type="checkbox"
                 checked={(formData.payment_methods || []).includes(method.code)}
                 onChange={() => handlePaymentMethodToggle(method.code)}
-                className="w-4 h-4 text-indigo-600 bg-gray-800 border-gray-700 rounded focus:ring-indigo-500"
+                className="w-4 h-4 text-indigo-600 bg-surface border-border rounded focus:ring-indigo-500"
               />
-              <span className="text-sm text-gray-300">{method.label}</span>
+              <span className="text-sm text-text-secondary">{method.label}</span>
             </label>
           ))}
         </div>
 
         {/* Champs conditionnels - Virement */}
         {(formData.payment_methods || []).includes('VIREMENT') && (
-          <div className="bg-gray-700/30 rounded-lg p-4 space-y-3">
+          <div className="bg-surface-strong/30 rounded-lg p-4 space-y-3">
             <h5 className="text-sm font-medium text-indigo-300">Informations Virement Bancaire</h5>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs text-gray-400 mb-1">IBAN *</label>
+                <label className="block text-xs text-text-muted mb-1">IBAN *</label>
                 <input
                   type="text"
                   value={formData.payment_details?.VIREMENT?.iban || ''}
                   onChange={(e) => handlePaymentDetailChange('VIREMENT', 'iban', e.target.value)}
                   placeholder="FR76 1234 5678 9012 3456 7890 123"
-                  className="w-full px-3 py-2 bg-gray-800/50 border border-gray-700 rounded text-white text-sm focus:outline-none focus:border-indigo-500"
+                  className="w-full px-3 py-2 bg-surface/50 border border-border rounded text-text-primary text-sm focus:outline-none focus:border-indigo-500"
                 />
               </div>
               <div>
-                <label className="block text-xs text-gray-400 mb-1">BIC</label>
+                <label className="block text-xs text-text-muted mb-1">BIC</label>
                 <input
                   type="text"
                   value={formData.payment_details?.VIREMENT?.bic || ''}
                   onChange={(e) => handlePaymentDetailChange('VIREMENT', 'bic', e.target.value)}
                   placeholder="BNPAFRPPXXX"
-                  className="w-full px-3 py-2 bg-gray-800/50 border border-gray-700 rounded text-white text-sm focus:outline-none focus:border-indigo-500"
+                  className="w-full px-3 py-2 bg-surface/50 border border-border rounded text-text-primary text-sm focus:outline-none focus:border-indigo-500"
                 />
               </div>
               <div>
-                <label className="block text-xs text-gray-400 mb-1">Titulaire du compte *</label>
+                <label className="block text-xs text-text-muted mb-1">Titulaire du compte *</label>
                 <input
                   type="text"
                   value={formData.payment_details?.VIREMENT?.titulaire || ''}
                   onChange={(e) => handlePaymentDetailChange('VIREMENT', 'titulaire', e.target.value)}
                   placeholder="Nom de l'entreprise"
-                  className="w-full px-3 py-2 bg-gray-800/50 border border-gray-700 rounded text-white text-sm focus:outline-none focus:border-indigo-500"
+                  className="w-full px-3 py-2 bg-surface/50 border border-border rounded text-text-primary text-sm focus:outline-none focus:border-indigo-500"
                 />
               </div>
               <div>
-                <label className="block text-xs text-gray-400 mb-1">Banque</label>
+                <label className="block text-xs text-text-muted mb-1">Banque</label>
                 <input
                   type="text"
                   value={formData.payment_details?.VIREMENT?.banque || ''}
                   onChange={(e) => handlePaymentDetailChange('VIREMENT', 'banque', e.target.value)}
                   placeholder="BNP Paribas"
-                  className="w-full px-3 py-2 bg-gray-800/50 border border-gray-700 rounded text-white text-sm focus:outline-none focus:border-indigo-500"
+                  className="w-full px-3 py-2 bg-surface/50 border border-border rounded text-text-primary text-sm focus:outline-none focus:border-indigo-500"
                 />
               </div>
             </div>
@@ -968,27 +968,27 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
 
         {/* Champs conditionnels - PayPal */}
         {(formData.payment_methods || []).includes('PAYPAL') && (
-          <div className="bg-gray-700/30 rounded-lg p-4 space-y-3">
+          <div className="bg-surface-strong/30 rounded-lg p-4 space-y-3">
             <h5 className="text-sm font-medium text-indigo-300">Informations PayPal</h5>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs text-gray-400 mb-1">Email PayPal *</label>
+                <label className="block text-xs text-text-muted mb-1">Email PayPal *</label>
                 <input
                   type="email"
                   value={formData.payment_details?.PAYPAL?.email || ''}
                   onChange={(e) => handlePaymentDetailChange('PAYPAL', 'email', e.target.value)}
                   placeholder="votre@email.com"
-                  className="w-full px-3 py-2 bg-gray-800/50 border border-gray-700 rounded text-white text-sm focus:outline-none focus:border-indigo-500"
+                  className="w-full px-3 py-2 bg-surface/50 border border-border rounded text-text-primary text-sm focus:outline-none focus:border-indigo-500"
                 />
               </div>
               <div>
-                <label className="block text-xs text-gray-400 mb-1">Lien de paiement PayPal</label>
+                <label className="block text-xs text-text-muted mb-1">Lien de paiement PayPal</label>
                 <input
                   type="url"
                   value={formData.payment_details?.PAYPAL?.lien || ''}
                   onChange={(e) => handlePaymentDetailChange('PAYPAL', 'lien', e.target.value)}
                   placeholder="https://paypal.me/votrecompte"
-                  className="w-full px-3 py-2 bg-gray-800/50 border border-gray-700 rounded text-white text-sm focus:outline-none focus:border-indigo-500"
+                  className="w-full px-3 py-2 bg-surface/50 border border-border rounded text-text-primary text-sm focus:outline-none focus:border-indigo-500"
                 />
               </div>
             </div>
@@ -997,16 +997,16 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
 
         {/* Champs conditionnels - Stripe */}
         {(formData.payment_methods || []).includes('STRIPE') && (
-          <div className="bg-gray-700/30 rounded-lg p-4 space-y-3">
+          <div className="bg-surface-strong/30 rounded-lg p-4 space-y-3">
             <h5 className="text-sm font-medium text-indigo-300">Informations Stripe</h5>
             <div>
-              <label className="block text-xs text-gray-400 mb-1">Lien de paiement Stripe *</label>
+              <label className="block text-xs text-text-muted mb-1">Lien de paiement Stripe *</label>
               <input
                 type="url"
                 value={formData.payment_details?.STRIPE?.lien || ''}
                 onChange={(e) => handlePaymentDetailChange('STRIPE', 'lien', e.target.value)}
                 placeholder="https://buy.stripe.com/..."
-                className="w-full px-3 py-2 bg-gray-800/50 border border-gray-700 rounded text-white text-sm focus:outline-none focus:border-indigo-500"
+                className="w-full px-3 py-2 bg-surface/50 border border-border rounded text-text-primary text-sm focus:outline-none focus:border-indigo-500"
               />
             </div>
           </div>
@@ -1014,16 +1014,16 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
 
         {/* Champs conditionnels - Carte */}
         {(formData.payment_methods || []).includes('CARTE') && (
-          <div className="bg-gray-700/30 rounded-lg p-4 space-y-3">
+          <div className="bg-surface-strong/30 rounded-lg p-4 space-y-3">
             <h5 className="text-sm font-medium text-indigo-300">Informations Carte Bancaire</h5>
             <div>
-              <label className="block text-xs text-gray-400 mb-1">Instructions</label>
+              <label className="block text-xs text-text-muted mb-1">Instructions</label>
               <textarea
                 value={formData.payment_details?.CARTE?.instructions || ''}
                 onChange={(e) => handlePaymentDetailChange('CARTE', 'instructions', e.target.value)}
                 placeholder="Ex: Paiement sur place ou lien TPE..."
                 rows="2"
-                className="w-full px-3 py-2 bg-gray-800/50 border border-gray-700 rounded text-white text-sm focus:outline-none focus:border-indigo-500 resize-none"
+                className="w-full px-3 py-2 bg-surface/50 border border-border rounded text-text-primary text-sm focus:outline-none focus:border-indigo-500 resize-none"
               />
             </div>
           </div>
@@ -1034,12 +1034,12 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
 
   const renderDocumentsStep = () => (
     <div className="space-y-6 animate-fadeIn">
-      <h3 className="text-lg font-semibold text-white mb-4">Documents et informations complémentaires</h3>
+      <h3 className="text-lg font-semibold text-text-primary mb-4">Documents et informations complémentaires</h3>
 
       {/* Upload fichiers */}
       {quote && quote.id && (
-        <div className="bg-gray-800/30 border border-gray-700/50 rounded-lg p-4 space-y-4">
-          <h4 className="text-md font-medium text-white">Fichiers joints</h4>
+        <div className="bg-surface/30 border border-border/50 rounded-lg p-4 space-y-4">
+          <h4 className="text-md font-medium text-text-primary">Fichiers joints</h4>
           <FileUpload
             entityType="quote"
             entityId={quote.id}
@@ -1050,8 +1050,8 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
       )}
 
       {/* CGV */}
-      <div className="bg-gray-800/30 border border-gray-700/50 rounded-lg p-4 space-y-4">
-        <h4 className="text-md font-medium text-white">Conditions Générales de Vente (CGV)</h4>
+      <div className="bg-surface/30 border border-border/50 rounded-lg p-4 space-y-4">
+        <h4 className="text-md font-medium text-text-primary">Conditions Générales de Vente (CGV)</h4>
 
         {/* Toggle : Texte ou PDF */}
         <div className="flex gap-4 items-center">
@@ -1064,7 +1064,7 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
               onChange={(e) => setFormData({ ...formData, cgv_type: e.target.value })}
               className="w-4 h-4 text-indigo-600"
             />
-            <span className="text-sm text-gray-300">Saisir le texte</span>
+            <span className="text-sm text-text-secondary">Saisir le texte</span>
           </label>
           <label className="flex items-center gap-2 cursor-pointer">
             <input
@@ -1075,7 +1075,7 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
               onChange={(e) => setFormData({ ...formData, cgv_type: e.target.value })}
               className="w-4 h-4 text-indigo-600"
             />
-            <span className="text-sm text-gray-300">Uploader un PDF</span>
+            <span className="text-sm text-text-secondary">Uploader un PDF</span>
           </label>
         </div>
 
@@ -1086,7 +1086,7 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
               value={formData.cgv}
               onChange={(e) => setFormData({ ...formData, cgv: e.target.value })}
               rows={8}
-              className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500 resize-none text-sm"
+              className="w-full px-4 py-2 bg-surface/50 border border-border rounded-lg text-text-primary focus:outline-none focus:border-indigo-500 resize-none text-sm"
               placeholder="Vos conditions générales de vente..."
             />
           </div>
@@ -1094,7 +1094,7 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
 
         {/* Upload PDF */}
         {formData.cgv_type === 'pdf' && (
-          <div className="border-2 border-dashed border-gray-600 rounded-lg p-6">
+          <div className="border-2 border-dashed border-border-strong rounded-lg p-6">
             <input
               type="file"
               id="cgv-pdf-upload"
@@ -1106,16 +1106,16 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
               htmlFor="cgv-pdf-upload"
               className="cursor-pointer flex flex-col items-center"
             >
-              <FiUpload className="w-10 h-10 text-gray-400 mb-2" />
-              <p className="text-gray-300 font-medium">Cliquez pour sélectionner un fichier PDF</p>
+              <FiUpload className="w-10 h-10 text-text-muted mb-2" />
+              <p className="text-text-secondary font-medium">Cliquez pour sélectionner un fichier PDF</p>
               <p className="text-sm text-gray-500 mt-1">Format accepté : PDF uniquement (max 5MB)</p>
             </label>
 
             {formData.cgv_pdf && (
-              <div className="mt-4 flex items-center justify-between p-3 bg-gray-700/30 rounded-lg">
+              <div className="mt-4 flex items-center justify-between p-3 bg-surface-strong/30 rounded-lg">
                 <div className="flex items-center gap-2">
-                  <FiFileText className="text-2xl text-gray-300" />
-                  <span className="text-sm text-white">{formData.cgv_pdf.name}</span>
+                  <FiFileText className="text-2xl text-text-secondary" />
+                  <span className="text-sm text-text-primary">{formData.cgv_pdf.name}</span>
                 </div>
                 <button
                   type="button"
@@ -1132,7 +1132,7 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
 
       {/* Informations complémentaires */}
       <div>
-        <label className="block text-sm font-medium text-gray-300 mb-1">
+        <label className="block text-sm font-medium text-text-secondary mb-1">
           Informations complémentaires
         </label>
         <textarea
@@ -1140,13 +1140,13 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
           onChange={(e) => setFormData({ ...formData, additional_info: e.target.value })}
           rows={3}
           placeholder="Informations supplémentaires à afficher sur le devis..."
-          className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500 text-sm"
+          className="w-full px-4 py-2 bg-surface/50 border border-border rounded-lg text-text-primary focus:outline-none focus:border-indigo-500 text-sm"
         />
       </div>
 
       {/* Notes internes */}
       <div>
-        <label className="block text-sm font-medium text-gray-300 mb-1">
+        <label className="block text-sm font-medium text-text-secondary mb-1">
           Notes internes (non visibles sur le devis)
         </label>
         <textarea
@@ -1154,7 +1154,7 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
           onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
           rows={3}
           placeholder="Notes pour usage interne..."
-          className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500 text-sm"
+          className="w-full px-4 py-2 bg-surface/50 border border-border rounded-lg text-text-primary focus:outline-none focus:border-indigo-500 text-sm"
         />
       </div>
     </div>
@@ -1165,38 +1165,38 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
 
     return (
       <div className="space-y-6 animate-fadeIn">
-        <h3 className="text-lg font-semibold text-white mb-4">Récapitulatif du devis</h3>
+        <h3 className="text-lg font-semibold text-text-primary mb-4">Récapitulatif du devis</h3>
 
         {/* Informations générales */}
-        <div className="bg-gray-800/30 border border-gray-700/50 rounded-lg p-4">
-          <h4 className="text-sm font-medium text-gray-300 mb-3">Informations générales</h4>
+        <div className="bg-surface/30 border border-border/50 rounded-lg p-4">
+          <h4 className="text-sm font-medium text-text-secondary mb-3">Informations générales</h4>
           <div className="space-y-2 text-sm">
             {formData.title && (
               <div className="flex justify-between">
-                <span className="text-gray-400">Titre:</span>
-                <span className="text-white font-medium">{formData.title}</span>
+                <span className="text-text-muted">Titre:</span>
+                <span className="text-text-primary font-medium">{formData.title}</span>
               </div>
             )}
             {formData.project_id && (
               <div className="flex justify-between">
-                <span className="text-gray-400">Projet:</span>
-                <span className="text-white">
+                <span className="text-text-muted">Projet:</span>
+                <span className="text-text-primary">
                   {projects.find(p => p.id === formData.project_id)?.name || 'N/A'}
                 </span>
               </div>
             )}
             <div className="flex justify-between">
-              <span className="text-gray-400">Validité:</span>
-              <span className="text-white">{formData.validity_days} jours</span>
+              <span className="text-text-muted">Validité:</span>
+              <span className="text-text-primary">{formData.validity_days} jours</span>
             </div>
           </div>
         </div>
 
         {/* Client */}
-        <div className="bg-gray-800/30 border border-gray-700/50 rounded-lg p-4">
-          <h4 className="text-sm font-medium text-gray-300 mb-3">Client</h4>
-          <div className="text-sm text-gray-400 space-y-1">
-            <p className="text-white font-medium">{formData.client_name}</p>
+        <div className="bg-surface/30 border border-border/50 rounded-lg p-4">
+          <h4 className="text-sm font-medium text-text-secondary mb-3">Client</h4>
+          <div className="text-sm text-text-muted space-y-1">
+            <p className="text-text-primary font-medium">{formData.client_name}</p>
             {formData.client_email && <p>{formData.client_email}</p>}
             {formData.client_siret && <p>SIRET: {formData.client_siret}</p>}
             {formData.client_address && <p className="text-xs">{formData.client_address}</p>}
@@ -1204,8 +1204,8 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
         </div>
 
         {/* Articles */}
-        <div className="bg-gray-800/30 border border-gray-700/50 rounded-lg p-4">
-          <h4 className="text-sm font-medium text-gray-300 mb-3">Articles ({formData.items.length})</h4>
+        <div className="bg-surface/30 border border-border/50 rounded-lg p-4">
+          <h4 className="text-sm font-medium text-text-secondary mb-3">Articles ({formData.items.length})</h4>
           <div className="space-y-2">
             {formData.items.map((item, index) => (
               item.type === 'detail' ? (
@@ -1216,10 +1216,10 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
               ) : (
                 // Ligne produit
                 <div key={index} className="flex justify-between text-sm">
-                  <span className="text-gray-400">
+                  <span className="text-text-muted">
                     {item.description} <span className="text-xs">({item.quantity} × {parseFloat(item.unit_price).toFixed(2)}€)</span>
                   </span>
-                  <span className="text-white font-medium">
+                  <span className="text-text-primary font-medium">
                     {((item.quantity || 0) * (item.unit_price || 0)).toFixed(2)} €
                   </span>
                 </div>
@@ -1229,40 +1229,40 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
         </div>
 
         {/* Totaux */}
-        <div className="bg-indigo-600/10 border border-indigo-500/30 rounded-lg p-4 space-y-2">
+        <div className="bg-accent/10 border border-indigo-500/30 rounded-lg p-4 space-y-2">
           <div className="flex justify-between text-sm">
-            <span className="text-gray-300">Sous-total</span>
-            <span className="text-white">{totals.subtotal.toFixed(2)} €</span>
+            <span className="text-text-secondary">Sous-total</span>
+            <span className="text-text-primary">{totals.subtotal.toFixed(2)} €</span>
           </div>
           {formData.discount_type !== 'none' && totals.discount_amount > 0 && (
             <div className="flex justify-between text-sm">
-              <span className="text-gray-300">Remise</span>
+              <span className="text-text-secondary">Remise</span>
               <span className="text-red-400">- {totals.discount_amount.toFixed(2)} €</span>
             </div>
           )}
           <div className="flex justify-between text-sm font-semibold">
-            <span className="text-gray-200">Total HT</span>
-            <span className="text-white">{totals.total_ht.toFixed(2)} €</span>
+            <span className="text-text-primary">Total HT</span>
+            <span className="text-text-primary">{totals.total_ht.toFixed(2)} €</span>
           </div>
           {formData.tva_applicable && (
             <div className="flex justify-between text-sm">
-              <span className="text-gray-300">TVA ({formData.tva_rate}%)</span>
-              <span className="text-white">{totals.tva_amount.toFixed(2)} €</span>
+              <span className="text-text-secondary">TVA ({formData.tva_rate}%)</span>
+              <span className="text-text-primary">{totals.tva_amount.toFixed(2)} €</span>
             </div>
           )}
           <div className="flex justify-between text-lg border-t border-indigo-500/30 pt-2 font-bold">
-            <span className="text-white">Total TTC</span>
+            <span className="text-text-primary">Total TTC</span>
             <span className="text-indigo-300">{totals.total_ttc.toFixed(2)} €</span>
           </div>
           {formData.acompte_type !== 'none' && totals.acompte_amount > 0 && (
             <>
               <div className="flex justify-between text-sm">
-                <span className="text-gray-300">Acompte</span>
-                <span className="text-white">{totals.acompte_amount.toFixed(2)} €</span>
+                <span className="text-text-secondary">Acompte</span>
+                <span className="text-text-primary">{totals.acompte_amount.toFixed(2)} €</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-gray-300">Reste à payer</span>
-                <span className="text-white font-semibold">{totals.reste_a_payer.toFixed(2)} €</span>
+                <span className="text-text-secondary">Reste à payer</span>
+                <span className="text-text-primary font-semibold">{totals.reste_a_payer.toFixed(2)} €</span>
               </div>
             </>
           )}
@@ -1270,8 +1270,8 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
 
         {/* Moyens de paiement */}
         {formData.payment_methods && formData.payment_methods.length > 0 && (
-          <div className="bg-gray-800/30 border border-gray-700/50 rounded-lg p-4">
-            <h4 className="text-sm font-medium text-gray-300 mb-2">Moyens de paiement acceptés</h4>
+          <div className="bg-surface/30 border border-border/50 rounded-lg p-4">
+            <h4 className="text-sm font-medium text-text-secondary mb-2">Moyens de paiement acceptés</h4>
             <div className="flex flex-wrap gap-2">
               {formData.payment_methods.map(methodId => {
                 const method = paymentMethods.find(m => m.id === methodId);
@@ -1287,9 +1287,9 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
 
         {/* Signature */}
         {quote && quote.id && (
-          <div className="bg-gray-800/30 border border-gray-700/50 rounded-lg p-4">
+          <div className="bg-surface/30 border border-border/50 rounded-lg p-4">
             <div className="flex items-center justify-between mb-3">
-              <h4 className="text-sm font-medium text-gray-300">Signature client</h4>
+              <h4 className="text-sm font-medium text-text-secondary">Signature client</h4>
               <button
                 type="button"
                 onClick={() => setShowSignature(!showSignature)}
@@ -1320,7 +1320,7 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
         <button
           type="button"
           onClick={onCancel}
-          className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-colors"
+          className="p-2 text-text-muted hover:text-text-primary hover:bg-surface-strong rounded-lg transition-colors"
         >
           <FiX className="w-5 h-5" />
         </button>
@@ -1339,15 +1339,15 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
       </div>
 
       {/* Navigation buttons */}
-      <div className="flex justify-between items-center pt-6 border-t border-gray-700">
+      <div className="flex justify-between items-center pt-6 border-t border-border">
         <button
           type="button"
           onClick={prevStep}
           disabled={currentStep === 0}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
             currentStep === 0
-              ? 'bg-gray-700/50 text-gray-500 cursor-not-allowed'
-              : 'bg-gray-700 hover:bg-gray-600 text-white'
+              ? 'bg-surface-strong/50 text-gray-500 cursor-not-allowed'
+              : 'bg-surface-strong hover:bg-border-strong text-text-primary'
           }`}
         >
           <FiChevronLeft className="w-4 h-4" />
@@ -1358,7 +1358,7 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
           <button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+            className="px-4 py-2 bg-surface-strong hover:bg-border-strong text-text-primary rounded-lg transition-colors"
           >
             Annuler
           </button>
@@ -1375,7 +1375,7 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
             <button
               type="button"
               onClick={nextStep}
-              className="flex items-center gap-2 px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
+              className="flex items-center gap-2 px-6 py-2 bg-accent hover:bg-indigo-700 text-white rounded-lg transition-colors"
             >
               <span>Suivant</span>
               <FiChevronRight className="w-4 h-4" />

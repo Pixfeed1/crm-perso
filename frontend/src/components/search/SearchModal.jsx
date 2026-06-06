@@ -198,7 +198,7 @@ const SearchModal = ({ onClose }) => {
       onClick={onClose}
     >
       <motion.div
-        className="bg-gradient-to-br from-gray-900 via-purple-900/40 to-indigo-900/40 border border-purple-500/30 rounded-2xl w-full max-w-3xl overflow-hidden shadow-2xl"
+        className="bg-gradient-to-br from-surface-muted via-purple-900/40 to-indigo-900/40 border border-purple-500/30 rounded-2xl w-full max-w-3xl overflow-hidden shadow-2xl"
         initial={{ scale: 0.9, y: -20 }}
         animate={{ scale: 1, y: 0 }}
         exit={{ scale: 0.9, y: -20 }}
@@ -214,7 +214,7 @@ const SearchModal = ({ onClose }) => {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Rechercher dans clients, leads, projets, objectifs..."
-              className="flex-1 bg-transparent text-white text-lg placeholder-gray-400 focus:outline-none"
+              className="flex-1 bg-transparent text-text-primary text-lg placeholder-gray-400 focus:outline-none"
             />
             {isLoading && (
               <motion.div
@@ -226,20 +226,20 @@ const SearchModal = ({ onClose }) => {
             )}
             <button
               onClick={onClose}
-              className="p-2 hover:bg-gray-800/50 rounded-lg transition-colors flex-shrink-0"
+              className="p-2 hover:bg-surface/50 rounded-lg transition-colors flex-shrink-0"
             >
-              <FiX className="text-xl text-gray-400" />
+              <FiX className="text-xl text-text-muted" />
             </button>
           </div>
 
           {/* Raccourci clavier */}
-          <div className="mt-3 flex items-center gap-2 text-xs text-gray-400">
+          <div className="mt-3 flex items-center gap-2 text-xs text-text-muted">
             <span>Utilisez</span>
-            <kbd className="px-2 py-1 bg-gray-800/50 border border-gray-700 rounded">↑↓</kbd>
+            <kbd className="px-2 py-1 bg-surface/50 border border-border rounded">↑↓</kbd>
             <span>pour naviguer</span>
-            <kbd className="px-2 py-1 bg-gray-800/50 border border-gray-700 rounded">Enter</kbd>
+            <kbd className="px-2 py-1 bg-surface/50 border border-border rounded">Enter</kbd>
             <span>pour sélectionner</span>
-            <kbd className="px-2 py-1 bg-gray-800/50 border border-gray-700 rounded">Esc</kbd>
+            <kbd className="px-2 py-1 bg-surface/50 border border-border rounded">Esc</kbd>
             <span>pour fermer</span>
           </div>
         </div>
@@ -250,7 +250,7 @@ const SearchModal = ({ onClose }) => {
             {query.trim().length < 2 ? (
               <motion.div
                 key="empty"
-                className="p-8 sm:p-12 text-center text-gray-400"
+                className="p-8 sm:p-12 text-center text-text-muted"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
@@ -261,7 +261,7 @@ const SearchModal = ({ onClose }) => {
             ) : results && results.total === 0 ? (
               <motion.div
                 key="no-results"
-                className="p-8 sm:p-12 text-center text-gray-400"
+                className="p-8 sm:p-12 text-center text-text-muted"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
@@ -286,7 +286,7 @@ const SearchModal = ({ onClose }) => {
                       {/* Header de catégorie */}
                       <div className="px-3 py-2 flex items-center gap-2">
                         <span className={`${config.color} text-lg`}>{config.icon}</span>
-                        <h3 className="text-sm font-medium text-gray-300 uppercase tracking-wide">
+                        <h3 className="text-sm font-medium text-text-secondary uppercase tracking-wide">
                           {config.label} ({results[type].length})
                         </h3>
                       </div>
@@ -305,7 +305,7 @@ const SearchModal = ({ onClose }) => {
                               className={`w-full text-left px-3 py-3 rounded-lg transition-all ${
                                 isSelected
                                   ? `${config.bg} ${config.border} border`
-                                  : 'hover:bg-gray-800/30'
+                                  : 'hover:bg-surface/30'
                               }`}
                               onClick={() => handleSelectResult({ type, item })}
                               initial={{ opacity: 0, x: -20 }}
@@ -317,11 +317,11 @@ const SearchModal = ({ onClose }) => {
                                   {config.icon}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                  <h4 className="text-white font-medium text-sm sm:text-base truncate">
+                                  <h4 className="text-text-primary font-medium text-sm sm:text-base truncate">
                                     {getDisplayName(type, item)}
                                   </h4>
                                   {getSecondaryInfo(type, item) && (
-                                    <p className="text-gray-400 text-xs sm:text-sm mt-0.5 truncate">
+                                    <p className="text-text-muted text-xs sm:text-sm mt-0.5 truncate">
                                       {getSecondaryInfo(type, item)}
                                     </p>
                                   )}

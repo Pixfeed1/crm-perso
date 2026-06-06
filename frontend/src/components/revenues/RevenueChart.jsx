@@ -119,8 +119,8 @@ const RevenueChart = ({ revenues, period, currentDate }) => {
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-gray-900/90 backdrop-blur-sm border border-gray-700 rounded-lg p-3 shadow-xl">
-          <p className="text-white font-medium">{label}</p>
+        <div className="bg-surface-muted/90 backdrop-blur-sm border border-border rounded-lg p-3 shadow-xl">
+          <p className="text-text-primary font-medium">{label}</p>
           <div className="mt-2 space-y-1">
             {payload.map((entry, index) => (
               <div key={index} className="flex items-center" style={{ color: entry.color }}>
@@ -131,7 +131,7 @@ const RevenueChart = ({ revenues, period, currentDate }) => {
                 </p>
               </div>
             ))}
-            <div className="flex items-center text-white pt-1 border-t border-gray-700 mt-1">
+            <div className="flex items-center text-text-primary pt-1 border-t border-border mt-1">
               <div className="w-3 h-3 rounded-full mr-2 bg-white"></div>
               <p className="text-sm">
                 <span className="font-medium">Total: </span>
@@ -151,20 +151,20 @@ const RevenueChart = ({ revenues, period, currentDate }) => {
   return (
     <div className="h-full flex flex-col">
       <div className="mb-4 flex justify-between items-center">
-        <h3 className="text-lg font-medium text-white">Évolution des revenus</h3>
+        <h3 className="text-lg font-medium text-text-primary">Évolution des revenus</h3>
         
         <div className="flex items-center space-x-4">
           <div className="flex items-center">
             <div className="w-3 h-3 rounded-full bg-emerald-500 mr-2"></div>
-            <span className="text-xs text-gray-300">Payé</span>
+            <span className="text-xs text-text-secondary">Payé</span>
           </div>
           <div className="flex items-center">
             <div className="w-3 h-3 rounded-full bg-amber-500 mr-2"></div>
-            <span className="text-xs text-gray-300">En attente</span>
+            <span className="text-xs text-text-secondary">En attente</span>
           </div>
           <div className="flex items-center">
             <div className="w-3 h-3 rounded-full bg-blue-500 mr-2"></div>
-            <span className="text-xs text-gray-300">Planifié</span>
+            <span className="text-xs text-text-secondary">Planifié</span>
           </div>
         </div>
       </div>
@@ -234,7 +234,7 @@ const RevenueChart = ({ revenues, period, currentDate }) => {
           </ResponsiveContainer>
         ) : (
           <div className="h-full flex items-center justify-center">
-            <p className="text-gray-400">Aucune donnée disponible pour cette période</p>
+            <p className="text-text-muted">Aucune donnée disponible pour cette période</p>
           </div>
         )}
       </div>

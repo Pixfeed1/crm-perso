@@ -5,24 +5,24 @@ import { FiBriefcase, FiUser, FiMail, FiPhone, FiMapPin, FiTool } from 'react-ic
 
 const ClientTable = ({ clients, selectedClient, onSelectClient, onMaintenanceClick }) => {
   return (
-    <div className="bg-gray-800/30 backdrop-blur rounded-xl overflow-hidden border border-gray-700">
+    <div className="bg-surface/30 backdrop-blur rounded-xl overflow-hidden border border-border">
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-gray-900/50 border-b border-gray-700">
+          <thead className="bg-surface-muted/50 border-b border-border">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider">
                 Client
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider hidden md:table-cell">
+              <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider hidden md:table-cell">
                 Contact
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider hidden lg:table-cell">
+              <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider hidden lg:table-cell">
                 Adresse
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider hidden xl:table-cell">
+              <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider hidden xl:table-cell">
                 Valeur
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider">
                 Statut
               </th>
             </tr>
@@ -35,7 +35,7 @@ const ClientTable = ({ clients, selectedClient, onSelectClient, onMaintenanceCli
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.02 }}
                 onClick={() => onSelectClient(client)}
-                className={`cursor-pointer transition-colors hover:bg-gray-700/30 ${
+                className={`cursor-pointer transition-colors hover:bg-surface-strong/30 ${
                   selectedClient?.id === client.id ? 'bg-indigo-500/10' : ''
                 }`}
               >
@@ -45,12 +45,12 @@ const ClientTable = ({ clients, selectedClient, onSelectClient, onMaintenanceCli
                     <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
                       client.status === 'active'
                         ? 'bg-green-500/20 text-green-400'
-                        : 'bg-gray-500/20 text-gray-400'
+                        : 'bg-gray-500/20 text-text-muted'
                     }`}>
                       {client.type === 'company' ? <FiBriefcase /> : <FiUser />}
                     </div>
                     <div className="min-w-0">
-                      <div className="text-white font-medium truncate">{client.name}</div>
+                      <div className="text-text-primary font-medium truncate">{client.name}</div>
                       {client.company && (
                         <div className="text-sm text-indigo-300 truncate">{client.company}</div>
                       )}
@@ -62,13 +62,13 @@ const ClientTable = ({ clients, selectedClient, onSelectClient, onMaintenanceCli
                 <td className="px-4 py-4 hidden md:table-cell">
                   <div className="space-y-1 text-sm">
                     {client.email && (
-                      <div className="flex items-center gap-2 text-gray-300">
+                      <div className="flex items-center gap-2 text-text-secondary">
                         <FiMail className="w-3 h-3 text-blue-400 flex-shrink-0" />
                         <span className="truncate">{client.email}</span>
                       </div>
                     )}
                     {client.phone && (
-                      <div className="flex items-center gap-2 text-gray-300">
+                      <div className="flex items-center gap-2 text-text-secondary">
                         <FiPhone className="w-3 h-3 text-green-400 flex-shrink-0" />
                         <span>{client.phone}</span>
                       </div>
@@ -79,7 +79,7 @@ const ClientTable = ({ clients, selectedClient, onSelectClient, onMaintenanceCli
                 {/* Adresse */}
                 <td className="px-4 py-4 hidden lg:table-cell">
                   {client.address ? (
-                    <div className="flex items-start gap-2 text-sm text-gray-400">
+                    <div className="flex items-start gap-2 text-sm text-text-muted">
                       <FiMapPin className="w-3 h-3 mt-0.5 flex-shrink-0" />
                       <span className="line-clamp-2">{client.address}</span>
                     </div>
@@ -105,7 +105,7 @@ const ClientTable = ({ clients, selectedClient, onSelectClient, onMaintenanceCli
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                       client.status === 'active'
                         ? 'bg-green-500/20 text-green-300 border border-green-500/30'
-                        : 'bg-gray-500/20 text-gray-300 border border-gray-500/30'
+                        : 'bg-gray-500/20 text-text-secondary border border-gray-500/30'
                     }`}>
                       {client.status === 'active' ? 'Actif' : 'Inactif'}
                     </span>

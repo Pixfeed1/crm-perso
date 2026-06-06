@@ -64,7 +64,7 @@ const RevenueFilter = ({ filters, setFilters, projects, onSort, sortField, sortD
   };
 
   return (
-    <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl mb-6">
+    <div className="bg-surface/30 backdrop-blur-sm rounded-xl mb-6">
       {/* Barre de recherche et tri toujours visible */}
       <div className="p-3 space-y-3" style={searchContainerStyle}>
         <div className="flex gap-2">
@@ -75,18 +75,18 @@ const RevenueFilter = ({ filters, setFilters, projects, onSort, sortField, sortD
               placeholder="Rechercher un revenu..."
               value={filters.search}
               onChange={(e) => handleFilterChange('search', e.target.value)}
-              className="w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg px-4 py-2 pl-10 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="w-full bg-surface/50 text-text-primary border border-border rounded-lg px-4 py-2 pl-10 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               style={searchInputStyle}
             />
           <span
-            className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+            className="absolute left-3 top-1/2 transform -translate-y-1/2 text-text-muted"
             style={iconStyle}
           >
             <FiSearch />
           </span>
           {filters.search && (
             <motion.button
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-300"
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-text-muted hover:text-text-secondary"
               style={iconStyle}
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
@@ -107,7 +107,7 @@ const RevenueFilter = ({ filters, setFilters, projects, onSort, sortField, sortD
                   className={`px-3 py-2 rounded-lg flex items-center gap-1 text-sm ${
                     sortField === option.field
                       ? 'bg-teal-600 text-white'
-                      : 'bg-gray-700/50 text-gray-300 hover:bg-gray-700'
+                      : 'bg-surface-strong/50 text-text-secondary hover:bg-surface-strong'
                   }`}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
@@ -126,12 +126,12 @@ const RevenueFilter = ({ filters, setFilters, projects, onSort, sortField, sortD
       
       {/* Bouton d'expansion des filtres */}
       <div
-        className="px-3 py-2 flex justify-between items-center cursor-pointer hover:bg-gray-700/30 transition-colors"
+        className="px-3 py-2 flex justify-between items-center cursor-pointer hover:bg-surface-strong/30 transition-colors"
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <div className="flex items-center text-sm">
           <span className="mr-2"><FiFilter /></span>
-          <span className="text-gray-300 font-medium">Filtres avancés</span>
+          <span className="text-text-secondary font-medium">Filtres avancés</span>
           {hasActiveFilters && (
             <span className="ml-2 px-1.5 py-0.5 bg-teal-600 rounded-full text-xs text-white">
               {Object.values(filters).filter(val => val !== '' && val !== 'all').length}
@@ -141,7 +141,7 @@ const RevenueFilter = ({ filters, setFilters, projects, onSort, sortField, sortD
         <motion.span
           animate={{ rotate: isExpanded ? 180 : 0 }}
           transition={{ duration: 0.3 }}
-          className="text-gray-400"
+          className="text-text-muted"
         >
           ⌄
         </motion.span>
@@ -157,10 +157,10 @@ const RevenueFilter = ({ filters, setFilters, projects, onSort, sortField, sortD
             transition={{ duration: 0.3 }}
             className="overflow-hidden"
           >
-            <div className="p-3 space-y-4 border-t border-gray-700/50">
+            <div className="p-3 space-y-4 border-t border-border/50">
               {/* Filtre par type */}
               <div>
-                <label className="block text-xs text-gray-400 mb-1">Type de revenu</label>
+                <label className="block text-xs text-text-muted mb-1">Type de revenu</label>
                 <div className="flex flex-wrap gap-2">
                   {typeOptions.map(option => (
                     <motion.button
@@ -168,7 +168,7 @@ const RevenueFilter = ({ filters, setFilters, projects, onSort, sortField, sortD
                       className={`px-3 py-1 rounded-full text-xs font-medium ${
                         filters.type === option.value
                           ? 'bg-teal-600 text-white'
-                          : 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50 border border-gray-700'
+                          : 'bg-surface/50 text-text-secondary hover:bg-surface-strong/50 border border-border'
                       }`}
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
@@ -183,7 +183,7 @@ const RevenueFilter = ({ filters, setFilters, projects, onSort, sortField, sortD
               {/* Filtre par montant */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label htmlFor="minAmount" className="block text-xs text-gray-400 mb-1">
+                  <label htmlFor="minAmount" className="block text-xs text-text-muted mb-1">
                     Montant minimum
                   </label>
                   <div className="relative">
@@ -192,18 +192,18 @@ const RevenueFilter = ({ filters, setFilters, projects, onSort, sortField, sortD
                       id="minAmount"
                       value={filters.minAmount}
                       onChange={(e) => handleFilterChange('minAmount', e.target.value)}
-                      className="w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg px-4 py-2 pl-8 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      className="w-full bg-surface/50 text-text-primary border border-border rounded-lg px-4 py-2 pl-8 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                       placeholder="Min"
                       min="0"
                     />
-                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-text-muted">
                       €
                     </span>
                   </div>
                 </div>
                 
                 <div>
-                  <label htmlFor="maxAmount" className="block text-xs text-gray-400 mb-1">
+                  <label htmlFor="maxAmount" className="block text-xs text-text-muted mb-1">
                     Montant maximum
                   </label>
                   <div className="relative">
@@ -212,11 +212,11 @@ const RevenueFilter = ({ filters, setFilters, projects, onSort, sortField, sortD
                       id="maxAmount"
                       value={filters.maxAmount}
                       onChange={(e) => handleFilterChange('maxAmount', e.target.value)}
-                      className="w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg px-4 py-2 pl-8 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      className="w-full bg-surface/50 text-text-primary border border-border rounded-lg px-4 py-2 pl-8 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                       placeholder="Max"
                       min="0"
                     />
-                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-text-muted">
                       €
                     </span>
                   </div>
@@ -225,14 +225,14 @@ const RevenueFilter = ({ filters, setFilters, projects, onSort, sortField, sortD
               
               {/* Filtre par projet */}
               <div>
-                <label htmlFor="project" className="block text-xs text-gray-400 mb-1">
+                <label htmlFor="project" className="block text-xs text-text-muted mb-1">
                   Projet associé
                 </label>
                 <select
                   id="project"
                   value={filters.project}
                   onChange={(e) => handleFilterChange('project', e.target.value)}
-                  className="w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full bg-surface/50 text-text-primary border border-border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 >
                   <option value="all">Tous les projets</option>
                   <option value="none">Sans projet</option>
@@ -248,7 +248,7 @@ const RevenueFilter = ({ filters, setFilters, projects, onSort, sortField, sortD
               {hasActiveFilters && (
                 <div className="pt-2 flex justify-end">
                   <motion.button
-                    className="text-xs text-teal-400 hover:text-teal-300 flex items-center bg-gray-700/50 px-2 py-1 rounded"
+                    className="text-xs text-teal-400 hover:text-teal-300 flex items-center bg-surface-strong/50 px-2 py-1 rounded"
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={resetFilters}

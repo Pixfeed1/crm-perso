@@ -55,7 +55,7 @@ const GoalFilter = ({ filters, setFilters, onSort, sortField, sortDirection }) =
     filters.period !== 'all';
 
   return (
-    <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl mb-6 shadow-md relative z-30">
+    <div className="bg-surface/30 backdrop-blur-sm rounded-xl mb-6 shadow-md relative z-30">
       {/* Barre de recherche et tri toujours visible */}
       <div className="p-3 space-y-3 relative z-20">
         <div className="flex gap-2">
@@ -66,14 +66,14 @@ const GoalFilter = ({ filters, setFilters, onSort, sortField, sortDirection }) =
               placeholder="Rechercher un objectif..."
               value={filters.search}
               onChange={(e) => handleFilterChange('search', e.target.value)}
-              className="w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg px-4 py-2 pl-10 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent relative z-10"
+              className="w-full bg-surface/50 text-text-primary border border-border rounded-lg px-4 py-2 pl-10 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent relative z-10"
             />
-            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 z-[15]">
+            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-text-muted z-[15]">
               <FiSearch />
             </span>
             {filters.search && (
               <motion.button
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 z-[15]"
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-text-muted hover:text-gray-600 z-[15]"
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
                 onClick={() => handleFilterChange('search', '')}
@@ -93,7 +93,7 @@ const GoalFilter = ({ filters, setFilters, onSort, sortField, sortDirection }) =
                   className={`px-3 py-2 rounded-lg flex items-center gap-1 text-sm ${
                     sortField === option.field
                       ? 'bg-amber-600 text-white'
-                      : 'bg-gray-700/50 text-gray-300 hover:bg-gray-700'
+                      : 'bg-surface-strong/50 text-text-secondary hover:bg-surface-strong'
                   }`}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
@@ -112,12 +112,12 @@ const GoalFilter = ({ filters, setFilters, onSort, sortField, sortDirection }) =
       
       {/* Bouton d'expansion des filtres */}
       <div
-        className="px-3 py-2 flex justify-between items-center cursor-pointer hover:bg-gray-700/30 transition-colors relative z-10"
+        className="px-3 py-2 flex justify-between items-center cursor-pointer hover:bg-surface-strong/30 transition-colors relative z-10"
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <div className="flex items-center text-sm gap-2">
           <FiFilter />
-          <span className="text-gray-300 font-medium">Filtres avancés</span>
+          <span className="text-text-secondary font-medium">Filtres avancés</span>
           {hasActiveFilters && (
             <span className="ml-2 px-1.5 py-0.5 bg-amber-600 rounded-full text-xs text-white">
               {Object.values(filters).filter(val => val !== '' && val !== 'all').length}
@@ -127,7 +127,7 @@ const GoalFilter = ({ filters, setFilters, onSort, sortField, sortDirection }) =
         <motion.span
           animate={{ rotate: isExpanded ? 180 : 0 }}
           transition={{ duration: 0.3 }}
-          className="text-gray-400"
+          className="text-text-muted"
         >
           ⌄
         </motion.span>
@@ -143,10 +143,10 @@ const GoalFilter = ({ filters, setFilters, onSort, sortField, sortDirection }) =
             transition={{ duration: 0.3 }}
             className="relative z-[9]"
           >
-            <div className="p-3 space-y-4 border-t border-gray-700/50">
+            <div className="p-3 space-y-4 border-t border-border/50">
               {/* Filtre par catégorie */}
               <div className="relative z-[8]">
-                <label className="block text-xs text-gray-400 mb-1">Catégorie</label>
+                <label className="block text-xs text-text-muted mb-1">Catégorie</label>
                 <div className="flex flex-wrap gap-2">
                   {categoryOptions.map(option => (
                     <motion.button
@@ -154,7 +154,7 @@ const GoalFilter = ({ filters, setFilters, onSort, sortField, sortDirection }) =
                       className={`px-3 py-1 rounded-full text-xs font-medium ${
                         filters.category === option.value
                           ? 'bg-amber-600 text-white shadow-md'
-                          : 'bg-gray-800/50 text-white hover:bg-gray-700 shadow-sm'
+                          : 'bg-surface/50 text-text-primary hover:bg-surface-strong shadow-sm'
                       }`}
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
@@ -169,7 +169,7 @@ const GoalFilter = ({ filters, setFilters, onSort, sortField, sortDirection }) =
               
               {/* Filtre par période */}
               <div className="relative z-[8]">
-                <label className="block text-xs text-gray-400 mb-1">Période</label>
+                <label className="block text-xs text-text-muted mb-1">Période</label>
                 <div className="flex flex-wrap gap-2">
                   {periodOptions.map(option => (
                     <motion.button
@@ -177,7 +177,7 @@ const GoalFilter = ({ filters, setFilters, onSort, sortField, sortDirection }) =
                       className={`px-3 py-1 rounded-full text-xs font-medium ${
                         filters.period === option.value
                           ? 'bg-amber-600 text-white shadow-md'
-                          : 'bg-gray-800/50 text-white hover:bg-gray-700 shadow-sm'
+                          : 'bg-surface/50 text-text-primary hover:bg-surface-strong shadow-sm'
                       }`}
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
@@ -194,7 +194,7 @@ const GoalFilter = ({ filters, setFilters, onSort, sortField, sortDirection }) =
               {hasActiveFilters && (
                 <div className="pt-2 flex justify-end">
                   <motion.button
-                    className="text-xs text-amber-400 hover:text-amber-300 flex items-center bg-gray-800/50 px-2 py-1 rounded-lg"
+                    className="text-xs text-amber-400 hover:text-amber-300 flex items-center bg-surface/50 px-2 py-1 rounded-lg"
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={resetFilters}

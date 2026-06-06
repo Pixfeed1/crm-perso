@@ -31,8 +31,8 @@ const RECO_LEVELS = [
   { value: 'alerte', label: 'Alerte' }
 ];
 
-const inputCls = "w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500";
-const labelCls = "block text-sm text-gray-400 mb-1";
+const inputCls = "w-full bg-surface/50 text-text-primary border border-border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500";
+const labelCls = "block text-sm text-text-muted mb-1";
 
 const MaintenanceReportForm = ({ contract, onClose, onSuccess }) => {
   const { toast } = useToast();
@@ -140,7 +140,7 @@ const MaintenanceReportForm = ({ contract, onClose, onSuccess }) => {
       initial={{ opacity: 0, height: 0 }}
       animate={{ opacity: 1, height: 'auto' }}
       exit={{ opacity: 0, height: 0 }}
-      className="mb-4 bg-gray-900/40 rounded-lg p-5"
+      className="mb-4 bg-surface-muted/40 rounded-lg p-5"
     >
       <div className="flex justify-between items-center mb-4">
         <h4 className="text-purple-300 font-medium">Nouveau rapport de maintenance</h4>
@@ -148,7 +148,7 @@ const MaintenanceReportForm = ({ contract, onClose, onSuccess }) => {
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
           onClick={onClose}
-          className="text-gray-400 hover:text-white"
+          className="text-text-muted hover:text-text-primary"
         >
           <FiX />
         </motion.button>
@@ -304,7 +304,7 @@ const MaintenanceReportForm = ({ contract, onClose, onSuccess }) => {
                 <button
                   type="button"
                   onClick={() => removeRecommendation(index)}
-                  className="md:col-span-1 flex items-center justify-center h-10 rounded-lg border border-gray-700 text-gray-400 hover:text-rose-400 hover:border-rose-500"
+                  className="md:col-span-1 flex items-center justify-center h-10 rounded-lg border border-border text-text-muted hover:text-rose-400 hover:border-rose-500"
                   aria-label="Supprimer la recommandation"
                 >
                   <FiTrash2 size={16} />
@@ -321,9 +321,9 @@ const MaintenanceReportForm = ({ contract, onClose, onSuccess }) => {
             name="show_backups"
             checked={formData.show_backups}
             onChange={handleInputChange}
-            className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-purple-600 focus:ring-purple-500"
+            className="w-4 h-4 rounded border-border-strong bg-surface-strong text-purple-600 focus:ring-purple-500"
           />
-          <span className="text-sm text-gray-300">Afficher les sauvegardes quotidiennes</span>
+          <span className="text-sm text-text-secondary">Afficher les sauvegardes quotidiennes</span>
         </label>
 
         {/* Mot de clôture */}
@@ -361,7 +361,7 @@ const MaintenanceReportForm = ({ contract, onClose, onSuccess }) => {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={onClose}
-            className="px-4 py-2 rounded-lg border border-gray-600 text-gray-300 hover:bg-gray-700/50"
+            className="px-4 py-2 rounded-lg border border-border-strong text-text-secondary hover:bg-surface-strong/50"
           >
             Annuler
           </motion.button>

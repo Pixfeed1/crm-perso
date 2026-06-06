@@ -36,7 +36,7 @@ const ClientDetails = ({ client, onUpdate, onDelete, onClose }) => {
     },
     inactive: {
       bg: 'bg-gray-500/20',
-      text: 'text-gray-300',
+      text: 'text-text-secondary',
       border: 'border-gray-500/30',
       label: 'Inactif'
     }
@@ -73,7 +73,7 @@ const ClientDetails = ({ client, onUpdate, onDelete, onClose }) => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 20 }}
-      className="bg-gray-800/30 border border-gray-700 rounded-2xl p-6 relative"
+      className="bg-surface/30 border border-border rounded-2xl p-6 relative"
     >
       {/* En-tête */}
       <div className="flex justify-between items-start mb-6">
@@ -82,7 +82,7 @@ const ClientDetails = ({ client, onUpdate, onDelete, onClose }) => {
             <TypeIcon />
           </div>
           <div>
-            <h2 className="text-2xl font-bold text-white mb-1">{client.name}</h2>
+            <h2 className="text-2xl font-bold text-text-primary mb-1">{client.name}</h2>
             {client.company && (
               <p className="text-indigo-300 text-lg">{client.company}</p>
             )}
@@ -135,7 +135,7 @@ const ClientDetails = ({ client, onUpdate, onDelete, onClose }) => {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => setIsEditing(true)}
-            className="p-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
+            className="p-2 bg-accent hover:bg-indigo-700 text-white rounded-lg transition-colors"
             title="Modifier"
           >
             <FiEdit2 />
@@ -156,19 +156,19 @@ const ClientDetails = ({ client, onUpdate, onDelete, onClose }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         {/* Type */}
         <div className="flex items-start gap-3">
-          <div className="w-10 h-10 bg-gray-700/50 rounded-lg flex items-center justify-center">
+          <div className="w-10 h-10 bg-surface-strong/50 rounded-lg flex items-center justify-center">
             <TypeIcon className="text-indigo-400" />
           </div>
           <div>
             <div className="text-xs text-gray-500 mb-1">Type</div>
-            <div className="text-white">{typeInfo.label}</div>
+            <div className="text-text-primary">{typeInfo.label}</div>
           </div>
         </div>
 
         {/* Email */}
         {client.email && (
           <div className="flex items-start gap-3">
-            <div className="w-10 h-10 bg-gray-700/50 rounded-lg flex items-center justify-center">
+            <div className="w-10 h-10 bg-surface-strong/50 rounded-lg flex items-center justify-center">
               <FiMail className="text-blue-400" />
             </div>
             <div>
@@ -183,12 +183,12 @@ const ClientDetails = ({ client, onUpdate, onDelete, onClose }) => {
         {/* Téléphone */}
         {client.phone && (
           <div className="flex items-start gap-3">
-            <div className="w-10 h-10 bg-gray-700/50 rounded-lg flex items-center justify-center">
+            <div className="w-10 h-10 bg-surface-strong/50 rounded-lg flex items-center justify-center">
               <FiPhone className="text-green-400" />
             </div>
             <div>
               <div className="text-xs text-gray-500 mb-1">Téléphone</div>
-              <a href={`tel:${client.phone}`} className="text-white">
+              <a href={`tel:${client.phone}`} className="text-text-primary">
                 {client.phone}
               </a>
             </div>
@@ -198,12 +198,12 @@ const ClientDetails = ({ client, onUpdate, onDelete, onClose }) => {
         {/* Adresse */}
         {client.address && (
           <div className="flex items-start gap-3">
-            <div className="w-10 h-10 bg-gray-700/50 rounded-lg flex items-center justify-center">
+            <div className="w-10 h-10 bg-surface-strong/50 rounded-lg flex items-center justify-center">
               <FiMapPin className="text-red-400" />
             </div>
             <div>
               <div className="text-xs text-gray-500 mb-1">Adresse</div>
-              <div className="text-white">{client.address}</div>
+              <div className="text-text-primary">{client.address}</div>
             </div>
           </div>
         )}
@@ -211,7 +211,7 @@ const ClientDetails = ({ client, onUpdate, onDelete, onClose }) => {
         {/* Site web */}
         {client.website && (
           <div className="flex items-start gap-3">
-            <div className="w-10 h-10 bg-gray-700/50 rounded-lg flex items-center justify-center">
+            <div className="w-10 h-10 bg-surface-strong/50 rounded-lg flex items-center justify-center">
               <FiGlobe className="text-purple-400" />
             </div>
             <div>
@@ -231,21 +231,21 @@ const ClientDetails = ({ client, onUpdate, onDelete, onClose }) => {
         {/* Industrie */}
         {client.industry && (
           <div className="flex items-start gap-3">
-            <div className="w-10 h-10 bg-gray-700/50 rounded-lg flex items-center justify-center">
+            <div className="w-10 h-10 bg-surface-strong/50 rounded-lg flex items-center justify-center">
               <FiBriefcase className="text-yellow-400" />
             </div>
             <div>
               <div className="text-xs text-gray-500 mb-1">Industrie</div>
-              <div className="text-white">{client.industry}</div>
+              <div className="text-text-primary">{client.industry}</div>
             </div>
           </div>
         )}
       </div>
 
       {/* Informations financières et dates */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 p-4 bg-gray-900/50 rounded-xl">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 p-4 bg-surface-muted/50 rounded-xl">
         <div>
-          <div className="flex items-center gap-2 text-gray-400 text-xs mb-1">
+          <div className="flex items-center gap-2 text-text-muted text-xs mb-1">
             <FiDollarSign />
             <span>Valeur vie client</span>
           </div>
@@ -255,21 +255,21 @@ const ClientDetails = ({ client, onUpdate, onDelete, onClose }) => {
         </div>
 
         <div>
-          <div className="flex items-center gap-2 text-gray-400 text-xs mb-1">
+          <div className="flex items-center gap-2 text-text-muted text-xs mb-1">
             <FiCalendar />
             <span>Début contrat</span>
           </div>
-          <div className="text-white">
+          <div className="text-text-primary">
             {client.contract_start_date ? formatLongDate(client.contract_start_date) : 'N/A'}
           </div>
         </div>
 
         <div>
-          <div className="flex items-center gap-2 text-gray-400 text-xs mb-1">
+          <div className="flex items-center gap-2 text-text-muted text-xs mb-1">
             <FiCalendar />
             <span>Client depuis</span>
           </div>
-          <div className="text-white">
+          <div className="text-text-primary">
             {formatLongDate(client.created_at)}
           </div>
         </div>
@@ -278,7 +278,7 @@ const ClientDetails = ({ client, onUpdate, onDelete, onClose }) => {
       {/* Source */}
       {client.source && (
         <div className="mb-6">
-          <div className="flex items-center gap-2 text-gray-400 text-xs mb-2">
+          <div className="flex items-center gap-2 text-text-muted text-xs mb-2">
             <FiTag />
             <span>Source</span>
           </div>
@@ -291,7 +291,7 @@ const ClientDetails = ({ client, onUpdate, onDelete, onClose }) => {
       {/* Tags */}
       {client.tags && (
         <div className="mb-6">
-          <div className="flex items-center gap-2 text-gray-400 text-xs mb-2">
+          <div className="flex items-center gap-2 text-text-muted text-xs mb-2">
             <FiTag />
             <span>Tags</span>
           </div>
@@ -311,11 +311,11 @@ const ClientDetails = ({ client, onUpdate, onDelete, onClose }) => {
       {/* Notes */}
       {client.notes && (
         <div>
-          <div className="flex items-center gap-2 text-gray-400 text-xs mb-2">
+          <div className="flex items-center gap-2 text-text-muted text-xs mb-2">
             <FiFileText />
             <span>Notes</span>
           </div>
-          <div className="p-4 bg-gray-900/50 rounded-xl text-gray-300 whitespace-pre-wrap">
+          <div className="p-4 bg-surface-muted/50 rounded-xl text-text-secondary whitespace-pre-wrap">
             {client.notes}
           </div>
         </div>
@@ -323,19 +323,19 @@ const ClientDetails = ({ client, onUpdate, onDelete, onClose }) => {
 
       {/* Projets et revenus associés */}
       {((client.projects && client.projects.length > 0) || (client.revenues && client.revenues.length > 0)) && (
-        <div className="mt-6 pt-6 border-t border-gray-700">
-          <h3 className="text-lg font-semibold text-white mb-4">Données associées</h3>
+        <div className="mt-6 pt-6 border-t border-border">
+          <h3 className="text-lg font-semibold text-text-primary mb-4">Données associées</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {client.projects && client.projects.length > 0 && (
               <div className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-xl">
                 <div className="text-blue-400 text-sm mb-1">Projets</div>
-                <div className="text-white text-2xl font-bold">{client.projects.length}</div>
+                <div className="text-text-primary text-2xl font-bold">{client.projects.length}</div>
               </div>
             )}
             {client.revenues && client.revenues.length > 0 && (
               <div className="p-4 bg-green-500/10 border border-green-500/30 rounded-xl">
                 <div className="text-green-400 text-sm mb-1">Revenus</div>
-                <div className="text-white text-2xl font-bold">{client.revenues.length}</div>
+                <div className="text-text-primary text-2xl font-bold">{client.revenues.length}</div>
               </div>
             )}
           </div>

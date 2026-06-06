@@ -135,14 +135,14 @@ const CalendarSync = ({ isOpen, onClose }) => {
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95 }}
-          className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden border border-gray-700"
+          className="bg-gradient-to-br from-surface-muted via-surface to-surface-muted rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden border border-border"
         >
           {/* Header */}
           <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4 flex items-center justify-between">
-            <h2 className="text-2xl font-bold text-white">Synchronisation calendrier</h2>
+            <h2 className="text-2xl font-bold text-text-primary">Synchronisation calendrier</h2>
             <button
               onClick={onClose}
-              className="text-white hover:text-gray-200 transition-colors"
+              className="text-text-primary hover:text-text-primary transition-colors"
             >
               <FiX className="text-2xl" />
             </button>
@@ -159,7 +159,7 @@ const CalendarSync = ({ isOpen, onClose }) => {
                 {/* Boutons de connexion */}
                 {connections.length === 0 && (
                   <div className="mb-8">
-                    <h3 className="text-lg font-semibold text-gray-200 mb-4">
+                    <h3 className="text-lg font-semibold text-text-primary mb-4">
                       Connecter un calendrier
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -188,7 +188,7 @@ const CalendarSync = ({ isOpen, onClose }) => {
 
                 {/* Connexions actives */}
                 {connections.map(connection => (
-                  <div key={connection.id} className="mb-6 bg-gray-800/50 rounded-lg p-6 border border-gray-700">
+                  <div key={connection.id} className="mb-6 bg-surface/50 rounded-lg p-6 border border-border">
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex items-center gap-3">
                         <div className={`p-3 rounded-lg ${
@@ -197,10 +197,10 @@ const CalendarSync = ({ isOpen, onClose }) => {
                           {getProviderIcon(connection.provider)}
                         </div>
                         <div>
-                          <h4 className="text-lg font-semibold text-white">
+                          <h4 className="text-lg font-semibold text-text-primary">
                             {getProviderName(connection.provider)}
                           </h4>
-                          <p className="text-sm text-gray-400">{connection.account_email}</p>
+                          <p className="text-sm text-text-muted">{connection.account_email}</p>
                         </div>
                       </div>
 
@@ -210,7 +210,7 @@ const CalendarSync = ({ isOpen, onClose }) => {
                           disabled={syncing[connection.id]}
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}
-                          className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="p-2 bg-accent text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
                           title="Synchroniser maintenant"
                         >
                           <FiRefreshCw className={syncing[connection.id] ? 'animate-spin' : ''} />
@@ -230,30 +230,30 @@ const CalendarSync = ({ isOpen, onClose }) => {
 
                     {/* Statut */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                      <div className="bg-gray-900/50 rounded-lg p-3">
-                        <p className="text-xs text-gray-400 mb-1">Statut</p>
+                      <div className="bg-surface-muted/50 rounded-lg p-3">
+                        <p className="text-xs text-text-muted mb-1">Statut</p>
                         <p className="text-sm font-semibold text-green-400 flex items-center gap-1">
                           <FiCheck /> Connecté
                         </p>
                       </div>
 
-                      <div className="bg-gray-900/50 rounded-lg p-3">
-                        <p className="text-xs text-gray-400 mb-1">Dernière synchro</p>
-                        <p className="text-sm font-semibold text-white">
+                      <div className="bg-surface-muted/50 rounded-lg p-3">
+                        <p className="text-xs text-text-muted mb-1">Dernière synchro</p>
+                        <p className="text-sm font-semibold text-text-primary">
                           {formatDate(connection.last_sync_at)}
                         </p>
                       </div>
 
-                      <div className="bg-gray-900/50 rounded-lg p-3">
-                        <p className="text-xs text-gray-400 mb-1">Direction</p>
-                        <p className="text-sm font-semibold text-white capitalize">
+                      <div className="bg-surface-muted/50 rounded-lg p-3">
+                        <p className="text-xs text-text-muted mb-1">Direction</p>
+                        <p className="text-sm font-semibold text-text-primary capitalize">
                           {connection.sync_direction === 'bidirectional' ? 'Bidirectionnelle' : connection.sync_direction}
                         </p>
                       </div>
 
-                      <div className="bg-gray-900/50 rounded-lg p-3">
-                        <p className="text-xs text-gray-400 mb-1">Synchronisation</p>
-                        <p className={`text-sm font-semibold ${connection.sync_enabled ? 'text-green-400' : 'text-gray-400'}`}>
+                      <div className="bg-surface-muted/50 rounded-lg p-3">
+                        <p className="text-xs text-text-muted mb-1">Synchronisation</p>
+                        <p className={`text-sm font-semibold ${connection.sync_enabled ? 'text-green-400' : 'text-text-muted'}`}>
                           {connection.sync_enabled ? 'Activée' : 'Désactivée'}
                         </p>
                       </div>
@@ -262,12 +262,12 @@ const CalendarSync = ({ isOpen, onClose }) => {
                     {/* Logs récents */}
                     {syncLogs[connection.id] && syncLogs[connection.id].length > 0 && (
                       <div>
-                        <h5 className="text-sm font-semibold text-gray-300 mb-2">Historique récent</h5>
+                        <h5 className="text-sm font-semibold text-text-secondary mb-2">Historique récent</h5>
                         <div className="space-y-2">
                           {syncLogs[connection.id].slice(0, 3).map(log => (
-                            <div key={log.id} className="bg-gray-900/50 rounded p-3 text-sm">
+                            <div key={log.id} className="bg-surface-muted/50 rounded p-3 text-sm">
                               <div className="flex items-center justify-between mb-1">
-                                <span className="text-gray-400">{formatDate(log.started_at)}</span>
+                                <span className="text-text-muted">{formatDate(log.started_at)}</span>
                                 <span className={`px-2 py-1 rounded text-xs font-semibold ${
                                   log.status === 'success' ? 'bg-green-500/20 text-green-400' :
                                   log.status === 'partial' ? 'bg-yellow-500/20 text-yellow-400' :
@@ -276,7 +276,7 @@ const CalendarSync = ({ isOpen, onClose }) => {
                                   {log.status === 'success' ? 'Succès' : log.status === 'partial' ? 'Partiel' : 'Erreur'}
                                 </span>
                               </div>
-                              <div className="text-gray-300">
+                              <div className="text-text-secondary">
                                 {log.events_imported > 0 && <span>↓ {log.events_imported} importés</span>}
                                 {log.events_imported > 0 && log.events_exported > 0 && <span className="mx-2">•</span>}
                                 {log.events_exported > 0 && <span>↑ {log.events_exported} exportés</span>}
@@ -292,7 +292,7 @@ const CalendarSync = ({ isOpen, onClose }) => {
                 {/* Ajouter un autre calendrier */}
                 {connections.length > 0 && connections.length < 2 && (
                   <div className="mt-6">
-                    <h3 className="text-lg font-semibold text-gray-200 mb-4">
+                    <h3 className="text-lg font-semibold text-text-primary mb-4">
                       Ajouter un autre calendrier
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -327,9 +327,9 @@ const CalendarSync = ({ isOpen, onClose }) => {
                 <div className="mt-6 bg-blue-900/20 border border-blue-500/30 rounded-lg p-4">
                   <div className="flex items-start gap-3">
                     <FiAlertCircle className="text-blue-400 text-xl flex-shrink-0 mt-0.5" />
-                    <div className="text-sm text-gray-300">
+                    <div className="text-sm text-text-secondary">
                       <p className="font-semibold text-blue-400 mb-1">À propos de la synchronisation</p>
-                      <ul className="list-disc list-inside space-y-1 text-gray-400">
+                      <ul className="list-disc list-inside space-y-1 text-text-muted">
                         <li>La synchronisation est bidirectionnelle par défaut</li>
                         <li>Les modifications sont synchronisées automatiquement</li>
                         <li>Vous pouvez synchroniser manuellement à tout moment</li>

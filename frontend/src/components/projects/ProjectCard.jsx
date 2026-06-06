@@ -55,7 +55,7 @@ const ProjectCard = ({ project, isSelected, onClick }) => {
   // Valeurs par défaut si le statut ou type n'est pas configuré
   const statusStyle = statusConfig[project.status] || {
     bg: 'bg-gray-500/20',
-    text: 'text-gray-300',
+    text: 'text-text-secondary',
     border: 'border-gray-500/30',
     label: project.status || 'Inconnu'
   };
@@ -107,7 +107,7 @@ const ProjectCard = ({ project, isSelected, onClick }) => {
   return (
     <motion.div
       className={`rounded-xl p-4 cursor-pointer transition-colors relative overflow-hidden ${
-        isSelected ? 'bg-purple-900/40 border-purple-500/50' : 'bg-gray-800/20 hover:bg-gray-800/40 border-transparent'
+        isSelected ? 'bg-purple-900/40 border-purple-500/50' : 'bg-surface/20 hover:bg-surface/40 border-transparent'
       } border`}
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
@@ -127,7 +127,7 @@ const ProjectCard = ({ project, isSelected, onClick }) => {
         <div className="flex justify-between items-start mb-2">
           <div className="flex items-center">
             <span className="text-base mr-2">{typeInfo.icon}</span>
-            <span className="text-xs text-gray-400">{typeInfo.label}</span>
+            <span className="text-xs text-text-muted">{typeInfo.label}</span>
           </div>
           <div className={`text-xs px-2 py-1 rounded-full ${statusStyle.bg} ${statusStyle.text} font-medium`}>
             {statusStyle.label}
@@ -136,12 +136,12 @@ const ProjectCard = ({ project, isSelected, onClick }) => {
         
         {/* Titre et client */}
         <div className="mb-3">
-          <h3 className="font-semibold text-white">{project.name || 'Projet sans nom'}</h3>
+          <h3 className="font-semibold text-text-primary">{project.name || 'Projet sans nom'}</h3>
           <p className="text-sm text-purple-300">{project.lead_name || 'Aucun client associé'}</p>
         </div>
         
         {/* Dates */}
-        <div className="flex justify-between text-xs text-gray-400 mb-3">
+        <div className="flex justify-between text-xs text-text-muted mb-3">
           <div>
             <span className="block">Début: {formatDate(project.start_date)}</span>
             <span className="block">Fin: {formatDate(project.end_date)}</span>
@@ -149,7 +149,7 @@ const ProjectCard = ({ project, isSelected, onClick }) => {
           
           {project.status !== 'terminé' && project.status !== 'annulé' && daysRemaining > 0 && (
             <div className={`px-2 py-1 rounded ${
-              daysRemaining <= 7 ? 'bg-rose-900/30 text-rose-300' : 'bg-gray-800/50 text-gray-300'
+              daysRemaining <= 7 ? 'bg-rose-900/30 text-rose-300' : 'bg-surface/50 text-text-secondary'
             }`}>
               {daysRemaining} jour{daysRemaining > 1 ? 's' : ''} restant{daysRemaining > 1 ? 's' : ''}
             </div>
@@ -159,10 +159,10 @@ const ProjectCard = ({ project, isSelected, onClick }) => {
         {/* Barre de progression */}
         <div className="mt-2">
           <div className="flex justify-between items-center text-xs mb-1">
-            <span className="text-gray-400">Progression</span>
-            <span className="text-white font-medium">{projectProgress}%</span>
+            <span className="text-text-muted">Progression</span>
+            <span className="text-text-primary font-medium">{projectProgress}%</span>
           </div>
-          <div className="h-2 bg-gray-800/70 rounded-full overflow-hidden">
+          <div className="h-2 bg-surface/70 rounded-full overflow-hidden">
             <div 
               className="h-full rounded-full bg-gradient-to-r from-purple-500 to-indigo-500"
               style={{ width: `${projectProgress}%` }}
@@ -172,7 +172,7 @@ const ProjectCard = ({ project, isSelected, onClick }) => {
         
         {/* Montant */}
         <div className="mt-3 flex justify-end">
-          <div className="bg-gray-800/50 px-3 py-1 rounded-lg text-sm font-medium text-white">
+          <div className="bg-surface/50 px-3 py-1 rounded-lg text-sm font-medium text-text-primary">
             {amount.toLocaleString()} €
           </div>
         </div>

@@ -70,14 +70,14 @@ const RecurrenceForm = ({ recurrenceData = {}, onChange }) => {
 
   if (formData.recurrence_type === 'NONE') {
     return (
-      <div className="border-t border-gray-600 pt-4">
-        <label className="block text-sm font-medium text-gray-300 mb-2">
+      <div className="border-t border-border-strong pt-4">
+        <label className="block text-sm font-medium text-text-secondary mb-2">
           Récurrence
         </label>
         <select
           value={formData.recurrence_type}
           onChange={(e) => handleChange('recurrence_type', e.target.value)}
-          className="w-full bg-gray-900/50 text-white border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+          className="w-full bg-surface-muted/50 text-text-primary border border-border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
         >
           {recurrenceTypeOptions.map(option => (
             <option key={option.value} value={option.value}>
@@ -90,15 +90,15 @@ const RecurrenceForm = ({ recurrenceData = {}, onChange }) => {
   }
 
   return (
-    <div className="border-t border-gray-600 pt-4 space-y-4">
+    <div className="border-t border-border-strong pt-4 space-y-4">
       <div>
-        <label className="block text-sm font-medium text-gray-300 mb-2">
+        <label className="block text-sm font-medium text-text-secondary mb-2">
           Récurrence
         </label>
         <select
           value={formData.recurrence_type}
           onChange={(e) => handleChange('recurrence_type', e.target.value)}
-          className="w-full bg-gray-900/50 text-white border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+          className="w-full bg-surface-muted/50 text-text-primary border border-border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
         >
           {recurrenceTypeOptions.map(option => (
             <option key={option.value} value={option.value}>
@@ -110,7 +110,7 @@ const RecurrenceForm = ({ recurrenceData = {}, onChange }) => {
 
       {/* Intervalle */}
       <div>
-        <label className="block text-sm font-medium text-gray-300 mb-2">
+        <label className="block text-sm font-medium text-text-secondary mb-2">
           Répéter tous les
         </label>
         <div className="flex items-center space-x-2">
@@ -120,9 +120,9 @@ const RecurrenceForm = ({ recurrenceData = {}, onChange }) => {
             max="365"
             value={formData.recurrence_interval}
             onChange={(e) => handleChange('recurrence_interval', parseInt(e.target.value) || 1)}
-            className="w-20 bg-gray-900/50 text-white border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-20 bg-surface-muted/50 text-text-primary border border-border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
-          <span className="text-gray-300">
+          <span className="text-text-secondary">
             {intervalLabels[formData.recurrence_type] || ''}
           </span>
         </div>
@@ -131,7 +131,7 @@ const RecurrenceForm = ({ recurrenceData = {}, onChange }) => {
       {/* Jours de la semaine pour récurrence hebdomadaire */}
       {formData.recurrence_type === 'WEEKLY' && (
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
+          <label className="block text-sm font-medium text-text-secondary mb-2">
             Répéter le(s)
           </label>
           <div className="flex flex-wrap gap-2">
@@ -147,8 +147,8 @@ const RecurrenceForm = ({ recurrenceData = {}, onChange }) => {
                   onClick={() => handleDayToggle(day.index)}
                   className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                     isSelected
-                      ? 'bg-indigo-600 text-white'
-                      : 'bg-gray-900/50 text-gray-300 border border-gray-700 hover:bg-gray-800/50'
+                      ? 'bg-accent text-white'
+                      : 'bg-surface-muted/50 text-text-secondary border border-border hover:bg-surface/50'
                   }`}
                   title={day.fullLabel}
                 >
@@ -162,13 +162,13 @@ const RecurrenceForm = ({ recurrenceData = {}, onChange }) => {
 
       {/* Fin de récurrence */}
       <div>
-        <label className="block text-sm font-medium text-gray-300 mb-2">
+        <label className="block text-sm font-medium text-text-secondary mb-2">
           Fin de récurrence
         </label>
 
         <div className="space-y-2">
           {/* Jamais */}
-          <label className="flex items-center text-gray-300 cursor-pointer">
+          <label className="flex items-center text-text-secondary cursor-pointer">
             <input
               type="radio"
               name="recurrence_end_type"
@@ -181,7 +181,7 @@ const RecurrenceForm = ({ recurrenceData = {}, onChange }) => {
           </label>
 
           {/* Après X occurrences */}
-          <label className="flex items-center text-gray-300 cursor-pointer">
+          <label className="flex items-center text-text-secondary cursor-pointer">
             <input
               type="radio"
               name="recurrence_end_type"
@@ -198,7 +198,7 @@ const RecurrenceForm = ({ recurrenceData = {}, onChange }) => {
               value={formData.recurrence_count}
               onChange={(e) => handleChange('recurrence_count', parseInt(e.target.value) || 1)}
               disabled={formData.recurrence_end_type !== 'COUNT'}
-              className={`mx-2 w-20 bg-gray-900/50 text-white border border-gray-700 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+              className={`mx-2 w-20 bg-surface-muted/50 text-text-primary border border-border rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
                 formData.recurrence_end_type !== 'COUNT' ? 'opacity-50' : ''
               }`}
             />
@@ -206,7 +206,7 @@ const RecurrenceForm = ({ recurrenceData = {}, onChange }) => {
           </label>
 
           {/* À une date spécifique */}
-          <label className="flex items-center text-gray-300 cursor-pointer">
+          <label className="flex items-center text-text-secondary cursor-pointer">
             <input
               type="radio"
               name="recurrence_end_type"
@@ -222,7 +222,7 @@ const RecurrenceForm = ({ recurrenceData = {}, onChange }) => {
                 onChange={(date) => handleChange('recurrence_end_date', date)}
                 dateFormat="dd/MM/yyyy"
                 disabled={formData.recurrence_end_type !== 'DATE'}
-                className={`bg-gray-900/50 text-white border border-gray-700 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                className={`bg-surface-muted/50 text-text-primary border border-border rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
                   formData.recurrence_end_type !== 'DATE' ? 'opacity-50' : ''
                 }`}
                 minDate={new Date()}
@@ -234,7 +234,7 @@ const RecurrenceForm = ({ recurrenceData = {}, onChange }) => {
 
       {/* Résumé de la récurrence */}
       <div className="bg-indigo-900/30 border border-indigo-500/50 rounded-lg p-3">
-        <p className="text-sm text-gray-300">
+        <p className="text-sm text-text-secondary">
           <span className="font-medium">Résumé : </span>
           {getSummary(formData)}
         </p>

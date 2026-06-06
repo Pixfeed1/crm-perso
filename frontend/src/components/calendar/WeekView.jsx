@@ -130,20 +130,20 @@ const WeekView = ({
     <div className="flex-1 flex flex-col h-full">
       {/* Version desktop - visible uniquement sur md et plus */}
       <div className="hidden md:block flex-1">
-        <div className="grid grid-cols-8 border-b border-gray-700">
+        <div className="grid grid-cols-8 border-b border-border">
           {/* Cellule vide pour l'angle supérieur gauche */}
-          <div className="border-r border-gray-700 p-2"></div>
+          <div className="border-r border-border p-2"></div>
           
           {/* Jours de la semaine */}
           {daysInWeek.map((day, index) => (
             <div 
               key={index}
-              className={`p-2 text-center border-r border-gray-700 cursor-pointer 
+              className={`p-2 text-center border-r border-border cursor-pointer 
                 ${day.isToday ? 'bg-indigo-900/20' : ''}`}
               onClick={() => onSelectDate(day.date)}
             >
-              <div className="text-gray-400 text-xs">{weekdays[index]}</div>
-              <div className={`text-lg font-medium ${day.isToday ? 'text-indigo-300' : 'text-white'}`}>
+              <div className="text-text-muted text-xs">{weekdays[index]}</div>
+              <div className={`text-lg font-medium ${day.isToday ? 'text-indigo-300' : 'text-text-primary'}`}>
                 {formatDate(day.date)}
               </div>
             </div>
@@ -152,11 +152,11 @@ const WeekView = ({
         
         <div className="grid grid-cols-8 relative flex-1">
           {/* Colonne des heures */}
-          <div className="border-r border-gray-700">
+          <div className="border-r border-border">
             {hours.map(hour => (
               <div 
                 key={hour} 
-                className="h-20 border-b border-gray-700 p-2 text-right text-gray-400 text-sm"
+                className="h-20 border-b border-border p-2 text-right text-text-muted text-sm"
               >
                 {formatHour(hour)}
               </div>
@@ -167,7 +167,7 @@ const WeekView = ({
           {daysInWeek.map((day, dayIndex) => (
             <div 
               key={dayIndex} 
-              className={`border-r border-gray-700 relative ${
+              className={`border-r border-border relative ${
                 day.isToday ? 'bg-indigo-900/10' : ''
               }`}
             >
@@ -175,7 +175,7 @@ const WeekView = ({
               {hours.map(hour => (
                 <div 
                   key={hour} 
-                  className="h-20 border-b border-gray-700"
+                  className="h-20 border-b border-border"
                   onClick={() => {
                     // Créer une date avec l'heure sélectionnée
                     const newDate = new Date(day.date);
@@ -193,7 +193,7 @@ const WeekView = ({
                     <motion.div
                       key={event.id}
                       className={`absolute left-1 right-1 p-1 rounded-md border-l-2 border 
-                        ${categoryColors[event.category] || 'bg-gray-600/80 text-gray-100 border-gray-500'} 
+                        ${categoryColors[event.category] || 'bg-border-strong/80 text-gray-100 border-gray-500'} 
                         ${priorityColors[event.priority] || 'border-l-gray-400'} 
                         ${selectedEvent && selectedEvent.id === event.id ? 'ring-2 ring-white' : ''}
                         ${position.startsBefore ? 'rounded-t-none border-t-dashed' : ''}
@@ -229,25 +229,25 @@ const WeekView = ({
       
       {/* Version mobile - visible uniquement en dessous de md */}
       <div className="md:hidden flex flex-col">
-        <div className="p-4 text-center border-b border-gray-700">
-          <h3 className="text-lg font-medium text-gray-300">
+        <div className="p-4 text-center border-b border-border">
+          <h3 className="text-lg font-medium text-text-secondary">
             Vue semaine
           </h3>
-          <p className="text-sm text-gray-400">Sélectionnez un jour pour voir les détails</p>
+          <p className="text-sm text-text-muted">Sélectionnez un jour pour voir les détails</p>
         </div>
         <div className="grid grid-cols-7 gap-2 p-4">
           {daysInWeek.map((day, index) => (
             <div 
               key={index}
               className={`p-2 text-center rounded-lg cursor-pointer 
-                ${day.isToday ? 'bg-indigo-900/50' : 'bg-gray-800/50'}`}
+                ${day.isToday ? 'bg-indigo-900/50' : 'bg-surface/50'}`}
               onClick={() => onSelectDate(day.date)}
             >
-              <div className="text-gray-400 text-xs">{weekdays[index]}</div>
-              <div className={`text-lg font-medium ${day.isToday ? 'text-indigo-300' : 'text-white'}`}>
+              <div className="text-text-muted text-xs">{weekdays[index]}</div>
+              <div className={`text-lg font-medium ${day.isToday ? 'text-indigo-300' : 'text-text-primary'}`}>
                 {formatDate(day.date)}
               </div>
-              <div className="text-xs text-gray-400 mt-1">
+              <div className="text-xs text-text-muted mt-1">
                 {getEventsForDay(day.date).length} événements
               </div>
             </div>
@@ -256,7 +256,7 @@ const WeekView = ({
         
         {/* Liste des événements pour aujourd'hui ou le jour sélectionné */}
         <div className="flex-1 p-4">
-          <h4 className="text-md font-medium text-gray-300 mb-3">
+          <h4 className="text-md font-medium text-text-secondary mb-3">
             Événements ({daysInWeek.find(d => d.isToday) ? 'Aujourd\'hui' : 'Jour sélectionné'})
           </h4>
           <div className="space-y-2">
@@ -264,7 +264,7 @@ const WeekView = ({
               <motion.div
                 key={event.id}
                 className={`p-3 rounded-lg cursor-pointer border-l-2 ${
-                  categoryColors[event.category] || 'bg-gray-600/80 text-gray-100 border-gray-500'
+                  categoryColors[event.category] || 'bg-border-strong/80 text-gray-100 border-gray-500'
                 } ${
                   selectedEvent && selectedEvent.id === event.id ? 'ring-2 ring-white' : ''
                 }`}
@@ -295,7 +295,7 @@ const WeekView = ({
             ))}
             
             {getEventsForDay(daysInWeek.find(d => d.isToday)?.date || daysInWeek[0].date).length === 0 && (
-              <div className="text-center text-gray-400 py-6">
+              <div className="text-center text-text-muted py-6">
                 <div className="text-3xl mb-2"><FiCalendar /></div>
                 <p>Aucun événement pour ce jour</p>
               </div>

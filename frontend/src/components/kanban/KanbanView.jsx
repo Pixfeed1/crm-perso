@@ -136,23 +136,23 @@ const KanbanView = ({ leads, onLeadUpdate, onLeadSelect }) => {
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div className="flex items-center gap-2">
               <FiTrendingUp className="text-indigo-300 text-xl" />
-              <h3 className="text-lg font-semibold text-white">Statistiques de Conversion</h3>
+              <h3 className="text-lg font-semibold text-text-primary">Statistiques de Conversion</h3>
             </div>
             <div className="flex gap-6 text-sm">
               <div className="text-center">
-                <div className="text-gray-400">Taux de gain</div>
+                <div className="text-text-muted">Taux de gain</div>
                 <div className="text-2xl font-bold text-green-400">{stats.totals.win_rate}%</div>
               </div>
               <div className="text-center">
-                <div className="text-gray-400">Conversion globale</div>
+                <div className="text-text-muted">Conversion globale</div>
                 <div className="text-2xl font-bold text-indigo-400">{stats.totals.conversion_rate}%</div>
               </div>
               <div className="text-center">
-                <div className="text-gray-400">Leads actifs</div>
-                <div className="text-2xl font-bold text-white">{stats.totals.active_leads}</div>
+                <div className="text-text-muted">Leads actifs</div>
+                <div className="text-2xl font-bold text-text-primary">{stats.totals.active_leads}</div>
               </div>
               <div className="text-center">
-                <div className="text-gray-400">Budget total</div>
+                <div className="text-text-muted">Budget total</div>
                 <div className="text-2xl font-bold text-amber-400">
                   {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(stats.totals.total_budget)}
                 </div>

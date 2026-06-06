@@ -101,7 +101,7 @@ const ContactClientModal = ({ contact, leadId, onClose, onCreateClient, onLinkCl
       onClick={onClose}
     >
       <motion.div
-        className="bg-gray-900 border border-gray-700 rounded-xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto"
+        className="bg-surface-muted border border-border rounded-xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto"
         initial={{ scale: 0.9, y: 20 }}
         animate={{ scale: 1, y: 0 }}
         exit={{ scale: 0.9, y: 20 }}
@@ -109,10 +109,10 @@ const ContactClientModal = ({ contact, leadId, onClose, onCreateClient, onLinkCl
       >
         {/* En-tête */}
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-xl font-semibold text-white">Profil Client Particulier</h3>
+          <h3 className="text-xl font-semibold text-text-primary">Profil Client Particulier</h3>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-white transition-colors"
+            className="text-text-muted hover:text-text-primary transition-colors"
           >
             <FiX size={24} />
           </button>
@@ -125,7 +125,7 @@ const ContactClientModal = ({ contact, leadId, onClose, onCreateClient, onLinkCl
               {contact.name.charAt(0)}
             </div>
             <div>
-              <h4 className="font-medium text-white">{contact.name}</h4>
+              <h4 className="font-medium text-text-primary">{contact.name}</h4>
               {contact.position && (
                 <p className="text-sm text-indigo-300">{contact.position}</p>
               )}
@@ -141,7 +141,7 @@ const ContactClientModal = ({ contact, leadId, onClose, onCreateClient, onLinkCl
             className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${
               mode === 'create'
                 ? 'bg-emerald-600 text-white'
-                : 'bg-gray-800 text-gray-400 hover:text-white'
+                : 'bg-surface text-text-muted hover:text-text-primary'
             }`}
           >
             <FiUser size={16} />
@@ -152,8 +152,8 @@ const ContactClientModal = ({ contact, leadId, onClose, onCreateClient, onLinkCl
             onClick={() => setMode('link')}
             className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${
               mode === 'link'
-                ? 'bg-indigo-600 text-white'
-                : 'bg-gray-800 text-gray-400 hover:text-white'
+                ? 'bg-accent text-white'
+                : 'bg-surface text-text-muted hover:text-text-primary'
             }`}
           >
             <FiLink size={16} />
@@ -167,7 +167,7 @@ const ContactClientModal = ({ contact, leadId, onClose, onCreateClient, onLinkCl
             <>
               {/* Mode: Créer un nouveau client */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-text-secondary mb-2">
                   Nom <span className="text-rose-400">*</span>
                 </label>
                 <input
@@ -176,12 +176,12 @@ const ContactClientModal = ({ contact, leadId, onClose, onCreateClient, onLinkCl
                   value={formData.name}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full px-4 py-2 bg-surface/50 border border-border rounded-lg text-text-primary focus:outline-none focus:border-emerald-500"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-text-secondary mb-2">
                   Email
                 </label>
                 <input
@@ -189,12 +189,12 @@ const ContactClientModal = ({ contact, leadId, onClose, onCreateClient, onLinkCl
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full px-4 py-2 bg-surface/50 border border-border rounded-lg text-text-primary focus:outline-none focus:border-emerald-500"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-text-secondary mb-2">
                   Téléphone
                 </label>
                 <input
@@ -202,12 +202,12 @@ const ContactClientModal = ({ contact, leadId, onClose, onCreateClient, onLinkCl
                   name="phone"
                   value={formData.phone}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full px-4 py-2 bg-surface/50 border border-border rounded-lg text-text-primary focus:outline-none focus:border-emerald-500"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-text-secondary mb-2">
                   Notes
                 </label>
                 <textarea
@@ -215,7 +215,7 @@ const ContactClientModal = ({ contact, leadId, onClose, onCreateClient, onLinkCl
                   value={formData.notes}
                   onChange={handleChange}
                   rows="3"
-                  className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-emerald-500 resize-none"
+                  className="w-full px-4 py-2 bg-surface/50 border border-border rounded-lg text-text-primary focus:outline-none focus:border-emerald-500 resize-none"
                 />
               </div>
             </>
@@ -223,14 +223,14 @@ const ContactClientModal = ({ contact, leadId, onClose, onCreateClient, onLinkCl
             <>
               {/* Mode: Lier à un client existant */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-text-secondary mb-2">
                   Sélectionner un client particulier <span className="text-rose-400">*</span>
                 </label>
                 <select
                   value={selectedClientId}
                   onChange={(e) => setSelectedClientId(e.target.value)}
                   required
-                  className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full px-4 py-2 bg-surface/50 border border-border rounded-lg text-text-primary focus:outline-none focus:border-indigo-500"
                 >
                   <option value="">-- Sélectionner un client --</option>
                   {existingClients.map((client) => (
@@ -240,7 +240,7 @@ const ContactClientModal = ({ contact, leadId, onClose, onCreateClient, onLinkCl
                   ))}
                 </select>
                 {existingClients.length === 0 && mode === 'link' && (
-                  <p className="text-sm text-gray-400 mt-2">
+                  <p className="text-sm text-text-muted mt-2">
                     Aucun client particulier trouvé. Créez-en un nouveau.
                   </p>
                 )}
@@ -253,7 +253,7 @@ const ContactClientModal = ({ contact, leadId, onClose, onCreateClient, onLinkCl
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 rounded-lg border-2 border-gray-700 text-white hover:bg-gray-800 font-medium transition-all"
+              className="flex-1 px-4 py-2 rounded-lg border-2 border-border text-text-primary hover:bg-surface font-medium transition-all"
             >
               Annuler
             </button>
@@ -263,8 +263,8 @@ const ContactClientModal = ({ contact, leadId, onClose, onCreateClient, onLinkCl
               className={`flex-1 px-4 py-2 rounded-lg font-medium transition-all ${
                 mode === 'create'
                   ? 'bg-emerald-600 hover:bg-emerald-700'
-                  : 'bg-indigo-600 hover:bg-indigo-700'
-              } text-white disabled:opacity-50 disabled:cursor-not-allowed`}
+                  : 'bg-accent hover:bg-indigo-700'
+              } text-text-primary disabled:opacity-50 disabled:cursor-not-allowed`}
             >
               {loading ? 'En cours...' : mode === 'create' ? 'Créer et lier' : 'Lier'}
             </button>

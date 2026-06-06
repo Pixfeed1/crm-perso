@@ -471,7 +471,7 @@ const Goals = () => {
               className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors ${
                 view === 'active'
                   ? 'bg-amber-600 text-white'
-                  : 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50'
+                  : 'bg-surface/50 text-text-secondary hover:bg-surface-strong/50'
               }`}
             >
               <FiZap /> En cours ({stats.active})
@@ -481,7 +481,7 @@ const Goals = () => {
               className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors ${
                 view === 'completed'
                   ? 'bg-green-600 text-white'
-                  : 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50'
+                  : 'bg-surface/50 text-text-secondary hover:bg-surface-strong/50'
               }`}
             >
               <FiCheckCircle /> Complétés ({stats.completed})
@@ -491,7 +491,7 @@ const Goals = () => {
               className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors ${
                 view === 'upcoming'
                   ? 'bg-purple-600 text-white'
-                  : 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50'
+                  : 'bg-surface/50 text-text-secondary hover:bg-surface-strong/50'
               }`}
             >
               <FiClock /> À venir ({stats.upcoming})
@@ -500,8 +500,8 @@ const Goals = () => {
               onClick={() => setView('archived')}
               className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors ${
                 view === 'archived'
-                  ? 'bg-gray-600 text-white'
-                  : 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50'
+                  ? 'bg-border-strong text-text-primary'
+                  : 'bg-surface/50 text-text-secondary hover:bg-surface-strong/50'
               }`}
             >
               <FiArchive /> Archives ({stats.archived})
@@ -525,8 +525,8 @@ const Goals = () => {
 
         {/* Formulaire d'ajout/édition */}
         {isAddingGoal && (
-          <div className="mb-6 bg-gray-800/50 rounded-xl p-4 sm:p-6 border border-gray-700/50">
-            <h2 className="text-xl font-semibold text-white mb-4">
+          <div className="mb-6 bg-surface/50 rounded-xl p-4 sm:p-6 border border-border/50">
+            <h2 className="text-xl font-semibold text-text-primary mb-4">
               {editingGoal ? 'Modifier l\'objectif' : 'Nouvel objectif'}
             </h2>
             <GoalForm
@@ -550,7 +550,7 @@ const Goals = () => {
 
         {/* Bouton restaurer pour les archives */}
         {view === 'archived' && filteredGoals.length > 0 && (
-          <div className="mt-4 text-center text-sm text-gray-400">
+          <div className="mt-4 text-center text-sm text-text-muted">
             Cliquez sur un objectif archivé pour voir ses détails.
             {filteredGoals.map(goal => (
               <button

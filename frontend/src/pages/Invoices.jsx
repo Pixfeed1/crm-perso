@@ -207,7 +207,7 @@ const Invoices = () => {
               Finances
             </h1>
             {activeTab === 'invoices' && (
-              <p className="text-gray-400 text-sm mt-1">
+              <p className="text-text-muted text-sm mt-1">
                 {filteredInvoices.length} facture{filteredInvoices.length !== 1 ? 's' : ''}
               </p>
             )}
@@ -228,13 +228,13 @@ const Invoices = () => {
         </div>
 
         {/* Onglets */}
-        <div className="flex gap-2 mb-6 border-b border-gray-700/50">
+        <div className="flex gap-2 mb-6 border-b border-border/50">
           <button
             onClick={() => setActiveTab('invoices')}
             className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
               activeTab === 'invoices'
                 ? 'border-indigo-500 text-indigo-300'
-                : 'border-transparent text-gray-400 hover:text-gray-200'
+                : 'border-transparent text-text-muted hover:text-text-primary'
             }`}
           >
             <FiFileText size={16} />
@@ -245,7 +245,7 @@ const Invoices = () => {
             className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
               activeTab === 'subscriptions'
                 ? 'border-indigo-500 text-indigo-300'
-                : 'border-transparent text-gray-400 hover:text-gray-200'
+                : 'border-transparent text-text-muted hover:text-text-primary'
             }`}
           >
             <FiRepeat size={16} />
@@ -256,7 +256,7 @@ const Invoices = () => {
             className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
               activeTab === 'treasury'
                 ? 'border-indigo-500 text-indigo-300'
-                : 'border-transparent text-gray-400 hover:text-gray-200'
+                : 'border-transparent text-text-muted hover:text-text-primary'
             }`}
           >
             <FiTrendingUp size={16} />
@@ -276,12 +276,12 @@ const Invoices = () => {
             placeholder="Rechercher..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-indigo-500"
+            className="px-4 py-2 bg-surface/50 border border-border rounded-lg text-text-primary placeholder-gray-400 focus:outline-none focus:border-indigo-500"
           />
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+            className="px-4 py-2 bg-surface/50 border border-border rounded-lg text-text-primary focus:outline-none focus:border-indigo-500"
           >
             <option value="all">Tous les statuts</option>
             <option value="pending">En attente</option>
@@ -291,18 +291,18 @@ const Invoices = () => {
         </div>
 
         {isLoading ? (
-          <div className="text-center py-12 text-gray-400">Chargement...</div>
+          <div className="text-center py-12 text-text-muted">Chargement...</div>
         ) : filteredInvoices.length === 0 ? (
-          <div className="text-center py-12 bg-gray-800/30 rounded-lg border border-gray-700/50">
+          <div className="text-center py-12 bg-surface/30 rounded-lg border border-border/50">
             <FiFileText className="w-16 h-16 mx-auto text-gray-600 mb-4" />
-            <p className="text-gray-400">Aucune facture trouvée</p>
+            <p className="text-text-muted">Aucune facture trouvée</p>
           </div>
         ) : (
-          <div className="bg-gray-800/30 rounded-lg border border-gray-700/50 overflow-hidden">
+          <div className="bg-surface/30 rounded-lg border border-border/50 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-800/50">
-                  <tr className="text-left text-sm text-gray-400">
+                <thead className="bg-surface/50">
+                  <tr className="text-left text-sm text-text-muted">
                     <th className="px-4 py-3">Numéro</th>
                     <th className="px-4 py-3">Client</th>
                     <th className="px-4 py-3">Date</th>
@@ -318,19 +318,19 @@ const Invoices = () => {
                       key={invoice.id}
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      className="hover:bg-gray-700/30 transition-colors"
+                      className="hover:bg-surface-strong/30 transition-colors"
                     >
                       <td className="px-4 py-3 font-mono text-sm text-indigo-300">
                         {invoice.invoice_number}
                       </td>
-                      <td className="px-4 py-3 text-white">{invoice.client_name}</td>
-                      <td className="px-4 py-3 text-gray-400 text-sm">
+                      <td className="px-4 py-3 text-text-primary">{invoice.client_name}</td>
+                      <td className="px-4 py-3 text-text-muted text-sm">
                         {formatDate(invoice.issue_date)}
                       </td>
-                      <td className="px-4 py-3 text-gray-400 text-sm">
+                      <td className="px-4 py-3 text-text-muted text-sm">
                         {formatDate(invoice.due_date)}
                       </td>
-                      <td className="px-4 py-3 font-semibold text-white">
+                      <td className="px-4 py-3 font-semibold text-text-primary">
                         {formatAmount(invoice.total_ttc)}
                       </td>
                       <td className="px-4 py-3">
@@ -406,7 +406,7 @@ const Invoices = () => {
               initial={{ scale: 0.95 }}
               animate={{ scale: 1 }}
               exit={{ scale: 0.95 }}
-              className="bg-gray-900 rounded-lg border border-gray-700 max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+              className="bg-surface-muted rounded-lg border border-border max-w-4xl w-full max-h-[90vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
             >
               <InvoiceForm
@@ -438,22 +438,22 @@ const Invoices = () => {
               initial={{ scale: 0.95 }}
               animate={{ scale: 1 }}
               exit={{ scale: 0.95 }}
-              className="bg-gray-900 rounded-lg border border-gray-700 max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+              className="bg-surface-muted rounded-lg border border-border max-w-4xl w-full max-h-[90vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
             >
               {/* En-tête */}
-              <div className="sticky top-0 bg-gray-900 border-b border-gray-700 px-6 py-4 flex justify-between items-center">
+              <div className="sticky top-0 bg-surface-muted border-b border-border px-6 py-4 flex justify-between items-center">
                 <div>
-                  <h2 className="text-xl font-bold text-white">
+                  <h2 className="text-xl font-bold text-text-primary">
                     Gestion des paiements
                   </h2>
-                  <p className="text-sm text-gray-400 mt-1">
+                  <p className="text-sm text-text-muted mt-1">
                     Facture {paymentsInvoice.invoice_number} - {paymentsInvoice.client_name}
                   </p>
                 </div>
                 <button
                   onClick={handleClosePayments}
-                  className="text-gray-400 hover:text-white transition-colors"
+                  className="text-text-muted hover:text-text-primary transition-colors"
                 >
                   <FiX size={24} />
                 </button>
@@ -462,28 +462,28 @@ const Invoices = () => {
               {/* Contenu */}
               <div className="p-6">
                 {/* Résumé facture */}
-                <div className="bg-gray-800/50 rounded-lg p-4 mb-6">
+                <div className="bg-surface/50 rounded-lg p-4 mb-6">
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div>
-                      <span className="text-gray-400 text-sm">Montant total</span>
-                      <p className="text-white font-semibold text-lg">
+                      <span className="text-text-muted text-sm">Montant total</span>
+                      <p className="text-text-primary font-semibold text-lg">
                         {formatAmount(paymentsInvoice.total_ttc)}
                       </p>
                     </div>
                     <div>
-                      <span className="text-gray-400 text-sm">Déjà payé</span>
+                      <span className="text-text-muted text-sm">Déjà payé</span>
                       <p className="text-green-400 font-semibold text-lg">
                         {formatAmount(paymentsInvoice.amount_paid || 0)}
                       </p>
                     </div>
                     <div>
-                      <span className="text-gray-400 text-sm">Reste à payer</span>
+                      <span className="text-text-muted text-sm">Reste à payer</span>
                       <p className="text-purple-400 font-semibold text-lg">
                         {formatAmount(paymentsInvoice.amount_remaining || paymentsInvoice.total_ttc)}
                       </p>
                     </div>
                     <div>
-                      <span className="text-gray-400 text-sm">Statut</span>
+                      <span className="text-text-muted text-sm">Statut</span>
                       <div className="mt-1">
                         <PaymentBadge invoice={paymentsInvoice} showAmount={false} />
                       </div>
@@ -520,7 +520,7 @@ const Invoices = () => {
 
                 {/* Liste des paiements */}
                 <div>
-                  <h3 className="text-lg font-semibold text-white mb-4">
+                  <h3 className="text-lg font-semibold text-text-primary mb-4">
                     Historique des paiements ({payments.length})
                   </h3>
                   <PaymentList

@@ -120,7 +120,7 @@ const ClientForm = ({ client = {}, onSave, onCancel }) => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 20 }}
-      className="bg-gray-800/30 border border-gray-700 rounded-2xl p-6"
+      className="bg-surface/30 border border-border rounded-2xl p-6"
     >
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-300 to-purple-300">
@@ -130,7 +130,7 @@ const ClientForm = ({ client = {}, onSave, onCancel }) => {
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
           onClick={onCancel}
-          className="text-gray-400 hover:text-white transition-colors"
+          className="text-text-muted hover:text-text-primary transition-colors"
         >
           <FiX className="text-xl" />
         </motion.button>
@@ -139,7 +139,7 @@ const ClientForm = ({ client = {}, onSave, onCancel }) => {
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Type de client */}
         <div>
-          <label className="block text-gray-300 mb-3 font-medium">Type de client</label>
+          <label className="block text-text-secondary mb-3 font-medium">Type de client</label>
           <div className="grid grid-cols-2 gap-3">
             <motion.button
               type="button"
@@ -148,8 +148,8 @@ const ClientForm = ({ client = {}, onSave, onCancel }) => {
               onClick={() => setFormData({ ...formData, type: 'company' })}
               className={`flex items-center justify-center gap-2 py-3 px-4 rounded-lg border transition-colors ${
                 formData.type === 'company'
-                  ? 'bg-indigo-600 border-indigo-500 text-white'
-                  : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-600'
+                  ? 'bg-accent border-indigo-500 text-white'
+                  : 'bg-surface border-border text-text-muted hover:border-border-strong'
               }`}
             >
               <FiBriefcase />
@@ -162,8 +162,8 @@ const ClientForm = ({ client = {}, onSave, onCancel }) => {
               onClick={() => setFormData({ ...formData, type: 'individual' })}
               className={`flex items-center justify-center gap-2 py-3 px-4 rounded-lg border transition-colors ${
                 formData.type === 'individual'
-                  ? 'bg-indigo-600 border-indigo-500 text-white'
-                  : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-600'
+                  ? 'bg-accent border-indigo-500 text-white'
+                  : 'bg-surface border-border text-text-muted hover:border-border-strong'
               }`}
             >
               <FiUser />
@@ -176,7 +176,7 @@ const ClientForm = ({ client = {}, onSave, onCancel }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Nom */}
           <div>
-            <label className="block text-gray-300 mb-2 font-medium">
+            <label className="block text-text-secondary mb-2 font-medium">
               Nom {formData.type === 'individual' ? 'du contact' : 'du responsable'} *
             </label>
             <input
@@ -184,9 +184,9 @@ const ClientForm = ({ client = {}, onSave, onCancel }) => {
               name="name"
               value={formData.name}
               onChange={handleInputChange}
-              className={`w-full px-4 py-2 bg-gray-900/50 border ${
-                errors.name ? 'border-red-500' : 'border-gray-700'
-              } rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500`}
+              className={`w-full px-4 py-2 bg-surface-muted/50 border ${
+                errors.name ? 'border-red-500' : 'border-border'
+              } rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-indigo-500`}
               placeholder="Jean Dupont"
             />
             {errors.name && <p className="mt-1 text-red-400 text-sm">{errors.name}</p>}
@@ -195,7 +195,7 @@ const ClientForm = ({ client = {}, onSave, onCancel }) => {
           {/* Entreprise (si type company) avec auto-complétion */}
           {formData.type === 'company' && (
             <div>
-              <label className="block text-gray-300 mb-2 font-medium">Entreprise *</label>
+              <label className="block text-text-secondary mb-2 font-medium">Entreprise *</label>
               <CompanyAutocomplete
                 value={formData.company}
                 onChange={(value) => {
@@ -226,28 +226,28 @@ const ClientForm = ({ client = {}, onSave, onCancel }) => {
         {/* Coordonnées */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-gray-300 mb-2 font-medium">Email</label>
+            <label className="block text-text-secondary mb-2 font-medium">Email</label>
             <input
               type="email"
               name="email"
               value={formData.email}
               onChange={handleInputChange}
-              className={`w-full px-4 py-2 bg-gray-900/50 border ${
-                errors.email ? 'border-red-500' : 'border-gray-700'
-              } rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500`}
+              className={`w-full px-4 py-2 bg-surface-muted/50 border ${
+                errors.email ? 'border-red-500' : 'border-border'
+              } rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-indigo-500`}
               placeholder="email@exemple.com"
             />
             {errors.email && <p className="mt-1 text-red-400 text-sm">{errors.email}</p>}
           </div>
 
           <div>
-            <label className="block text-gray-300 mb-2 font-medium">Téléphone</label>
+            <label className="block text-text-secondary mb-2 font-medium">Téléphone</label>
             <input
               type="tel"
               name="phone"
               value={formData.phone}
               onChange={handleInputChange}
-              className="w-full px-4 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+              className="w-full px-4 py-2 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-indigo-500"
               placeholder="+33 6 12 34 56 78"
             />
           </div>
@@ -256,7 +256,7 @@ const ClientForm = ({ client = {}, onSave, onCancel }) => {
         {/* Adresse et site web */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-gray-300 mb-2 font-medium">Adresse</label>
+            <label className="block text-text-secondary mb-2 font-medium">Adresse</label>
             <AddressAutocomplete
               value={formData.address}
               onChange={(value) => {
@@ -274,13 +274,13 @@ const ClientForm = ({ client = {}, onSave, onCancel }) => {
           </div>
 
           <div>
-            <label className="block text-gray-300 mb-2 font-medium">Site web</label>
+            <label className="block text-text-secondary mb-2 font-medium">Site web</label>
             <input
               type="text"
               name="website"
               value={formData.website}
               onChange={handleInputChange}
-              className="w-full px-4 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+              className="w-full px-4 py-2 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-indigo-500"
               placeholder="www.exemple.com"
             />
           </div>
@@ -289,31 +289,31 @@ const ClientForm = ({ client = {}, onSave, onCancel }) => {
         {/* Industrie et Source */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-gray-300 mb-2 font-medium">Industrie</label>
+            <label className="block text-text-secondary mb-2 font-medium">Industrie</label>
             <select
               name="industry"
               value={formData.industry}
               onChange={handleInputChange}
-              className="w-full px-4 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500 [&>option]:bg-gray-800 [&>option]:text-white"
+              className="w-full px-4 py-2 bg-surface-muted/50 border border-border rounded-lg text-text-primary focus:outline-none focus:border-indigo-500 [&>option]:bg-surface [&>option]:text-text-primary"
             >
-              <option value="" className="bg-gray-800 text-white">Sélectionner...</option>
+              <option value="" className="bg-surface text-text-primary">Sélectionner...</option>
               {industryOptions.map(option => (
-                <option key={option.value} value={option.value} className="bg-gray-800 text-white">{option.label}</option>
+                <option key={option.value} value={option.value} className="bg-surface text-text-primary">{option.label}</option>
               ))}
             </select>
           </div>
 
           <div>
-            <label className="block text-gray-300 mb-2 font-medium">Source</label>
+            <label className="block text-text-secondary mb-2 font-medium">Source</label>
             <select
               name="source"
               value={formData.source}
               onChange={handleInputChange}
-              className="w-full px-4 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500 [&>option]:bg-gray-800 [&>option]:text-white"
+              className="w-full px-4 py-2 bg-surface-muted/50 border border-border rounded-lg text-text-primary focus:outline-none focus:border-indigo-500 [&>option]:bg-surface [&>option]:text-text-primary"
             >
-              <option value="" className="bg-gray-800 text-white">Sélectionner...</option>
+              <option value="" className="bg-surface text-text-primary">Sélectionner...</option>
               {sourceOptions.map(option => (
-                <option key={option.value} value={option.value} className="bg-gray-800 text-white">{option.label}</option>
+                <option key={option.value} value={option.value} className="bg-surface text-text-primary">{option.label}</option>
               ))}
             </select>
           </div>
@@ -322,24 +322,24 @@ const ClientForm = ({ client = {}, onSave, onCancel }) => {
         {/* Dates et valeurs */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-gray-300 mb-2 font-medium">Date de début du contrat</label>
+            <label className="block text-text-secondary mb-2 font-medium">Date de début du contrat</label>
             <input
               type="date"
               name="contract_start_date"
               value={formData.contract_start_date}
               onChange={handleInputChange}
-              className="w-full px-4 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+              className="w-full px-4 py-2 bg-surface-muted/50 border border-border rounded-lg text-text-primary focus:outline-none focus:border-indigo-500"
             />
           </div>
 
           <div>
-            <label className="block text-gray-300 mb-2 font-medium">Valeur vie client (€)</label>
+            <label className="block text-text-secondary mb-2 font-medium">Valeur vie client (€)</label>
             <input
               type="number"
               name="lifetime_value"
               value={formData.lifetime_value}
               onChange={handleInputChange}
-              className="w-full px-4 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+              className="w-full px-4 py-2 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-indigo-500"
               placeholder="0"
               min="0"
               step="100"
@@ -350,26 +350,26 @@ const ClientForm = ({ client = {}, onSave, onCancel }) => {
         {/* Statut et Tags */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-gray-300 mb-2 font-medium">Statut</label>
+            <label className="block text-text-secondary mb-2 font-medium">Statut</label>
             <select
               name="status"
               value={formData.status}
               onChange={handleInputChange}
-              className="w-full px-4 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500 [&>option]:bg-gray-800 [&>option]:text-white"
+              className="w-full px-4 py-2 bg-surface-muted/50 border border-border rounded-lg text-text-primary focus:outline-none focus:border-indigo-500 [&>option]:bg-surface [&>option]:text-text-primary"
             >
-              <option value="active" className="bg-gray-800 text-white">Actif</option>
-              <option value="inactive" className="bg-gray-800 text-white">Inactif</option>
+              <option value="active" className="bg-surface text-text-primary">Actif</option>
+              <option value="inactive" className="bg-surface text-text-primary">Inactif</option>
             </select>
           </div>
 
           <div>
-            <label className="block text-gray-300 mb-2 font-medium">Tags (séparés par des virgules)</label>
+            <label className="block text-text-secondary mb-2 font-medium">Tags (séparés par des virgules)</label>
             <input
               type="text"
               name="tags"
               value={formData.tags}
               onChange={handleInputChange}
-              className="w-full px-4 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+              className="w-full px-4 py-2 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-indigo-500"
               placeholder="VIP, Premium, Important"
             />
           </div>
@@ -378,7 +378,7 @@ const ClientForm = ({ client = {}, onSave, onCancel }) => {
         {/* Notes */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="block text-gray-300 font-medium">Notes</label>
+            <label className="block text-text-secondary font-medium">Notes</label>
             <TemplateSelector
               category={templateCategories.CLIENT}
               currentValue={formData.notes}
@@ -391,7 +391,7 @@ const ClientForm = ({ client = {}, onSave, onCancel }) => {
             value={formData.notes}
             onChange={handleInputChange}
             rows={4}
-            className="w-full px-4 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 resize-none"
+            className="w-full px-4 py-2 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-indigo-500 resize-none"
             placeholder="Notes supplémentaires sur le client..."
           />
         </div>
@@ -403,7 +403,7 @@ const ClientForm = ({ client = {}, onSave, onCancel }) => {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={onCancel}
-            className="flex-1 px-4 py-2.5 border-2 border-white/30 text-white hover:bg-white/10 hover:border-white/40 rounded-lg font-medium transition-all"
+            className="flex-1 px-4 py-2.5 border-2 border-overlay/30 text-text-primary hover:bg-overlay/10 hover:border-overlay/40 rounded-lg font-medium transition-all"
           >
             Annuler
           </motion.button>

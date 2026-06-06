@@ -7,10 +7,10 @@ const TaskList = ({ tasks = [], onToggleStatus }) => {
   // Si aucune tâche n'est disponible
   if (tasks.length === 0) {
     return (
-      <div className="bg-gray-900/30 rounded-lg p-6 text-center">
+      <div className="bg-surface-muted/30 rounded-lg p-6 text-center">
         <div className="text-4xl mb-3"><FiClipboard /></div>
-        <h4 className="text-lg font-medium text-gray-300 mb-2">Aucune tâche</h4>
-        <p className="text-gray-400 text-sm">
+        <h4 className="text-lg font-medium text-text-secondary mb-2">Aucune tâche</h4>
+        <p className="text-text-muted text-sm">
           Ajoutez des tâches pour suivre l'avancement de ce projet.
         </p>
       </div>
@@ -24,16 +24,16 @@ const TaskList = ({ tasks = [], onToggleStatus }) => {
   return (
     <div>
       {/* Résumé des tâches */}
-      <div className="mb-4 bg-gray-900/30 p-4 rounded-lg flex flex-wrap gap-4 justify-between items-center">
+      <div className="mb-4 bg-surface-muted/30 p-4 rounded-lg flex flex-wrap gap-4 justify-between items-center">
         <div className="flex items-center">
           <div className="text-2xl mr-3"><FiBarChart2 /></div>
           <div>
-            <h4 className="font-medium text-white">{completedTasks} sur {tasks.length} tâches complétées</h4>
-            <div className="text-sm text-gray-400">{completionPercentage}% terminé</div>
+            <h4 className="font-medium text-text-primary">{completedTasks} sur {tasks.length} tâches complétées</h4>
+            <div className="text-sm text-text-muted">{completionPercentage}% terminé</div>
           </div>
         </div>
         
-        <div className="w-48 h-2 bg-gray-800 rounded-full overflow-hidden">
+        <div className="w-48 h-2 bg-surface rounded-full overflow-hidden">
           <motion.div 
             className="h-full bg-gradient-to-r from-purple-500 to-indigo-500"
             initial={{ width: 0 }}
@@ -55,7 +55,7 @@ const TaskList = ({ tasks = [], onToggleStatus }) => {
               exit={{ opacity: 0, height: 0 }}
               transition={{ duration: 0.2 }}
               className={`p-3 rounded-lg flex items-center justify-between ${
-                task.completed ? 'bg-purple-900/20' : 'bg-gray-800/50'
+                task.completed ? 'bg-purple-900/20' : 'bg-surface/50'
               }`}
             >
               <div className="flex items-center">
@@ -65,7 +65,7 @@ const TaskList = ({ tasks = [], onToggleStatus }) => {
                   className={`flex-shrink-0 w-6 h-6 rounded-full border mr-3 flex items-center justify-center ${
                     task.completed 
                       ? 'bg-purple-600 border-purple-500' 
-                      : 'border-gray-600 hover:border-purple-500'
+                      : 'border-border-strong hover:border-purple-500'
                   }`}
                   onClick={() => onToggleStatus(task.id)}
                 >
@@ -82,14 +82,14 @@ const TaskList = ({ tasks = [], onToggleStatus }) => {
                       strokeLinejoin="round"
                       initial={{ opacity: 0, scale: 0.5 }}
                       animate={{ opacity: 1, scale: 1 }}
-                      className="text-white"
+                      className="text-text-primary"
                     >
                       <polyline points="20 6 9 17 4 12" />
                     </motion.svg>
                   )}
                 </motion.button>
                 
-                <span className={`${task.completed ? 'text-gray-400 line-through' : 'text-white'}`}>
+                <span className={`${task.completed ? 'text-text-muted line-through' : 'text-text-primary'}`}>
                   {task.title}
                 </span>
               </div>

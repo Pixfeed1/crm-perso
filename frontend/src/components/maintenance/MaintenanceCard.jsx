@@ -21,7 +21,7 @@ const MaintenanceCard = ({ contract, isSelected, onClick }) => {
     },
     cancelled: {
       bg: 'bg-gray-500/20',
-      text: 'text-gray-300',
+      text: 'text-text-secondary',
       border: 'border-gray-500/30',
       label: 'Annulé'
     }
@@ -34,7 +34,7 @@ const MaintenanceCard = ({ contract, isSelected, onClick }) => {
 
   // Couleur du PageSpeed
   const getPageSpeedColor = (score) => {
-    if (!score) return 'text-gray-400';
+    if (!score) return 'text-text-muted';
     if (score >= 90) return 'text-green-400';
     if (score >= 50) return 'text-amber-400';
     return 'text-rose-400';
@@ -45,7 +45,7 @@ const MaintenanceCard = ({ contract, isSelected, onClick }) => {
       className={`rounded-xl p-5 cursor-pointer transition-all relative overflow-hidden h-full flex flex-col ${
         isSelected
           ? 'bg-indigo-900/40 border-indigo-500/50 shadow-lg shadow-indigo-500/20 z-10'
-          : 'bg-gray-800/40 hover:bg-gray-800/60 border-gray-700/50 hover:border-gray-600/50 hover:shadow-xl hover:shadow-black/20 hover:z-20'
+          : 'bg-surface/40 hover:bg-surface/60 border-border/50 hover:border-border-strong/50 hover:shadow-xl hover:shadow-black/20 hover:z-20'
       } border backdrop-blur-sm`}
       whileHover={{ scale: 1.02, y: -4 }}
       whileTap={{ scale: 0.98 }}
@@ -81,7 +81,7 @@ const MaintenanceCard = ({ contract, isSelected, onClick }) => {
 
         {/* Nom du site et client */}
         <div className="mb-4 flex-grow">
-          <h3 className="font-bold text-white text-base leading-tight mb-1 line-clamp-1">
+          <h3 className="font-bold text-text-primary text-base leading-tight mb-1 line-clamp-1">
             {contract.site_name}
           </h3>
           {contract.client_name && (
@@ -90,7 +90,7 @@ const MaintenanceCard = ({ contract, isSelected, onClick }) => {
             </p>
           )}
           {contract.site_url && (
-            <p className="text-xs text-gray-400 truncate mt-1">
+            <p className="text-xs text-text-muted truncate mt-1">
               {contract.site_url.replace(/^https?:\/\//, '')}
             </p>
           )}
@@ -109,24 +109,24 @@ const MaintenanceCard = ({ contract, isSelected, onClick }) => {
             </span>
           </div>
           {contract.wordpress_version && (
-            <span className="text-xs text-gray-400 bg-gray-700/50 px-2 py-0.5 rounded">
+            <span className="text-xs text-text-muted bg-surface-strong/50 px-2 py-0.5 rounded">
               v{contract.wordpress_version}
             </span>
           )}
         </div>
 
         {/* Infos de date */}
-        <div className="flex justify-between items-center pt-4 border-t border-gray-700/50 mt-auto">
+        <div className="flex justify-between items-center pt-4 border-t border-border/50 mt-auto">
           <div>
             <div className="text-xs text-gray-500 mb-0.5">Dernier rapport</div>
-            <div className="text-xs font-medium text-gray-300">
+            <div className="text-xs font-medium text-text-secondary">
               {contract.last_report_date ? formatDate(contract.last_report_date) : 'Jamais'}
             </div>
           </div>
 
           <div className="text-right">
             <div className="text-xs text-gray-500 mb-0.5">Prochain</div>
-            <div className={`text-xs font-medium ${isReportDue ? 'text-amber-400' : 'text-gray-300'}`}>
+            <div className={`text-xs font-medium ${isReportDue ? 'text-amber-400' : 'text-text-secondary'}`}>
               {contract.next_report_due ? formatDate(contract.next_report_due) : '-'}
             </div>
           </div>

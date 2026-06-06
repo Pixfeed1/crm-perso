@@ -139,7 +139,7 @@ const ICalExport = ({ onClose, currentView }) => {
             </div>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
+              className="text-text-muted hover:text-gray-600 transition-colors"
             >
               <FiX className="text-2xl" />
             </button>
@@ -186,7 +186,7 @@ const ICalExport = ({ onClose, currentView }) => {
                       }`}
                     >
                       {exportType === 'all' && (
-                        <FiCheck className="text-white text-xs" />
+                        <FiCheck className="text-text-primary text-xs" />
                       )}
                     </div>
                     <FiCalendar className="text-gray-600" />
@@ -220,7 +220,7 @@ const ICalExport = ({ onClose, currentView }) => {
                       }`}
                     >
                       {exportType === 'range' && (
-                        <FiCheck className="text-white text-xs" />
+                        <FiCheck className="text-text-primary text-xs" />
                       )}
                     </div>
                     <FiClock className="text-gray-600" />
@@ -285,7 +285,7 @@ const ICalExport = ({ onClose, currentView }) => {
                       }`}
                     >
                       {exportType === 'category' && (
-                        <FiCheck className="text-white text-xs" />
+                        <FiCheck className="text-text-primary text-xs" />
                       )}
                     </div>
                     <FiFilter className="text-gray-600" />
@@ -350,7 +350,7 @@ const ICalExport = ({ onClose, currentView }) => {
               >
                 <div className="flex items-center space-x-3">
                   <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                    <FiCheck className="text-white" />
+                    <FiCheck className="text-text-primary" />
                   </div>
                   <div className="text-sm text-green-800">
                     <p className="font-medium">Export réussi !</p>

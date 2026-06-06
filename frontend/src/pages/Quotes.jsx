@@ -122,7 +122,7 @@ const Quotes = () => {
   // Badge de statut
   const getStatusBadge = (status) => {
     const badges = {
-      draft: { color: 'bg-gray-500/20 text-gray-300', icon: FiEdit2, label: 'Brouillon' },
+      draft: { color: 'bg-gray-500/20 text-text-secondary', icon: FiEdit2, label: 'Brouillon' },
       sent: { color: 'bg-blue-500/20 text-blue-300', icon: FiSend, label: 'Envoyé' },
       accepted: { color: 'bg-green-500/20 text-green-300', icon: FiCheck, label: 'Accepté' },
       rejected: { color: 'bg-red-500/20 text-red-300', icon: FiX, label: 'Refusé' },
@@ -210,7 +210,7 @@ const Quotes = () => {
             <h1 className="text-2xl sm:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-300 to-purple-300">
               Devis
             </h1>
-            <p className="text-gray-400 text-sm mt-1">
+            <p className="text-text-muted text-sm mt-1">
               {filteredQuotes.length} devis
             </p>
           </div>
@@ -235,13 +235,13 @@ const Quotes = () => {
             placeholder="Rechercher par numéro ou client..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-indigo-500"
+            className="px-4 py-2 bg-surface/50 border border-border rounded-lg text-text-primary placeholder-gray-400 focus:outline-none focus:border-indigo-500"
           />
 
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+            className="px-4 py-2 bg-surface/50 border border-border rounded-lg text-text-primary focus:outline-none focus:border-indigo-500"
           >
             <option value="all">Tous les statuts</option>
             <option value="draft">Brouillon</option>
@@ -254,20 +254,20 @@ const Quotes = () => {
 
         {/* Liste des devis */}
         {isLoading ? (
-          <div className="text-center py-12 text-gray-400">
+          <div className="text-center py-12 text-text-muted">
             Chargement...
           </div>
         ) : filteredQuotes.length === 0 ? (
-          <div className="text-center py-12 bg-gray-800/30 rounded-lg border border-gray-700/50">
+          <div className="text-center py-12 bg-surface/30 rounded-lg border border-border/50">
             <FiFileText className="w-16 h-16 mx-auto text-gray-600 mb-4" />
-            <p className="text-gray-400">Aucun devis trouvé</p>
+            <p className="text-text-muted">Aucun devis trouvé</p>
           </div>
         ) : (
-          <div className="bg-gray-800/30 rounded-lg border border-gray-700/50 overflow-hidden">
+          <div className="bg-surface/30 rounded-lg border border-border/50 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-800/50">
-                  <tr className="text-left text-sm text-gray-400">
+                <thead className="bg-surface/50">
+                  <tr className="text-left text-sm text-text-muted">
                     <th className="px-4 py-3">Numéro</th>
                     <th className="px-4 py-3">Client</th>
                     <th className="px-4 py-3">Date</th>
@@ -282,18 +282,18 @@ const Quotes = () => {
                       key={quote.id}
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      className="hover:bg-gray-700/30 transition-colors"
+                      className="hover:bg-surface-strong/30 transition-colors"
                     >
                       <td className="px-4 py-3 font-mono text-sm text-indigo-300">
                         {quote.quote_number}
                       </td>
-                      <td className="px-4 py-3 text-white">
+                      <td className="px-4 py-3 text-text-primary">
                         {quote.client_name}
                       </td>
-                      <td className="px-4 py-3 text-gray-400 text-sm">
+                      <td className="px-4 py-3 text-text-muted text-sm">
                         {formatDate(quote.issue_date)}
                       </td>
-                      <td className="px-4 py-3 font-semibold text-white">
+                      <td className="px-4 py-3 font-semibold text-text-primary">
                         {formatAmount(quote.total_ttc)}
                       </td>
                       <td className="px-4 py-3">
@@ -370,7 +370,7 @@ const Quotes = () => {
               initial={{ scale: 0.95 }}
               animate={{ scale: 1 }}
               exit={{ scale: 0.95 }}
-              className="bg-gray-900 rounded-lg border border-gray-700 max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+              className="bg-surface-muted rounded-lg border border-border max-w-4xl w-full max-h-[90vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
             >
               <QuoteForm
@@ -413,7 +413,7 @@ const Quotes = () => {
                   setIsViewingQuote(false);
                   setSelectedQuote(null);
                 }}
-                className="bg-gray-800 hover:bg-gray-700 text-white p-3 rounded-lg transition-colors"
+                className="bg-surface hover:bg-surface-strong text-text-primary p-3 rounded-lg transition-colors"
               >
                 <FiX size={20} />
               </button>
@@ -473,7 +473,7 @@ const Quotes = () => {
                   <div className="mb-12">
                     <table className="w-full border-collapse">
                       <thead>
-                        <tr className="bg-indigo-600 text-white">
+                        <tr className="bg-accent text-white">
                           <th className="px-4 py-3 text-left font-semibold">Description</th>
                           <th className="px-4 py-3 text-center font-semibold w-24">Qté</th>
                           <th className="px-4 py-3 text-right font-semibold w-32">P.U. HT</th>
@@ -508,9 +508,9 @@ const Quotes = () => {
                         <span className="text-gray-700 font-medium">TVA (20%)</span>
                         <span className="text-gray-900 font-semibold text-lg">{formatAmount(selectedQuote.total_tva)}</span>
                       </div>
-                      <div className="flex justify-between items-center pt-3 bg-indigo-600 -m-6 mt-0 p-6 rounded-b-lg">
-                        <span className="text-white font-bold text-lg">Total TTC</span>
-                        <span className="text-white font-bold text-2xl">{formatAmount(selectedQuote.total_ttc)}</span>
+                      <div className="flex justify-between items-center pt-3 bg-accent -m-6 mt-0 p-6 rounded-b-lg">
+                        <span className="text-text-primary font-bold text-lg">Total TTC</span>
+                        <span className="text-text-primary font-bold text-2xl">{formatAmount(selectedQuote.total_ttc)}</span>
                       </div>
                     </div>
                   </div>

@@ -150,21 +150,21 @@ const QuickInvoiceModal = ({ isOpen, onClose, client }) => {
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="relative w-full max-w-4xl bg-gray-800 rounded-2xl shadow-2xl border border-gray-700 overflow-hidden max-h-[90vh] flex flex-col"
+          className="relative w-full max-w-4xl bg-surface rounded-2xl shadow-2xl border border-border overflow-hidden max-h-[90vh] flex flex-col"
         >
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-700">
+          <div className="flex items-center justify-between p-6 border-b border-border">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-orange-500/20 rounded-xl flex items-center justify-center">
                 <FiFileText className="text-orange-400 text-xl" />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-white">Créer et envoyer une facture</h2>
-                <p className="text-sm text-gray-400">pour {client?.name}</p>
+                <h2 className="text-xl font-bold text-text-primary">Créer et envoyer une facture</h2>
+                <p className="text-sm text-text-muted">pour {client?.name}</p>
               </div>
             </div>
-            <button onClick={onClose} className="p-2 hover:bg-gray-700 rounded-lg transition-colors">
-              <FiX className="text-gray-400 text-xl" />
+            <button onClick={onClose} className="p-2 hover:bg-surface-strong rounded-lg transition-colors">
+              <FiX className="text-text-muted text-xl" />
             </button>
           </div>
 
@@ -172,7 +172,7 @@ const QuickInvoiceModal = ({ isOpen, onClose, client }) => {
           <div className="p-6 space-y-6 overflow-y-auto flex-1">
             {/* Articles */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-3">
+              <label className="block text-sm font-medium text-text-secondary mb-3">
                 Articles / Services <span className="text-red-400">*</span>
               </label>
 
@@ -183,7 +183,7 @@ const QuickInvoiceModal = ({ isOpen, onClose, client }) => {
                     placeholder="Description"
                     value={item.description}
                     onChange={(e) => handleUpdateItem(index, 'description', e.target.value)}
-                    className="flex-1 px-3 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
+                    className="flex-1 px-3 py-2 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
                   />
                   <input
                     type="number"
@@ -191,7 +191,7 @@ const QuickInvoiceModal = ({ isOpen, onClose, client }) => {
                     min="1"
                     value={item.quantity}
                     onChange={(e) => handleUpdateItem(index, 'quantity', Number(e.target.value))}
-                    className="w-20 px-3 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
+                    className="w-20 px-3 py-2 bg-surface-muted/50 border border-border rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
                   />
                   <input
                     type="number"
@@ -200,15 +200,15 @@ const QuickInvoiceModal = ({ isOpen, onClose, client }) => {
                     step="0.01"
                     value={item.unit_price}
                     onChange={(e) => handleUpdateItem(index, 'unit_price', Number(e.target.value))}
-                    className="w-28 px-3 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
+                    className="w-28 px-3 py-2 bg-surface-muted/50 border border-border rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
                   />
-                  <div className="w-24 px-3 py-2 bg-gray-700/50 rounded-lg text-white text-sm flex items-center justify-end">
+                  <div className="w-24 px-3 py-2 bg-surface-strong/50 rounded-lg text-text-primary text-sm flex items-center justify-end">
                     {(item.quantity * item.unit_price).toFixed(2)} €
                   </div>
                   {items.length > 1 && (
                     <button
                       onClick={() => handleRemoveItem(index)}
-                      className="p-2 hover:bg-red-600 rounded-lg transition-colors text-gray-400 hover:text-white"
+                      className="p-2 hover:bg-red-600 rounded-lg transition-colors text-text-muted hover:text-white"
                     >
                       <FiTrash2 className="w-4 h-4" />
                     </button>
@@ -218,7 +218,7 @@ const QuickInvoiceModal = ({ isOpen, onClose, client }) => {
 
               <button
                 onClick={handleAddItem}
-                className="mt-2 flex items-center gap-2 px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors text-sm"
+                className="mt-2 flex items-center gap-2 px-3 py-2 bg-surface-strong hover:bg-border-strong text-text-primary rounded-lg transition-colors text-sm"
               >
                 <FiPlus />
                 Ajouter une ligne
@@ -228,11 +228,11 @@ const QuickInvoiceModal = ({ isOpen, onClose, client }) => {
             {/* Paramètres */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Taux TVA (%)</label>
+                <label className="block text-sm font-medium text-text-secondary mb-2">Taux TVA (%)</label>
                 <select
                   value={tvaRate}
                   onChange={(e) => setTvaRate(Number(e.target.value))}
-                  className="w-full px-3 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full px-3 py-2 bg-surface-muted/50 border border-border rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-orange-500"
                 >
                   <option value={0}>0% (Exonéré)</option>
                   <option value={5.5}>5.5% (Réduit)</option>
@@ -242,51 +242,51 @@ const QuickInvoiceModal = ({ isOpen, onClose, client }) => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Date d'échéance <span className="text-red-400">*</span></label>
+                <label className="block text-sm font-medium text-text-secondary mb-2">Date d'échéance <span className="text-red-400">*</span></label>
                 <input
                   type="date"
                   value={dueDate}
                   onChange={(e) => setDueDate(e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full px-3 py-2 bg-surface-muted/50 border border-border rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-orange-500"
                 />
               </div>
             </div>
 
             {/* Notes */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Notes / Conditions de paiement</label>
+              <label className="block text-sm font-medium text-text-secondary mb-2">Notes / Conditions de paiement</label>
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 rows={3}
                 placeholder="Conditions de paiement, pénalités de retard..."
-                className="w-full px-3 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500 resize-none"
+                className="w-full px-3 py-2 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500 resize-none"
               />
             </div>
 
             {/* Récapitulatif */}
-            <div className="bg-gray-900/50 rounded-xl p-4 space-y-2">
+            <div className="bg-surface-muted/50 rounded-xl p-4 space-y-2">
               <div className="flex justify-between text-sm">
-                <span className="text-gray-400">Sous-total HT</span>
-                <span className="text-white font-medium">{subtotal.toFixed(2)} €</span>
+                <span className="text-text-muted">Sous-total HT</span>
+                <span className="text-text-primary font-medium">{subtotal.toFixed(2)} €</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-gray-400">TVA ({tvaRate}%)</span>
-                <span className="text-white font-medium">{tvaAmount.toFixed(2)} €</span>
+                <span className="text-text-muted">TVA ({tvaRate}%)</span>
+                <span className="text-text-primary font-medium">{tvaAmount.toFixed(2)} €</span>
               </div>
-              <div className="pt-2 border-t border-gray-700 flex justify-between">
-                <span className="text-white font-semibold">Total TTC</span>
+              <div className="pt-2 border-t border-border flex justify-between">
+                <span className="text-text-primary font-semibold">Total TTC</span>
                 <span className="text-orange-400 font-bold text-lg">{total.toFixed(2)} €</span>
               </div>
             </div>
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-700 bg-gray-900/30">
+          <div className="flex items-center justify-end gap-3 p-6 border-t border-border bg-surface-muted/30">
             <button
               onClick={onClose}
               disabled={isSending}
-              className="px-4 py-2 text-gray-300 hover:text-white hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50"
+              className="px-4 py-2 text-text-secondary hover:text-text-primary hover:bg-surface-strong rounded-lg transition-colors disabled:opacity-50"
             >
               Annuler
             </button>

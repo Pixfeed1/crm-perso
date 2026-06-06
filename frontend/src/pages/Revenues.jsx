@@ -424,7 +424,7 @@ const Revenues = () => {
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-0">
           <div className="flex gap-1 sm:gap-2 sm:mr-4">
             <motion.button
-              className="flex-1 sm:flex-none p-1.5 sm:p-2 rounded-lg bg-gray-800/50 hover:bg-gray-700/50 text-gray-300 text-xs sm:text-base"
+              className="flex-1 sm:flex-none p-1.5 sm:p-2 rounded-lg bg-surface/50 hover:bg-surface-strong/50 text-text-secondary text-xs sm:text-base"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={navigateToPrevious}
@@ -432,7 +432,7 @@ const Revenues = () => {
               ◀
             </motion.button>
             <motion.button
-              className="flex-1 sm:flex-none px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg bg-gray-800/50 hover:bg-gray-700/50 text-gray-300 text-xs sm:text-sm whitespace-nowrap"
+              className="flex-1 sm:flex-none px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg bg-surface/50 hover:bg-surface-strong/50 text-text-secondary text-xs sm:text-sm whitespace-nowrap"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={navigateToToday}
@@ -440,7 +440,7 @@ const Revenues = () => {
               Aujourd'hui
             </motion.button>
             <motion.button
-              className="flex-1 sm:flex-none p-1.5 sm:p-2 rounded-lg bg-gray-800/50 hover:bg-gray-700/50 text-gray-300 text-xs sm:text-base"
+              className="flex-1 sm:flex-none p-1.5 sm:p-2 rounded-lg bg-surface/50 hover:bg-surface-strong/50 text-text-secondary text-xs sm:text-base"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={navigateToNext}
@@ -448,20 +448,20 @@ const Revenues = () => {
               ▶
             </motion.button>
           </div>
-          <h2 className="text-lg sm:text-2xl font-semibold text-white capitalize text-center sm:text-left">
+          <h2 className="text-lg sm:text-2xl font-semibold text-text-primary capitalize text-center sm:text-left">
             {formatPeriodTitle()}
           </h2>
         </div>
 
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
-          <div className="bg-gray-800/50 rounded-lg p-1 flex">
+          <div className="bg-surface/50 rounded-lg p-1 flex">
             {['month', 'quarter', 'year'].map((p) => (
               <motion.button
                 key={p}
                 className={`flex-1 sm:flex-none px-2 py-1 sm:px-3 sm:py-1 rounded-lg text-xs sm:text-sm ${
                   period === p
                     ? 'bg-teal-600 text-white'
-                    : 'text-gray-300 hover:bg-gray-700/50'
+                    : 'text-text-secondary hover:bg-surface-strong/50'
                 }`}
                 whileHover={{ scale: period === p ? 1 : 1.05 }}
                 whileTap={{ scale: 0.95 }}
@@ -504,7 +504,7 @@ const Revenues = () => {
         </div>
 
         {/* Graphique - Pleine largeur */}
-        <div className="bg-gray-800/30 backdrop-blur-sm rounded-2xl p-6 h-96 mb-6">
+        <div className="bg-surface/30 backdrop-blur-sm rounded-2xl p-6 h-96 mb-6">
           <RevenueChart
             revenues={periodRevenues}
             period={period}
@@ -513,7 +513,7 @@ const Revenues = () => {
         </div>
 
         {/* Formulaire ou Détails - En dessous */}
-        <div className="bg-gray-800/30 backdrop-blur-sm rounded-2xl p-6 mb-6">
+        <div className="bg-surface/30 backdrop-blur-sm rounded-2xl p-6 mb-6">
           <AnimatePresence mode="wait">
             {isAddingRevenue ? (
               <motion.div
@@ -537,25 +537,25 @@ const Revenues = () => {
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.3 }}
               >
-                <h3 className="text-xl font-semibold text-white mb-4">
+                <h3 className="text-xl font-semibold text-text-primary mb-4">
                   Détails du revenu
                 </h3>
                 <div className="space-y-4">
                   <div className="flex justify-between">
-                    <span className="text-gray-400">Montant</span>
-                    <span className="font-bold text-white">
+                    <span className="text-text-muted">Montant</span>
+                    <span className="font-bold text-text-primary">
                       {selectedRevenue.amount.toLocaleString()} €
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-400">Date</span>
-                    <span className="text-white">
+                    <span className="text-text-muted">Date</span>
+                    <span className="text-text-primary">
                       {new Date(selectedRevenue.date).toLocaleDateString('fr-FR')}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-400">Type</span>
-                    <span className="text-white capitalize">
+                    <span className="text-text-muted">Type</span>
+                    <span className="text-text-primary capitalize">
                       {selectedRevenue.type === 'invoice'
                         ? 'Facture'
                         : selectedRevenue.type === 'recurring'
@@ -564,7 +564,7 @@ const Revenues = () => {
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-400">Statut</span>
+                    <span className="text-text-muted">Statut</span>
                     <span
                       className={`px-2 py-1 rounded-full text-xs font-medium ${
                         selectedRevenue.status === 'paid'
@@ -583,15 +583,15 @@ const Revenues = () => {
                   </div>
                   {selectedRevenue.project_name && (
                     <div className="flex justify-between">
-                      <span className="text-gray-400">Projet</span>
+                      <span className="text-text-muted">Projet</span>
                       <span className="text-teal-300">
                         {selectedRevenue.project_name}
                       </span>
                     </div>
                   )}
                   <div className="pt-2">
-                    <span className="text-gray-400">Description</span>
-                    <p className="mt-1 text-white">
+                    <span className="text-text-muted">Description</span>
+                    <p className="mt-1 text-text-primary">
                       {selectedRevenue.description}
                     </p>
                   </div>
@@ -638,8 +638,8 @@ const Revenues = () => {
         </div>
 
         {/* Liste des revenus - Avec hauteur minimale pour être visible */}
-        <div className="bg-gray-800/30 backdrop-blur-sm rounded-2xl p-6 flex flex-col flex-grow overflow-hidden min-h-[400px]">
-          <h3 className="text-xl font-semibold text-white mb-4">Liste des revenus</h3>
+        <div className="bg-surface/30 backdrop-blur-sm rounded-2xl p-6 flex flex-col flex-grow overflow-hidden min-h-[400px]">
+          <h3 className="text-xl font-semibold text-text-primary mb-4">Liste des revenus</h3>
           <RevenueList
             revenues={filteredRevenues}
             selectedRevenue={selectedRevenue}

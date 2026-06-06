@@ -134,7 +134,7 @@ const ReminderForm = ({ onSave, onCancel }) => {
   };
 
   return (
-    <div className="bg-gray-900/40 rounded-lg p-4 sm:p-5">
+    <div className="bg-surface-muted/40 rounded-lg p-4 sm:p-5">
       <h4 className="text-base sm:text-lg font-medium text-indigo-300 mb-3 sm:mb-4">
         Nouveau rappel
       </h4>
@@ -143,7 +143,7 @@ const ReminderForm = ({ onSave, onCancel }) => {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           {/* Type d'entité */}
           <div>
-            <label htmlFor="entity_type" className="block text-xs sm:text-sm font-medium text-gray-300 mb-1">
+            <label htmlFor="entity_type" className="block text-xs sm:text-sm font-medium text-text-secondary mb-1">
               Type<span className="text-rose-500 ml-1">*</span>
             </label>
             <select
@@ -151,9 +151,9 @@ const ReminderForm = ({ onSave, onCancel }) => {
               name="entity_type"
               value={formData.entity_type}
               onChange={handleInputChange}
-              className={`w-full bg-gray-800/50 border ${
-                errors.entity_type ? 'border-rose-500' : 'border-gray-700'
-              } rounded-lg px-3 py-2 text-white text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent`}
+              className={`w-full bg-surface/50 border ${
+                errors.entity_type ? 'border-rose-500' : 'border-border'
+              } rounded-lg px-3 py-2 text-text-primary text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent`}
             >
               <option value="lead">Lead</option>
               <option value="project">Projet</option>
@@ -166,7 +166,7 @@ const ReminderForm = ({ onSave, onCancel }) => {
 
           {/* Entité */}
           <div>
-            <label htmlFor="entity_id" className="block text-xs sm:text-sm font-medium text-gray-300 mb-1">
+            <label htmlFor="entity_id" className="block text-xs sm:text-sm font-medium text-text-secondary mb-1">
               {formData.entity_type === 'lead' ? 'Lead' : formData.entity_type === 'project' ? 'Projet' : 'Objectif'}
               <span className="text-rose-500 ml-1">*</span>
             </label>
@@ -176,9 +176,9 @@ const ReminderForm = ({ onSave, onCancel }) => {
               value={formData.entity_id}
               onChange={handleInputChange}
               disabled={loadingEntities}
-              className={`w-full bg-gray-800/50 border ${
-                errors.entity_id ? 'border-rose-500' : 'border-gray-700'
-              } rounded-lg px-3 py-2 text-white text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:opacity-50`}
+              className={`w-full bg-surface/50 border ${
+                errors.entity_id ? 'border-rose-500' : 'border-border'
+              } rounded-lg px-3 py-2 text-text-primary text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:opacity-50`}
             >
               <option value="">
                 {loadingEntities ? 'Chargement...' : 'Sélectionner'}
@@ -197,7 +197,7 @@ const ReminderForm = ({ onSave, onCancel }) => {
 
         {/* Titre */}
         <div>
-          <label htmlFor="title" className="block text-xs sm:text-sm font-medium text-gray-300 mb-1">
+          <label htmlFor="title" className="block text-xs sm:text-sm font-medium text-text-secondary mb-1">
             Titre<span className="text-rose-500 ml-1">*</span>
           </label>
           <input
@@ -206,9 +206,9 @@ const ReminderForm = ({ onSave, onCancel }) => {
             name="title"
             value={formData.title}
             onChange={handleInputChange}
-            className={`w-full bg-gray-800/50 border ${
-              errors.title ? 'border-rose-500' : 'border-gray-700'
-            } rounded-lg px-3 py-2 text-white placeholder-gray-400 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent`}
+            className={`w-full bg-surface/50 border ${
+              errors.title ? 'border-rose-500' : 'border-border'
+            } rounded-lg px-3 py-2 text-text-primary placeholder-gray-400 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent`}
             placeholder="Ex: Relancer le client"
           />
           {errors.title && (
@@ -218,7 +218,7 @@ const ReminderForm = ({ onSave, onCancel }) => {
 
         {/* Description */}
         <div>
-          <label htmlFor="description" className="block text-xs sm:text-sm font-medium text-gray-300 mb-1">
+          <label htmlFor="description" className="block text-xs sm:text-sm font-medium text-text-secondary mb-1">
             Description
           </label>
           <textarea
@@ -227,7 +227,7 @@ const ReminderForm = ({ onSave, onCancel }) => {
             value={formData.description}
             onChange={handleInputChange}
             rows={3}
-            className="w-full bg-gray-800/50 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-400 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+            className="w-full bg-surface/50 border border-border rounded-lg px-3 py-2 text-text-primary placeholder-gray-400 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
             placeholder="Détails optionnels..."
           />
         </div>
@@ -235,7 +235,7 @@ const ReminderForm = ({ onSave, onCancel }) => {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           {/* Date et heure */}
           <div>
-            <label htmlFor="due_date" className="block text-xs sm:text-sm font-medium text-gray-300 mb-1">
+            <label htmlFor="due_date" className="block text-xs sm:text-sm font-medium text-text-secondary mb-1">
               Date et heure<span className="text-rose-500 ml-1">*</span>
             </label>
             <input
@@ -244,9 +244,9 @@ const ReminderForm = ({ onSave, onCancel }) => {
               name="due_date"
               value={formData.due_date}
               onChange={handleInputChange}
-              className={`w-full bg-gray-800/50 border ${
-                errors.due_date ? 'border-rose-500' : 'border-gray-700'
-              } rounded-lg px-3 py-2 text-white text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent`}
+              className={`w-full bg-surface/50 border ${
+                errors.due_date ? 'border-rose-500' : 'border-border'
+              } rounded-lg px-3 py-2 text-text-primary text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent`}
             />
             {errors.due_date && (
               <p className="mt-1 text-xs text-rose-500">{errors.due_date}</p>
@@ -255,7 +255,7 @@ const ReminderForm = ({ onSave, onCancel }) => {
 
           {/* Priorité */}
           <div>
-            <label htmlFor="priority" className="block text-xs sm:text-sm font-medium text-gray-300 mb-1">
+            <label htmlFor="priority" className="block text-xs sm:text-sm font-medium text-text-secondary mb-1">
               Priorité
             </label>
             <select
@@ -263,7 +263,7 @@ const ReminderForm = ({ onSave, onCancel }) => {
               name="priority"
               value={formData.priority}
               onChange={handleInputChange}
-              className="w-full bg-gray-800/50 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="w-full bg-surface/50 border border-border rounded-lg px-3 py-2 text-text-primary text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
             >
               <option value="low">Basse</option>
               <option value="medium">Moyenne</option>
@@ -277,7 +277,7 @@ const ReminderForm = ({ onSave, onCancel }) => {
           <motion.button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 rounded-lg border-2 border-white/30 text-white hover:bg-white/10 hover:border-white/40 font-medium transition-all text-sm sm:text-base"
+            className="px-4 py-2 rounded-lg border-2 border-overlay/30 text-text-primary hover:bg-overlay/10 hover:border-overlay/40 font-medium transition-all text-sm sm:text-base"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             disabled={submitting}
@@ -287,7 +287,7 @@ const ReminderForm = ({ onSave, onCancel }) => {
 
           <motion.button
             type="submit"
-            className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium flex items-center justify-center text-sm sm:text-base"
+            className="px-4 py-2 rounded-lg bg-accent hover:bg-indigo-700 text-white font-medium flex items-center justify-center text-sm sm:text-base"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             disabled={submitting}

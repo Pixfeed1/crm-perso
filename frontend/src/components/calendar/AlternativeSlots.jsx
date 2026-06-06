@@ -78,14 +78,14 @@ const AlternativeSlots = ({ slots, onSelectSlot, onClose, isLoading }) => {
         className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
       >
         <motion.div
-          className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden border border-gray-700"
+          className="bg-gradient-to-br from-surface-muted via-surface to-surface-muted rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden border border-border"
         >
           {/* Header */}
           <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <FiCalendar className="text-2xl text-white" />
+              <FiCalendar className="text-2xl text-text-primary" />
               <div>
-                <h2 className="text-2xl font-bold text-white">Créneaux disponibles</h2>
+                <h2 className="text-2xl font-bold text-text-primary">Créneaux disponibles</h2>
                 <p className="text-sm text-indigo-100">
                   {slots && slots.length > 0 ? `${slots.length} créneau${slots.length > 1 ? 'x' : ''} trouvé${slots.length > 1 ? 's' : ''}` : 'Recherche en cours...'}
                 </p>
@@ -93,7 +93,7 @@ const AlternativeSlots = ({ slots, onSelectSlot, onClose, isLoading }) => {
             </div>
             <button
               onClick={onClose}
-              className="text-white hover:text-gray-200 transition-colors"
+              className="text-text-primary hover:text-text-primary transition-colors"
             >
               <FiX className="text-2xl" />
             </button>
@@ -104,13 +104,13 @@ const AlternativeSlots = ({ slots, onSelectSlot, onClose, isLoading }) => {
             {isLoading ? (
               <div className="flex flex-col items-center justify-center py-12">
                 <FiRefreshCw className="text-4xl text-indigo-500 animate-spin mb-4" />
-                <p className="text-gray-300">Recherche des meilleurs créneaux...</p>
+                <p className="text-text-secondary">Recherche des meilleurs créneaux...</p>
               </div>
             ) : slots && slots.length > 0 ? (
               <div className="space-y-6">
                 {Object.entries(groupedSlots).map(([date, dateSlots], dateIndex) => (
                   <div key={date}>
-                    <h3 className="text-lg font-semibold text-gray-200 mb-3 sticky top-0 bg-gray-900/90 backdrop-blur-sm py-2 -mx-6 px-6 z-10">
+                    <h3 className="text-lg font-semibold text-text-primary mb-3 sticky top-0 bg-surface-muted/90 backdrop-blur-sm py-2 -mx-6 px-6 z-10">
                       {dateSlots && dateSlots.length > 0 ? formatDate(dateSlots[0].start) : date}
                     </h3>
 
@@ -125,17 +125,17 @@ const AlternativeSlots = ({ slots, onSelectSlot, onClose, isLoading }) => {
                           className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
                             selectedSlot === slot
                               ? 'border-indigo-500 bg-indigo-900/30'
-                              : 'border-gray-700 bg-gray-800/50 hover:border-gray-600 hover:bg-gray-800'
+                              : 'border-border bg-surface/50 hover:border-border-strong hover:bg-surface'
                           }`}
                         >
                           <div className="flex items-start justify-between mb-2">
                             <div className="flex items-center gap-2">
                               <FiClock className="text-indigo-400" />
                               <div>
-                                <div className="font-semibold text-white">
+                                <div className="font-semibold text-text-primary">
                                   {formatTime(slot.start)} - {formatTime(slot.end)}
                                 </div>
-                                <div className="text-xs text-gray-400">
+                                <div className="text-xs text-text-muted">
                                   {formatDuration(slot.duration)}
                                 </div>
                               </div>
@@ -147,13 +147,13 @@ const AlternativeSlots = ({ slots, onSelectSlot, onClose, isLoading }) => {
                                 animate={{ scale: 1 }}
                                 className="w-6 h-6 bg-indigo-500 rounded-full flex items-center justify-center"
                               >
-                                <FiCheck className="text-white text-sm" />
+                                <FiCheck className="text-text-primary text-sm" />
                               </motion.div>
                             )}
                           </div>
 
                           {/* Score de qualité */}
-                          <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-700">
+                          <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border">
                             <FiStar className={`text-sm ${getScoreColor(slot.score)}`} />
                             <span className={`text-xs font-semibold ${getScoreColor(slot.score)}`}>
                               {getScoreLabel(slot.score)}
@@ -171,7 +171,7 @@ const AlternativeSlots = ({ slots, onSelectSlot, onClose, isLoading }) => {
             ) : (
               <div className="text-center py-12">
                 <FiCalendar className="text-6xl text-gray-600 mx-auto mb-4" />
-                <p className="text-xl text-gray-400 mb-2">Aucun créneau disponible</p>
+                <p className="text-xl text-text-muted mb-2">Aucun créneau disponible</p>
                 <p className="text-sm text-gray-500">
                   Essayez d'élargir la plage de recherche ou de modifier la durée de l'événement
                 </p>
@@ -181,11 +181,11 @@ const AlternativeSlots = ({ slots, onSelectSlot, onClose, isLoading }) => {
 
           {/* Footer */}
           {slots && slots.length > 0 && (
-            <div className="bg-gray-800/50 px-6 py-4 border-t border-gray-700 flex items-center justify-between">
-              <div className="text-sm text-gray-400">
+            <div className="bg-surface/50 px-6 py-4 border-t border-border flex items-center justify-between">
+              <div className="text-sm text-text-muted">
                 {selectedSlot ? (
                   <span>
-                    Créneau sélectionné : <span className="font-semibold text-white">{formatTime(selectedSlot.start)}</span>
+                    Créneau sélectionné : <span className="font-semibold text-text-primary">{formatTime(selectedSlot.start)}</span>
                   </span>
                 ) : (
                   <span>Sélectionnez un créneau pour continuer</span>
@@ -197,7 +197,7 @@ const AlternativeSlots = ({ slots, onSelectSlot, onClose, isLoading }) => {
                   onClick={onClose}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-semibold transition-colors"
+                  className="px-4 py-2 bg-surface-strong hover:bg-border-strong text-text-primary rounded-lg font-semibold transition-colors"
                 >
                   Annuler
                 </motion.button>
@@ -209,8 +209,8 @@ const AlternativeSlots = ({ slots, onSelectSlot, onClose, isLoading }) => {
                   whileTap={selectedSlot ? { scale: 0.98 } : {}}
                   className={`px-4 py-2 rounded-lg font-semibold transition-colors flex items-center gap-2 ${
                     selectedSlot
-                      ? 'bg-indigo-600 hover:bg-indigo-700 text-white'
-                      : 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                      ? 'bg-accent hover:bg-indigo-700 text-white'
+                      : 'bg-surface-strong text-gray-500 cursor-not-allowed'
                   }`}
                 >
                   <FiCheck />

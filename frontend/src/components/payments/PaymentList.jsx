@@ -104,7 +104,7 @@ const PaymentList = ({ invoice, payments, onPaymentsUpdate }) => {
 
   if (!payments || payments.length === 0) {
     return (
-      <div className="text-center py-8 text-gray-400">
+      <div className="text-center py-8 text-text-muted">
         <FiDollarSign className="mx-auto text-4xl mb-2 opacity-50" />
         <p>Aucun paiement enregistré</p>
       </div>
@@ -126,7 +126,7 @@ const PaymentList = ({ invoice, payments, onPaymentsUpdate }) => {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ delay: index * 0.05 }}
-                className="bg-gray-800/30 backdrop-blur-sm rounded-lg p-4 hover:bg-gray-800/50 transition-colors"
+                className="bg-surface/30 backdrop-blur-sm rounded-lg p-4 hover:bg-surface/50 transition-colors"
               >
                 <div className="flex items-center justify-between">
                   {/* Gauche : Informations paiement */}
@@ -135,7 +135,7 @@ const PaymentList = ({ invoice, payments, onPaymentsUpdate }) => {
                       {/* Montant */}
                       <div className="flex items-center bg-purple-500/20 border border-purple-500/30 rounded-lg px-3 py-1">
                         <FiDollarSign className="text-purple-300 mr-1" />
-                        <span className="text-white font-semibold">
+                        <span className="text-text-primary font-semibold">
                           {parseFloat(payment.amount).toFixed(2)} €
                         </span>
                       </div>
@@ -151,16 +151,16 @@ const PaymentList = ({ invoice, payments, onPaymentsUpdate }) => {
 
                     {/* Détails */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
-                      <div className="flex items-center text-gray-400">
+                      <div className="flex items-center text-text-muted">
                         <FiCalendar className="mr-2" size={14} />
                         <span>{formatDate(payment.payment_date)}</span>
                       </div>
-                      <div className="flex items-center text-gray-400">
+                      <div className="flex items-center text-text-muted">
                         <FiCreditCard className="mr-2" size={14} />
                         <span>{methodLabel}</span>
                       </div>
                       {payment.reference && (
-                        <div className="flex items-center text-gray-400">
+                        <div className="flex items-center text-text-muted">
                           <FiFileText className="mr-2" size={14} />
                           <span className="truncate">{payment.reference}</span>
                         </div>
@@ -169,7 +169,7 @@ const PaymentList = ({ invoice, payments, onPaymentsUpdate }) => {
 
                     {/* Notes */}
                     {payment.notes && (
-                      <div className="mt-2 text-sm text-gray-400 italic">
+                      <div className="mt-2 text-sm text-text-muted italic">
                         {payment.notes}
                       </div>
                     )}

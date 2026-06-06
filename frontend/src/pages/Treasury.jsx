@@ -117,7 +117,7 @@ const Treasury = () => {
     return (
       <div className="h-full flex flex-col overflow-y-auto p-1 sm:p-2 lg:p-4">
         <div className="max-w-7xl mx-auto w-full">
-          <div className="text-center py-12 text-gray-400">
+          <div className="text-center py-12 text-text-muted">
             <FiRefreshCw className="w-12 h-12 mx-auto mb-4 animate-spin" />
             <p>Chargement des données de trésorerie...</p>
           </div>
@@ -135,7 +135,7 @@ const Treasury = () => {
             <h1 className="text-2xl sm:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-green-300 to-emerald-300">
               Trésorerie
             </h1>
-            <p className="text-gray-400 text-sm mt-1">
+            <p className="text-text-muted text-sm mt-1">
               Vue d'ensemble de vos encaissements et impayés
             </p>
           </div>
@@ -145,7 +145,7 @@ const Treasury = () => {
             <select
               value={period}
               onChange={(e) => setPeriod(e.target.value)}
-              className="px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-green-500"
+              className="px-4 py-2 bg-surface/50 border border-border rounded-lg text-text-primary focus:outline-none focus:border-green-500"
             >
               <option value="7">7 derniers jours</option>
               <option value="30">30 derniers jours</option>
@@ -156,7 +156,7 @@ const Treasury = () => {
             {/* Bouton rafraîchir */}
             <motion.button
               onClick={fetchTreasuryData}
-              className="p-2 bg-gray-800/50 border border-gray-700 rounded-lg text-gray-400 hover:text-white hover:border-green-500 transition-colors"
+              className="p-2 bg-surface/50 border border-border rounded-lg text-text-muted hover:text-text-primary hover:border-green-500 transition-colors"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               title="Rafraîchir"
@@ -185,15 +185,15 @@ const Treasury = () => {
             className="bg-gradient-to-br from-green-500/20 to-emerald-500/20 border border-green-500/30 rounded-xl p-6"
           >
             <div className="flex items-center justify-between mb-2">
-              <span className="text-gray-400 text-sm">Total encaissé</span>
+              <span className="text-text-muted text-sm">Total encaissé</span>
               <div className="p-2 bg-green-500/20 rounded-lg">
                 <FiDollarSign className="text-green-400" />
               </div>
             </div>
-            <p className="text-2xl font-bold text-white mb-1">
+            <p className="text-2xl font-bold text-text-primary mb-1">
               {formatAmount(stats.total_received)}
             </p>
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-text-muted">
               {stats.payment_count} paiement{stats.payment_count > 1 ? 's' : ''} reçu{stats.payment_count > 1 ? 's' : ''}
             </p>
           </motion.div>
@@ -206,15 +206,15 @@ const Treasury = () => {
             className="bg-gradient-to-br from-blue-500/20 to-indigo-500/20 border border-blue-500/30 rounded-xl p-6"
           >
             <div className="flex items-center justify-between mb-2">
-              <span className="text-gray-400 text-sm">Période sélectionnée</span>
+              <span className="text-text-muted text-sm">Période sélectionnée</span>
               <div className="p-2 bg-blue-500/20 rounded-lg">
                 <FiCalendar className="text-blue-400" />
               </div>
             </div>
-            <p className="text-2xl font-bold text-white mb-1">
+            <p className="text-2xl font-bold text-text-primary mb-1">
               {formatAmount(stats.period_received)}
             </p>
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-text-muted">
               {period === '7' ? '7 derniers jours' : period === '30' ? '30 derniers jours' : period === '90' ? '90 derniers jours' : '12 derniers mois'}
             </p>
           </motion.div>
@@ -227,15 +227,15 @@ const Treasury = () => {
             className="bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-500/30 rounded-xl p-6"
           >
             <div className="flex items-center justify-between mb-2">
-              <span className="text-gray-400 text-sm">En attente</span>
+              <span className="text-text-muted text-sm">En attente</span>
               <div className="p-2 bg-amber-500/20 rounded-lg">
                 <FiClock className="text-amber-400" />
               </div>
             </div>
-            <p className="text-2xl font-bold text-white mb-1">
+            <p className="text-2xl font-bold text-text-primary mb-1">
               {formatAmount(stats.total_unpaid)}
             </p>
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-text-muted">
               À encaisser
             </p>
           </motion.div>
@@ -248,23 +248,23 @@ const Treasury = () => {
             className="bg-gradient-to-br from-rose-500/20 to-red-500/20 border border-rose-500/30 rounded-xl p-6"
           >
             <div className="flex items-center justify-between mb-2">
-              <span className="text-gray-400 text-sm">En retard</span>
+              <span className="text-text-muted text-sm">En retard</span>
               <div className="p-2 bg-rose-500/20 rounded-lg">
                 <FiAlertCircle className="text-rose-400" />
               </div>
             </div>
-            <p className="text-2xl font-bold text-white mb-1">
+            <p className="text-2xl font-bold text-text-primary mb-1">
               {formatAmount(stats.total_overdue)}
             </p>
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-text-muted">
               {overdueInvoices.length} facture{overdueInvoices.length > 1 ? 's' : ''}
             </p>
           </motion.div>
         </div>
 
         {/* Graphique */}
-        <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl border border-gray-700/50 p-6 mb-6">
-          <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
+        <div className="bg-surface/30 backdrop-blur-sm rounded-xl border border-border/50 p-6 mb-6">
+          <h2 className="text-xl font-semibold text-text-primary mb-4 flex items-center gap-2">
             <FiTrendingUp />
             Évolution des encaissements
           </h2>
@@ -300,7 +300,7 @@ const Treasury = () => {
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <div className="text-center py-12 text-gray-400">
+            <div className="text-center py-12 text-text-muted">
               <FiTrendingUp className="w-12 h-12 mx-auto mb-4 opacity-50" />
               <p>Aucun encaissement sur cette période</p>
             </div>
@@ -309,16 +309,16 @@ const Treasury = () => {
 
         {/* Factures en retard */}
         {overdueInvoices.length > 0 && (
-          <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl border border-rose-500/30 p-6">
-            <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
+          <div className="bg-surface/30 backdrop-blur-sm rounded-xl border border-rose-500/30 p-6">
+            <h2 className="text-xl font-semibold text-text-primary mb-4 flex items-center gap-2">
               <FiAlertCircle className="text-rose-400" />
               Factures en retard ({overdueInvoices.length})
             </h2>
 
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-800/50">
-                  <tr className="text-left text-sm text-gray-400">
+                <thead className="bg-surface/50">
+                  <tr className="text-left text-sm text-text-muted">
                     <th className="px-4 py-3">Numéro</th>
                     <th className="px-4 py-3">Client</th>
                     <th className="px-4 py-3">Échéance</th>
@@ -333,12 +333,12 @@ const Treasury = () => {
                     const daysOverdue = Math.floor((today - dueDate) / (1000 * 60 * 60 * 24));
 
                     return (
-                      <tr key={invoice.id} className="hover:bg-gray-700/30 transition-colors">
+                      <tr key={invoice.id} className="hover:bg-surface-strong/30 transition-colors">
                         <td className="px-4 py-3 font-mono text-sm text-rose-300">
                           {invoice.invoice_number}
                         </td>
-                        <td className="px-4 py-3 text-white">{invoice.client_name}</td>
-                        <td className="px-4 py-3 text-gray-400 text-sm">
+                        <td className="px-4 py-3 text-text-primary">{invoice.client_name}</td>
+                        <td className="px-4 py-3 text-text-muted text-sm">
                           {formatDate(invoice.due_date)}
                         </td>
                         <td className="px-4 py-3">

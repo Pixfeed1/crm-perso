@@ -138,27 +138,27 @@ const ReviewRequestModal = ({ isOpen, onClose, client, contact }) => {
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, y: 20 }}
           transition={{ type: 'spring', duration: 0.3 }}
-          className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 border border-indigo-500/30 rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto"
+          className="bg-gradient-to-br from-surface-muted via-surface to-surface-muted border border-indigo-500/30 rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="sticky top-0 bg-gray-900/90 backdrop-blur-sm p-6 pb-4 border-b border-gray-700/50 flex items-start justify-between">
+          <div className="sticky top-0 bg-surface-muted/90 backdrop-blur-sm p-6 pb-4 border-b border-border/50 flex items-start justify-between">
             <div className="flex items-start gap-4">
               <div className="bg-indigo-500/20 text-indigo-400 p-3 rounded-xl">
                 <FiStar className="text-2xl" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-white">
+                <h2 className="text-2xl font-bold text-text-primary">
                   Demander un avis
                 </h2>
-                <p className="text-gray-400 text-sm mt-1">
+                <p className="text-text-muted text-sm mt-1">
                   {client?.name || 'Client'}
                 </p>
               </div>
             </div>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-white transition-colors p-2 hover:bg-gray-800 rounded-lg"
+              className="text-text-muted hover:text-text-primary transition-colors p-2 hover:bg-surface rounded-lg"
             >
               <FiX className="text-xl" />
             </button>
@@ -167,34 +167,34 @@ const ReviewRequestModal = ({ isOpen, onClose, client, contact }) => {
           <div className="p-6 space-y-6">
             {/* Informations du contact */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+              <h3 className="text-lg font-semibold text-text-primary flex items-center gap-2">
                 <FiMail className="text-indigo-400" />
                 Destinataire
               </h3>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-text-secondary mb-2">
                     Nom du contact
                   </label>
                   <input
                     type="text"
                     value={contactName}
                     onChange={(e) => setContactName(e.target.value)}
-                    className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+                    className="w-full px-4 py-2 bg-surface border border-border rounded-lg text-text-primary focus:outline-none focus:border-indigo-500"
                     placeholder="Nom du contact"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-text-secondary mb-2">
                     Email <span className="text-red-400">*</span>
                   </label>
                   <input
                     type="email"
                     value={contactEmail}
                     onChange={(e) => setContactEmail(e.target.value)}
-                    className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+                    className="w-full px-4 py-2 bg-surface border border-border rounded-lg text-text-primary focus:outline-none focus:border-indigo-500"
                     placeholder="email@exemple.com"
                     required
                   />
@@ -204,7 +204,7 @@ const ReviewRequestModal = ({ isOpen, onClose, client, contact }) => {
 
             {/* Sélection des plateformes */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-white">
+              <h3 className="text-lg font-semibold text-text-primary">
                 Plateformes d'avis
               </h3>
 
@@ -221,7 +221,7 @@ const ReviewRequestModal = ({ isOpen, onClose, client, contact }) => {
                         p-4 rounded-xl border-2 transition-all
                         ${isSelected
                           ? 'border-indigo-500 bg-indigo-500/10'
-                          : 'border-gray-700 bg-gray-800 hover:border-gray-600'
+                          : 'border-border bg-surface hover:border-border-strong'
                         }
                       `}
                     >
@@ -229,7 +229,7 @@ const ReviewRequestModal = ({ isOpen, onClose, client, contact }) => {
                         <div className={`${platform.bgColor} p-3 rounded-lg`}>
                           <Icon className={`text-2xl ${platform.color}`} />
                         </div>
-                        <span className="text-sm font-medium text-white text-center">
+                        <span className="text-sm font-medium text-text-primary text-center">
                           {platform.name}
                         </span>
                         {isSelected && (
@@ -245,7 +245,7 @@ const ReviewRequestModal = ({ isOpen, onClose, client, contact }) => {
             {/* Template d'email */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-white">
+                <h3 className="text-lg font-semibold text-text-primary">
                   Message personnalisé
                 </h3>
                 <button
@@ -258,30 +258,30 @@ const ReviewRequestModal = ({ isOpen, onClose, client, contact }) => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-text-secondary mb-2">
                   Sujet de l'email <span className="text-red-400">*</span>
                 </label>
                 <input
                   type="text"
                   value={emailSubject}
                   onChange={(e) => setEmailSubject(e.target.value)}
-                  className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full px-4 py-2 bg-surface border border-border rounded-lg text-text-primary focus:outline-none focus:border-indigo-500"
                   placeholder="Sujet de l'email"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-text-secondary mb-2">
                   Corps du message <span className="text-red-400">*</span>
                 </label>
                 <textarea
                   value={emailBody}
                   onChange={(e) => setEmailBody(e.target.value)}
                   rows={12}
-                  className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500 font-mono text-sm"
+                  className="w-full px-4 py-3 bg-surface border border-border rounded-lg text-text-primary focus:outline-none focus:border-indigo-500 font-mono text-sm"
                   placeholder="Corps de l'email"
                 />
-                <p className="text-xs text-gray-400 mt-2">
+                <p className="text-xs text-text-muted mt-2">
                   Variables disponibles : {'{nom_client}'}, {'{nom_contact}'}, {'{société}'}
                 </p>
               </div>
@@ -298,10 +298,10 @@ const ReviewRequestModal = ({ isOpen, onClose, client, contact }) => {
           </div>
 
           {/* Footer */}
-          <div className="sticky bottom-0 bg-gray-900/90 backdrop-blur-sm p-6 pt-4 border-t border-gray-700/50 flex justify-end gap-3">
+          <div className="sticky bottom-0 bg-surface-muted/90 backdrop-blur-sm p-6 pt-4 border-t border-border/50 flex justify-end gap-3">
             <button
               onClick={onClose}
-              className="px-6 py-2.5 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+              className="px-6 py-2.5 bg-surface-strong hover:bg-border-strong text-text-primary rounded-lg transition-colors"
               disabled={loading}
             >
               Annuler
@@ -309,7 +309,7 @@ const ReviewRequestModal = ({ isOpen, onClose, client, contact }) => {
             <button
               onClick={handleSend}
               disabled={loading || !contactEmail || selectedPlatforms.length === 0}
-              className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center gap-2"
+              className="px-6 py-2.5 bg-accent hover:bg-indigo-700 disabled:bg-border-strong disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center gap-2"
             >
               {loading ? (
                 <>

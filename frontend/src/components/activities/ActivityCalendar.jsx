@@ -99,9 +99,9 @@ const ActivityCalendar = ({ activities, startDate, endDate, onSelectActivity, on
   return (
     <div className="flex-1 overflow-y-auto">
       {/* En-tête des jours de la semaine */}
-      <div className="grid grid-cols-7 text-center border-b border-gray-700">
+      <div className="grid grid-cols-7 text-center border-b border-border">
         {weekdays.map((day, index) => (
-          <div key={index} className="py-2 text-gray-400 font-medium text-sm">
+          <div key={index} className="py-2 text-text-muted font-medium text-sm">
             {day}
           </div>
         ))}
@@ -115,7 +115,7 @@ const ActivityCalendar = ({ activities, startDate, endDate, onSelectActivity, on
               <div 
                 key={dayIndex} 
                 className={`min-h-[120px] p-2 ${
-                  day ? (isToday(day) ? 'bg-indigo-900/20' : '') : 'bg-gray-900/30'
+                  day ? (isToday(day) ? 'bg-indigo-900/20' : '') : 'bg-surface-muted/30'
                 }`}
                 onClick={() => day && onAddActivity(day)}
               >
@@ -123,7 +123,7 @@ const ActivityCalendar = ({ activities, startDate, endDate, onSelectActivity, on
                   <>
                     {/* Numéro du jour */}
                     <div className={`text-right font-medium mb-2 ${
-                      isToday(day) ? 'text-indigo-300' : 'text-gray-300'
+                      isToday(day) ? 'text-indigo-300' : 'text-text-secondary'
                     }`}>
                       {day.getDate()}
                     </div>
@@ -131,13 +131,13 @@ const ActivityCalendar = ({ activities, startDate, endDate, onSelectActivity, on
                     {/* Activités du jour */}
                     <div className="space-y-1">
                       {getActivitiesForDay(day).map(activity => {
-                        const typeStyle = typeConfig[activity.type] || { bg: 'bg-gray-600/70', border: 'border-gray-500' };
+                        const typeStyle = typeConfig[activity.type] || { bg: 'bg-border-strong/70', border: 'border-gray-500' };
                         const priorityStyle = priorityBorder[activity.priority] || 'border-l-gray-500';
                         
                         return (
                           <motion.div
                             key={activity.id}
-                            className={`px-2 py-1 text-xs rounded truncate cursor-pointer border-l-2 ${typeStyle.bg} ${priorityStyle} text-white ${
+                            className={`px-2 py-1 text-xs rounded truncate cursor-pointer border-l-2 ${typeStyle.bg} ${priorityStyle} text-text-primary ${
                               activity.status === 'completed' ? 'opacity-70' : ''
                             } flex items-center gap-1`}
                             whileHover={{ scale: 1.02 }}

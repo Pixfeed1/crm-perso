@@ -95,7 +95,7 @@ const ActivityForm = ({ activity = {}, onSave, onCancel, projects, defaultDate }
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Description */}
         <div className="w-full">
-          <label htmlFor="description" className="block text-sm font-medium text-gray-300 mb-1">
+          <label htmlFor="description" className="block text-sm font-medium text-text-secondary mb-1">
             Description <span className="text-rose-500">*</span>
           </label>
           <input
@@ -104,8 +104,8 @@ const ActivityForm = ({ activity = {}, onSave, onCancel, projects, defaultDate }
             name="description"
             value={formData.description}
             onChange={handleInputChange}
-            className={`w-full bg-gray-800/50 text-white border ${
-              errors.description ? 'border-rose-500' : 'border-gray-700'
+            className={`w-full bg-surface/50 text-text-primary border ${
+              errors.description ? 'border-rose-500' : 'border-border'
             } rounded-lg px-2 sm:px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 placeholder-gray-400`}
             placeholder="Ex: Développement de la page d'accueil"
           />
@@ -117,7 +117,7 @@ const ActivityForm = ({ activity = {}, onSave, onCancel, projects, defaultDate }
         {/* Type et priorité */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="w-full">
-            <label htmlFor="type" className="block text-sm font-medium text-gray-300 mb-1">
+            <label htmlFor="type" className="block text-sm font-medium text-text-secondary mb-1">
               Type d'activité
             </label>
             <select
@@ -125,7 +125,7 @@ const ActivityForm = ({ activity = {}, onSave, onCancel, projects, defaultDate }
               name="type"
               value={formData.type}
               onChange={handleInputChange}
-              className="w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg px-2 sm:px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+              className="w-full bg-surface/50 text-text-primary border border-border rounded-lg px-2 sm:px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
             >
               {activityTypes.map(type => (
                 <option key={type.value} value={type.value}>
@@ -136,7 +136,7 @@ const ActivityForm = ({ activity = {}, onSave, onCancel, projects, defaultDate }
           </div>
           
           <div className="w-full">
-            <label htmlFor="priority" className="block text-sm font-medium text-gray-300 mb-1">
+            <label htmlFor="priority" className="block text-sm font-medium text-text-secondary mb-1">
               Priorité
             </label>
             <select
@@ -144,7 +144,7 @@ const ActivityForm = ({ activity = {}, onSave, onCancel, projects, defaultDate }
               name="priority"
               value={formData.priority}
               onChange={handleInputChange}
-              className="w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg px-2 sm:px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+              className="w-full bg-surface/50 text-text-primary border border-border rounded-lg px-2 sm:px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
             >
               {priorityLevels.map(priority => (
                 <option key={priority.value} value={priority.value}>
@@ -158,7 +158,7 @@ const ActivityForm = ({ activity = {}, onSave, onCancel, projects, defaultDate }
         {/* Date et temps prévu */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="w-full">
-            <label htmlFor="date" className="block text-sm font-medium text-gray-300 mb-1">
+            <label htmlFor="date" className="block text-sm font-medium text-text-secondary mb-1">
               Date <span className="text-rose-500">*</span>
             </label>
             <input
@@ -167,8 +167,8 @@ const ActivityForm = ({ activity = {}, onSave, onCancel, projects, defaultDate }
               name="date"
               value={formData.date}
               onChange={handleInputChange}
-              className={`w-full bg-gray-800/50 text-white border ${
-                errors.date ? 'border-rose-500' : 'border-gray-700'
+              className={`w-full bg-surface/50 text-text-primary border ${
+                errors.date ? 'border-rose-500' : 'border-border'
               } rounded-lg px-2 sm:px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm`}
             />
             {errors.date && (
@@ -177,7 +177,7 @@ const ActivityForm = ({ activity = {}, onSave, onCancel, projects, defaultDate }
           </div>
           
           <div className="w-full">
-            <label htmlFor="planned_time" className="block text-sm font-medium text-gray-300 mb-1">
+            <label htmlFor="planned_time" className="block text-sm font-medium text-text-secondary mb-1">
               Temps prévu (min) <span className="text-rose-500">*</span>
             </label>
             <input
@@ -187,8 +187,8 @@ const ActivityForm = ({ activity = {}, onSave, onCancel, projects, defaultDate }
               value={formData.planned_time}
               onChange={handleInputChange}
               min="1"
-              className={`w-full bg-gray-800/50 text-white border ${
-                errors.planned_time ? 'border-rose-500' : 'border-gray-700'
+              className={`w-full bg-surface/50 text-text-primary border ${
+                errors.planned_time ? 'border-rose-500' : 'border-border'
               } rounded-lg px-2 sm:px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm`}
             />
             {errors.planned_time && (
@@ -199,7 +199,7 @@ const ActivityForm = ({ activity = {}, onSave, onCancel, projects, defaultDate }
         
         {/* Projet */}
         <div className="w-full">
-          <label htmlFor="project_id" className="block text-sm font-medium text-gray-300 mb-1">
+          <label htmlFor="project_id" className="block text-sm font-medium text-text-secondary mb-1">
             Projet associé
           </label>
           <select
@@ -207,7 +207,7 @@ const ActivityForm = ({ activity = {}, onSave, onCancel, projects, defaultDate }
             name="project_id"
             value={formData.project_id}
             onChange={handleInputChange}
-            className="w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg px-2 sm:px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+            className="w-full bg-surface/50 text-text-primary border border-border rounded-lg px-2 sm:px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
           >
             <option value="">Aucun projet</option>
             {projects && projects.map(project => (
@@ -221,7 +221,7 @@ const ActivityForm = ({ activity = {}, onSave, onCancel, projects, defaultDate }
         {/* Lead */}
         <div className="w-full">
           <div className="flex items-center mb-2">
-            <label htmlFor="lead_name" className="block text-sm font-medium text-gray-300">
+            <label htmlFor="lead_name" className="block text-sm font-medium text-text-secondary">
               Lead associé
             </label>
             <div className="ml-2">
@@ -232,7 +232,7 @@ const ActivityForm = ({ activity = {}, onSave, onCancel, projects, defaultDate }
                 onChange={() => setShowLeadInput(!showLeadInput)}
                 className="mr-1"
               />
-              <label htmlFor="show_lead" className="text-xs text-gray-400">
+              <label htmlFor="show_lead" className="text-xs text-text-muted">
                 Associer un lead
               </label>
             </div>
@@ -245,7 +245,7 @@ const ActivityForm = ({ activity = {}, onSave, onCancel, projects, defaultDate }
               name="lead_name"
               value={formData.lead_name}
               onChange={handleInputChange}
-              className="w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg px-2 sm:px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 placeholder-gray-400 text-sm"
+              className="w-full bg-surface/50 text-text-primary border border-border rounded-lg px-2 sm:px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 placeholder-gray-400 text-sm"
               placeholder="Nom du lead"
             />
           )}
@@ -255,7 +255,7 @@ const ActivityForm = ({ activity = {}, onSave, onCancel, projects, defaultDate }
         <div className="flex justify-center sm:justify-end space-x-3 pt-4">
           <motion.button
             type="button"
-            className="px-3 sm:px-4 py-2 rounded-lg border-2 border-white/30 text-white hover:bg-white/10 hover:border-white/40 shadow-sm text-sm font-semibold transition-all"
+            className="px-3 sm:px-4 py-2 rounded-lg border-2 border-overlay/30 text-text-primary hover:bg-overlay/10 hover:border-overlay/40 shadow-sm text-sm font-semibold transition-all"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={onCancel}
@@ -265,7 +265,7 @@ const ActivityForm = ({ activity = {}, onSave, onCancel, projects, defaultDate }
           
           <motion.button
             type="submit"
-            className="px-3 sm:px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm text-sm"
+            className="px-3 sm:px-4 py-2 rounded-lg bg-accent hover:bg-indigo-700 text-white shadow-sm text-sm"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >

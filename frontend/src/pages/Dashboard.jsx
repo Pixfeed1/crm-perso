@@ -408,7 +408,7 @@ const Dashboard = () => {
                             onClick={() => { setDateFilter('month'); setShowFilters(false); }}
                             className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
                               dateFilter === 'month'
-                                ? 'bg-accent text-text-primary'
+                                ? 'bg-accent text-white'
                                 : 'text-text-secondary hover:bg-surface-strong'
                             }`}
                           >
@@ -418,7 +418,7 @@ const Dashboard = () => {
                             onClick={() => { setDateFilter('quarter'); setShowFilters(false); }}
                             className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
                               dateFilter === 'quarter'
-                                ? 'bg-accent text-text-primary'
+                                ? 'bg-accent text-white'
                                 : 'text-text-secondary hover:bg-surface-strong'
                             }`}
                           >
@@ -428,7 +428,7 @@ const Dashboard = () => {
                             onClick={() => { setDateFilter('year'); setShowFilters(false); }}
                             className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
                               dateFilter === 'year'
-                                ? 'bg-accent text-text-primary'
+                                ? 'bg-accent text-white'
                                 : 'text-text-secondary hover:bg-surface-strong'
                             }`}
                           >
@@ -438,7 +438,7 @@ const Dashboard = () => {
                             onClick={() => { setDateFilter('all'); setShowFilters(false); }}
                             className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
                               dateFilter === 'all'
-                                ? 'bg-accent text-text-primary'
+                                ? 'bg-accent text-white'
                                 : 'text-text-secondary hover:bg-surface-strong'
                             }`}
                           >
@@ -466,7 +466,7 @@ const Dashboard = () => {
               <div className="relative" ref={newMenuRef}>
                 <button
                   onClick={() => setShowNewMenu(!showNewMenu)}
-                  className="px-4 py-2 bg-accent hover:bg-indigo-700 text-text-primary rounded-lg transition-colors flex items-center gap-2"
+                  className="px-4 py-2 bg-accent hover:bg-indigo-700 text-white rounded-lg transition-colors flex items-center gap-2"
                 >
                   <FaPlus className="w-4 h-4" />
                   <span className="text-sm font-medium text-text-primary">Nouveau</span>

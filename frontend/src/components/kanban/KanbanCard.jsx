@@ -6,7 +6,7 @@ import { FiMail, FiPhone, FiBriefcase, FiDollarSign, FiUser } from 'react-icons/
 const KanbanCard = ({ lead, onDragStart, onDragEnd, onClick, isDragging }) => {
   return (
     <motion.div
-      className={`bg-gray-800/50 backdrop-blur-sm border border-gray-700 rounded-lg p-4 cursor-move hover:bg-gray-700/50 transition-all ${
+      className={`bg-surface/50 backdrop-blur-sm border border-border rounded-lg p-4 cursor-move hover:bg-surface-strong/50 transition-all ${
         isDragging ? 'opacity-50 scale-95' : 'opacity-100'
       }`}
       draggable
@@ -27,9 +27,9 @@ const KanbanCard = ({ lead, onDragStart, onDragEnd, onClick, isDragging }) => {
       {/* Nom du lead */}
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1">
-          <h4 className="text-white font-semibold text-base mb-1">{lead.name}</h4>
+          <h4 className="text-text-primary font-semibold text-base mb-1">{lead.name}</h4>
           {lead.company && (
-            <div className="flex items-center gap-1 text-gray-400 text-sm">
+            <div className="flex items-center gap-1 text-text-muted text-sm">
               <FiBriefcase className="text-xs" />
               <span>{lead.company}</span>
             </div>
@@ -51,13 +51,13 @@ const KanbanCard = ({ lead, onDragStart, onDragEnd, onClick, isDragging }) => {
       {/* Informations de contact */}
       <div className="space-y-2 mb-3">
         {lead.email && (
-          <div className="flex items-center gap-2 text-gray-300 text-sm">
+          <div className="flex items-center gap-2 text-text-secondary text-sm">
             <FiMail className="text-indigo-400 text-xs flex-shrink-0" />
             <span className="truncate">{lead.email}</span>
           </div>
         )}
         {lead.phone && (
-          <div className="flex items-center gap-2 text-gray-300 text-sm">
+          <div className="flex items-center gap-2 text-text-secondary text-sm">
             <FiPhone className="text-green-400 text-xs flex-shrink-0" />
             <span>{lead.phone}</span>
           </div>
@@ -66,7 +66,7 @@ const KanbanCard = ({ lead, onDragStart, onDragEnd, onClick, isDragging }) => {
 
       {/* Budget */}
       {lead.budget && (
-        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-700">
+        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border">
           <FiDollarSign className="text-amber-400" />
           <span className="text-amber-400 font-semibold">
             {new Intl.NumberFormat('fr-FR', {

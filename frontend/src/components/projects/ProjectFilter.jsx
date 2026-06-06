@@ -66,7 +66,7 @@ const ProjectFilter = ({ filters, setFilters, onSort, sortField, sortDirection }
   const hasActiveFilters = filters.search !== '' || filters.status !== 'all' || filters.type !== 'all' || filters.timeframe !== 'all';
 
   return (
-    <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl overflow-hidden">
+    <div className="bg-surface/30 backdrop-blur-sm rounded-xl overflow-hidden">
       {/* Barre de recherche et tri toujours visible */}
       <div className="p-3 space-y-3">
         <div className="flex gap-2">
@@ -77,14 +77,14 @@ const ProjectFilter = ({ filters, setFilters, onSort, sortField, sortDirection }
               placeholder="Rechercher un projet..."
               value={filters.search}
               onChange={(e) => handleFilterChange('search', e.target.value)}
-              className="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-4 py-2 pl-10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="w-full bg-surface-muted/50 border border-border rounded-lg px-4 py-2 pl-10 text-text-primary placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             />
-            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-text-muted">
               <FiSearch />
             </span>
             {filters.search && (
               <motion.button
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-text-muted hover:text-text-primary"
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
                 onClick={() => handleFilterChange('search', '')}
@@ -104,7 +104,7 @@ const ProjectFilter = ({ filters, setFilters, onSort, sortField, sortDirection }
                   className={`px-3 py-2 rounded-lg flex items-center gap-1 text-sm ${
                     sortField === option.field
                       ? 'bg-purple-600 text-white'
-                      : 'bg-gray-700/50 text-gray-300 hover:bg-gray-700'
+                      : 'bg-surface-strong/50 text-text-secondary hover:bg-surface-strong'
                   }`}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
@@ -123,12 +123,12 @@ const ProjectFilter = ({ filters, setFilters, onSort, sortField, sortDirection }
       
       {/* Bouton d'expansion des filtres */}
       <div
-        className="px-3 py-2 flex justify-between items-center cursor-pointer hover:bg-gray-700/30 transition-colors"
+        className="px-3 py-2 flex justify-between items-center cursor-pointer hover:bg-surface-strong/30 transition-colors"
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <div className="flex items-center text-sm">
           <span className="mr-2"><FiFilter /></span>
-          <span className="text-gray-300 font-medium">Filtres avancés</span>
+          <span className="text-text-secondary font-medium">Filtres avancés</span>
           {hasActiveFilters && (
             <span className="ml-2 px-1.5 py-0.5 bg-purple-600 rounded-full text-xs text-white">
               {Object.values(filters).filter(val => val !== '' && val !== 'all').length}
@@ -138,7 +138,7 @@ const ProjectFilter = ({ filters, setFilters, onSort, sortField, sortDirection }
         <motion.span
           animate={{ rotate: isExpanded ? 180 : 0 }}
           transition={{ duration: 0.3 }}
-          className="text-white"
+          className="text-text-primary"
         >
           ⌄
         </motion.span>
@@ -154,10 +154,10 @@ const ProjectFilter = ({ filters, setFilters, onSort, sortField, sortDirection }
             transition={{ duration: 0.3 }}
             className="overflow-hidden"
           >
-            <div className="p-3 space-y-3 border-t border-gray-700/50">
+            <div className="p-3 space-y-3 border-t border-border/50">
               {/* Sélection du statut */}
               <div>
-                <label className="block text-xs text-white mb-1">Statut</label>
+                <label className="block text-xs text-text-primary mb-1">Statut</label>
                 <div className="flex flex-wrap gap-2">
                   {statusOptions.map(option => (
                     <motion.button
@@ -165,7 +165,7 @@ const ProjectFilter = ({ filters, setFilters, onSort, sortField, sortDirection }
                       className={`px-3 py-1 rounded-full text-xs font-medium ${
                         filters.status === option.value
                           ? 'bg-purple-600 text-white'
-                          : 'bg-gray-700/50 text-white hover:bg-gray-700'
+                          : 'bg-surface-strong/50 text-text-primary hover:bg-surface-strong'
                       }`}
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
@@ -179,7 +179,7 @@ const ProjectFilter = ({ filters, setFilters, onSort, sortField, sortDirection }
               
               {/* Sélection du type */}
               <div>
-                <label className="block text-xs text-white mb-1">Type</label>
+                <label className="block text-xs text-text-primary mb-1">Type</label>
                 <div className="flex flex-wrap gap-2">
                   {typeOptions.map(option => (
                     <motion.button
@@ -187,7 +187,7 @@ const ProjectFilter = ({ filters, setFilters, onSort, sortField, sortDirection }
                       className={`px-3 py-1 rounded-full text-xs font-medium ${
                         filters.type === option.value
                           ? 'bg-purple-600 text-white'
-                          : 'bg-gray-700/50 text-white hover:bg-gray-700'
+                          : 'bg-surface-strong/50 text-text-primary hover:bg-surface-strong'
                       }`}
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
@@ -201,7 +201,7 @@ const ProjectFilter = ({ filters, setFilters, onSort, sortField, sortDirection }
               
               {/* Sélection de la période */}
               <div>
-                <label className="block text-xs text-white mb-1">Période</label>
+                <label className="block text-xs text-text-primary mb-1">Période</label>
                 <div className="flex flex-wrap gap-2">
                   {timeframeOptions.map(option => (
                     <motion.button
@@ -209,7 +209,7 @@ const ProjectFilter = ({ filters, setFilters, onSort, sortField, sortDirection }
                       className={`px-3 py-1 rounded-full text-xs font-medium ${
                         filters.timeframe === option.value
                           ? 'bg-purple-600 text-white'
-                          : 'bg-gray-700/50 text-white hover:bg-gray-700'
+                          : 'bg-surface-strong/50 text-text-primary hover:bg-surface-strong'
                       }`}
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}

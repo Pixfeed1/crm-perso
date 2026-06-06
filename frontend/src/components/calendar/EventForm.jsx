@@ -252,7 +252,7 @@ const EventForm = ({ event = {}, selectedDate, onSave, onCancel }) => {
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Titre */}
         <div>
-          <label htmlFor="title" className="block text-sm font-medium text-gray-300 mb-1">
+          <label htmlFor="title" className="block text-sm font-medium text-text-secondary mb-1">
             Titre <span className="text-rose-500">*</span>
           </label>
           <input
@@ -261,8 +261,8 @@ const EventForm = ({ event = {}, selectedDate, onSave, onCancel }) => {
             name="title"
             value={formData.title}
             onChange={handleInputChange}
-            className={`w-full bg-gray-900/50 text-white border ${
-              errors.title ? 'border-rose-500' : 'border-gray-700'
+            className={`w-full bg-surface-muted/50 text-text-primary border ${
+              errors.title ? 'border-rose-500' : 'border-border'
             } rounded-lg px-4 py-2 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500`}
             placeholder="Ex: Réunion d'équipe"
           />
@@ -274,7 +274,7 @@ const EventForm = ({ event = {}, selectedDate, onSave, onCancel }) => {
         {/* Type d'événement et priorité */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label htmlFor="category" className="block text-sm font-medium text-gray-300 mb-1">
+            <label htmlFor="category" className="block text-sm font-medium text-text-secondary mb-1">
               Type d'événement
             </label>
             <select
@@ -282,7 +282,7 @@ const EventForm = ({ event = {}, selectedDate, onSave, onCancel }) => {
               name="category"
               value={formData.category}
               onChange={handleInputChange}
-              className="w-full bg-gray-900/50 text-white border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+              className="w-full bg-surface-muted/50 text-text-primary border border-border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
             >
               {categoryOptions.map(option => (
                 <option key={option.value} value={option.value}>
@@ -293,7 +293,7 @@ const EventForm = ({ event = {}, selectedDate, onSave, onCancel }) => {
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-text-secondary mb-1">
               Priorité
             </label>
             <div className="flex space-x-2">
@@ -302,8 +302,8 @@ const EventForm = ({ event = {}, selectedDate, onSave, onCancel }) => {
                   key={option.value}
                   className={`flex-1 py-2 rounded-lg cursor-pointer text-center text-sm ${
                     formData.priority === option.value
-                      ? `${option.color} text-white`
-                      : 'bg-gray-900/50 text-gray-300 border border-gray-700 hover:bg-gray-800/50'
+                      ? `${option.color} text-text-primary`
+                      : 'bg-surface-muted/50 text-text-secondary border border-border hover:bg-surface/50'
                   }`}
                 >
                   <input 
@@ -324,7 +324,7 @@ const EventForm = ({ event = {}, selectedDate, onSave, onCancel }) => {
         {/* Date et heure */}
         <div>
           <div className="flex items-center mb-2">
-            <label className="flex items-center text-sm font-medium text-gray-300">
+            <label className="flex items-center text-sm font-medium text-text-secondary">
               <input
                 type="checkbox"
                 name="all_day"
@@ -338,7 +338,7 @@ const EventForm = ({ event = {}, selectedDate, onSave, onCancel }) => {
           
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-text-secondary mb-1">
                 Début <span className="text-rose-500">*</span>
               </label>
               <DatePicker
@@ -348,8 +348,8 @@ const EventForm = ({ event = {}, selectedDate, onSave, onCancel }) => {
                 dateFormat={formData.all_day ? "dd/MM/yyyy" : "dd/MM/yyyy HH:mm"}
                 timeFormat="HH:mm"
                 timeIntervals={15}
-                className={`w-full bg-gray-900/50 text-white border ${
-                  errors.start_date ? 'border-rose-500' : 'border-gray-700'
+                className={`w-full bg-surface-muted/50 text-text-primary border ${
+                  errors.start_date ? 'border-rose-500' : 'border-border'
                 } rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500`}
               />
               {errors.start_date && (
@@ -358,7 +358,7 @@ const EventForm = ({ event = {}, selectedDate, onSave, onCancel }) => {
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-text-secondary mb-1">
                 Fin <span className="text-rose-500">*</span>
               </label>
               <DatePicker
@@ -368,8 +368,8 @@ const EventForm = ({ event = {}, selectedDate, onSave, onCancel }) => {
                 dateFormat={formData.all_day ? "dd/MM/yyyy" : "dd/MM/yyyy HH:mm"}
                 timeFormat="HH:mm"
                 timeIntervals={15}
-                className={`w-full bg-gray-900/50 text-white border ${
-                  errors.end_date ? 'border-rose-500' : 'border-gray-700'
+                className={`w-full bg-surface-muted/50 text-text-primary border ${
+                  errors.end_date ? 'border-rose-500' : 'border-border'
                 } rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500`}
               />
               {errors.end_date && (
@@ -381,7 +381,7 @@ const EventForm = ({ event = {}, selectedDate, onSave, onCancel }) => {
         
         {/* Lieu avec auto-complétion */}
         <div>
-          <label htmlFor="location" className="block text-sm font-medium text-gray-300 mb-1">
+          <label htmlFor="location" className="block text-sm font-medium text-text-secondary mb-1">
             Lieu
           </label>
           <AddressAutocomplete
@@ -421,7 +421,7 @@ const EventForm = ({ event = {}, selectedDate, onSave, onCancel }) => {
 
         {/* Couleur */}
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
+          <label className="block text-sm font-medium text-text-secondary mb-2">
             Couleur
           </label>
           <div className="flex flex-wrap gap-3">
@@ -446,7 +446,7 @@ const EventForm = ({ event = {}, selectedDate, onSave, onCancel }) => {
                   onChange={handleInputChange}
                   className="sr-only"
                 />
-                <span className="text-xs text-gray-300">{option.label}</span>
+                <span className="text-xs text-text-secondary">{option.label}</span>
               </label>
             ))}
           </div>
@@ -454,7 +454,7 @@ const EventForm = ({ event = {}, selectedDate, onSave, onCancel }) => {
         
         {/* Description */}
         <div>
-          <label htmlFor="description" className="block text-sm font-medium text-gray-300 mb-1">
+          <label htmlFor="description" className="block text-sm font-medium text-text-secondary mb-1">
             Description
           </label>
           <textarea
@@ -463,7 +463,7 @@ const EventForm = ({ event = {}, selectedDate, onSave, onCancel }) => {
             value={formData.description}
             onChange={handleInputChange}
             rows="3"
-            className="w-full bg-gray-900/50 text-white border border-gray-700 rounded-lg px-4 py-2 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full bg-surface-muted/50 text-text-primary border border-border rounded-lg px-4 py-2 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             placeholder="Détails de l'événement..."
           />
         </div>
@@ -486,7 +486,7 @@ const EventForm = ({ event = {}, selectedDate, onSave, onCancel }) => {
           <motion.button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 rounded-lg bg-white text-gray-900 border-2 border-gray-600 hover:bg-gray-100 hover:border-gray-700 font-semibold transition-all"
+            className="px-4 py-2 rounded-lg bg-white text-gray-900 border-2 border-border-strong hover:bg-gray-100 hover:border-border font-semibold transition-all"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >
@@ -495,7 +495,7 @@ const EventForm = ({ event = {}, selectedDate, onSave, onCancel }) => {
           
           <motion.button
             type="submit"
-            className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white"
+            className="px-4 py-2 rounded-lg bg-accent hover:bg-indigo-700 text-white"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >

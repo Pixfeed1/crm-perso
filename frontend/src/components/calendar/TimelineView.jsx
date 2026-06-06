@@ -163,75 +163,75 @@ const TimelineView = ({
   const dateColumns = generateDateColumns();
 
   return (
-    <div className="h-full flex flex-col bg-gray-900" ref={timelineRef}>
+    <div className="h-full flex flex-col bg-surface-muted" ref={timelineRef}>
       {/* Header avec contrôles */}
-      <div className="flex items-center justify-between p-4 bg-gray-800 border-b border-gray-700">
+      <div className="flex items-center justify-between p-4 bg-surface border-b border-border">
         <div className="flex items-center space-x-2">
           <button
-            className="p-2 hover:bg-gray-700 rounded"
+            className="p-2 hover:bg-surface-strong rounded"
             onClick={() => setZoom(Math.max(1, zoom - 1))}
           >
-            <FiZoomOut className="text-white" />
+            <FiZoomOut className="text-text-primary" />
           </button>
-          <span className="text-white text-sm">
+          <span className="text-text-primary text-sm">
             {zoom === 1 ? 'Jour' : zoom === 2 ? 'Semaine' : 'Mois'}
           </span>
           <button
-            className="p-2 hover:bg-gray-700 rounded"
+            className="p-2 hover:bg-surface-strong rounded"
             onClick={() => setZoom(Math.min(3, zoom + 1))}
           >
-            <FiZoomIn className="text-white" />
+            <FiZoomIn className="text-text-primary" />
           </button>
         </div>
 
         <div className="flex items-center space-x-4">
           <button
-            className="p-2 hover:bg-gray-700 rounded"
+            className="p-2 hover:bg-surface-strong rounded"
             onClick={() => {
               const newDate = new Date(currentDate);
               newDate.setMonth(newDate.getMonth() - 1);
               // Appeler onPrevious si disponible via props
             }}
           >
-            <FiChevronLeft className="text-white" />
+            <FiChevronLeft className="text-text-primary" />
           </button>
-          <span className="text-white font-medium">
+          <span className="text-text-primary font-medium">
             {currentDate.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
           </span>
           <button
-            className="p-2 hover:bg-gray-700 rounded"
+            className="p-2 hover:bg-surface-strong rounded"
             onClick={() => {
               const newDate = new Date(currentDate);
               newDate.setMonth(newDate.getMonth() + 1);
               // Appeler onNext si disponible via props
             }}
           >
-            <FiChevronRight className="text-white" />
+            <FiChevronRight className="text-text-primary" />
           </button>
         </div>
 
-        <button className="p-2 hover:bg-gray-700 rounded">
-          <FiMaximize2 className="text-white" />
+        <button className="p-2 hover:bg-surface-strong rounded">
+          <FiMaximize2 className="text-text-primary" />
         </button>
       </div>
 
       {/* Grille Timeline */}
       <div className="flex-1 overflow-auto relative">
         {/* En-tête des dates */}
-        <div className="sticky top-0 z-10 flex bg-gray-800 border-b border-gray-700">
-          <div className="w-48 flex-shrink-0 p-2 border-r border-gray-700">
-            <span className="text-white font-medium">Tâches</span>
+        <div className="sticky top-0 z-10 flex bg-surface border-b border-border">
+          <div className="w-48 flex-shrink-0 p-2 border-r border-border">
+            <span className="text-text-primary font-medium">Tâches</span>
           </div>
           <div className="flex-1 flex">
             {dateColumns.map((date, index) => (
               <div
                 key={index}
-                className="flex-1 min-w-[40px] p-2 border-r border-gray-700 text-center"
+                className="flex-1 min-w-[40px] p-2 border-r border-border text-center"
               >
-                <div className="text-white text-xs">
+                <div className="text-text-primary text-xs">
                   {date.getDate()}
                 </div>
-                <div className="text-gray-400 text-xs">
+                <div className="text-text-muted text-xs">
                   {date.toLocaleDateString('fr-FR', { weekday: 'short' })}
                 </div>
               </div>
@@ -244,13 +244,13 @@ const TimelineView = ({
           {swimlanes.map((swimlane, laneIndex) => (
             <div
               key={laneIndex}
-              className="flex border-b border-gray-700"
+              className="flex border-b border-border"
               style={{ minHeight: '60px' }}
             >
               {/* Nom du swimlane */}
-              <div className="w-48 flex-shrink-0 p-3 border-r border-gray-700 bg-gray-800/50">
-                <span className="text-white text-sm font-medium">{swimlane.name}</span>
-                <div className="text-gray-400 text-xs mt-1">
+              <div className="w-48 flex-shrink-0 p-3 border-r border-border bg-surface/50">
+                <span className="text-text-primary text-sm font-medium">{swimlane.name}</span>
+                <div className="text-text-muted text-xs mt-1">
                   {swimlane.events.length} tâche{swimlane.events.length > 1 ? 's' : ''}
                 </div>
               </div>
@@ -260,7 +260,7 @@ const TimelineView = ({
                 {dateColumns.map((date, index) => (
                   <div
                     key={index}
-                    className="flex-1 min-w-[40px] border-r border-gray-700/30"
+                    className="flex-1 min-w-[40px] border-r border-border/30"
                   />
                 ))}
               </div>
@@ -290,11 +290,11 @@ const TimelineView = ({
                       animate={{ opacity: 1, scale: 1 }}
                     >
                       <div className="p-2 h-full flex flex-col justify-between">
-                        <div className="text-white text-xs font-medium truncate">
+                        <div className="text-text-primary text-xs font-medium truncate">
                           {event.title}
                         </div>
                         {event.completion_percentage > 0 && (
-                          <div className="w-full bg-gray-700/50 rounded-full h-1">
+                          <div className="w-full bg-surface-strong/50 rounded-full h-1">
                             <div
                               className="bg-green-400 h-1 rounded-full"
                               style={{ width: `${event.completion_percentage}%` }}
@@ -340,7 +340,7 @@ const TimelineView = ({
       </div>
 
       {/* Légende */}
-      <div className="p-3 bg-gray-800 border-t border-gray-700 flex items-center justify-between text-xs text-gray-400">
+      <div className="p-3 bg-surface border-t border-border flex items-center justify-between text-xs text-text-muted">
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-2">
             <div className="w-3 h-3 bg-blue-500 rounded" />

@@ -441,10 +441,10 @@ const Projects = () => {
     return (
       <div className="h-full flex flex-col items-center justify-center px-4">
         <div className="text-3xl sm:text-4xl mb-4"><FiAlertTriangle /></div>
-        <h2 className="text-lg sm:text-xl font-semibold text-white mb-2">Erreur de chargement</h2>
-        <p className="text-sm sm:text-base text-gray-300 mb-4 text-center">{error}</p>
+        <h2 className="text-lg sm:text-xl font-semibold text-text-primary mb-2">Erreur de chargement</h2>
+        <p className="text-sm sm:text-base text-text-secondary mb-4 text-center">{error}</p>
         <button
-          className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm sm:text-base"
+          className="px-4 py-2 bg-accent text-white rounded-lg text-sm sm:text-base"
           onClick={() => window.location.reload()}
         >
           Réessayer
@@ -478,21 +478,21 @@ const Projects = () => {
         {/* Statistiques */}
         {stats && (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-            <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-4">
-              <div className="text-gray-400 text-xs mb-1">Total Projets</div>
-              <div className="text-white text-2xl font-bold">{stats.total || 0}</div>
+            <div className="bg-surface/50 border border-border rounded-xl p-4">
+              <div className="text-text-muted text-xs mb-1">Total Projets</div>
+              <div className="text-text-primary text-2xl font-bold">{stats.total || 0}</div>
             </div>
             <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4">
               <div className="text-green-400 text-xs mb-1">Actifs</div>
-              <div className="text-white text-2xl font-bold">{stats.active || 0}</div>
+              <div className="text-text-primary text-2xl font-bold">{stats.active || 0}</div>
             </div>
             <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4">
               <div className="text-blue-400 text-xs mb-1">Terminés</div>
-              <div className="text-white text-2xl font-bold">{stats.completed || 0}</div>
+              <div className="text-text-primary text-2xl font-bold">{stats.completed || 0}</div>
             </div>
             <div className="bg-purple-500/10 border border-purple-500/30 rounded-xl p-4">
               <div className="text-purple-400 text-xs mb-1">Budget Total</div>
-              <div className="text-white text-2xl font-bold">{stats.totalBudget || 0}€</div>
+              <div className="text-text-primary text-2xl font-bold">{stats.totalBudget || 0}€</div>
             </div>
           </div>
         )}
@@ -500,11 +500,11 @@ const Projects = () => {
         {/* Barre d'outils avec boutons vue et actions */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
           <div className="flex items-center gap-4">
-            <h2 className="text-lg sm:text-xl font-semibold text-white">Vos Projets</h2>
-            <div className="bg-gray-800/50 rounded-lg p-1 flex">
+            <h2 className="text-lg sm:text-xl font-semibold text-text-primary">Vos Projets</h2>
+            <div className="bg-surface/50 rounded-lg p-1 flex">
               <motion.button
                 className={`px-3 py-1 rounded-lg text-sm flex items-center gap-1 transition-colors ${
-                  view === 'list' ? 'bg-purple-600 text-white' : 'text-gray-300 hover:bg-gray-700/50'
+                  view === 'list' ? 'bg-purple-600 text-white' : 'text-text-secondary hover:bg-surface-strong/50'
                 }`}
                 onClick={() => setView('list')}
                 whileTap={{ scale: 0.95 }}
@@ -513,7 +513,7 @@ const Projects = () => {
               </motion.button>
               <motion.button
                 className={`px-3 py-1 rounded-lg text-sm flex items-center gap-1 transition-colors ${
-                  view === 'timeline' ? 'bg-purple-600 text-white' : 'text-gray-300 hover:bg-gray-700/50'
+                  view === 'timeline' ? 'bg-purple-600 text-white' : 'text-text-secondary hover:bg-surface-strong/50'
                 }`}
                 onClick={() => setView('timeline')}
                 whileTap={{ scale: 0.95 }}

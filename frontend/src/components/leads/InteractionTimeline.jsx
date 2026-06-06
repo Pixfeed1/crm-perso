@@ -71,12 +71,12 @@ const InteractionTimeline = ({ interactions = [], contacts = [], onUpdateInterac
   // Si aucune interaction n'est disponible
   if (interactions.length === 0) {
     return (
-      <div className="bg-gray-900/30 rounded-lg p-4 sm:p-6 text-center">
+      <div className="bg-surface-muted/30 rounded-lg p-4 sm:p-6 text-center">
         <div className="text-3xl sm:text-4xl mb-3 text-gray-500">
           <FiClock />
         </div>
-        <h4 className="text-base sm:text-lg font-medium text-gray-300 mb-2">Aucune interaction</h4>
-        <p className="text-gray-400 text-xs sm:text-sm">
+        <h4 className="text-base sm:text-lg font-medium text-text-secondary mb-2">Aucune interaction</h4>
+        <p className="text-text-muted text-xs sm:text-sm">
           Commencez à suivre vos échanges avec ce lead en ajoutant une interaction.
         </p>
       </div>
@@ -99,17 +99,17 @@ const InteractionTimeline = ({ interactions = [], contacts = [], onUpdateInterac
             >
               {/* Ligne de connexion pour la timeline */}
               {index < interactions.length - 1 && (
-                <div className="absolute left-4 sm:left-5 top-12 sm:top-14 bottom-0 w-0.5 bg-gradient-to-b from-gray-700 to-transparent -mb-3 sm:-mb-4" />
+                <div className="absolute left-4 sm:left-5 top-12 sm:top-14 bottom-0 w-0.5 bg-gradient-to-b from-surface-strong to-transparent -mb-3 sm:-mb-4" />
               )}
 
               <div className="flex gap-3 sm:gap-4">
                 {/* Icône du type d'interaction */}
                 <div className={`flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-full ${config.bg} border ${config.border} flex items-center justify-center ${config.color} relative z-10`}>
-                  <span className="text-sm sm:text-base text-white">{config.icon}</span>
+                  <span className="text-sm sm:text-base text-text-primary">{config.icon}</span>
                 </div>
 
                 {/* Contenu de l'interaction */}
-                <div className="flex-1 bg-gray-900/30 rounded-lg p-3 sm:p-4 min-w-0">
+                <div className="flex-1 bg-surface-muted/30 rounded-lg p-3 sm:p-4 min-w-0">
                   {/* En-tête */}
                   <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mb-2 sm:mb-3">
                     <div className="min-w-0 flex-1">
@@ -118,12 +118,12 @@ const InteractionTimeline = ({ interactions = [], contacts = [], onUpdateInterac
                           {config.label}
                         </span>
                         <span className="text-xs text-gray-500">•</span>
-                        <span className="text-xs text-gray-400 flex items-center gap-1">
+                        <span className="text-xs text-text-muted flex items-center gap-1">
                           <FiClock className="text-xs" />
                           {formatDate(interaction.date)}
                         </span>
                       </div>
-                      <h4 className="font-medium text-white text-sm sm:text-base break-words">
+                      <h4 className="font-medium text-text-primary text-sm sm:text-base break-words">
                         {interaction.description}
                       </h4>
                       {interaction.contact_name && (
@@ -157,8 +157,8 @@ const InteractionTimeline = ({ interactions = [], contacts = [], onUpdateInterac
 
                   {/* Notes détaillées */}
                   {interaction.notes && (
-                    <div className="mt-2 pt-2 border-t border-gray-700/50">
-                      <p className="text-xs sm:text-sm text-gray-300 whitespace-pre-wrap break-words">
+                    <div className="mt-2 pt-2 border-t border-border/50">
+                      <p className="text-xs sm:text-sm text-text-secondary whitespace-pre-wrap break-words">
                         {interaction.notes}
                       </p>
                     </div>
@@ -181,13 +181,13 @@ const InteractionTimeline = ({ interactions = [], contacts = [], onUpdateInterac
             onClick={() => setEditingInteraction(null)}
           >
             <motion.div
-              className="bg-gray-900 border border-gray-700 rounded-xl p-4 sm:p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+              className="bg-surface-muted border border-border rounded-xl p-4 sm:p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
               onClick={(e) => e.stopPropagation()}
             >
-              <h3 className="text-lg sm:text-xl font-semibold text-white mb-4">Éditer l'interaction</h3>
+              <h3 className="text-lg sm:text-xl font-semibold text-text-primary mb-4">Éditer l'interaction</h3>
               <InteractionForm
                 interaction={editingInteraction}
                 contacts={contacts}
@@ -209,19 +209,19 @@ const InteractionTimeline = ({ interactions = [], contacts = [], onUpdateInterac
             exit={{ opacity: 0 }}
           >
             <motion.div
-              className="bg-gray-900 border border-gray-700 rounded-xl p-4 sm:p-6 max-w-md w-full"
+              className="bg-surface-muted border border-border rounded-xl p-4 sm:p-6 max-w-md w-full"
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
             >
-              <h3 className="text-lg sm:text-xl font-semibold text-white mb-2">Confirmer la suppression</h3>
-              <p className="text-gray-300 text-sm sm:text-base mb-4 sm:mb-6">
+              <h3 className="text-lg sm:text-xl font-semibold text-text-primary mb-2">Confirmer la suppression</h3>
+              <p className="text-text-secondary text-sm sm:text-base mb-4 sm:mb-6">
                 Êtes-vous sûr de vouloir supprimer cette interaction ? Cette action ne peut pas être annulée.
               </p>
 
               <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3">
                 <motion.button
-                  className="px-4 py-2 rounded-lg border-2 border-white/30 text-white hover:bg-white/10 hover:border-white/40 font-medium transition-all text-sm sm:text-base"
+                  className="px-4 py-2 rounded-lg border-2 border-overlay/30 text-text-primary hover:bg-overlay/10 hover:border-overlay/40 font-medium transition-all text-sm sm:text-base"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => setDeletingInteraction(null)}

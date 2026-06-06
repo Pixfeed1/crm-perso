@@ -104,13 +104,13 @@ const BillingLinkEmailModal = ({
             initial={{ scale: 0.95, y: 20 }}
             animate={{ scale: 1, y: 0 }}
             exit={{ scale: 0.95, y: 20 }}
-            className="bg-gray-900 border border-gray-700 rounded-2xl max-w-lg w-full flex flex-col max-h-[90vh] overflow-hidden"
+            className="bg-surface-muted border border-border rounded-2xl max-w-lg w-full flex flex-col max-h-[90vh] overflow-hidden"
             style={{ maxHeight: '90dvh' }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex justify-between items-center px-6 py-4 border-b border-gray-700 shrink-0 bg-gray-900">
-              <h2 className="text-xl font-bold text-white">{title}</h2>
-              <button onClick={onClose} className="text-gray-400 hover:text-white">
+            <div className="flex justify-between items-center px-6 py-4 border-b border-border shrink-0 bg-surface-muted">
+              <h2 className="text-xl font-bold text-text-primary">{title}</h2>
+              <button onClick={onClose} className="text-text-muted hover:text-text-primary">
                 <FiX size={22} />
               </button>
             </div>
@@ -118,14 +118,14 @@ const BillingLinkEmailModal = ({
             <div className="p-6 space-y-4 overflow-y-auto flex-1 min-h-0">
               {/* Modèles de texte */}
               <div>
-                <label className="block text-sm text-gray-300 mb-2">Modèle de texte</label>
+                <label className="block text-sm text-text-secondary mb-2">Modèle de texte</label>
                 <div className="flex flex-wrap gap-2">
                   {presets.map((p) => (
                     <button
                       key={p.label}
                       type="button"
                       onClick={() => applyPreset(p.text)}
-                      className="px-3 py-1.5 text-sm bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-200 rounded-lg transition-colors"
+                      className="px-3 py-1.5 text-sm bg-accent/30 hover:bg-accent/50 text-indigo-200 rounded-lg transition-colors"
                     >
                       {p.label}
                     </button>
@@ -135,36 +135,36 @@ const BillingLinkEmailModal = ({
 
               {/* Corps de l'email */}
               <div>
-                <label className="block text-sm text-gray-300 mb-1">Message de l'email</label>
+                <label className="block text-sm text-text-secondary mb-1">Message de l'email</label>
                 <textarea
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   rows={7}
                   placeholder="Votre message..."
-                  className="w-full px-3 py-2 bg-gray-800/60 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 resize-y"
+                  className="w-full px-3 py-2 bg-surface/60 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-indigo-500 resize-y"
                 />
                 <p className="text-xs text-gray-500 mt-1">Le lien de paiement et votre signature sont ajoutés automatiquement.</p>
               </div>
 
               {/* Conditions PDF */}
-              <label className="flex items-start gap-3 p-3 bg-white/5 rounded-lg border border-white/10 cursor-pointer">
+              <label className="flex items-start gap-3 p-3 bg-overlay/5 rounded-lg border border-overlay/10 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={includeConditions}
                   onChange={(e) => setIncludeConditions(e.target.checked)}
                   className="mt-1"
                 />
-                <span className="text-sm text-gray-300 flex items-center gap-2">
+                <span className="text-sm text-text-secondary flex items-center gap-2">
                   <FiFileText className="text-indigo-300" />
-                  Joindre automatiquement : <strong className="text-white">{conditionsLabel}</strong>
+                  Joindre automatiquement : <strong className="text-text-primary">{conditionsLabel}</strong>
                 </span>
               </label>
 
               {/* Pièces jointes supplémentaires */}
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label className="text-sm text-gray-300">Pièces jointes supplémentaires</label>
-                  <label className="px-3 py-1.5 text-sm bg-gray-700/60 hover:bg-gray-700 text-gray-200 rounded-lg cursor-pointer flex items-center gap-1">
+                  <label className="text-sm text-text-secondary">Pièces jointes supplémentaires</label>
+                  <label className="px-3 py-1.5 text-sm bg-surface-strong/60 hover:bg-surface-strong text-text-primary rounded-lg cursor-pointer flex items-center gap-1">
                     <FiPaperclip size={14} />
                     Ajouter
                     <input type="file" multiple className="hidden" onChange={handleAddFiles} />
@@ -173,8 +173,8 @@ const BillingLinkEmailModal = ({
                 {attachments.length > 0 && (
                   <ul className="space-y-2">
                     {attachments.map((a, idx) => (
-                      <li key={idx} className="flex items-center justify-between bg-gray-800/60 border border-gray-700 rounded-lg px-3 py-2">
-                        <span className="text-sm text-gray-300 truncate">{a.filename}</span>
+                      <li key={idx} className="flex items-center justify-between bg-surface/60 border border-border rounded-lg px-3 py-2">
+                        <span className="text-sm text-text-secondary truncate">{a.filename}</span>
                         <button onClick={() => removeAttachment(idx)} className="text-red-400 hover:text-red-300" title="Retirer">
                           <FiTrash2 size={14} />
                         </button>
@@ -185,11 +185,11 @@ const BillingLinkEmailModal = ({
               </div>
             </div>
 
-            <div className="flex gap-3 px-6 py-4 border-t border-gray-700 shrink-0 bg-gray-900">
+            <div className="flex gap-3 px-6 py-4 border-t border-border shrink-0 bg-surface-muted">
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 px-4 py-2.5 border-2 border-white/20 text-white hover:bg-white/10 rounded-lg font-medium transition-all"
+                className="flex-1 px-4 py-2.5 border-2 border-overlay/20 text-text-primary hover:bg-overlay/10 rounded-lg font-medium transition-all"
               >
                 Annuler
               </button>
@@ -197,7 +197,7 @@ const BillingLinkEmailModal = ({
                 type="button"
                 onClick={handleSend}
                 disabled={sending}
-                className="flex-1 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                className="flex-1 px-4 py-2.5 bg-accent hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 <FiSend size={16} />
                 {sending ? 'Envoi...' : 'Envoyer'}

@@ -54,7 +54,7 @@ const PaymentBadge = ({ invoice, showAmount = false }) => {
 
       {/* Montants détaillés si demandé */}
       {showAmount && (
-        <div className="text-sm text-gray-400">
+        <div className="text-sm text-text-muted">
           {paymentStatus === 'partial' && (
             <span>
               {amountPaid.toFixed(2)} € / {totalTtc.toFixed(2)} €

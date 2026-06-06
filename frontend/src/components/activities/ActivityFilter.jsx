@@ -145,12 +145,12 @@ const ActivityFilter = ({
   return (
     <div className="flex-1 max-w-full">
       {/* Filtres de période */}
-      <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl overflow-hidden mb-4">
+      <div className="bg-surface/30 backdrop-blur-sm rounded-xl overflow-hidden mb-4">
         <div className="flex flex-wrap p-2 gap-2">
           {periodOptions.map((option, index) => (
             <motion.button
               key={index}
-              className="px-3 py-1 bg-gray-800/50 text-white hover:bg-gray-700 rounded-lg text-sm"
+              className="px-3 py-1 bg-surface/50 text-text-primary hover:bg-surface-strong rounded-lg text-sm"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={option.action}
@@ -160,29 +160,29 @@ const ActivityFilter = ({
           ))}
         </div>
         
-        <div className="p-3 border-t border-gray-700/50 flex flex-wrap gap-4 items-end">
+        <div className="p-3 border-t border-border/50 flex flex-wrap gap-4 items-end">
           <div>
-            <label className="block text-xs text-gray-400 mb-1">Du</label>
+            <label className="block text-xs text-text-muted mb-1">Du</label>
             <DatePicker
               selected={localStartDate}
               onChange={date => setLocalStartDate(date)}
               dateFormat="dd/MM/yyyy"
-              className="bg-gray-800/50 text-white border border-gray-700 rounded-lg px-3 py-1 w-32 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="bg-surface/50 text-text-primary border border-border rounded-lg px-3 py-1 w-32 focus:outline-none focus:ring-2 focus:ring-purple-500"
             />
           </div>
           
           <div>
-            <label className="block text-xs text-gray-400 mb-1">Au</label>
+            <label className="block text-xs text-text-muted mb-1">Au</label>
             <DatePicker
               selected={localEndDate}
               onChange={date => setLocalEndDate(date)}
               dateFormat="dd/MM/yyyy"
-              className="bg-gray-800/50 text-white border border-gray-700 rounded-lg px-3 py-1 w-32 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="bg-surface/50 text-text-primary border border-border rounded-lg px-3 py-1 w-32 focus:outline-none focus:ring-2 focus:ring-purple-500"
             />
           </div>
           
           <motion.button
-            className="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm"
+            className="px-3 py-1 bg-accent hover:bg-indigo-700 text-white rounded-lg text-sm"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={applyCustomDateRange}
@@ -193,7 +193,7 @@ const ActivityFilter = ({
       </div>
       
       {/* Barre de recherche et tri */}
-      <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl overflow-hidden w-full">
+      <div className="bg-surface/30 backdrop-blur-sm rounded-xl overflow-hidden w-full">
         <div className="p-3 space-y-3">
           <div className="flex gap-2">
             {/* Recherche */}
@@ -203,14 +203,14 @@ const ActivityFilter = ({
                 placeholder="Rechercher une activité..."
                 value={filters.search}
                 onChange={(e) => handleFilterChange('search', e.target.value)}
-                className="w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg px-4 py-2 pl-10 pr-8 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="w-full bg-surface/50 text-text-primary border border-border rounded-lg px-4 py-2 pl-10 pr-8 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               />
-              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-text-muted">
                 <FiSearch />
               </span>
               {filters.search && (
                 <motion.button
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-text-muted hover:text-text-primary"
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
                   onClick={() => handleFilterChange('search', '')}
@@ -229,8 +229,8 @@ const ActivityFilter = ({
                     onClick={() => onSort(option.field)}
                     className={`px-3 py-2 rounded-lg flex items-center gap-1 text-sm ${
                       sortField === option.field
-                        ? 'bg-indigo-600 text-white'
-                        : 'bg-gray-700/50 text-gray-300 hover:bg-gray-700'
+                        ? 'bg-accent text-white'
+                        : 'bg-surface-strong/50 text-text-secondary hover:bg-surface-strong'
                     }`}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
@@ -249,14 +249,14 @@ const ActivityFilter = ({
         
         {/* Bouton d'expansion des filtres */}
         <div
-          className="px-3 py-2 flex justify-between items-center cursor-pointer hover:bg-gray-700/30"
+          className="px-3 py-2 flex justify-between items-center cursor-pointer hover:bg-surface-strong/30"
           onClick={() => setIsExpanded(!isExpanded)}
         >
           <div className="flex items-center text-sm">
             <span className="mr-2"><FiFilter /></span>
-            <span className="text-gray-300 font-medium">Filtres avancés</span>
+            <span className="text-text-secondary font-medium">Filtres avancés</span>
             {hasActiveFilters && (
-              <span className="ml-2 px-1.5 py-0.5 bg-indigo-600 rounded-full text-xs text-white">
+              <span className="ml-2 px-1.5 py-0.5 bg-accent rounded-full text-xs text-white">
                 {Object.values(filters).filter(val => val !== '' && val !== 'all').length}
               </span>
             )}
@@ -264,7 +264,7 @@ const ActivityFilter = ({
           <motion.span
             animate={{ rotate: isExpanded ? 180 : 0 }}
             transition={{ duration: 0.3 }}
-            className="text-gray-400"
+            className="text-text-muted"
           >
             <FiChevronDown />
           </motion.span>
@@ -280,18 +280,18 @@ const ActivityFilter = ({
               transition={{ duration: 0.3 }}
               className="overflow-hidden"
             >
-              <div className="p-3 space-y-4 border-t border-gray-700/50">
+              <div className="p-3 space-y-4 border-t border-border/50">
                 {/* Filtre par type */}
                 <div>
-                  <label className="block text-xs text-gray-400 mb-1">Type d'activité</label>
+                  <label className="block text-xs text-text-muted mb-1">Type d'activité</label>
                   <div className="flex flex-wrap gap-2">
                     {typeOptions.map(option => (
                       <motion.button
                         key={option.value}
                         className={`px-3 py-1 rounded-full text-xs font-medium ${
                           filters.type === option.value
-                            ? 'bg-indigo-600 text-white'
-                            : 'bg-gray-800/50 text-white hover:bg-gray-700'
+                            ? 'bg-accent text-white'
+                            : 'bg-surface/50 text-text-primary hover:bg-surface-strong'
                         }`}
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
@@ -305,15 +305,15 @@ const ActivityFilter = ({
                 
                 {/* Filtre par priorité */}
                 <div>
-                  <label className="block text-xs text-gray-400 mb-1">Priorité</label>
+                  <label className="block text-xs text-text-muted mb-1">Priorité</label>
                   <div className="flex flex-wrap gap-2">
                     {priorityOptions.map(option => (
                       <motion.button
                         key={option.value}
                         className={`px-3 py-1 rounded-full text-xs font-medium ${
                           filters.priority === option.value
-                            ? 'bg-indigo-600 text-white'
-                            : 'bg-gray-800/50 text-white hover:bg-gray-700'
+                            ? 'bg-accent text-white'
+                            : 'bg-surface/50 text-text-primary hover:bg-surface-strong'
                         }`}
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
@@ -327,15 +327,15 @@ const ActivityFilter = ({
                 
                 {/* Filtre par statut */}
                 <div>
-                  <label className="block text-xs text-gray-400 mb-1">Statut</label>
+                  <label className="block text-xs text-text-muted mb-1">Statut</label>
                   <div className="flex flex-wrap gap-2">
                     {statusOptions.map(option => (
                       <motion.button
                         key={option.value}
                         className={`px-3 py-1 rounded-full text-xs font-medium ${
                           filters.status === option.value
-                            ? 'bg-indigo-600 text-white'
-                            : 'bg-gray-800/50 text-white hover:bg-gray-700'
+                            ? 'bg-accent text-white'
+                            : 'bg-surface/50 text-text-primary hover:bg-surface-strong'
                         }`}
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
@@ -349,14 +349,14 @@ const ActivityFilter = ({
                 
                 {/* Filtre par projet */}
                 <div>
-                  <label htmlFor="project" className="block text-xs text-gray-400 mb-1">
+                  <label htmlFor="project" className="block text-xs text-text-muted mb-1">
                     Projet associé
                   </label>
                   <select
                     id="project"
                     value={filters.project}
                     onChange={(e) => handleFilterChange('project', e.target.value)}
-                    className="w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full bg-surface/50 text-text-primary border border-border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   >
                     <option value="all">Tous les projets</option>
                     <option value="none">Sans projet</option>
@@ -372,7 +372,7 @@ const ActivityFilter = ({
                 {hasActiveFilters && (
                   <div className="pt-2 flex justify-end">
                     <motion.button
-                      className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 bg-gray-700/50 px-2 py-1 rounded"
+                      className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 bg-surface-strong/50 px-2 py-1 rounded"
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                       onClick={resetFilters}

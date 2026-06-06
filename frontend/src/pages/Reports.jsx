@@ -427,25 +427,25 @@ const Reports = () => {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl flex items-center justify-center">
-                <FiBarChart2 className="text-white text-2xl" />
+                <FiBarChart2 className="text-text-primary text-2xl" />
               </div>
               <div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-white">Rapports & Analytics</h1>
-                <p className="text-gray-400 text-sm">Analyse de performance {getPeriodLabel()}</p>
+                <h1 className="text-2xl sm:text-3xl font-bold text-text-primary">Rapports & Analytics</h1>
+                <p className="text-text-muted text-sm">Analyse de performance {getPeriodLabel()}</p>
               </div>
             </div>
 
             <div className="flex gap-2">
               {/* Sélecteur de période */}
-              <div className="flex bg-slate-800/50 backdrop-blur rounded-lg p-1">
+              <div className="flex bg-surface/50 backdrop-blur rounded-lg p-1">
                 {['month', 'quarter', 'year'].map((p) => (
                   <button
                     key={p}
                     onClick={() => setPeriod(p)}
                     className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
                       period === p
-                        ? 'bg-indigo-600 text-white'
-                        : 'text-gray-400 hover:text-white'
+                        ? 'bg-accent text-white'
+                        : 'text-text-muted hover:text-text-primary'
                     }`}
                   >
                     {p === 'month' ? 'Mois' : p === 'quarter' ? 'Trimestre' : 'Année'}
@@ -472,18 +472,18 @@ const Reports = () => {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="relative bg-gradient-to-br from-slate-800/50 to-slate-800/30 backdrop-blur rounded-2xl p-4 sm:p-6 shadow-xl shadow-black/20 overflow-hidden"
+            className="relative bg-gradient-to-br from-surface/50 to-surface/30 backdrop-blur rounded-2xl p-4 sm:p-6 shadow-xl shadow-black/20 overflow-hidden"
           >
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-cyan-500 opacity-60"></div>
             <div className="relative z-10">
               <div className="flex items-start justify-between mb-3 sm:mb-4">
-                <div className="p-2 sm:p-2.5 rounded-xl bg-slate-700/50">
+                <div className="p-2 sm:p-2.5 rounded-xl bg-surface-strong/50">
                   <FiUsers className="text-lg sm:text-xl text-blue-400" />
                 </div>
               </div>
               <div className="space-y-1">
-                <p className="text-xs text-gray-400">Nouveaux Leads</p>
-                <p className="text-2xl sm:text-3xl font-bold text-white">{reportData.summary.newLeads}</p>
+                <p className="text-xs text-text-muted">Nouveaux Leads</p>
+                <p className="text-2xl sm:text-3xl font-bold text-text-primary">{reportData.summary.newLeads}</p>
               </div>
             </div>
           </motion.div>
@@ -492,18 +492,18 @@ const Reports = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="relative bg-gradient-to-br from-slate-800/50 to-slate-800/30 backdrop-blur rounded-2xl p-4 sm:p-6 shadow-xl shadow-black/20 overflow-hidden"
+            className="relative bg-gradient-to-br from-surface/50 to-surface/30 backdrop-blur rounded-2xl p-4 sm:p-6 shadow-xl shadow-black/20 overflow-hidden"
           >
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 to-teal-500 opacity-60"></div>
             <div className="relative z-10">
               <div className="flex items-start justify-between mb-3 sm:mb-4">
-                <div className="p-2 sm:p-2.5 rounded-xl bg-slate-700/50">
+                <div className="p-2 sm:p-2.5 rounded-xl bg-surface-strong/50">
                   <FiTrendingUp className="text-lg sm:text-xl text-emerald-400" />
                 </div>
               </div>
               <div className="space-y-1">
-                <p className="text-xs text-gray-400">Taux de Conversion</p>
-                <p className="text-2xl sm:text-3xl font-bold text-white">{reportData.leadConversion.conversionRate}%</p>
+                <p className="text-xs text-text-muted">Taux de Conversion</p>
+                <p className="text-2xl sm:text-3xl font-bold text-text-primary">{reportData.leadConversion.conversionRate}%</p>
               </div>
             </div>
           </motion.div>
@@ -512,18 +512,18 @@ const Reports = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="relative bg-gradient-to-br from-slate-800/50 to-slate-800/30 backdrop-blur rounded-2xl p-4 sm:p-6 shadow-xl shadow-black/20 overflow-hidden"
+            className="relative bg-gradient-to-br from-surface/50 to-surface/30 backdrop-blur rounded-2xl p-4 sm:p-6 shadow-xl shadow-black/20 overflow-hidden"
           >
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 to-pink-500 opacity-60"></div>
             <div className="relative z-10">
               <div className="flex items-start justify-between mb-3 sm:mb-4">
-                <div className="p-2 sm:p-2.5 rounded-xl bg-slate-700/50">
+                <div className="p-2 sm:p-2.5 rounded-xl bg-surface-strong/50">
                   <FiDollarSign className="text-lg sm:text-xl text-purple-400" />
                 </div>
               </div>
               <div className="space-y-1">
-                <p className="text-xs text-gray-400">Revenus Totaux</p>
-                <p className="text-xl sm:text-2xl font-bold text-white">{formatAmount(reportData.summary.totalRevenue)}</p>
+                <p className="text-xs text-text-muted">Revenus Totaux</p>
+                <p className="text-xl sm:text-2xl font-bold text-text-primary">{formatAmount(reportData.summary.totalRevenue)}</p>
               </div>
             </div>
           </motion.div>
@@ -532,18 +532,18 @@ const Reports = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="relative bg-gradient-to-br from-slate-800/50 to-slate-800/30 backdrop-blur rounded-2xl p-4 sm:p-6 shadow-xl shadow-black/20 overflow-hidden"
+            className="relative bg-gradient-to-br from-surface/50 to-surface/30 backdrop-blur rounded-2xl p-4 sm:p-6 shadow-xl shadow-black/20 overflow-hidden"
           >
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-500 to-orange-500 opacity-60"></div>
             <div className="relative z-10">
               <div className="flex items-start justify-between mb-3 sm:mb-4">
-                <div className="p-2 sm:p-2.5 rounded-xl bg-slate-700/50">
+                <div className="p-2 sm:p-2.5 rounded-xl bg-surface-strong/50">
                   <FiUsers className="text-lg sm:text-xl text-amber-400" />
                 </div>
               </div>
               <div className="space-y-1">
-                <p className="text-xs text-gray-400">Clients Actifs</p>
-                <p className="text-2xl sm:text-3xl font-bold text-white">{reportData.summary.activeClients}</p>
+                <p className="text-xs text-text-muted">Clients Actifs</p>
+                <p className="text-2xl sm:text-3xl font-bold text-text-primary">{reportData.summary.activeClients}</p>
               </div>
             </div>
           </motion.div>
@@ -556,10 +556,10 @@ const Reports = () => {
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="bg-slate-800/30 backdrop-blur rounded-2xl p-4 sm:p-6 shadow-xl shadow-black/20"
+            className="bg-surface/30 backdrop-blur rounded-2xl p-4 sm:p-6 shadow-xl shadow-black/20"
           >
             <div className="flex items-center justify-between mb-4 sm:mb-6">
-              <h2 className="text-lg sm:text-xl font-semibold text-white flex items-center gap-2">
+              <h2 className="text-lg sm:text-xl font-semibold text-text-primary flex items-center gap-2">
                 <FiTrendingUp className="text-green-400" />
                 <span className="hidden sm:inline">Conversion Leads</span>
                 <span className="sm:hidden">Conversion</span>
@@ -570,26 +570,26 @@ const Reports = () => {
             </div>
 
             <div className="space-y-4">
-              <div className="flex justify-between items-center p-3 bg-slate-700/20 rounded-lg">
-                <span className="text-gray-300">Total Leads</span>
-                <span className="text-white font-semibold">{reportData.leadConversion.totalLeads}</span>
+              <div className="flex justify-between items-center p-3 bg-surface-strong/20 rounded-lg">
+                <span className="text-text-secondary">Total Leads</span>
+                <span className="text-text-primary font-semibold">{reportData.leadConversion.totalLeads}</span>
               </div>
               <div className="flex justify-between items-center p-3 bg-emerald-500/10 rounded-lg border border-emerald-500/30">
-                <span className="text-gray-300">Leads Convertis</span>
+                <span className="text-text-secondary">Leads Convertis</span>
                 <span className="text-emerald-400 font-semibold">{reportData.leadConversion.convertedLeads}</span>
               </div>
 
               {/* Répartition par statut */}
               <div className="mt-6">
-                <h3 className="text-sm font-medium text-gray-400 mb-3">Répartition par Statut</h3>
+                <h3 className="text-sm font-medium text-text-muted mb-3">Répartition par Statut</h3>
                 <div className="space-y-2">
                   {reportData.leadConversion.byStatus.map((item, index) => (
                     <div key={index} className="space-y-1">
                       <div className="flex justify-between text-sm">
-                        <span className="text-gray-300">{getStatusLabel(item.status)}</span>
-                        <span className="text-gray-400">{item.count} ({item.percentage}%)</span>
+                        <span className="text-text-secondary">{getStatusLabel(item.status)}</span>
+                        <span className="text-text-muted">{item.count} ({item.percentage}%)</span>
                       </div>
-                      <div className="h-2 bg-slate-700/50 rounded-full overflow-hidden">
+                      <div className="h-2 bg-surface-strong/50 rounded-full overflow-hidden">
                         <motion.div
                           initial={{ width: 0 }}
                           animate={{ width: `${item.percentage}%` }}
@@ -608,9 +608,9 @@ const Reports = () => {
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="bg-slate-800/30 backdrop-blur rounded-2xl p-4 sm:p-6 shadow-xl shadow-black/20"
+            className="bg-surface/30 backdrop-blur rounded-2xl p-4 sm:p-6 shadow-xl shadow-black/20"
           >
-            <h2 className="text-lg sm:text-xl font-semibold text-white mb-4 sm:mb-6 flex items-center gap-2">
+            <h2 className="text-lg sm:text-xl font-semibold text-text-primary mb-4 sm:mb-6 flex items-center gap-2">
               <FiPieChart className="text-purple-400" />
               <span className="hidden sm:inline">Performance par Source</span>
               <span className="sm:hidden">Performance</span>
@@ -623,10 +623,10 @@ const Reports = () => {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}
-                  className="p-4 bg-slate-700/20 rounded-lg hover:bg-slate-700/30 transition-colors"
+                  className="p-4 bg-surface-strong/20 rounded-lg hover:bg-surface-strong/30 transition-colors"
                 >
                   <div className="flex justify-between items-center mb-2">
-                    <span className="font-medium text-white">{source.source}</span>
+                    <span className="font-medium text-text-primary">{source.source}</span>
                     <span className="text-sm px-2 py-1 bg-purple-500/20 text-purple-300 rounded">
                       {source.conversionRate}%
                     </span>
@@ -634,7 +634,7 @@ const Reports = () => {
                   <div className="grid grid-cols-2 gap-3 text-sm">
                     <div>
                       <span className="text-gray-500">Total: </span>
-                      <span className="text-gray-300 font-medium">{source.total}</span>
+                      <span className="text-text-secondary font-medium">{source.total}</span>
                     </div>
                     <div>
                       <span className="text-gray-500">Convertis: </span>
@@ -656,9 +656,9 @@ const Reports = () => {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-slate-800/30 backdrop-blur rounded-2xl p-4 sm:p-6 shadow-xl shadow-black/20 lg:col-span-2"
+            className="bg-surface/30 backdrop-blur rounded-2xl p-4 sm:p-6 shadow-xl shadow-black/20 lg:col-span-2"
           >
-            <h2 className="text-lg sm:text-xl font-semibold text-white mb-4 sm:mb-6 flex items-center gap-2">
+            <h2 className="text-lg sm:text-xl font-semibold text-text-primary mb-4 sm:mb-6 flex items-center gap-2">
               <FaChartLine className="text-teal-400" />
               <span className="hidden sm:inline">Évolution des Revenus</span>
               <span className="sm:hidden">Revenus</span>
@@ -679,7 +679,7 @@ const Reports = () => {
                       className="space-y-1"
                     >
                       <div className="flex justify-between text-sm">
-                        <span className="font-medium text-gray-300">
+                        <span className="font-medium text-text-secondary">
                           {new Date(item.month + '-01').toLocaleDateString('fr-FR', {
                             month: 'long',
                             year: 'numeric'
@@ -687,7 +687,7 @@ const Reports = () => {
                         </span>
                         <span className="font-semibold text-teal-300">{formatAmount(item.amount)}</span>
                       </div>
-                      <div className="h-4 bg-slate-700/50 rounded-full overflow-hidden">
+                      <div className="h-4 bg-surface-strong/50 rounded-full overflow-hidden">
                         <motion.div
                           className="h-full bg-gradient-to-r from-teal-500 to-emerald-500 rounded-full"
                           initial={{ width: 0 }}
@@ -709,8 +709,8 @@ const Reports = () => {
         </div>
 
         {/* Note de bas de page */}
-        <div className="mt-6 p-4 bg-slate-800/30 backdrop-blur rounded-lg shadow-xl shadow-black/20">
-          <p className="text-sm text-gray-300 flex items-start gap-2">
+        <div className="mt-6 p-4 bg-surface/30 backdrop-blur rounded-lg shadow-xl shadow-black/20">
+          <p className="text-sm text-text-secondary flex items-start gap-2">
             <FiInfo className="text-indigo-400 flex-shrink-0 mt-0.5" />
             <span><strong>Astuce :</strong> Ces rapports sont générés en temps réel à partir de vos données.
             Utilisez le sélecteur de période pour analyser différentes périodes et exportez en PDF pour vos présentations.</span>

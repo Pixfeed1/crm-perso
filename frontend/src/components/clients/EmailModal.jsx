@@ -149,26 +149,26 @@ const EmailModal = ({ isOpen, onClose, client }) => {
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="relative w-full max-w-2xl bg-gray-800 rounded-2xl shadow-2xl border border-gray-700 overflow-hidden"
+          className="relative w-full max-w-2xl bg-surface rounded-2xl shadow-2xl border border-border overflow-hidden"
         >
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-700">
+          <div className="flex items-center justify-between p-6 border-b border-border">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-blue-500/20 rounded-xl flex items-center justify-center">
                 <FiMail className="text-blue-400 text-xl" />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-white">Envoyer un email</h2>
-                <p className="text-sm text-gray-400">
+                <h2 className="text-xl font-bold text-text-primary">Envoyer un email</h2>
+                <p className="text-sm text-text-muted">
                   à {client?.name}{client?.company && ` (${client.company})`}
                 </p>
               </div>
             </div>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
+              className="p-2 hover:bg-surface-strong rounded-lg transition-colors"
             >
-              <FiX className="text-gray-400 text-xl" />
+              <FiX className="text-text-muted text-xl" />
             </button>
           </div>
 
@@ -176,25 +176,25 @@ const EmailModal = ({ isOpen, onClose, client }) => {
           <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
             {/* Destinataire */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-text-secondary mb-2">
                 Destinataire
               </label>
-              <div className="flex items-center gap-3 px-4 py-3 bg-gray-900/50 rounded-lg border border-gray-700">
+              <div className="flex items-center gap-3 px-4 py-3 bg-surface-muted/50 rounded-lg border border-border">
                 {client?.type === 'company' ? (
                   <FiBriefcase className="text-indigo-400" />
                 ) : (
                   <FiUser className="text-indigo-400" />
                 )}
                 <div>
-                  <div className="text-white font-medium">{client?.name}</div>
-                  <div className="text-sm text-gray-400">{client?.email}</div>
+                  <div className="text-text-primary font-medium">{client?.name}</div>
+                  <div className="text-sm text-text-muted">{client?.email}</div>
                 </div>
               </div>
             </div>
 
             {/* Objet */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-text-secondary mb-2">
                 Objet <span className="text-red-400">*</span>
               </label>
               <input
@@ -202,13 +202,13 @@ const EmailModal = ({ isOpen, onClose, client }) => {
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
                 placeholder="Objet de votre email"
-                className="w-full px-4 py-3 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                className="w-full px-4 py-3 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               />
             </div>
 
             {/* Message */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-text-secondary mb-2">
                 Message <span className="text-red-400">*</span>
               </label>
               <textarea
@@ -216,7 +216,7 @@ const EmailModal = ({ isOpen, onClose, client }) => {
                 onChange={(e) => setMessage(e.target.value)}
                 placeholder="Écrivez votre message ici..."
                 rows={12}
-                className="w-full px-4 py-3 bg-gray-900/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
+                className="w-full px-4 py-3 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
               />
               <div className="mt-2 text-xs text-gray-500">
                 {message.length} caractères
@@ -225,7 +225,7 @@ const EmailModal = ({ isOpen, onClose, client }) => {
 
             {/* Pièces jointes */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-text-secondary mb-2">
                 Pièces jointes
               </label>
 
@@ -241,7 +241,7 @@ const EmailModal = ({ isOpen, onClose, client }) => {
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors text-sm"
+                className="flex items-center gap-2 px-4 py-2 bg-surface-strong hover:bg-border-strong text-text-primary rounded-lg transition-colors text-sm"
               >
                 <FiPaperclip />
                 <span>Ajouter un fichier</span>
@@ -253,19 +253,19 @@ const EmailModal = ({ isOpen, onClose, client }) => {
                   {attachments.map((file, index) => (
                     <div
                       key={index}
-                      className="flex items-center justify-between gap-3 px-4 py-3 bg-gray-900/50 rounded-lg border border-gray-700"
+                      className="flex items-center justify-between gap-3 px-4 py-3 bg-surface-muted/50 rounded-lg border border-border"
                     >
                       <div className="flex items-center gap-3 flex-1 min-w-0">
                         <FiFile className="text-blue-400 flex-shrink-0" />
                         <div className="min-w-0 flex-1">
-                          <div className="text-white text-sm truncate">{file.name}</div>
+                          <div className="text-text-primary text-sm truncate">{file.name}</div>
                           <div className="text-xs text-gray-500">{formatFileSize(file.size)}</div>
                         </div>
                       </div>
                       <button
                         type="button"
                         onClick={() => handleRemoveAttachment(index)}
-                        className="p-2 hover:bg-red-600 rounded-lg transition-colors text-gray-400 hover:text-white"
+                        className="p-2 hover:bg-red-600 rounded-lg transition-colors text-text-muted hover:text-white"
                         title="Supprimer"
                       >
                         <FiTrash2 className="w-4 h-4" />
@@ -288,11 +288,11 @@ const EmailModal = ({ isOpen, onClose, client }) => {
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-700 bg-gray-900/30">
+          <div className="flex items-center justify-end gap-3 p-6 border-t border-border bg-surface-muted/30">
             <button
               onClick={onClose}
               disabled={isSending}
-              className="px-4 py-2 text-gray-300 hover:text-white hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50"
+              className="px-4 py-2 text-text-secondary hover:text-text-primary hover:bg-surface-strong rounded-lg transition-colors disabled:opacity-50"
             >
               Annuler
             </button>

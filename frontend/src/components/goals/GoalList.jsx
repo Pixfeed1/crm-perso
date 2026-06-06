@@ -91,7 +91,7 @@ const GoalList = ({
     } else if (isExpired(goal)) {
       return { text: 'Expiré', color: 'bg-rose-500/20 text-rose-300 border-rose-500/30', icon: <FiAlertCircle /> };
     } else {
-      return { text: 'Inactif', color: 'bg-gray-500/20 text-gray-300 border-gray-500/30', icon: <FiMinusCircle /> };
+      return { text: 'Inactif', color: 'bg-gray-500/20 text-text-secondary border-gray-500/30', icon: <FiMinusCircle /> };
     }
   };
 
@@ -129,10 +129,10 @@ const GoalList = ({
 
   if (goals.length === 0) {
     return (
-      <div className="bg-gray-800/30 rounded-xl p-8 text-center">
+      <div className="bg-surface/30 rounded-xl p-8 text-center">
         <FiTarget className="mx-auto text-5xl text-gray-500 mb-4" />
-        <h4 className="text-lg font-medium text-white mb-2">Aucun objectif</h4>
-        <p className="text-gray-400 text-sm">
+        <h4 className="text-lg font-medium text-text-primary mb-2">Aucun objectif</h4>
+        <p className="text-text-muted text-sm">
           Créez votre premier objectif pour commencer à suivre votre progression.
         </p>
       </div>
@@ -145,7 +145,7 @@ const GoalList = ({
         const progress = calculateProgress(goal.current_value, goal.target_value);
         const statusInfo = getGoalStatus(goal);
         const timeRemaining = getTimeRemaining(goal);
-        const categoryInfo = categoryConfig[goal.category] || { icon: <FiMapPin />, label: goal.category, color: 'text-gray-300', unit: '' };
+        const categoryInfo = categoryConfig[goal.category] || { icon: <FiMapPin />, label: goal.category, color: 'text-text-secondary', unit: '' };
         const isExpanded = expandedGoalId === goal.id;
         const completed = isCompleted(goal);
         const increments = quickIncrements[goal.category] || [1, 5, 10];
@@ -159,7 +159,7 @@ const GoalList = ({
             className={`rounded-xl border overflow-hidden transition-all ${
               completed
                 ? 'bg-green-900/10 border-green-500/20'
-                : 'bg-gray-800/50 border-gray-700/50 hover:border-gray-600/50'
+                : 'bg-surface/50 border-border/50 hover:border-border-strong/50'
             }`}
           >
             {/* Header de la carte */}
@@ -172,13 +172,13 @@ const GoalList = ({
                     {statusInfo.text}
                   </span>
 
-                  <span className={`flex items-center gap-1 ${categoryInfo.color} text-xs px-2 py-1 bg-gray-800/70 rounded-md`}>
+                  <span className={`flex items-center gap-1 ${categoryInfo.color} text-xs px-2 py-1 bg-surface/70 rounded-md`}>
                     {categoryInfo.icon}
                     {categoryInfo.label}
                   </span>
 
                   {timeRemaining && (
-                    <span className="text-xs text-gray-400 px-2 py-1 bg-gray-800/50 rounded-md">
+                    <span className="text-xs text-text-muted px-2 py-1 bg-surface/50 rounded-md">
                       {timeRemaining} restants
                     </span>
                   )}
@@ -187,7 +187,7 @@ const GoalList = ({
                 <div className="flex items-center gap-1">
                   <button
                     onClick={(e) => { e.stopPropagation(); setExpandedGoalId(isExpanded ? null : goal.id); }}
-                    className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-700/50 rounded-lg transition-colors"
+                    className="p-1.5 text-text-muted hover:text-text-primary hover:bg-surface-strong/50 rounded-lg transition-colors"
                     title={isExpanded ? 'Réduire' : 'Développer'}
                   >
                     {isExpanded ? <FiChevronUp /> : <FiChevronDown />}
@@ -197,12 +197,12 @@ const GoalList = ({
 
               {/* Ligne 2: Nom + Valeurs */}
               <div className="flex items-start justify-between mb-3">
-                <h3 className="font-semibold text-white text-lg leading-tight">{goal.name}</h3>
+                <h3 className="font-semibold text-text-primary text-lg leading-tight">{goal.name}</h3>
                 <div className="text-right ml-4 shrink-0">
-                  <div className="text-xl font-bold text-white">
+                  <div className="text-xl font-bold text-text-primary">
                     {formatValue(goal.current_value, goal.category)}
                   </div>
-                  <div className="text-sm text-gray-400">
+                  <div className="text-sm text-text-muted">
                     sur {formatValue(goal.target_value, goal.category)}
                   </div>
                 </div>
@@ -211,12 +211,12 @@ const GoalList = ({
               {/* Barre de progression */}
               <div className="mb-3">
                 <div className="flex justify-between text-xs mb-1">
-                  <span className="text-gray-400">{formatDate(goal.start_date)} → {formatDate(goal.end_date)}</span>
-                  <span className={`font-bold ${progress >= 100 ? 'text-green-400' : progress >= 75 ? 'text-amber-400' : 'text-white'}`}>
+                  <span className="text-text-muted">{formatDate(goal.start_date)} → {formatDate(goal.end_date)}</span>
+                  <span className={`font-bold ${progress >= 100 ? 'text-green-400' : progress >= 75 ? 'text-amber-400' : 'text-text-primary'}`}>
                     {progress}%
                   </span>
                 </div>
-                <div className="h-3 bg-gray-700/50 rounded-full overflow-hidden">
+                <div className="h-3 bg-surface-strong/50 rounded-full overflow-hidden">
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${progress}%` }}
@@ -246,7 +246,7 @@ const GoalList = ({
                           e.stopPropagation();
                           onUpdateProgress(goal.id, goal.current_value + inc);
                         }}
-                        className="px-2 py-1 text-xs bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 rounded-md transition-colors flex items-center gap-1"
+                        className="px-2 py-1 text-xs bg-accent/30 hover:bg-accent/50 text-indigo-300 rounded-md transition-colors flex items-center gap-1"
                         title={`Ajouter ${formatValue(inc, goal.category)}`}
                       >
                         <FiPlus className="w-3 h-3" />
@@ -261,7 +261,7 @@ const GoalList = ({
                   {onEdit && (
                     <button
                       onClick={(e) => { e.stopPropagation(); onEdit(goal); }}
-                      className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-700/50 rounded-lg transition-colors"
+                      className="p-1.5 text-text-muted hover:text-text-primary hover:bg-surface-strong/50 rounded-lg transition-colors"
                       title="Modifier"
                     >
                       <FiEdit2 className="w-4 h-4" />
@@ -319,21 +319,21 @@ const GoalList = ({
                   animate={{ height: 'auto', opacity: 1 }}
                   exit={{ height: 0, opacity: 0 }}
                   transition={{ duration: 0.2 }}
-                  className="border-t border-gray-700/50"
+                  className="border-t border-border/50"
                 >
-                  <div className="p-4 bg-gray-900/30">
+                  <div className="p-4 bg-surface-muted/30">
                     {/* Description */}
                     {goal.description && (
                       <div className="mb-4">
-                        <h4 className="text-xs font-medium text-gray-400 uppercase mb-1">Description</h4>
-                        <p className="text-sm text-gray-300">{goal.description}</p>
+                        <h4 className="text-xs font-medium text-text-muted uppercase mb-1">Description</h4>
+                        <p className="text-sm text-text-secondary">{goal.description}</p>
                       </div>
                     )}
 
                     {/* Milestones */}
                     {goal.milestones && goal.milestones.length > 0 && (
                       <div>
-                        <h4 className="text-xs font-medium text-gray-400 uppercase mb-2">
+                        <h4 className="text-xs font-medium text-text-muted uppercase mb-2">
                           Étapes ({goal.milestones.filter(m => m.achieved).length}/{goal.milestones.length})
                         </h4>
                         <div className="space-y-2">
@@ -343,7 +343,7 @@ const GoalList = ({
                               className={`flex items-center justify-between p-2 rounded-lg ${
                                 milestone.achieved
                                   ? 'bg-green-900/20 border border-green-500/20'
-                                  : 'bg-gray-800/50 border border-gray-700/30'
+                                  : 'bg-surface/50 border border-border/30'
                               }`}
                             >
                               <div className="flex items-center gap-2">
@@ -352,11 +352,11 @@ const GoalList = ({
                                 ) : (
                                   <div className="w-4 h-4 rounded-full border-2 border-gray-500" />
                                 )}
-                                <span className={milestone.achieved ? 'text-green-300' : 'text-gray-300'}>
+                                <span className={milestone.achieved ? 'text-green-300' : 'text-text-secondary'}>
                                   {milestone.name}
                                 </span>
                               </div>
-                              <span className={`text-sm ${milestone.achieved ? 'text-green-400' : 'text-gray-400'}`}>
+                              <span className={`text-sm ${milestone.achieved ? 'text-green-400' : 'text-text-muted'}`}>
                                 {formatValue(milestone.target, goal.category)}
                               </span>
                             </div>

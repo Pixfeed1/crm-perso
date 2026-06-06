@@ -98,15 +98,15 @@ const MaintenanceReports = ({ project }) => {
   };
 
   const statusConfig = {
-    'draft': { label: 'Brouillon', bg: 'bg-gray-500/20', text: 'text-gray-300', icon: <FiFileText /> },
+    'draft': { label: 'Brouillon', bg: 'bg-gray-500/20', text: 'text-text-secondary', icon: <FiFileText /> },
     'sent': { label: 'Envoyé', bg: 'bg-emerald-500/20', text: 'text-emerald-300', icon: <FiCheckCircle /> },
     'viewed': { label: 'Lu', bg: 'bg-blue-500/20', text: 'text-blue-300', icon: <FiEye /> }
   };
 
   return (
-    <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl p-5 mb-6">
+    <div className="bg-surface/30 backdrop-blur-sm rounded-xl p-5 mb-6">
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-medium text-gray-200 flex items-center">
+        <h3 className="text-lg font-medium text-text-primary flex items-center">
           <span className="mr-2"><FiFileText /></span>
           Rapports de maintenance
         </h3>
@@ -129,38 +129,38 @@ const MaintenanceReports = ({ project }) => {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="mb-4 bg-gray-900/40 rounded-lg p-4"
+            className="mb-4 bg-surface-muted/40 rounded-lg p-4"
           >
             <h4 className="text-purple-300 font-medium mb-3">Nouveau rapport</h4>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Début de période</label>
+                <label className="block text-sm text-text-muted mb-1">Début de période</label>
                 <input
                   type="date"
                   value={periodStart}
                   onChange={(e) => setPeriodStart(e.target.value)}
-                  className="w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full bg-surface/50 text-text-primary border border-border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Fin de période</label>
+                <label className="block text-sm text-text-muted mb-1">Fin de période</label>
                 <input
                   type="date"
                   value={periodEnd}
                   onChange={(e) => setPeriodEnd(e.target.value)}
-                  className="w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full bg-surface/50 text-text-primary border border-border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
                 />
               </div>
             </div>
 
             <div className="mb-4">
-              <label className="block text-sm text-gray-400 mb-1">Notes pour le client (optionnel)</label>
+              <label className="block text-sm text-text-muted mb-1">Notes pour le client (optionnel)</label>
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 rows={2}
-                className="w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full bg-surface/50 text-text-primary border border-border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
                 placeholder="Message personnalisé à inclure dans le rapport..."
               />
             </div>
@@ -170,7 +170,7 @@ const MaintenanceReports = ({ project }) => {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => setShowGenerator(false)}
-                className="px-4 py-2 rounded-lg border border-gray-600 text-gray-300 hover:bg-gray-700/50"
+                className="px-4 py-2 rounded-lg border border-border-strong text-text-secondary hover:bg-surface-strong/50"
               >
                 Annuler
               </motion.button>
@@ -209,10 +209,10 @@ const MaintenanceReports = ({ project }) => {
           />
         </div>
       ) : reports.length === 0 ? (
-        <div className="bg-gray-900/30 rounded-lg p-6 text-center">
+        <div className="bg-surface-muted/30 rounded-lg p-6 text-center">
           <div className="text-4xl mb-3 text-gray-500"><FiFileText /></div>
-          <h4 className="text-lg font-medium text-gray-300 mb-2">Aucun rapport</h4>
-          <p className="text-gray-400 text-sm">
+          <h4 className="text-lg font-medium text-text-secondary mb-2">Aucun rapport</h4>
+          <p className="text-text-muted text-sm">
             Générez un rapport pour l'envoyer au client.
           </p>
         </div>
@@ -227,7 +227,7 @@ const MaintenanceReports = ({ project }) => {
                 key={report.id}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-gray-800/50 rounded-lg p-4"
+                className="bg-surface/50 rounded-lg p-4"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
@@ -236,12 +236,12 @@ const MaintenanceReports = ({ project }) => {
                         {status.icon}
                         {status.label}
                       </span>
-                      <span className="text-gray-400 text-sm">
+                      <span className="text-text-muted text-sm">
                         {formatDate(report.period_start)} - {formatDate(report.period_end)}
                       </span>
                     </div>
 
-                    <div className="flex gap-4 text-sm text-gray-400">
+                    <div className="flex gap-4 text-sm text-text-muted">
                       <span className="flex items-center gap-1">
                         <FiCalendar className="text-gray-500" />
                         {data.summary?.interventions_count || 0} intervention{(data.summary?.interventions_count || 0) > 1 ? 's' : ''}

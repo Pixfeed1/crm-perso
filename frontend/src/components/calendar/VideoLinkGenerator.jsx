@@ -112,7 +112,7 @@ const VideoLinkGenerator = ({ value, onChange, eventData }) => {
     <div className="space-y-3">
       {/* Champ de lien manuel */}
       <div>
-        <label className="block text-sm font-medium text-gray-300 mb-1">
+        <label className="block text-sm font-medium text-text-secondary mb-1">
           Lien de visioconférence
         </label>
         <div className="flex space-x-2">
@@ -122,9 +122,9 @@ const VideoLinkGenerator = ({ value, onChange, eventData }) => {
               value={value || ''}
               onChange={(e) => onChange(e.target.value, null, null)}
               placeholder="https://meet.google.com/abc-defg-hij ou générer automatiquement"
-              className="w-full px-3 py-2 pl-10 bg-gray-700/50 border border-gray-600 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 pl-10 bg-surface-strong/50 border border-border-strong text-text-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            <FiVideo className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <FiVideo className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
           </div>
 
           {value && (
@@ -132,7 +132,7 @@ const VideoLinkGenerator = ({ value, onChange, eventData }) => {
               href={value}
               target="_blank"
               rel="noopener noreferrer"
-              className="px-3 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors flex items-center"
+              className="px-3 py-2 bg-surface-strong text-text-primary rounded-lg hover:bg-border-strong transition-colors flex items-center"
               title="Ouvrir le lien"
             >
               <FiExternalLink />
@@ -168,16 +168,16 @@ const VideoLinkGenerator = ({ value, onChange, eventData }) => {
             <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
-              className="p-4 bg-gray-800/50 border border-gray-700 rounded-lg space-y-3"
+              className="p-4 bg-surface/50 border border-border rounded-lg space-y-3"
             >
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-300">
+                <span className="text-sm font-medium text-text-secondary">
                   Choisir la plateforme
                 </span>
                 <button
                   type="button"
                   onClick={() => setShowProviders(false)}
-                  className="text-gray-400 hover:text-white"
+                  className="text-text-muted hover:text-text-primary"
                 >
                   <FiX />
                 </button>
@@ -193,7 +193,7 @@ const VideoLinkGenerator = ({ value, onChange, eventData }) => {
                       className={`flex items-center p-3 border-2 rounded-lg cursor-pointer transition-all ${
                         selectedProvider === provider.id
                           ? getProviderClasses(info.color)
-                          : 'border-gray-700 hover:border-gray-600'
+                          : 'border-border hover:border-border-strong'
                       }`}
                     >
                       <input
@@ -207,10 +207,10 @@ const VideoLinkGenerator = ({ value, onChange, eventData }) => {
                       <div className="flex items-center space-x-3 flex-1">
                         <span className="text-2xl">{info.icon}</span>
                         <div>
-                          <div className="font-medium text-white">
+                          <div className="font-medium text-text-primary">
                             {info.name}
                           </div>
-                          <div className="text-xs text-gray-400">
+                          <div className="text-xs text-text-muted">
                             {provider.description}
                           </div>
                         </div>
@@ -244,7 +244,7 @@ const VideoLinkGenerator = ({ value, onChange, eventData }) => {
               </button>
 
               {/* Info */}
-              <div className="text-xs text-gray-400 text-center">
+              <div className="text-xs text-text-muted text-center">
                 Un lien de visioconférence sera créé automatiquement
               </div>
             </motion.div>
@@ -254,7 +254,7 @@ const VideoLinkGenerator = ({ value, onChange, eventData }) => {
 
       {/* Message si aucun provider configuré */}
       {providers.length === 0 && (
-        <div className="text-xs text-gray-400 mt-1">
+        <div className="text-xs text-text-muted mt-1">
           Aucun service de visioconférence configuré.{' '}
           <a href="/settings" className="text-blue-400 hover:underline">
             Configurer dans les paramètres

@@ -372,12 +372,12 @@ const Activities = () => {
 
             <div className="flex flex-col sm:flex-row gap-2">
               {/* Sélecteur de vue : liste / calendrier */}
-              <div className="bg-gray-800/50 rounded-lg p-1 flex">
+              <div className="bg-surface/50 rounded-lg p-1 flex">
                 <motion.button
                   className={`px-3 py-1 rounded-lg text-sm flex items-center justify-center flex-1 sm:flex-none ${
                     view === 'list'
-                      ? 'bg-indigo-600 text-white'
-                      : 'text-gray-300 hover:bg-gray-700/50'
+                      ? 'bg-accent text-white'
+                      : 'text-text-secondary hover:bg-surface-strong/50'
                   }`}
                   whileHover={{ scale: view === 'list' ? 1 : 1.05 }}
                   whileTap={{ scale: 0.95 }}
@@ -389,8 +389,8 @@ const Activities = () => {
                 <motion.button
                   className={`px-3 py-1 rounded-lg text-sm flex items-center justify-center flex-1 sm:flex-none ${
                     view === 'calendar'
-                      ? 'bg-indigo-600 text-white'
-                      : 'text-gray-300 hover:bg-gray-700/50'
+                      ? 'bg-accent text-white'
+                      : 'text-text-secondary hover:bg-surface-strong/50'
                   }`}
                   whileHover={{ scale: view === 'calendar' ? 1 : 1.05 }}
                   whileTap={{ scale: 0.95 }}
@@ -442,7 +442,7 @@ const Activities = () => {
         </div>
 
         {/* Vue principale (liste/calendrier) */}
-        <div className="bg-gray-800/30 backdrop-blur-sm rounded-2xl p-3 sm:p-4 md:p-6 mb-6">
+        <div className="bg-surface/30 backdrop-blur-sm rounded-2xl p-3 sm:p-4 md:p-6 mb-6">
           <AnimatePresence mode="wait">
             {view === 'list' ? (
               <motion.div
@@ -452,7 +452,7 @@ const Activities = () => {
                 exit={{ opacity: 0 }}
                 className="h-full flex flex-col"
               >
-                <h3 className="text-xl font-semibold text-white mb-4">Liste des activités</h3>
+                <h3 className="text-xl font-semibold text-text-primary mb-4">Liste des activités</h3>
                 <ActivityList
                   activities={filteredActivities}
                   selectedActivity={selectedActivity}
@@ -468,7 +468,7 @@ const Activities = () => {
                 exit={{ opacity: 0 }}
                 className="h-full flex flex-col"
               >
-                <h3 className="text-xl font-semibold text-white mb-4">Calendrier des activités</h3>
+                <h3 className="text-xl font-semibold text-text-primary mb-4">Calendrier des activités</h3>
                 <ActivityCalendar
                   activities={filteredActivities}
                   startDate={startDate}
@@ -483,7 +483,7 @@ const Activities = () => {
 
         {/* Panneau de détails ou formulaire (sous la liste) */}
         {(isAddingActivity || selectedActivity) && (
-          <div className="bg-gray-800/30 backdrop-blur-sm rounded-2xl p-2 sm:p-4 md:p-6">
+          <div className="bg-surface/30 backdrop-blur-sm rounded-2xl p-2 sm:p-4 md:p-6">
             <AnimatePresence mode="wait">
               {isAddingActivity ? (
                 /* Formulaire de création */
@@ -513,13 +513,13 @@ const Activities = () => {
                   className="w-full"
                 >
                   <div className="flex justify-between items-start mb-4">
-                    <h3 className="text-xl font-semibold text-white">Détails de l'activité</h3>
+                    <h3 className="text-xl font-semibold text-text-primary">Détails de l'activité</h3>
                     <div className="flex space-x-2">
                       {/* Bouton Editer (= recréer) */}
                       <motion.button
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
-                        className="p-2 rounded-lg bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300"
+                        className="p-2 rounded-lg bg-accent/30 hover:bg-accent/50 text-indigo-300"
                         onClick={() => {
                           setIsAddingActivity(true);
                           setSelectedActivity(null);
@@ -542,8 +542,8 @@ const Activities = () => {
                   <div className="space-y-4">
                     {/* Type */}
                     <div className="flex justify-between items-center">
-                      <span className="text-gray-400">Type</span>
-                      <span className="text-white capitalize flex items-center gap-1">
+                      <span className="text-text-muted">Type</span>
+                      <span className="text-text-primary capitalize flex items-center gap-1">
                         {selectedActivity.type === 'development' ? <><FiMonitor /> Développement</> :
                          selectedActivity.type === 'design'      ? <><FiEdit /> Design</>        :
                          selectedActivity.type === 'meeting'     ? <><FiUsers /> Réunion</>       :
@@ -556,7 +556,7 @@ const Activities = () => {
                     </div>
                     {/* Priorité */}
                     <div className="flex justify-between items-center">
-                      <span className="text-gray-400">Priorité</span>
+                      <span className="text-text-muted">Priorité</span>
                       <span
                         className={`px-2 py-1 rounded-full text-xs font-medium ${
                           selectedActivity.priority === 'high'
@@ -575,14 +575,14 @@ const Activities = () => {
                     </div>
                     {/* Date */}
                     <div className="flex justify-between items-center">
-                      <span className="text-gray-400">Date</span>
-                      <span className="text-white">
+                      <span className="text-text-muted">Date</span>
+                      <span className="text-text-primary">
                         {new Date(selectedActivity.date).toLocaleDateString('fr-FR')}
                       </span>
                     </div>
                     {/* Statut */}
                     <div className="flex justify-between items-center">
-                      <span className="text-gray-400">Statut</span>
+                      <span className="text-text-muted">Statut</span>
                       <span
                         className={`px-2 py-1 rounded-full text-xs font-medium ${
                           selectedActivity.status === 'completed'
@@ -595,8 +595,8 @@ const Activities = () => {
                     </div>
                     {/* Temps prévu / Temps réel */}
                     <div className="flex justify-between items-center">
-                      <span className="text-gray-400">Temps prévu</span>
-                      <span className="text-white">
+                      <span className="text-text-muted">Temps prévu</span>
+                      <span className="text-text-primary">
                         {Math.floor(selectedActivity.planned_time / 60)}h
                         {selectedActivity.planned_time % 60
                           ? `${selectedActivity.planned_time % 60}min`
@@ -605,8 +605,8 @@ const Activities = () => {
                     </div>
                     {selectedActivity.status === 'completed' && (
                       <div className="flex justify-between items-center">
-                        <span className="text-gray-400">Temps réel</span>
-                        <span className="text-white">
+                        <span className="text-text-muted">Temps réel</span>
+                        <span className="text-text-primary">
                           {Math.floor(selectedActivity.actual_time / 60)}h
                           {selectedActivity.actual_time % 60
                             ? `${selectedActivity.actual_time % 60}min`
@@ -617,14 +617,14 @@ const Activities = () => {
                     {/* Projet */}
                     {selectedActivity.project_name && (
                       <div className="flex justify-between items-center">
-                        <span className="text-gray-400">Projet</span>
+                        <span className="text-text-muted">Projet</span>
                         <span className="text-indigo-300">{selectedActivity.project_name}</span>
                       </div>
                     )}
                     {/* Description */}
                     <div>
-                      <span className="text-gray-400">Description</span>
-                      <p className="mt-1 text-white break-words">
+                      <span className="text-text-muted">Description</span>
+                      <p className="mt-1 text-text-primary break-words">
                         {selectedActivity.description}
                       </p>
                     </div>

@@ -78,7 +78,7 @@ const LeadDetails = ({ lead, onUpdate, onDelete, onAddContact, onUpdateContact, 
   // Valeurs par défaut si le statut n'est pas configuré
   const statusStyle = statusConfig[lead.status] || {
     bg: 'bg-gray-500/20',
-    text: 'text-gray-300',
+    text: 'text-text-secondary',
     border: 'border-gray-500/30',
     icon: <FiHelpCircle />
   };
@@ -310,7 +310,7 @@ const LeadDetails = ({ lead, onUpdate, onDelete, onAddContact, onUpdateContact, 
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="p-2 rounded-lg bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300"
+            className="p-2 rounded-lg bg-accent/30 hover:bg-accent/50 text-indigo-300"
             onClick={() => setIsEditing(true)}
           >
             <FiEdit2 className="text-base sm:text-lg" />
@@ -330,8 +330,8 @@ const LeadDetails = ({ lead, onUpdate, onDelete, onAddContact, onUpdateContact, 
       {/* Informations principales */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
         {/* Panneau de gauche */}
-        <div className="bg-gray-800/30 rounded-xl p-4 sm:p-5 overflow-visible">
-          <h3 className="text-base sm:text-lg font-medium text-gray-200 mb-3 sm:mb-4 flex items-center gap-2">
+        <div className="bg-surface/30 rounded-xl p-4 sm:p-5 overflow-visible">
+          <h3 className="text-base sm:text-lg font-medium text-text-primary mb-3 sm:mb-4 flex items-center gap-2">
             <FiClipboard className="text-base sm:text-lg" />
             Informations
           </h3>
@@ -339,32 +339,32 @@ const LeadDetails = ({ lead, onUpdate, onDelete, onAddContact, onUpdateContact, 
           <div className="space-y-3 sm:space-y-4">
             {/* Type */}
             <div className="flex justify-between items-center">
-              <span className="text-gray-400 text-sm sm:text-base">Type</span>
-              <span className="font-medium text-white flex items-center gap-1 sm:gap-2 text-sm sm:text-base">
-                {lead.type === 'company' ? <><FiBriefcase className="text-sm sm:text-base text-white" /> <span className="text-white">Entreprise</span></> : <><FiUser className="text-sm sm:text-base text-white" /> <span className="text-white">Particulier</span></>}
+              <span className="text-text-muted text-sm sm:text-base">Type</span>
+              <span className="font-medium text-text-primary flex items-center gap-1 sm:gap-2 text-sm sm:text-base">
+                {lead.type === 'company' ? <><FiBriefcase className="text-sm sm:text-base text-text-primary" /> <span className="text-text-primary">Entreprise</span></> : <><FiUser className="text-sm sm:text-base text-text-primary" /> <span className="text-text-primary">Particulier</span></>}
               </span>
             </div>
 
             {/* Statut avec menu déroulant */}
             <div className="flex justify-between items-center">
-              <span className="text-gray-400 text-sm sm:text-base">Statut</span>
+              <span className="text-text-muted text-sm sm:text-base">Statut</span>
 
               <div className="relative group">
                 <button
                   className={`flex items-center px-2 sm:px-3 py-1 rounded-full ${statusStyle.bg} ${statusStyle.text} border ${statusStyle.border} text-xs sm:text-sm font-medium`}
                 >
-                  <span className="mr-1 text-xs sm:text-sm text-white">{statusStyle.icon}</span>
+                  <span className="mr-1 text-xs sm:text-sm text-text-primary">{statusStyle.icon}</span>
                   {lead.status.charAt(0).toUpperCase() + lead.status.slice(1)}
                   <span className="ml-1">▼</span>
                 </button>
 
                 {/* Menu déroulant pour changer le statut */}
-                <div className="absolute right-0 mt-2 w-40 sm:w-48 bg-gray-900 border border-gray-700 rounded-lg shadow-lg z-50 overflow-hidden opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300">
+                <div className="absolute right-0 mt-2 w-40 sm:w-48 bg-surface-muted border border-border rounded-lg shadow-lg z-50 overflow-hidden opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300">
                   {Object.keys(statusConfig).map(status => (
                     <button
                       key={status}
-                      className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-800 flex items-center ${
-                        lead.status === status ? 'bg-gray-800' : ''
+                      className={`w-full text-left px-4 py-2 text-sm hover:bg-surface flex items-center ${
+                        lead.status === status ? 'bg-surface' : ''
                       }`}
                       onClick={() => handleStatusChange(status)}
                     >
@@ -378,35 +378,35 @@ const LeadDetails = ({ lead, onUpdate, onDelete, onAddContact, onUpdateContact, 
             
             {/* Source */}
             <div className="flex justify-between items-center">
-              <span className="text-gray-400 text-sm sm:text-base">Source</span>
-              <span className="font-medium text-white text-sm sm:text-base">{lead.source || 'Non spécifié'}</span>
+              <span className="text-text-muted text-sm sm:text-base">Source</span>
+              <span className="font-medium text-text-primary text-sm sm:text-base">{lead.source || 'Non spécifié'}</span>
             </div>
 
             {/* Date de création */}
             <div className="flex justify-between items-center">
-              <span className="text-gray-400 text-sm sm:text-base">Créé le</span>
-              <span className="font-medium text-white text-sm sm:text-base">{formatDate(lead.created_at)}</span>
+              <span className="text-text-muted text-sm sm:text-base">Créé le</span>
+              <span className="font-medium text-text-primary text-sm sm:text-base">{formatDate(lead.created_at)}</span>
             </div>
           </div>
         </div>
         
         {/* Panneau de droite (Notes) */}
-        <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl p-4 sm:p-5">
-          <h3 className="text-base sm:text-lg font-medium text-gray-200 mb-3 sm:mb-4 flex items-center gap-2">
+        <div className="bg-surface/30 backdrop-blur-sm rounded-xl p-4 sm:p-5">
+          <h3 className="text-base sm:text-lg font-medium text-text-primary mb-3 sm:mb-4 flex items-center gap-2">
             <FiFileText className="text-base sm:text-lg" />
             Notes
           </h3>
 
-          <div className="bg-gray-900/50 rounded-lg p-3 sm:p-4 min-h-[100px] sm:min-h-[120px] text-gray-300 text-sm sm:text-base">
+          <div className="bg-surface-muted/50 rounded-lg p-3 sm:p-4 min-h-[100px] sm:min-h-[120px] text-text-secondary text-sm sm:text-base">
             {lead.notes || 'Aucune note pour ce lead.'}
           </div>
         </div>
       </div>
 
       {/* Section Contacts */}
-      <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl p-4 sm:p-5 mb-4 sm:mb-6">
+      <div className="bg-surface/30 backdrop-blur-sm rounded-xl p-4 sm:p-5 mb-4 sm:mb-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 sm:mb-4 gap-3">
-          <h3 className="text-base sm:text-lg font-medium text-gray-200 flex items-center gap-2">
+          <h3 className="text-base sm:text-lg font-medium text-text-primary flex items-center gap-2">
             <FiUsers className="text-base sm:text-lg" />
             Contacts
           </h3>
@@ -414,7 +414,7 @@ const LeadDetails = ({ lead, onUpdate, onDelete, onAddContact, onUpdateContact, 
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 px-3 py-1.5 sm:py-1 rounded-lg text-xs sm:text-sm flex items-center whitespace-nowrap"
+            className="bg-accent/30 hover:bg-accent/50 text-indigo-300 px-3 py-1.5 sm:py-1 rounded-lg text-xs sm:text-sm flex items-center whitespace-nowrap"
             onClick={() => setIsAddingContact(true)}
           >
             <span className="mr-1">+</span>
@@ -459,9 +459,9 @@ const LeadDetails = ({ lead, onUpdate, onDelete, onAddContact, onUpdateContact, 
       </div>
 
       {/* Section Interactions */}
-      <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl p-4 sm:p-5 mb-4 sm:mb-6">
+      <div className="bg-surface/30 backdrop-blur-sm rounded-xl p-4 sm:p-5 mb-4 sm:mb-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 sm:mb-4 gap-3">
-          <h3 className="text-base sm:text-lg font-medium text-gray-200 flex items-center gap-2">
+          <h3 className="text-base sm:text-lg font-medium text-text-primary flex items-center gap-2">
             <FiClock className="text-base sm:text-lg" />
             Historique des interactions
           </h3>
@@ -469,7 +469,7 @@ const LeadDetails = ({ lead, onUpdate, onDelete, onAddContact, onUpdateContact, 
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 px-3 py-1.5 sm:py-1 rounded-lg text-xs sm:text-sm flex items-center whitespace-nowrap"
+            className="bg-accent/30 hover:bg-accent/50 text-indigo-300 px-3 py-1.5 sm:py-1 rounded-lg text-xs sm:text-sm flex items-center whitespace-nowrap"
             onClick={() => setIsAddingInteraction(true)}
           >
             <span className="mr-1">+</span>
@@ -523,19 +523,19 @@ const LeadDetails = ({ lead, onUpdate, onDelete, onAddContact, onUpdateContact, 
             exit={{ opacity: 0 }}
           >
             <motion.div
-              className="bg-gray-900 border border-gray-700 rounded-xl p-4 sm:p-6 max-w-md w-full"
+              className="bg-surface-muted border border-border rounded-xl p-4 sm:p-6 max-w-md w-full"
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
             >
-              <h3 className="text-lg sm:text-xl font-semibold text-white mb-2">Confirmer la suppression</h3>
-              <p className="text-gray-300 text-sm sm:text-base mb-4 sm:mb-6">
+              <h3 className="text-lg sm:text-xl font-semibold text-text-primary mb-2">Confirmer la suppression</h3>
+              <p className="text-text-secondary text-sm sm:text-base mb-4 sm:mb-6">
                 Êtes-vous sûr de vouloir supprimer définitivement ce lead ? Cette action ne peut pas être annulée.
               </p>
 
               <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3">
                 <motion.button
-                  className="px-4 py-2 rounded-lg border-2 border-white/30 text-white hover:bg-white/10 hover:border-white/40 font-medium transition-all text-sm sm:text-base"
+                  className="px-4 py-2 rounded-lg border-2 border-overlay/30 text-text-primary hover:bg-overlay/10 hover:border-overlay/40 font-medium transition-all text-sm sm:text-base"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => setShowDeleteConfirm(false)}

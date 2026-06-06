@@ -67,7 +67,7 @@ const RemindersList = ({ reminders, onComplete, onDismiss, onDelete }) => {
         return (
           <motion.div
             key={reminder.id}
-            className={`bg-gray-800/50 rounded-lg p-4 border ${priority.border} ${priority.bg}`}
+            className={`bg-surface/50 rounded-lg p-4 border ${priority.border} ${priority.bg}`}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.05 }}
@@ -75,7 +75,7 @@ const RemindersList = ({ reminders, onComplete, onDismiss, onDelete }) => {
             <div className="flex flex-col sm:flex-row sm:items-start gap-3">
               {/* Icône d'entité */}
               <div className="flex-shrink-0">
-                <div className="w-10 h-10 rounded-full bg-gray-700/50 flex items-center justify-center text-lg">
+                <div className="w-10 h-10 rounded-full bg-surface-strong/50 flex items-center justify-center text-lg">
                   {entityIcons[reminder.entity_type] || <FiClock />}
                 </div>
               </div>
@@ -85,10 +85,10 @@ const RemindersList = ({ reminders, onComplete, onDismiss, onDelete }) => {
                 {/* Header */}
                 <div className="flex items-start justify-between gap-2 mb-2">
                   <div className="flex-1">
-                    <h3 className="font-medium text-white text-sm sm:text-base break-words">
+                    <h3 className="font-medium text-text-primary text-sm sm:text-base break-words">
                       {reminder.title}
                     </h3>
-                    <div className="flex items-center gap-2 mt-1 text-xs text-gray-400">
+                    <div className="flex items-center gap-2 mt-1 text-xs text-text-muted">
                       <span className="capitalize">{reminder.entity_type}</span>
                       <span>•</span>
                       <span className={overdue ? 'text-rose-400 flex items-center gap-1' : 'flex items-center gap-1'}>
@@ -103,7 +103,7 @@ const RemindersList = ({ reminders, onComplete, onDismiss, onDelete }) => {
 
                 {/* Description */}
                 {reminder.description && (
-                  <p className="text-sm text-gray-300 mb-3 break-words">
+                  <p className="text-sm text-text-secondary mb-3 break-words">
                     {reminder.description}
                   </p>
                 )}
@@ -121,7 +121,7 @@ const RemindersList = ({ reminders, onComplete, onDismiss, onDelete }) => {
                   </motion.button>
 
                   <motion.button
-                    className="px-3 py-1.5 bg-gray-700/30 hover:bg-gray-700/50 text-gray-300 rounded-lg text-xs sm:text-sm flex items-center gap-1"
+                    className="px-3 py-1.5 bg-surface-strong/30 hover:bg-surface-strong/50 text-text-secondary rounded-lg text-xs sm:text-sm flex items-center gap-1"
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={() => onDismiss(reminder.id)}

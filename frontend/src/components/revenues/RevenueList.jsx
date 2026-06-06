@@ -95,10 +95,10 @@ const RevenueList = ({ revenues, selectedRevenue, onSelectRevenue }) => {
   if (revenues.length === 0) {
     return (
       <div className="flex-1 flex items-center justify-center">
-        <div className="bg-gray-900/30 rounded-lg p-6 text-center">
+        <div className="bg-surface-muted/30 rounded-lg p-6 text-center">
           <div className="text-4xl mb-3"><FiDollarSign /></div>
-          <h4 className="text-lg font-medium text-gray-300 mb-2">Aucun revenu</h4>
-          <p className="text-gray-400 text-sm">
+          <h4 className="text-lg font-medium text-text-secondary mb-2">Aucun revenu</h4>
+          <p className="text-text-muted text-sm">
             Ajoutez vos premiers revenus pour commencer à suivre vos finances.
           </p>
         </div>
@@ -111,10 +111,10 @@ const RevenueList = ({ revenues, selectedRevenue, onSelectRevenue }) => {
   return (
     <div className="flex-1 overflow-y-auto">
       <table className="min-w-full divide-y divide-gray-700">
-        <thead className="sticky top-0 bg-gray-800/80 backdrop-blur-sm z-10">
+        <thead className="sticky top-0 bg-surface/80 backdrop-blur-sm z-10">
           <tr>
             <th 
-              className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer"
+              className="px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider cursor-pointer"
               onClick={() => requestSort('date')}
             >
               <div className="flex items-center">
@@ -123,7 +123,7 @@ const RevenueList = ({ revenues, selectedRevenue, onSelectRevenue }) => {
               </div>
             </th>
             <th 
-              className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer"
+              className="px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider cursor-pointer"
               onClick={() => requestSort('amount')}
             >
               <div className="flex items-center">
@@ -131,11 +131,11 @@ const RevenueList = ({ revenues, selectedRevenue, onSelectRevenue }) => {
                 <span className="ml-1">{getSortDirectionIcon('amount')}</span>
               </div>
             </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+            <th className="px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider">
               Description
             </th>
             <th 
-              className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer"
+              className="px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider cursor-pointer"
               onClick={() => requestSort('project')}
             >
               <div className="flex items-center">
@@ -143,11 +143,11 @@ const RevenueList = ({ revenues, selectedRevenue, onSelectRevenue }) => {
                 <span className="ml-1">{getSortDirectionIcon('project')}</span>
               </div>
             </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+            <th className="px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider">
               Type
             </th>
             <th 
-              className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer"
+              className="px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider cursor-pointer"
               onClick={() => requestSort('status')}
             >
               <div className="flex items-center">
@@ -161,8 +161,8 @@ const RevenueList = ({ revenues, selectedRevenue, onSelectRevenue }) => {
           {sortedRevenues.map((revenue) => {
             const isSelected = selectedRevenue && selectedRevenue.id === revenue.id;
             const statusStyle = statusConfig[revenue.status] || {
-              bg: 'bg-gray-900/30',
-              text: 'text-gray-300',
+              bg: 'bg-surface-muted/30',
+              text: 'text-text-secondary',
               label: revenue.status
             };
             const typeInfo = typeConfig[revenue.type] || {
@@ -173,18 +173,18 @@ const RevenueList = ({ revenues, selectedRevenue, onSelectRevenue }) => {
             return (
               <motion.tr 
                 key={revenue.id}
-                className={`cursor-pointer hover:bg-gray-700/30 ${isSelected ? 'bg-teal-900/20' : ''}`}
+                className={`cursor-pointer hover:bg-surface-strong/30 ${isSelected ? 'bg-teal-900/20' : ''}`}
                 whileHover={{ scale: 1.01 }}
                 onClick={() => onSelectRevenue(revenue)}
               >
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-text-primary">
                   {formatDate(revenue.date)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-bold text-white">{revenue.amount.toLocaleString()} €</div>
+                  <div className="text-sm font-bold text-text-primary">{revenue.amount.toLocaleString()} €</div>
                 </td>
                 <td className="px-6 py-4">
-                  <div className="text-sm text-white truncate max-w-xs">{revenue.description}</div>
+                  <div className="text-sm text-text-primary truncate max-w-xs">{revenue.description}</div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   {revenue.project_name ? (
@@ -194,7 +194,7 @@ const RevenueList = ({ revenues, selectedRevenue, onSelectRevenue }) => {
                   )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-white flex items-center">
+                  <div className="text-sm text-text-primary flex items-center">
                     <span className="mr-1">{typeInfo.icon}</span>
                     <span>{typeInfo.label}</span>
                   </div>

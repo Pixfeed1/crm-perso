@@ -98,7 +98,7 @@ const GoalDetails = ({
     } else if (isExpired()) {
       return { text: 'Expiré', color: 'bg-rose-900/30 text-rose-300', icon: <FiAlertCircle /> };
     } else {
-      return { text: 'Inactif', color: 'bg-gray-900/30 text-gray-300', icon: <FiMinusCircle /> };
+      return { text: 'Inactif', color: 'bg-surface-muted/30 text-text-secondary', icon: <FiMinusCircle /> };
     }
   };
   
@@ -143,8 +143,8 @@ const GoalDetails = ({
   const progress = calculateProgress(goal.current_value, goal.target_value);
   const statusInfo = getGoalStatus();
   const timeRemaining = getTimeRemaining();
-  const categoryInfo = categoryConfig[goal.category] || { icon: '<FiMapPin />', label: goal.category, color: 'text-gray-300' };
-  const periodInfo = periodConfig[goal.period] || { label: goal.period, color: 'text-gray-300' };
+  const categoryInfo = categoryConfig[goal.category] || { icon: '<FiMapPin />', label: goal.category, color: 'text-text-secondary' };
+  const periodInfo = periodConfig[goal.period] || { label: goal.period, color: 'text-text-secondary' };
   
   return (
     <div className="h-full">
@@ -199,8 +199,8 @@ const GoalDetails = ({
       </div>
       
       {/* Progression */}
-      <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl p-5 mb-6">
-        <h3 className="text-lg font-medium text-gray-200 mb-4 flex items-center">
+      <div className="bg-surface/30 backdrop-blur-sm rounded-xl p-5 mb-6">
+        <h3 className="text-lg font-medium text-text-primary mb-4 flex items-center">
           <span className="mr-2"><FiTrendingUp /></span>
           Progression
         </h3>
@@ -208,10 +208,10 @@ const GoalDetails = ({
         {/* Barre de progression */}
         <div className="mb-4">
           <div className="flex justify-between text-sm mb-1">
-            <span className="text-gray-400">Progression actuelle</span>
-            <span className="text-white font-medium">{progress}%</span>
+            <span className="text-text-muted">Progression actuelle</span>
+            <span className="text-text-primary font-medium">{progress}%</span>
           </div>
-          <div className="h-3 bg-gray-700 rounded-full overflow-hidden">
+          <div className="h-3 bg-surface-strong rounded-full overflow-hidden">
             <motion.div 
               className={`h-full rounded-full ${
                 progress >= 100 
@@ -232,13 +232,13 @@ const GoalDetails = ({
         {/* Valeurs actuelles/cibles */}
         <div className="flex justify-between items-center mt-4">
           <div>
-            <div className="text-sm text-gray-400">Valeur actuelle</div>
-            <div className="text-xl font-bold text-white">{goal.current_value}{goal.category === 'revenue' ? ' €' : ''}</div>
+            <div className="text-sm text-text-muted">Valeur actuelle</div>
+            <div className="text-xl font-bold text-text-primary">{goal.current_value}{goal.category === 'revenue' ? ' €' : ''}</div>
           </div>
           <div className="text-2xl text-gray-500">/</div>
           <div>
-            <div className="text-sm text-gray-400">Objectif</div>
-            <div className="text-xl font-bold text-white">{goal.target_value}{goal.category === 'revenue' ? ' €' : ''}</div>
+            <div className="text-sm text-text-muted">Objectif</div>
+            <div className="text-xl font-bold text-text-primary">{goal.target_value}{goal.category === 'revenue' ? ' €' : ''}</div>
           </div>
         </div>
         
@@ -246,18 +246,18 @@ const GoalDetails = ({
         <AnimatePresence>
           {isEditing && (
             <motion.div 
-              className="mt-4 pt-4 border-t border-gray-700"
+              className="mt-4 pt-4 border-t border-border"
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
             >
-              <h4 className="text-sm font-medium text-gray-300 mb-2">Mettre à jour la progression</h4>
+              <h4 className="text-sm font-medium text-text-secondary mb-2">Mettre à jour la progression</h4>
               <div className="flex items-center space-x-2">
                 <input
                   type="number"
                   value={editData.current_value}
                   onChange={(e) => setEditData({ current_value: e.target.value })}
-                  className="flex-1 bg-gray-800/50 text-white border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="flex-1 bg-surface/50 text-text-primary border border-border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   step="0.01"
                   min="0"
                 />
@@ -270,7 +270,7 @@ const GoalDetails = ({
                   Mettre à jour
                 </motion.button>
                 <motion.button
-                  className="p-2 rounded-lg border-2 border-white/30 text-white hover:bg-white/10 hover:border-white/40 font-medium transition-all"
+                  className="p-2 rounded-lg border-2 border-overlay/30 text-text-primary hover:bg-overlay/10 hover:border-overlay/40 font-medium transition-all"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => setIsEditing(false)}
@@ -284,46 +284,46 @@ const GoalDetails = ({
       </div>
       
       {/* Informations détaillées */}
-      <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl p-5 mb-6">
-        <h3 className="text-lg font-medium text-gray-200 mb-4 flex items-center">
+      <div className="bg-surface/30 backdrop-blur-sm rounded-xl p-5 mb-6">
+        <h3 className="text-lg font-medium text-text-primary mb-4 flex items-center">
           <span className="mr-2"><FiClipboard /></span>
           Détails
         </h3>
         
         <div className="space-y-4">
           <div>
-            <h4 className="text-sm text-gray-400">Description</h4>
-            <p className="mt-1 text-white">{goal.description || 'Aucune description'}</p>
+            <h4 className="text-sm text-text-muted">Description</h4>
+            <p className="mt-1 text-text-primary">{goal.description || 'Aucune description'}</p>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <h4 className="text-sm text-gray-400">Date de début</h4>
-              <p className="mt-1 text-white">{formatDate(goal.start_date)}</p>
+              <h4 className="text-sm text-text-muted">Date de début</h4>
+              <p className="mt-1 text-text-primary">{formatDate(goal.start_date)}</p>
             </div>
             <div>
-              <h4 className="text-sm text-gray-400">Date de fin</h4>
-              <p className="mt-1 text-white">{formatDate(goal.end_date)}</p>
+              <h4 className="text-sm text-text-muted">Date de fin</h4>
+              <p className="mt-1 text-text-primary">{formatDate(goal.end_date)}</p>
             </div>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <h4 className="text-sm text-gray-400">Créé le</h4>
-              <p className="mt-1 text-white">{formatDate(goal.created_at)}</p>
+              <h4 className="text-sm text-text-muted">Créé le</h4>
+              <p className="mt-1 text-text-primary">{formatDate(goal.created_at)}</p>
             </div>
             <div>
-              <h4 className="text-sm text-gray-400">Dernière mise à jour</h4>
-              <p className="mt-1 text-white">{formatDate(goal.updated_at)}</p>
+              <h4 className="text-sm text-text-muted">Dernière mise à jour</h4>
+              <p className="mt-1 text-text-primary">{formatDate(goal.updated_at)}</p>
             </div>
           </div>
         </div>
       </div>
       
       {/* Étapes (Milestones) */}
-      <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl p-5">
+      <div className="bg-surface/30 backdrop-blur-sm rounded-xl p-5">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-medium text-gray-200 flex items-center">
+          <h3 className="text-lg font-medium text-text-primary flex items-center">
             <span className="mr-2"><FiAward /></span>
             Étapes
           </h3>
@@ -346,20 +346,20 @@ const GoalDetails = ({
               <div
                 key={milestone.id}
                 className={`p-3 rounded-lg flex justify-between items-center ${
-                  milestone.achieved ? 'bg-green-900/20 border-green-500/30' : 'bg-gray-800/50'
+                  milestone.achieved ? 'bg-green-900/20 border-green-500/30' : 'bg-surface/50'
                 } border`}
               >
                 <div className="flex items-center">
                   <div className={`w-6 h-6 rounded-full flex items-center justify-center mr-3 ${
                     milestone.achieved 
                       ? 'bg-green-500 text-white' 
-                      : 'bg-gray-700 text-gray-400'
+                      : 'bg-surface-strong text-text-muted'
                   }`}>
                     {milestone.achieved ? '<FiCheck />' : '<FiCircle />'}
                   </div>
                   <div>
-                    <div className="font-medium text-white">{milestone.name}</div>
-                    <div className="text-sm text-gray-400">
+                    <div className="font-medium text-text-primary">{milestone.name}</div>
+                    <div className="text-sm text-text-muted">
                       Objectif: {milestone.target}
                       {goal.category === 'revenue' ? ' €' : ''}
                     </div>
@@ -381,7 +381,7 @@ const GoalDetails = ({
                   <motion.button
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded-lg"
+                    className="px-3 py-1 bg-surface-strong hover:bg-border-strong text-text-primary text-sm rounded-lg"
                     onClick={() => onUpdateMilestone(milestone.id, false)}
                   >
                     Annuler
@@ -390,7 +390,7 @@ const GoalDetails = ({
               </div>
             ))
           ) : (
-            <div className="text-center py-6 text-gray-400">
+            <div className="text-center py-6 text-text-muted">
               Aucune étape définie. Ajoutez des étapes intermédiaires pour suivre votre progression.
             </div>
           )}
@@ -400,19 +400,19 @@ const GoalDetails = ({
         <AnimatePresence>
           {isAddingMilestone && (
             <motion.div 
-              className="mt-4 pt-4 border-t border-gray-700"
+              className="mt-4 pt-4 border-t border-border"
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
             >
-              <h4 className="text-sm font-medium text-gray-300 mb-2">Nouvelle étape</h4>
+              <h4 className="text-sm font-medium text-text-secondary mb-2">Nouvelle étape</h4>
               <div className="space-y-3">
                 <input
                   type="text"
                   placeholder="Nom de l'étape"
                   value={milestoneData.name}
                   onChange={(e) => setMilestoneData({ ...milestoneData, name: e.target.value })}
-                  className="w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full bg-surface/50 text-text-primary border border-border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 />
                 <div className="flex items-center space-x-2">
                   <input
@@ -420,7 +420,7 @@ const GoalDetails = ({
                     placeholder="Valeur cible"
                     value={milestoneData.target}
                     onChange={(e) => setMilestoneData({ ...milestoneData, target: parseFloat(e.target.value) })}
-                    className="flex-1 bg-gray-800/50 text-white border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="flex-1 bg-surface/50 text-text-primary border border-border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     step="0.01"
                     min="0"
                   />
@@ -434,7 +434,7 @@ const GoalDetails = ({
                     Ajouter
                   </motion.button>
                   <motion.button
-                    className="p-2 rounded-lg border-2 border-white/30 text-white hover:bg-white/10 hover:border-white/40 font-medium transition-all"
+                    className="p-2 rounded-lg border-2 border-overlay/30 text-text-primary hover:bg-overlay/10 hover:border-overlay/40 font-medium transition-all"
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={() => setIsAddingMilestone(false)}
@@ -458,19 +458,19 @@ const GoalDetails = ({
             exit={{ opacity: 0 }}
           >
             <motion.div
-              className="bg-gray-900 border border-gray-700 rounded-xl p-6 max-w-md w-full"
+              className="bg-surface-muted border border-border rounded-xl p-6 max-w-md w-full"
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
             >
-              <h3 className="text-xl font-semibold text-white mb-2">Confirmer la suppression</h3>
-              <p className="text-gray-300 mb-6">
+              <h3 className="text-xl font-semibold text-text-primary mb-2">Confirmer la suppression</h3>
+              <p className="text-text-secondary mb-6">
                 Êtes-vous sûr de vouloir supprimer définitivement cet objectif ? Cette action ne peut pas être annulée.
               </p>
               
               <div className="flex justify-end space-x-3">
                 <motion.button
-                  className="px-4 py-2 rounded-lg border-2 border-white/30 text-white hover:bg-white/10 hover:border-white/40 font-medium transition-all"
+                  className="px-4 py-2 rounded-lg border-2 border-overlay/30 text-text-primary hover:bg-overlay/10 hover:border-overlay/40 font-medium transition-all"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => setShowDeleteConfirm(false)}

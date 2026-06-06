@@ -219,10 +219,10 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 20 }}
-      className="bg-gray-800/30 border border-gray-700 rounded-2xl p-6"
+      className="bg-surface/30 border border-border rounded-2xl p-6"
     >
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-white">
+        <h2 className="text-2xl font-bold text-text-primary">
           {project.id ? 'Modifier le projet' : 'Nouveau projet'}
         </h2>
       </div>
@@ -230,7 +230,7 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
       <form onSubmit={handleSubmit} className="space-y-4 w-full">
         {/* Nom du projet */}
         <div>
-          <label htmlFor="name" className="block text-sm font-medium text-gray-300 mb-1">
+          <label htmlFor="name" className="block text-sm font-medium text-text-secondary mb-1">
             Nom du projet<span className="text-rose-400 ml-1">*</span>
           </label>
           <input
@@ -239,9 +239,9 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
             name="name"
             value={formData.name}
             onChange={handleInputChange}
-            className={`w-full bg-gray-700 border ${
-              errors.name ? 'border-rose-500' : 'border-gray-600'
-            } rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
+            className={`w-full bg-surface-strong border ${
+              errors.name ? 'border-rose-500' : 'border-border-strong'
+            } rounded-lg px-4 py-2 text-text-primary placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
             placeholder="Site E-commerce 2025"
           />
           {errors.name && (
@@ -258,7 +258,7 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Type de projet */}
           <div>
-          <label htmlFor="type" className="block text-sm font-medium text-gray-300 mb-1">
+          <label htmlFor="type" className="block text-sm font-medium text-text-secondary mb-1">
               Type de projet
             </label>
             <select
@@ -266,7 +266,7 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
               name="type"
               value={formData.type}
               onChange={handleInputChange}
-              className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="w-full bg-surface-strong border border-border-strong rounded-lg px-4 py-2 text-text-primary focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             >
               {typeOptions.map(option => (
                 <option key={option.value} value={option.value}>
@@ -278,7 +278,7 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
           
           {/* Client/Lead */}
           <div>
-            <label htmlFor="lead_id" className="block text-sm font-medium text-gray-300 mb-1">
+            <label htmlFor="lead_id" className="block text-sm font-medium text-text-secondary mb-1">
               Client / Lead
             </label>
             <select
@@ -286,9 +286,9 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
               name="lead_id"
               value={leads.find(item => item.originalId === formData.lead_id)?.id || ''}
               onChange={handleLeadChange}
-              className={`w-full bg-gray-700 border ${
-                errors.lead_id ? 'border-rose-500' : 'border-gray-600'
-              } rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
+              className={`w-full bg-surface-strong border ${
+                errors.lead_id ? 'border-rose-500' : 'border-border-strong'
+              } rounded-lg px-4 py-2 text-text-primary focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
               disabled={loadingLeads}
             >
               <option value="">{loadingLeads ? 'Chargement...' : 'Sélectionner un client ou lead'}</option>
@@ -313,7 +313,7 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
         {/* Description */}
         <div>
           <div className="flex items-center justify-between mb-1">
-            <label htmlFor="description" className="block text-sm font-medium text-gray-300">
+            <label htmlFor="description" className="block text-sm font-medium text-text-secondary">
               Description
             </label>
             <TemplateSelector
@@ -329,7 +329,7 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
             value={formData.description}
             onChange={handleInputChange}
             rows={4}
-            className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            className="w-full bg-surface-strong border border-border-strong rounded-lg px-4 py-2 text-text-primary placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             placeholder="Description détaillée du projet..."
           />
         </div>
@@ -337,7 +337,7 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Date de début */}
           <div>
-            <label htmlFor="start_date" className="block text-sm font-medium text-gray-300 mb-1">
+            <label htmlFor="start_date" className="block text-sm font-medium text-text-secondary mb-1">
               Date de début<span className="text-rose-400 ml-1">*</span>
             </label>
             <input
@@ -346,9 +346,9 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
               name="start_date"
               value={formData.start_date}
               onChange={handleInputChange}
-              className={`w-full bg-gray-700 border ${
-                errors.start_date ? 'border-rose-500' : 'border-gray-600'
-              } rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
+              className={`w-full bg-surface-strong border ${
+                errors.start_date ? 'border-rose-500' : 'border-border-strong'
+              } rounded-lg px-4 py-2 text-text-primary focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
             />
             {errors.start_date && (
               <motion.p 
@@ -363,7 +363,7 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
           
           {/* Date de fin */}
           <div>
-            <label htmlFor="end_date" className="block text-sm font-medium text-gray-300 mb-1">
+            <label htmlFor="end_date" className="block text-sm font-medium text-text-secondary mb-1">
               Date de fin<span className="text-rose-400 ml-1">*</span>
             </label>
             <input
@@ -372,9 +372,9 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
               name="end_date"
               value={formData.end_date}
               onChange={handleInputChange}
-              className={`w-full bg-gray-700 border ${
-                errors.end_date ? 'border-rose-500' : 'border-gray-600'
-              } rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
+              className={`w-full bg-surface-strong border ${
+                errors.end_date ? 'border-rose-500' : 'border-border-strong'
+              } rounded-lg px-4 py-2 text-text-primary focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
             />
             {errors.end_date && (
               <motion.p 
@@ -389,7 +389,7 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
           
           {/* Statut */}
           <div>
-            <label htmlFor="status" className="block text-sm font-medium text-gray-300 mb-1">
+            <label htmlFor="status" className="block text-sm font-medium text-text-secondary mb-1">
               Statut
             </label>
             <select
@@ -397,7 +397,7 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
               name="status"
               value={formData.status}
               onChange={handleInputChange}
-              className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="w-full bg-surface-strong border border-border-strong rounded-lg px-4 py-2 text-text-primary focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             >
               {statusOptions.map(option => (
                 <option key={option.value} value={option.value}>
@@ -410,7 +410,7 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
         
         {/* Montant */}
         <div className="max-w-xs">
-          <label htmlFor="amount" className="block text-sm font-medium text-gray-300 mb-1">
+          <label htmlFor="amount" className="block text-sm font-medium text-text-secondary mb-1">
             Montant (€)
           </label>
           <div className="relative">
@@ -422,11 +422,11 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
               onChange={handleInputChange}
               step="0.01"
               min="0"
-              className={`w-full bg-gray-700 border ${
-                errors.amount ? 'border-rose-500' : 'border-gray-600'
-              } rounded-lg px-4 py-2 pl-10 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
+              className={`w-full bg-surface-strong border ${
+                errors.amount ? 'border-rose-500' : 'border-border-strong'
+              } rounded-lg px-4 py-2 pl-10 text-text-primary focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
             />
-            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-text-muted">
               €
             </span>
           </div>
@@ -446,7 +446,7 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
           <motion.button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 rounded-lg border-2 border-white/30 text-white hover:bg-white/10 hover:border-white/40 font-medium transition-all"
+            className="px-4 py-2 rounded-lg border-2 border-overlay/30 text-text-primary hover:bg-overlay/10 hover:border-overlay/40 font-medium transition-all"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             disabled={submitting}

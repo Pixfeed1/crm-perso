@@ -184,7 +184,7 @@ const GoalForm = ({ goal, onSave, onCancel }) => {
       <div className="space-y-6">
         {/* Titre de l'objectif (pour name) */}
         <div>
-          <label htmlFor="title" className="block text-sm font-medium text-gray-300 mb-1">
+          <label htmlFor="title" className="block text-sm font-medium text-text-secondary mb-1">
             Nom de l'objectif<span className="text-rose-500 ml-1">*</span>
           </label>
           <input
@@ -193,8 +193,8 @@ const GoalForm = ({ goal, onSave, onCancel }) => {
             name="title"
             value={formData.title}
             onChange={handleInputChange}
-            className={`w-full bg-gray-800/50 text-white border ${
-              errors.title ? 'border-rose-500' : 'border-gray-700'
+            className={`w-full bg-surface/50 text-text-primary border ${
+              errors.title ? 'border-rose-500' : 'border-border'
             } rounded-lg px-4 py-2 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent break-words`}
             placeholder="Ex: Acquérir 5 nouveaux clients"
           />
@@ -207,7 +207,7 @@ const GoalForm = ({ goal, onSave, onCancel }) => {
         
         {/* Description */}
         <div>
-          <label htmlFor="description" className="block text-sm font-medium text-gray-300 mb-1">
+          <label htmlFor="description" className="block text-sm font-medium text-text-secondary mb-1">
             Description
           </label>
           <textarea
@@ -216,7 +216,7 @@ const GoalForm = ({ goal, onSave, onCancel }) => {
             value={formData.description}
             onChange={handleInputChange}
             rows="3"
-            className="w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg px-4 py-2 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            className="w-full bg-surface/50 text-text-primary border border-border rounded-lg px-4 py-2 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             placeholder="Décrivez votre objectif en quelques mots..."
           />
         </div>
@@ -224,7 +224,7 @@ const GoalForm = ({ goal, onSave, onCancel }) => {
         {/* Valeurs cible et actuelle */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label htmlFor="target_value" className="block text-sm font-medium text-gray-300 mb-1">
+            <label htmlFor="target_value" className="block text-sm font-medium text-text-secondary mb-1">
               Valeur cible<span className="text-rose-500 ml-1">*</span>
             </label>
             <input
@@ -233,14 +233,14 @@ const GoalForm = ({ goal, onSave, onCancel }) => {
               name="target_value"
               value={formData.target_value}
               onChange={handleInputChange}
-              className={`w-full bg-gray-800/50 text-white border ${
-                errors.target_value ? 'border-rose-500' : 'border-gray-700'
+              className={`w-full bg-surface/50 text-text-primary border ${
+                errors.target_value ? 'border-rose-500' : 'border-border'
               } rounded-lg px-4 py-2 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
               placeholder="Ex: 5000"
               step="0.01"
               min="0"
             />
-            <p className="mt-1 text-xs text-gray-300">
+            <p className="mt-1 text-xs text-text-secondary">
               La valeur cible doit être supérieure à 0
             </p>
             {errors.target_value && (
@@ -251,7 +251,7 @@ const GoalForm = ({ goal, onSave, onCancel }) => {
           </div>
           
           <div>
-            <label htmlFor="current_value" className="block text-sm font-medium text-gray-300 mb-1">
+            <label htmlFor="current_value" className="block text-sm font-medium text-text-secondary mb-1">
               Valeur actuelle
             </label>
             <input
@@ -260,7 +260,7 @@ const GoalForm = ({ goal, onSave, onCancel }) => {
               name="current_value"
               value={formData.current_value}
               onChange={handleInputChange}
-              className="w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg px-4 py-2 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="w-full bg-surface/50 text-text-primary border border-border rounded-lg px-4 py-2 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               placeholder="Ex: 0"
               step="0.01"
               min="0"
@@ -270,7 +270,7 @@ const GoalForm = ({ goal, onSave, onCancel }) => {
         
         {/* Catégorie */}
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
+          <label className="block text-sm font-medium text-text-secondary mb-2">
             Catégorie<span className="text-rose-500 ml-1">*</span>
           </label>
           <div className="grid grid-cols-1 gap-3">
@@ -280,7 +280,7 @@ const GoalForm = ({ goal, onSave, onCancel }) => {
                 className={`cursor-pointer p-4 rounded-lg border ${
                   formData.category === option.value
                     ? 'bg-amber-600 text-white border-amber-500'
-                    : 'bg-gray-800/50 text-white border-gray-300 hover:bg-gray-700'
+                    : 'bg-surface/50 text-text-primary border-gray-300 hover:bg-surface-strong'
                 }`}
                 onClick={() => setFormData(prev => ({ ...prev, category: option.value }))}
               >
@@ -303,7 +303,7 @@ const GoalForm = ({ goal, onSave, onCancel }) => {
         
         {/* Période */}
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
+          <label className="block text-sm font-medium text-text-secondary mb-2">
             Période<span className="text-rose-500 ml-1">*</span>
           </label>
           <div className="grid grid-cols-1 gap-3">
@@ -313,7 +313,7 @@ const GoalForm = ({ goal, onSave, onCancel }) => {
                 className={`cursor-pointer p-4 rounded-lg border ${
                   formData.period === option.value
                     ? 'bg-amber-600 text-white border-amber-500'
-                    : 'bg-gray-800/50 text-white border-gray-300 hover:bg-gray-700'
+                    : 'bg-surface/50 text-text-primary border-gray-300 hover:bg-surface-strong'
                 }`}
                 onClick={() => handlePeriodChange(option.value)}
               >
@@ -334,7 +334,7 @@ const GoalForm = ({ goal, onSave, onCancel }) => {
         {/* Dates de début et de fin */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label htmlFor="start_date" className="block text-sm font-medium text-gray-300 mb-1">
+            <label htmlFor="start_date" className="block text-sm font-medium text-text-secondary mb-1">
               Date de début<span className="text-rose-500 ml-1">*</span>
             </label>
             <input
@@ -343,8 +343,8 @@ const GoalForm = ({ goal, onSave, onCancel }) => {
               name="start_date"
               value={formData.start_date}
               onChange={handleInputChange}
-              className={`w-full bg-gray-800/50 text-white border ${
-                errors.start_date ? 'border-rose-500' : 'border-gray-700'
+              className={`w-full bg-surface/50 text-text-primary border ${
+                errors.start_date ? 'border-rose-500' : 'border-border'
               } rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
             />
             {errors.start_date && (
@@ -355,7 +355,7 @@ const GoalForm = ({ goal, onSave, onCancel }) => {
           </div>
 
           <div>
-            <label htmlFor="end_date" className="block text-sm font-medium text-gray-300 mb-1">
+            <label htmlFor="end_date" className="block text-sm font-medium text-text-secondary mb-1">
               Date de fin<span className="text-rose-500 ml-1">*</span>
             </label>
             <input
@@ -364,8 +364,8 @@ const GoalForm = ({ goal, onSave, onCancel }) => {
               name="end_date"
               value={formData.end_date}
               onChange={handleInputChange}
-              className={`w-full bg-gray-800/50 text-white border ${
-                errors.end_date ? 'border-rose-500' : 'border-gray-700'
+              className={`w-full bg-surface/50 text-text-primary border ${
+                errors.end_date ? 'border-rose-500' : 'border-border'
               } rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
             />
             {errors.end_date && (
@@ -380,7 +380,7 @@ const GoalForm = ({ goal, onSave, onCancel }) => {
         <div className="pt-6 flex justify-end space-x-4">
           <button
             type="button"
-            className="px-5 py-2 rounded-lg border-2 border-white/30 text-white hover:bg-white/10 hover:border-white/40 shadow-md font-semibold transition-all"
+            className="px-5 py-2 rounded-lg border-2 border-overlay/30 text-text-primary hover:bg-overlay/10 hover:border-overlay/40 shadow-md font-semibold transition-all"
             onClick={onCancel}
           >
             Annuler

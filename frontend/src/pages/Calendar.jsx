@@ -391,7 +391,7 @@ const Calendar = () => {
           />
         </div>
 
-        <div className="bg-gray-800/30 backdrop-blur-sm rounded-2xl overflow-hidden" style={{ height: 'calc(100vh - 320px)', minHeight: '400px' }}>
+        <div className="bg-surface/30 backdrop-blur-sm rounded-2xl overflow-hidden" style={{ height: 'calc(100vh - 320px)', minHeight: '400px' }}>
         <motion.div
           className="w-full h-full flex flex-col overflow-hidden"
           initial={{ opacity: 0 }}
@@ -476,7 +476,7 @@ const Calendar = () => {
               exit={{ y: "100%", opacity: 0 }}
               transition={{ duration: 0.3 }}
             >
-              <div className="bg-gray-800/98 backdrop-blur-lg rounded-t-2xl lg:rounded-2xl p-4 sm:p-6 h-[85vh] lg:h-auto lg:max-h-[90vh] lg:max-w-3xl lg:w-full overflow-y-auto mx-auto lg:m-4 shadow-2xl border-t lg:border border-gray-700/50 pointer-events-auto">
+              <div className="bg-surface/98 backdrop-blur-lg rounded-t-2xl lg:rounded-2xl p-4 sm:p-6 h-[85vh] lg:h-auto lg:max-h-[90vh] lg:max-w-3xl lg:w-full overflow-y-auto mx-auto lg:m-4 shadow-2xl border-t lg:border border-border/50 pointer-events-auto">
                 <AnimatePresence mode="wait">
                   {isAddingEvent ? (
                     <motion.div

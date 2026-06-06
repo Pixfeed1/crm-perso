@@ -98,7 +98,7 @@ const RevenueForm = ({ revenue = {}, onSave, onCancel, projects }) => {
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Montant */}
         <div>
-          <label htmlFor="amount" className="block text-sm font-medium text-gray-300 mb-1">
+          <label htmlFor="amount" className="block text-sm font-medium text-text-secondary mb-1">
             Montant (€)<span className="text-rose-500 ml-1">*</span>
           </label>
           <div className="relative">
@@ -110,11 +110,11 @@ const RevenueForm = ({ revenue = {}, onSave, onCancel, projects }) => {
               onChange={handleInputChange}
               step="0.01"
               min="0"
-              className={`w-full bg-gray-800/50 text-white border ${
-                errors.amount ? 'border-rose-500' : 'border-gray-700'
+              className={`w-full bg-surface/50 text-text-primary border ${
+                errors.amount ? 'border-rose-500' : 'border-border'
               } rounded-lg px-4 py-2 pl-10 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
             />
-            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-text-muted">
               €
             </span>
           </div>
@@ -131,7 +131,7 @@ const RevenueForm = ({ revenue = {}, onSave, onCancel, projects }) => {
         
         {/* Date */}
         <div>
-          <label htmlFor="date" className="block text-sm font-medium text-gray-300 mb-1">
+          <label htmlFor="date" className="block text-sm font-medium text-text-secondary mb-1">
             Date<span className="text-rose-500 ml-1">*</span>
           </label>
           <input
@@ -140,8 +140,8 @@ const RevenueForm = ({ revenue = {}, onSave, onCancel, projects }) => {
             name="date"
             value={formData.date}
             onChange={handleInputChange}
-            className={`w-full bg-gray-800/50 text-white border ${
-              errors.date ? 'border-rose-500' : 'border-gray-700'
+            className={`w-full bg-surface/50 text-text-primary border ${
+              errors.date ? 'border-rose-500' : 'border-border'
             } rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
           />
           {errors.date && (
@@ -157,7 +157,7 @@ const RevenueForm = ({ revenue = {}, onSave, onCancel, projects }) => {
         
         {/* Description */}
         <div>
-          <label htmlFor="description" className="block text-sm font-medium text-gray-300 mb-1">
+          <label htmlFor="description" className="block text-sm font-medium text-text-secondary mb-1">
             Description<span className="text-rose-500 ml-1">*</span>
           </label>
           <input
@@ -166,8 +166,8 @@ const RevenueForm = ({ revenue = {}, onSave, onCancel, projects }) => {
             name="description"
             value={formData.description}
             onChange={handleInputChange}
-            className={`w-full bg-gray-800/50 text-white border ${
-              errors.description ? 'border-rose-500' : 'border-gray-700'
+            className={`w-full bg-surface/50 text-text-primary border ${
+              errors.description ? 'border-rose-500' : 'border-border'
             } rounded-lg px-4 py-2 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
             placeholder="Ex: Acompte projet site web"
           />
@@ -184,7 +184,7 @@ const RevenueForm = ({ revenue = {}, onSave, onCancel, projects }) => {
         
         {/* Projet associé */}
         <div>
-          <label htmlFor="project_id" className="block text-sm font-medium text-gray-300 mb-1">
+          <label htmlFor="project_id" className="block text-sm font-medium text-text-secondary mb-1">
             Associer à un projet
           </label>
           <select
@@ -192,7 +192,7 @@ const RevenueForm = ({ revenue = {}, onSave, onCancel, projects }) => {
             name="project_id"
             value={formData.project_id}
             onChange={handleInputChange}
-            className="w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            className="w-full bg-surface/50 text-text-primary border border-border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
           >
             <option value="">Aucun projet</option>
             {projects.map(project => (
@@ -206,7 +206,7 @@ const RevenueForm = ({ revenue = {}, onSave, onCancel, projects }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Type */}
           <div>
-            <label htmlFor="type" className="block text-sm font-medium text-gray-300 mb-1">
+            <label htmlFor="type" className="block text-sm font-medium text-text-secondary mb-1">
               Type
             </label>
             <select
@@ -214,7 +214,7 @@ const RevenueForm = ({ revenue = {}, onSave, onCancel, projects }) => {
               name="type"
               value={formData.type}
               onChange={handleInputChange}
-              className="w-full bg-gray-800/50 text-white border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="w-full bg-surface/50 text-text-primary border border-border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             >
               {typeOptions.map(option => (
                 <option key={option.value} value={option.value}>
@@ -226,7 +226,7 @@ const RevenueForm = ({ revenue = {}, onSave, onCancel, projects }) => {
           
           {/* Statut */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-text-secondary mb-1">
               Statut
             </label>
             <div className="flex space-x-2">
@@ -235,8 +235,8 @@ const RevenueForm = ({ revenue = {}, onSave, onCancel, projects }) => {
                   key={option.value}
                   className={`flex-1 py-2 rounded-lg cursor-pointer text-center text-sm ${
                     formData.status === option.value
-                      ? `${option.color} text-white`
-                      : 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50 border border-gray-700'
+                      ? `${option.color} text-text-primary`
+                      : 'bg-surface/50 text-text-secondary hover:bg-surface-strong/50 border border-border'
                   }`}
                 >
                   <input 
@@ -259,7 +259,7 @@ const RevenueForm = ({ revenue = {}, onSave, onCancel, projects }) => {
           <motion.button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 rounded-lg border-2 border-white/30 text-white hover:bg-white/10 hover:border-white/40 font-medium transition-all"
+            className="px-4 py-2 rounded-lg border-2 border-overlay/30 text-text-primary hover:bg-overlay/10 hover:border-overlay/40 font-medium transition-all"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             disabled={submitting}

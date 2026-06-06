@@ -32,17 +32,17 @@ const MaintenanceDetails = ({ contract, onDelete, onRefresh, onEdit, onGenerateR
   const statusConfig = {
     active: { bg: 'bg-green-500/20', text: 'text-green-300', label: 'Actif' },
     paused: { bg: 'bg-amber-500/20', text: 'text-amber-300', label: 'En pause' },
-    cancelled: { bg: 'bg-gray-500/20', text: 'text-gray-300', label: 'Annulé' }
+    cancelled: { bg: 'bg-gray-500/20', text: 'text-text-secondary', label: 'Annulé' }
   };
 
   // Statut du prélèvement
   const billingStatusConfig = {
-    none: { bg: 'bg-gray-500/20', text: 'text-gray-300', label: 'Pas de prélèvement' },
+    none: { bg: 'bg-gray-500/20', text: 'text-text-secondary', label: 'Pas de prélèvement' },
     pending: { bg: 'bg-amber-500/20', text: 'text-amber-300', label: "En attente d'autorisation" },
     active: { bg: 'bg-green-500/20', text: 'text-green-300', label: 'Prélèvement actif' },
     past_due: { bg: 'bg-rose-500/20', text: 'text-rose-300', label: 'Impayé' },
     canceling: { bg: 'bg-amber-500/20', text: 'text-amber-300', label: 'Résiliation prévue' },
-    canceled: { bg: 'bg-gray-500/20', text: 'text-gray-300', label: 'Résilié' }
+    canceled: { bg: 'bg-gray-500/20', text: 'text-text-secondary', label: 'Résilié' }
   };
   const billingStyle = billingStatusConfig[contract.billing_status] || billingStatusConfig.none;
 
@@ -50,7 +50,7 @@ const MaintenanceDetails = ({ contract, onDelete, onRefresh, onEdit, onGenerateR
 
   // Couleur PageSpeed
   const getPageSpeedColor = (score) => {
-    if (!score) return 'text-gray-400';
+    if (!score) return 'text-text-muted';
     if (score >= 90) return 'text-green-400';
     if (score >= 50) return 'text-amber-400';
     return 'text-rose-400';
@@ -207,7 +207,7 @@ const MaintenanceDetails = ({ contract, onDelete, onRefresh, onEdit, onGenerateR
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 20 }}
-      className="bg-gray-800/30 border border-gray-700 rounded-2xl p-6 relative"
+      className="bg-surface/30 border border-border rounded-2xl p-6 relative"
     >
       {/* En-tête */}
       <div className="flex justify-between items-start mb-6">
@@ -216,7 +216,7 @@ const MaintenanceDetails = ({ contract, onDelete, onRefresh, onEdit, onGenerateR
             <FiGlobe />
           </div>
           <div>
-            <h2 className="text-2xl font-bold text-white mb-1">{contract.site_name}</h2>
+            <h2 className="text-2xl font-bold text-text-primary mb-1">{contract.site_name}</h2>
             {contract.client_name && (
               <p className="text-indigo-300 text-lg flex items-center gap-2">
                 <FiUser size={16} />
@@ -245,7 +245,7 @@ const MaintenanceDetails = ({ contract, onDelete, onRefresh, onEdit, onGenerateR
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={onEdit}
-            className="p-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
+            className="p-2 bg-accent hover:bg-indigo-700 text-white rounded-lg transition-colors"
             title="Modifier"
           >
             <FiEdit2 />
@@ -264,26 +264,26 @@ const MaintenanceDetails = ({ contract, onDelete, onRefresh, onEdit, onGenerateR
 
       {/* Infos techniques */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-gray-900/40 rounded-lg p-3">
-          <div className="text-xs text-gray-400 mb-1">PageSpeed Mobile</div>
+        <div className="bg-surface-muted/40 rounded-lg p-3">
+          <div className="text-xs text-text-muted mb-1">PageSpeed Mobile</div>
           <div className={`text-2xl font-bold ${getPageSpeedColor(contract.pagespeed_mobile)}`}>
             {contract.pagespeed_mobile || '-'}
           </div>
         </div>
-        <div className="bg-gray-900/40 rounded-lg p-3">
-          <div className="text-xs text-gray-400 mb-1">PageSpeed Desktop</div>
+        <div className="bg-surface-muted/40 rounded-lg p-3">
+          <div className="text-xs text-text-muted mb-1">PageSpeed Desktop</div>
           <div className={`text-2xl font-bold ${getPageSpeedColor(contract.pagespeed_desktop)}`}>
             {contract.pagespeed_desktop || '-'}
           </div>
         </div>
-        <div className="bg-gray-900/40 rounded-lg p-3">
-          <div className="text-xs text-gray-400 mb-1">Version CMS / App</div>
-          <div className="text-lg font-medium text-white">
+        <div className="bg-surface-muted/40 rounded-lg p-3">
+          <div className="text-xs text-text-muted mb-1">Version CMS / App</div>
+          <div className="text-lg font-medium text-text-primary">
             {contract.wordpress_version || '-'}
           </div>
         </div>
-        <div className="bg-gray-900/40 rounded-lg p-3">
-          <div className="text-xs text-gray-400 mb-1">Montant mensuel</div>
+        <div className="bg-surface-muted/40 rounded-lg p-3">
+          <div className="text-xs text-text-muted mb-1">Montant mensuel</div>
           <div className="text-lg font-medium text-green-400">
             {formatAmount(contract.monthly_amount)}
           </div>
@@ -294,7 +294,7 @@ const MaintenanceDetails = ({ contract, onDelete, onRefresh, onEdit, onGenerateR
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         <div className="space-y-2">
           {contract.site_url && (
-            <div className="flex items-center gap-2 text-gray-300">
+            <div className="flex items-center gap-2 text-text-secondary">
               <FiGlobe className="text-gray-500" size={14} />
               <a href={contract.site_url} target="_blank" rel="noopener noreferrer" className="hover:text-indigo-400">
                 {contract.site_url}
@@ -302,30 +302,30 @@ const MaintenanceDetails = ({ contract, onDelete, onRefresh, onEdit, onGenerateR
             </div>
           )}
           {contract.hosting_provider && (
-            <div className="text-gray-400 text-sm">
-              Hébergeur: <span className="text-gray-300">{contract.hosting_provider}</span>
+            <div className="text-text-muted text-sm">
+              Hébergeur: <span className="text-text-secondary">{contract.hosting_provider}</span>
             </div>
           )}
           {contract.php_version && (
-            <div className="text-gray-400 text-sm">
-              PHP: <span className="text-gray-300">{contract.php_version}</span>
+            <div className="text-text-muted text-sm">
+              PHP: <span className="text-text-secondary">{contract.php_version}</span>
             </div>
           )}
           {contract.plugins_count > 0 && (
-            <div className="text-gray-400 text-sm">
-              Plugins: <span className="text-gray-300">{contract.plugins_count}</span>
+            <div className="text-text-muted text-sm">
+              Plugins: <span className="text-text-secondary">{contract.plugins_count}</span>
             </div>
           )}
         </div>
         <div className="space-y-2">
-          <div className="text-gray-400 text-sm">
-            Début contrat: <span className="text-gray-300">{contract.contract_start_date ? formatDate(contract.contract_start_date) : '-'}</span>
+          <div className="text-text-muted text-sm">
+            Début contrat: <span className="text-text-secondary">{contract.contract_start_date ? formatDate(contract.contract_start_date) : '-'}</span>
           </div>
-          <div className="text-gray-400 text-sm">
-            Dernier rapport: <span className="text-gray-300">{contract.last_report_date ? formatDate(contract.last_report_date) : 'Jamais'}</span>
+          <div className="text-text-muted text-sm">
+            Dernier rapport: <span className="text-text-secondary">{contract.last_report_date ? formatDate(contract.last_report_date) : 'Jamais'}</span>
           </div>
-          <div className="text-gray-400 text-sm">
-            Prochain rapport: <span className={contract.next_report_due && new Date(contract.next_report_due) <= new Date() ? 'text-amber-400' : 'text-gray-300'}>
+          <div className="text-text-muted text-sm">
+            Prochain rapport: <span className={contract.next_report_due && new Date(contract.next_report_due) <= new Date() ? 'text-amber-400' : 'text-text-secondary'}>
               {contract.next_report_due ? formatDate(contract.next_report_due) : '-'}
             </span>
           </div>
@@ -333,9 +333,9 @@ const MaintenanceDetails = ({ contract, onDelete, onRefresh, onEdit, onGenerateR
       </div>
 
       {/* Section Prélèvement */}
-      <div className="border-t border-gray-700 pt-6">
+      <div className="border-t border-border pt-6">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-medium text-gray-200 flex items-center gap-2">
+          <h3 className="text-lg font-medium text-text-primary flex items-center gap-2">
             <FiCreditCard />
             Prélèvement automatique
           </h3>
@@ -350,7 +350,7 @@ const MaintenanceDetails = ({ contract, onDelete, onRefresh, onEdit, onGenerateR
             whileTap={{ scale: 0.97 }}
             onClick={handleSetupBilling}
             disabled={billingLoading}
-            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm flex items-center gap-2 disabled:opacity-50"
+            className="px-4 py-2 bg-accent hover:bg-indigo-700 text-white rounded-lg text-sm flex items-center gap-2 disabled:opacity-50"
           >
             {billingLoading ? (
               <motion.div
@@ -366,20 +366,20 @@ const MaintenanceDetails = ({ contract, onDelete, onRefresh, onEdit, onGenerateR
         )}
 
         {billingUrl && (
-          <div className="mt-4 bg-gray-900/40 rounded-lg p-3">
-            <p className="text-xs text-gray-400 mb-2">Lien de paiement (carte ou SEPA) :</p>
+          <div className="mt-4 bg-surface-muted/40 rounded-lg p-3">
+            <p className="text-xs text-text-muted mb-2">Lien de paiement (carte ou SEPA) :</p>
             <input
               type="text"
               readOnly
               value={billingUrl}
               onFocus={(e) => e.target.select()}
-              className="w-full min-w-0 bg-gray-800/60 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-300 mb-3"
+              className="w-full min-w-0 bg-surface/60 border border-border rounded-lg px-3 py-2 text-sm text-text-secondary mb-3"
             />
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
                 onClick={handleCopyBillingLink}
-                className="px-3 py-1.5 bg-gray-700/50 hover:bg-gray-700 text-gray-200 rounded-lg text-sm flex items-center gap-1"
+                className="px-3 py-1.5 bg-surface-strong/50 hover:bg-surface-strong text-text-primary rounded-lg text-sm flex items-center gap-1"
               >
                 <FiCopy size={14} /> {linkCopied ? 'Copié !' : 'Copier le lien'}
               </button>
@@ -421,7 +421,7 @@ const MaintenanceDetails = ({ contract, onDelete, onRefresh, onEdit, onGenerateR
               whileTap={{ scale: 0.97 }}
               onClick={handleResumeBilling}
               disabled={resumeLoading}
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm flex items-center gap-2 disabled:opacity-50"
+              className="px-4 py-2 bg-accent hover:bg-indigo-700 text-white rounded-lg text-sm flex items-center gap-2 disabled:opacity-50"
             >
               {resumeLoading ? (
                 <motion.div
@@ -439,9 +439,9 @@ const MaintenanceDetails = ({ contract, onDelete, onRefresh, onEdit, onGenerateR
       </div>
 
       {/* Section Rapports */}
-      <div className="border-t border-gray-700 pt-6">
+      <div className="border-t border-border pt-6">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-medium text-gray-200 flex items-center gap-2">
+          <h3 className="text-lg font-medium text-text-primary flex items-center gap-2">
             <FiFileText />
             Rapports de maintenance
           </h3>
@@ -462,17 +462,17 @@ const MaintenanceDetails = ({ contract, onDelete, onRefresh, onEdit, onGenerateR
             {contract.reports.map(report => (
               <div
                 key={report.id}
-                className="bg-gray-900/40 rounded-lg p-3 flex justify-between items-center"
+                className="bg-surface-muted/40 rounded-lg p-3 flex justify-between items-center"
               >
                 <div>
-                  <div className="text-sm text-white">
+                  <div className="text-sm text-text-primary">
                     {formatDate(report.period_start)} - {formatDate(report.period_end)}
                   </div>
-                  <div className="text-xs text-gray-400">
+                  <div className="text-xs text-text-muted">
                     {report.status === 'sent' ? (
                       <span className="text-green-400">Envoyé le {formatDate(report.sent_at)}</span>
                     ) : (
-                      <span className="text-gray-400">Brouillon</span>
+                      <span className="text-text-muted">Brouillon</span>
                     )}
                   </div>
                 </div>
@@ -529,26 +529,26 @@ const MaintenanceDetails = ({ contract, onDelete, onRefresh, onEdit, onGenerateR
             ))}
           </div>
         ) : (
-          <div className="bg-gray-900/30 rounded-lg p-6 text-center">
+          <div className="bg-surface-muted/30 rounded-lg p-6 text-center">
             <div className="text-3xl mb-2 text-gray-500"><FiFileText /></div>
-            <p className="text-gray-400 text-sm">Aucun rapport généré</p>
+            <p className="text-text-muted text-sm">Aucun rapport généré</p>
           </div>
         )}
       </div>
 
       {/* Notes */}
       {contract.notes && (
-        <div className="border-t border-gray-700 pt-6 mt-6">
-          <h3 className="text-sm font-medium text-gray-400 mb-2">Notes</h3>
-          <p className="text-gray-300 whitespace-pre-wrap">{contract.notes}</p>
+        <div className="border-t border-border pt-6 mt-6">
+          <h3 className="text-sm font-medium text-text-muted mb-2">Notes</h3>
+          <p className="text-text-secondary whitespace-pre-wrap">{contract.notes}</p>
         </div>
       )}
 
       {/* Modale de confirmation d'arrêt du prélèvement */}
       <Modal isOpen={cancelModalOpen} onClose={() => setCancelModalOpen(false)} maxWidth="max-w-md">
-        <div className="bg-gray-800 border border-gray-700 rounded-2xl p-6">
-          <h3 className="text-lg font-semibold text-white mb-3">Arrêter le prélèvement</h3>
-          <p className="text-sm text-gray-300 mb-4">
+        <div className="bg-surface border border-border rounded-2xl p-6">
+          <h3 className="text-lg font-semibold text-text-primary mb-3">Arrêter le prélèvement</h3>
+          <p className="text-sm text-text-secondary mb-4">
             Arrêter le prélèvement de ce contrat ? Le service reste actif jusqu'à la fin de la
             période déjà payée, puis plus aucun prélèvement ne sera effectué.
           </p>
@@ -557,15 +557,15 @@ const MaintenanceDetails = ({ contract, onDelete, onRefresh, onEdit, onGenerateR
               type="checkbox"
               checked={cancelImmediate}
               onChange={(e) => setCancelImmediate(e.target.checked)}
-              className="mt-0.5 w-4 h-4 rounded border-gray-600 bg-gray-700 text-red-600 focus:ring-red-500"
+              className="mt-0.5 w-4 h-4 rounded border-border-strong bg-surface-strong text-red-600 focus:ring-red-500"
             />
-            <span className="text-sm text-gray-300">Arrêter immédiatement (sans attendre la fin de la période)</span>
+            <span className="text-sm text-text-secondary">Arrêter immédiatement (sans attendre la fin de la période)</span>
           </label>
           <div className="flex justify-end gap-2">
             <button
               type="button"
               onClick={() => setCancelModalOpen(false)}
-              className="px-4 py-2 rounded-lg border border-gray-600 text-gray-300 hover:bg-gray-700/50"
+              className="px-4 py-2 rounded-lg border border-border-strong text-text-secondary hover:bg-surface-strong/50"
             >
               Annuler
             </button>

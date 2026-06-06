@@ -46,10 +46,10 @@ const ContactList = ({
   // Si aucun contact n'est disponible
   if (contacts.length === 0) {
     return (
-      <div className="bg-gray-900/30 rounded-lg p-4 sm:p-6 text-center">
+      <div className="bg-surface-muted/30 rounded-lg p-4 sm:p-6 text-center">
         <div className="text-3xl sm:text-4xl mb-3"><FiUser /></div>
-        <h4 className="text-base sm:text-lg font-medium text-gray-300 mb-2">Aucun contact</h4>
-        <p className="text-gray-400 text-xs sm:text-sm">
+        <h4 className="text-base sm:text-lg font-medium text-text-secondary mb-2">Aucun contact</h4>
+        <p className="text-text-muted text-xs sm:text-sm">
           {leadType === 'company'
             ? "Ajoutez des contacts pour cette entreprise."
             : "Ajoutez des informations de contact pour ce prospect."
@@ -65,12 +65,12 @@ const ContactList = ({
         {contacts.map((contact) => (
           <motion.div
             key={contact.id}
-            className="bg-gray-900/30 rounded-lg overflow-hidden"
+            className="bg-surface-muted/30 rounded-lg overflow-hidden"
             layout
           >
             {/* En-tête du contact (toujours visible) */}
             <div
-              className="p-3 sm:p-4 cursor-pointer flex justify-between items-center hover:bg-gray-900/50 transition-colors"
+              className="p-3 sm:p-4 cursor-pointer flex justify-between items-center hover:bg-surface-muted/50 transition-colors"
               onClick={() => toggleExpand(contact.id)}
             >
               <div className="flex items-center min-w-0 flex-1">
@@ -79,7 +79,7 @@ const ContactList = ({
                 </div>
                 <div className="ml-2 sm:ml-3 min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <h4 className="font-medium text-gray-200 text-sm sm:text-base truncate">{contact.name}</h4>
+                    <h4 className="font-medium text-text-primary text-sm sm:text-base truncate">{contact.name}</h4>
                     {contact.client_id && (
                       <span
                         className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-xs font-medium"
@@ -101,7 +101,7 @@ const ContactList = ({
               </div>
 
               <motion.button
-                className="text-gray-400 hover:text-white ml-2 flex-shrink-0"
+                className="text-text-muted hover:text-text-primary ml-2 flex-shrink-0"
                 animate={{ rotate: expandedContact === contact.id ? 180 : 0 }}
                 transition={{ duration: 0.3 }}
               >
@@ -117,17 +117,17 @@ const ContactList = ({
                   animate={{ height: 'auto', opacity: 1 }}
                   exit={{ height: 0, opacity: 0 }}
                   transition={{ duration: 0.3 }}
-                  className="overflow-hidden border-t border-gray-700/50"
+                  className="overflow-hidden border-t border-border/50"
                 >
                   <div className="p-3 sm:p-4 pt-3 space-y-3">
                     {/* Email */}
                     {contact.email && (
                       <div className="flex items-start">
-                        <div className="w-7 h-7 sm:w-8 sm:h-8 flex-shrink-0 rounded-full bg-gray-800 flex items-center justify-center text-gray-400 mr-2 sm:mr-3">
+                        <div className="w-7 h-7 sm:w-8 sm:h-8 flex-shrink-0 rounded-full bg-surface flex items-center justify-center text-text-muted mr-2 sm:mr-3">
                           <FiMail className="text-sm sm:text-base text-indigo-400" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="text-xs text-gray-400 mb-1">Email</p>
+                          <p className="text-xs text-text-muted mb-1">Email</p>
                           <a
                             href={`mailto:${contact.email}`}
                             className="text-indigo-300 hover:text-indigo-200 transition-colors text-sm break-all"
@@ -141,11 +141,11 @@ const ContactList = ({
                     {/* Téléphone */}
                     {contact.phone && (
                       <div className="flex items-start">
-                        <div className="w-7 h-7 sm:w-8 sm:h-8 flex-shrink-0 rounded-full bg-gray-800 flex items-center justify-center text-gray-400 mr-2 sm:mr-3">
+                        <div className="w-7 h-7 sm:w-8 sm:h-8 flex-shrink-0 rounded-full bg-surface flex items-center justify-center text-text-muted mr-2 sm:mr-3">
                           <FiPhone className="text-sm sm:text-base text-green-400" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="text-xs text-gray-400 mb-1">Téléphone</p>
+                          <p className="text-xs text-text-muted mb-1">Téléphone</p>
                           <a
                             href={`tel:${contact.phone}`}
                             className="text-indigo-300 hover:text-indigo-200 transition-colors text-sm"
@@ -159,12 +159,12 @@ const ContactList = ({
                     {/* Notes */}
                     {contact.notes && (
                       <div className="flex items-start">
-                        <div className="w-7 h-7 sm:w-8 sm:h-8 flex-shrink-0 rounded-full bg-gray-800 flex items-center justify-center text-gray-400 mr-2 sm:mr-3">
+                        <div className="w-7 h-7 sm:w-8 sm:h-8 flex-shrink-0 rounded-full bg-surface flex items-center justify-center text-text-muted mr-2 sm:mr-3">
                           <FiFileText className="text-sm sm:text-base text-purple-400" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="text-xs text-gray-400 mb-1">Notes</p>
-                          <p className="text-gray-300 text-sm">{contact.notes}</p>
+                          <p className="text-xs text-text-muted mb-1">Notes</p>
+                          <p className="text-text-secondary text-sm">{contact.notes}</p>
                         </div>
                       </div>
                     )}
@@ -176,14 +176,14 @@ const ContactList = ({
                           <FiUserCheck className="text-emerald-400" />
                           <span className="text-sm font-medium text-emerald-300">Client particulier</span>
                         </div>
-                        <p className="text-xs text-gray-400">
+                        <p className="text-xs text-text-muted">
                           Ce contact a aussi un profil client pour ses besoins personnels
                         </p>
                       </div>
                     )}
 
                     {/* Actions */}
-                    <div className="flex flex-col sm:flex-row justify-between gap-2 mt-2 pt-2 border-t border-gray-700/30">
+                    <div className="flex flex-col sm:flex-row justify-between gap-2 mt-2 pt-2 border-t border-border/30">
                       {/* Actions principales */}
                       <div className="flex flex-col sm:flex-row gap-2">
                         <motion.button
@@ -278,13 +278,13 @@ const ContactList = ({
             onClick={() => setEditingContact(null)}
           >
             <motion.div
-              className="bg-gray-900 border border-gray-700 rounded-xl p-4 sm:p-6 max-w-md w-full max-h-[90vh] overflow-y-auto"
+              className="bg-surface-muted border border-border rounded-xl p-4 sm:p-6 max-w-md w-full max-h-[90vh] overflow-y-auto"
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
               onClick={(e) => e.stopPropagation()}
             >
-              <h3 className="text-lg sm:text-xl font-semibold text-white mb-4">Éditer le contact</h3>
+              <h3 className="text-lg sm:text-xl font-semibold text-text-primary mb-4">Éditer le contact</h3>
               <ContactForm
                 contact={editingContact}
                 onSave={handleSaveEdit}
@@ -305,19 +305,19 @@ const ContactList = ({
             exit={{ opacity: 0 }}
           >
             <motion.div
-              className="bg-gray-900 border border-gray-700 rounded-xl p-4 sm:p-6 max-w-md w-full"
+              className="bg-surface-muted border border-border rounded-xl p-4 sm:p-6 max-w-md w-full"
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
             >
-              <h3 className="text-lg sm:text-xl font-semibold text-white mb-2">Confirmer la suppression</h3>
-              <p className="text-gray-300 text-sm sm:text-base mb-4 sm:mb-6">
+              <h3 className="text-lg sm:text-xl font-semibold text-text-primary mb-2">Confirmer la suppression</h3>
+              <p className="text-text-secondary text-sm sm:text-base mb-4 sm:mb-6">
                 Êtes-vous sûr de vouloir supprimer le contact <strong>{deletingContact.name}</strong> ?
               </p>
 
               <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3">
                 <motion.button
-                  className="px-4 py-2 rounded-lg border-2 border-white/30 text-white hover:bg-white/10 hover:border-white/40 font-medium transition-all text-sm sm:text-base"
+                  className="px-4 py-2 rounded-lg border-2 border-overlay/30 text-text-primary hover:bg-overlay/10 hover:border-overlay/40 font-medium transition-all text-sm sm:text-base"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => setDeletingContact(null)}

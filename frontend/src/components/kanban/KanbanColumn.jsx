@@ -11,18 +11,18 @@ const KanbanColumn = ({ column, leads, count, budget, onDragOver, onDrop, isDrag
       transition={{ duration: 0.3 }}
     >
       {/* En-tête de la colonne */}
-      <div className={`p-4 rounded-t-xl bg-gradient-to-r ${column.color} border-b border-white/10`}>
+      <div className={`p-4 rounded-t-xl bg-gradient-to-r ${column.color} border-b border-overlay/10`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-xl text-white">{column.icon}</span>
-            <h3 className="font-semibold text-white text-lg">{column.title}</h3>
-            <span className="text-xs bg-white/20 text-white px-2 py-1 rounded-full font-medium">
+            <span className="text-xl text-text-primary">{column.icon}</span>
+            <h3 className="font-semibold text-text-primary text-lg">{column.title}</h3>
+            <span className="text-xs bg-overlay/20 text-text-primary px-2 py-1 rounded-full font-medium">
               {count}
             </span>
           </div>
         </div>
         {budget > 0 && (
-          <div className="mt-2 text-xs text-white/80">
+          <div className="mt-2 text-xs text-text-primary/80">
             Budget: {new Intl.NumberFormat('fr-FR', {
               style: 'currency',
               currency: 'EUR',
@@ -44,7 +44,7 @@ const KanbanColumn = ({ column, leads, count, budget, onDragOver, onDrop, isDrag
         <div className="space-y-3">
           {children}
           {leads.length === 0 && (
-            <div className="text-center text-gray-400 text-sm py-8">
+            <div className="text-center text-text-muted text-sm py-8">
               Aucun lead dans cette colonne
             </div>
           )}

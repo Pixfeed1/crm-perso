@@ -41,7 +41,7 @@ const LeadCard = ({ lead, isSelected, onClick }) => {
   // Valeurs par défaut si le statut n'est pas configuré
   const statusStyle = statusConfig[lead.status] || {
     bg: 'bg-gray-500/20',
-    text: 'text-gray-300',
+    text: 'text-text-secondary',
     border: 'border-gray-500/30'
   };
 
@@ -57,7 +57,7 @@ const LeadCard = ({ lead, isSelected, onClick }) => {
   return (
     <motion.div
       className={`rounded-xl p-4 cursor-pointer transition-colors relative overflow-hidden ${
-        isSelected ? 'bg-indigo-900/40 border-indigo-500/50' : 'bg-gray-800/20 hover:bg-gray-800/40 border-transparent'
+        isSelected ? 'bg-indigo-900/40 border-indigo-500/50' : 'bg-surface/20 hover:bg-surface/40 border-transparent'
       } border`}
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
@@ -78,14 +78,14 @@ const LeadCard = ({ lead, isSelected, onClick }) => {
           <div className={`text-xs px-2 py-1 rounded-full ${statusStyle.bg} ${statusStyle.text} font-medium`}>
             {lead.status.charAt(0).toUpperCase() + lead.status.slice(1)}
           </div>
-          <div className="text-xs text-gray-400">
+          <div className="text-xs text-text-muted">
             {formatDate(lead.created_at)}
           </div>
         </div>
         
         {/* Titre et entreprise */}
         <div className="mb-2">
-          <h3 className="font-semibold text-white">{lead.name}</h3>
+          <h3 className="font-semibold text-text-primary">{lead.name}</h3>
           {lead.type === 'company' && lead.company && (
             <p className="text-sm text-indigo-300">{lead.company}</p>
           )}
@@ -93,7 +93,7 @@ const LeadCard = ({ lead, isSelected, onClick }) => {
         
         {/* Indicateur de source */}
         {lead.source && (
-          <div className="flex items-center text-xs text-gray-400 mb-2 gap-1">
+          <div className="flex items-center text-xs text-text-muted mb-2 gap-1">
             <FiMapPin />
             <span>{lead.source}</span>
           </div>
@@ -113,7 +113,7 @@ const LeadCard = ({ lead, isSelected, onClick }) => {
                 </div>
               ))}
               {lead.contacts.length > 3 && (
-                <div className="w-7 h-7 rounded-full bg-gray-700 flex items-center justify-center text-xs font-medium text-white">
+                <div className="w-7 h-7 rounded-full bg-surface-strong flex items-center justify-center text-xs font-medium text-text-primary">
                   +{lead.contacts.length - 3}
                 </div>
               )}

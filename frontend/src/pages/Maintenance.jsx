@@ -235,11 +235,11 @@ const Maintenance = () => {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center">
-                <FiTool className="text-white text-2xl" />
+                <FiTool className="text-text-primary text-2xl" />
               </div>
               <div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-white">Maintenance</h1>
-                <p className="text-gray-400 text-sm">
+                <h1 className="text-2xl sm:text-3xl font-bold text-text-primary">Maintenance</h1>
+                <p className="text-text-muted text-sm">
                   {filteredContracts.length} contrat{filteredContracts.length !== 1 ? 's' : ''}
                 </p>
               </div>
@@ -247,11 +247,11 @@ const Maintenance = () => {
 
             <div className="flex gap-2">
               {/* Toggle vue */}
-              <div className="flex bg-gray-700 rounded-lg p-1">
+              <div className="flex bg-surface-strong rounded-lg p-1">
                 <button
                   onClick={() => setViewMode('cards')}
                   className={`p-2 rounded transition-colors ${
-                    viewMode === 'cards' ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:text-white'
+                    viewMode === 'cards' ? 'bg-accent text-white' : 'text-text-muted hover:text-white'
                   }`}
                 >
                   <FiGrid />
@@ -259,7 +259,7 @@ const Maintenance = () => {
                 <button
                   onClick={() => setViewMode('list')}
                   className={`p-2 rounded transition-colors ${
-                    viewMode === 'list' ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:text-white'
+                    viewMode === 'list' ? 'bg-accent text-white' : 'text-text-muted hover:text-white'
                   }`}
                 >
                   <FiList />
@@ -281,21 +281,21 @@ const Maintenance = () => {
           {/* Statistiques */}
           {stats && (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-              <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-4">
-                <div className="text-gray-400 text-xs mb-1">Total</div>
-                <div className="text-white text-2xl font-bold">{stats.total_contracts || 0}</div>
+              <div className="bg-surface/50 border border-border rounded-xl p-4">
+                <div className="text-text-muted text-xs mb-1">Total</div>
+                <div className="text-text-primary text-2xl font-bold">{stats.total_contracts || 0}</div>
               </div>
               <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4">
                 <div className="text-green-400 text-xs mb-1">Actifs</div>
-                <div className="text-white text-2xl font-bold">{stats.active_contracts || 0}</div>
+                <div className="text-text-primary text-2xl font-bold">{stats.active_contracts || 0}</div>
               </div>
               <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4">
                 <div className="text-amber-400 text-xs mb-1">Rapports à envoyer</div>
-                <div className="text-white text-2xl font-bold">{stats.reports_due || 0}</div>
+                <div className="text-text-primary text-2xl font-bold">{stats.reports_due || 0}</div>
               </div>
               <div className="bg-indigo-500/10 border border-indigo-500/30 rounded-xl p-4">
                 <div className="text-indigo-400 text-xs mb-1">Revenus mensuels</div>
-                <div className="text-white text-2xl font-bold">
+                <div className="text-text-primary text-2xl font-bold">
                   {Math.round(stats.monthly_revenue || 0)}€
                 </div>
               </div>
@@ -303,7 +303,7 @@ const Maintenance = () => {
           )}
 
           {/* Recherche et filtres */}
-          <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl p-3 mb-6">
+          <div className="bg-surface/30 backdrop-blur-sm rounded-xl p-3 mb-6">
             <div className="flex flex-col sm:flex-row gap-3">
               {/* Recherche */}
               <div className="flex-1 relative">
@@ -312,13 +312,13 @@ const Maintenance = () => {
                   placeholder="Rechercher un site..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-4 py-2 pl-10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full bg-surface-muted/50 border border-border rounded-lg px-4 py-2 pl-10 text-text-primary placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
-                <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-text-muted" />
                 {searchQuery && (
                   <button
                     onClick={() => setSearchQuery('')}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-text-muted hover:text-text-primary"
                   >
                     <FiX />
                   </button>
@@ -335,8 +335,8 @@ const Maintenance = () => {
                     onClick={() => setStatusFilter(option.value)}
                     className={`px-3 py-2 rounded-lg text-sm ${
                       statusFilter === option.value
-                        ? 'bg-indigo-600 text-white'
-                        : 'bg-gray-700/50 text-gray-300 hover:bg-gray-700'
+                        ? 'bg-accent text-white'
+                        : 'bg-surface-strong/50 text-text-secondary hover:bg-surface-strong'
                     }`}
                   >
                     {option.label}
@@ -376,7 +376,7 @@ const Maintenance = () => {
                 {/* Bouton retour toujours visible */}
                 <button
                   onClick={closeDetails}
-                  className="mb-4 text-gray-400 hover:text-white flex items-center gap-2"
+                  className="mb-4 text-text-muted hover:text-text-primary flex items-center gap-2"
                 >
                   ← Retour à la liste
                 </button>
@@ -409,7 +409,7 @@ const Maintenance = () => {
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={handleAddContract}
-                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg"
+                    className="px-4 py-2 bg-accent hover:bg-indigo-700 text-white rounded-lg"
                   >
                     Créer un contrat
                   </motion.button>

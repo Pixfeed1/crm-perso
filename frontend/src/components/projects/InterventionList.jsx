@@ -11,7 +11,7 @@ const InterventionList = ({ interventions = [], stats, onToggleStatus, onEdit, o
     'security': { icon: <FiShield />, label: 'Sécurité', color: 'text-red-400' },
     'maintenance': { icon: <FiTool />, label: 'Maintenance', color: 'text-purple-400' },
     'support': { icon: <FiHelpCircle />, label: 'Support', color: 'text-amber-400' },
-    'other': { icon: <FiTool />, label: 'Autre', color: 'text-gray-400' }
+    'other': { icon: <FiTool />, label: 'Autre', color: 'text-text-muted' }
   };
 
   // Configuration des statuts
@@ -19,12 +19,12 @@ const InterventionList = ({ interventions = [], stats, onToggleStatus, onEdit, o
     'planned': { label: 'Planifié', bg: 'bg-blue-500/20', text: 'text-blue-300' },
     'in_progress': { label: 'En cours', bg: 'bg-amber-500/20', text: 'text-amber-300' },
     'completed': { label: 'Terminé', bg: 'bg-emerald-500/20', text: 'text-emerald-300' },
-    'cancelled': { label: 'Annulé', bg: 'bg-gray-500/20', text: 'text-gray-400' }
+    'cancelled': { label: 'Annulé', bg: 'bg-gray-500/20', text: 'text-text-muted' }
   };
 
   // Configuration des priorités
   const priorityConfig = {
-    'low': { label: 'Basse', color: 'text-gray-400' },
+    'low': { label: 'Basse', color: 'text-text-muted' },
     'normal': { label: 'Normale', color: 'text-blue-400' },
     'high': { label: 'Haute', color: 'text-amber-400' },
     'urgent': { label: 'Urgente', color: 'text-red-400' }
@@ -57,10 +57,10 @@ const InterventionList = ({ interventions = [], stats, onToggleStatus, onEdit, o
   // Si aucune intervention
   if (interventions.length === 0) {
     return (
-      <div className="bg-gray-900/30 rounded-lg p-6 text-center">
+      <div className="bg-surface-muted/30 rounded-lg p-6 text-center">
         <div className="text-4xl mb-3 text-gray-500"><FiTool /></div>
-        <h4 className="text-lg font-medium text-gray-300 mb-2">Aucune intervention</h4>
-        <p className="text-gray-400 text-sm">
+        <h4 className="text-lg font-medium text-text-secondary mb-2">Aucune intervention</h4>
+        <p className="text-text-muted text-sm">
           Ajoutez des interventions pour suivre les actions réalisées sur ce projet.
         </p>
       </div>
@@ -73,13 +73,13 @@ const InterventionList = ({ interventions = [], stats, onToggleStatus, onEdit, o
   return (
     <div>
       {/* Résumé des interventions */}
-      <div className="mb-4 bg-gray-900/30 p-4 rounded-lg flex flex-wrap gap-4 justify-between items-center">
+      <div className="mb-4 bg-surface-muted/30 p-4 rounded-lg flex flex-wrap gap-4 justify-between items-center">
         <div className="flex items-center gap-6">
           <div className="flex items-center">
             <div className="text-2xl mr-3 text-purple-400"><FiTool /></div>
             <div>
-              <h4 className="font-medium text-white">{interventions.length} intervention{interventions.length > 1 ? 's' : ''}</h4>
-              <div className="text-sm text-gray-400">
+              <h4 className="font-medium text-text-primary">{interventions.length} intervention{interventions.length > 1 ? 's' : ''}</h4>
+              <div className="text-sm text-text-muted">
                 {stats?.completed || interventions.filter(i => i.status === 'completed').length} terminée{(stats?.completed || interventions.filter(i => i.status === 'completed').length) > 1 ? 's' : ''}
               </div>
             </div>
@@ -88,8 +88,8 @@ const InterventionList = ({ interventions = [], stats, onToggleStatus, onEdit, o
           <div className="flex items-center">
             <div className="text-2xl mr-3 text-indigo-400"><FiClock /></div>
             <div>
-              <h4 className="font-medium text-white">{formatDuration(totalMinutes)}</h4>
-              <div className="text-sm text-gray-400">Temps total</div>
+              <h4 className="font-medium text-text-primary">{formatDuration(totalMinutes)}</h4>
+              <div className="text-sm text-text-muted">Temps total</div>
             </div>
           </div>
         </div>
@@ -112,7 +112,7 @@ const InterventionList = ({ interventions = [], stats, onToggleStatus, onEdit, o
                 exit={{ opacity: 0, height: 0 }}
                 transition={{ duration: 0.2 }}
                 className={`p-4 rounded-lg ${
-                  intervention.status === 'completed' ? 'bg-purple-900/20' : 'bg-gray-800/50'
+                  intervention.status === 'completed' ? 'bg-purple-900/20' : 'bg-surface/50'
                 }`}
               >
                 <div className="flex items-start justify-between">
@@ -125,7 +125,7 @@ const InterventionList = ({ interventions = [], stats, onToggleStatus, onEdit, o
                     <div className="flex-1">
                       {/* Titre et type */}
                       <div className="flex items-center gap-2 mb-1">
-                        <span className={`font-medium ${intervention.status === 'completed' ? 'text-gray-400' : 'text-white'}`}>
+                        <span className={`font-medium ${intervention.status === 'completed' ? 'text-text-muted' : 'text-text-primary'}`}>
                           {intervention.title}
                         </span>
                         <span className={`text-xs px-2 py-0.5 rounded ${statusInfo.bg} ${statusInfo.text}`}>
@@ -135,7 +135,7 @@ const InterventionList = ({ interventions = [], stats, onToggleStatus, onEdit, o
 
                       {/* Description */}
                       {intervention.description && (
-                        <p className="text-sm text-gray-400 mb-2">{intervention.description}</p>
+                        <p className="text-sm text-text-muted mb-2">{intervention.description}</p>
                       )}
 
                       {/* Métadonnées */}

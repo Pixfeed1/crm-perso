@@ -15,7 +15,7 @@ const ClientCard = ({ client, isSelected, onClick, onMaintenanceClick }) => {
     },
     inactive: {
       bg: 'bg-gray-500/20',
-      text: 'text-gray-300',
+      text: 'text-text-secondary',
       border: 'border-gray-500/30',
       label: 'Inactif'
     }
@@ -44,7 +44,7 @@ const ClientCard = ({ client, isSelected, onClick, onMaintenanceClick }) => {
       className={`rounded-xl p-5 cursor-pointer transition-all relative overflow-hidden h-full flex flex-col ${
         isSelected
           ? 'bg-indigo-900/40 border-indigo-500/50 shadow-lg shadow-indigo-500/20 z-10'
-          : 'bg-gray-800/40 hover:bg-gray-800/60 border-gray-700/50 hover:border-gray-600/50 hover:shadow-xl hover:shadow-black/20 hover:z-20'
+          : 'bg-surface/40 hover:bg-surface/60 border-border/50 hover:border-border-strong/50 hover:shadow-xl hover:shadow-black/20 hover:z-20'
       } border backdrop-blur-sm`}
       whileHover={{ scale: 1.02, y: -4 }}
       whileTap={{ scale: 0.98 }}
@@ -86,7 +86,7 @@ const ClientCard = ({ client, isSelected, onClick, onMaintenanceClick }) => {
 
         {/* Nom et entreprise */}
         <div className="mb-4 flex-grow">
-          <h3 className="font-bold text-white text-base leading-tight mb-1 line-clamp-1">{client.name}</h3>
+          <h3 className="font-bold text-text-primary text-base leading-tight mb-1 line-clamp-1">{client.name}</h3>
           {client.company && (
             <p className="text-sm text-indigo-300 font-medium line-clamp-1">{client.company}</p>
           )}
@@ -95,13 +95,13 @@ const ClientCard = ({ client, isSelected, onClick, onMaintenanceClick }) => {
         {/* Informations de contact */}
         <div className="space-y-2 mb-4">
           {client.email && (
-            <div className="flex items-center gap-2 text-xs text-gray-400">
+            <div className="flex items-center gap-2 text-xs text-text-muted">
               <FiMail className="text-gray-500 flex-shrink-0" />
               <span className="truncate">{client.email}</span>
             </div>
           )}
           {client.phone && (
-            <div className="flex items-center gap-2 text-xs text-gray-400">
+            <div className="flex items-center gap-2 text-xs text-text-muted">
               <FiPhone className="text-gray-500 flex-shrink-0" />
               <span className="truncate">{client.phone}</span>
             </div>
@@ -109,7 +109,7 @@ const ClientCard = ({ client, isSelected, onClick, onMaintenanceClick }) => {
         </div>
 
         {/* Valeur et date */}
-        <div className="flex justify-between items-center pt-4 border-t border-gray-700/50 mt-auto">
+        <div className="flex justify-between items-center pt-4 border-t border-border/50 mt-auto">
           {client.lifetime_value > 0 ? (
             <div>
               <div className="text-xs text-gray-500 mb-0.5">Valeur</div>
@@ -123,7 +123,7 @@ const ClientCard = ({ client, isSelected, onClick, onMaintenanceClick }) => {
 
           <div className="text-right">
             <div className="text-xs text-gray-500 mb-0.5">Client depuis</div>
-            <div className="text-xs font-medium text-gray-300">
+            <div className="text-xs font-medium text-text-secondary">
               {client.contract_start_date ? formatDate(client.contract_start_date) : formatDate(client.created_at)}
             </div>
           </div>

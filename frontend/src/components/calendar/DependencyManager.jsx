@@ -98,7 +98,7 @@ const DependencyManager = ({ eventId, allEvents }) => {
 
   if (!eventId) {
     return (
-      <div className="text-gray-400 text-sm p-4 text-center">
+      <div className="text-text-muted text-sm p-4 text-center">
         Enregistrez l'événement pour gérer les dépendances
       </div>
     );
@@ -110,7 +110,7 @@ const DependencyManager = ({ eventId, allEvents }) => {
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
           <FiLink className="text-blue-400" />
-          <h4 className="text-white font-medium">Dépendances</h4>
+          <h4 className="text-text-primary font-medium">Dépendances</h4>
         </div>
         {!isAdding && (
           <button
@@ -142,16 +142,16 @@ const DependencyManager = ({ eventId, allEvents }) => {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="bg-gray-800 rounded-lg p-4 space-y-3"
+            className="bg-surface rounded-lg p-4 space-y-3"
           >
             <div>
-              <label className="block text-sm text-gray-300 mb-1">
+              <label className="block text-sm text-text-secondary mb-1">
                 Événement cible
               </label>
               <select
                 value={selectedTargetEvent}
                 onChange={(e) => setSelectedTargetEvent(e.target.value)}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 bg-surface-strong border border-border-strong text-text-primary rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">Sélectionner un événement</option>
                 {availableEvents.map(event => (
@@ -163,13 +163,13 @@ const DependencyManager = ({ eventId, allEvents }) => {
             </div>
 
             <div>
-              <label className="block text-sm text-gray-300 mb-1">
+              <label className="block text-sm text-text-secondary mb-1">
                 Type de dépendance
               </label>
               <select
                 value={dependencyType}
                 onChange={(e) => setDependencyType(e.target.value)}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 bg-surface-strong border border-border-strong text-text-primary rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="finish_to_start">Fin → Début (standard)</option>
                 <option value="start_to_start">Début → Début</option>
@@ -179,14 +179,14 @@ const DependencyManager = ({ eventId, allEvents }) => {
             </div>
 
             <div>
-              <label className="block text-sm text-gray-300 mb-1">
+              <label className="block text-sm text-text-secondary mb-1">
                 Décalage (jours)
               </label>
               <input
                 type="number"
                 value={lagDays}
                 onChange={(e) => setLagDays(e.target.value)}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 bg-surface-strong border border-border-strong text-text-primary rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="0"
               />
             </div>
@@ -197,7 +197,7 @@ const DependencyManager = ({ eventId, allEvents }) => {
                   setIsAdding(false);
                   setError(null);
                 }}
-                className="px-3 py-2 text-gray-300 hover:bg-gray-700 rounded transition-colors"
+                className="px-3 py-2 text-text-secondary hover:bg-surface-strong rounded transition-colors"
               >
                 Annuler
               </button>
@@ -216,24 +216,24 @@ const DependencyManager = ({ eventId, allEvents }) => {
       {/* Liste des dépendances sortantes */}
       {dependencies.outgoing.length > 0 && (
         <div className="space-y-2">
-          <h5 className="text-gray-400 text-sm font-medium">Bloque ces événements :</h5>
+          <h5 className="text-text-muted text-sm font-medium">Bloque ces événements :</h5>
           {dependencies.outgoing.map((dep) => (
             <motion.div
               key={dep.id}
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
-              className="bg-gray-800 rounded p-3 flex items-center justify-between"
+              className="bg-surface rounded p-3 flex items-center justify-between"
             >
               <div className="flex-1">
-                <div className="text-white text-sm">{dep.target_title || 'Événement sans titre'}</div>
-                <div className="text-gray-400 text-xs mt-1">
+                <div className="text-text-primary text-sm">{dep.target_title || 'Événement sans titre'}</div>
+                <div className="text-text-muted text-xs mt-1">
                   {dep.dependency_type ? dependencyTypeLabels[dep.dependency_type] : 'Type non défini'}
                   {dep.lag_days && dep.lag_days !== 0 && ` (${dep.lag_days > 0 ? '+' : ''}${dep.lag_days} jours)`}
                 </div>
               </div>
               <button
                 onClick={() => handleRemoveDependency(dep.id)}
-                className="p-2 text-gray-400 hover:text-red-400 hover:bg-gray-700 rounded transition-colors"
+                className="p-2 text-text-muted hover:text-red-400 hover:bg-surface-strong rounded transition-colors"
               >
                 <FiX />
               </button>
@@ -245,16 +245,16 @@ const DependencyManager = ({ eventId, allEvents }) => {
       {/* Liste des dépendances entrantes */}
       {dependencies.incoming.length > 0 && (
         <div className="space-y-2">
-          <h5 className="text-gray-400 text-sm font-medium">Bloqué par ces événements :</h5>
+          <h5 className="text-text-muted text-sm font-medium">Bloqué par ces événements :</h5>
           {dependencies.incoming.map((dep) => (
             <motion.div
               key={dep.id}
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
-              className="bg-gray-800 rounded p-3"
+              className="bg-surface rounded p-3"
             >
-              <div className="text-white text-sm">{dep.source_title || 'Événement sans titre'}</div>
-              <div className="text-gray-400 text-xs mt-1">
+              <div className="text-text-primary text-sm">{dep.source_title || 'Événement sans titre'}</div>
+              <div className="text-text-muted text-xs mt-1">
                 {dep.dependency_type ? dependencyTypeLabels[dep.dependency_type] : 'Type non défini'}
                 {dep.lag_days && dep.lag_days !== 0 && ` (${dep.lag_days > 0 ? '+' : ''}${dep.lag_days} jours)`}
               </div>
@@ -265,7 +265,7 @@ const DependencyManager = ({ eventId, allEvents }) => {
 
       {/* Message si aucune dépendance */}
       {dependencies.outgoing.length === 0 && dependencies.incoming.length === 0 && !isAdding && (
-        <div className="text-gray-400 text-sm text-center py-4">
+        <div className="text-text-muted text-sm text-center py-4">
           Aucune dépendance définie
         </div>
       )}

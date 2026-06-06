@@ -111,14 +111,14 @@ const DayView = ({
   return (
     <div className="flex-1 flex flex-col h-full">
       {/* En-tête avec la date du jour */}
-      <div className="p-3 border-b border-gray-700 flex justify-between items-center">
-        <h3 className={`text-lg font-medium capitalize ${isToday() ? 'text-indigo-300' : 'text-white'}`}>
+      <div className="p-3 border-b border-border flex justify-between items-center">
+        <h3 className={`text-lg font-medium capitalize ${isToday() ? 'text-indigo-300' : 'text-text-primary'}`}>
           {formatDay()}
           {isToday() && <span className="ml-2 text-sm text-indigo-400">(Aujourd'hui)</span>}
         </h3>
         
         <motion.button
-          className="px-3 py-1 bg-indigo-600/70 hover:bg-indigo-600 text-white rounded-lg text-sm flex items-center"
+          className="px-3 py-1 bg-accent/70 hover:bg-accent text-white rounded-lg text-sm flex items-center"
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={() => onAddEvent(currentDate)}
@@ -130,8 +130,8 @@ const DayView = ({
       
       {/* Événements sur toute la journée */}
       {allDayEvents.length > 0 && (
-        <div className="border-b border-gray-700">
-          <div className="py-1 px-3 bg-gray-800/50 text-gray-400 text-xs font-medium">
+        <div className="border-b border-border">
+          <div className="py-1 px-3 bg-surface/50 text-text-muted text-xs font-medium">
             Toute la journée
           </div>
           <div className="p-2 space-y-1">
@@ -139,7 +139,7 @@ const DayView = ({
               <motion.div
                 key={event.id}
                 className={`px-3 py-2 rounded-md cursor-pointer border-l-2 ${
-                  categoryColors[event.category] || 'bg-gray-600/80 text-gray-100 border-gray-500'
+                  categoryColors[event.category] || 'bg-border-strong/80 text-gray-100 border-gray-500'
                 } ${selectedEvent && selectedEvent.id === event.id ? 'ring-2 ring-white' : ''}`}
                 whileHover={{ scale: 1.01 }}
                 whileTap={{ scale: 0.99 }}
@@ -162,7 +162,7 @@ const DayView = ({
         {hours.map(hour => (
           <div 
             key={hour} 
-            className="h-20 border-b border-gray-700 flex"
+            className="h-20 border-b border-border flex"
             onClick={() => {
               // Créer une date avec l'heure sélectionnée
               const newDate = new Date(currentDate);
@@ -170,7 +170,7 @@ const DayView = ({
               onAddEvent(newDate);
             }}
           >
-            <div className="w-16 p-2 text-right text-gray-400 text-sm border-r border-gray-700">
+            <div className="w-16 p-2 text-right text-text-muted text-sm border-r border-border">
               {formatHour(hour)}
             </div>
             <div className="flex-1"></div>
@@ -185,7 +185,7 @@ const DayView = ({
               <motion.div
                 key={event.id}
                 className={`absolute left-2 right-2 p-2 rounded-md border pointer-events-auto cursor-pointer
-                  ${categoryColors[event.category] || 'bg-gray-600/80 text-gray-100 border-gray-500'} 
+                  ${categoryColors[event.category] || 'bg-border-strong/80 text-gray-100 border-gray-500'} 
                   ${selectedEvent && selectedEvent.id === event.id ? 'ring-2 ring-white' : ''}
                   ${position.startsBefore ? 'rounded-t-none border-t-dashed' : ''}
                   ${position.endsAfter ? 'rounded-b-none border-b-dashed' : ''}
@@ -232,9 +232,9 @@ const DayView = ({
       {/* Message si aucun événement */}
       {sortedEvents.length === 0 && (
         <div className="flex-1 flex items-center justify-center">
-          <div className="text-center text-gray-400">
+          <div className="text-center text-text-muted">
             <div className="text-4xl mb-3"><FiCalendar /></div>
-            <h4 className="text-lg font-medium text-gray-300 mb-2">Pas d'événements</h4>
+            <h4 className="text-lg font-medium text-text-secondary mb-2">Pas d'événements</h4>
             <p className="text-sm">
               Aucun événement planifié pour cette journée.
             </p>

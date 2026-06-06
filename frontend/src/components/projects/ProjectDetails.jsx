@@ -117,7 +117,7 @@ const ProjectDetails = ({ project, onUpdate, onDelete, onAddTask, onToggleTaskSt
   // Valeurs par défaut si le statut ou type n'est pas configuré
   const statusStyle = statusConfig[project.status] || {
     bg: 'bg-gray-500/20',
-    text: 'text-gray-300',
+    text: 'text-text-secondary',
     border: 'border-gray-500/30',
     label: project.status,
     icon: <FiHelpCircle />
@@ -210,7 +210,7 @@ const ProjectDetails = ({ project, onUpdate, onDelete, onAddTask, onToggleTaskSt
   };
 
   return (
-    <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-gray-700/50">
+    <div className="bg-surface/50 backdrop-blur-sm rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-border/50">
       {/* En-tête avec actions */}
       <div className="flex justify-between items-start mb-6">
         <div>
@@ -252,7 +252,7 @@ const ProjectDetails = ({ project, onUpdate, onDelete, onAddTask, onToggleTaskSt
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              className="p-2 rounded-lg bg-gray-600/30 hover:bg-gray-600/50 text-gray-300"
+              className="p-2 rounded-lg bg-border-strong/30 hover:bg-border-strong/50 text-text-secondary"
               onClick={onClose}
             >
               <FiX />
@@ -264,8 +264,8 @@ const ProjectDetails = ({ project, onUpdate, onDelete, onAddTask, onToggleTaskSt
       {/* Informations principales */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         {/* Panneau de gauche (Informations) */}
-        <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl p-5">
-          <h3 className="text-lg font-medium text-gray-200 mb-4 flex items-center">
+        <div className="bg-surface/30 backdrop-blur-sm rounded-xl p-5">
+          <h3 className="text-lg font-medium text-text-primary mb-4 flex items-center">
             <span className="mr-2"><FiClipboard /></span>
             Détails du projet
           </h3>
@@ -273,7 +273,7 @@ const ProjectDetails = ({ project, onUpdate, onDelete, onAddTask, onToggleTaskSt
           <div className="space-y-4">
             {/* Statut avec menu déroulant */}
             <div className="flex justify-between items-center">
-              <span className="text-gray-400">Statut</span>
+              <span className="text-text-muted">Statut</span>
               
               <div className="relative group">
                 <button 
@@ -285,12 +285,12 @@ const ProjectDetails = ({ project, onUpdate, onDelete, onAddTask, onToggleTaskSt
                 </button>
                 
                 {/* Menu déroulant pour changer le statut */}
-                <div className="absolute right-0 mt-2 w-48 bg-gray-900 border border-gray-700 rounded-lg shadow-lg z-10 overflow-hidden opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300">
+                <div className="absolute right-0 mt-2 w-48 bg-surface-muted border border-border rounded-lg shadow-lg z-10 overflow-hidden opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300">
                   {Object.keys(statusConfig).map(status => (
                     <button
                       key={status}
-                      className={`w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-800 flex items-center ${
-                        project.status === status ? 'bg-gray-800' : ''
+                      className={`w-full text-left px-4 py-2 text-sm text-text-primary hover:bg-surface flex items-center ${
+                        project.status === status ? 'bg-surface' : ''
                       }`}
                       onClick={() => handleStatusChange(status)}
                     >
@@ -304,27 +304,27 @@ const ProjectDetails = ({ project, onUpdate, onDelete, onAddTask, onToggleTaskSt
             
             {/* Dates */}
             <div className="flex justify-between">
-              <span className="text-gray-400">Début</span>
-              <span className="font-medium text-white">{formatDate(project.start_date)}</span>
+              <span className="text-text-muted">Début</span>
+              <span className="font-medium text-text-primary">{formatDate(project.start_date)}</span>
             </div>
             
             <div className="flex justify-between">
-              <span className="text-gray-400">Fin</span>
-              <span className="font-medium text-white">{formatDate(project.end_date)}</span>
+              <span className="text-text-muted">Fin</span>
+              <span className="font-medium text-text-primary">{formatDate(project.end_date)}</span>
             </div>
             
             {/* Durée */}
             <div className="flex justify-between">
-              <span className="text-gray-400">Durée</span>
-              <span className="font-medium text-white">{totalDays} jours</span>
+              <span className="text-text-muted">Durée</span>
+              <span className="font-medium text-text-primary">{totalDays} jours</span>
             </div>
             
             {/* Jours restants (si le projet n'est pas terminé) */}
             {project.status !== 'terminé' && project.status !== 'annulé' && (
               <div className="flex justify-between">
-                <span className="text-gray-400">Restant</span>
+                <span className="text-text-muted">Restant</span>
                 <span className={`font-medium ${
-                  daysRemaining <= 7 ? 'text-rose-300' : 'text-white'
+                  daysRemaining <= 7 ? 'text-rose-300' : 'text-text-primary'
                 }`}>
                   {daysRemaining} jour{daysRemaining > 1 ? 's' : ''}
                 </span>
@@ -333,30 +333,30 @@ const ProjectDetails = ({ project, onUpdate, onDelete, onAddTask, onToggleTaskSt
             
             {/* Montant */}
             <div className="flex justify-between">
-              <span className="text-gray-400">Montant</span>
-              <span className="font-medium text-white">{(project.amount || project.budget || 0).toLocaleString()} €</span>
+              <span className="text-text-muted">Montant</span>
+              <span className="font-medium text-text-primary">{(project.amount || project.budget || 0).toLocaleString()} €</span>
             </div>
           </div>
         </div>
         
         {/* Panneau de droite (Description) */}
-        <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl p-5">
-          <h3 className="text-lg font-medium text-gray-200 mb-4 flex items-center">
+        <div className="bg-surface/30 backdrop-blur-sm rounded-xl p-5">
+          <h3 className="text-lg font-medium text-text-primary mb-4 flex items-center">
             <span className="mr-2"><FiFileText /></span>
             Description
           </h3>
           
-          <div className="bg-gray-900/50 rounded-lg p-4 min-h-[120px] text-gray-300">
+          <div className="bg-surface-muted/50 rounded-lg p-4 min-h-[120px] text-text-secondary">
             {project.description || 'Aucune description pour ce projet.'}
           </div>
           
           {/* Progression */}
           <div className="mt-4">
             <div className="flex justify-between items-center mb-1">
-              <span className="text-sm text-gray-400">Progression</span>
-              <span className="text-sm font-medium text-white">{project.progress}%</span>
+              <span className="text-sm text-text-muted">Progression</span>
+              <span className="text-sm font-medium text-text-primary">{project.progress}%</span>
             </div>
-            <div className="h-3 bg-gray-900/70 rounded-full overflow-hidden">
+            <div className="h-3 bg-surface-muted/70 rounded-full overflow-hidden">
               <motion.div 
                 className="h-full rounded-full bg-gradient-to-r from-purple-500 to-indigo-500"
                 initial={{ width: 0 }}
@@ -366,13 +366,13 @@ const ProjectDetails = ({ project, onUpdate, onDelete, onAddTask, onToggleTaskSt
             </div>
             
             {/* Visualisation de la période écoulée */}
-            <div className="mt-3 flex justify-between text-xs text-gray-400">
+            <div className="mt-3 flex justify-between text-xs text-text-muted">
               <span>{formatDate(project.start_date)}</span>
               <span>{formatDate(project.end_date)}</span>
             </div>
-            <div className="mt-1 h-2 bg-gray-900/70 rounded-full overflow-hidden">
+            <div className="mt-1 h-2 bg-surface-muted/70 rounded-full overflow-hidden">
               <div 
-                className="h-full bg-gray-700"
+                className="h-full bg-surface-strong"
                 style={{ width: `${(daysElapsed / totalDays) * 100}%` }}
               />
             </div>
@@ -384,9 +384,9 @@ const ProjectDetails = ({ project, onUpdate, onDelete, onAddTask, onToggleTaskSt
       <ProjectPayments project={project} />
 
       {/* Section Tâches */}
-      <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl p-5 mb-6">
+      <div className="bg-surface/30 backdrop-blur-sm rounded-xl p-5 mb-6">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-medium text-gray-200 flex items-center">
+          <h3 className="text-lg font-medium text-text-primary flex items-center">
             <span className="mr-2"><FiCheck /></span>
             Tâches
           </h3>
@@ -434,9 +434,9 @@ const ProjectDetails = ({ project, onUpdate, onDelete, onAddTask, onToggleTaskSt
 
       {/* Section Interventions (uniquement pour les projets maintenance) */}
       {project.type === 'maintenance' && (
-        <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl p-5 mb-6">
+        <div className="bg-surface/30 backdrop-blur-sm rounded-xl p-5 mb-6">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-medium text-gray-200 flex items-center">
+            <h3 className="text-lg font-medium text-text-primary flex items-center">
               <span className="mr-2"><FiTool /></span>
               Interventions
             </h3>
@@ -510,13 +510,13 @@ const ProjectDetails = ({ project, onUpdate, onDelete, onAddTask, onToggleTaskSt
             onClick={() => setIsEditing(false)}
           >
             <motion.div
-              className="bg-gray-900 border border-gray-700 rounded-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+              className="bg-surface-muted border border-border rounded-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
               onClick={(e) => e.stopPropagation()}
             >
-              <h3 className="text-xl font-semibold text-white mb-4">Modifier le projet</h3>
+              <h3 className="text-xl font-semibold text-text-primary mb-4">Modifier le projet</h3>
 
               <form onSubmit={(e) => {
                 e.preventDefault();
@@ -533,24 +533,24 @@ const ProjectDetails = ({ project, onUpdate, onDelete, onAddTask, onToggleTaskSt
               }}>
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">Nom du projet *</label>
+                    <label className="block text-sm font-medium text-text-secondary mb-1">Nom du projet *</label>
                     <input
                       type="text"
                       name="name"
                       defaultValue={project.name}
                       required
-                      className="w-full bg-gray-800 text-gray-100 border border-gray-600 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      className="w-full bg-surface text-gray-100 border border-border-strong rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
                     />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-1">Type *</label>
+                      <label className="block text-sm font-medium text-text-secondary mb-1">Type *</label>
                       <select
                         name="type"
                         defaultValue={project.type}
                         required
-                        className="w-full bg-gray-800 text-gray-100 border border-gray-600 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        className="w-full bg-surface text-gray-100 border border-border-strong rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
                       >
                         <option value="site-web">Site Web</option>
                         <option value="application-mobile">App Mobile</option>
@@ -563,12 +563,12 @@ const ProjectDetails = ({ project, onUpdate, onDelete, onAddTask, onToggleTaskSt
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-1">Statut *</label>
+                      <label className="block text-sm font-medium text-text-secondary mb-1">Statut *</label>
                       <select
                         name="status"
                         defaultValue={project.status}
                         required
-                        className="w-full bg-gray-800 text-gray-100 border border-gray-600 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        className="w-full bg-surface text-gray-100 border border-border-strong rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
                       >
                         <option value="planifié">Planifié</option>
                         <option value="en-cours">En cours</option>
@@ -580,48 +580,48 @@ const ProjectDetails = ({ project, onUpdate, onDelete, onAddTask, onToggleTaskSt
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">Description</label>
+                    <label className="block text-sm font-medium text-text-secondary mb-1">Description</label>
                     <textarea
                       name="description"
                       defaultValue={project.description || ''}
                       rows={3}
-                      className="w-full bg-gray-800 text-gray-100 border border-gray-600 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      className="w-full bg-surface text-gray-100 border border-border-strong rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
                     />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-1">Date de début *</label>
+                      <label className="block text-sm font-medium text-text-secondary mb-1">Date de début *</label>
                       <input
                         type="date"
                         name="start_date"
                         defaultValue={project.start_date}
                         required
-                        className="w-full bg-gray-800 text-gray-100 border border-gray-600 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        className="w-full bg-surface text-gray-100 border border-border-strong rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-1">Date de fin *</label>
+                      <label className="block text-sm font-medium text-text-secondary mb-1">Date de fin *</label>
                       <input
                         type="date"
                         name="end_date"
                         defaultValue={project.end_date}
                         required
-                        className="w-full bg-gray-800 text-gray-100 border border-gray-600 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        className="w-full bg-surface text-gray-100 border border-border-strong rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">Montant (€)</label>
+                    <label className="block text-sm font-medium text-text-secondary mb-1">Montant (€)</label>
                     <input
                       type="number"
                       name="amount"
                       defaultValue={project.amount || project.budget || 0}
                       step="0.01"
                       min="0"
-                      className="w-full bg-gray-800 text-gray-100 border border-gray-600 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      className="w-full bg-surface text-gray-100 border border-border-strong rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
                     />
                   </div>
                 </div>
@@ -629,7 +629,7 @@ const ProjectDetails = ({ project, onUpdate, onDelete, onAddTask, onToggleTaskSt
                 <div className="flex justify-end space-x-3 mt-6">
                   <motion.button
                     type="button"
-                    className="px-4 py-2 rounded-lg border-2 border-white/30 text-white hover:bg-white/10 hover:border-white/40 font-medium transition-all"
+                    className="px-4 py-2 rounded-lg border-2 border-overlay/30 text-text-primary hover:bg-overlay/10 hover:border-overlay/40 font-medium transition-all"
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => setIsEditing(false)}
@@ -662,19 +662,19 @@ const ProjectDetails = ({ project, onUpdate, onDelete, onAddTask, onToggleTaskSt
             exit={{ opacity: 0 }}
           >
             <motion.div
-              className="bg-gray-900 border border-gray-700 rounded-xl p-6 max-w-md w-full"
+              className="bg-surface-muted border border-border rounded-xl p-6 max-w-md w-full"
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
             >
-              <h3 className="text-xl font-semibold text-white mb-2">Confirmer la suppression</h3>
-              <p className="text-gray-300 mb-6">
+              <h3 className="text-xl font-semibold text-text-primary mb-2">Confirmer la suppression</h3>
+              <p className="text-text-secondary mb-6">
                 Êtes-vous sûr de vouloir supprimer définitivement ce projet ? Cette action ne peut pas être annulée.
               </p>
               
               <div className="flex justify-end space-x-3">
                 <motion.button
-                  className="px-4 py-2 rounded-lg border-2 border-white/30 text-white hover:bg-white/10 hover:border-white/40 font-medium transition-all"
+                  className="px-4 py-2 rounded-lg border-2 border-overlay/30 text-text-primary hover:bg-overlay/10 hover:border-overlay/40 font-medium transition-all"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => setShowDeleteConfirm(false)}

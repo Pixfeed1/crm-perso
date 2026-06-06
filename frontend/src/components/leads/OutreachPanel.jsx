@@ -264,7 +264,7 @@ Je bosse dans [ton domaine] et j'ai une idée qui pourrait t'intéresser. On en 
       case 'sent': return 'text-blue-400 bg-blue-500/20';
       case 'responded': return 'text-green-400 bg-green-500/20';
       case 'not_interested': return 'text-red-400 bg-red-500/20';
-      default: return 'text-gray-400 bg-gray-500/20';
+      default: return 'text-text-muted bg-gray-500/20';
     }
   };
 
@@ -274,10 +274,10 @@ Je bosse dans [ton domaine] et j'ai une idée qui pourrait t'intéresser. On en 
       <div className="bg-gradient-to-br from-emerald-900/40 via-teal-900/30 to-emerald-900/40 border border-emerald-500/30 rounded-xl p-6 backdrop-blur-sm">
         <div className="flex items-center gap-4 mb-4">
           <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center flex-shrink-0">
-            <FiSend className="text-white text-xl" />
+            <FiSend className="text-text-primary text-xl" />
           </div>
           <div className="flex-1">
-            <h3 className="text-xl font-bold text-white mb-1">
+            <h3 className="text-xl font-bold text-text-primary mb-1">
               Outreach Multi-Canal
             </h3>
             <p className="text-sm text-emerald-200">
@@ -288,37 +288,37 @@ Je bosse dans [ton domaine] et j'ai une idée qui pourrait t'intéresser. On en 
 
         {/* Stats rapides */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="bg-gray-800/50 rounded-lg p-3 text-center">
-            <div className="text-2xl font-bold text-white">{stats.total}</div>
-            <div className="text-xs text-gray-400">Total leads</div>
+          <div className="bg-surface/50 rounded-lg p-3 text-center">
+            <div className="text-2xl font-bold text-text-primary">{stats.total}</div>
+            <div className="text-xs text-text-muted">Total leads</div>
           </div>
-          <div className="bg-gray-800/50 rounded-lg p-3 text-center">
+          <div className="bg-surface/50 rounded-lg p-3 text-center">
             <div className="text-2xl font-bold text-amber-400">{stats.notContacted}</div>
-            <div className="text-xs text-gray-400">Non contactés</div>
+            <div className="text-xs text-text-muted">Non contactés</div>
           </div>
-          <div className="bg-gray-800/50 rounded-lg p-3 text-center">
+          <div className="bg-surface/50 rounded-lg p-3 text-center">
             <div className="text-2xl font-bold text-blue-400">{stats.pending}</div>
-            <div className="text-xs text-gray-400">En attente</div>
+            <div className="text-xs text-text-muted">En attente</div>
           </div>
-          <div className="bg-gray-800/50 rounded-lg p-3 text-center">
+          <div className="bg-surface/50 rounded-lg p-3 text-center">
             <div className="text-2xl font-bold text-green-400">{stats.responded}</div>
-            <div className="text-xs text-gray-400">Ont répondu</div>
+            <div className="text-xs text-text-muted">Ont répondu</div>
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Liste des leads */}
-        <div className="lg:col-span-1 bg-gray-800/30 border border-gray-700 rounded-xl p-4">
+        <div className="lg:col-span-1 bg-surface/30 border border-border rounded-xl p-4">
           <div className="flex items-center justify-between mb-4">
-            <h4 className="font-semibold text-white flex items-center gap-2">
+            <h4 className="font-semibold text-text-primary flex items-center gap-2">
               <FiUser className="text-emerald-400" />
               Leads à contacter
             </h4>
             <select
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
-              className="text-xs bg-gray-700 border border-gray-600 rounded-lg px-2 py-1 text-white"
+              className="text-xs bg-surface-strong border border-border-strong rounded-lg px-2 py-1 text-text-primary"
             >
               <option value="all">Tous ({leads.length})</option>
               <option value="not_contacted">Non contactés ({stats.notContacted})</option>
@@ -329,7 +329,7 @@ Je bosse dans [ton domaine] et j'ai une idée qui pourrait t'intéresser. On en 
 
           <div className="space-y-2 max-h-[500px] overflow-y-auto">
             {filteredLeads.length === 0 ? (
-              <div className="text-center py-8 text-gray-400">
+              <div className="text-center py-8 text-text-muted">
                 <FiUser className="w-8 h-8 mx-auto mb-2 opacity-50" />
                 <p className="text-sm">Aucun lead à afficher</p>
               </div>
@@ -349,15 +349,15 @@ Je bosse dans [ton domaine] et j'ai une idée qui pourrait t'intéresser. On en 
                     className={`w-full text-left p-3 rounded-lg transition-all ${
                       isSelected
                         ? 'bg-emerald-600/30 border-emerald-500'
-                        : 'bg-gray-800/50 hover:bg-gray-700/50 border-transparent'
+                        : 'bg-surface/50 hover:bg-surface-strong/50 border-transparent'
                     } border`}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
-                        <div className="font-medium text-white truncate">
+                        <div className="font-medium text-text-primary truncate">
                           {lead.company_name}
                         </div>
-                        <div className="text-xs text-gray-400 truncate">
+                        <div className="text-xs text-text-muted truncate">
                           {lead.contact_name || 'Pas de contact'}
                         </div>
                       </div>
@@ -385,19 +385,19 @@ Je bosse dans [ton domaine] et j'ai une idée qui pourrait t'intéresser. On en 
         </div>
 
         {/* Zone de rédaction */}
-        <div className="lg:col-span-2 bg-gray-800/30 border border-gray-700 rounded-xl p-4">
+        <div className="lg:col-span-2 bg-surface/30 border border-border rounded-xl p-4">
           {!selectedLead ? (
-            <div className="flex flex-col items-center justify-center h-full py-12 text-gray-400">
+            <div className="flex flex-col items-center justify-center h-full py-12 text-text-muted">
               <FiMessageSquare className="w-12 h-12 mb-4 opacity-50" />
               <p>Sélectionnez un lead pour commencer</p>
             </div>
           ) : (
             <div className="space-y-4">
               {/* Info lead sélectionné */}
-              <div className="flex items-center justify-between bg-gray-900/50 rounded-lg p-3">
+              <div className="flex items-center justify-between bg-surface-muted/50 rounded-lg p-3">
                 <div>
-                  <div className="font-semibold text-white">{selectedLead.company_name}</div>
-                  <div className="text-sm text-gray-400">
+                  <div className="font-semibold text-text-primary">{selectedLead.company_name}</div>
+                  <div className="text-sm text-text-muted">
                     {selectedLead.contact_name && <span>{selectedLead.contact_name} • </span>}
                     {selectedLead.email || selectedLead.phone || 'Pas de contact'}
                   </div>
@@ -406,19 +406,19 @@ Je bosse dans [ton domaine] et j'ai une idée qui pourrait t'intéresser. On en 
                   {selectedLead.email && (
                     <a
                       href={`mailto:${selectedLead.email}`}
-                      className="p-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
+                      className="p-2 bg-surface-strong hover:bg-border-strong rounded-lg transition-colors"
                       title="Ouvrir email"
                     >
-                      <FiMail className="w-4 h-4 text-white" />
+                      <FiMail className="w-4 h-4 text-text-primary" />
                     </a>
                   )}
                   {selectedLead.phone && (
                     <a
                       href={`tel:${selectedLead.phone}`}
-                      className="p-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
+                      className="p-2 bg-surface-strong hover:bg-border-strong rounded-lg transition-colors"
                       title="Appeler"
                     >
-                      <FiPhone className="w-4 h-4 text-white" />
+                      <FiPhone className="w-4 h-4 text-text-primary" />
                     </a>
                   )}
                 </div>
@@ -450,8 +450,8 @@ Je bosse dans [ton domaine] et j'ai une idée qui pourrait t'intéresser. On en 
                       }}
                       className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
                         activeChannel === channel.id
-                          ? `bg-${channel.color}-600 text-white`
-                          : 'bg-gray-700/50 text-gray-300 hover:bg-gray-600/50'
+                          ? `bg-${channel.color}-600 text-text-primary`
+                          : 'bg-surface-strong/50 text-text-secondary hover:bg-border-strong/50'
                       }`}
                     >
                       <channel.icon className="w-4 h-4" />
@@ -499,10 +499,10 @@ Je bosse dans [ton domaine] et j'ai une idée qui pourrait t'intéresser. On en 
                       <button
                         key={template.id}
                         onClick={() => applyTemplate(template)}
-                        className="text-left p-3 bg-gray-700/50 hover:bg-gray-600/50 rounded-lg transition-colors"
+                        className="text-left p-3 bg-surface-strong/50 hover:bg-border-strong/50 rounded-lg transition-colors"
                       >
-                        <div className="font-medium text-white text-sm">{template.name}</div>
-                        <div className="text-xs text-gray-400 truncate mt-1">
+                        <div className="font-medium text-text-primary text-sm">{template.name}</div>
+                        <div className="text-xs text-text-muted truncate mt-1">
                           {template.body.substring(0, 50)}...
                         </div>
                       </button>
@@ -514,7 +514,7 @@ Je bosse dans [ton domaine] et j'ai une idée qui pourrait t'intéresser. On en 
               {/* Champ objet (email uniquement) */}
               {activeChannel === 'email' && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">
+                  <label className="block text-sm font-medium text-text-secondary mb-1">
                     Objet
                   </label>
                   <input
@@ -522,14 +522,14 @@ Je bosse dans [ton domaine] et j'ai une idée qui pourrait t'intéresser. On en 
                     value={emailSubject}
                     onChange={(e) => setEmailSubject(e.target.value)}
                     placeholder="Objet de l'email..."
-                    className="w-full px-4 py-2 bg-gray-900/50 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500"
+                    className="w-full px-4 py-2 bg-surface-muted/50 border border-border-strong rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-emerald-500"
                   />
                 </div>
               )}
 
               {/* Zone de texte message */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-text-secondary mb-1">
                   Message
                   <span className="text-xs text-gray-500 ml-2">
                     Variables: {`{{prénom}}`}, {`{{entreprise}}`}, {`{{email}}`}
@@ -540,7 +540,7 @@ Je bosse dans [ton domaine] et j'ai une idée qui pourrait t'intéresser. On en 
                   onChange={(e) => setMessage(e.target.value)}
                   placeholder={`Écrivez votre message ${activeChannel === 'email' ? 'email' : activeChannel === 'facebook' ? 'Facebook' : 'Instagram'}...`}
                   rows={8}
-                  className="w-full px-4 py-3 bg-gray-900/50 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500 resize-none"
+                  className="w-full px-4 py-3 bg-surface-muted/50 border border-border-strong rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-emerald-500 resize-none"
                 />
                 <div className="flex justify-between mt-1">
                   <span className="text-xs text-gray-500">
@@ -558,11 +558,11 @@ Je bosse dans [ton domaine] et j'ai une idée qui pourrait t'intéresser. On en 
               </div>
 
               {/* Actions */}
-              <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-700">
+              <div className="flex flex-wrap gap-2 pt-2 border-t border-border">
                 <button
                   onClick={markAsSent}
                   disabled={!message}
-                  className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-700 disabled:text-gray-500 text-white rounded-lg font-medium transition-colors"
+                  className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-surface-strong disabled:text-gray-500 text-white rounded-lg font-medium transition-colors"
                 >
                   <FiSend className="w-4 h-4" />
                   Marquer envoyé
@@ -579,21 +579,21 @@ Je bosse dans [ton domaine] et j'ai une idée qui pourrait t'intéresser. On en 
                 <div className="relative">
                   <button
                     onClick={() => setShowFollowupPicker(!showFollowupPicker)}
-                    className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition-colors"
+                    className="flex items-center justify-center gap-2 px-4 py-2 bg-surface-strong hover:bg-border-strong text-text-primary rounded-lg font-medium transition-colors"
                   >
                     <FiClock className="w-4 h-4" />
                     Relancer
                   </button>
 
                   {showFollowupPicker && (
-                    <div className="absolute bottom-full left-0 mb-2 bg-gray-800 border border-gray-600 rounded-lg p-2 shadow-xl z-10">
-                      <div className="text-xs text-gray-400 mb-2">Relancer dans :</div>
+                    <div className="absolute bottom-full left-0 mb-2 bg-surface border border-border-strong rounded-lg p-2 shadow-xl z-10">
+                      <div className="text-xs text-text-muted mb-2">Relancer dans :</div>
                       <div className="flex flex-col gap-1">
                         {[1, 2, 3, 5, 7, 14].map(days => (
                           <button
                             key={days}
                             onClick={() => scheduleFollowup(days)}
-                            className="px-3 py-1 text-sm text-white hover:bg-gray-700 rounded transition-colors text-left"
+                            className="px-3 py-1 text-sm text-text-primary hover:bg-surface-strong rounded transition-colors text-left"
                           >
                             {days} jour{days > 1 ? 's' : ''}
                           </button>

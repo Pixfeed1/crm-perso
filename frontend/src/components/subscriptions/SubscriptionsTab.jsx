@@ -30,12 +30,12 @@ const buildDefaultModalites = (periodicity, intervalCount) => {
 };
 
 const billingStatusConfig = {
-  none: { bg: 'bg-gray-500/20', text: 'text-gray-300', label: 'Pas de paiement' },
+  none: { bg: 'bg-gray-500/20', text: 'text-text-secondary', label: 'Pas de paiement' },
   pending: { bg: 'bg-amber-500/20', text: 'text-amber-300', label: "En attente d'autorisation" },
   active: { bg: 'bg-green-500/20', text: 'text-green-300', label: 'Actif' },
   past_due: { bg: 'bg-rose-500/20', text: 'text-rose-300', label: 'Impayé' },
   canceling: { bg: 'bg-amber-500/20', text: 'text-amber-300', label: 'Résiliation prévue' },
-  canceled: { bg: 'bg-gray-500/20', text: 'text-gray-300', label: 'Résilié' }
+  canceled: { bg: 'bg-gray-500/20', text: 'text-text-secondary', label: 'Résilié' }
 };
 
 const formatAmount = (amount) =>
@@ -247,14 +247,14 @@ const SubscriptionsTab = () => {
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
-        <p className="text-gray-400 text-sm">
+        <p className="text-text-muted text-sm">
           {subscriptions.length} abonnement{subscriptions.length !== 1 ? 's' : ''}
         </p>
         <motion.button
           whileHover={{ scale: 1.03 }}
           whileTap={{ scale: 0.97 }}
           onClick={openForm}
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-accent hover:bg-indigo-700 text-white rounded-lg transition-colors"
         >
           <FiPlus />
           Créer un abonnement
@@ -262,11 +262,11 @@ const SubscriptionsTab = () => {
       </div>
 
       {loading ? (
-        <div className="text-center py-12 text-gray-400">Chargement...</div>
+        <div className="text-center py-12 text-text-muted">Chargement...</div>
       ) : subscriptions.length === 0 ? (
-        <div className="text-center py-12 bg-gray-800/30 rounded-lg border border-gray-700/50">
+        <div className="text-center py-12 bg-surface/30 rounded-lg border border-border/50">
           <FiRepeat className="w-16 h-16 mx-auto text-gray-600 mb-4" />
-          <p className="text-gray-400">Aucun abonnement</p>
+          <p className="text-text-muted">Aucun abonnement</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -278,12 +278,12 @@ const SubscriptionsTab = () => {
                 key={sub.id}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-gray-800/30 border border-gray-700/50 rounded-xl p-4"
+                className="bg-surface/30 border border-border/50 rounded-xl p-4"
               >
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="text-white font-semibold">{sub.label}</h3>
+                      <h3 className="text-text-primary font-semibold">{sub.label}</h3>
                       <span className={`text-xs px-2.5 py-1 rounded-full ${style.bg} ${style.text} font-medium`}>
                         {style.label}
                       </span>
@@ -292,8 +292,8 @@ const SubscriptionsTab = () => {
                       <FiUser size={14} />
                       {sub.client_name || 'Client inconnu'}
                     </p>
-                    <p className="text-gray-400 text-sm mt-1">
-                      <span className="text-white font-medium">{formatAmount(sub.amount_eur)}</span>
+                    <p className="text-text-muted text-sm mt-1">
+                      <span className="text-text-primary font-medium">{formatAmount(sub.amount_eur)}</span>
                       {' · '}{periodicityLabel(sub)}
                     </p>
                   </div>
@@ -304,7 +304,7 @@ const SubscriptionsTab = () => {
                       whileTap={{ scale: 0.95 }}
                       onClick={() => handleGenerateLink(sub)}
                       disabled={loadingLink === sub.id}
-                      className="p-2 bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 rounded-lg transition-colors disabled:opacity-50"
+                      className="p-2 bg-accent/30 hover:bg-accent/50 text-indigo-300 rounded-lg transition-colors disabled:opacity-50"
                       title="Générer le lien de paiement"
                     >
                       <FiLink size={16} />
@@ -355,19 +355,19 @@ const SubscriptionsTab = () => {
                 </div>
 
                 {url && (
-                  <div className="mt-3 bg-gray-900/40 rounded-lg p-3">
-                    <p className="text-xs text-gray-400 mb-2">Lien de paiement (carte ou SEPA) :</p>
+                  <div className="mt-3 bg-surface-muted/40 rounded-lg p-3">
+                    <p className="text-xs text-text-muted mb-2">Lien de paiement (carte ou SEPA) :</p>
                     <div className="flex gap-2">
                       <input
                         type="text"
                         readOnly
                         value={url}
                         onFocus={(e) => e.target.select()}
-                        className="flex-1 min-w-0 bg-gray-800/60 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-300"
+                        className="flex-1 min-w-0 bg-surface/60 border border-border rounded-lg px-3 py-2 text-sm text-text-secondary"
                       />
                       <button
                         onClick={() => handleCopyLink(sub)}
-                        className="px-3 py-2 bg-indigo-600/40 hover:bg-indigo-600/60 text-indigo-200 rounded-lg text-sm flex items-center gap-1"
+                        className="px-3 py-2 bg-accent/40 hover:bg-accent/60 text-indigo-200 rounded-lg text-sm flex items-center gap-1"
                       >
                         {copiedId === sub.id ? <FiCheck size={14} /> : <FiCopy size={14} />}
                         {copiedId === sub.id ? 'Copié' : 'Copier'}
@@ -395,24 +395,24 @@ const SubscriptionsTab = () => {
               initial={{ scale: 0.95, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: 20 }}
-              className="bg-gray-900 border border-gray-700 rounded-2xl max-w-lg w-full flex flex-col max-h-[90vh] overflow-hidden"
+              className="bg-surface-muted border border-border rounded-2xl max-w-lg w-full flex flex-col max-h-[90vh] overflow-hidden"
               style={{ maxHeight: '90dvh' }}
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex justify-between items-center px-6 py-4 border-b border-gray-700 shrink-0">
-                <h2 className="text-xl font-bold text-white">Nouvel abonnement</h2>
-                <button onClick={() => setFormOpen(false)} className="text-gray-400 hover:text-white">
+              <div className="flex justify-between items-center px-6 py-4 border-b border-border shrink-0">
+                <h2 className="text-xl font-bold text-text-primary">Nouvel abonnement</h2>
+                <button onClick={() => setFormOpen(false)} className="text-text-muted hover:text-text-primary">
                   <FiX size={22} />
                 </button>
               </div>
               <form onSubmit={handleCreate} className="flex flex-col min-h-0 flex-1">
                 <div className="p-6 space-y-4 overflow-y-auto flex-1 min-h-0">
                 <div>
-                  <label className="block text-sm text-gray-300 mb-1">Client</label>
+                  <label className="block text-sm text-text-secondary mb-1">Client</label>
                   <select
                     value={form.client_id}
                     onChange={(e) => setForm({ ...form, client_id: e.target.value })}
-                    className="w-full px-3 py-2 bg-gray-800/60 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+                    className="w-full px-3 py-2 bg-surface/60 border border-border rounded-lg text-text-primary focus:outline-none focus:border-indigo-500"
                     required
                   >
                     <option value="">Sélectionner un client</option>
@@ -423,19 +423,19 @@ const SubscriptionsTab = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm text-gray-300 mb-1">Libellé</label>
+                  <label className="block text-sm text-text-secondary mb-1">Libellé</label>
                   <input
                     type="text"
                     value={form.label}
                     onChange={(e) => setForm({ ...form, label: e.target.value })}
                     placeholder="Ex. Hébergement Premium"
-                    className="w-full px-3 py-2 bg-gray-800/60 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                    className="w-full px-3 py-2 bg-surface/60 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-indigo-500"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm text-gray-300 mb-1">Montant (€)</label>
+                  <label className="block text-sm text-text-secondary mb-1">Montant (€)</label>
                   <input
                     type="number"
                     min="0"
@@ -443,17 +443,17 @@ const SubscriptionsTab = () => {
                     value={form.amount_eur}
                     onChange={(e) => setForm({ ...form, amount_eur: e.target.value })}
                     placeholder="0.00"
-                    className="w-full px-3 py-2 bg-gray-800/60 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                    className="w-full px-3 py-2 bg-surface/60 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-indigo-500"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm text-gray-300 mb-1">Périodicité</label>
+                  <label className="block text-sm text-text-secondary mb-1">Périodicité</label>
                   <select
                     value={form.periodicity}
                     onChange={(e) => setForm({ ...form, periodicity: e.target.value })}
-                    className="w-full px-3 py-2 bg-gray-800/60 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+                    className="w-full px-3 py-2 bg-surface/60 border border-border rounded-lg text-text-primary focus:outline-none focus:border-indigo-500"
                   >
                     <option value="month">Mensuel</option>
                     <option value="year">Annuel</option>
@@ -463,80 +463,80 @@ const SubscriptionsTab = () => {
 
                 {form.periodicity === 'custom' && (
                   <div>
-                    <label className="block text-sm text-gray-300 mb-1">Tous les N mois</label>
+                    <label className="block text-sm text-text-secondary mb-1">Tous les N mois</label>
                     <input
                       type="number"
                       min="1"
                       step="1"
                       value={form.interval_count}
                       onChange={(e) => setForm({ ...form, interval_count: e.target.value })}
-                      className="w-full px-3 py-2 bg-gray-800/60 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+                      className="w-full px-3 py-2 bg-surface/60 border border-border rounded-lg text-text-primary focus:outline-none focus:border-indigo-500"
                     />
                   </div>
                 )}
 
                 {/* Conditions (PDF joint à l'envoi du lien) */}
-                <div className="pt-2 border-t border-gray-700/60">
-                  <p className="text-sm font-semibold text-gray-200 mb-3">Conditions (PDF joint à l'email)</p>
+                <div className="pt-2 border-t border-border/60">
+                  <p className="text-sm font-semibold text-text-primary mb-3">Conditions (PDF joint à l'email)</p>
 
                   <div className="mb-3">
-                    <label className="block text-sm text-gray-300 mb-1">Intro</label>
+                    <label className="block text-sm text-text-secondary mb-1">Intro</label>
                     <textarea
                       value={form.cond_intro}
                       onChange={(e) => setForm({ ...form, cond_intro: e.target.value })}
                       rows={2}
                       placeholder="Texte d'introduction du document de conditions..."
-                      className="w-full px-3 py-2 bg-gray-800/60 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 resize-y"
+                      className="w-full px-3 py-2 bg-surface/60 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-indigo-500 resize-y"
                     />
                   </div>
 
                   <div className="mb-3">
-                    <label className="block text-sm text-gray-300 mb-1">Inclus <span className="text-gray-500">(une ligne par élément)</span></label>
+                    <label className="block text-sm text-text-secondary mb-1">Inclus <span className="text-gray-500">(une ligne par élément)</span></label>
                     <textarea
                       value={form.cond_included}
                       onChange={(e) => setForm({ ...form, cond_included: e.target.value })}
                       rows={3}
                       placeholder={"Hébergement et nom de domaine\nSupport par email\n..."}
-                      className="w-full px-3 py-2 bg-gray-800/60 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 resize-y"
+                      className="w-full px-3 py-2 bg-surface/60 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-indigo-500 resize-y"
                     />
                   </div>
 
                   <div className="mb-3">
-                    <label className="block text-sm text-gray-300 mb-1">Exclus <span className="text-gray-500">(une ligne par élément)</span></label>
+                    <label className="block text-sm text-text-secondary mb-1">Exclus <span className="text-gray-500">(une ligne par élément)</span></label>
                     <textarea
                       value={form.cond_excluded}
                       onChange={(e) => setForm({ ...form, cond_excluded: e.target.value })}
                       rows={3}
                       placeholder={"Développements spécifiques\nRefonte graphique\n..."}
-                      className="w-full px-3 py-2 bg-gray-800/60 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 resize-y"
+                      className="w-full px-3 py-2 bg-surface/60 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-indigo-500 resize-y"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm text-gray-300 mb-1">Modalités <span className="text-gray-500">(« Clé : valeur » par ligne)</span></label>
+                    <label className="block text-sm text-text-secondary mb-1">Modalités <span className="text-gray-500">(« Clé : valeur » par ligne)</span></label>
                     <textarea
                       value={form.cond_modalites}
                       onChange={(e) => { setForm({ ...form, cond_modalites: e.target.value }); setModalitesTouched(true); }}
                       rows={5}
-                      className="w-full px-3 py-2 bg-gray-800/60 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 resize-y"
+                      className="w-full px-3 py-2 bg-surface/60 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-indigo-500 resize-y"
                     />
                     <p className="text-xs text-gray-500 mt-1">Pré-rempli selon la périodicité (engagement, facturation, résiliation, responsabilité).</p>
                   </div>
                 </div>
                 </div>
 
-                <div className="flex gap-3 px-6 py-4 border-t border-gray-700 shrink-0 bg-gray-900">
+                <div className="flex gap-3 px-6 py-4 border-t border-border shrink-0 bg-surface-muted">
                   <button
                     type="button"
                     onClick={() => setFormOpen(false)}
-                    className="flex-1 px-4 py-2.5 border-2 border-white/20 text-white hover:bg-white/10 rounded-lg font-medium transition-all"
+                    className="flex-1 px-4 py-2.5 border-2 border-overlay/20 text-text-primary hover:bg-overlay/10 rounded-lg font-medium transition-all"
                   >
                     Annuler
                   </button>
                   <button
                     type="submit"
                     disabled={saving}
-                    className="flex-1 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
+                    className="flex-1 px-4 py-2.5 bg-accent hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
                   >
                     {saving ? 'Création...' : "Créer l'abonnement"}
                   </button>
@@ -561,7 +561,7 @@ const SubscriptionsTab = () => {
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
-              className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 border border-rose-500/30 rounded-2xl max-w-md w-full p-6"
+              className="bg-gradient-to-br from-surface-muted via-surface to-surface-muted border border-rose-500/30 rounded-2xl max-w-md w-full p-6"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-start gap-4 mb-4">
@@ -569,22 +569,22 @@ const SubscriptionsTab = () => {
                   <FiSlash className="text-2xl" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-white mb-1">Arrêter l'abonnement</h3>
-                  <p className="text-gray-300 text-sm">
+                  <h3 className="text-xl font-bold text-text-primary mb-1">Arrêter l'abonnement</h3>
+                  <p className="text-text-secondary text-sm">
                     « {cancelTarget.label} » — {cancelTarget.client_name || 'client'}
                   </p>
                 </div>
               </div>
 
-              <label className="flex items-start gap-3 p-3 bg-white/5 rounded-lg border border-white/10 cursor-pointer mb-4">
+              <label className="flex items-start gap-3 p-3 bg-overlay/5 rounded-lg border border-overlay/10 cursor-pointer mb-4">
                 <input
                   type="checkbox"
                   checked={cancelImmediate}
                   onChange={(e) => setCancelImmediate(e.target.checked)}
                   className="mt-1"
                 />
-                <span className="text-sm text-gray-300">
-                  Arrêter <strong className="text-white">immédiatement</strong>. Sinon, l'abonnement
+                <span className="text-sm text-text-secondary">
+                  Arrêter <strong className="text-text-primary">immédiatement</strong>. Sinon, l'abonnement
                   reste actif jusqu'à la fin de la période déjà payée (résiliation programmée).
                 </span>
               </label>
@@ -592,7 +592,7 @@ const SubscriptionsTab = () => {
               <div className="flex gap-3">
                 <button
                   onClick={() => setCancelTarget(null)}
-                  className="flex-1 px-4 py-2.5 border-2 border-white/20 text-white hover:bg-white/10 rounded-lg font-medium transition-all"
+                  className="flex-1 px-4 py-2.5 border-2 border-overlay/20 text-text-primary hover:bg-overlay/10 rounded-lg font-medium transition-all"
                 >
                   Annuler
                 </button>
@@ -623,7 +623,7 @@ const SubscriptionsTab = () => {
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
-              className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 border border-red-500/30 rounded-2xl max-w-md w-full p-6"
+              className="bg-gradient-to-br from-surface-muted via-surface to-surface-muted border border-red-500/30 rounded-2xl max-w-md w-full p-6"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-start gap-4 mb-4">
@@ -631,8 +631,8 @@ const SubscriptionsTab = () => {
                   <FiTrash2 className="text-2xl" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-white mb-1">Supprimer l'abonnement</h3>
-                  <p className="text-gray-300 text-sm">
+                  <h3 className="text-xl font-bold text-text-primary mb-1">Supprimer l'abonnement</h3>
+                  <p className="text-text-secondary text-sm">
                     Cette action supprime l'abonnement du CRM. Si un paiement récurrent Stripe est
                     actif, pensez à l'arrêter avant.
                   </p>
@@ -641,7 +641,7 @@ const SubscriptionsTab = () => {
               <div className="flex gap-3">
                 <button
                   onClick={() => setDeleteTarget(null)}
-                  className="flex-1 px-4 py-2.5 border-2 border-white/20 text-white hover:bg-white/10 rounded-lg font-medium transition-all"
+                  className="flex-1 px-4 py-2.5 border-2 border-overlay/20 text-text-primary hover:bg-overlay/10 rounded-lg font-medium transition-all"
                 >
                   Annuler
                 </button>

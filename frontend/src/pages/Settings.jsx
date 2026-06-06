@@ -186,7 +186,7 @@ const Settings = () => {
   if (isLoading) {
     return (
       <div className="p-4 sm:p-6 lg:p-8">
-        <div className="text-center py-12 text-gray-400">
+        <div className="text-center py-12 text-text-muted">
           Chargement...
         </div>
       </div>
@@ -201,7 +201,7 @@ const Settings = () => {
           <h1 className="text-2xl sm:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-300 to-purple-300">
             Paramètres
           </h1>
-          <p className="text-gray-400 text-sm mt-1">
+          <p className="text-text-muted text-sm mt-1">
             Configuration de votre entreprise
           </p>
         </div>
@@ -209,7 +209,7 @@ const Settings = () => {
         <button
           onClick={handleSave}
           disabled={isSaving}
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-600 text-white rounded-lg transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-accent hover:bg-indigo-700 disabled:bg-border-strong text-white rounded-lg transition-colors"
         >
           <FiSave />
           <span>{isSaving ? 'Enregistrement...' : 'Enregistrer'}</span>
@@ -217,13 +217,13 @@ const Settings = () => {
       </div>
 
       {/* Onglets */}
-      <div className="flex gap-2 mb-6 border-b border-gray-700 overflow-x-auto">
+      <div className="flex gap-2 mb-6 border-b border-border overflow-x-auto">
         <button
           onClick={() => setActiveTab('company')}
           className={`px-4 py-2 flex items-center gap-2 border-b-2 transition-colors whitespace-nowrap ${
             activeTab === 'company'
               ? 'border-indigo-500 text-indigo-300'
-              : 'border-transparent text-gray-400 hover:text-gray-300'
+              : 'border-transparent text-text-muted hover:text-text-secondary'
           }`}
         >
           <FiBriefcase />
@@ -234,7 +234,7 @@ const Settings = () => {
           className={`px-4 py-2 flex items-center gap-2 border-b-2 transition-colors whitespace-nowrap ${
             activeTab === 'email'
               ? 'border-indigo-500 text-indigo-300'
-              : 'border-transparent text-gray-400 hover:text-gray-300'
+              : 'border-transparent text-text-muted hover:text-text-secondary'
           }`}
         >
           <FiMail />
@@ -245,7 +245,7 @@ const Settings = () => {
           className={`px-4 py-2 flex items-center gap-2 border-b-2 transition-colors whitespace-nowrap ${
             activeTab === 'video'
               ? 'border-indigo-500 text-indigo-300'
-              : 'border-transparent text-gray-400 hover:text-gray-300'
+              : 'border-transparent text-text-muted hover:text-text-secondary'
           }`}
         >
           <FiVideo />
@@ -256,7 +256,7 @@ const Settings = () => {
           className={`px-4 py-2 flex items-center gap-2 border-b-2 transition-colors whitespace-nowrap ${
             activeTab === 'reminders'
               ? 'border-indigo-500 text-indigo-300'
-              : 'border-transparent text-gray-400 hover:text-gray-300'
+              : 'border-transparent text-text-muted hover:text-text-secondary'
           }`}
         >
           <FiBell />
@@ -267,7 +267,7 @@ const Settings = () => {
           className={`px-4 py-2 flex items-center gap-2 border-b-2 transition-colors whitespace-nowrap ${
             activeTab === 'appearance'
               ? 'border-indigo-500 text-indigo-300'
-              : 'border-transparent text-gray-400 hover:text-gray-300'
+              : 'border-transparent text-text-muted hover:text-text-secondary'
           }`}
         >
           <FiSun />
@@ -283,11 +283,11 @@ const Settings = () => {
         transition={{ duration: 0.3 }}
       >
         {activeTab === 'company' && (
-          <div className="bg-gray-800/30 rounded-lg border border-gray-700/50 p-6">
+          <div className="bg-surface/30 rounded-lg border border-border/50 p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Nom entreprise */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-text-secondary mb-2">
                   Nom de l'entreprise
                 </label>
                 <input
@@ -295,14 +295,14 @@ const Settings = () => {
                   name="company_name"
                   value={formData.company_name || ''}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full px-4 py-2 bg-surface-muted/50 border border-border rounded-lg text-text-primary focus:outline-none focus:border-indigo-500"
                   placeholder="Mon Entreprise"
                 />
               </div>
 
               {/* Email */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-text-secondary mb-2">
                   Email professionnel
                 </label>
                 <input
@@ -310,14 +310,14 @@ const Settings = () => {
                   name="email"
                   value={formData.email || ''}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full px-4 py-2 bg-surface-muted/50 border border-border rounded-lg text-text-primary focus:outline-none focus:border-indigo-500"
                   placeholder="contact@entreprise.com"
                 />
               </div>
 
               {/* Téléphone */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-text-secondary mb-2">
                   Téléphone
                 </label>
                 <input
@@ -325,14 +325,14 @@ const Settings = () => {
                   name="phone"
                   value={formData.phone || ''}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full px-4 py-2 bg-surface-muted/50 border border-border rounded-lg text-text-primary focus:outline-none focus:border-indigo-500"
                   placeholder="01 23 45 67 89"
                 />
               </div>
 
               {/* SIRET */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-text-secondary mb-2">
                   SIRET
                 </label>
                 <input
@@ -340,14 +340,14 @@ const Settings = () => {
                   name="siret"
                   value={formData.siret || ''}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full px-4 py-2 bg-surface-muted/50 border border-border rounded-lg text-text-primary focus:outline-none focus:border-indigo-500"
                   placeholder="123 456 789 00012"
                 />
               </div>
 
               {/* Adresse */}
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-text-secondary mb-2">
                   Adresse
                 </label>
                 <input
@@ -355,14 +355,14 @@ const Settings = () => {
                   name="address"
                   value={formData.address || ''}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full px-4 py-2 bg-surface-muted/50 border border-border rounded-lg text-text-primary focus:outline-none focus:border-indigo-500"
                   placeholder="123 Rue de la République"
                 />
               </div>
 
               {/* Code postal */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-text-secondary mb-2">
                   Code postal
                 </label>
                 <input
@@ -370,14 +370,14 @@ const Settings = () => {
                   name="postal_code"
                   value={formData.postal_code || ''}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full px-4 py-2 bg-surface-muted/50 border border-border rounded-lg text-text-primary focus:outline-none focus:border-indigo-500"
                   placeholder="75001"
                 />
               </div>
 
               {/* Ville */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-text-secondary mb-2">
                   Ville
                 </label>
                 <input
@@ -385,14 +385,14 @@ const Settings = () => {
                   name="city"
                   value={formData.city || ''}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full px-4 py-2 bg-surface-muted/50 border border-border rounded-lg text-text-primary focus:outline-none focus:border-indigo-500"
                   placeholder="Paris"
                 />
               </div>
 
               {/* Pays */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-text-secondary mb-2">
                   Pays
                 </label>
                 <input
@@ -400,14 +400,14 @@ const Settings = () => {
                   name="country"
                   value={formData.country || 'France'}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full px-4 py-2 bg-surface-muted/50 border border-border rounded-lg text-text-primary focus:outline-none focus:border-indigo-500"
                   placeholder="France"
                 />
               </div>
 
               {/* Logo URL */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-text-secondary mb-2">
                   URL du logo
                 </label>
                 <input
@@ -415,7 +415,7 @@ const Settings = () => {
                   name="logo_url"
                   value={formData.logo_url || ''}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full px-4 py-2 bg-surface-muted/50 border border-border rounded-lg text-text-primary focus:outline-none focus:border-indigo-500"
                   placeholder="https://..."
                 />
                 <p className="text-xs text-gray-500 mt-1">
@@ -429,17 +429,17 @@ const Settings = () => {
         {activeTab === 'email' && (
           <div className="space-y-6">
             {/* Configuration SMTP */}
-            <div className="bg-gray-800/30 rounded-lg border border-gray-700/50 p-6">
-              <h3 className="text-lg font-semibold text-white mb-4">Configuration SMTP</h3>
-              <p className="text-sm text-gray-400 mb-4">
-                La configuration SMTP se fait via le fichier <code className="bg-gray-900 px-2 py-1 rounded">.env</code> du backend.
+            <div className="bg-surface/30 rounded-lg border border-border/50 p-6">
+              <h3 className="text-lg font-semibold text-text-primary mb-4">Configuration SMTP</h3>
+              <p className="text-sm text-text-muted mb-4">
+                La configuration SMTP se fait via le fichier <code className="bg-surface-muted px-2 py-1 rounded">.env</code> du backend.
                 <br />
-                Référez-vous au fichier <code className="bg-gray-900 px-2 py-1 rounded">.env.example</code> pour les détails de configuration.
+                Référez-vous au fichier <code className="bg-surface-muted px-2 py-1 rounded">.env.example</code> pour les détails de configuration.
               </p>
 
-              <div className="bg-gray-900/50 rounded-lg p-4 mb-4">
-                <h4 className="text-sm font-medium text-gray-300 mb-3">Variables requises :</h4>
-                <div className="space-y-2 font-mono text-xs text-gray-400">
+              <div className="bg-surface-muted/50 rounded-lg p-4 mb-4">
+                <h4 className="text-sm font-medium text-text-secondary mb-3">Variables requises :</h4>
+                <div className="space-y-2 font-mono text-xs text-text-muted">
                   <div>• EMAIL_HOST (ex: mail.votre-domaine.com)</div>
                   <div>• EMAIL_PORT (ex: 587)</div>
                   <div>• EMAIL_USER (ex: contact@votre-domaine.com)</div>
@@ -453,7 +453,7 @@ const Settings = () => {
                 <button
                   onClick={handleTestEmail}
                   disabled={isTestingEmail}
-                  className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-600 text-white rounded-lg transition-colors"
+                  className="flex items-center gap-2 px-4 py-2 bg-accent hover:bg-indigo-700 disabled:bg-border-strong text-white rounded-lg transition-colors"
                 >
                   <FiMail />
                   <span>{isTestingEmail ? 'Test en cours...' : 'Tester la connexion SMTP'}</span>
@@ -504,15 +504,15 @@ const Settings = () => {
             </div>
 
             {/* Signature email */}
-            <div className="bg-gray-800/30 rounded-lg border border-gray-700/50 p-6">
-              <h3 className="text-lg font-semibold text-white mb-2">Signature email</h3>
-              <p className="text-sm text-gray-400 mb-4">
+            <div className="bg-surface/30 rounded-lg border border-border/50 p-6">
+              <h3 className="text-lg font-semibold text-text-primary mb-2">Signature email</h3>
+              <p className="text-sm text-text-muted mb-4">
                 Personnalisez votre signature pour les emails envoyés depuis l'application
               </p>
 
               {/* Templates de signature */}
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-text-secondary mb-2">
                   Choisissez votre modèle de signature
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -522,12 +522,12 @@ const Settings = () => {
                     onClick={() => handleSignatureChange(signatureTemplates.executive)}
                     className={`p-3 rounded-lg transition-colors text-left ${
                       formData.email_signature === signatureTemplates.executive
-                        ? 'bg-indigo-600/40 border-2 border-indigo-400 ring-2 ring-indigo-400/30'
+                        ? 'bg-accent/40 border-2 border-indigo-400 ring-2 ring-indigo-400/30'
                         : 'bg-indigo-900/30 border border-indigo-500/50 hover:border-indigo-400'
                     }`}
                   >
                     <div className="text-sm font-medium text-indigo-400 mb-1">Executive</div>
-                    <div className="text-xs text-gray-400">Logo à gauche, structuré</div>
+                    <div className="text-xs text-text-muted">Logo à gauche, structuré</div>
                     <span className="inline-block mt-2 px-2 py-0.5 bg-indigo-500/20 text-indigo-300 text-xs rounded">Recommandé</span>
                   </button>
 
@@ -538,12 +538,12 @@ const Settings = () => {
                     className={`p-3 rounded-lg transition-colors text-left ${
                       formData.email_signature === signatureTemplates.minimal
                         ? 'bg-green-600/40 border-2 border-green-400 ring-2 ring-green-400/30'
-                        : 'bg-gray-900/50 border border-gray-700 hover:border-indigo-500'
+                        : 'bg-surface-muted/50 border border-border hover:border-indigo-500'
                     }`}
                   >
-                    <div className="text-sm font-medium text-white mb-1">Minimal</div>
-                    <div className="text-xs text-gray-400">Texte uniquement, léger</div>
-                    <span className="inline-block mt-2 px-2 py-0.5 bg-gray-700 text-gray-300 text-xs rounded">Simple</span>
+                    <div className="text-sm font-medium text-text-primary mb-1">Minimal</div>
+                    <div className="text-xs text-text-muted">Texte uniquement, léger</div>
+                    <span className="inline-block mt-2 px-2 py-0.5 bg-surface-strong text-text-secondary text-xs rounded">Simple</span>
                   </button>
 
                   {/* Template Modern */}
@@ -553,12 +553,12 @@ const Settings = () => {
                     className={`p-3 rounded-lg transition-colors text-left ${
                       formData.email_signature === signatureTemplates.modern
                         ? 'bg-green-600/40 border-2 border-green-400 ring-2 ring-green-400/30'
-                        : 'bg-gray-900/50 border border-gray-700 hover:border-indigo-500'
+                        : 'bg-surface-muted/50 border border-border hover:border-indigo-500'
                     }`}
                   >
-                    <div className="text-sm font-medium text-white mb-1">Modern</div>
-                    <div className="text-xs text-gray-400">Bordure latérale, startup</div>
-                    <span className="inline-block mt-2 px-2 py-0.5 bg-gray-700 text-gray-300 text-xs rounded">Tendance</span>
+                    <div className="text-sm font-medium text-text-primary mb-1">Modern</div>
+                    <div className="text-xs text-text-muted">Bordure latérale, startup</div>
+                    <span className="inline-block mt-2 px-2 py-0.5 bg-surface-strong text-text-secondary text-xs rounded">Tendance</span>
                   </button>
 
                   {/* Template Classic */}
@@ -568,12 +568,12 @@ const Settings = () => {
                     className={`p-3 rounded-lg transition-colors text-left ${
                       formData.email_signature === signatureTemplates.classic
                         ? 'bg-green-600/40 border-2 border-green-400 ring-2 ring-green-400/30'
-                        : 'bg-gray-900/50 border border-gray-700 hover:border-indigo-500'
+                        : 'bg-surface-muted/50 border border-border hover:border-indigo-500'
                     }`}
                   >
-                    <div className="text-sm font-medium text-white mb-1">Classic</div>
-                    <div className="text-xs text-gray-400">Logo à gauche, classique</div>
-                    <span className="inline-block mt-2 px-2 py-0.5 bg-gray-700 text-gray-300 text-xs rounded">Universel</span>
+                    <div className="text-sm font-medium text-text-primary mb-1">Classic</div>
+                    <div className="text-xs text-text-muted">Logo à gauche, classique</div>
+                    <span className="inline-block mt-2 px-2 py-0.5 bg-surface-strong text-text-secondary text-xs rounded">Universel</span>
                   </button>
                 </div>
               </div>
@@ -581,10 +581,10 @@ const Settings = () => {
               {/* Prévisualisation */}
               {formData.email_signature && (
                 <div className="mt-6">
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-text-secondary mb-2">
                     Prévisualisation
                   </label>
-                  <div className="p-4 bg-gray-900/50 rounded-lg border border-gray-700 overflow-auto">
+                  <div className="p-4 bg-surface-muted/50 rounded-lg border border-border overflow-auto">
                     <div
                       style={{ display: 'flow-root' }}
                       dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(formData.email_signature) }}
@@ -605,23 +605,23 @@ const Settings = () => {
         )}
 
         {activeTab === 'appearance' && (
-          <div className="bg-gray-800/30 rounded-lg border border-gray-700/50 p-6">
-            <h2 className="text-lg font-semibold text-white mb-1">Thème de l'interface</h2>
-            <p className="text-gray-400 text-sm mb-6">Choisissez l'apparence du CRM. Votre choix est mémorisé sur cet appareil.</p>
+          <div className="bg-surface/30 rounded-lg border border-border/50 p-6">
+            <h2 className="text-lg font-semibold text-text-primary mb-1">Thème de l'interface</h2>
+            <p className="text-text-muted text-sm mb-6">Choisissez l'apparence du CRM. Votre choix est mémorisé sur cet appareil.</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-xl">
               <button
                 type="button"
                 onClick={() => setTheme('classique')}
                 className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left ${
-                  theme === 'classique' ? 'border-indigo-500 bg-indigo-500/10' : 'border-gray-700 hover:border-gray-600'
+                  theme === 'classique' ? 'border-indigo-500 bg-indigo-500/10' : 'border-border hover:border-border-strong'
                 }`}
               >
-                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900 flex items-center justify-center text-white">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-surface-muted via-purple-900 to-violet-900 flex items-center justify-center text-white">
                   <FiMoon />
                 </div>
                 <div>
-                  <div className="text-white font-medium">Classique</div>
-                  <div className="text-gray-400 text-xs">Thème sombre (par défaut)</div>
+                  <div className="text-text-primary font-medium">Classique</div>
+                  <div className="text-text-muted text-xs">Thème sombre (par défaut)</div>
                 </div>
                 {theme === 'classique' && <FiCheckCircle className="ml-auto text-indigo-400" />}
               </button>
@@ -630,15 +630,15 @@ const Settings = () => {
                 type="button"
                 onClick={() => setTheme('clair')}
                 className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left ${
-                  theme === 'clair' ? 'border-indigo-500 bg-indigo-500/10' : 'border-gray-700 hover:border-gray-600'
+                  theme === 'clair' ? 'border-indigo-500 bg-indigo-500/10' : 'border-border hover:border-border-strong'
                 }`}
               >
                 <div className="w-10 h-10 rounded-lg flex items-center justify-center text-gray-700" style={{ background: 'linear-gradient(to bottom right, #ffffff, #f1f0ee)', border: '1px solid #e9e9e7' }}>
                   <FiSun />
                 </div>
                 <div>
-                  <div className="text-white font-medium">Clair</div>
-                  <div className="text-gray-400 text-xs">Style Notion (en cours)</div>
+                  <div className="text-text-primary font-medium">Clair</div>
+                  <div className="text-text-muted text-xs">Style Notion (en cours)</div>
                 </div>
                 {theme === 'clair' && <FiCheckCircle className="ml-auto text-indigo-400" />}
               </button>
