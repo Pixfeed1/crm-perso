@@ -366,10 +366,11 @@ const crawlController = {
           'Source : Crawl Common Crawl'
         ].filter(Boolean).join('\n');
         try {
+          // Mêmes colonnes que la création de lead standard (leadController.createLead).
           await db.pool.query(
-            `INSERT INTO leads (name, company, type, status, source, notes, tags, created_at, updated_at)
-             VALUES ($1, $2, 'company', 'nouveau', 'Crawl', $3, $4, NOW(), NOW())`,
-            [r.title || r.domain, r.domain, notes, r.platform || null]
+            `INSERT INTO leads (name, company, type, status, source, notes, created_at, updated_at)
+             VALUES ($1, $2, 'company', 'nouveau', 'Crawl', $3, NOW(), NOW())`,
+            [r.title || r.domain, r.domain, notes]
           );
           await db.pool.query('UPDATE crawl_results SET added_as_prospect = TRUE WHERE id = $1', [r.id]);
           created++;
