@@ -59,13 +59,45 @@ async function updateJob(db, id, fields) {
   await db.pool.query(`UPDATE crawl_jobs SET ${set} WHERE id = $${keys.length + 1}`, [...keys.map((k) => fields[k]), id]);
 }
 
+// Normalise un domaine/url pour comparaison (minuscule, sans schéma ni www, sans chemin).
+function normalizeDomain(value) {
+  if (!value) return '';
+  let s = String(value).trim().toLowerCase();
+  s = s.replace(/^https?:\/\//, '').replace(/^www\./, '');
+  s = s.split('/')[0].split('?')[0];
+  return s.trim();
+}
+
+// Construit le fichier d'exclusion (un domaine par ligne) = domaines déjà connus :
+// crawl_results (tous jobs) UNION domaines/sites des leads. Renvoie le nb de lignes.
+async function buildExcludeFile(db, filePath) {
+  const set = new Set();
+  try {
+    const cr = await db.pool.query('SELECT DISTINCT domain FROM crawl_results WHERE domain IS NOT NULL');
+    cr.rows.forEach((r) => { const d = normalizeDomain(r.domain); if (d) set.add(d); });
+    // Domaines/sites des leads (le crawl stocke le domaine dans company).
+    const ld = await db.pool.query("SELECT company FROM leads WHERE company IS NOT NULL AND company <> ''");
+    ld.rows.forEach((r) => { const d = normalizeDomain(r.company); if (d && d.includes('.')) set.add(d); });
+  } catch (e) {
+    console.error('[Crawl] Erreur construction liste exclusion:', e.message);
+  }
+  if (set.size === 0) return 0;
+  fs.writeFileSync(filePath, Array.from(set).join('\n') + '\n', 'utf8');
+  return set.size;
+}
+
 // Lance le process Python et suit sa progression.
-function runCrawl(db, jobId, techno, nbSites) {
+async function runCrawl(db, jobId, techno, nbSites) {
   const jobDir = path.join(os.tmpdir(), `crawl-${jobId}`);
   const csvPath = path.join(jobDir, 'results.csv');
   fs.mkdirSync(jobDir, { recursive: true });
 
+  // Liste d'exclusion : on ne ramène que des domaines jamais vus.
+  const excludePath = path.join(jobDir, 'exclude.txt');
+  const excludeCount = await buildExcludeFile(db, excludePath);
+
   const args = ['run', '--crawl', COMMON_CRAWL_ID, '--mode', techno, '--max-domains', String(nbSites), '--output', csvPath];
+  if (excludeCount > 0) args.push('--exclude', excludePath);
   const child = spawn(PYTHON_BIN, [SCRIPT, ...args], { cwd: jobDir });
 
   let stderrTail = [];
@@ -144,11 +176,23 @@ async function ingestCsv(db, jobId, csvPath) {
   const di = idx('domain'), pi = idx('platform'), si = idx('signals'),
     hi = idx('http_status'), fi = idx('final_url'), ti = idx('title'), ei = idx('error');
 
+  // Dédoublonnage de sécurité : domaines déjà présents en base (tous jobs) + intra-CSV.
+  const seen = new Set();
+  try {
+    const ex = await db.pool.query('SELECT DISTINCT domain FROM crawl_results WHERE domain IS NOT NULL');
+    ex.rows.forEach((r) => { const d = normalizeDomain(r.domain); if (d) seen.add(d); });
+  } catch (e) {
+    console.error('[Crawl] Erreur préchargement dédoublonnage:', e.message);
+  }
+
   for (let r = 1; r < rows.length; r++) {
     const row = rows[r];
     if (!row || row.length === 0) continue;
     const domain = di >= 0 ? (row[di] || '').trim() : '';
     if (!domain) continue;
+    const norm = normalizeDomain(domain);
+    if (seen.has(norm)) continue; // déjà connu : on ignore silencieusement
+    seen.add(norm);
     const httpRaw = hi >= 0 ? parseInt(row[hi], 10) : null;
     await db.pool.query(
       `INSERT INTO crawl_results (job_id, domain, platform, signals, http_status, final_url, title, error)
@@ -225,7 +269,12 @@ const crawlController = {
       );
       const jobId = rows[0].id;
       runningJobId = jobId;
-      runCrawl(db, jobId, techno, nb); // async, non bloquant
+      // async, non bloquant : en cas d'échec avant le spawn, on libère le verrou et on marque l'erreur.
+      runCrawl(db, jobId, techno, nb).catch(async (err) => {
+        runningJobId = null;
+        console.error('[Crawl] Erreur runCrawl:', err);
+        await updateJob(db, jobId, { statut: 'error', message: `Erreur de lancement : ${err.message}` }).catch(() => {});
+      });
       res.status(201).json({ id: jobId });
     } catch (error) {
       console.error('[Crawl] Erreur démarrage:', error);
