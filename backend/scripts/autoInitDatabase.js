@@ -1096,13 +1096,26 @@ async function ensureEmailSignatureSeed(client) {
     const cs = await client.query('SELECT email_signature FROM company_settings LIMIT 1');
     base = (cs.rows[0] && cs.rows[0].email_signature) || '';
   } catch (e) { /* table absente : on ignore */ }
-  const unsub = '<p style="margin:14px 0 0 0;font-size:11px;color:#9ca3af;">Vous recevez cet email dans le cadre d\'une prise de contact professionnelle. Pour ne plus être contacté, répondez « STOP » à ce message.</p>';
-  const content = (base || '<p style="margin:0;">Marc Gueffie — Pixfeed</p>') + unsub;
+  const content = base || '<p style="margin:0;">Marc Gueffie — Pixfeed</p>';
   await client.query(
     'INSERT INTO email_signatures (name, content, is_default) VALUES ($1, $2, TRUE)',
     ['Signature par défaut', content]
   );
   console.log('  ✓ Signature par défaut seedée');
+}
+
+/**
+ * Migration idempotente : retire l'ancienne ligne de désinscription (« ... STOP ... »)
+ * des signatures déjà enregistrées.
+ */
+async function ensureSignatureUnsubRemoval(client) {
+  try {
+    await client.query(
+      "UPDATE email_signatures SET content = regexp_replace(content, '<p[^>]*>[^<]*STOP[^<]*</p>', '', 'g') WHERE content ILIKE '%STOP%'"
+    );
+  } catch (e) {
+    console.error('  ⚠️ Nettoyage ligne désinscription signatures:', e.message);
+  }
 }
 
 async function ensureMaintenanceReportConstraints(client) {
@@ -1239,6 +1252,7 @@ async function autoInitDatabase(pool) {
     // Seeds emails (modèles + signature par défaut) — seulement si vides
     await ensureEmailTemplatesSeed(client);
     await ensureEmailSignatureSeed(client);
+    await ensureSignatureUnsubRemoval(client);
 
     // Insérer les données de référence
     await ensureTvaRegimes(client);
