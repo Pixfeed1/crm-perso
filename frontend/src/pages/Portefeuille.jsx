@@ -6,18 +6,20 @@
 import React from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { FiUsers, FiUserCheck, FiBriefcase, FiClock } from 'react-icons/fi';
+import { FiUsers, FiUserCheck, FiBriefcase, FiClock, FiSearch } from 'react-icons/fi';
 
 import Leads from './Leads';
 import Clients from './Clients';
 import Projects from './Projects';
 import SuiviCockpit from '../components/suivi/SuiviCockpit';
+import CrawlPanel from '../components/crawl/CrawlPanel';
 
 const TABS = [
   { key: 'prospects', label: 'Prospects', icon: FiUsers },
   { key: 'clients', label: 'Clients', icon: FiUserCheck },
   { key: 'projets', label: 'Projets', icon: FiBriefcase },
-  { key: 'suivi', label: 'Suivi', icon: FiClock }
+  { key: 'suivi', label: 'Suivi', icon: FiClock },
+  { key: 'crawl', label: 'Crawl', icon: FiSearch }
 ];
 
 const Portefeuille = () => {
@@ -68,6 +70,13 @@ const Portefeuille = () => {
           <div className="h-full overflow-y-auto p-2 sm:p-4 lg:p-6">
             <div className="max-w-5xl mx-auto w-full">
               <SuiviCockpit />
+            </div>
+          </div>
+        )}
+        {activeTab === 'crawl' && (
+          <div className="h-full overflow-y-auto p-2 sm:p-4 lg:p-6">
+            <div className="max-w-5xl mx-auto w-full">
+              <CrawlPanel />
             </div>
           </div>
         )}

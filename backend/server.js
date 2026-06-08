@@ -144,6 +144,7 @@ app.use('/api/video-conference', require('./routes/videoConferenceRoutes'));
 app.use('/api/review-requests', require('./routes/reviewRequestRoutes'));
 app.use('/api/interventions', require('./routes/interventionRoutes'));
 app.use('/api/interactions', require('./routes/interactionRoutes'));
+app.use('/api/portefeuille/crawl', require('./routes/crawlRoutes'));
 app.use('/api/maintenance-reports', require('./routes/maintenanceReportRoutes'));
 app.use('/api/maintenance-contracts', require('./routes/maintenanceContractRoutes'));
 app.use('/api/subscriptions', require('./routes/subscriptionRoutes'));

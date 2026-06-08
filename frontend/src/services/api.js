@@ -1150,6 +1150,14 @@ export const interactionsAPI = {
   getCockpit: (filter = 'all') => apiRequest(`/interactions/cockpit?filter=${encodeURIComponent(filter)}`)
 };
 
+// API pour le Crawl (outil externe cc_prospector, onglet Portefeuille)
+export const crawlAPI = {
+  start: (techno, nb_sites) => apiRequest('/portefeuille/crawl', 'POST', { techno, nb_sites }),
+  get: (id) => apiRequest(`/portefeuille/crawl/${id}`),
+  toProspect: (id, result_ids) => apiRequest(`/portefeuille/crawl/${id}/to-prospect`, 'POST', { result_ids }),
+  exportCsv: (id) => apiRequestRaw(`/portefeuille/crawl/${id}/export.csv`)
+};
+
 // API pour les emails programmés
 export const scheduledEmailsAPI = {
   // Récupérer tous les emails programmés

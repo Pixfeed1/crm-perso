@@ -1,0 +1,302 @@
+// backend/controllers/crawlController.js
+//
+// Pilote l'outil externe cc_prospector : lance un crawl en arrière-plan, parse sa
+// sortie (stdout+stderr) pour suivre phase/progression, ingère le CSV dans crawl_results,
+// exporte un CSV nettoyé, et transforme des résultats en prospects (réutilise leadModel).
+
+const { spawn } = require('child_process');
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
+const leadModel = require('../models/leadModel');
+
+// Constantes faciles à mettre à jour (override possible par variables d'env).
+const PYTHON_BIN = process.env.CC_PROSPECTOR_PYTHON || '/home/jurojinn/tools/cc_prospector/venv/bin/python';
+const SCRIPT = process.env.CC_PROSPECTOR_SCRIPT || '/home/jurojinn/tools/cc_prospector/cc_prospector.py';
+const COMMON_CRAWL_ID = process.env.COMMON_CRAWL_ID || 'CC-MAIN-2026-21';
+
+const VALID_TECHNO = ['ecommerce', 'woocommerce', 'prestashop'];
+
+// Un seul job en cours à la fois (verrou en mémoire процессus).
+let runningJobId = null;
+
+// --- Petit parseur CSV (gère les champs entre guillemets et les virgules internes) ---
+function parseCsv(content) {
+  const rows = [];
+  let field = '';
+  let row = [];
+  let inQuotes = false;
+  for (let i = 0; i < content.length; i++) {
+    const c = content[i];
+    if (inQuotes) {
+      if (c === '"') {
+        if (content[i + 1] === '"') { field += '"'; i++; } else { inQuotes = false; }
+      } else { field += c; }
+    } else if (c === '"') {
+      inQuotes = true;
+    } else if (c === ',') {
+      row.push(field); field = '';
+    } else if (c === '\n' || c === '\r') {
+      if (c === '\r' && content[i + 1] === '\n') i++;
+      row.push(field); field = '';
+      if (row.length > 1 || row[0] !== '') rows.push(row);
+      row = [];
+    } else { field += c; }
+  }
+  if (field !== '' || row.length) { row.push(field); rows.push(row); }
+  return rows;
+}
+
+function csvEscape(value) {
+  const s = value == null ? '' : String(value);
+  return /[",\n;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+async function updateJob(db, id, fields) {
+  const keys = Object.keys(fields);
+  if (!keys.length) return;
+  const set = keys.map((k, i) => `${k} = $${i + 1}`).join(', ');
+  await db.pool.query(`UPDATE crawl_jobs SET ${set} WHERE id = $${keys.length + 1}`, [...keys.map((k) => fields[k]), id]);
+}
+
+// Lance le process Python et suit sa progression.
+function runCrawl(db, jobId, techno, nbSites) {
+  const jobDir = path.join(os.tmpdir(), `crawl-${jobId}`);
+  const csvPath = path.join(jobDir, 'results.csv');
+  fs.mkdirSync(jobDir, { recursive: true });
+
+  const args = ['run', '--crawl', COMMON_CRAWL_ID, '--mode', techno, '--max-domains', String(nbSites), '--output', csvPath];
+  const child = spawn(PYTHON_BIN, [SCRIPT, ...args], { cwd: jobDir });
+
+  let stderrTail = [];
+  let phase = 'recherche';
+  let total = 0;
+  let done = 0;
+
+  const pushTail = (line) => { stderrTail.push(line); if (stderrTail.length > 12) stderrTail.shift(); };
+
+  const handleLine = (line, isErr) => {
+    if (isErr) pushTail(line);
+    // Phase recherche (stderr)
+    if (/Listage des fichiers|fichiers Parquet trouvés|Lecture de l'index/i.test(line)) {
+      if (phase !== 'detection') { phase = 'recherche'; updateJob(db, jobId, { phase }).catch(() => {}); }
+    }
+    // Phase détection (stdout) : "Détection sur N domaines"
+    const det = line.match(/Détection sur (\d+) domaines/);
+    if (det) {
+      phase = 'detection'; total = parseInt(det[1], 10) || 0;
+      updateJob(db, jobId, { phase, progress_total: total }).catch(() => {});
+    }
+    // Progression : "  ... X/N traités"
+    const prog = line.match(/(\d+)\/(\d+)\s+traités/);
+    if (prog) {
+      done = parseInt(prog[1], 10) || 0; total = parseInt(prog[2], 10) || total;
+      if (phase !== 'detection') phase = 'detection';
+      updateJob(db, jobId, { phase, progress_done: done, progress_total: total }).catch(() => {});
+    }
+  };
+
+  let bufOut = '';
+  let bufErr = '';
+  child.stdout.on('data', (d) => {
+    bufOut += d.toString();
+    const lines = bufOut.split('\n'); bufOut = lines.pop();
+    lines.forEach((l) => handleLine(l, false));
+  });
+  child.stderr.on('data', (d) => {
+    bufErr += d.toString();
+    const lines = bufErr.split('\n'); bufErr = lines.pop();
+    lines.forEach((l) => handleLine(l, true));
+  });
+
+  const cleanup = () => { try { fs.rmSync(jobDir, { recursive: true, force: true }); } catch (e) { /* ignore */ } };
+
+  child.on('error', async (err) => {
+    runningJobId = null;
+    await updateJob(db, jobId, { statut: 'error', message: `Lancement impossible : ${err.message}` }).catch(() => {});
+    cleanup();
+  });
+
+  child.on('close', async (code) => {
+    try {
+      if (code === 0 && fs.existsSync(csvPath)) {
+        await ingestCsv(db, jobId, csvPath);
+        await updateJob(db, jobId, { statut: 'done', phase: 'done', progress_done: total || done, progress_total: total || done });
+      } else {
+        await updateJob(db, jobId, { statut: 'error', message: (stderrTail.join('\n') || `Le crawl a échoué (code ${code}).`).slice(0, 2000) });
+      }
+    } catch (e) {
+      await updateJob(db, jobId, { statut: 'error', message: `Erreur d'ingestion : ${e.message}` }).catch(() => {});
+    } finally {
+      runningJobId = null;
+      cleanup();
+    }
+  });
+}
+
+// Ingestion du CSV de l'outil (colonnes : domain, platform, signals, http_status, final_url, title, error)
+async function ingestCsv(db, jobId, csvPath) {
+  const content = fs.readFileSync(csvPath, 'utf8');
+  const rows = parseCsv(content);
+  if (rows.length === 0) return;
+  const header = rows[0].map((h) => h.trim().toLowerCase());
+  const idx = (name) => header.indexOf(name);
+  const di = idx('domain'), pi = idx('platform'), si = idx('signals'),
+    hi = idx('http_status'), fi = idx('final_url'), ti = idx('title'), ei = idx('error');
+
+  for (let r = 1; r < rows.length; r++) {
+    const row = rows[r];
+    if (!row || row.length === 0) continue;
+    const domain = di >= 0 ? (row[di] || '').trim() : '';
+    if (!domain) continue;
+    const httpRaw = hi >= 0 ? parseInt(row[hi], 10) : null;
+    await db.pool.query(
+      `INSERT INTO crawl_results (job_id, domain, platform, signals, http_status, final_url, title, error)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [
+        jobId, domain,
+        pi >= 0 ? (row[pi] || null) : null,
+        si >= 0 ? (row[si] || null) : null,
+        Number.isNaN(httpRaw) ? null : httpRaw,
+        fi >= 0 ? (row[fi] || null) : null,
+        ti >= 0 ? (row[ti] || null) : null,
+        ei >= 0 ? (row[ei] || null) : null
+      ]
+    );
+  }
+}
+
+const crawlController = {
+  /**
+   * POST /api/portefeuille/crawl { techno, nb_sites }
+   */
+  start: async (req, res) => {
+    const db = req.app.locals.db;
+    const { techno, nb_sites } = req.body || {};
+    if (!VALID_TECHNO.includes(techno)) {
+      return res.status(400).json({ message: `Techno invalide (${VALID_TECHNO.join(', ')})` });
+    }
+    const nb = Math.min(Math.max(parseInt(nb_sites, 10) || 0, 5), 200);
+    if (runningJobId) {
+      return res.status(409).json({ message: 'Un crawl est déjà en cours. Patientez la fin.' });
+    }
+    try {
+      const { rows } = await db.pool.query(
+        `INSERT INTO crawl_jobs (techno, nb_sites, statut, phase) VALUES ($1, $2, 'running', 'recherche') RETURNING id`,
+        [techno, nb]
+      );
+      const jobId = rows[0].id;
+      runningJobId = jobId;
+      runCrawl(db, jobId, techno, nb); // async, non bloquant
+      res.status(201).json({ id: jobId });
+    } catch (error) {
+      console.error('[Crawl] Erreur démarrage:', error);
+      res.status(500).json({ message: 'Erreur lors du démarrage du crawl' });
+    }
+  },
+
+  /**
+   * GET /api/portefeuille/crawl/:id -> statut + phase + progress + message + résultats
+   */
+  get: async (req, res) => {
+    const db = req.app.locals.db;
+    const { id } = req.params;
+    try {
+      const jr = await db.pool.query('SELECT * FROM crawl_jobs WHERE id = $1', [id]);
+      if (jr.rows.length === 0) return res.status(404).json({ message: 'Job introuvable' });
+      const rr = await db.pool.query(
+        'SELECT * FROM crawl_results WHERE job_id = $1 ORDER BY platform ASC, domain ASC',
+        [id]
+      );
+      res.json({ job: jr.rows[0], results: rr.rows });
+    } catch (error) {
+      console.error('[Crawl] Erreur lecture:', error);
+      res.status(500).json({ message: 'Erreur serveur' });
+    }
+  },
+
+  /**
+   * GET /api/portefeuille/crawl/:id/export.csv -> CSV nettoyé (UTF-8 BOM, Excel)
+   */
+  exportCsv: async (req, res) => {
+    const db = req.app.locals.db;
+    const { id } = req.params;
+    try {
+      const jr = await db.pool.query('SELECT techno FROM crawl_jobs WHERE id = $1', [id]);
+      if (jr.rows.length === 0) return res.status(404).json({ message: 'Job introuvable' });
+      // Dédoublonné par domaine, trié par plateforme puis domaine
+      const { rows } = await db.pool.query(
+        `SELECT DISTINCT ON (domain) domain, platform, title, http_status, final_url
+         FROM crawl_results WHERE job_id = $1
+         ORDER BY domain, platform`,
+        [id]
+      );
+      rows.sort((a, b) => (a.platform || '').localeCompare(b.platform || '') || (a.domain || '').localeCompare(b.domain || ''));
+
+      const header = ['Domaine', 'Plateforme', 'Titre', 'Statut HTTP', 'URL finale'];
+      const lines = [header.join(',')];
+      for (const r of rows) {
+        lines.push([r.domain, r.platform, r.title, r.http_status, r.final_url].map(csvEscape).join(','));
+      }
+      const csv = '﻿' + lines.join('\r\n'); // BOM UTF-8
+
+      const d = new Date();
+      const stamp = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+      const fileName = `crawl-${jr.rows[0].techno}-${stamp}.csv`;
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+      res.send(csv);
+    } catch (error) {
+      console.error('[Crawl] Erreur export:', error);
+      res.status(500).json({ message: 'Erreur serveur' });
+    }
+  },
+
+  /**
+   * POST /api/portefeuille/crawl/:id/to-prospect { result_ids: [] }
+   * Crée des prospects via le modèle de lead existant (réutilisé, non dupliqué).
+   */
+  toProspect: async (req, res) => {
+    const db = req.app.locals.db;
+    const { id } = req.params;
+    const { result_ids } = req.body || {};
+    if (!Array.isArray(result_ids) || result_ids.length === 0) {
+      return res.status(400).json({ message: 'Aucun résultat sélectionné' });
+    }
+    try {
+      const { rows } = await db.pool.query(
+        `SELECT * FROM crawl_results WHERE job_id = $1 AND id = ANY($2) AND added_as_prospect = FALSE`,
+        [id, result_ids]
+      );
+      let created = 0;
+      for (const r of rows) {
+        const notes = [
+          r.platform ? `Plateforme : ${r.platform}` : null,
+          r.final_url ? `URL : ${r.final_url}` : null,
+          'Source : Crawl Common Crawl'
+        ].filter(Boolean).join('\n');
+        try {
+          await leadModel.createLead(db, {
+            name: r.title || r.domain,
+            company: r.domain,
+            type: 'company',
+            status: 'nouveau',
+            source: 'Crawl',
+            notes,
+            tags: r.platform || null
+          });
+          await db.pool.query('UPDATE crawl_results SET added_as_prospect = TRUE WHERE id = $1', [r.id]);
+          created++;
+        } catch (e) {
+          console.error('[Crawl] Échec création prospect pour', r.domain, e.message);
+        }
+      }
+      res.json({ created });
+    } catch (error) {
+      console.error('[Crawl] Erreur to-prospect:', error);
+      res.status(500).json({ message: 'Erreur serveur' });
+    }
+  }
+};
+
+module.exports = crawlController;

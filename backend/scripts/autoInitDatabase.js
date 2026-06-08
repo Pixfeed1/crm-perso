@@ -82,6 +82,45 @@ const DATABASE_SCHEMA = {
     ]
   },
 
+  // Table crawl_jobs (pilotage de l'outil externe cc_prospector)
+  crawl_jobs: {
+    columns: {
+      id: 'SERIAL PRIMARY KEY',
+      techno: 'VARCHAR(20)', // ecommerce | woocommerce | prestashop
+      nb_sites: 'INTEGER',
+      statut: "VARCHAR(20) DEFAULT 'pending'", // pending | running | done | error
+      phase: 'VARCHAR(20)', // recherche | detection | done
+      progress_done: 'INTEGER DEFAULT 0',
+      progress_total: 'INTEGER DEFAULT 0',
+      message: 'TEXT',
+      created_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'
+    },
+    indexes: [
+      'CREATE INDEX IF NOT EXISTS idx_crawl_jobs_statut ON crawl_jobs(statut)'
+    ]
+  },
+
+  // Table crawl_results (sites détectés par un crawl)
+  crawl_results: {
+    columns: {
+      id: 'SERIAL PRIMARY KEY',
+      job_id: 'INTEGER REFERENCES crawl_jobs(id) ON DELETE CASCADE',
+      domain: 'TEXT',
+      platform: 'VARCHAR(30)', // WooCommerce | PrestaShop | Shopify | WordPress | Inconnu
+      signals: 'TEXT',
+      http_status: 'INTEGER',
+      final_url: 'TEXT',
+      title: 'TEXT',
+      error: 'TEXT',
+      gerant: 'TEXT', // enrichissement futur (null)
+      email: 'TEXT',  // enrichissement futur (null)
+      added_as_prospect: 'BOOLEAN DEFAULT FALSE'
+    },
+    indexes: [
+      'CREATE INDEX IF NOT EXISTS idx_crawl_results_job ON crawl_results(job_id)'
+    ]
+  },
+
   // Table projects
   projects: {
     columns: {
