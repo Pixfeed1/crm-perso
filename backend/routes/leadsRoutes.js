@@ -4,9 +4,43 @@ const router = express.Router();
 const authMiddleware = require('../middleware/authMiddleware');
 const leadController = require('../controllers/leadController');
 const leadModel = require('../models/leadModel');
+const emailService = require('../services/emailService');
 
 // Appliquer le middleware d'authentification à toutes les routes
 router.use(authMiddleware);
+
+// POST /api/leads/:id/send-email — envoi immédiat depuis une fiche prospect + log Suivi.
+// Réutilise emailService (SMTP .env) ; logge une interaction email (table interactions).
+router.post('/:id/send-email', async (req, res) => {
+  const db = req.app.locals.db;
+  const { id } = req.params;
+  const { to, subject, body, signature = '' } = req.body || {};
+  if (!to || !subject || !body) {
+    return res.status(400).json({ message: 'Destinataire, objet et message sont requis' });
+  }
+  try {
+    const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const html = `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.6;color:#374151;">`
+      + `<div style="white-space:pre-wrap;">${esc(body)}</div>`
+      + (signature ? `<div style="margin-top:18px;">${signature}</div>` : '')
+      + `</div>`;
+    await emailService.sendEmail({ to, subject, html, text: body });
+    // Log automatique dans Suivi (best-effort)
+    try {
+      await db.pool.query(
+        `INSERT INTO interactions (contact_type, contact_id, type, date, notes, followup_done)
+         VALUES ('lead', $1, 'email', NOW(), $2, FALSE)`,
+        [id, subject]
+      );
+    } catch (logErr) {
+      console.error('[Lead] Échec log interaction email:', logErr.message);
+    }
+    res.json({ success: true });
+  } catch (error) {
+    console.error('[Lead] Erreur envoi email:', error);
+    res.status(500).json({ message: error.message || "Erreur lors de l'envoi de l'email" });
+  }
+});
 
 // Obtenir les statistiques Kanban
 router.get('/kanban/stats', leadController.getKanbanStats);

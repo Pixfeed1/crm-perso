@@ -122,6 +122,19 @@ class ScheduledEmailWorker {
       await scheduledEmailModel.markAsSent(this.db, email.id);
       this.processedCount++;
 
+      // Log automatique dans Suivi pour un email programmé lié à un prospect (lead).
+      if (email.related_type === 'lead' && email.related_id) {
+        try {
+          await this.db.pool.query(
+            `INSERT INTO interactions (contact_type, contact_id, type, date, notes, followup_done)
+             VALUES ('lead', $1, 'email', NOW(), $2, FALSE)`,
+            [email.related_id, email.subject]
+          );
+        } catch (logErr) {
+          console.error(`[Worker] Échec log interaction email #${email.id}:`, logErr.message);
+        }
+      }
+
       console.log(`✅ Email #${email.id} envoyé avec succès à ${email.to_email}`);
 
     } catch (error) {

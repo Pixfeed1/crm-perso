@@ -1,13 +1,15 @@
 // src/pages/Settings.jsx
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FiSave, FiBriefcase, FiMail, FiCheckCircle, FiXCircle, FiAlertCircle, FiVideo, FiBell, FiSun, FiMoon } from 'react-icons/fi';
+import { FiSave, FiBriefcase, FiMail, FiCheckCircle, FiXCircle, FiAlertCircle, FiVideo, FiBell, FiSun, FiMoon, FiFileText, FiEdit3 } from 'react-icons/fi';
 import DOMPurify from 'dompurify';
 import { settingsAPI } from '../services/settingsAPI';
 import { useToast } from '../hooks/useToast';
 import { useTheme } from '../contexts/ThemeContext';
 import VideoConferenceSettings from '../components/settings/VideoConferenceSettings';
 import ReminderSettings from '../components/settings/ReminderSettings';
+import EmailTemplatesSettings from '../components/settings/EmailTemplatesSettings';
+import EmailSignaturesSettings from '../components/settings/EmailSignaturesSettings';
 
 const Settings = () => {
   const { toast } = useToast();
@@ -261,6 +263,28 @@ const Settings = () => {
         >
           <FiBell />
           <span>Relances automatiques</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('templates')}
+          className={`px-4 py-2 flex items-center gap-2 border-b-2 transition-colors whitespace-nowrap ${
+            activeTab === 'templates'
+              ? 'border-indigo-500 text-indigo-300'
+              : 'border-transparent text-text-muted hover:text-text-secondary'
+          }`}
+        >
+          <FiFileText />
+          <span>Modèles email</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('signatures')}
+          className={`px-4 py-2 flex items-center gap-2 border-b-2 transition-colors whitespace-nowrap ${
+            activeTab === 'signatures'
+              ? 'border-indigo-500 text-indigo-300'
+              : 'border-transparent text-text-muted hover:text-text-secondary'
+          }`}
+        >
+          <FiEdit3 />
+          <span>Signatures</span>
         </button>
         <button
           onClick={() => setActiveTab('appearance')}
@@ -603,6 +627,10 @@ const Settings = () => {
         {activeTab === 'reminders' && (
           <ReminderSettings />
         )}
+
+        {activeTab === 'templates' && <EmailTemplatesSettings />}
+
+        {activeTab === 'signatures' && <EmailSignaturesSettings />}
 
         {activeTab === 'appearance' && (
           <div className="bg-surface/30 rounded-lg border border-border/50 p-6">

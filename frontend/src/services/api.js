@@ -236,6 +236,8 @@ export const leadsAPI = {
     console.log('Appel API: récupération de tous les leads');
     return apiRequest('/leads');
   },
+  // Envoi immédiat d'un email depuis une fiche prospect (+ log Suivi côté serveur)
+  sendEmail: (id, payload) => apiRequest(`/leads/${id}/send-email`, 'POST', payload),
   getById: (id) => {
     console.log(`Appel API: récupération du lead ID ${id}`);
     return apiRequest(`/leads/${id}`);
@@ -1148,6 +1150,22 @@ export const interactionsAPI = {
   delete: (id) => apiRequest(`/interactions/${id}`, 'DELETE'),
   getFollowups: () => apiRequest('/interactions/followups'),
   getCockpit: (filter = 'all') => apiRequest(`/interactions/cockpit?filter=${encodeURIComponent(filter)}`)
+};
+
+// API modèles d'email
+export const emailTemplatesAPI = {
+  list: () => apiRequest('/email-templates'),
+  create: (data) => apiRequest('/email-templates', 'POST', data),
+  update: (id, data) => apiRequest(`/email-templates/${id}`, 'PUT', data),
+  delete: (id) => apiRequest(`/email-templates/${id}`, 'DELETE')
+};
+
+// API signatures d'email
+export const emailSignaturesAPI = {
+  list: () => apiRequest('/email-signatures'),
+  create: (data) => apiRequest('/email-signatures', 'POST', data),
+  update: (id, data) => apiRequest(`/email-signatures/${id}`, 'PUT', data),
+  delete: (id) => apiRequest(`/email-signatures/${id}`, 'DELETE')
 };
 
 // API pour le Crawl (outil externe cc_prospector, onglet Portefeuille)

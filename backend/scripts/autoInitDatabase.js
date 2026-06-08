@@ -744,6 +744,33 @@ const DATABASE_SCHEMA = {
     ]
   },
 
+  // Modèles d'email (éditables/supprimables dans Réglages)
+  email_templates: {
+    columns: {
+      id: 'SERIAL PRIMARY KEY',
+      name: 'VARCHAR(255) NOT NULL',
+      category: "VARCHAR(20) DEFAULT 'autre'", // contact|relance|cloture|interesse|presta|woo|autre
+      subject: 'TEXT',
+      body: 'TEXT',
+      created_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP',
+      updated_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'
+    },
+    indexes: []
+  },
+
+  // Signatures d'email (une par défaut)
+  email_signatures: {
+    columns: {
+      id: 'SERIAL PRIMARY KEY',
+      name: 'VARCHAR(255) NOT NULL',
+      content: 'TEXT',
+      is_default: 'BOOLEAN DEFAULT FALSE',
+      created_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP',
+      updated_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'
+    },
+    indexes: []
+  },
+
   // Table stripe_webhook_events (idempotence des webhooks Stripe : un event traité une seule fois)
   stripe_webhook_events: {
     columns: {
@@ -991,6 +1018,93 @@ async function ensureStripeIdempotencyColumns(client) {
  * (cree manuellement, sans projet). On relache le NOT NULL historique sur project_id.
  * DROP NOT NULL est idempotent (no-op si la colonne est deja nullable).
  */
+/**
+ * Seed des 6 modèles d'email par défaut (uniquement si la table est vide ;
+ * ils restent éditables/supprimables ensuite).
+ */
+async function ensureEmailTemplatesSeed(client) {
+  const { rows } = await client.query('SELECT COUNT(*)::int AS n FROM email_templates');
+  if (rows[0].n > 0) return;
+  console.log('\n🔧 Seed des modèles d\'email par défaut...');
+  const T = [
+    ['Premier contact', 'contact', 'Un détail repéré sur {site}',
+`{prenom},
+
+En parcourant {site}, j'ai remarqué {constat} — rien de dramatique, mais le genre de détail qui peut faire fuir un visiteur (ou pénaliser votre référencement) sans qu'on s'en rende compte.
+
+Développeur freelance spécialisé {plateforme}, c'est précisément le type de choses que je corrige au quotidien.
+
+Si ça vous parle, je vous envoie le détail de ce que j'ai repéré et comment le régler. Un mot de votre part et c'est parti.`],
+    ['Relance', 'relance', 'Re: Un détail repéré sur {site}',
+`{prenom},
+
+Je reviens vers vous au sujet de ce que j'avais repéré sur {site}.
+
+Ce sont des points rapides à corriger, et qui vous font sûrement perdre quelques visiteurs au passage. Si vous voulez le détail, un simple « oui » suffit — je vous envoie tout.`],
+    ['Clôture', 'cloture', 'Je n\'insiste pas',
+`{prenom},
+
+Sans retour, je ne vais pas vous encombrer davantage.
+
+Si un jour vous avez besoin d'un développeur de confiance sur {plateforme} — bug, mise à jour, refonte, migration — gardez mon contact, ce sera avec plaisir.
+
+Bonne continuation à {site} !`],
+    ['Intéressé', 'interesse', 'Super, on en parle ?',
+`{prenom},
+
+Content que ça vous parle ! Pour bien cerner vos besoins sur {site}, le plus simple est un court échange de 15-20 min.
+
+Dites-moi le créneau qui vous arrange, je m'adapte.
+
+À très vite,`],
+    ['PrestaShop', 'presta', 'Votre PrestaShop est-il à jour ?',
+`{prenom},
+
+Beaucoup de boutiques PrestaShop tournent encore sous 1.6 ou 1.7, des versions qui ne sont plus maintenues : failles de sécurité, modules qui cassent, incompatibilité PHP.
+
+Développeur freelance spécialisé PrestaShop (jusqu'à la 8.x), je gère ces migrations sans perte de données ni de référencement.
+
+Je peux vérifier où en est {site} et vous dire s'il y a un risque, sans engagement. Ça vous intéresse ?`],
+    ['WooCommerce', 'woo', 'Vos extensions WooCommerce sont-elles à jour ?',
+`{prenom},
+
+Sur {site}, comme sur beaucoup de boutiques WooCommerce, ce sont souvent les extensions et WordPress laissés sans mises à jour qui posent problème : failles de sécurité, conflits, lenteurs.
+
+Développeur freelance spécialisé WooCommerce, je m'occupe de la maintenance, de la sécurité et des performances de ce type de boutique.
+
+Je peux regarder où en est {site} et vous faire un retour, sans engagement. Ça vous intéresse ?`]
+  ];
+  for (const [name, category, subject, body] of T) {
+    await client.query(
+      'INSERT INTO email_templates (name, category, subject, body) VALUES ($1, $2, $3, $4)',
+      [name, category, subject, body]
+    );
+  }
+  console.log('  ✓ 6 modèles d\'email seedés');
+}
+
+/**
+ * Seed d'une signature par défaut (si aucune). Reprend company_settings.email_signature
+ * si présente, et ajoute une ligne de désinscription.
+ */
+async function ensureEmailSignatureSeed(client) {
+  const { rows } = await client.query('SELECT COUNT(*)::int AS n FROM email_signatures');
+  if (rows[0].n > 0) return;
+  console.log('\n🔧 Seed signature email par défaut...');
+  let base = '';
+  try {
+    const cs = await client.query('SELECT email_signature FROM company_settings LIMIT 1');
+    base = (cs.rows[0] && cs.rows[0].email_signature) || '';
+  } catch (e) { /* table absente : on ignore */ }
+  const unsub = '<p style="margin:14px 0 0 0;font-size:11px;color:#9ca3af;">Vous recevez cet email dans le cadre d\'une prise de contact professionnelle. Pour ne plus être contacté, répondez « STOP » à ce message.</p>';
+  const content = (base || '<p style="margin:0;">Marc Gueffie — Pixfeed</p>') + unsub;
+  await client.query(
+    'INSERT INTO email_signatures (name, content, is_default) VALUES ($1, $2, TRUE)',
+    ['Signature par défaut', content]
+  );
+  console.log('  ✓ Signature par défaut seedée');
+}
+
 async function ensureMaintenanceReportConstraints(client) {
   console.log('\n🔧 Vérification contraintes maintenance_reports...');
   await client.query('ALTER TABLE maintenance_reports ALTER COLUMN project_id DROP NOT NULL;');
@@ -1119,9 +1233,12 @@ async function autoInitDatabase(pool) {
 
     // Table interactions (suivi des prises de contact, leads + clients)
     await ensureInteractionsColumns(client);
-
     // Mise à jour du titre dans les signatures email déjà enregistrées
     await ensureSignatureTitleUpdate(client);
+
+    // Seeds emails (modèles + signature par défaut) — seulement si vides
+    await ensureEmailTemplatesSeed(client);
+    await ensureEmailSignatureSeed(client);
 
     // Insérer les données de référence
     await ensureTvaRegimes(client);
