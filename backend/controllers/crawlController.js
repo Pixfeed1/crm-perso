@@ -8,7 +8,6 @@ const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const leadModel = require('../models/leadModel');
 
 // Constantes faciles à mettre à jour (override possible par variables d'env).
 const PYTHON_BIN = process.env.CC_PROSPECTOR_PYTHON || '/home/jurojinn/tools/cc_prospector/venv/bin/python';
@@ -341,21 +340,25 @@ const crawlController = {
 
   /**
    * POST /api/portefeuille/crawl/:id/to-prospect { result_ids: [] }
-   * Crée des prospects via le modèle de lead existant (réutilisé, non dupliqué).
+   * Crée des prospects (leads standard) à partir des résultats sélectionnés.
+   * INSERT natif dans la table leads (mêmes colonnes que la création standard),
+   * pour fiabilité : le prospect créé est un lead normal (statut 'nouveau').
    */
   toProspect: async (req, res) => {
     const db = req.app.locals.db;
     const { id } = req.params;
     const { result_ids } = req.body || {};
-    if (!Array.isArray(result_ids) || result_ids.length === 0) {
+    const ids = Array.isArray(result_ids) ? result_ids.map((v) => parseInt(v, 10)).filter((v) => !Number.isNaN(v)) : [];
+    if (ids.length === 0) {
       return res.status(400).json({ message: 'Aucun résultat sélectionné' });
     }
     try {
       const { rows } = await db.pool.query(
-        `SELECT * FROM crawl_results WHERE job_id = $1 AND id = ANY($2) AND added_as_prospect = FALSE`,
-        [id, result_ids]
+        `SELECT * FROM crawl_results WHERE job_id = $1 AND id = ANY($2::int[]) AND added_as_prospect = FALSE`,
+        [parseInt(id, 10), ids]
       );
       let created = 0;
+      let lastError = null;
       for (const r of rows) {
         const notes = [
           r.platform ? `Plateforme : ${r.platform}` : null,
@@ -363,20 +366,20 @@ const crawlController = {
           'Source : Crawl Common Crawl'
         ].filter(Boolean).join('\n');
         try {
-          await leadModel.createLead(db, {
-            name: r.title || r.domain,
-            company: r.domain,
-            type: 'company',
-            status: 'nouveau',
-            source: 'Crawl',
-            notes,
-            tags: r.platform || null
-          });
+          await db.pool.query(
+            `INSERT INTO leads (name, company, type, status, source, notes, tags, created_at, updated_at)
+             VALUES ($1, $2, 'company', 'nouveau', 'Crawl', $3, $4, NOW(), NOW())`,
+            [r.title || r.domain, r.domain, notes, r.platform || null]
+          );
           await db.pool.query('UPDATE crawl_results SET added_as_prospect = TRUE WHERE id = $1', [r.id]);
           created++;
         } catch (e) {
+          lastError = e.message;
           console.error('[Crawl] Échec création prospect pour', r.domain, e.message);
         }
+      }
+      if (created === 0 && lastError) {
+        return res.status(500).json({ message: `Création impossible : ${lastError}` });
       }
       res.json({ created });
     } catch (error) {
