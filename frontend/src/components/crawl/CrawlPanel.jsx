@@ -5,7 +5,7 @@
 // Charte : tokens de thème, react-icons, framer-motion. Aucune couleur en dur.
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiSearch, FiDownload, FiUserPlus, FiGlobe, FiCheckCircle, FiAlertTriangle, FiLoader } from 'react-icons/fi';
+import { FiSearch, FiDownload, FiUserPlus, FiGlobe, FiCheckCircle, FiAlertTriangle, FiLoader, FiTrash2, FiClock } from 'react-icons/fi';
 import { crawlAPI } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
 
@@ -14,6 +14,23 @@ const TECHNOS = [
   { value: 'woocommerce', label: 'WooCommerce' },
   { value: 'prestashop', label: 'PrestaShop' }
 ];
+const technoLabel = (v) => (TECHNOS.find((t) => t.value === v) || {}).label || v;
+
+// Badge de statut de job — tokens sémantiques.
+const STATUT_BADGE = {
+  pending: { cls: 'bg-neutral-bg text-neutral-text', label: 'En attente' },
+  running: { cls: 'bg-warning-bg text-warning-text', label: 'En cours' },
+  done: { cls: 'bg-success-bg text-success-text', label: 'Terminé' },
+  error: { cls: 'bg-danger-bg text-danger-text', label: 'Erreur' }
+};
+const statutBadge = (s) => STATUT_BADGE[s] || STATUT_BADGE.pending;
+
+const formatDateTime = (s) => {
+  if (!s) return '';
+  const d = new Date(s);
+  if (isNaN(d)) return '';
+  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+};
 
 // Badges plateforme — classes basées sur les tokens sémantiques (aucune couleur en dur).
 const PLATFORM_BADGE = {
@@ -36,9 +53,30 @@ const CrawlPanel = () => {
   const [platformFilter, setPlatformFilter] = useState('all');
   const [starting, setStarting] = useState(false);
   const [adding, setAdding] = useState(false);
+  const [history, setHistory] = useState([]);
   const pollRef = useRef(null);
 
   const running = job && (job.statut === 'running' || job.statut === 'pending');
+
+  const loadHistory = useCallback(async () => {
+    try {
+      const data = await crawlAPI.list();
+      setHistory(data || []);
+      return data || [];
+    } catch (error) {
+      console.error('Erreur historique crawl:', error);
+      return [];
+    }
+  }, []);
+
+  // Au montage : charge l'historique et reprend le polling si un job tourne encore.
+  useEffect(() => {
+    (async () => {
+      const data = await loadHistory();
+      const active = data.find((j) => j.statut === 'running' || j.statut === 'pending');
+      if (active) setJobId(active.id);
+    })();
+  }, [loadHistory]);
 
   const poll = useCallback(async (id) => {
     try {
@@ -47,11 +85,12 @@ const CrawlPanel = () => {
       setResults(data.results || []);
       if (data.job && (data.job.statut === 'done' || data.job.statut === 'error')) {
         if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+        loadHistory();
       }
     } catch (error) {
       console.error('Erreur suivi crawl:', error);
     }
-  }, []);
+  }, [loadHistory]);
 
   useEffect(() => {
     if (!jobId) return undefined;
@@ -66,10 +105,30 @@ const CrawlPanel = () => {
       setResults([]); setSelected(new Set()); setJob(null);
       const res = await crawlAPI.start(techno, nbSites);
       setJobId(res.id);
+      loadHistory();
     } catch (error) {
       toast.error(error.message || 'Impossible de lancer le crawl');
     } finally {
       setStarting(false);
+    }
+  };
+
+  // Recharge un crawl passé (sans le relancer).
+  const selectFromHistory = (id) => {
+    if (id === jobId) return;
+    setResults([]); setSelected(new Set()); setJob(null);
+    setJobId(id);
+  };
+
+  const handleDeleteJob = async (id, e) => {
+    if (e) e.stopPropagation();
+    try {
+      await crawlAPI.delete(id);
+      setHistory((prev) => prev.filter((j) => j.id !== id));
+      if (id === jobId) { setJobId(null); setJob(null); setResults([]); setSelected(new Set()); }
+      toast.success('Crawl supprimé');
+    } catch (error) {
+      toast.error('Erreur lors de la suppression');
     }
   };
 
@@ -157,6 +216,47 @@ const CrawlPanel = () => {
           </div>
         </div>
       </div>
+
+      {/* Historique des crawls */}
+      {history.length > 0 && (
+        <div className="bg-surface border border-border rounded-2xl p-5 mb-5">
+          <h3 className="text-sm font-semibold text-text-primary flex items-center gap-2 mb-3">
+            <FiClock size={15} /> Historique des crawls
+          </h3>
+          <div className="space-y-2">
+            {history.map((j) => {
+              const sb = statutBadge(j.statut);
+              const isCurrent = j.id === jobId;
+              return (
+                <div
+                  key={j.id}
+                  onClick={() => selectFromHistory(j.id)}
+                  className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
+                    isCurrent ? 'border-accent bg-surface-muted/60' : 'border-border bg-surface-muted/30 hover:bg-surface-muted/60'
+                  }`}
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-medium text-text-primary">{technoLabel(j.techno)}</span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${sb.cls}`}>{sb.label}</span>
+                    </div>
+                    <div className="text-xs text-text-muted mt-0.5">
+                      {formatDateTime(j.created_at)} · {j.nb_sites} sites demandés · {j.nb_results} résultat{j.nb_results > 1 ? 's' : ''}
+                    </div>
+                  </div>
+                  <button
+                    onClick={(e) => handleDeleteJob(j.id, e)}
+                    className="p-2 rounded-lg text-text-muted hover:text-danger-text hover:bg-surface-strong flex-shrink-0"
+                    title="Supprimer ce crawl"
+                  >
+                    <FiTrash2 size={15} />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Pendant le job : loader + phase */}
       <AnimatePresence>

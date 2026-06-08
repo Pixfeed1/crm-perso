@@ -7,6 +7,9 @@ const authMiddleware = require('../middleware/authMiddleware');
 
 router.use(authMiddleware);
 
+// GET /api/portefeuille/crawl - historique des crawls
+router.get('/', crawlController.list);
+
 // POST /api/portefeuille/crawl - lance un crawl
 router.post('/', crawlController.start);
 
@@ -18,5 +21,8 @@ router.get('/:id/export.csv', crawlController.exportCsv);
 
 // POST /api/portefeuille/crawl/:id/to-prospect - convertit des résultats en prospects
 router.post('/:id/to-prospect', crawlController.toProspect);
+
+// DELETE /api/portefeuille/crawl/:id - supprime le job + ses résultats
+router.delete('/:id', crawlController.remove);
 
 module.exports = router;

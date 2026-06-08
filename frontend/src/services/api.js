@@ -1152,8 +1152,10 @@ export const interactionsAPI = {
 
 // API pour le Crawl (outil externe cc_prospector, onglet Portefeuille)
 export const crawlAPI = {
+  list: () => apiRequest('/portefeuille/crawl'),
   start: (techno, nb_sites) => apiRequest('/portefeuille/crawl', 'POST', { techno, nb_sites }),
   get: (id) => apiRequest(`/portefeuille/crawl/${id}`),
+  delete: (id) => apiRequest(`/portefeuille/crawl/${id}`, 'DELETE'),
   toProspect: (id, result_ids) => apiRequest(`/portefeuille/crawl/${id}/to-prospect`, 'POST', { result_ids }),
   exportCsv: (id) => apiRequestRaw(`/portefeuille/crawl/${id}/export.csv`)
 };

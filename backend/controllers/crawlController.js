@@ -168,6 +168,44 @@ async function ingestCsv(db, jobId, csvPath) {
 
 const crawlController = {
   /**
+   * GET /api/portefeuille/crawl -> historique des jobs (récent -> ancien) + nb de résultats.
+   */
+  list: async (req, res) => {
+    const db = req.app.locals.db;
+    try {
+      const { rows } = await db.pool.query(
+        `SELECT j.id, j.techno, j.nb_sites, j.statut, j.phase,
+                j.progress_done, j.progress_total, j.message, j.created_at,
+                COUNT(r.id)::int AS nb_results
+         FROM crawl_jobs j
+         LEFT JOIN crawl_results r ON r.job_id = j.id
+         GROUP BY j.id
+         ORDER BY j.created_at DESC, j.id DESC`
+      );
+      res.json(rows);
+    } catch (error) {
+      console.error('[Crawl] Erreur historique:', error);
+      res.status(500).json({ message: 'Erreur serveur' });
+    }
+  },
+
+  /**
+   * DELETE /api/portefeuille/crawl/:id -> supprime le job + ses résultats (cascade).
+   */
+  remove: async (req, res) => {
+    const db = req.app.locals.db;
+    const { id } = req.params;
+    try {
+      const r = await db.pool.query('DELETE FROM crawl_jobs WHERE id = $1 RETURNING id', [id]);
+      if (r.rowCount === 0) return res.status(404).json({ message: 'Job introuvable' });
+      res.json({ success: true });
+    } catch (error) {
+      console.error('[Crawl] Erreur suppression:', error);
+      res.status(500).json({ message: 'Erreur serveur' });
+    }
+  },
+
+  /**
    * POST /api/portefeuille/crawl { techno, nb_sites }
    */
   start: async (req, res) => {
