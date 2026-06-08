@@ -196,14 +196,24 @@ const CrawlPanel = () => {
             </select>
           </div>
           <div>
-            <label className="block text-sm text-text-secondary mb-1">Nombre de sites : <span className="text-text-primary font-medium">{nbSites}</span></label>
-            <input
-              type="range" min="5" max="200" step="5"
-              value={nbSites}
-              onChange={(e) => setNbSites(parseInt(e.target.value, 10))}
-              disabled={running}
-              className="w-full accent-accent disabled:opacity-50"
-            />
+            <label className="block text-sm text-text-secondary mb-1">Nombre de sites</label>
+            <div className="flex items-center gap-3">
+              <input
+                type="range" min="5" max="200" step="5"
+                value={Math.min(nbSites || 5, 200)}
+                onChange={(e) => setNbSites(parseInt(e.target.value, 10))}
+                disabled={running}
+                className="flex-1 accent-accent disabled:opacity-50"
+              />
+              <input
+                type="number" min="1" max="5000"
+                value={nbSites}
+                onChange={(e) => setNbSites(e.target.value === '' ? '' : Math.max(1, Math.min(5000, parseInt(e.target.value, 10) || 0)))}
+                onBlur={(e) => { if (e.target.value === '' || parseInt(e.target.value, 10) < 1) setNbSites(5); }}
+                disabled={running}
+                className="w-20 px-2 py-2 bg-surface-muted border border-border rounded-lg text-text-primary text-center focus:outline-none focus:border-accent disabled:opacity-50"
+              />
+            </div>
           </div>
           <div>
             <button

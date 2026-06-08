@@ -214,7 +214,7 @@ const crawlController = {
     if (!VALID_TECHNO.includes(techno)) {
       return res.status(400).json({ message: `Techno invalide (${VALID_TECHNO.join(', ')})` });
     }
-    const nb = Math.min(Math.max(parseInt(nb_sites, 10) || 0, 5), 200);
+    const nb = Math.min(Math.max(parseInt(nb_sites, 10) || 0, 1), 5000);
     if (runningJobId) {
       return res.status(409).json({ message: 'Un crawl est déjà en cours. Patientez la fin.' });
     }
