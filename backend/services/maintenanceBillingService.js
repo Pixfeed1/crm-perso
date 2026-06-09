@@ -382,16 +382,20 @@ async function applyStripeEvent(db, event) {
       break;
     }
 
-    case 'invoice.paid': {
+    case 'invoice.paid':
+    case 'invoice.payment_succeeded': {
+      // Paiement réussi : (re)passe en actif et efface tout "Impayé" résiduel.
       await db.pool.query(
-        `UPDATE ${table} SET billing_status = 'active', updated_at = NOW() WHERE id = $1`,
+        `UPDATE ${table} SET billing_status = 'active', updated_at = NOW()
+         WHERE id = $1 AND billing_status NOT IN ('canceling', 'canceled')`,
         [row.id]
       );
-      console.log(`[Billing] invoice.paid -> ${tag}`);
+      console.log(`[Billing] ${event.type} -> ${tag} actif`);
       break;
     }
 
     case 'invoice.payment_failed': {
+      const billingReason = obj.billing_reason || null;
       // Échec transitoire à ne PAS traiter comme un impayé :
       // - SCA/3DS en cours (authentication_required) avant validation du paiement ;
       // - nouvelle tentative déjà programmée par Stripe (dunning).
@@ -400,8 +404,19 @@ async function applyStripeEvent(db, event) {
         (obj.last_payment_error && obj.last_payment_error.code) ||
         null;
       const retryImminent = !!obj.next_payment_attempt;
-      if (reasonCode === 'authentication_required' || retryImminent) {
-        console.log(`[Billing] invoice.payment_failed transitoire ignoré (${tag}) raison=${reasonCode || 'n/a'} retry=${retryImminent}`);
+
+      // 1) Échec de MISE EN PLACE (1re facture, avant que le client ait fini le Checkout
+      //    et rattaché sa carte) : billing_reason='subscription_create' (abonnement encore
+      //    incomplete, aucun paiement réussi). On IGNORE (log seulement), pas d'alerte.
+      if (billingReason === 'subscription_create' || reasonCode === 'authentication_required' || retryImminent) {
+        console.log(`[Billing] invoice.payment_failed initial/transitoire ignoré (${tag}) reason=${billingReason || 'n/a'} code=${reasonCode || 'n/a'} retry=${retryImminent}`);
+        break;
+      }
+
+      // 2) On n'alerte + ne passe en "Impayé" QUE pour un vrai échec de RENOUVELLEMENT
+      //    d'un abonnement déjà actif (billing_reason='subscription_cycle').
+      if (billingReason !== 'subscription_cycle') {
+        console.log(`[Billing] invoice.payment_failed non-cycle ignoré (${tag}) reason=${billingReason || 'n/a'}`);
         break;
       }
 
