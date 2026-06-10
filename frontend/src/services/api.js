@@ -1176,7 +1176,7 @@ export const crawlAPI = {
   start: (techno, nb_sites) => apiRequest('/portefeuille/crawl', 'POST', { techno, nb_sites }),
   get: (id) => apiRequest(`/portefeuille/crawl/${id}`),
   delete: (id) => apiRequest(`/portefeuille/crawl/${id}`, 'DELETE'),
-  toProspect: (id, result_ids) => apiRequest(`/portefeuille/crawl/${id}/to-prospect`, 'POST', { result_ids }),
+  toProspect: (id, result_ids, extra = {}) => apiRequest(`/portefeuille/crawl/${id}/to-prospect`, 'POST', { result_ids, ...extra }),
   exportCsv: (id) => apiRequestRaw(`/portefeuille/crawl/${id}/export.csv`)
 };
 

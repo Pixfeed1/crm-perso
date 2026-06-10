@@ -5,7 +5,7 @@
 // Charte : tokens de thème, react-icons, framer-motion. Aucune couleur en dur.
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiSearch, FiDownload, FiUserPlus, FiGlobe, FiCheckCircle, FiAlertTriangle, FiLoader, FiTrash2, FiClock } from 'react-icons/fi';
+import { FiSearch, FiDownload, FiUserPlus, FiGlobe, FiCheckCircle, FiAlertTriangle, FiLoader, FiTrash2, FiClock, FiSlash, FiX } from 'react-icons/fi';
 import { crawlAPI } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
 
@@ -53,6 +53,9 @@ const CrawlPanel = () => {
   const [platformFilter, setPlatformFilter] = useState('all');
   const [starting, setStarting] = useState(false);
   const [adding, setAdding] = useState(false);
+  const [pbTarget, setPbTarget] = useState(null); // { ids: [...] } pour "Pas de business"
+  const [pbNote, setPbNote] = useState('');
+  const [pbSaving, setPbSaving] = useState(false);
   const [history, setHistory] = useState([]);
   const pollRef = useRef(null);
 
@@ -170,6 +173,23 @@ const CrawlPanel = () => {
       toast.error(error.message || "Erreur lors de l'ajout aux prospects");
     } finally {
       setAdding(false);
+    }
+  };
+
+  // "Pas de business" : crée des leads en statut pas_business (+ note), traités/exclus.
+  const confirmPasBusiness = async () => {
+    if (!pbTarget || pbTarget.ids.length === 0) return;
+    try {
+      setPbSaving(true);
+      const res = await crawlAPI.toProspect(jobId, pbTarget.ids, { relation_status: 'pas_business', note: pbNote });
+      toast.success(`${res.created} site${res.created > 1 ? 's' : ''} classé${res.created > 1 ? 's' : ''} « Pas de business »`);
+      setPbTarget(null); setPbNote('');
+      setSelected(new Set());
+      poll(jobId);
+    } catch (error) {
+      toast.error(error.message || 'Erreur lors du classement');
+    } finally {
+      setPbSaving(false);
     }
   };
 
@@ -345,6 +365,14 @@ const CrawlPanel = () => {
               >
                 <FiUserPlus size={15} /> Ajouter aux prospects{selected.size > 0 ? ` (${selected.size})` : ''}
               </button>
+              <button
+                onClick={() => { setPbNote(''); setPbTarget({ ids: [...selected] }); }}
+                disabled={selected.size === 0}
+                className="px-3 py-2 bg-surface-strong hover:bg-border-strong text-text-primary rounded-lg text-sm flex items-center gap-1 disabled:opacity-50"
+                title="Classer la sélection en « Pas de business »"
+              >
+                <FiSlash size={15} /> Pas de business{selected.size > 0 ? ` (${selected.size})` : ''}
+              </button>
             </div>
           </div>
 
@@ -376,6 +404,7 @@ const CrawlPanel = () => {
                       <th className="px-4 py-3">Domaine</th>
                       <th className="px-4 py-3">Plateforme</th>
                       <th className="px-4 py-3">Titre</th>
+                      <th className="px-4 py-3 w-10"></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
@@ -402,6 +431,17 @@ const CrawlPanel = () => {
                           )}
                         </td>
                         <td className="px-4 py-3 text-text-secondary truncate max-w-xs">{r.title || '—'}</td>
+                        <td className="px-4 py-3 text-right">
+                          {!r.added_as_prospect && (
+                            <button
+                              onClick={() => { setPbNote(''); setPbTarget({ ids: [r.id] }); }}
+                              className="p-2 rounded-lg text-text-muted hover:text-danger-text hover:bg-surface-strong"
+                              title="Pas de business"
+                            >
+                              <FiSlash size={15} />
+                            </button>
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -411,6 +451,49 @@ const CrawlPanel = () => {
           )}
         </div>
       )}
+
+      {/* Modale note "Pas de business" */}
+      <AnimatePresence>
+        {pbTarget && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[10000] flex items-center justify-center p-4"
+            onClick={() => setPbTarget(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 20 }}
+              className="panel-bg border border-border rounded-2xl max-w-md w-full"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex justify-between items-center px-6 py-4 border-b border-border">
+                <h2 className="text-lg font-bold text-text-primary flex items-center gap-2"><FiSlash size={18} /> Pas de business</h2>
+                <button onClick={() => setPbTarget(null)} className="text-text-muted hover:text-text-primary"><FiX size={20} /></button>
+              </div>
+              <div className="p-6 space-y-3">
+                <p className="text-sm text-text-secondary">
+                  {pbTarget.ids.length} site{pbTarget.ids.length > 1 ? 's' : ''} seront classés « Pas de business » : créés comme contacts non actifs (reprospectables depuis Suivi), exclus des prochains crawls.
+                </p>
+                <div>
+                  <label className="block text-sm text-text-secondary mb-1">Note (optionnel)</label>
+                  <textarea value={pbNote} onChange={(e) => setPbNote(e.target.value)} rows={3}
+                    placeholder="Pourquoi ce n'est pas du business ? (déjà un presta, pas la cible, etc.)"
+                    className="w-full px-3 py-2 bg-surface-muted border border-border rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:border-accent resize-y" />
+                </div>
+              </div>
+              <div className="flex gap-3 px-6 py-4 border-t border-border">
+                <button onClick={() => setPbTarget(null)}
+                  className="flex-1 px-4 py-2.5 border-2 border-border text-text-primary hover:bg-surface-strong rounded-lg font-medium transition-all">
+                  Annuler
+                </button>
+                <button onClick={confirmPasBusiness} disabled={pbSaving}
+                  className="flex-1 px-4 py-2.5 bg-accent hover:bg-accent-hover text-white rounded-lg font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+                  <FiSlash size={16} /> {pbSaving ? 'Classement…' : 'Classer'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

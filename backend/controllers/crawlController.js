@@ -347,11 +347,14 @@ const crawlController = {
   toProspect: async (req, res) => {
     const db = req.app.locals.db;
     const { id } = req.params;
-    const { result_ids } = req.body || {};
+    const { result_ids, relation_status = 'nouveau', note = '' } = req.body || {};
     const ids = Array.isArray(result_ids) ? result_ids.map((v) => parseInt(v, 10)).filter((v) => !Number.isNaN(v)) : [];
     if (ids.length === 0) {
       return res.status(400).json({ message: 'Aucun résultat sélectionné' });
     }
+    // Seuls 'nouveau' (prospect actif) et 'pas_business' (écarté) sont acceptés ici.
+    const statusVal = relation_status === 'pas_business' ? 'pas_business' : 'nouveau';
+    const userNote = (note || '').toString().trim();
     try {
       const { rows } = await db.pool.query(
         `SELECT * FROM crawl_results WHERE job_id = $1 AND id = ANY($2::int[]) AND added_as_prospect = FALSE`,
@@ -361,16 +364,17 @@ const crawlController = {
       let lastError = null;
       for (const r of rows) {
         const notes = [
+          userNote || null,
           r.platform ? `Plateforme : ${r.platform}` : null,
           r.final_url ? `URL : ${r.final_url}` : null,
           'Source : Crawl Common Crawl'
         ].filter(Boolean).join('\n');
         try {
-          // Mêmes colonnes que la création de lead standard (leadController.createLead).
+          // Mêmes colonnes que la création de lead standard + statut de relation (suivi).
           await db.pool.query(
-            `INSERT INTO leads (name, company, type, status, source, notes, created_at, updated_at)
-             VALUES ($1, $2, 'company', 'nouveau', 'Crawl', $3, NOW(), NOW())`,
-            [r.title || r.domain, r.domain, notes]
+            `INSERT INTO leads (name, company, type, status, source, notes, relation_status, created_at, updated_at)
+             VALUES ($1, $2, 'company', 'nouveau', 'Crawl', $3, $4, NOW(), NOW())`,
+            [r.title || r.domain, r.domain, notes, statusVal]
           );
           await db.pool.query('UPDATE crawl_results SET added_as_prospect = TRUE WHERE id = $1', [r.id]);
           created++;
