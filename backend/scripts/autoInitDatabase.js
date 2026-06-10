@@ -73,6 +73,7 @@ const DATABASE_SCHEMA = {
       result: 'TEXT',
       relation_status: 'VARCHAR(20)', // statut de relation appliqué lors de cet échange (historique)
       next_followup_date: 'DATE',
+      next_followup_channel: 'VARCHAR(20)', // canal de la prochaine relance : appel|email|sms|autre
       followup_done: 'BOOLEAN DEFAULT FALSE',
       created_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'
     },
@@ -1180,12 +1181,18 @@ async function ensureInteractionsColumns(client) {
   await client.query('ALTER TABLE interactions ADD COLUMN IF NOT EXISTS result TEXT;');
   await client.query('ALTER TABLE interactions ADD COLUMN IF NOT EXISTS relation_status VARCHAR(20);');
   await client.query('ALTER TABLE interactions ADD COLUMN IF NOT EXISTS next_followup_date DATE;');
+  await client.query('ALTER TABLE interactions ADD COLUMN IF NOT EXISTS next_followup_channel VARCHAR(20);');
   await client.query('ALTER TABLE interactions ADD COLUMN IF NOT EXISTS followup_done BOOLEAN DEFAULT FALSE;');
   await client.query('CREATE INDEX IF NOT EXISTS idx_interactions_contact ON interactions(contact_type, contact_id);');
   await client.query('CREATE INDEX IF NOT EXISTS idx_interactions_followup ON interactions(next_followup_date, followup_done);');
   // Statut de relation (suivi/prospection) sur les contacts : leads ET clients.
   await client.query("ALTER TABLE leads ADD COLUMN IF NOT EXISTS relation_status VARCHAR(20) DEFAULT 'nouveau';");
   await client.query("ALTER TABLE crm_clients ADD COLUMN IF NOT EXISTS relation_status VARCHAR(20) DEFAULT 'nouveau';");
+  // Plateforme (techno du site) sur les contacts, pour le filtre plateforme du cockpit Suivi.
+  await client.query('ALTER TABLE leads ADD COLUMN IF NOT EXISTS platform VARCHAR(50);');
+  await client.query('ALTER TABLE crm_clients ADD COLUMN IF NOT EXISTS platform VARCHAR(50);');
+  // Backfill plateforme des leads issus du Crawl (plateforme rangée dans les notes).
+  await client.query("UPDATE leads SET platform = trim(substring(notes from 'Plateforme\\s*:\\s*([^\\n]+)')) WHERE platform IS NULL AND notes ~ 'Plateforme\\s*:';");
   console.log('  ✓ Colonnes interactions vérifiées');
 }
 

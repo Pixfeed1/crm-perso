@@ -6,7 +6,8 @@
 const VALID_TYPES = ['email', 'appel', 'sms', 'note', 'rdv'];
 const VALID_CONTACT_TYPES = ['lead', 'client'];
 const VALID_REACHED = ['joint', 'pas_reponse', 'message'];
-const VALID_STATUS = ['nouveau', 'a_contacter', 'en_discussion', 'devis_envoye', 'gagne', 'perdu'];
+const VALID_STATUS = ['nouveau', 'a_contacter', 'en_discussion', 'devis_envoye', 'gagne', 'perdu', 'pas_business'];
+const VALID_CHANNELS = ['appel', 'email', 'sms', 'autre'];
 
 const interactionController = {
   /**
@@ -46,7 +47,7 @@ const interactionController = {
     const {
       contact_type, contact_id, type,
       reached = null, date, notes = null, result = null,
-      relation_status = null, next_followup_date = null
+      relation_status = null, next_followup_date = null, next_followup_channel = null
     } = req.body || {};
 
     if (!VALID_CONTACT_TYPES.includes(contact_type) || !contact_id) {
@@ -57,13 +58,14 @@ const interactionController = {
     }
     const reachedVal = reached && VALID_REACHED.includes(reached) ? reached : null;
     const statusVal = relation_status && VALID_STATUS.includes(relation_status) ? relation_status : null;
+    const channelVal = next_followup_date && next_followup_channel && VALID_CHANNELS.includes(next_followup_channel) ? next_followup_channel : null;
 
     try {
       const { rows } = await db.pool.query(
-        `INSERT INTO interactions (contact_type, contact_id, type, reached, date, notes, result, relation_status, next_followup_date, followup_done)
-         VALUES ($1, $2, $3, $4, COALESCE($5, NOW()), $6, $7, $8, $9, FALSE)
+        `INSERT INTO interactions (contact_type, contact_id, type, reached, date, notes, result, relation_status, next_followup_date, next_followup_channel, followup_done)
+         VALUES ($1, $2, $3, $4, COALESCE($5, NOW()), $6, $7, $8, $9, $10, FALSE)
          RETURNING *`,
-        [contact_type, contact_id, type, reachedVal, date || null, notes, result, statusVal, next_followup_date || null]
+        [contact_type, contact_id, type, reachedVal, date || null, notes, result, statusVal, next_followup_date || null, channelVal]
       );
 
       // Mise à jour du statut de relation du contact (best-effort).
@@ -80,6 +82,31 @@ const interactionController = {
     } catch (error) {
       console.error('[Interaction] Erreur création:', error);
       res.status(500).json({ message: "Erreur lors de la création de l'interaction" });
+    }
+  },
+
+  /**
+   * PATCH /api/interactions/contact-status
+   * Change directement le statut de relation d'un contact (ex. "Pas de business" /
+   * réactivation), sans logguer d'échange. Body { contact_type, contact_id, relation_status }.
+   */
+  setContactStatus: async (req, res) => {
+    const db = req.app.locals.db;
+    const { contact_type, contact_id, relation_status } = req.body || {};
+    if (!VALID_CONTACT_TYPES.includes(contact_type) || !contact_id) {
+      return res.status(400).json({ message: 'contact_type et contact_id requis' });
+    }
+    if (!VALID_STATUS.includes(relation_status)) {
+      return res.status(400).json({ message: 'Statut invalide' });
+    }
+    try {
+      const table = contact_type === 'lead' ? 'leads' : 'crm_clients';
+      const r = await db.pool.query(`UPDATE ${table} SET relation_status = $1 WHERE id = $2 RETURNING id`, [relation_status, contact_id]);
+      if (r.rowCount === 0) return res.status(404).json({ message: 'Contact introuvable' });
+      res.json({ success: true, relation_status });
+    } catch (error) {
+      console.error('[Interaction] Erreur maj statut:', error);
+      res.status(500).json({ message: 'Erreur serveur' });
     }
   },
 
@@ -152,25 +179,20 @@ const interactionController = {
   },
 
   /**
-   * GET /api/interactions/cockpit?filter=all|relance_today|overdue|prospects|clients
-   * Cockpit "Suivi" : TOUS les prospects + clients (même sans échange), avec leur
-   * dernière interaction et prochaine relance si elles existent. UNE seule requête.
+   * GET /api/interactions/cockpit
+   * Cockpit "Suivi" : TOUS les prospects + clients (même sans échange), avec leur dernière
+   * interaction (dernier contact + joint?) et leur prochaine relance (date + canal).
+   * Renvoie toutes les lignes + les compteurs du bandeau. Le filtrage fin (recherche,
+   * plateforme, onglets) est fait côté client sur ce jeu unique. UNE seule requête.
    */
   getCockpit: async (req, res) => {
     const db = req.app.locals.db;
-    const filter = (req.query.filter || 'all').toString();
     try {
       const { rows } = await db.pool.query(
         `WITH contacts AS (
-           SELECT 'client'::text AS contact_type, id AS contact_id, name AS contact_name, email AS contact_email, phone AS contact_phone, COALESCE(relation_status, 'nouveau') AS relation_status FROM crm_clients
+           SELECT 'client'::text AS contact_type, id AS contact_id, name AS contact_name, email AS contact_email, phone AS contact_phone, COALESCE(relation_status, 'nouveau') AS relation_status, platform, NULL::text AS site FROM crm_clients
            UNION ALL
-           SELECT 'lead'::text, id, name, email, phone, COALESCE(relation_status, 'nouveau') FROM leads
-         ),
-         agg AS (
-           SELECT contact_type, contact_id,
-                  COUNT(*) FILTER (WHERE date >= NOW() - INTERVAL '7 days') AS exchanges_7d
-           FROM interactions
-           GROUP BY contact_type, contact_id
+           SELECT 'lead'::text, id, name, email, phone, COALESCE(relation_status, 'nouveau'), platform, company FROM leads
          ),
          last_ex AS (
            SELECT DISTINCT ON (contact_type, contact_id)
@@ -180,45 +202,35 @@ const interactionController = {
          ),
          next_ex AS (
            SELECT DISTINCT ON (contact_type, contact_id)
-                  contact_type, contact_id, id AS followup_id, next_followup_date AS next_followup
+                  contact_type, contact_id, id AS followup_id, next_followup_date AS next_followup, next_followup_channel
            FROM interactions
            WHERE followup_done = FALSE AND next_followup_date IS NOT NULL
            ORDER BY contact_type, contact_id, next_followup_date ASC
          )
-         SELECT c.contact_type, c.contact_id, c.contact_name, c.contact_email, c.contact_phone, c.relation_status,
-                COALESCE(a.exchanges_7d, 0) AS exchanges_7d,
-                n.next_followup, n.followup_id,
+         SELECT c.contact_type, c.contact_id, c.contact_name, c.contact_email, c.contact_phone, c.relation_status, c.platform, c.site,
+                n.next_followup, n.next_followup_channel, n.followup_id,
                 l.last_type, l.last_reached, l.last_date, l.last_result
          FROM contacts c
-         LEFT JOIN agg a ON a.contact_type = c.contact_type AND a.contact_id = c.contact_id
          LEFT JOIN last_ex l ON l.contact_type = c.contact_type AND l.contact_id = c.contact_id
          LEFT JOIN next_ex n ON n.contact_type = c.contact_type AND n.contact_id = c.contact_id
          ORDER BY (n.next_followup IS NULL), n.next_followup ASC, l.last_date DESC NULLS LAST, c.contact_name ASC`
       );
 
-      // Stats focus (calculées sur le jeu déjà chargé, sans requête supplémentaire)
+      // Compteurs du bandeau (calculés sur le jeu déjà chargé). Les vues actives
+      // excluent "Pas de business" (sauf son propre compteur).
       const today = new Date(); today.setHours(0, 0, 0, 0);
       const dayOf = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
+      const active = (r) => r.relation_status !== 'pas_business';
       const stats = {
-        relance_today: rows.filter((r) => r.next_followup && dayOf(r.next_followup).getTime() === today.getTime()).length,
-        overdue: rows.filter((r) => r.next_followup && dayOf(r.next_followup) < today).length,
-        exchanges_7d: rows.reduce((s, r) => s + Number(r.exchanges_7d || 0), 0)
+        relance_today: rows.filter((r) => active(r) && r.next_followup && dayOf(r.next_followup).getTime() === today.getTime()).length,
+        overdue: rows.filter((r) => active(r) && r.next_followup && dayOf(r.next_followup) < today).length,
+        nouveaux: rows.filter((r) => r.relation_status === 'nouveau').length,
+        en_discussion: rows.filter((r) => r.relation_status === 'en_discussion').length,
+        sans_reponse: rows.filter((r) => active(r) && r.relation_status !== 'gagne' && r.relation_status !== 'perdu' && r.last_reached === 'pas_reponse').length,
+        pas_business: rows.filter((r) => r.relation_status === 'pas_business').length
       };
 
-      let contacts = rows;
-      if (filter === 'relance_today') {
-        contacts = rows.filter((r) => r.next_followup && dayOf(r.next_followup).getTime() === today.getTime());
-      } else if (filter === 'overdue') {
-        contacts = rows.filter((r) => r.next_followup && dayOf(r.next_followup) < today);
-      } else if (filter === 'prospects') {
-        contacts = rows.filter((r) => r.contact_type === 'lead');
-      } else if (filter === 'clients') {
-        contacts = rows.filter((r) => r.contact_type === 'client');
-      } else if (VALID_STATUS.includes(filter)) {
-        contacts = rows.filter((r) => r.relation_status === filter);
-      }
-
-      res.json({ stats, contacts });
+      res.json({ stats, contacts: rows });
     } catch (error) {
       console.error('[Interaction] Erreur cockpit suivi:', error);
       res.status(500).json({ message: 'Erreur serveur' });

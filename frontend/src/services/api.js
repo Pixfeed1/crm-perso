@@ -1149,7 +1149,9 @@ export const interactionsAPI = {
   markFollowupDone: (id, done = true) => apiRequest(`/interactions/${id}/followup-done`, 'PATCH', { done }),
   delete: (id) => apiRequest(`/interactions/${id}`, 'DELETE'),
   getFollowups: () => apiRequest('/interactions/followups'),
-  getCockpit: (filter = 'all') => apiRequest(`/interactions/cockpit?filter=${encodeURIComponent(filter)}`)
+  getCockpit: () => apiRequest('/interactions/cockpit'),
+  setContactStatus: (contact_type, contact_id, relation_status) =>
+    apiRequest('/interactions/contact-status', 'PATCH', { contact_type, contact_id, relation_status })
 };
 
 // API modèles d'email

@@ -14,10 +14,12 @@ router.use(authMiddleware);
 router.post('/:id/send-email', async (req, res) => {
   const db = req.app.locals.db;
   const { id } = req.params;
-  const { to, subject, body, signature = '' } = req.body || {};
+  const { to, subject, body, signature = '', next_followup_date = null, next_followup_channel = null } = req.body || {};
   if (!to || !subject || !body) {
     return res.status(400).json({ message: 'Destinataire, objet et message sont requis' });
   }
+  const channels = ['appel', 'email', 'sms', 'autre'];
+  const followupChannel = next_followup_date && channels.includes(next_followup_channel) ? next_followup_channel : null;
   try {
     const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     const html = `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.6;color:#374151;">`
@@ -30,9 +32,9 @@ router.post('/:id/send-email', async (req, res) => {
       const extract = String(body).replace(/\s+/g, ' ').trim().slice(0, 200);
       const notes = `À : ${to}\nObjet : ${subject}${extract ? `\n${extract}` : ''}`;
       await db.pool.query(
-        `INSERT INTO interactions (contact_type, contact_id, type, date, notes, followup_done)
-         VALUES ('lead', $1, 'email', NOW(), $2, FALSE)`,
-        [id, notes]
+        `INSERT INTO interactions (contact_type, contact_id, type, date, notes, next_followup_date, next_followup_channel, followup_done)
+         VALUES ('lead', $1, 'email', NOW(), $2, $3, $4, FALSE)`,
+        [id, notes, next_followup_date || null, followupChannel]
       );
     } catch (logErr) {
       console.error('[Lead] Échec log interaction email:', logErr.message);

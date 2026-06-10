@@ -20,6 +20,9 @@ router.get('/contact/:contactType/:contactId', interactionController.getByContac
 // POST /api/interactions - créer une interaction
 router.post('/', interactionController.create);
 
+// PATCH /api/interactions/contact-status - changer le statut d'un contact (Pas de business, réactivation)
+router.patch('/contact-status', interactionController.setContactStatus);
+
 // PATCH /api/interactions/:id/followup-done - marquer la relance comme faite
 router.patch('/:id/followup-done', interactionController.markFollowupDone);
 

@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FiMail, FiSend, FiClock, FiX, FiTrash2 } from 'react-icons/fi';
 import { leadsAPI, scheduledEmailsAPI, emailTemplatesAPI, emailSignaturesAPI } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
+import { CHANNELS } from '../../utils/relationStatus';
 
 const nowLocalDT = () => {
   const d = new Date();
@@ -65,6 +66,8 @@ const ProspectEmails = ({ lead }) => {
   const [signatureId, setSignatureId] = useState('');
   const [mode, setMode] = useState('now'); // now | schedule
   const [sendAt, setSendAt] = useState(nowLocalDT());
+  const [relanceDate, setRelanceDate] = useState('');
+  const [relanceChannel, setRelanceChannel] = useState('appel');
   const [sending, setSending] = useState(false);
 
   // Nom utilisé pour {prenom} selon le destinataire courant (contact choisi sinon lead).
@@ -86,6 +89,7 @@ const ProspectEmails = ({ lead }) => {
 
   const openModal = async () => {
     setTo(defaultTo); setTemplateId(''); setSubject(''); setBody(''); setMode('now'); setSendAt(nowLocalDT());
+    setRelanceDate(''); setRelanceChannel('appel');
     setOpen(true);
     try {
       const [t, s] = await Promise.all([emailTemplatesAPI.list(), emailSignaturesAPI.list()]);
@@ -124,7 +128,11 @@ const ProspectEmails = ({ lead }) => {
     try {
       setSending(true);
       if (mode === 'now') {
-        await leadsAPI.sendEmail(lead.id, { to, subject, body, signature: signatureContent() });
+        await leadsAPI.sendEmail(lead.id, {
+          to, subject, body, signature: signatureContent(),
+          next_followup_date: relanceDate || null,
+          next_followup_channel: relanceDate ? relanceChannel : null
+        });
         toast.success('Email envoyé');
       } else {
         const bodyHtml = `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.6;color:#374151;">`
@@ -288,6 +296,20 @@ const ProspectEmails = ({ lead }) => {
                       className="w-full px-3 py-2 bg-surface-muted border border-border rounded-lg text-text-primary focus:outline-none focus:border-accent" />
                   )}
                 </div>
+
+                {mode === 'now' && (
+                  <div>
+                    <label className="block text-sm text-text-secondary mb-1">Programmer une relance après l'envoi (optionnel)</label>
+                    <div className="flex gap-2">
+                      <input type="date" value={relanceDate} onChange={(e) => setRelanceDate(e.target.value)}
+                        className="flex-1 px-3 py-2 bg-surface-muted border border-border rounded-lg text-text-primary focus:outline-none focus:border-accent" />
+                      <select value={relanceChannel} onChange={(e) => setRelanceChannel(e.target.value)} disabled={!relanceDate}
+                        className="w-28 px-2 py-2 bg-surface-muted border border-border rounded-lg text-text-primary focus:outline-none focus:border-accent disabled:opacity-50">
+                        {CHANNELS.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="flex gap-3 px-6 py-4 border-t border-border shrink-0">

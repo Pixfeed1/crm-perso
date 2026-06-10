@@ -11,7 +11,7 @@ import {
 import { interactionsAPI } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
 import LogExchangeModal from './LogExchangeModal';
-import { statusMeta, reachedMeta } from '../../utils/relationStatus';
+import { statusMeta, reachedMeta, channelLabel } from '../../utils/relationStatus';
 
 const TYPE_META = {
   email: { icon: FiMail, label: 'Email' },
@@ -150,7 +150,9 @@ const ContactFollowup = ({ contactType, contactId, phone, onEmail }) => {
                   <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${followupUrgency(nextFollowup.next_followup_date).cls}`}>
                     {followupUrgency(nextFollowup.next_followup_date).label}
                   </span>
-                  <span className="text-sm text-text-primary">{formatDate(nextFollowup.next_followup_date)}</span>
+                  <span className="text-sm text-text-primary">
+                    {nextFollowup.next_followup_channel ? `${channelLabel(nextFollowup.next_followup_channel)} · ` : ''}{formatDate(nextFollowup.next_followup_date)}
+                  </span>
                   <button onClick={() => markDone(nextFollowup.id)} className="text-xs text-text-muted hover:text-text-primary flex items-center gap-1" title="Marquer comme faite">
                     <FiCheck size={12} /> faite
                   </button>

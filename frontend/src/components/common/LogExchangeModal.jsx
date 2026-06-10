@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FiPhone, FiMessageSquare, FiMail, FiFileText, FiX, FiPlus } from 'react-icons/fi';
 import { interactionsAPI } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
-import { RELATION_STATUSES, REACHED_OPTIONS } from '../../utils/relationStatus';
+import { RELATION_STATUSES, REACHED_OPTIONS, CHANNELS } from '../../utils/relationStatus';
 
 const SEGMENTS = [
   { key: 'appel', label: 'Appel', icon: FiPhone },
@@ -29,14 +29,14 @@ const LogExchangeModal = ({
   const { toast } = useToast();
   const [type, setType] = useState(defaultType);
   const [form, setForm] = useState({
-    reached: '', date: todayLocal(), notes: '', result: '', relation_status: currentStatus || 'nouveau', next_followup_date: ''
+    reached: '', date: todayLocal(), notes: '', result: '', relation_status: currentStatus || 'nouveau', next_followup_date: '', next_followup_channel: 'appel'
   });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
       setType(defaultType || 'appel');
-      setForm({ reached: '', date: todayLocal(), notes: '', result: '', relation_status: currentStatus || 'nouveau', next_followup_date: '' });
+      setForm({ reached: '', date: todayLocal(), notes: '', result: '', relation_status: currentStatus || 'nouveau', next_followup_date: '', next_followup_channel: 'appel' });
     }
   }, [isOpen, defaultType, currentStatus]);
 
@@ -54,7 +54,8 @@ const LogExchangeModal = ({
         notes: form.notes || null,
         result: form.result || null,
         relation_status: form.relation_status || null,
-        next_followup_date: form.next_followup_date || null
+        next_followup_date: form.next_followup_date || null,
+        next_followup_channel: form.next_followup_date ? form.next_followup_channel : null
       });
       toast.success('Échange enregistré');
       onClose();
@@ -163,11 +164,18 @@ const LogExchangeModal = ({
                 </div>
               </div>
 
-              {/* Prochaine relance */}
+              {/* Prochaine relance (date + canal) */}
               <div>
                 <label className="block text-sm text-text-secondary mb-1">Prochaine relance (optionnel)</label>
-                <input type="date" value={form.next_followup_date} onChange={(e) => setForm({ ...form, next_followup_date: e.target.value })}
-                  className="w-full px-3 py-2 bg-surface-muted border border-border rounded-lg text-text-primary focus:outline-none focus:border-accent" />
+                <div className="flex gap-2">
+                  <input type="date" value={form.next_followup_date} onChange={(e) => setForm({ ...form, next_followup_date: e.target.value })}
+                    className="flex-1 px-3 py-2 bg-surface-muted border border-border rounded-lg text-text-primary focus:outline-none focus:border-accent" />
+                  <select value={form.next_followup_channel} onChange={(e) => setForm({ ...form, next_followup_channel: e.target.value })}
+                    disabled={!form.next_followup_date}
+                    className="w-28 px-2 py-2 bg-surface-muted border border-border rounded-lg text-text-primary focus:outline-none focus:border-accent disabled:opacity-50">
+                    {CHANNELS.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
+                  </select>
+                </div>
               </div>
             </div>
 
