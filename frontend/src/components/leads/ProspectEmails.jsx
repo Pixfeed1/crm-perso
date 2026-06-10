@@ -15,9 +15,10 @@ const nowLocalDT = () => {
   return d.toISOString().slice(0, 16);
 };
 
-const resolveVars = (text, lead) => {
+const resolveVars = (text, lead, prenomName) => {
   if (!text) return '';
-  const prenom = ((lead.name || '').trim().split(/\s+/)[0]) || 'Bonjour';
+  const source = (prenomName || lead.name || '').trim();
+  const prenom = source.split(/\s+/)[0] || 'Bonjour';
   const site = lead.company || '';
   const platMatch = lead.notes && lead.notes.match(/Plateforme\s*:\s*([^\n]+)/i);
   const plateforme = (platMatch && platMatch[1].trim()) || lead.tags || '';
@@ -47,13 +48,30 @@ const ProspectEmails = ({ lead }) => {
   const [signatures, setSignatures] = useState([]);
   const [scheduled, setScheduled] = useState([]);
 
-  const [to, setTo] = useState(lead.email || '');
+  // Destinataires possibles : contacts du prospect avec email, + l'email du lead.
+  const contactRecipients = (lead.contacts || [])
+    .filter((c) => c && c.email)
+    .map((c) => ({ email: c.email.trim(), name: c.name || '' }));
+  const recipientOptions = [...contactRecipients];
+  if (lead.email && !recipientOptions.some((r) => r.email.toLowerCase() === lead.email.toLowerCase())) {
+    recipientOptions.push({ email: lead.email.trim(), name: lead.name || '' });
+  }
+  const defaultTo = (contactRecipients[0] && contactRecipients[0].email) || lead.email || '';
+
+  const [to, setTo] = useState(defaultTo);
+  const [templateId, setTemplateId] = useState('');
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
   const [signatureId, setSignatureId] = useState('');
   const [mode, setMode] = useState('now'); // now | schedule
   const [sendAt, setSendAt] = useState(nowLocalDT());
   const [sending, setSending] = useState(false);
+
+  // Nom utilisé pour {prenom} selon le destinataire courant (contact choisi sinon lead).
+  const recipientName = (email) => {
+    const match = recipientOptions.find((r) => r.email.toLowerCase() === (email || '').toLowerCase());
+    return (match && match.name) || lead.name || '';
+  };
 
   const loadScheduled = useCallback(async () => {
     try {
@@ -67,7 +85,7 @@ const ProspectEmails = ({ lead }) => {
   useEffect(() => { loadScheduled(); }, [loadScheduled]);
 
   const openModal = async () => {
-    setTo(lead.email || ''); setSubject(''); setBody(''); setMode('now'); setSendAt(nowLocalDT());
+    setTo(defaultTo); setTemplateId(''); setSubject(''); setBody(''); setMode('now'); setSendAt(nowLocalDT());
     setOpen(true);
     try {
       const [t, s] = await Promise.all([emailTemplatesAPI.list(), emailSignaturesAPI.list()]);
@@ -80,12 +98,20 @@ const ProspectEmails = ({ lead }) => {
     }
   };
 
-  const applyTemplate = (id) => {
+  const applyTemplate = (id, recipientEmail = to) => {
+    setTemplateId(id);
     if (!id) { setSubject(''); setBody(''); return; }
     const t = templates.find((x) => String(x.id) === String(id));
     if (!t) return;
-    setSubject(resolveVars(t.subject, lead));
-    setBody(resolveVars(t.body, lead));
+    const prenomName = recipientName(recipientEmail);
+    setSubject(resolveVars(t.subject, lead, prenomName));
+    setBody(resolveVars(t.body, lead, prenomName));
+  };
+
+  // Changement de destinataire : met à jour {prenom} si un modèle est actif.
+  const handleRecipientChange = (email) => {
+    setTo(email);
+    if (templateId) applyTemplate(templateId, email);
   };
 
   const signatureContent = () => {
@@ -203,8 +229,24 @@ const ProspectEmails = ({ lead }) => {
 
                 <div>
                   <label className="block text-sm text-text-secondary mb-1">Destinataire</label>
-                  <input type="email" value={to} onChange={(e) => setTo(e.target.value)}
-                    className="w-full px-3 py-2 bg-surface-muted border border-border rounded-lg text-text-primary focus:outline-none focus:border-accent" />
+                  {recipientOptions.length > 0 && (
+                    <select
+                      value={recipientOptions.some((r) => r.email.toLowerCase() === to.toLowerCase()) ? to : ''}
+                      onChange={(e) => handleRecipientChange(e.target.value)}
+                      className="w-full mb-2 px-3 py-2 bg-surface-muted border border-border rounded-lg text-text-primary focus:outline-none focus:border-accent"
+                    >
+                      {recipientOptions.map((r) => (
+                        <option key={r.email} value={r.email}>{r.name ? `${r.name} — ${r.email}` : r.email}</option>
+                      ))}
+                      <option value="">Autre (saisie manuelle)…</option>
+                    </select>
+                  )}
+                  <input type="email" value={to} onChange={(e) => handleRecipientChange(e.target.value)}
+                    placeholder="email@exemple.com"
+                    className="w-full px-3 py-2 bg-surface-muted border border-border rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:border-accent" />
+                  {recipientOptions.length === 0 && !to && (
+                    <p className="text-xs text-danger-text mt-1">Aucune adresse email — ajoutez un email au prospect ou à un contact.</p>
+                  )}
                 </div>
 
                 <div>
@@ -253,8 +295,9 @@ const ProspectEmails = ({ lead }) => {
                   className="flex-1 px-4 py-2.5 border-2 border-border text-text-primary hover:bg-surface-strong rounded-lg font-medium transition-all">
                   Annuler
                 </button>
-                <button type="button" onClick={handleSend} disabled={sending}
-                  className="flex-1 px-4 py-2.5 bg-accent hover:bg-accent-hover text-white rounded-lg font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+                <button type="button" onClick={handleSend} disabled={sending || !to.trim()}
+                  title={!to.trim() ? 'Aucune adresse email' : undefined}
+                  className="flex-1 px-4 py-2.5 bg-accent hover:bg-accent-hover text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                   {mode === 'now' ? <FiSend size={16} /> : <FiClock size={16} />}
                   {sending ? 'Envoi…' : (mode === 'now' ? 'Envoyer maintenant' : 'Programmer')}
                 </button>
