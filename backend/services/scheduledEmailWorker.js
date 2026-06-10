@@ -123,12 +123,12 @@ class ScheduledEmailWorker {
       this.processedCount++;
 
       // Log automatique COMPLET dans Suivi pour un email programmé lié à un prospect (lead),
-      // au moment de l'envoi réel (destinataire + sujet + extrait du corps).
+      // au moment de l'envoi réel (destinataire + sujet + corps intégral) pour pouvoir
+      // relire exactement ce qui a été envoyé avant de relancer.
       if (email.related_type === 'lead' && email.related_id) {
         try {
-          const raw = (email.body_text || (email.body_html || '').replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim();
-          const extract = raw.slice(0, 200);
-          const notes = `À : ${email.to_email}\nObjet : ${email.subject}${extract ? `\n${extract}` : ''}`;
+          const corps = (email.body_text || (email.body_html || '').replace(/<[^>]+>/g, ' ')).replace(/[ \t]+/g, ' ').trim();
+          const notes = `À : ${email.to_email}\nObjet : ${email.subject}${corps ? `\n\n${corps}` : ''}`;
           await this.db.pool.query(
             `INSERT INTO interactions (contact_type, contact_id, type, date, notes, followup_done)
              VALUES ('lead', $1, 'email', NOW(), $2, FALSE)`,

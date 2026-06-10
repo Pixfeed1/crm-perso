@@ -27,10 +27,11 @@ router.post('/:id/send-email', async (req, res) => {
       + (signature ? `<div style="margin-top:18px;">${signature}</div>` : '')
       + `</div>`;
     await emailService.sendEmail({ to, subject, html, text: body });
-    // Log automatique COMPLET dans Suivi (destinataire + sujet + extrait du corps).
+    // Log automatique COMPLET dans Suivi (destinataire + sujet + corps intégral)
+    // afin de pouvoir relire exactement ce qui a été envoyé avant de relancer.
     try {
-      const extract = String(body).replace(/\s+/g, ' ').trim().slice(0, 200);
-      const notes = `À : ${to}\nObjet : ${subject}${extract ? `\n${extract}` : ''}`;
+      const corps = String(body).trim();
+      const notes = `À : ${to}\nObjet : ${subject}${corps ? `\n\n${corps}` : ''}`;
       await db.pool.query(
         `INSERT INTO interactions (contact_type, contact_id, type, date, notes, next_followup_date, next_followup_channel, followup_done)
          VALUES ('lead', $1, 'email', NOW(), $2, $3, $4, FALSE)`,

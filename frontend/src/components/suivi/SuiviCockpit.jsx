@@ -8,11 +8,12 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   FiBell, FiAlertTriangle, FiStar, FiMessageCircle, FiSlash, FiSearch,
-  FiPhone, FiMail, FiFileText, FiCheck, FiRotateCcw
+  FiPhone, FiMail, FiFileText, FiCheck, FiRotateCcw, FiClock
 } from 'react-icons/fi';
 import { interactionsAPI } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
 import LogExchangeModal from '../common/LogExchangeModal';
+import InteractionHistoryModal from '../common/InteractionHistoryModal';
 import { statusMeta, reachedMeta, channelLabel } from '../../utils/relationStatus';
 
 const fmtDM = (s) => {
@@ -89,6 +90,7 @@ const SuiviCockpit = () => {
   const [data, setData] = useState({ stats: {}, contacts: [] });
   const [loading, setLoading] = useState(true);
   const [logTarget, setLogTarget] = useState(null);
+  const [historyTarget, setHistoryTarget] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -251,6 +253,7 @@ const SuiviCockpit = () => {
 
                   {/* Actions rapides */}
                   <div className="flex items-center gap-1 flex-shrink-0">
+                    <button onClick={() => setHistoryTarget({ contact_type: r.contact_type, contact_id: r.contact_id, name: r.contact_name })} className="p-2 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-strong" title="Voir l'historique des échanges"><FiClock size={15} /></button>
                     {!isPB && (
                       <>
                         <button onClick={() => openLog(r, 'appel')} className="p-2 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-strong" title="Enregistrer un appel"><FiPhone size={15} /></button>
@@ -285,6 +288,14 @@ const SuiviCockpit = () => {
         phone={logTarget?.phone}
         defaultType={logTarget?.type || 'appel'}
         currentStatus={logTarget?.relation_status || 'nouveau'}
+      />
+
+      <InteractionHistoryModal
+        isOpen={!!historyTarget}
+        onClose={() => setHistoryTarget(null)}
+        contactType={historyTarget?.contact_type}
+        contactId={historyTarget?.contact_id}
+        contactName={historyTarget?.name}
       />
     </div>
   );

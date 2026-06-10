@@ -6,11 +6,12 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   FiPhone, FiMessageSquare, FiFileText, FiMail, FiCalendar,
-  FiTrash2, FiClock, FiCheck, FiChevronDown, FiChevronUp, FiBell
+  FiClock, FiCheck, FiChevronDown, FiChevronUp, FiBell
 } from 'react-icons/fi';
 import { interactionsAPI } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
 import LogExchangeModal from './LogExchangeModal';
+import InteractionTimeline from './InteractionTimeline';
 import { statusMeta, reachedMeta, channelLabel } from '../../utils/relationStatus';
 
 const TYPE_META = {
@@ -181,48 +182,8 @@ const ContactFollowup = ({ contactType, contactId, phone, onEmail }) => {
                 exit={{ opacity: 0, height: 0 }}
                 className="overflow-hidden"
               >
-                <div className="space-y-3 mt-3">
-                  {items.map((it) => {
-                    const meta = TYPE_META[it.type] || TYPE_META.note;
-                    const Icon = meta.icon;
-                    const rm = reachedMeta(it.reached);
-                    const itStatus = it.relation_status ? statusMeta(it.relation_status) : null;
-                    const followupDue = it.next_followup_date && !it.followup_done;
-                    return (
-                      <div key={it.id} className="bg-surface-muted/40 border border-border/70 rounded-xl p-3 flex gap-3">
-                        <div className="w-9 h-9 rounded-lg bg-surface-strong text-text-secondary flex items-center justify-center flex-shrink-0">
-                          <Icon size={16} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="text-sm text-text-primary font-medium flex items-center gap-2">
-                              {meta.label}
-                              {rm && <span className="text-xs text-text-muted">· {rm.label}</span>}
-                            </span>
-                            <span className="text-xs text-text-muted">{formatDate(it.date)}</span>
-                          </div>
-                          {it.notes && <p className="text-sm text-text-secondary mt-1 whitespace-pre-wrap">{it.notes}</p>}
-                          <div className="flex items-center gap-2 flex-wrap mt-2">
-                            {itStatus && <span className={`text-xs px-2 py-0.5 rounded-full ${itStatus.cls}`}>{itStatus.label}</span>}
-                            {it.result && <span className="text-xs px-2 py-0.5 rounded-full bg-neutral-bg text-neutral-text">{it.result}</span>}
-                            {followupDue && (
-                              <span className={`text-xs px-2 py-0.5 rounded-full flex items-center gap-1 ${followupUrgency(it.next_followup_date).cls}`}>
-                                <FiClock size={11} /> Relance le {formatDate(it.next_followup_date)}
-                              </span>
-                            )}
-                            {it.next_followup_date && it.followup_done && (
-                              <span className="text-xs px-2 py-0.5 rounded-full bg-success-bg text-success-text flex items-center gap-1">
-                                <FiCheck size={11} /> Relance faite
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        <button onClick={() => handleDelete(it.id)} className="text-text-muted hover:text-danger-text self-start" title="Supprimer">
-                          <FiTrash2 size={14} />
-                        </button>
-                      </div>
-                    );
-                  })}
+                <div className="mt-3">
+                  <InteractionTimeline items={items} onDelete={handleDelete} />
                 </div>
               </motion.div>
             )}
