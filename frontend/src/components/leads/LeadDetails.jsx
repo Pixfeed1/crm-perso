@@ -1,7 +1,7 @@
 // src/components/leads/LeadDetails.jsx
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiStar, FiEye, FiCheckCircle, FiMessageCircle, FiAward, FiXCircle, FiHelpCircle, FiClipboard, FiBriefcase, FiUser, FiFileText, FiUsers, FiEdit2, FiTrash2, FiClock, FiUserCheck } from 'react-icons/fi';
+import { FiStar, FiEye, FiCheckCircle, FiMessageCircle, FiAward, FiXCircle, FiHelpCircle, FiClipboard, FiBriefcase, FiUser, FiFileText, FiUsers, FiEdit2, FiTrash2, FiUserCheck } from 'react-icons/fi';
 import { leadsAPI, clientsAPI } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
 import { useConfirm } from '../../hooks/useConfirm';
@@ -9,8 +9,6 @@ import { useConfirm } from '../../hooks/useConfirm';
 // Sous-composants
 import ContactList from './ContactList';
 import ContactForm from './ContactForm';
-import InteractionTimeline from './InteractionTimeline';
-import InteractionForm from './InteractionForm';
 import ContactFollowup from '../common/ContactFollowup';
 import ProspectEmails from './ProspectEmails';
 import LeadForm from './LeadForm';
@@ -21,9 +19,7 @@ const LeadDetails = ({ lead, onUpdate, onDelete, onAddContact, onUpdateContact, 
   const { confirm, confirmState } = useConfirm();
   const [isEditing, setIsEditing] = useState(false);
   const [isAddingContact, setIsAddingContact] = useState(false);
-  const [isAddingInteraction, setIsAddingInteraction] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [interactions, setInteractions] = useState([]);
   const [isConverting, setIsConverting] = useState(false);
 
   // Format de la date
@@ -113,60 +109,7 @@ const LeadDetails = ({ lead, onUpdate, onDelete, onAddContact, onUpdateContact, 
     }
   };
 
-  // Charger les interactions lorsque le lead change
-  useEffect(() => {
-    const fetchInteractions = async () => {
-      if (lead && lead.id) {
-        try {
-          const interactionsData = await leadsAPI.getInteractions(lead.id);
-          setInteractions(interactionsData);
-        } catch (error) {
-          console.error('Erreur lors du chargement des interactions:', error);
-          setInteractions([]);
-        }
-      }
-    };
 
-    fetchInteractions();
-  }, [lead]);
-
-  // Sauvegarde d'une nouvelle interaction
-  const handleSaveInteraction = async (interactionData) => {
-    try {
-      await onAddInteraction(lead.id, interactionData);
-      setIsAddingInteraction(false);
-      // Recharger les interactions
-      const interactionsData = await leadsAPI.getInteractions(lead.id);
-      setInteractions(interactionsData);
-    } catch (error) {
-      console.error('Erreur lors de l\'ajout de l\'interaction:', error);
-    }
-  };
-
-  // Mise à jour d'une interaction
-  const handleUpdateInteractionLocal = async (interactionId, updatedData) => {
-    try {
-      await onUpdateInteraction(interactionId, updatedData);
-      // Recharger les interactions
-      const interactionsData = await leadsAPI.getInteractions(lead.id);
-      setInteractions(interactionsData);
-    } catch (error) {
-      console.error('Erreur lors de la mise à jour de l\'interaction:', error);
-    }
-  };
-
-  // Suppression d'une interaction
-  const handleDeleteInteractionLocal = async (interactionId) => {
-    try {
-      await onDeleteInteraction(interactionId);
-      // Recharger les interactions
-      const interactionsData = await leadsAPI.getInteractions(lead.id);
-      setInteractions(interactionsData);
-    } catch (error) {
-      console.error('Erreur lors de la suppression de l\'interaction:', error);
-    }
-  };
-  
   // Confirmation et suppression du lead
   const handleConfirmDelete = async () => {
     try {
@@ -459,59 +402,10 @@ const LeadDetails = ({ lead, onUpdate, onDelete, onAddContact, onUpdateContact, 
         </AnimatePresence>
       </div>
 
-      {/* Section Interactions */}
-      <div className="bg-surface/30 backdrop-blur-sm rounded-xl p-4 sm:p-5 mb-4 sm:mb-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 sm:mb-4 gap-3">
-          <h3 className="text-base sm:text-lg font-medium text-text-primary flex items-center gap-2">
-            <FiClock className="text-base sm:text-lg" />
-            Historique des interactions
-          </h3>
-
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="bg-accent/30 hover:bg-accent/50 text-indigo-300 px-3 py-1.5 sm:py-1 rounded-lg text-xs sm:text-sm flex items-center whitespace-nowrap"
-            onClick={() => setIsAddingInteraction(true)}
-          >
-            <span className="mr-1">+</span>
-            Nouvelle interaction
-          </motion.button>
-        </div>
-
-        {/* Timeline des interactions ou formulaire d'ajout */}
-        <AnimatePresence mode="wait">
-          {isAddingInteraction ? (
-            <motion.div
-              key="interaction-form"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-            >
-              <InteractionForm
-                contacts={lead.contacts || []}
-                onSave={handleSaveInteraction}
-                onCancel={() => setIsAddingInteraction(false)}
-              />
-            </motion.div>
-          ) : (
-            <motion.div
-              key="interaction-timeline"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-            >
-              <InteractionTimeline
-                interactions={interactions}
-                contacts={lead.contacts || []}
-                onUpdateInteraction={handleUpdateInteractionLocal}
-                onDeleteInteraction={handleDeleteInteractionLocal}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-
-      {/* Suivi des prises de contact (table interactions unifiée) */}
+      {/* Suivi des prises de contact — système UNIQUE (table interactions) :
+          statut, dernier contact, prochaine relance, boutons rapides + timeline complète
+          (« Voir tout l'historique »). Remplace l'ancien « Historique des interactions »
+          qui lisait une autre table (lead_interactions) et créait un doublon. */}
       <ContactFollowup contactType="lead" contactId={lead.id} phone={lead.phone} />
 
       {/* Emails : modèle éditable + signature, envoi immédiat ou programmé */}

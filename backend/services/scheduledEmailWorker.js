@@ -122,13 +122,17 @@ class ScheduledEmailWorker {
       await scheduledEmailModel.markAsSent(this.db, email.id);
       this.processedCount++;
 
-      // Log automatique dans Suivi pour un email programmé lié à un prospect (lead).
+      // Log automatique COMPLET dans Suivi pour un email programmé lié à un prospect (lead),
+      // au moment de l'envoi réel (destinataire + sujet + extrait du corps).
       if (email.related_type === 'lead' && email.related_id) {
         try {
+          const raw = (email.body_text || (email.body_html || '').replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim();
+          const extract = raw.slice(0, 200);
+          const notes = `À : ${email.to_email}\nObjet : ${email.subject}${extract ? `\n${extract}` : ''}`;
           await this.db.pool.query(
             `INSERT INTO interactions (contact_type, contact_id, type, date, notes, followup_done)
              VALUES ('lead', $1, 'email', NOW(), $2, FALSE)`,
-            [email.related_id, email.subject]
+            [email.related_id, notes]
           );
         } catch (logErr) {
           console.error(`[Worker] Échec log interaction email #${email.id}:`, logErr.message);

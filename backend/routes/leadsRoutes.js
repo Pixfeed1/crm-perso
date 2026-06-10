@@ -25,12 +25,14 @@ router.post('/:id/send-email', async (req, res) => {
       + (signature ? `<div style="margin-top:18px;">${signature}</div>` : '')
       + `</div>`;
     await emailService.sendEmail({ to, subject, html, text: body });
-    // Log automatique dans Suivi (best-effort)
+    // Log automatique COMPLET dans Suivi (destinataire + sujet + extrait du corps).
     try {
+      const extract = String(body).replace(/\s+/g, ' ').trim().slice(0, 200);
+      const notes = `À : ${to}\nObjet : ${subject}${extract ? `\n${extract}` : ''}`;
       await db.pool.query(
         `INSERT INTO interactions (contact_type, contact_id, type, date, notes, followup_done)
          VALUES ('lead', $1, 'email', NOW(), $2, FALSE)`,
-        [id, subject]
+        [id, notes]
       );
     } catch (logErr) {
       console.error('[Lead] Échec log interaction email:', logErr.message);
