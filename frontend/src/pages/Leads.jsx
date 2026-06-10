@@ -107,13 +107,13 @@ const Leads = () => {
     let result = leads.filter(lead => {
       // Filtre par recherche
       const searchMatch = filters.search === '' ||
-        lead.name.toLowerCase().includes(filters.search.toLowerCase()) ||
+        (lead.name && lead.name.toLowerCase().includes(filters.search.toLowerCase())) ||
         (lead.company && lead.company.toLowerCase().includes(filters.search.toLowerCase()));
 
       // Filtre par statut
-      // "all" signifie tous les leads ACTIFS (exclut won/lost qui sont archivés)
+      // "all" = tous les leads ACTIFS (exclut les leads perdus, archivés)
       const statusMatch = filters.status === 'all'
-        ? (lead.status !== 'won' && lead.status !== 'lost')
+        ? lead.status !== 'perdu'
         : lead.status === filters.status;
 
       // Filtre par type
@@ -136,8 +136,8 @@ const Leads = () => {
 
       switch (sortField) {
         case 'name':
-          aValue = a.name.toLowerCase();
-          bValue = b.name.toLowerCase();
+          aValue = (a.name || '').toLowerCase();
+          bValue = (b.name || '').toLowerCase();
           break;
         case 'company':
           aValue = (a.company || '').toLowerCase();

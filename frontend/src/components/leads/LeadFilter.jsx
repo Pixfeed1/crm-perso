@@ -6,15 +6,15 @@ import { FiSearch, FiX, FiFilter, FiArrowUp, FiArrowDown } from 'react-icons/fi'
 const LeadFilter = ({ filters, setFilters, onSort, sortField, sortDirection, isKanbanView = false }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  // Options de statut (alignées avec le Kanban)
+  // Options de statut (alignées avec LeadForm = valeurs réellement stockées)
   const statusOptions = [
     { value: 'all', label: 'Tous les statuts' },
-    { value: 'new', label: 'Nouveau' },
-    { value: 'contacted', label: 'Contacté' },
-    { value: 'proposal', label: 'Proposition' },
-    { value: 'negotiation', label: 'Négociation' },
-    { value: 'won', label: 'Gagné' },
-    { value: 'lost', label: 'Perdu' }
+    { value: 'nouveau', label: 'Nouveau' },
+    { value: 'prospect', label: 'Prospect' },
+    { value: 'qualifié', label: 'Qualifié' },
+    { value: 'négociation', label: 'Négociation' },
+    { value: 'client', label: 'Client' },
+    { value: 'perdu', label: 'Perdu' }
   ];
 
   // Options de type
@@ -27,6 +27,7 @@ const LeadFilter = ({ filters, setFilters, onSort, sortField, sortDirection, isK
   // Options de source
   const sourceOptions = [
     { value: 'all', label: 'Toutes les sources' },
+    { value: 'Crawl', label: 'Crawl' },
     { value: 'Site Web', label: 'Site Web' },
     { value: 'Référence', label: 'Référence' },
     { value: 'LinkedIn', label: 'LinkedIn' },
