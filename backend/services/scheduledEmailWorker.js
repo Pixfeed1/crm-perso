@@ -134,6 +134,11 @@ class ScheduledEmailWorker {
              VALUES ('lead', $1, 'email', NOW(), $2, FALSE)`,
             [email.related_id, notes]
           );
+          // Première prise de contact : "Nouveau" -> "Contacté".
+          await this.db.pool.query(
+            "UPDATE leads SET status = 'contacte', updated_at = NOW() WHERE id = $1 AND (status IS NULL OR status = 'nouveau')",
+            [email.related_id]
+          );
         } catch (logErr) {
           console.error(`[Worker] Échec log interaction email #${email.id}:`, logErr.message);
         }

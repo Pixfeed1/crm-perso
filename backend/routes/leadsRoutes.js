@@ -36,6 +36,12 @@ router.post('/:id/send-email', async (req, res) => {
          VALUES ('lead', $1, 'email', NOW(), $2, $3, $4, FALSE)`,
         [id, notes, next_followup_date || null, followupChannel]
       );
+      // Première prise de contact : fait passer le lead "Nouveau" -> "Contacté"
+      // (n'écrase pas un statut déjà avancé manuellement).
+      await db.pool.query(
+        "UPDATE leads SET status = 'contacte', updated_at = NOW() WHERE id = $1 AND (status IS NULL OR status = 'nouveau')",
+        [id]
+      );
     } catch (logErr) {
       console.error('[Lead] Échec log interaction email:', logErr.message);
     }

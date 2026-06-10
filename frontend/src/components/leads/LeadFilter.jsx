@@ -10,6 +10,7 @@ const LeadFilter = ({ filters, setFilters, onSort, sortField, sortDirection, isK
   const statusOptions = [
     { value: 'all', label: 'Tous les statuts' },
     { value: 'nouveau', label: 'Nouveau' },
+    { value: 'contacte', label: 'Contacté' },
     { value: 'prospect', label: 'Prospect' },
     { value: 'qualifié', label: 'Qualifié' },
     { value: 'négociation', label: 'Négociation' },

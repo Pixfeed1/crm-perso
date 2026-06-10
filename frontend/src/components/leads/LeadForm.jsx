@@ -23,6 +23,7 @@ const LeadForm = ({ lead = {}, onSave, onCancel }) => {
   // Options de statut
   const statusOptions = [
     { value: 'nouveau', label: 'Nouveau' },
+    { value: 'contacte', label: 'Contacté' },
     { value: 'prospect', label: 'Prospect' },
     { value: 'qualifié', label: 'Qualifié' },
     { value: 'négociation', label: 'Négociation' },
