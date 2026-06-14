@@ -73,18 +73,18 @@ const ClientDetails = ({ client, onUpdate, onDelete, onClose }) => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 20 }}
-      className="bg-surface/30 border border-border rounded-2xl p-6 relative"
+      className="bg-surface/30 border border-border rounded-2xl p-4 sm:p-6 relative max-w-full overflow-hidden"
     >
       {/* En-tête */}
-      <div className="flex justify-between items-start mb-6">
-        <div className="flex items-start gap-4">
-          <div className={`w-16 h-16 rounded-xl ${statusStyle.bg} ${statusStyle.text} flex items-center justify-center text-2xl`}>
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-6">
+        <div className="flex items-start gap-3 sm:gap-4 min-w-0">
+          <div className={`w-12 h-12 sm:w-16 sm:h-16 rounded-xl ${statusStyle.bg} ${statusStyle.text} flex items-center justify-center text-xl sm:text-2xl flex-shrink-0`}>
             <TypeIcon />
           </div>
-          <div>
-            <h2 className="text-2xl font-bold text-text-primary mb-1">{client.name}</h2>
+          <div className="min-w-0">
+            <h2 className="text-xl sm:text-2xl font-bold text-text-primary mb-1 break-words">{client.name}</h2>
             {client.company && (
-              <p className="text-indigo-300 text-lg">{client.company}</p>
+              <p className="text-indigo-300 text-base sm:text-lg break-words">{client.company}</p>
             )}
             <div className={`inline-block mt-2 text-xs px-3 py-1 rounded-full ${statusStyle.bg} ${statusStyle.text} font-medium`}>
               {statusStyle.label}
@@ -92,7 +92,7 @@ const ClientDetails = ({ client, onUpdate, onDelete, onClose }) => {
           </div>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2 sm:flex-shrink-0">
           {client.email && (
             <motion.button
               whileHover={{ scale: 1.05 }}
@@ -156,7 +156,7 @@ const ClientDetails = ({ client, onUpdate, onDelete, onClose }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         {/* Type */}
         <div className="flex items-start gap-3">
-          <div className="w-10 h-10 bg-surface-strong/50 rounded-lg flex items-center justify-center">
+          <div className="w-10 h-10 bg-surface-strong/50 rounded-lg flex items-center justify-center flex-shrink-0">
             <TypeIcon className="text-indigo-400" />
           </div>
           <div>
@@ -168,12 +168,12 @@ const ClientDetails = ({ client, onUpdate, onDelete, onClose }) => {
         {/* Email */}
         {client.email && (
           <div className="flex items-start gap-3">
-            <div className="w-10 h-10 bg-surface-strong/50 rounded-lg flex items-center justify-center">
+            <div className="w-10 h-10 bg-surface-strong/50 rounded-lg flex items-center justify-center flex-shrink-0">
               <FiMail className="text-blue-400" />
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="text-xs text-gray-500 mb-1">Email</div>
-              <a href={`mailto:${client.email}`} className="text-blue-400 hover:underline">
+              <a href={`mailto:${client.email}`} className="text-blue-400 hover:underline break-all">
                 {client.email}
               </a>
             </div>
@@ -183,7 +183,7 @@ const ClientDetails = ({ client, onUpdate, onDelete, onClose }) => {
         {/* Téléphone */}
         {client.phone && (
           <div className="flex items-start gap-3">
-            <div className="w-10 h-10 bg-surface-strong/50 rounded-lg flex items-center justify-center">
+            <div className="w-10 h-10 bg-surface-strong/50 rounded-lg flex items-center justify-center flex-shrink-0">
               <FiPhone className="text-green-400" />
             </div>
             <div>
@@ -198,12 +198,12 @@ const ClientDetails = ({ client, onUpdate, onDelete, onClose }) => {
         {/* Adresse */}
         {client.address && (
           <div className="flex items-start gap-3">
-            <div className="w-10 h-10 bg-surface-strong/50 rounded-lg flex items-center justify-center">
+            <div className="w-10 h-10 bg-surface-strong/50 rounded-lg flex items-center justify-center flex-shrink-0">
               <FiMapPin className="text-red-400" />
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="text-xs text-gray-500 mb-1">Adresse</div>
-              <div className="text-text-primary">{client.address}</div>
+              <div className="text-text-primary break-words">{client.address}</div>
             </div>
           </div>
         )}
@@ -211,16 +211,16 @@ const ClientDetails = ({ client, onUpdate, onDelete, onClose }) => {
         {/* Site web */}
         {client.website && (
           <div className="flex items-start gap-3">
-            <div className="w-10 h-10 bg-surface-strong/50 rounded-lg flex items-center justify-center">
+            <div className="w-10 h-10 bg-surface-strong/50 rounded-lg flex items-center justify-center flex-shrink-0">
               <FiGlobe className="text-purple-400" />
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="text-xs text-gray-500 mb-1">Site web</div>
               <a
                 href={client.website.startsWith('http') ? client.website : `https://${client.website}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-purple-400 hover:underline"
+                className="text-purple-400 hover:underline break-all"
               >
                 {client.website}
               </a>
@@ -231,7 +231,7 @@ const ClientDetails = ({ client, onUpdate, onDelete, onClose }) => {
         {/* Industrie */}
         {client.industry && (
           <div className="flex items-start gap-3">
-            <div className="w-10 h-10 bg-surface-strong/50 rounded-lg flex items-center justify-center">
+            <div className="w-10 h-10 bg-surface-strong/50 rounded-lg flex items-center justify-center flex-shrink-0">
               <FiBriefcase className="text-yellow-400" />
             </div>
             <div>
@@ -315,7 +315,7 @@ const ClientDetails = ({ client, onUpdate, onDelete, onClose }) => {
             <FiFileText />
             <span>Notes</span>
           </div>
-          <div className="p-4 bg-surface-muted/50 rounded-xl text-text-secondary whitespace-pre-wrap">
+          <div className="p-4 bg-surface-muted/50 rounded-xl text-text-secondary whitespace-pre-wrap break-words">
             {client.notes}
           </div>
         </div>
