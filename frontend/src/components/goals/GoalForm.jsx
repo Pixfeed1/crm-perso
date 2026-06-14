@@ -1,5 +1,6 @@
 // src/components/goals/GoalForm.jsx
 import React, { useState, useEffect } from 'react';
+import { isAutoGoalCategory } from '../../utils/goalPace';
 // Suppression de framer-motion pour éviter les conflits WebAssembly
 // import { motion } from 'framer-motion';
 
@@ -55,21 +56,35 @@ const GoalForm = ({ goal, onSave, onCancel }) => {
     setFormValid(isValid);
   }, [formData]);
 
-  // Options de catégorie
+  // Options de catégorie. Les catégories "auto" sont calculées automatiquement depuis
+  // les vraies données (pas de saisie de la valeur actuelle).
   const categoryOptions = [
-    { value: 'leads', label: 'Leads', description: 'Objectifs liés à l\'acquisition de clients' },
-    { value: 'revenue', label: 'Revenus', description: 'Objectifs financiers et de chiffre d\'affaires' },
+    // Catégories métier (réalisé calculé automatiquement)
+    { value: 'maintenance_signed', label: 'Contrats de maintenance', description: 'Contrats de maintenance signés sur la période', auto: true },
+    { value: 'subscriptions', label: 'Abonnements', description: 'Abonnements actifs créés sur la période', auto: true },
+    { value: 'new_clients', label: 'Nouveaux clients', description: 'Clients créés sur la période', auto: true },
+    { value: 'quotes_sent', label: 'Devis envoyés', description: 'Devis envoyés sur la période', auto: true },
+    { value: 'projects_signed', label: 'Projets / contrats', description: 'Projets créés sur la période', auto: true },
+    { value: 'revenue_cashed', label: 'CA encaissé (€)', description: 'Revenus encaissés (payés) sur la période', auto: true },
+    { value: 'prospects_contacted', label: 'Prospects contactés', description: 'Prospects passés en « Contacté » sur la période', auto: true },
+    // Catégories manuelles (saisie de la valeur actuelle)
+    { value: 'leads', label: 'Leads (manuel)', description: 'Objectifs liés à l\'acquisition de clients' },
+    { value: 'revenue', label: 'Revenus (manuel)', description: 'Objectifs financiers et de chiffre d\'affaires' },
     { value: 'productivity', label: 'Productivité', description: 'Objectifs liés à l\'efficacité et à la performance' },
     { value: 'marketing', label: 'Marketing', description: 'Objectifs de visibilité et de communication' },
     { value: 'personal', label: 'Personnel', description: 'Objectifs de développement personnel' }
   ];
-  
+
   // Options de période
   const periodOptions = [
+    { value: 'weekly', label: 'Hebdomadaire', description: 'Objectif à atteindre sur une semaine' },
     { value: 'monthly', label: 'Mensuel', description: 'Objectif à atteindre sur un mois' },
     { value: 'quarterly', label: 'Trimestriel', description: 'Objectif à atteindre sur un trimestre' },
+    { value: 'semiannual', label: 'Semestriel', description: 'Objectif à atteindre sur un semestre' },
     { value: 'yearly', label: 'Annuel', description: 'Objectif à atteindre sur une année' }
   ];
+
+  const isAuto = isAutoGoalCategory(formData.category);
   
   // Mise à jour des champs du formulaire
   const handleInputChange = (e) => {
@@ -101,13 +116,20 @@ const GoalForm = ({ goal, onSave, onCancel }) => {
     let end;
     
     // Ajuster la date de fin en fonction de la période
-    if (period === 'monthly') {
+    if (period === 'weekly') {
+      end = new Date(start);
+      end.setDate(end.getDate() + 6); // semaine = 7 jours (début inclus)
+    } else if (period === 'monthly') {
       end = new Date(start);
       end.setMonth(end.getMonth() + 1);
       end.setDate(0); // Dernier jour du mois
     } else if (period === 'quarterly') {
       end = new Date(start);
       end.setMonth(end.getMonth() + 3);
+      end.setDate(end.getDate() - 1);
+    } else if (period === 'semiannual') {
+      end = new Date(start);
+      end.setMonth(end.getMonth() + 6);
       end.setDate(end.getDate() - 1);
     } else if (period === 'yearly') {
       end = new Date(start);
@@ -250,22 +272,34 @@ const GoalForm = ({ goal, onSave, onCancel }) => {
             )}
           </div>
           
-          <div>
-            <label htmlFor="current_value" className="block text-sm font-medium text-text-secondary mb-1">
-              Valeur actuelle
-            </label>
-            <input
-              type="number"
-              id="current_value"
-              name="current_value"
-              value={formData.current_value}
-              onChange={handleInputChange}
-              className="w-full bg-surface/50 text-text-primary border border-border rounded-lg px-4 py-2 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              placeholder="Ex: 0"
-              step="0.01"
-              min="0"
-            />
-          </div>
+          {isAuto ? (
+            <div>
+              <label className="block text-sm font-medium text-text-secondary mb-1">
+                Valeur actuelle
+              </label>
+              <div className="w-full bg-surface-muted/50 text-text-muted border border-border rounded-lg px-4 py-2 flex items-center gap-2">
+                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-info-bg text-info-text">Auto</span>
+                Calculée depuis les données réelles
+              </div>
+            </div>
+          ) : (
+            <div>
+              <label htmlFor="current_value" className="block text-sm font-medium text-text-secondary mb-1">
+                Valeur actuelle
+              </label>
+              <input
+                type="number"
+                id="current_value"
+                name="current_value"
+                value={formData.current_value}
+                onChange={handleInputChange}
+                className="w-full bg-surface/50 text-text-primary border border-border rounded-lg px-4 py-2 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                placeholder="Ex: 0"
+                step="0.01"
+                min="0"
+              />
+            </div>
+          )}
         </div>
         
         {/* Catégorie */}
@@ -284,9 +318,15 @@ const GoalForm = ({ goal, onSave, onCancel }) => {
                 }`}
                 onClick={() => setFormData(prev => ({ ...prev, category: option.value }))}
               >
-                <div className="flex items-center mb-1">
-                  <span className="text-xl mr-2">{option.icon}</span>
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
                   <span className="font-medium">{option.label}</span>
+                  {option.auto && (
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                      formData.category === option.value ? 'bg-white/20 text-white' : 'bg-info-bg text-info-text'
+                    }`}>
+                      Auto
+                    </span>
+                  )}
                 </div>
                 <div className="text-sm">
                   {option.description}

@@ -1,5 +1,7 @@
 // backend/controllers/goalController.js
 
+const { enrichGoalsWithAuto } = require('../utils/goalAutoProgress');
+
 /**
  * Contrôleur pour la gestion des objectifs
  */
@@ -104,7 +106,10 @@ const goalController = {
             console.error('Erreur lors de la récupération des objectifs:', err);
             return res.status(500).json({ message: 'Erreur serveur' });
           }
-          res.json(goals);
+          // Réalisé calculé live pour les catégories métier (auto), sinon valeur stockée.
+          enrichGoalsWithAuto(db.pool, goals)
+            .then(() => res.json(goals))
+            .catch(() => res.json(goals));
         });
       })
       .catch((err) => {
@@ -135,18 +140,23 @@ const goalController = {
           if (!goal) {
             return res.status(404).json({ message: 'Objectif non trouvé' });
           }
-          
+
           // Récupérer les étapes (milestones) associées à l'objectif
           db.all('SELECT * FROM milestones WHERE goal_id = $1 ORDER BY id', [id], (milestoneErr, milestones) => {
             if (milestoneErr) {
               console.error('Erreur lors de la récupération des étapes:', milestoneErr);
-              // Renvoyer l'objectif sans les étapes
-              return res.json(goal);
+              // Renvoyer l'objectif sans les étapes (réalisé auto si catégorie métier)
+              return enrichGoalsWithAuto(db.pool, [goal])
+                .then(() => res.json(goal))
+                .catch(() => res.json(goal));
             }
-            
+
             // Ajouter les étapes à l'objectif
             goal.milestones = milestones || [];
-            res.json(goal);
+            // Réalisé calculé live pour les catégories métier (auto), sinon valeur stockée.
+            enrichGoalsWithAuto(db.pool, [goal])
+              .then(() => res.json(goal))
+              .catch(() => res.json(goal));
           });
         });
       })

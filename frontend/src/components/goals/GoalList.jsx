@@ -5,8 +5,10 @@ import {
   FiUsers, FiDollarSign, FiSettings, FiRadio, FiStar,
   FiCheckCircle, FiClock, FiZap, FiAlertCircle, FiMinusCircle,
   FiTarget, FiMapPin, FiPlus, FiEdit2, FiArchive, FiCopy,
-  FiChevronDown, FiChevronUp, FiTrash2
+  FiChevronDown, FiChevronUp, FiTrash2, FiTrendingUp, FiTool,
+  FiRefreshCw, FiUserPlus, FiFileText, FiBriefcase, FiSend
 } from 'react-icons/fi';
+import { computePace, PACE_META, isAutoGoalCategory } from '../../utils/goalPace';
 
 const GoalList = ({
   goals,
@@ -37,6 +39,15 @@ const GoalList = ({
 
   // Configuration des couleurs de catégorie
   const categoryConfig = {
+    // Catégories métier (auto) — tokens sémantiques
+    'maintenance_signed': { icon: <FiTool />, label: 'Maintenance', color: 'text-info-text', unit: '' },
+    'subscriptions': { icon: <FiRefreshCw />, label: 'Abonnements', color: 'text-info-text', unit: '' },
+    'new_clients': { icon: <FiUserPlus />, label: 'Nouveaux clients', color: 'text-info-text', unit: '' },
+    'quotes_sent': { icon: <FiFileText />, label: 'Devis envoyés', color: 'text-info-text', unit: '' },
+    'projects_signed': { icon: <FiBriefcase />, label: 'Projets', color: 'text-info-text', unit: '' },
+    'revenue_cashed': { icon: <FiDollarSign />, label: 'CA encaissé', color: 'text-success-text', unit: ' €' },
+    'prospects_contacted': { icon: <FiSend />, label: 'Prospects contactés', color: 'text-info-text', unit: '' },
+    // Catégories manuelles (style existant conservé)
     'leads': { icon: <FiUsers />, label: 'Leads', color: 'text-blue-300', unit: '' },
     'revenue': { icon: <FiDollarSign />, label: 'Revenus', color: 'text-emerald-300', unit: ' €' },
     'productivity': { icon: <FiSettings />, label: 'Productivité', color: 'text-purple-300', unit: '' },
@@ -112,8 +123,9 @@ const GoalList = ({
   // Formater la valeur avec unité
   const formatValue = (value, category) => {
     const config = categoryConfig[category] || { unit: '' };
-    if (category === 'revenue') {
-      return new Intl.NumberFormat('fr-FR').format(value) + config.unit;
+    // Catégories monétaires : séparateurs de milliers (€)
+    if (config.unit && config.unit.includes('€')) {
+      return new Intl.NumberFormat('fr-FR').format(Math.round(value)) + config.unit;
     }
     return value + config.unit;
   };
@@ -149,6 +161,10 @@ const GoalList = ({
         const isExpanded = expandedGoalId === goal.id;
         const completed = isCompleted(goal);
         const increments = quickIncrements[goal.category] || [1, 5, 10];
+        const auto = goal.auto || isAutoGoalCategory(goal.category);
+        const active = isActive(goal);
+        const pace = computePace(goal);
+        const paceMeta = PACE_META[pace.status] || PACE_META.on_time;
 
         return (
           <motion.div
@@ -176,6 +192,12 @@ const GoalList = ({
                     {categoryInfo.icon}
                     {categoryInfo.label}
                   </span>
+
+                  {auto && (
+                    <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-info-bg text-info-text font-medium" title="Réalisé calculé automatiquement depuis les données">
+                      <FiZap size={11} /> Auto
+                    </span>
+                  )}
 
                   {timeRemaining && (
                     <span className="text-xs text-text-muted px-2 py-1 bg-surface/50 rounded-md">
@@ -234,10 +256,30 @@ const GoalList = ({
                 </div>
               </div>
 
+              {/* Rythme : avance/retard vs temps écoulé + reste à faire + cadence nécessaire */}
+              {active && !completed && (
+                <div className="mb-3 flex items-center gap-2 flex-wrap text-xs">
+                  <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full font-medium ${paceMeta.cls}`}>
+                    <FiTrendingUp size={12} /> {paceMeta.label}
+                  </span>
+                  {pace.remaining > 0 && (
+                    <span className="text-text-muted">
+                      Reste {formatValue(Math.round(pace.remaining), goal.category)}
+                      {pace.daysLeft > 0 && (
+                        <> · ~{formatValue(Math.ceil(pace.ratePerUnit), goal.category)}/{pace.rateUnit}</>
+                      )}
+                    </span>
+                  )}
+                  <span className="text-text-muted">
+                    ({Math.round(pace.timePct * 100)}% du temps écoulé)
+                  </span>
+                </div>
+              )}
+
               {/* Actions rapides */}
               <div className="flex items-center justify-between gap-2 flex-wrap">
-                {/* Boutons d'incrémentation */}
-                {!completed && onUpdateProgress && (
+                {/* Boutons d'incrémentation (catégories manuelles uniquement) */}
+                {!completed && !auto && onUpdateProgress && (
                   <div className="flex items-center gap-1">
                     {increments.map((inc) => (
                       <button
