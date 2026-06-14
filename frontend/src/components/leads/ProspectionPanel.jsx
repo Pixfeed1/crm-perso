@@ -1,10 +1,74 @@
 // src/components/leads/ProspectionPanel.jsx
 import React, { useState, useEffect } from 'react';
-import { FiSearch, FiMapPin, FiUserPlus, FiExternalLink, FiCheck, FiX, FiAlertCircle, FiDollarSign, FiRefreshCw, FiEdit, FiPhone, FiGlobe, FiMail } from 'react-icons/fi';
+import { motion, AnimatePresence } from 'framer-motion';
+import { FiSearch, FiMapPin, FiUserPlus, FiExternalLink, FiAlertCircle, FiDollarSign, FiRefreshCw, FiEdit, FiPhone, FiGlobe, FiMail, FiArrowRight, FiTarget, FiSend, FiRadio } from 'react-icons/fi';
 import { prospectionAPI } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
 
-const ProspectionPanel = ({ onLeadCreated }) => {
+// Badge SOURCE homogene (meme rendu pour toutes les sources, seul le libelle change).
+// Tokens semantiques uniquement (charte) : aucune couleur en dur.
+const SOURCE_LABELS = {
+  'pole-emploi': 'France Travail',
+  'france travail': 'France Travail',
+  'google-jobs': 'Google Jobs',
+  'google jobs': 'Google Jobs',
+  sirene: 'SIRENE',
+  pappers: 'Pappers',
+  crawl: 'Crawl',
+  manuel: 'Manuel',
+  manual: 'Manuel'
+};
+
+const SourceBadge = ({ source }) => {
+  if (!source) return null;
+  const label = SOURCE_LABELS[String(source).toLowerCase()] || source;
+  return (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-info-bg text-info-text">
+      <FiRadio size={11} /> {label}
+    </span>
+  );
+};
+
+// Fil d'etapes : Decouverte (sources) -> Qualification (liste) -> Relance (outreach).
+// Permet de naviguer sans saut brutal entre les vues de la page Leads.
+const FLOW_STEPS = [
+  { key: 'prospection', label: 'Découverte', icon: FiSearch, hint: 'Trouver de nouvelles sources' },
+  { key: 'table', label: 'Qualification', icon: FiTarget, hint: 'Trier et qualifier les prospects' },
+  { key: 'outreach', label: 'Relance', icon: FiSend, hint: 'Contacter et relancer' }
+];
+
+const FlowStepper = ({ current = 'prospection', onNavigate }) => (
+  <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto pb-1">
+    {FLOW_STEPS.map((step, i) => {
+      const Icon = step.icon;
+      const isActive = step.key === current;
+      const clickable = !isActive && typeof onNavigate === 'function';
+      return (
+        <React.Fragment key={step.key}>
+          <button
+            type="button"
+            onClick={clickable ? () => onNavigate(step.key) : undefined}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+              isActive
+                ? 'bg-accent text-white'
+                : clickable
+                ? 'bg-surface-strong text-text-secondary hover:bg-border-strong hover:text-text-primary'
+                : 'bg-surface-strong text-text-muted'
+            }`}
+            title={step.hint}
+          >
+            <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs ${isActive ? 'bg-white/20' : 'bg-surface'}`}>{i + 1}</span>
+            <Icon size={14} />
+            <span className="hidden sm:inline">{step.label}</span>
+          </button>
+          {i < FLOW_STEPS.length - 1 && <FiArrowRight className="text-text-muted flex-shrink-0" size={14} />}
+        </React.Fragment>
+      );
+    })}
+  </div>
+);
+
+const ProspectionPanel = ({ onLeadCreated, onNavigate }) => {
   const { toast } = useToast();
 
   // État global
@@ -284,60 +348,59 @@ const ProspectionPanel = ({ onLeadCreated }) => {
 
   return (
     <div className="space-y-4">
-      {/* Header moderne */}
-      <div className="bg-gradient-to-br from-indigo-900/40 via-purple-900/30 to-indigo-900/40 border border-indigo-500/30 rounded-xl p-6 backdrop-blur-sm">
-        <div className="flex items-center gap-4 mb-2">
-          <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center flex-shrink-0">
-            <FiSearch className="text-text-primary text-xl" />
+      {/* Fil d'etapes : Decouverte -> Qualification -> Relance */}
+      <FlowStepper current="prospection" onNavigate={onNavigate} />
+
+      {/* En-tete harmonise (tokens, comme le cockpit Suivi) */}
+      <div className="bg-surface border border-border rounded-xl p-4 sm:p-5">
+        <div className="flex items-center gap-3 sm:gap-4 mb-4">
+          <div className="w-11 h-11 rounded-xl bg-accent/15 text-accent flex items-center justify-center flex-shrink-0">
+            <FiSearch size={20} />
           </div>
-          <div className="flex-1">
-            <h3 className="text-xl font-bold text-text-primary mb-1">
-              Prospection Multi-Sources
+          <div className="min-w-0">
+            <h3 className="text-lg font-bold text-text-primary">
+              Prospection multi-sources
             </h3>
-            <p className="text-sm text-indigo-200">
-              Trouvez de nouveaux leads via France Travail, Google Jobs et l'API SIRENE
+            <p className="text-sm text-text-muted">
+              Découvrez de nouveaux prospects via France Travail, Google Jobs et l'API SIRENE
             </p>
           </div>
         </div>
 
-        {/* Onglets modernes */}
-        <div className="flex flex-col sm:flex-row gap-2 mt-4">
+        {/* Sous-onglets de source (style cockpit) */}
+        <div className="flex flex-col sm:flex-row gap-2">
           <button
             onClick={() => setActiveTab('jobs')}
-            className={`flex-1 px-6 py-3 rounded-lg text-sm font-medium transition-all ${
+            className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
               activeTab === 'jobs'
-                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/30'
-                : 'bg-surface/50 text-text-secondary hover:bg-surface-strong/50 hover:text-text-primary'
+                ? 'bg-accent text-white'
+                : 'bg-surface-strong text-text-secondary hover:bg-border-strong hover:text-text-primary'
             }`}
           >
-            <div className="flex items-center justify-center gap-2">
-              <FiSearch className="text-sm" />
-              <span>Offres d'emploi</span>
-            </div>
+            <FiSearch size={15} />
+            <span>Offres d'emploi</span>
           </button>
           <button
             onClick={() => setActiveTab('companies')}
-            className={`flex-1 px-6 py-3 rounded-lg text-sm font-medium transition-all ${
+            className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
               activeTab === 'companies'
-                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/30'
-                : 'bg-surface/50 text-text-secondary hover:bg-surface-strong/50 hover:text-text-primary'
+                ? 'bg-accent text-white'
+                : 'bg-surface-strong text-text-secondary hover:bg-border-strong hover:text-text-primary'
             }`}
           >
-            <div className="flex items-center justify-center gap-2">
-              <FiMapPin className="text-sm" />
-              <span>Entreprises SIRENE</span>
-              {pappersCredits && (
-                <span className={`ml-1 px-2 py-0.5 text-xs rounded-full font-semibold ${
-                  pappersCredits.is_depleted
-                    ? 'bg-red-500/30 text-red-200'
-                    : pappersCredits.is_low
-                    ? 'bg-yellow-500/30 text-yellow-200'
-                    : 'bg-green-500/30 text-green-200'
-                }`}>
-                  {pappersCredits.remaining}
-                </span>
-              )}
-            </div>
+            <FiMapPin size={15} />
+            <span>Entreprises SIRENE</span>
+            {pappersCredits && (
+              <span className={`ml-1 px-2 py-0.5 text-xs rounded-full font-semibold ${
+                pappersCredits.is_depleted
+                  ? 'bg-danger-bg text-danger-text'
+                  : pappersCredits.is_low
+                  ? 'bg-warning-bg text-warning-text'
+                  : 'bg-success-bg text-success-text'
+              }`}>
+                {pappersCredits.remaining}
+              </span>
+            )}
           </button>
         </div>
       </div>
@@ -351,21 +414,21 @@ const ProspectionPanel = ({ onLeadCreated }) => {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-semibold text-text-primary mb-2 flex items-center gap-2">
-                    <FiSearch className="text-indigo-400" />
-                    Mots-clés <span className="text-rose-400">*</span>
+                    <FiSearch className="text-accent" />
+                    Mots-clés <span className="text-danger-text">*</span>
                   </label>
                   <input
                     type="text"
                     value={jobSearchParams.keywords}
                     onChange={(e) => setJobSearchParams({ ...jobSearchParams, keywords: e.target.value })}
                     placeholder="Ex: refonte site web, développeur, designer UX/UI..."
-                    className="w-full px-4 py-3 bg-surface-muted/50 border border-border-strong rounded-lg text-text-primary placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                    className="w-full px-4 py-3 bg-surface-muted/50 border border-border-strong rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-semibold text-text-primary mb-2 flex items-center gap-2">
-                    <FiMapPin className="text-indigo-400" />
+                    <FiMapPin className="text-accent" />
                     Localisation
                   </label>
                   <input
@@ -373,7 +436,7 @@ const ProspectionPanel = ({ onLeadCreated }) => {
                     value={jobSearchParams.location}
                     onChange={(e) => setJobSearchParams({ ...jobSearchParams, location: e.target.value })}
                     placeholder="Code département (75) ou code postal (75001)"
-                    className="w-full px-4 py-3 bg-surface-muted/50 border border-border-strong rounded-lg text-text-primary placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                    className="w-full px-4 py-3 bg-surface-muted/50 border border-border-strong rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
                   />
                   <p className="text-xs text-text-muted mt-1.5 flex items-center gap-1">
                     <FiAlertCircle className="w-3 h-3" />
@@ -385,19 +448,19 @@ const ProspectionPanel = ({ onLeadCreated }) => {
               {/* Sources */}
               <div>
                 <label className="block text-sm font-semibold text-text-primary mb-3">
-                  Sources de recherche <span className="text-rose-400">*</span>
+                  Sources de recherche <span className="text-danger-text">*</span>
                 </label>
                 <div className="flex flex-col gap-3">
                   <label className={`flex items-center gap-3 p-4 border-2 rounded-xl cursor-pointer transition-all ${
                     jobSearchParams.sources.includes('pole-emploi')
-                      ? 'bg-indigo-500/20 border-indigo-500 shadow-lg shadow-indigo-500/20'
-                      : 'bg-surface/50 border-border-strong hover:border-gray-500'
+                      ? 'bg-accent/15 border-accent'
+                      : 'bg-surface-muted/50 border-border hover:border-border-strong'
                   }`}>
                     <input
                       type="checkbox"
                       checked={jobSearchParams.sources.includes('pole-emploi')}
                       onChange={() => handleJobSourceToggle('pole-emploi')}
-                      className="w-5 h-5 text-indigo-600 bg-surface-strong border-border-strong rounded focus:ring-2 focus:ring-indigo-500"
+                      className="w-5 h-5 text-accent bg-surface-strong border-border-strong rounded focus:ring-2 focus:ring-accent"
                     />
                     <div className="flex-1">
                       <span className="text-sm font-medium text-text-primary">France Travail</span>
@@ -406,14 +469,14 @@ const ProspectionPanel = ({ onLeadCreated }) => {
                   </label>
                   <label className={`flex items-center gap-3 p-4 border-2 rounded-xl cursor-pointer transition-all ${
                     jobSearchParams.sources.includes('google-jobs')
-                      ? 'bg-indigo-500/20 border-indigo-500 shadow-lg shadow-indigo-500/20'
-                      : 'bg-surface/50 border-border-strong hover:border-gray-500'
+                      ? 'bg-accent/15 border-accent'
+                      : 'bg-surface-muted/50 border-border hover:border-border-strong'
                   }`}>
                     <input
                       type="checkbox"
                       checked={jobSearchParams.sources.includes('google-jobs')}
                       onChange={() => handleJobSourceToggle('google-jobs')}
-                      className="w-5 h-5 text-indigo-600 bg-surface-strong border-border-strong rounded focus:ring-2 focus:ring-indigo-500"
+                      className="w-5 h-5 text-accent bg-surface-strong border-border-strong rounded focus:ring-2 focus:ring-accent"
                     />
                     <div className="flex-1">
                       <span className="text-sm font-medium text-text-primary">Google Jobs</span>
@@ -436,7 +499,7 @@ const ProspectionPanel = ({ onLeadCreated }) => {
                     <select
                       value={jobSearchParams.contractType}
                       onChange={(e) => setJobSearchParams({ ...jobSearchParams, contractType: e.target.value })}
-                      className="w-full px-4 py-2 bg-surface/50 border border-border rounded-lg text-text-primary focus:outline-none focus:border-indigo-500"
+                      className="w-full px-4 py-2 bg-surface/50 border border-border rounded-lg text-text-primary focus:outline-none focus:border-accent"
                     >
                       <option value="">Tous les types</option>
                       <option value="CDI">CDI</option>
@@ -456,7 +519,7 @@ const ProspectionPanel = ({ onLeadCreated }) => {
                     <select
                       value={jobSearchParams.experience}
                       onChange={(e) => setJobSearchParams({ ...jobSearchParams, experience: e.target.value })}
-                      className="w-full px-4 py-2 bg-surface/50 border border-border rounded-lg text-text-primary focus:outline-none focus:border-indigo-500"
+                      className="w-full px-4 py-2 bg-surface/50 border border-border rounded-lg text-text-primary focus:outline-none focus:border-accent"
                     >
                       <option value="">Tous les niveaux</option>
                       <option value="D">Débutant</option>
@@ -473,7 +536,7 @@ const ProspectionPanel = ({ onLeadCreated }) => {
                     <select
                       value={jobSearchParams.datePosted}
                       onChange={(e) => setJobSearchParams({ ...jobSearchParams, datePosted: e.target.value })}
-                      className="w-full px-4 py-2 bg-surface/50 border border-border rounded-lg text-text-primary focus:outline-none focus:border-indigo-500"
+                      className="w-full px-4 py-2 bg-surface/50 border border-border rounded-lg text-text-primary focus:outline-none focus:border-accent"
                     >
                       <option value="all">Toutes les dates</option>
                       <option value="today">Aujourd'hui</option>
@@ -494,7 +557,7 @@ const ProspectionPanel = ({ onLeadCreated }) => {
                         value={jobSearchParams.minSalary}
                         onChange={(e) => setJobSearchParams({ ...jobSearchParams, minSalary: e.target.value })}
                         placeholder="Ex: 30000"
-                        className="w-full px-4 py-2 bg-surface/50 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                        className="w-full px-4 py-2 bg-surface/50 border border-border rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
                       />
                     </div>
                     <div className="flex-1">
@@ -506,7 +569,7 @@ const ProspectionPanel = ({ onLeadCreated }) => {
                         value={jobSearchParams.maxSalary}
                         onChange={(e) => setJobSearchParams({ ...jobSearchParams, maxSalary: e.target.value })}
                         placeholder="Ex: 50000"
-                        className="w-full px-4 py-2 bg-surface/50 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                        className="w-full px-4 py-2 bg-surface/50 border border-border rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
                       />
                     </div>
                   </div>
@@ -517,10 +580,12 @@ const ProspectionPanel = ({ onLeadCreated }) => {
 
             {/* Bouton de recherche */}
             <div className="flex justify-end pt-4 border-t border-border">
-              <button
+              <motion.button
                 type="submit"
                 disabled={isSearchingJobs}
-                className="w-full sm:w-auto px-8 py-3.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:from-surface-strong disabled:to-surface-strong disabled:cursor-not-allowed text-white rounded-xl font-semibold transition-all flex items-center justify-center gap-3 shadow-lg shadow-indigo-500/30 hover:shadow-xl hover:shadow-indigo-500/50 sm:hover:scale-105"
+                whileHover={{ scale: isSearchingJobs ? 1 : 1.02 }}
+                whileTap={{ scale: isSearchingJobs ? 1 : 0.98 }}
+                className="w-full sm:w-auto px-8 py-3.5 bg-accent hover:bg-accent-hover disabled:bg-surface-strong disabled:cursor-not-allowed text-white rounded-xl font-semibold transition-colors flex items-center justify-center gap-3"
               >
                 {isSearchingJobs ? (
                   <>
@@ -533,7 +598,7 @@ const ProspectionPanel = ({ onLeadCreated }) => {
                     <span>Lancer la recherche</span>
                   </>
                 )}
-              </button>
+              </motion.button>
             </div>
           </form>
 
@@ -542,22 +607,24 @@ const ProspectionPanel = ({ onLeadCreated }) => {
             <div className="bg-surface/30 border border-border rounded-xl p-6 space-y-4">
               <div className="flex items-center justify-between">
                 <h4 className="text-lg font-bold text-text-primary flex items-center gap-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                  <div className="w-2 h-2 bg-success-text rounded-full animate-pulse" />
                   {jobResults.length} opportunité{jobResults.length > 1 ? 's' : ''} trouvée{jobResults.length > 1 ? 's' : ''}
                 </h4>
                 <span className="text-sm text-text-muted">
                   Cliquez sur une carte pour importer
                 </span>
               </div>
-              <div className="flex flex-col gap-4 max-h-[700px] overflow-y-auto pr-2">
-                {jobResults.map((opportunity, index) => (
-                  <OpportunityCard
-                    key={opportunity.id || index}
-                    opportunity={opportunity}
-                    onImport={handleImportLead}
-                    importing={importingId === (opportunity.id || opportunity.company_name)}
-                  />
-                ))}
+              <div className="flex flex-col gap-3 max-h-[700px] overflow-y-auto pr-1">
+                <AnimatePresence initial={false}>
+                  {jobResults.map((opportunity, index) => (
+                    <OpportunityCard
+                      key={opportunity.id || index}
+                      opportunity={opportunity}
+                      onImport={handleImportLead}
+                      importing={importingId === (opportunity.id || opportunity.company_name)}
+                    />
+                  ))}
+                </AnimatePresence>
               </div>
             </div>
           )}
@@ -569,12 +636,12 @@ const ProspectionPanel = ({ onLeadCreated }) => {
         <div className="space-y-6">
           {/* Compteur crédits Pappers */}
           {pappersCredits && (
-            <div className={`p-4 rounded-lg border ${
+            <div className={`p-4 rounded-lg border border-border ${
               pappersCredits.is_depleted
-                ? 'bg-red-500/10 border-red-500/30'
+                ? 'bg-danger-bg'
                 : pappersCredits.is_low
-                ? 'bg-yellow-500/10 border-yellow-500/30'
-                : 'bg-green-500/10 border-green-500/30'
+                ? 'bg-warning-bg'
+                : 'bg-success-bg'
             }`}>
               <div className="flex items-center justify-between">
                 <div>
@@ -587,7 +654,7 @@ const ProspectionPanel = ({ onLeadCreated }) => {
                 </div>
                 <div className="text-right">
                   <div className={`text-2xl font-bold ${
-                    pappersCredits.is_depleted ? 'text-red-400' : pappersCredits.is_low ? 'text-yellow-400' : 'text-green-400'
+                    pappersCredits.is_depleted ? 'text-danger-text' : pappersCredits.is_low ? 'text-warning-text' : 'text-success-text'
                   }`}>
                     {pappersCredits.remaining}
                   </div>
@@ -601,7 +668,7 @@ const ProspectionPanel = ({ onLeadCreated }) => {
                 </div>
               </div>
               {pappersCredits.is_depleted && (
-                <p className="text-xs text-red-400 mt-2 flex items-center gap-1">
+                <p className="text-xs text-danger-text mt-2 flex items-center gap-1">
                   <FiAlertCircle className="flex-shrink-0" />
                   Crédits épuisés. Réinitialisation le {new Date(pappersCredits.next_reset).toLocaleDateString('fr-FR')}
                 </p>
@@ -620,7 +687,7 @@ const ProspectionPanel = ({ onLeadCreated }) => {
                   value={companySearchParams.nafCode}
                   onChange={(e) => setCompanySearchParams({ ...companySearchParams, nafCode: e.target.value })}
                   placeholder="Ex: 43.21A (plomberie), 62.01Z (programmation)"
-                  className="w-full px-4 py-2 bg-surface/50 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                  className="w-full px-4 py-2 bg-surface/50 border border-border rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
                 />
               </div>
 
@@ -633,7 +700,7 @@ const ProspectionPanel = ({ onLeadCreated }) => {
                   value={companySearchParams.city}
                   onChange={(e) => setCompanySearchParams({ ...companySearchParams, city: e.target.value })}
                   placeholder="Ex: Paris, Lyon..."
-                  className="w-full px-4 py-2 bg-surface/50 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                  className="w-full px-4 py-2 bg-surface/50 border border-border rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
                 />
               </div>
 
@@ -646,7 +713,7 @@ const ProspectionPanel = ({ onLeadCreated }) => {
                   value={companySearchParams.postalCode}
                   onChange={(e) => setCompanySearchParams({ ...companySearchParams, postalCode: e.target.value })}
                   placeholder="Ex: 75001, 69002..."
-                  className="w-full px-4 py-2 bg-surface/50 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                  className="w-full px-4 py-2 bg-surface/50 border border-border rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
                 />
               </div>
 
@@ -659,7 +726,7 @@ const ProspectionPanel = ({ onLeadCreated }) => {
                   value={companySearchParams.department}
                   onChange={(e) => setCompanySearchParams({ ...companySearchParams, department: e.target.value })}
                   placeholder="Ex: 75, 92, 971..."
-                  className="w-full px-4 py-2 bg-surface/50 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                  className="w-full px-4 py-2 bg-surface/50 border border-border rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
                 />
               </div>
 
@@ -673,14 +740,14 @@ const ProspectionPanel = ({ onLeadCreated }) => {
                     value={companySearchParams.minEmployees}
                     onChange={(e) => setCompanySearchParams({ ...companySearchParams, minEmployees: e.target.value })}
                     placeholder="Min"
-                    className="w-full sm:w-1/2 px-4 py-2 bg-surface/50 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                    className="w-full sm:w-1/2 px-4 py-2 bg-surface/50 border border-border rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
                   />
                   <input
                     type="number"
                     value={companySearchParams.maxEmployees}
                     onChange={(e) => setCompanySearchParams({ ...companySearchParams, maxEmployees: e.target.value })}
                     placeholder="Max"
-                    className="w-full sm:w-1/2 px-4 py-2 bg-surface/50 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                    className="w-full sm:w-1/2 px-4 py-2 bg-surface/50 border border-border rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:border-accent"
                   />
                 </div>
               </div>
@@ -692,7 +759,7 @@ const ProspectionPanel = ({ onLeadCreated }) => {
                   className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium transition-colors ${
                     isSearchingCompanies
                       ? 'bg-surface-strong text-text-muted cursor-not-allowed'
-                      : 'bg-accent hover:bg-indigo-700 text-white'
+                      : 'bg-accent hover:bg-accent-hover text-white'
                   }`}
                 >
                   <FiSearch className="w-4 h-4" />
@@ -708,19 +775,21 @@ const ProspectionPanel = ({ onLeadCreated }) => {
               <h4 className="text-md font-semibold text-text-primary">
                 {companyResults.length} entreprise(s) trouvée(s)
               </h4>
-              <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2">
-                {companyResults.map((company, index) => (
-                  <CompanyCard
-                    key={company.siret || index}
-                    company={company}
-                    onImport={handleImportLead}
-                    onEnrichWithPappers={handleEnrichWithPappers}
-                    onManualEnrich={handleManualEnrich}
-                    importing={importingId === company.siret}
-                    enriching={enrichingId === company.siret}
-                    pappersCredits={pappersCredits}
-                  />
-                ))}
+              <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1">
+                <AnimatePresence initial={false}>
+                  {companyResults.map((company, index) => (
+                    <CompanyCard
+                      key={company.siret || index}
+                      company={company}
+                      onImport={handleImportLead}
+                      onEnrichWithPappers={handleEnrichWithPappers}
+                      onManualEnrich={handleManualEnrich}
+                      importing={importingId === company.siret}
+                      enriching={enrichingId === company.siret}
+                      pappersCredits={pappersCredits}
+                    />
+                  ))}
+                </AnimatePresence>
               </div>
             </div>
           )}
@@ -735,16 +804,24 @@ const ProspectionPanel = ({ onLeadCreated }) => {
 // ============================================================================
 
 const OpportunityCard = ({ opportunity, onImport, importing }) => (
-  <div className="bg-surface/30 border border-border/50 rounded-lg p-4 hover:border-indigo-500/30 transition-colors">
+  <motion.div
+    initial={{ opacity: 0, y: 8 }}
+    animate={{ opacity: 1, y: 0 }}
+    exit={{ opacity: 0 }}
+    className="bg-surface border border-border rounded-xl p-4 hover:border-border-strong transition-colors"
+  >
     <div className="flex flex-col sm:flex-row items-start gap-4">
-      <div className="flex-1 w-full">
-        <h5 className="text-text-primary font-semibold mb-1">
-          {opportunity.company_name || 'Entreprise confidentielle'}
-        </h5>
+      <div className="flex-1 w-full min-w-0">
+        <div className="flex items-center gap-2 flex-wrap mb-1">
+          <h5 className="text-text-primary font-semibold break-words">
+            {opportunity.company_name || 'Entreprise confidentielle'}
+          </h5>
+          <SourceBadge source={opportunity.source || 'Offre'} />
+        </div>
 
         {(opportunity.city || opportunity.department) && (
           <div className="flex items-center gap-2 text-sm text-text-muted mb-2">
-            <FiMapPin className="w-3 h-3" />
+            <FiMapPin className="w-3 h-3 flex-shrink-0" />
             <span>
               {opportunity.city}
               {opportunity.department && ` (${opportunity.department})`}
@@ -760,36 +837,31 @@ const OpportunityCard = ({ opportunity, onImport, importing }) => (
 
         <div className="flex flex-wrap gap-2">
           {opportunity.sector && (
-            <span className="px-2 py-1 bg-indigo-500/20 text-indigo-300 text-xs rounded">
+            <span className="px-2 py-0.5 rounded-full bg-neutral-bg text-neutral-text text-xs font-medium">
               {opportunity.sector}
             </span>
           )}
-          {opportunity.source && (
-            <span className="px-2 py-1 bg-purple-500/20 text-purple-300 text-xs rounded">
-              {opportunity.source}
-            </span>
-          )}
           {opportunity.email && (
-            <span className="px-2 py-1 bg-green-500/20 text-green-300 text-xs rounded">
-              {opportunity.email}
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-strong text-text-secondary text-xs break-all">
+              <FiMail size={11} className="flex-shrink-0" /> {opportunity.email}
             </span>
           )}
           {opportunity.phone && (
-            <span className="px-2 py-1 bg-blue-500/20 text-blue-300 text-xs rounded">
-              {opportunity.phone}
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-strong text-text-secondary text-xs">
+              <FiPhone size={11} className="flex-shrink-0" /> {opportunity.phone}
             </span>
           )}
         </div>
       </div>
 
-      <div className="flex flex-row sm:flex-col gap-2 w-full sm:w-auto">
+      <div className="flex flex-row sm:flex-col gap-2 w-full sm:w-auto flex-shrink-0">
         <button
           onClick={() => onImport(opportunity)}
           disabled={importing}
           className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
             importing
               ? 'bg-surface-strong text-text-muted cursor-not-allowed'
-              : 'bg-green-600 hover:bg-green-700 text-white'
+              : 'bg-accent hover:bg-accent-hover text-white'
           }`}
         >
           <FiUserPlus className="w-4 h-4" />
@@ -809,7 +881,7 @@ const OpportunityCard = ({ opportunity, onImport, importing }) => (
         )}
       </div>
     </div>
-  </div>
+  </motion.div>
 );
 
 // ============================================================================
@@ -817,24 +889,30 @@ const OpportunityCard = ({ opportunity, onImport, importing }) => (
 // ============================================================================
 
 const CompanyCard = ({ company, onImport, onEnrichWithPappers, onManualEnrich, importing, enriching, pappersCredits }) => (
-  <div className="bg-surface/30 border border-border/50 rounded-lg p-4 hover:border-indigo-500/30 transition-colors">
+  <motion.div
+    initial={{ opacity: 0, y: 8 }}
+    animate={{ opacity: 1, y: 0 }}
+    exit={{ opacity: 0 }}
+    className="bg-surface border border-border rounded-xl p-4 hover:border-border-strong transition-colors"
+  >
     <div className="flex flex-col sm:flex-row items-start gap-4">
-      <div className="flex-1 w-full">
-        <div className="flex items-center gap-2 mb-1">
-          <h5 className="text-text-primary font-semibold">
+      <div className="flex-1 w-full min-w-0">
+        <div className="flex items-center gap-2 flex-wrap mb-1">
+          <h5 className="text-text-primary font-semibold break-words">
             {company.company_name}
           </h5>
+          <SourceBadge source="SIRENE" />
           {company.enriched && (
-            <span className="px-2 py-0.5 bg-green-500/20 text-green-300 text-xs rounded">
+            <span className="px-2 py-0.5 rounded-full bg-success-bg text-success-text text-xs font-medium">
               {company.enriched === 'manual' ? 'Édité' : 'Enrichi'}
             </span>
           )}
         </div>
 
-        <div className="space-y-1 text-sm text-text-muted mb-3">
+        <div className="space-y-1 text-sm text-text-muted mb-3 break-words">
           <div>SIRET: {company.siret} • {company.legal_form}</div>
           <div className="flex items-center gap-2">
-            <FiMapPin className="w-3 h-3" />
+            <FiMapPin className="w-3 h-3 flex-shrink-0" />
             {company.address}, {company.postal_code} {company.city}
           </div>
           {company.naf_code && (
@@ -849,13 +927,13 @@ const CompanyCard = ({ company, onImport, onEnrichWithPappers, onManualEnrich, i
         {company.enriched && (
           <div className="flex flex-wrap gap-2 mb-2">
             {company.phone && (
-              <span className="px-2 py-1 bg-blue-500/20 text-blue-300 text-xs rounded flex items-center gap-1">
-                <FiPhone className="w-3 h-3" /> {company.phone}
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-strong text-text-secondary text-xs">
+                <FiPhone className="w-3 h-3 flex-shrink-0" /> {company.phone}
               </span>
             )}
             {company.email && (
-              <span className="px-2 py-1 bg-green-500/20 text-green-300 text-xs rounded flex items-center gap-1">
-                <FiMail className="w-3 h-3" /> {company.email}
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-strong text-text-secondary text-xs break-all">
+                <FiMail className="w-3 h-3 flex-shrink-0" /> {company.email}
               </span>
             )}
             {company.website && (
@@ -863,23 +941,23 @@ const CompanyCard = ({ company, onImport, onEnrichWithPappers, onManualEnrich, i
                 href={company.website}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-2 py-1 bg-purple-500/20 text-purple-300 text-xs rounded hover:bg-purple-500/30 flex items-center gap-1"
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-info-bg text-info-text text-xs hover:opacity-80 transition-opacity"
               >
-                <FiGlobe className="w-3 h-3" /> Site web
+                <FiGlobe className="w-3 h-3 flex-shrink-0" /> Site web
               </a>
             )}
           </div>
         )}
       </div>
 
-      <div className="flex flex-row sm:flex-col gap-2 w-full sm:w-auto sm:min-w-[140px]">
+      <div className="flex flex-row sm:flex-col gap-2 w-full sm:w-auto sm:min-w-[140px] flex-shrink-0">
         <button
           onClick={() => onImport(company)}
           disabled={importing}
           className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
             importing
               ? 'bg-surface-strong text-text-muted cursor-not-allowed'
-              : 'bg-green-600 hover:bg-green-700 text-white'
+              : 'bg-accent hover:bg-accent-hover text-white'
           }`}
         >
           <FiUserPlus className="w-4 h-4" />
@@ -894,7 +972,7 @@ const CompanyCard = ({ company, onImport, onEnrichWithPappers, onManualEnrich, i
               className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                 enriching || (pappersCredits && pappersCredits.is_depleted)
                   ? 'bg-surface-strong text-text-muted cursor-not-allowed'
-                  : 'bg-accent hover:bg-indigo-700 text-white'
+                  : 'bg-surface-strong hover:bg-border-strong text-text-primary'
               }`}
               title={pappersCredits && pappersCredits.is_depleted ? 'Crédits Pappers épuisés' : 'Enrichir avec Pappers (1 crédit)'}
             >
@@ -914,7 +992,7 @@ const CompanyCard = ({ company, onImport, onEnrichWithPappers, onManualEnrich, i
         )}
       </div>
     </div>
-  </div>
+  </motion.div>
 );
 
 export default ProspectionPanel;

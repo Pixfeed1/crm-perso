@@ -651,20 +651,24 @@ const Leads = () => {
           )}
         </div>
 
-        {/* Filtres */}
-        <div className="mb-4">
-          <LeadFilter
-            filters={filters}
-            setFilters={setFilters}
-            onSort={handleSort}
-            sortField={sortField}
-            sortDirection={sortDirection}
-          />
-        </div>
+        {/* Filtres — masques en Prospection/Outreach (ils filtrent la liste de leads,
+            pas les resultats de recherche : inutiles et trompeurs sur ces vues) */}
+        {view !== 'prospection' && view !== 'outreach' && (
+          <div className="mb-4">
+            <LeadFilter
+              filters={filters}
+              setFilters={setFilters}
+              onSort={handleSort}
+              sortField={sortField}
+              sortDirection={sortDirection}
+            />
+          </div>
+        )}
 
         {/* Vue Prospection */}
         {view === 'prospection' ? (
           <ProspectionPanel
+            onNavigate={setView}
             onLeadCreated={(newLead) => {
               setLeads([...leads, newLead]);
               toast.success('Lead créé avec succès depuis la prospection');
