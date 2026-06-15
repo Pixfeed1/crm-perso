@@ -325,7 +325,7 @@ const Calendar = () => {
     return (
       <div className="h-full flex items-center justify-center">
         <motion.div
-          className="w-16 h-16 border-4 border-indigo-500 border-t-transparent rounded-full"
+          className="w-16 h-16 border-4 border-accent border-t-transparent rounded-full"
           animate={{ rotate: 360 }}
           transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
         />
@@ -340,7 +340,7 @@ const Calendar = () => {
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
             <div>
               <motion.h1
-                className="text-2xl sm:text-3xl md:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-teal-300 to-indigo-300"
+                className="text-2xl sm:text-3xl md:text-4xl font-bold text-text-primary"
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
@@ -348,7 +348,7 @@ const Calendar = () => {
                 Calendrier
               </motion.h1>
               <motion.p
-                className="text-indigo-200 mt-1 sm:mt-2 text-xs sm:text-sm md:text-base"
+                className="text-text-muted mt-1 sm:mt-2 text-xs sm:text-sm md:text-base"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.5, delay: 0.2 }}

@@ -296,7 +296,7 @@ const TimelineView = ({
                         {event.completion_percentage > 0 && (
                           <div className="w-full bg-surface-strong/50 rounded-full h-1">
                             <div
-                              className="bg-green-400 h-1 rounded-full"
+                              className="bg-success-text h-1 rounded-full"
                               style={{ width: `${event.completion_percentage}%` }}
                             />
                           </div>
@@ -305,7 +305,7 @@ const TimelineView = ({
 
                       {/* Icône jalon */}
                       {event.is_milestone && (
-                        <div className="absolute -right-2 top-1/2 -translate-y-1/2 w-4 h-4 bg-yellow-400 rotate-45" />
+                        <div className="absolute -right-2 top-1/2 -translate-y-1/2 w-4 h-4 bg-warning-text rotate-45" />
                       )}
                     </motion.div>
                   );
@@ -343,11 +343,11 @@ const TimelineView = ({
       <div className="p-3 bg-surface border-t border-border flex items-center justify-between text-xs text-text-muted">
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 bg-blue-500 rounded" />
+            <div className="w-3 h-3 bg-accent rounded" />
             <span>Tâche</span>
           </div>
           <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 bg-yellow-400 rotate-45" />
+            <div className="w-3 h-3 bg-warning-text rotate-45" />
             <span>Jalon</span>
           </div>
           <div className="flex items-center space-x-2">
@@ -359,7 +359,7 @@ const TimelineView = ({
           </div>
         </div>
 
-        <div className="text-gray-500">
+        <div className="text-text-muted">
           {events.length} événement{events.length > 1 ? 's' : ''}
         </div>
       </div>
