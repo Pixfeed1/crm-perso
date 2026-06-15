@@ -408,9 +408,10 @@ const DATABASE_SCHEMA = {
       reminder_minutes: 'INTEGER',
       recurrence_type: 'VARCHAR(20)',
       recurrence_interval: 'INTEGER',
+      recurrence_end_type: 'VARCHAR(20)',
       recurrence_end_date: 'DATE',
       recurrence_count: 'INTEGER',
-      recurrence_days: 'JSONB',
+      recurrence_days: 'VARCHAR(50)',
       parent_event_id: 'INTEGER',
       is_deleted: 'BOOLEAN DEFAULT false',
       project_id: 'INTEGER REFERENCES projects(id) ON DELETE SET NULL',
@@ -1197,6 +1198,38 @@ async function ensureInteractionsColumns(client) {
 }
 
 /**
+ * Migration idempotente : colonnes de récurrence de la table events.
+ * La table events de base (pgMigrations) ne contient AUCUNE colonne de récurrence,
+ * donc createRecurringEvent échouait silencieusement (aucun événement récurrent créé,
+ * ex. import JSON avec "repeat"). On ajoute les colonnes attendues par le modèle, avec
+ * les bons types (recurrence_days = chaîne "1,3,5", pas JSONB).
+ */
+async function ensureEventRecurrenceColumns(client) {
+  console.log('[AutoInit] Vérification des colonnes de récurrence de events...');
+  await client.query('ALTER TABLE events ADD COLUMN IF NOT EXISTS recurrence_type VARCHAR(20);');
+  await client.query('ALTER TABLE events ADD COLUMN IF NOT EXISTS recurrence_interval INTEGER DEFAULT 1;');
+  await client.query('ALTER TABLE events ADD COLUMN IF NOT EXISTS recurrence_end_type VARCHAR(20);');
+  await client.query('ALTER TABLE events ADD COLUMN IF NOT EXISTS recurrence_end_date TIMESTAMP;');
+  await client.query('ALTER TABLE events ADD COLUMN IF NOT EXISTS recurrence_count INTEGER;');
+  await client.query('ALTER TABLE events ADD COLUMN IF NOT EXISTS recurrence_days VARCHAR(50);');
+  await client.query('ALTER TABLE events ADD COLUMN IF NOT EXISTS parent_event_id INTEGER;');
+  // Si recurrence_days a été créée en JSONB par un ancien schéma, la convertir en texte
+  // (le modèle y stocke une chaîne de jours "1,3,5").
+  await client.query(`
+    DO $$
+    BEGIN
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'events' AND column_name = 'recurrence_days' AND data_type = 'jsonb'
+      ) THEN
+        ALTER TABLE events ALTER COLUMN recurrence_days TYPE VARCHAR(50) USING recurrence_days::text;
+      END IF;
+    END $$;
+  `);
+  console.log('  ✓ Colonnes de récurrence events vérifiées');
+}
+
+/**
  * Migration idempotente : met à jour le titre dans les signatures email DÉJÀ enregistrées
  * (company_settings.email_signature) — l'ancien HTML figé n'est pas régénéré sinon.
  * 'Chargé de Projet' (et la variante 'web') -> 'Fondateur & développeur'.
@@ -1253,6 +1286,8 @@ async function autoInitDatabase(pool) {
 
     // Table interactions (suivi des prises de contact, leads + clients)
     await ensureInteractionsColumns(client);
+
+    await ensureEventRecurrenceColumns(client);
     // Mise à jour du titre dans les signatures email déjà enregistrées
     await ensureSignatureTitleUpdate(client);
 
