@@ -371,6 +371,10 @@ export const eventsAPI = {
     console.log('Appel API: création d\'un événement récurrent', data);
     return apiRequest('/events/recurring', 'POST', data);
   },
+  importEvents: (payload) => {
+    console.log('Appel API: import d\'événements (JSON)', payload);
+    return apiRequest('/events/import', 'POST', payload);
+  },
   update: (id, data) => {
     console.log(`Appel API: mise à jour de l'événement ID ${id}`, data);
     return apiRequest(`/events/${id}`, 'PUT', data);

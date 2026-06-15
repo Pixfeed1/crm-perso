@@ -7,6 +7,7 @@ const recurrenceService = require('../services/recurrenceService');
 const conflictDetectionService = require('../services/conflictDetectionService');
 const icalExportService = require('../services/icalExportService');
 const eventDependencyModel = require('../models/eventDependencyModel');
+const { normalizeImportEvent, parseImportPayload } = require('../utils/eventImport');
 
 // Appliquer le middleware d'authentification à toutes les routes
 router.use(authMiddleware);
@@ -223,6 +224,80 @@ router.post('/recurring', async (req, res) => {
     console.error('Erreur lors de la création de l\'événement récurrent:', error);
     res.status(500).json({ message: 'Erreur serveur', error: error.message });
   }
+});
+
+// Import en masse d'événements via JSON.
+// Body : un tableau d'événements OU { events: [...], defaults: {...}, dry_run: bool }.
+// dry_run=true => aucun écrit, renvoie seulement l'aperçu (ce qui serait créé/ignoré + avertissements).
+router.post('/import', async (req, res) => {
+  const db = req.app.locals.db;
+  const dryRun = req.body && req.body.dry_run === true;
+  const { events, defaults } = parseImportPayload(req.body);
+
+  if (!Array.isArray(events)) {
+    return res.status(400).json({ message: 'Format attendu : un tableau d\'événements ou { "events": [...] }' });
+  }
+  if (events.length === 0) {
+    return res.status(400).json({ message: 'Aucun événement à importer' });
+  }
+  if (events.length > 500) {
+    return res.status(400).json({ message: 'Trop d\'événements (max 500 par import)' });
+  }
+
+  const report = { dry_run: dryRun, total: events.length, created: 0, skipped: 0, errors: [], preview: [] };
+
+  for (let i = 0; i < events.length; i++) {
+    const { event, isRecurring, warnings, error } = normalizeImportEvent(events[i], defaults);
+    if (error) {
+      report.errors.push({ index: i, title: (events[i] && events[i].title) || null, reason: error });
+      continue;
+    }
+
+    // Dédoublonnage : même titre + même minute de début (évite les doublons en cas de réimport)
+    let duplicate = false;
+    try {
+      const dup = await db.pool.query(
+        `SELECT id FROM events WHERE title = $1 AND date_trunc('minute', start_datetime) = date_trunc('minute', $2::timestamp) LIMIT 1`,
+        [event.title, event.start_datetime]
+      );
+      duplicate = dup.rows.length > 0;
+    } catch (e) { /* en cas d'échec du contrôle on n'empêche pas l'import */ }
+
+    const line = {
+      index: i,
+      title: event.title,
+      start: event.start_datetime,
+      end: event.end_datetime,
+      recurring: !!isRecurring,
+      duplicate,
+      warnings: warnings || []
+    };
+
+    if (duplicate) {
+      report.skipped++;
+      line.action = 'skip_duplicate';
+      report.preview.push(line);
+      continue;
+    }
+
+    if (dryRun) {
+      line.action = 'would_create';
+      report.preview.push(line);
+      continue;
+    }
+
+    try {
+      if (isRecurring) await eventModel.createRecurringEvent(db, event);
+      else await eventModel.createEvent(db, event);
+      report.created++;
+      line.action = 'created';
+      report.preview.push(line);
+    } catch (e) {
+      report.errors.push({ index: i, title: event.title, reason: e.message });
+    }
+  }
+
+  res.status(200).json(report);
 });
 
 // Obtenir les occurrences d'un événement récurrent dans une plage

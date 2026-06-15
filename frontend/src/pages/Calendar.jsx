@@ -1,7 +1,7 @@
 // src/pages/Calendar.jsx
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiRefreshCw, FiDownload } from 'react-icons/fi';
+import { FiRefreshCw, FiDownload, FiUploadCloud } from 'react-icons/fi';
 import { useCalendarEvents } from '../hooks/useCalendarEvents';
 
 // Composants
@@ -14,6 +14,7 @@ import EventDetails from '../components/calendar/EventDetails';
 import EventForm from '../components/calendar/EventForm';
 import CalendarSync from '../components/calendar/CalendarSync';
 import ICalExport from '../components/calendar/ICalExport';
+import EventImportModal from '../components/calendar/EventImportModal';
 import Button from '../components/common/Button';
 
 const Calendar = () => {
@@ -24,6 +25,7 @@ const Calendar = () => {
   const [isAddingEvent, setIsAddingEvent] = useState(false);
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [filters, setFilters] = useState({
     search: '',
     category: 'all',
@@ -32,7 +34,7 @@ const Calendar = () => {
 
   // Données + mutations centralisées dans le hook (fetch par plage de la vue,
   // filtrage mémoïsé, création/mise à jour/suppression).
-  const { filteredEvents, isLoading, saveEvent, updateEvent, deleteEvent } = useCalendarEvents(view, currentDate, filters);
+  const { filteredEvents, isLoading, saveEvent, updateEvent, deleteEvent, refetch } = useCalendarEvents(view, currentDate, filters);
 
   // Sélection d'un événement
   const handleSelectEvent = (event) => {
@@ -159,6 +161,14 @@ const Calendar = () => {
               </motion.p>
             </div>
             <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+              <Button
+                onClick={() => setIsImportModalOpen(true)}
+                variant="secondary"
+                icon={FiUploadCloud}
+                className="w-full sm:w-auto"
+              >
+                Importer
+              </Button>
               <Button
                 onClick={() => setIsExportModalOpen(true)}
                 variant="secondary"
@@ -328,6 +338,14 @@ const Calendar = () => {
         <ICalExport
           onClose={() => setIsExportModalOpen(false)}
           currentView={view}
+        />
+      )}
+
+      {/* Modal d'import JSON en masse */}
+      {isImportModalOpen && (
+        <EventImportModal
+          onClose={() => setIsImportModalOpen(false)}
+          onImported={refetch}
         />
       )}
     </div>
