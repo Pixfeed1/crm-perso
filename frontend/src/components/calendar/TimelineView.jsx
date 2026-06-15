@@ -162,11 +162,23 @@ const TimelineView = ({
 
   const dateColumns = generateDateColumns();
 
+  // Libellé court d'une plage de dates (vue liste mobile)
+  const formatRange = (start, end) => {
+    const opts = { day: '2-digit', month: 'short' };
+    const sd = start ? new Date(start) : null;
+    const ed = end ? new Date(end) : null;
+    if (sd && !isNaN(sd) && ed && !isNaN(ed)) {
+      return `${sd.toLocaleDateString('fr-FR', opts)} → ${ed.toLocaleDateString('fr-FR', opts)}`;
+    }
+    if (sd && !isNaN(sd)) return sd.toLocaleDateString('fr-FR', opts);
+    return '';
+  };
+
   return (
     <div className="h-full flex flex-col bg-surface-muted" ref={timelineRef}>
       {/* Header avec contrôles */}
-      <div className="flex items-center justify-between p-4 bg-surface border-b border-border">
-        <div className="flex items-center space-x-2">
+      <div className="flex flex-wrap items-center justify-between gap-2 p-3 sm:p-4 bg-surface border-b border-border">
+        <div className="hidden md:flex items-center space-x-2">
           <button
             className="p-2 hover:bg-surface-strong rounded"
             onClick={() => setZoom(Math.max(1, zoom - 1))}
@@ -210,13 +222,13 @@ const TimelineView = ({
           </button>
         </div>
 
-        <button className="p-2 hover:bg-surface-strong rounded">
+        <button className="hidden md:block p-2 hover:bg-surface-strong rounded">
           <FiMaximize2 className="text-text-primary" />
         </button>
       </div>
 
-      {/* Grille Timeline */}
-      <div className="flex-1 overflow-auto relative">
+      {/* Grille Timeline (Gantt) — desktop uniquement */}
+      <div className="hidden md:block flex-1 overflow-auto relative">
         {/* En-tête des dates */}
         <div className="sticky top-0 z-10 flex bg-surface border-b border-border">
           <div className="w-48 flex-shrink-0 p-2 border-r border-border">
@@ -339,8 +351,71 @@ const TimelineView = ({
         </div>
       </div>
 
-      {/* Légende */}
-      <div className="p-3 bg-surface border-t border-border flex items-center justify-between text-xs text-text-muted">
+      {/* Vue liste empilée — mobile uniquement (le Gantt n'est pas exploitable < md) */}
+      <div className="md:hidden flex-1 overflow-y-auto p-3 space-y-4">
+        {swimlanes.length === 0 ? (
+          <p className="text-text-muted text-sm text-center py-8">Aucune tâche à afficher.</p>
+        ) : (
+          swimlanes.map((swimlane, laneIndex) => (
+            <div key={laneIndex}>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-text-primary text-sm font-semibold">{swimlane.name}</span>
+                <span className="text-text-muted text-xs">
+                  {swimlane.events.length} tâche{swimlane.events.length > 1 ? 's' : ''}
+                </span>
+              </div>
+              <div className="space-y-2">
+                {swimlane.events.map((event) => {
+                  const isSelected = selectedEvent?.id === event.id;
+                  return (
+                    <motion.button
+                      key={event.id}
+                      type="button"
+                      onClick={() => onSelectEvent(event)}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className={`w-full text-left bg-surface border rounded-xl p-3 transition-colors ${
+                        isSelected ? 'border-accent' : 'border-border hover:border-border-strong'
+                      }`}
+                    >
+                      <div className="flex items-start gap-2">
+                        <span
+                          className="w-2.5 h-2.5 rounded-full mt-1 flex-shrink-0"
+                          style={{ backgroundColor: event.timeline_color || event.color || 'rgb(var(--accent))' }}
+                        />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-text-primary text-sm font-medium break-words">{event.title}</span>
+                            {event.is_milestone && (
+                              <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-warning-bg text-warning-text">Jalon</span>
+                            )}
+                          </div>
+                          {formatRange(event.start_datetime, event.end_datetime) && (
+                            <div className="text-text-muted text-xs mt-0.5">
+                              {formatRange(event.start_datetime, event.end_datetime)}
+                            </div>
+                          )}
+                          {event.completion_percentage > 0 && (
+                            <div className="w-full bg-surface-strong/50 rounded-full h-1 mt-2">
+                              <div
+                                className="bg-success-text h-1 rounded-full"
+                                style={{ width: `${Math.min(100, event.completion_percentage)}%` }}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </motion.button>
+                  );
+                })}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Légende — desktop uniquement (spécifique au Gantt) */}
+      <div className="hidden md:flex p-3 bg-surface border-t border-border items-center justify-between text-xs text-text-muted">
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-2">
             <div className="w-3 h-3 bg-accent rounded" />
