@@ -185,6 +185,11 @@ const EventImportModal = ({ onClose, onImported }) => {
                     ? <span className="px-2 py-1 rounded-full bg-info-bg text-info-text">{report.preview.filter(p => p.action === 'would_create').length} à créer</span>
                     : <span className="px-2 py-1 rounded-full bg-success-bg text-success-text">{report.created} créé(s)</span>}
                   {report.skipped > 0 && <span className="px-2 py-1 rounded-full bg-warning-bg text-warning-text">{report.skipped} doublon(s) ignoré(s)</span>}
+                  {report.preview.filter(p => p.conflicts > 0).length > 0 && (
+                    <span className="px-2 py-1 rounded-full bg-warning-bg text-warning-text">
+                      {report.preview.filter(p => p.conflicts > 0).length} avec conflit d'horaire
+                    </span>
+                  )}
                   {report.errors.length > 0 && <span className="px-2 py-1 rounded-full bg-danger-bg text-danger-text">{report.errors.length} erreur(s)</span>}
                 </div>
 

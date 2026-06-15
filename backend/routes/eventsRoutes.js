@@ -280,6 +280,17 @@ router.post('/import', async (req, res) => {
       continue;
     }
 
+    // Détection de conflits d'horaire avec les événements existants (avertissement, non bloquant).
+    // Pour une série, on contrôle la première occurrence (fenêtre de base).
+    try {
+      const c = await conflictDetectionService.detectConflicts(db, event);
+      const count = c.conflictCount != null ? c.conflictCount : (c.conflicts ? c.conflicts.length : 0);
+      if (count > 0) {
+        line.conflicts = count;
+        line.warnings = [...line.warnings, `${count} conflit(s) d'horaire avec des événements existants`];
+      }
+    } catch (e) { /* la détection de conflits n'empêche pas l'import */ }
+
     if (dryRun) {
       line.action = 'would_create';
       report.preview.push(line);
