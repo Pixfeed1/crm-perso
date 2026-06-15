@@ -1226,6 +1226,33 @@ async function ensureEventRecurrenceColumns(client) {
       END IF;
     END $$;
   `);
+  // Colonnes d'exception sur events (occurrences modifiées d'une série).
+  await client.query('ALTER TABLE events ADD COLUMN IF NOT EXISTS is_exception BOOLEAN DEFAULT false;');
+  await client.query('ALTER TABLE events ADD COLUMN IF NOT EXISTS exception_date TIMESTAMP;');
+  // Tables liées à la récurrence/au Gantt, requêtées au chargement du calendrier
+  // (getEventExceptions) et par la timeline (dépendances) — absentes du schéma de base,
+  // ce qui provoquait une 500 dès qu'un mois contenait un événement récurrent.
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS event_exceptions (
+      id SERIAL PRIMARY KEY,
+      parent_event_id INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+      exception_date TIMESTAMP NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+  await client.query('CREATE INDEX IF NOT EXISTS idx_event_exceptions_parent ON event_exceptions(parent_event_id);');
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS event_dependencies (
+      id SERIAL PRIMARY KEY,
+      source_event_id INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+      target_event_id INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+      dependency_type VARCHAR(30) DEFAULT 'finish_to_start',
+      lag_days INTEGER DEFAULT 0,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+  await client.query('CREATE INDEX IF NOT EXISTS idx_event_dependencies_source ON event_dependencies(source_event_id);');
+  await client.query('CREATE INDEX IF NOT EXISTS idx_event_dependencies_target ON event_dependencies(target_event_id);');
   console.log('  ✓ Colonnes de récurrence events vérifiées');
 }
 
