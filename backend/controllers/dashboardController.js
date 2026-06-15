@@ -83,12 +83,14 @@ const dashboardController = {
       // Calculer les statistiques des revenus
       dashboardData.revenues.thisMonth = revenueStats.total || 0;
 
-      // Revenus totaux
-      dashboardData.revenues.total = allRevenues.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0);
+      // Revenus totaux (encaissés uniquement : status 'paid', cohérent avec l'objectif revenue_cashed)
+      dashboardData.revenues.total = allRevenues
+        .filter(r => r.status === 'paid')
+        .reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0);
 
-      // Projection basée sur la moyenne des 3 derniers mois
+      // Projection basée sur la moyenne des 3 derniers mois (encaissés uniquement)
       const revenuesLastThreeMonths = allRevenues.filter(r =>
-        r.date && r.date >= threeMonthsAgoStr
+        r.status === 'paid' && r.date && r.date >= threeMonthsAgoStr
       );
       const totalLastThreeMonths = revenuesLastThreeMonths.reduce(
         (sum, r) => sum + (parseFloat(r.amount) || 0),
