@@ -138,7 +138,7 @@ const CalendarSync = ({ isOpen, onClose }) => {
           className="bg-gradient-to-br from-surface-muted via-surface to-surface-muted rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden border border-border"
         >
           {/* Header */}
-          <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4 flex items-center justify-between">
+          <div className="bg-accent px-6 py-4 flex items-center justify-between">
             <h2 className="text-2xl font-bold text-text-primary">Synchronisation calendrier</h2>
             <button
               onClick={onClose}
@@ -152,7 +152,7 @@ const CalendarSync = ({ isOpen, onClose }) => {
           <div className="p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
             {loading ? (
               <div className="flex justify-center items-center py-12">
-                <FiRefreshCw className="text-4xl text-indigo-500 animate-spin" />
+                <FiRefreshCw className="text-4xl text-accent animate-spin" />
               </div>
             ) : (
               <>
@@ -167,9 +167,9 @@ const CalendarSync = ({ isOpen, onClose }) => {
                         onClick={handleConnectGoogle}
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
-                        className="flex items-center justify-center gap-3 bg-white text-gray-800 rounded-lg px-6 py-4 font-semibold hover:shadow-lg transition-all"
+                        className="flex items-center justify-center gap-3 bg-surface text-text-primary rounded-lg px-6 py-4 font-semibold hover:shadow-lg transition-all"
                       >
-                        <FaGoogle className="text-2xl text-red-500" />
+                        <FaGoogle className="text-2xl text-danger-text" />
                         <span>Google Calendar</span>
                       </motion.button>
 
@@ -177,7 +177,7 @@ const CalendarSync = ({ isOpen, onClose }) => {
                         onClick={handleConnectOutlook}
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
-                        className="flex items-center justify-center gap-3 bg-blue-600 text-white rounded-lg px-6 py-4 font-semibold hover:shadow-lg transition-all"
+                        className="flex items-center justify-center gap-3 bg-accent text-white rounded-lg px-6 py-4 font-semibold hover:shadow-lg transition-all"
                       >
                         <SiMicrosoftoutlook className="text-2xl" />
                         <span>Outlook</span>
@@ -192,7 +192,7 @@ const CalendarSync = ({ isOpen, onClose }) => {
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex items-center gap-3">
                         <div className={`p-3 rounded-lg ${
-                          connection.provider === 'google' ? 'bg-red-500/10' : 'bg-blue-500/10'
+                          connection.provider === 'google' ? 'bg-danger-bg' : 'bg-info-bg'
                         }`}>
                           {getProviderIcon(connection.provider)}
                         </div>
@@ -210,7 +210,7 @@ const CalendarSync = ({ isOpen, onClose }) => {
                           disabled={syncing[connection.id]}
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}
-                          className="p-2 bg-accent text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="p-2 bg-accent text-white rounded-lg hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
                           title="Synchroniser maintenant"
                         >
                           <FiRefreshCw className={syncing[connection.id] ? 'animate-spin' : ''} />
@@ -220,7 +220,7 @@ const CalendarSync = ({ isOpen, onClose }) => {
                           onClick={() => handleDisconnect(connection.id, connection.provider)}
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}
-                          className="p-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                          className="p-2 bg-danger-text text-white rounded-lg hover:opacity-90"
                           title="Déconnecter"
                         >
                           <FiX />
@@ -232,7 +232,7 @@ const CalendarSync = ({ isOpen, onClose }) => {
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                       <div className="bg-surface-muted/50 rounded-lg p-3">
                         <p className="text-xs text-text-muted mb-1">Statut</p>
-                        <p className="text-sm font-semibold text-green-400 flex items-center gap-1">
+                        <p className="text-sm font-semibold text-success-text flex items-center gap-1">
                           <FiCheck /> Connecté
                         </p>
                       </div>
@@ -253,7 +253,7 @@ const CalendarSync = ({ isOpen, onClose }) => {
 
                       <div className="bg-surface-muted/50 rounded-lg p-3">
                         <p className="text-xs text-text-muted mb-1">Synchronisation</p>
-                        <p className={`text-sm font-semibold ${connection.sync_enabled ? 'text-green-400' : 'text-text-muted'}`}>
+                        <p className={`text-sm font-semibold ${connection.sync_enabled ? 'text-success-text' : 'text-text-muted'}`}>
                           {connection.sync_enabled ? 'Activée' : 'Désactivée'}
                         </p>
                       </div>
@@ -269,9 +269,9 @@ const CalendarSync = ({ isOpen, onClose }) => {
                               <div className="flex items-center justify-between mb-1">
                                 <span className="text-text-muted">{formatDate(log.started_at)}</span>
                                 <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                                  log.status === 'success' ? 'bg-green-500/20 text-green-400' :
-                                  log.status === 'partial' ? 'bg-yellow-500/20 text-yellow-400' :
-                                  'bg-red-500/20 text-red-400'
+                                  log.status === 'success' ? 'bg-success-bg text-success-text' :
+                                  log.status === 'partial' ? 'bg-warning-bg text-warning-text' :
+                                  'bg-danger-bg text-danger-text'
                                 }`}>
                                   {log.status === 'success' ? 'Succès' : log.status === 'partial' ? 'Partiel' : 'Erreur'}
                                 </span>
@@ -301,9 +301,9 @@ const CalendarSync = ({ isOpen, onClose }) => {
                           onClick={handleConnectGoogle}
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
-                          className="flex items-center justify-center gap-3 bg-white text-gray-800 rounded-lg px-6 py-4 font-semibold hover:shadow-lg transition-all"
+                          className="flex items-center justify-center gap-3 bg-surface text-text-primary rounded-lg px-6 py-4 font-semibold hover:shadow-lg transition-all"
                         >
-                          <FaGoogle className="text-2xl text-red-500" />
+                          <FaGoogle className="text-2xl text-danger-text" />
                           <span>Google Calendar</span>
                         </motion.button>
                       )}
@@ -313,7 +313,7 @@ const CalendarSync = ({ isOpen, onClose }) => {
                           onClick={handleConnectOutlook}
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
-                          className="flex items-center justify-center gap-3 bg-blue-600 text-white rounded-lg px-6 py-4 font-semibold hover:shadow-lg transition-all"
+                          className="flex items-center justify-center gap-3 bg-accent text-white rounded-lg px-6 py-4 font-semibold hover:shadow-lg transition-all"
                         >
                           <SiMicrosoftoutlook className="text-2xl" />
                           <span>Outlook</span>
@@ -324,11 +324,11 @@ const CalendarSync = ({ isOpen, onClose }) => {
                 )}
 
                 {/* Note informative */}
-                <div className="mt-6 bg-blue-900/20 border border-blue-500/30 rounded-lg p-4">
+                <div className="mt-6 bg-info-bg border border-info-text/30 rounded-lg p-4">
                   <div className="flex items-start gap-3">
-                    <FiAlertCircle className="text-blue-400 text-xl flex-shrink-0 mt-0.5" />
+                    <FiAlertCircle className="text-accent text-xl flex-shrink-0 mt-0.5" />
                     <div className="text-sm text-text-secondary">
-                      <p className="font-semibold text-blue-400 mb-1">À propos de la synchronisation</p>
+                      <p className="font-semibold text-accent mb-1">À propos de la synchronisation</p>
                       <ul className="list-disc list-inside space-y-1 text-text-muted">
                         <li>La synchronisation est bidirectionnelle par défaut</li>
                         <li>Les modifications sont synchronisées automatiquement</li>

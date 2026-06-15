@@ -109,13 +109,13 @@ const DependencyManager = ({ eventId, allEvents }) => {
       {/* En-tête */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
-          <FiLink className="text-blue-400" />
+          <FiLink className="text-accent" />
           <h4 className="text-text-primary font-medium">Dépendances</h4>
         </div>
         {!isAdding && (
           <button
             onClick={() => setIsAdding(true)}
-            className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm flex items-center space-x-1"
+            className="px-3 py-1 bg-accent text-white rounded hover:bg-accent-hover transition-colors text-sm flex items-center space-x-1"
           >
             <FiPlus className="text-xs" />
             <span>Ajouter</span>
@@ -128,10 +128,10 @@ const DependencyManager = ({ eventId, allEvents }) => {
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-red-500/20 border border-red-500 rounded p-3 flex items-center space-x-2"
+          className="bg-danger-bg border border-danger-text rounded p-3 flex items-center space-x-2"
         >
-          <FiAlertCircle className="text-red-400" />
-          <span className="text-red-200 text-sm">{error}</span>
+          <FiAlertCircle className="text-danger-text" />
+          <span className="text-danger-text text-sm">{error}</span>
         </motion.div>
       )}
 
@@ -151,7 +151,7 @@ const DependencyManager = ({ eventId, allEvents }) => {
               <select
                 value={selectedTargetEvent}
                 onChange={(e) => setSelectedTargetEvent(e.target.value)}
-                className="w-full px-3 py-2 bg-surface-strong border border-border-strong text-text-primary rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 bg-surface-strong border border-border-strong text-text-primary rounded focus:outline-none focus:ring-2 focus:ring-accent"
               >
                 <option value="">Sélectionner un événement</option>
                 {availableEvents.map(event => (
@@ -169,7 +169,7 @@ const DependencyManager = ({ eventId, allEvents }) => {
               <select
                 value={dependencyType}
                 onChange={(e) => setDependencyType(e.target.value)}
-                className="w-full px-3 py-2 bg-surface-strong border border-border-strong text-text-primary rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 bg-surface-strong border border-border-strong text-text-primary rounded focus:outline-none focus:ring-2 focus:ring-accent"
               >
                 <option value="finish_to_start">Fin → Début (standard)</option>
                 <option value="start_to_start">Début → Début</option>
@@ -186,7 +186,7 @@ const DependencyManager = ({ eventId, allEvents }) => {
                 type="number"
                 value={lagDays}
                 onChange={(e) => setLagDays(e.target.value)}
-                className="w-full px-3 py-2 bg-surface-strong border border-border-strong text-text-primary rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 bg-surface-strong border border-border-strong text-text-primary rounded focus:outline-none focus:ring-2 focus:ring-accent"
                 placeholder="0"
               />
             </div>
@@ -204,7 +204,7 @@ const DependencyManager = ({ eventId, allEvents }) => {
               <button
                 onClick={handleAddDependency}
                 disabled={!selectedTargetEvent}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 bg-accent text-white rounded hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Ajouter
               </button>
@@ -233,7 +233,7 @@ const DependencyManager = ({ eventId, allEvents }) => {
               </div>
               <button
                 onClick={() => handleRemoveDependency(dep.id)}
-                className="p-2 text-text-muted hover:text-red-400 hover:bg-surface-strong rounded transition-colors"
+                className="p-2 text-text-muted hover:text-danger-text hover:bg-surface-strong rounded transition-colors"
               >
                 <FiX />
               </button>

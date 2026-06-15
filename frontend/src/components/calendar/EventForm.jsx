@@ -81,9 +81,9 @@ const EventForm = ({ event = {}, selectedDate, onSave, onCancel }) => {
 
   // Options de priorité
   const priorityOptions = [
-    { value: 'high', label: 'Haute', color: 'bg-rose-600' },
-    { value: 'medium', label: 'Moyenne', color: 'bg-amber-600' },
-    { value: 'low', label: 'Basse', color: 'bg-blue-600' }
+    { value: 'high', label: 'Haute', color: 'bg-danger-text' },
+    { value: 'medium', label: 'Moyenne', color: 'bg-warning-text' },
+    { value: 'low', label: 'Basse', color: 'bg-info-text' }
   ];
   
   // Options de couleur
@@ -226,7 +226,7 @@ const EventForm = ({ event = {}, selectedDate, onSave, onCancel }) => {
 
   return (
     <div className="w-full max-w-full">
-      <h2 className="text-2xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-teal-300 to-indigo-300">
+      <h2 className="text-2xl font-bold mb-6 text-text-primary">
         {event.id ? 'Modifier l\'événement' : 'Nouvel événement'}
       </h2>
 
@@ -253,7 +253,7 @@ const EventForm = ({ event = {}, selectedDate, onSave, onCancel }) => {
         {/* Titre */}
         <div>
           <label htmlFor="title" className="block text-sm font-medium text-text-secondary mb-1">
-            Titre <span className="text-rose-500">*</span>
+            Titre <span className="text-danger-text">*</span>
           </label>
           <input
             type="text"
@@ -262,12 +262,12 @@ const EventForm = ({ event = {}, selectedDate, onSave, onCancel }) => {
             value={formData.title}
             onChange={handleInputChange}
             className={`w-full bg-surface-muted/50 text-text-primary border ${
-              errors.title ? 'border-rose-500' : 'border-border'
-            } rounded-lg px-4 py-2 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500`}
+              errors.title ? 'border-danger-text' : 'border-border'
+            } rounded-lg px-4 py-2 placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-accent`}
             placeholder="Ex: Réunion d'équipe"
           />
           {errors.title && (
-            <p className="mt-1 text-xs text-rose-500">{errors.title}</p>
+            <p className="mt-1 text-xs text-danger-text">{errors.title}</p>
           )}
         </div>
         
@@ -282,7 +282,7 @@ const EventForm = ({ event = {}, selectedDate, onSave, onCancel }) => {
               name="category"
               value={formData.category}
               onChange={handleInputChange}
-              className="w-full bg-surface-muted/50 text-text-primary border border-border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+              className="w-full bg-surface-muted/50 text-text-primary border border-border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-accent cursor-pointer"
             >
               {categoryOptions.map(option => (
                 <option key={option.value} value={option.value}>
@@ -339,7 +339,7 @@ const EventForm = ({ event = {}, selectedDate, onSave, onCancel }) => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-text-secondary mb-1">
-                Début <span className="text-rose-500">*</span>
+                Début <span className="text-danger-text">*</span>
               </label>
               <DatePicker
                 selected={formData.start_date}
@@ -349,17 +349,17 @@ const EventForm = ({ event = {}, selectedDate, onSave, onCancel }) => {
                 timeFormat="HH:mm"
                 timeIntervals={15}
                 className={`w-full bg-surface-muted/50 text-text-primary border ${
-                  errors.start_date ? 'border-rose-500' : 'border-border'
-                } rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500`}
+                  errors.start_date ? 'border-danger-text' : 'border-border'
+                } rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-accent`}
               />
               {errors.start_date && (
-                <p className="mt-1 text-xs text-rose-500">{errors.start_date}</p>
+                <p className="mt-1 text-xs text-danger-text">{errors.start_date}</p>
               )}
             </div>
             
             <div>
               <label className="block text-sm font-medium text-text-secondary mb-1">
-                Fin <span className="text-rose-500">*</span>
+                Fin <span className="text-danger-text">*</span>
               </label>
               <DatePicker
                 selected={formData.end_date}
@@ -369,11 +369,11 @@ const EventForm = ({ event = {}, selectedDate, onSave, onCancel }) => {
                 timeFormat="HH:mm"
                 timeIntervals={15}
                 className={`w-full bg-surface-muted/50 text-text-primary border ${
-                  errors.end_date ? 'border-rose-500' : 'border-border'
-                } rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500`}
+                  errors.end_date ? 'border-danger-text' : 'border-border'
+                } rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-accent`}
               />
               {errors.end_date && (
-                <p className="mt-1 text-xs text-rose-500">{errors.end_date}</p>
+                <p className="mt-1 text-xs text-danger-text">{errors.end_date}</p>
               )}
             </div>
           </div>
@@ -433,7 +433,7 @@ const EventForm = ({ event = {}, selectedDate, onSave, onCancel }) => {
                 <div 
                   className={`w-8 h-8 rounded-full mb-1 border-2 ${
                     formData.color === option.value 
-                      ? 'border-white' 
+                      ? 'border-text-primary' 
                       : 'border-transparent'
                   }`}
                   style={{ backgroundColor: option.value }}
@@ -463,7 +463,7 @@ const EventForm = ({ event = {}, selectedDate, onSave, onCancel }) => {
             value={formData.description}
             onChange={handleInputChange}
             rows="3"
-            className="w-full bg-surface-muted/50 text-text-primary border border-border rounded-lg px-4 py-2 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full bg-surface-muted/50 text-text-primary border border-border rounded-lg px-4 py-2 placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-accent"
             placeholder="Détails de l'événement..."
           />
         </div>
@@ -486,7 +486,7 @@ const EventForm = ({ event = {}, selectedDate, onSave, onCancel }) => {
           <motion.button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 rounded-lg bg-white text-gray-900 border-2 border-border-strong hover:bg-gray-100 hover:border-border font-semibold transition-all"
+            className="px-4 py-2 rounded-lg bg-surface-strong text-text-primary border-2 border-border hover:bg-border-strong font-semibold transition-all"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >
@@ -495,7 +495,7 @@ const EventForm = ({ event = {}, selectedDate, onSave, onCancel }) => {
           
           <motion.button
             type="submit"
-            className="px-4 py-2 rounded-lg bg-accent hover:bg-indigo-700 text-white"
+            className="px-4 py-2 rounded-lg bg-accent hover:bg-accent-hover text-white"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >

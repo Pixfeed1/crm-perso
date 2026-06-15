@@ -9,18 +9,18 @@ const ConflictAlert = ({ conflicts, onClose, onViewAlternatives }) => {
   const getSeverityColor = (severity) => {
     switch (severity) {
       case 'high':
-        return 'bg-red-500/10 border-red-500/50 text-red-400';
+        return 'bg-danger-bg border-danger-text/50 text-danger-text';
       case 'medium':
-        return 'bg-yellow-500/10 border-yellow-500/50 text-yellow-400';
+        return 'bg-warning-bg border-warning-text/50 text-warning-text';
       case 'low':
-        return 'bg-blue-500/10 border-blue-500/50 text-blue-400';
+        return 'bg-info-bg border-info-text/50 text-info-text';
       default:
-        return 'bg-gray-500/10 border-gray-500/50 text-text-muted';
+        return 'bg-neutral-bg border-border text-text-muted';
     }
   };
 
   const getSeverityIcon = (severity) => {
-    const className = severity === 'high' ? 'text-red-500' : severity === 'medium' ? 'text-yellow-500' : 'text-blue-500';
+    const className = severity === 'high' ? 'text-danger-text' : severity === 'medium' ? 'text-warning-text' : 'text-info-text';
     return <FiAlertTriangle className={`text-2xl ${className}`} />;
   };
 
@@ -50,14 +50,14 @@ const ConflictAlert = ({ conflicts, onClose, onViewAlternatives }) => {
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -10 }}
-        className="mb-4 bg-gradient-to-r from-red-900/20 to-orange-900/20 border-2 border-red-500/50 rounded-lg p-4"
+        className="mb-4 bg-danger-bg border-2 border-danger-text/50 rounded-lg p-4"
       >
         {/* Header */}
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-3">
-            <FiAlertTriangle className="text-red-500 text-2xl flex-shrink-0" />
+            <FiAlertTriangle className="text-danger-text text-2xl flex-shrink-0" />
             <div>
-              <h3 className="text-lg font-bold text-red-400">
+              <h3 className="text-lg font-bold text-danger-text">
                 {conflicts.length} Conflit{conflicts.length > 1 ? 's' : ''} détecté{conflicts.length > 1 ? 's' : ''}
               </h3>
               <p className="text-sm text-text-secondary">
@@ -117,7 +117,7 @@ const ConflictAlert = ({ conflicts, onClose, onViewAlternatives }) => {
                             {formatDuration(conflict.overlapDuration)}
                           </span>
                         {conflict.conflictType === 'location' && (
-                          <span className="ml-2 px-2 py-0.5 bg-purple-500/20 text-purple-300 rounded text-xs">
+                          <span className="ml-2 px-2 py-0.5 bg-accent/15 text-accent rounded text-xs">
                             Même lieu
                           </span>
                         )}
@@ -137,7 +137,7 @@ const ConflictAlert = ({ conflicts, onClose, onViewAlternatives }) => {
             onClick={onViewAlternatives}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            className="flex-1 px-4 py-2 bg-accent hover:bg-indigo-700 text-white rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
+            className="flex-1 px-4 py-2 bg-accent hover:bg-accent-hover text-white rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
           >
             <FiClock />
             <span>Voir les créneaux disponibles</span>

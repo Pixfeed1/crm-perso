@@ -112,34 +112,34 @@ const ICalExport = ({ onClose, currentView }) => {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+        className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
         onClick={onClose}
       >
         <motion.div
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.9, opacity: 0 }}
-          className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+          className="bg-surface rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <div className="flex items-center justify-between p-6 border-b border-border">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                <FiDownload className="text-blue-600 text-xl" />
+              <div className="w-10 h-10 bg-accent/15 rounded-lg flex items-center justify-center">
+                <FiDownload className="text-info-text text-xl" />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-gray-900">
+                <h2 className="text-xl font-bold text-text-primary">
                   Exporter au format iCal
                 </h2>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-text-muted">
                   Compatible avec Apple, Google, Outlook, etc.
                 </p>
               </div>
             </div>
             <button
               onClick={onClose}
-              className="text-text-muted hover:text-gray-600 transition-colors"
+              className="text-text-muted hover:text-text-primary transition-colors"
             >
               <FiX className="text-2xl" />
             </button>
@@ -149,21 +149,21 @@ const ICalExport = ({ onClose, currentView }) => {
           <div className="p-6 space-y-6">
             {/* Nom du calendrier */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-text-secondary mb-2">
                 Nom du calendrier
               </label>
               <input
                 type="text"
                 value={calendarName}
                 onChange={(e) => setCalendarName(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent"
                 placeholder="Mon Calendrier CRM"
               />
             </div>
 
             {/* Type d'export */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-3">
+              <label className="block text-sm font-medium text-text-secondary mb-3">
                 Que souhaitez-vous exporter ?
               </label>
               <div className="space-y-3">
@@ -172,8 +172,8 @@ const ICalExport = ({ onClose, currentView }) => {
                   whileHover={{ scale: 1.02 }}
                   className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
                     exportType === 'all'
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-200 hover:border-gray-300'
+                      ? 'border-accent bg-accent/10'
+                      : 'border-border hover:border-border-strong'
                   }`}
                   onClick={() => setExportType('all')}
                 >
@@ -181,20 +181,20 @@ const ICalExport = ({ onClose, currentView }) => {
                     <div
                       className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
                         exportType === 'all'
-                          ? 'border-blue-500 bg-blue-500'
-                          : 'border-gray-300'
+                          ? 'border-accent bg-accent/100'
+                          : 'border-border'
                       }`}
                     >
                       {exportType === 'all' && (
                         <FiCheck className="text-text-primary text-xs" />
                       )}
                     </div>
-                    <FiCalendar className="text-gray-600" />
+                    <FiCalendar className="text-text-muted" />
                     <div>
-                      <div className="font-medium text-gray-900">
+                      <div className="font-medium text-text-primary">
                         Tous les événements
                       </div>
-                      <div className="text-sm text-gray-500">
+                      <div className="text-sm text-text-muted">
                         Exporter l'intégralité du calendrier
                       </div>
                     </div>
@@ -206,8 +206,8 @@ const ICalExport = ({ onClose, currentView }) => {
                   whileHover={{ scale: 1.02 }}
                   className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
                     exportType === 'range'
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-200 hover:border-gray-300'
+                      ? 'border-accent bg-accent/10'
+                      : 'border-border hover:border-border-strong'
                   }`}
                   onClick={() => setExportType('range')}
                 >
@@ -215,20 +215,20 @@ const ICalExport = ({ onClose, currentView }) => {
                     <div
                       className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
                         exportType === 'range'
-                          ? 'border-blue-500 bg-blue-500'
-                          : 'border-gray-300'
+                          ? 'border-accent bg-accent/100'
+                          : 'border-border'
                       }`}
                     >
                       {exportType === 'range' && (
                         <FiCheck className="text-text-primary text-xs" />
                       )}
                     </div>
-                    <FiClock className="text-gray-600" />
+                    <FiClock className="text-text-muted" />
                     <div>
-                      <div className="font-medium text-gray-900">
+                      <div className="font-medium text-text-primary">
                         Plage de dates
                       </div>
-                      <div className="text-sm text-gray-500">
+                      <div className="text-sm text-text-muted">
                         Exporter une période spécifique
                       </div>
                     </div>
@@ -241,25 +241,25 @@ const ICalExport = ({ onClose, currentView }) => {
                       className="ml-8 space-y-3 mt-3"
                     >
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                        <label className="block text-xs font-medium text-text-muted mb-1">
                           Date de début
                         </label>
                         <input
                           type="date"
                           value={startDate}
                           onChange={(e) => setStartDate(e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                          className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent text-sm"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                        <label className="block text-xs font-medium text-text-muted mb-1">
                           Date de fin
                         </label>
                         <input
                           type="date"
                           value={endDate}
                           onChange={(e) => setEndDate(e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                          className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent text-sm"
                         />
                       </div>
                     </motion.div>
@@ -271,8 +271,8 @@ const ICalExport = ({ onClose, currentView }) => {
                   whileHover={{ scale: 1.02 }}
                   className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
                     exportType === 'category'
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-200 hover:border-gray-300'
+                      ? 'border-accent bg-accent/10'
+                      : 'border-border hover:border-border-strong'
                   }`}
                   onClick={() => setExportType('category')}
                 >
@@ -280,20 +280,20 @@ const ICalExport = ({ onClose, currentView }) => {
                     <div
                       className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
                         exportType === 'category'
-                          ? 'border-blue-500 bg-blue-500'
-                          : 'border-gray-300'
+                          ? 'border-accent bg-accent/100'
+                          : 'border-border'
                       }`}
                     >
                       {exportType === 'category' && (
                         <FiCheck className="text-text-primary text-xs" />
                       )}
                     </div>
-                    <FiFilter className="text-gray-600" />
+                    <FiFilter className="text-text-muted" />
                     <div>
-                      <div className="font-medium text-gray-900">
+                      <div className="font-medium text-text-primary">
                         Par catégorie
                       </div>
-                      <div className="text-sm text-gray-500">
+                      <div className="text-sm text-text-muted">
                         Exporter une catégorie d'événements
                       </div>
                     </div>
@@ -305,13 +305,13 @@ const ICalExport = ({ onClose, currentView }) => {
                       animate={{ opacity: 1, height: 'auto' }}
                       className="ml-8 mt-3"
                     >
-                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                      <label className="block text-xs font-medium text-text-muted mb-1">
                         Catégorie
                       </label>
                       <select
                         value={category}
                         onChange={(e) => setCategory(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                        className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent text-sm"
                       >
                         <option value="">Sélectionner une catégorie</option>
                         {categories.map((cat) => (
@@ -327,12 +327,12 @@ const ICalExport = ({ onClose, currentView }) => {
             </div>
 
             {/* Info box */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="bg-info-bg border border-info-text/30 rounded-lg p-4">
               <div className="flex items-start space-x-3">
-                <FiCalendar className="text-blue-600 mt-0.5 flex-shrink-0" />
-                <div className="text-sm text-blue-800">
+                <FiCalendar className="text-info-text mt-0.5 flex-shrink-0" />
+                <div className="text-sm text-info-text">
                   <p className="font-medium mb-1">Format iCalendar (.ics)</p>
-                  <p className="text-blue-600">
+                  <p className="text-info-text">
                     Le fichier exporté sera compatible avec tous les calendriers :
                     Apple Calendar, Google Calendar, Microsoft Outlook, Thunderbird, etc.
                     Les événements récurrents et leurs exceptions seront préservés.
@@ -346,15 +346,15 @@ const ICalExport = ({ onClose, currentView }) => {
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-green-50 border border-green-200 rounded-lg p-4"
+                className="bg-success-bg border border-success-text/30 rounded-lg p-4"
               >
                 <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                  <div className="w-8 h-8 bg-success-text rounded-full flex items-center justify-center">
                     <FiCheck className="text-text-primary" />
                   </div>
-                  <div className="text-sm text-green-800">
+                  <div className="text-sm text-success-text">
                     <p className="font-medium">Export réussi !</p>
-                    <p className="text-green-600">
+                    <p className="text-success-text">
                       Le fichier .ics a été téléchargé avec succès.
                     </p>
                   </div>
@@ -364,10 +364,10 @@ const ICalExport = ({ onClose, currentView }) => {
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200">
+          <div className="flex items-center justify-end space-x-3 p-6 border-t border-border">
             <button
               onClick={onClose}
-              className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              className="px-4 py-2 text-text-secondary hover:bg-surface-strong rounded-lg transition-colors"
               disabled={isExporting}
             >
               Annuler
@@ -375,7 +375,7 @@ const ICalExport = ({ onClose, currentView }) => {
             <button
               onClick={handleExport}
               disabled={!isFormValid() || isExporting}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+              className="px-6 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
             >
               {isExporting ? (
                 <>

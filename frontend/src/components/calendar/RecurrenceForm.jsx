@@ -77,7 +77,7 @@ const RecurrenceForm = ({ recurrenceData = {}, onChange }) => {
         <select
           value={formData.recurrence_type}
           onChange={(e) => handleChange('recurrence_type', e.target.value)}
-          className="w-full bg-surface-muted/50 text-text-primary border border-border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+          className="w-full bg-surface-muted/50 text-text-primary border border-border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-accent cursor-pointer"
         >
           {recurrenceTypeOptions.map(option => (
             <option key={option.value} value={option.value}>
@@ -98,7 +98,7 @@ const RecurrenceForm = ({ recurrenceData = {}, onChange }) => {
         <select
           value={formData.recurrence_type}
           onChange={(e) => handleChange('recurrence_type', e.target.value)}
-          className="w-full bg-surface-muted/50 text-text-primary border border-border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+          className="w-full bg-surface-muted/50 text-text-primary border border-border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-accent cursor-pointer"
         >
           {recurrenceTypeOptions.map(option => (
             <option key={option.value} value={option.value}>
@@ -120,7 +120,7 @@ const RecurrenceForm = ({ recurrenceData = {}, onChange }) => {
             max="365"
             value={formData.recurrence_interval}
             onChange={(e) => handleChange('recurrence_interval', parseInt(e.target.value) || 1)}
-            className="w-20 bg-surface-muted/50 text-text-primary border border-border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-20 bg-surface-muted/50 text-text-primary border border-border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-accent"
           />
           <span className="text-text-secondary">
             {intervalLabels[formData.recurrence_type] || ''}
@@ -198,7 +198,7 @@ const RecurrenceForm = ({ recurrenceData = {}, onChange }) => {
               value={formData.recurrence_count}
               onChange={(e) => handleChange('recurrence_count', parseInt(e.target.value) || 1)}
               disabled={formData.recurrence_end_type !== 'COUNT'}
-              className={`mx-2 w-20 bg-surface-muted/50 text-text-primary border border-border rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+              className={`mx-2 w-20 bg-surface-muted/50 text-text-primary border border-border rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-accent ${
                 formData.recurrence_end_type !== 'COUNT' ? 'opacity-50' : ''
               }`}
             />
@@ -222,7 +222,7 @@ const RecurrenceForm = ({ recurrenceData = {}, onChange }) => {
                 onChange={(date) => handleChange('recurrence_end_date', date)}
                 dateFormat="dd/MM/yyyy"
                 disabled={formData.recurrence_end_type !== 'DATE'}
-                className={`bg-surface-muted/50 text-text-primary border border-border rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                className={`bg-surface-muted/50 text-text-primary border border-border rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-accent ${
                   formData.recurrence_end_type !== 'DATE' ? 'opacity-50' : ''
                 }`}
                 minDate={new Date()}
@@ -233,7 +233,7 @@ const RecurrenceForm = ({ recurrenceData = {}, onChange }) => {
       </div>
 
       {/* Résumé de la récurrence */}
-      <div className="bg-indigo-900/30 border border-indigo-500/50 rounded-lg p-3">
+      <div className="bg-accent/10 border border-accent/40 rounded-lg p-3">
         <p className="text-sm text-text-secondary">
           <span className="font-medium">Résumé : </span>
           {getSummary(formData)}

@@ -98,10 +98,10 @@ const VideoLinkGenerator = ({ value, onChange, eventData }) => {
   // Mapping statique pour les classes Tailwind (nécessaire pour le JIT compiler)
   const getProviderClasses = (color) => {
     const colorClasses = {
-      green: 'border-green-500 bg-green-500/10',
-      blue: 'border-blue-500 bg-blue-500/10',
-      purple: 'border-purple-500 bg-purple-500/10',
-      gray: 'border-gray-500 bg-gray-500/10'
+      green: 'border-success-text bg-success-bg',
+      blue: 'border-info-text bg-info-bg',
+      purple: 'border-accent bg-accent/10',
+      gray: 'border-border bg-neutral-bg'
     };
     return colorClasses[color] || colorClasses.gray;
   };
@@ -122,7 +122,7 @@ const VideoLinkGenerator = ({ value, onChange, eventData }) => {
               value={value || ''}
               onChange={(e) => onChange(e.target.value, null, null)}
               placeholder="https://meet.google.com/abc-defg-hij ou générer automatiquement"
-              className="w-full px-3 py-2 pl-10 bg-surface-strong/50 border border-border-strong text-text-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 pl-10 bg-surface-strong/50 border border-border-strong text-text-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-accent"
             />
             <FiVideo className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
           </div>
@@ -143,7 +143,7 @@ const VideoLinkGenerator = ({ value, onChange, eventData }) => {
             <button
               type="button"
               onClick={() => onChange('', null, null)}
-              className="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center"
+              className="px-3 py-2 bg-danger-text text-white rounded-lg hover:opacity-90 transition-colors flex items-center"
               title="Supprimer le lien"
             >
               <FiX />
@@ -159,7 +159,7 @@ const VideoLinkGenerator = ({ value, onChange, eventData }) => {
             <button
               type="button"
               onClick={() => setShowProviders(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2 text-sm"
+              className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover transition-colors flex items-center space-x-2 text-sm"
             >
               <FiVideo />
               <span>Générer un lien automatiquement</span>
@@ -216,7 +216,7 @@ const VideoLinkGenerator = ({ value, onChange, eventData }) => {
                         </div>
                       </div>
                       {selectedProvider === provider.id && (
-                        <FiCheck className="text-green-500" />
+                        <FiCheck className="text-success-text" />
                       )}
                     </label>
                   );
@@ -228,7 +228,7 @@ const VideoLinkGenerator = ({ value, onChange, eventData }) => {
                 type="button"
                 onClick={generateSimpleLink}
                 disabled={isGenerating || !selectedProvider}
-                className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                className="w-full px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
               >
                 {isGenerating ? (
                   <>
@@ -256,7 +256,7 @@ const VideoLinkGenerator = ({ value, onChange, eventData }) => {
       {providers.length === 0 && (
         <div className="text-xs text-text-muted mt-1">
           Aucun service de visioconférence configuré.{' '}
-          <a href="/settings" className="text-blue-400 hover:underline">
+          <a href="/settings" className="text-accent hover:underline">
             Configurer dans les paramètres
           </a>
         </div>

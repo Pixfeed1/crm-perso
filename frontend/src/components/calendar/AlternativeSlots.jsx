@@ -34,9 +34,9 @@ const AlternativeSlots = ({ slots, onSelectSlot, onClose, isLoading }) => {
   };
 
   const getScoreColor = (score) => {
-    if (score >= 80) return 'text-green-400';
-    if (score >= 60) return 'text-yellow-400';
-    return 'text-orange-400';
+    if (score >= 80) return 'text-success-text';
+    if (score >= 60) return 'text-warning-text';
+    return 'text-warning-text';
   };
 
   const getScoreLabel = (score) => {
@@ -81,12 +81,12 @@ const AlternativeSlots = ({ slots, onSelectSlot, onClose, isLoading }) => {
           className="bg-gradient-to-br from-surface-muted via-surface to-surface-muted rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden border border-border"
         >
           {/* Header */}
-          <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4 flex items-center justify-between">
+          <div className="bg-accent px-6 py-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <FiCalendar className="text-2xl text-text-primary" />
               <div>
                 <h2 className="text-2xl font-bold text-text-primary">Créneaux disponibles</h2>
-                <p className="text-sm text-indigo-100">
+                <p className="text-sm text-white/80">
                   {slots && slots.length > 0 ? `${slots.length} créneau${slots.length > 1 ? 'x' : ''} trouvé${slots.length > 1 ? 's' : ''}` : 'Recherche en cours...'}
                 </p>
               </div>
@@ -103,7 +103,7 @@ const AlternativeSlots = ({ slots, onSelectSlot, onClose, isLoading }) => {
           <div className="p-6 overflow-y-auto max-h-[calc(90vh-180px)]">
             {isLoading ? (
               <div className="flex flex-col items-center justify-center py-12">
-                <FiRefreshCw className="text-4xl text-indigo-500 animate-spin mb-4" />
+                <FiRefreshCw className="text-4xl text-accent animate-spin mb-4" />
                 <p className="text-text-secondary">Recherche des meilleurs créneaux...</p>
               </div>
             ) : slots && slots.length > 0 ? (
@@ -124,13 +124,13 @@ const AlternativeSlots = ({ slots, onSelectSlot, onClose, isLoading }) => {
                           onClick={() => handleSelectSlot(slot)}
                           className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
                             selectedSlot === slot
-                              ? 'border-indigo-500 bg-indigo-900/30'
+                              ? 'border-accent bg-accent/10'
                               : 'border-border bg-surface/50 hover:border-border-strong hover:bg-surface'
                           }`}
                         >
                           <div className="flex items-start justify-between mb-2">
                             <div className="flex items-center gap-2">
-                              <FiClock className="text-indigo-400" />
+                              <FiClock className="text-accent" />
                               <div>
                                 <div className="font-semibold text-text-primary">
                                   {formatTime(slot.start)} - {formatTime(slot.end)}
@@ -145,7 +145,7 @@ const AlternativeSlots = ({ slots, onSelectSlot, onClose, isLoading }) => {
                               <motion.div
                                 initial={{ scale: 0 }}
                                 animate={{ scale: 1 }}
-                                className="w-6 h-6 bg-indigo-500 rounded-full flex items-center justify-center"
+                                className="w-6 h-6 bg-accent rounded-full flex items-center justify-center"
                               >
                                 <FiCheck className="text-text-primary text-sm" />
                               </motion.div>
@@ -158,7 +158,7 @@ const AlternativeSlots = ({ slots, onSelectSlot, onClose, isLoading }) => {
                             <span className={`text-xs font-semibold ${getScoreColor(slot.score)}`}>
                               {getScoreLabel(slot.score)}
                             </span>
-                            <span className="text-xs text-gray-500 ml-auto">
+                            <span className="text-xs text-text-muted ml-auto">
                               Score: {slot.score}/100
                             </span>
                           </div>
@@ -170,9 +170,9 @@ const AlternativeSlots = ({ slots, onSelectSlot, onClose, isLoading }) => {
               </div>
             ) : (
               <div className="text-center py-12">
-                <FiCalendar className="text-6xl text-gray-600 mx-auto mb-4" />
+                <FiCalendar className="text-6xl text-text-muted mx-auto mb-4" />
                 <p className="text-xl text-text-muted mb-2">Aucun créneau disponible</p>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-text-muted">
                   Essayez d'élargir la plage de recherche ou de modifier la durée de l'événement
                 </p>
               </div>
@@ -209,8 +209,8 @@ const AlternativeSlots = ({ slots, onSelectSlot, onClose, isLoading }) => {
                   whileTap={selectedSlot ? { scale: 0.98 } : {}}
                   className={`px-4 py-2 rounded-lg font-semibold transition-colors flex items-center gap-2 ${
                     selectedSlot
-                      ? 'bg-accent hover:bg-indigo-700 text-white'
-                      : 'bg-surface-strong text-gray-500 cursor-not-allowed'
+                      ? 'bg-accent hover:bg-accent-hover text-white'
+                      : 'bg-surface-strong text-text-muted cursor-not-allowed'
                   }`}
                 >
                   <FiCheck />
