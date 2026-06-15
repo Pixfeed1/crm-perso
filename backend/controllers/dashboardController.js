@@ -80,8 +80,8 @@ const dashboardController = {
         p.status === 'planned' && p.start_date && p.start_date > now.toISOString().split('T')[0]
       ).length;
 
-      // Calculer les statistiques des revenus
-      dashboardData.revenues.thisMonth = revenueStats.total || 0;
+      // Calculer les statistiques des revenus (encaissé du mois courant : status 'paid')
+      dashboardData.revenues.thisMonth = revenueStats.total_paid || 0;
 
       // Revenus totaux (encaissés uniquement : status 'paid', cohérent avec l'objectif revenue_cashed)
       dashboardData.revenues.total = allRevenues

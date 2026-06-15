@@ -1,8 +1,37 @@
 // backend/controllers/invoiceController.js
 const invoiceModel = require('../models/invoiceModel');
+const revenueModel = require('../models/revenueModel');
 const emailService = require('../services/emailService');
 const pdfService = require('../services/pdfService');
 const SettingsModel = require('../models/settingsModel');
+
+/**
+ * Crée (best-effort) un revenu encaissé pour une facture passée en "payé".
+ * Garde-fou anti-doublon : ne crée rien si un revenu porte déjà ce numéro de facture
+ * (évite le double comptage avec Stripe / paiement de projet / appels répétés).
+ */
+const ensureRevenueForPaidInvoice = async (db, id) => {
+  try {
+    const invoice = await invoiceModel.getInvoiceById(db, id);
+    if (!invoice || !invoice.invoice_number) return;
+    const dup = await db.pool.query(
+      'SELECT id FROM revenues WHERE invoice_number = $1 LIMIT 1',
+      [invoice.invoice_number]
+    );
+    if (dup.rows.length > 0) return;
+    await revenueModel.createRevenue(db.pool, {
+      amount: parseFloat(invoice.total_ttc) || 0,
+      date: new Date().toISOString().split('T')[0],
+      description: `Facture ${invoice.invoice_number}${invoice.client_name ? ` — ${invoice.client_name}` : ''}`,
+      type: 'invoice',
+      status: 'paid',
+      client_id: invoice.client_id || null,
+      invoice_number: invoice.invoice_number
+    });
+  } catch (revErr) {
+    console.error('[Invoice] Échec création revenu pour facture payée:', revErr.message);
+  }
+};
 
 /**
  * Contrôleur pour la gestion des factures
@@ -245,6 +274,9 @@ const invoiceController = {
         return res.status(404).json({ message: 'Facture non trouvée' });
       }
 
+      // Revenu encaissé lié à la facture (sans doublon)
+      await ensureRevenueForPaidInvoice(db, id);
+
       res.json({
         message: 'Facture marquée comme payée avec succès',
         id,
@@ -278,6 +310,11 @@ const invoiceController = {
 
       if (result.changes === 0) {
         return res.status(404).json({ message: 'Facture non trouvée' });
+      }
+
+      // Si la facture passe en "payé", créer le revenu encaissé associé (sans doublon)
+      if (payment_status === 'paid') {
+        await ensureRevenueForPaidInvoice(db, id);
       }
 
       res.json({
