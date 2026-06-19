@@ -559,6 +559,13 @@ export const revenuesAPI = {
   }
 };
 
+// ===== PILOTAGE CA / MRR (module Objectif) =====
+export const objectifAPI = {
+  getSummary: (annee = 2027) => apiRequest(`/objectif/summary?annee=${annee}`),
+  getParams: (annee = 2027) => apiRequest(`/objectif/params?annee=${annee}`),
+  updateParams: (data) => apiRequest('/objectif/params', 'PUT', data)
+};
+
 // ===== TABLEAU DE BORD =====
 export const dashboardAPI = {
   getData: () => {

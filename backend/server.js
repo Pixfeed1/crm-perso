@@ -125,6 +125,7 @@ app.use('/api/clients', require('./routes/clientsRoutes'));
 app.use('/api/projects', require('./routes/projectsRoutes'));
 app.use('/api/events', require('./routes/eventsRoutes'));
 app.use('/api/goals', require('./routes/goalsRoutes'));
+app.use('/api/objectif', require('./routes/objectifRoutes'));
 app.use('/api/revenues', require('./routes/revenuesRoutes'));
 app.use('/api/reminders', require('./routes/reminderRoutes'));
 app.use('/api/search', require('./routes/searchRoutes'));

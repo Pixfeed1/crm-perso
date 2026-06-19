@@ -390,6 +390,25 @@ async function applyStripeEvent(db, event) {
          WHERE id = $1 AND billing_status NOT IN ('canceling', 'canceled')`,
         [row.id]
       );
+      // Enregistre l'encaissement récurrent dans revenues (alimente le CA réalisé).
+      // Idempotent par stripe_invoice_id : ne crée jamais de doublon, ne touche pas l'abonnement.
+      try {
+        const stripeInvoiceId = obj.id || null;
+        const amountEur = typeof obj.amount_paid === 'number' ? obj.amount_paid / 100
+          : (typeof obj.total === 'number' ? obj.total / 100 : null);
+        if (stripeInvoiceId && amountEur && amountEur > 0) {
+          const dup = await db.pool.query('SELECT id FROM revenues WHERE stripe_invoice_id = $1 LIMIT 1', [stripeInvoiceId]);
+          if (dup.rows.length === 0) {
+            await db.pool.query(
+              `INSERT INTO revenues (amount, date, description, type, status, client_id, stripe_invoice_id, created_at, updated_at)
+               VALUES ($1, CURRENT_DATE, $2, 'subscription', 'paid', $3, $4, NOW(), NOW())`,
+              [amountEur, `Encaissement ${targetLabel(table, row)}`, row.client_id || null, stripeInvoiceId]
+            );
+          }
+        }
+      } catch (revErr) {
+        console.error(`[Billing] Échec enregistrement revenu invoice.paid (${tag}):`, revErr.message);
+      }
       console.log(`[Billing] ${event.type} -> ${tag} actif`);
       break;
     }

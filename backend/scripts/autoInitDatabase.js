@@ -1257,6 +1257,53 @@ async function ensureEventRecurrenceColumns(client) {
 }
 
 /**
+ * Migration idempotente : colonnes "pilotage CA/MRR" sur subscriptions (additif, ne touche
+ * jamais aux abonnements existants ni à leur facturation). + backfill date_fin pour les
+ * abonnements déjà résiliés.
+ */
+async function ensureSubscriptionPilotageColumns(client) {
+  console.log('[AutoInit] Vérification des colonnes pilotage de subscriptions...');
+  await client.query('ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS tier VARCHAR(50);');
+  await client.query('ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS stripe_price_id VARCHAR(255);');
+  await client.query('ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS date_fin TIMESTAMP;');
+  await client.query("ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS devise VARCHAR(3) DEFAULT 'EUR';");
+  // Backfill date_fin pour les abonnements déjà résiliés (à partir de billing_cancel_at/updated_at).
+  await client.query("UPDATE subscriptions SET date_fin = COALESCE(billing_cancel_at, updated_at) WHERE billing_status = 'canceled' AND date_fin IS NULL;");
+  console.log('  ✓ Colonnes pilotage subscriptions vérifiées');
+}
+
+/**
+ * Migration idempotente : table objectif_params (paramètres éditables du pilotage CA/MRR).
+ * Une ligne par année. Aucune valeur en dur dans le code applicatif : tout vient d'ici.
+ */
+async function ensureObjectifParams(client) {
+  console.log('[AutoInit] Vérification de la table objectif_params...');
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS objectif_params (
+      id SERIAL PRIMARY KEY,
+      annee INTEGER UNIQUE NOT NULL,
+      cible_ca_eur NUMERIC(12,2) NOT NULL DEFAULT 100800,
+      cible_mrr_eur NUMERIC(12,2) NOT NULL DEFAULT 8400,
+      taux_urssaf NUMERIC(5,4) NOT NULL DEFAULT 0.26,
+      taux_impot_provision NUMERIC(5,4) NOT NULL DEFAULT 0.06,
+      plafond_micro NUMERIC(12,2) NOT NULL DEFAULT 77700,
+      seuil_tva_base NUMERIC(12,2) NOT NULL DEFAULT 37500,
+      seuil_tva_majore NUMERIC(12,2) NOT NULL DEFAULT 41250,
+      ponctuel_prevu NUMERIC(12,2) NOT NULL DEFAULT 0,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+  // Seed de l'année 2027 si absente (valeurs par défaut = §10 de la spec).
+  await client.query(`
+    INSERT INTO objectif_params (annee)
+    SELECT 2027
+    WHERE NOT EXISTS (SELECT 1 FROM objectif_params WHERE annee = 2027);
+  `);
+  console.log('  ✓ Table objectif_params vérifiée');
+}
+
+/**
  * Migration idempotente : met à jour le titre dans les signatures email DÉJÀ enregistrées
  * (company_settings.email_signature) — l'ancien HTML figé n'est pas régénéré sinon.
  * 'Chargé de Projet' (et la variante 'web') -> 'Fondateur & développeur'.
@@ -1315,6 +1362,10 @@ async function autoInitDatabase(pool) {
     await ensureInteractionsColumns(client);
 
     await ensureEventRecurrenceColumns(client);
+
+    await ensureSubscriptionPilotageColumns(client);
+
+    await ensureObjectifParams(client);
     // Mise à jour du titre dans les signatures email déjà enregistrées
     await ensureSignatureTitleUpdate(client);
 

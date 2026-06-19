@@ -10,6 +10,7 @@ import GoalStats from '../components/goals/GoalStats';
 import GoalList from '../components/goals/GoalList';
 import GoalForm from '../components/goals/GoalForm';
 import GoalFilter from '../components/goals/GoalFilter';
+import PilotageCA from '../components/goals/PilotageCA';
 import Button from '../components/common/Button';
 
 const Goals = () => {
@@ -22,6 +23,7 @@ const Goals = () => {
   const [editingGoal, setEditingGoal] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [view, setView] = useState('active'); // 'active', 'completed', 'upcoming', 'archived'
+  const [section, setSection] = useState('objectifs'); // 'objectifs' | 'pilotage'
   const [stats, setStats] = useState({
     total: 0,
     active: 0,
@@ -433,8 +435,31 @@ const Goals = () => {
   return (
     <div className="h-full flex flex-col overflow-y-auto p-2 sm:p-4">
       <div className="max-w-5xl mx-auto w-full">
+        {/* Sélecteur de sous-écran : Objectifs (existant) / Pilotage CA 2027 */}
+        <div className="flex gap-2 mb-4 pt-16 sm:pt-2">
+          <button
+            onClick={() => setSection('objectifs')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              section === 'objectifs' ? 'bg-accent text-white' : 'bg-surface-strong text-text-secondary hover:bg-border-strong'
+            }`}
+          >
+            Objectifs
+          </button>
+          <button
+            onClick={() => setSection('pilotage')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              section === 'pilotage' ? 'bg-accent text-white' : 'bg-surface-strong text-text-secondary hover:bg-border-strong'
+            }`}
+          >
+            Pilotage CA 2027
+          </button>
+        </div>
+
+        {section === 'pilotage' && <PilotageCA />}
+
+        {section === 'objectifs' && (<>
         {/* En-tête */}
-        <header className="mb-6 pt-16 sm:pt-0">
+        <header className="mb-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
             <div>
               <h1 className="text-3xl sm:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-amber-300 to-orange-300">
@@ -566,6 +591,7 @@ const Goals = () => {
 
         {/* Modal de confirmation */}
         <ConfirmModal {...confirmState.config} isOpen={confirmState.isOpen} />
+        </>)}
       </div>
     </div>
   );
