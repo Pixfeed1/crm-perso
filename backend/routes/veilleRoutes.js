@@ -11,5 +11,6 @@ router.post('/annonces/:id/ecarter', veilleController.ecarter);
 router.get('/criteres', veilleController.getCriteres);
 router.put('/criteres', veilleController.updateCriteres);
 router.post('/run', veilleController.run);
+router.get('/run/status', veilleController.runStatus);
 
 module.exports = router;

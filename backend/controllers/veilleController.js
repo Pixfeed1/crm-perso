@@ -1,5 +1,5 @@
 // backend/controllers/veilleController.js
-const { runVeille } = require('../services/veilleMissions');
+const { runVeille, getRunStatus } = require('../services/veilleMissions');
 const veilleWorker = require('../services/veilleMissionsWorker');
 
 const veilleController = {
@@ -87,16 +87,20 @@ const veilleController = {
     }
   },
 
-  // POST /api/veille/run  (déclenchement manuel pour tester)
+  // POST /api/veille/run  (déclenchement manuel : lance en arrière-plan + suivi via /run/status)
   run: async (req, res) => {
     const db = req.app.locals.db;
-    try {
-      const report = await runVeille(db);
-      res.json({ success: true, report });
-    } catch (error) {
-      console.error('[Veille] run manuel:', error.message);
-      res.status(500).json({ message: error.message || 'Erreur lors du run' });
+    if (getRunStatus().running) {
+      return res.status(409).json({ message: 'Un run est déjà en cours', status: getRunStatus() });
     }
+    // Lancement en arrière-plan : la réponse part tout de suite, le front poll /run/status.
+    runVeille(db).catch((e) => console.error('[Veille] run arrière-plan:', e.message));
+    res.status(202).json({ started: true, status: getRunStatus() });
+  },
+
+  // GET /api/veille/run/status  (suivi temps réel de l'étape courante)
+  runStatus: (req, res) => {
+    res.json(getRunStatus());
   }
 };
 

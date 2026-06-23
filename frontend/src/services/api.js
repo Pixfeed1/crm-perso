@@ -568,7 +568,8 @@ export const veilleAPI = {
   ecarter: (id) => apiRequest(`/veille/annonces/${id}/ecarter`, 'POST'),
   getCriteres: () => apiRequest('/veille/criteres'),
   updateCriteres: (data) => apiRequest('/veille/criteres', 'PUT', data),
-  run: () => apiRequest('/veille/run', 'POST')
+  run: () => apiRequest('/veille/run', 'POST'),
+  runStatus: () => apiRequest('/veille/run/status')
 };
 
 // ===== PILOTAGE CA / MRR (module Objectif) =====

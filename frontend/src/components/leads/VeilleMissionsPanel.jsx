@@ -3,14 +3,34 @@
 // Onglet "Veille missions" de la Prospection : annonces freelance récupérées (Jooble),
 // qualifiées au LLM, affichées en cartes (score, raisons, brouillon de réponse).
 // Tokens de thème, react-icons, framer-motion, aucune couleur en dur.
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   FiCpu, FiSliders, FiExternalLink, FiCopy, FiEdit2, FiXCircle, FiRefreshCw,
-  FiPlay, FiCheck, FiX, FiAlertCircle
+  FiPlay, FiCheck, FiX, FiAlertCircle, FiLoader
 } from 'react-icons/fi';
 import { veilleAPI } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
+
+// Spinner animé (framer-motion).
+const Spinner = ({ size = 16 }) => (
+  <motion.span
+    animate={{ rotate: 360 }}
+    transition={{ duration: 0.9, repeat: Infinity, ease: 'linear' }}
+    className="inline-flex"
+  >
+    <FiLoader size={size} />
+  </motion.span>
+);
+
+// Libellé d'étape de run.
+const ETAPE_LABEL = {
+  recuperation: 'Récupération des annonces…',
+  filtrage: 'Filtrage…',
+  qualification: 'Qualification IA…',
+  termine: 'Terminé',
+  erreur: 'Erreur'
+};
 
 // Métadonnées du label de score -> classes tokens.
 const scoreMeta = (label, score) => {
@@ -34,6 +54,8 @@ const VeilleMissionsPanel = () => {
   const [criteres, setCriteres] = useState(null);
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
+  const [runState, setRunState] = useState(null); // { etape, message, error } pendant/après le run
+  const pollRef = useRef(null);
   const [showCriteres, setShowCriteres] = useState(false);
   const [scoreFilter, setScoreFilter] = useState('all'); // all | fort | verifier | faible
   const [search, setSearch] = useState('');
@@ -56,18 +78,47 @@ const VeilleMissionsPanel = () => {
 
   useEffect(() => { load(); }, [load]);
 
-  const runNow = async () => {
-    setRunning(true);
-    try {
-      const res = await veilleAPI.run();
-      const r = res.report || {};
-      toast.success(`Veille lancée : ${r.inserees || 0} nouvelle(s) annonce(s)`);
+  // Nettoyage du polling au démontage.
+  useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
+
+  const finishRun = useCallback((status) => {
+    if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+    setRunning(false);
+    setRunState(status);
+    if (status && status.etape === 'erreur') {
+      toast.error(status.error || 'Erreur lors du run');
+    } else {
+      const n = status && status.report ? status.report.inserees : 0;
+      toast.success(n > 0 ? `${n} nouvelle(s) annonce(s)` : 'Aucune nouvelle annonce cette fois');
       load();
-    } catch (e) {
-      toast.error(e.message || 'Erreur lors du run (clés API configurées ?)');
-    } finally {
-      setRunning(false);
     }
+  }, [toast, load]);
+
+  const runNow = async () => {
+    if (running) return;
+    setRunning(true);
+    setRunState({ etape: 'recuperation', message: 'Démarrage…' });
+    try {
+      await veilleAPI.run(); // 202 : lancé en arrière-plan (ou 409 si déjà en cours)
+    } catch (e) {
+      // 409 = un run est déjà en cours -> on suit quand même via le polling.
+      if (!/déjà en cours|already/i.test(e.message || '')) {
+        setRunning(false);
+        setRunState({ etape: 'erreur', error: e.message || 'Erreur lors du lancement (clés API configurées ?)' });
+        toast.error(e.message || 'Erreur lors du lancement du run');
+        return;
+      }
+    }
+    // Polling de l'étape courante toutes les 2 s.
+    pollRef.current = setInterval(async () => {
+      try {
+        const s = await veilleAPI.runStatus();
+        setRunState(s);
+        if (s && !s.running) finishRun(s);
+      } catch (e) {
+        finishRun({ etape: 'erreur', error: 'Suivi interrompu' });
+      }
+    }, 2000);
   };
 
   const ecarter = async (id) => {
@@ -123,8 +174,9 @@ const VeilleMissionsPanel = () => {
           </div>
           <div className="flex items-center gap-2">
             <button onClick={load} className="p-2 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-strong" title="Rafraîchir"><FiRefreshCw size={16} /></button>
-            <button onClick={runNow} disabled={running} className="px-3 py-2 rounded-lg bg-surface-strong hover:bg-border-strong text-text-primary text-sm flex items-center gap-2 disabled:opacity-50">
-              <FiPlay size={15} /> {running ? 'Run…' : 'Lancer maintenant'}
+            <button onClick={runNow} disabled={running} className="px-3 py-2 rounded-lg bg-surface-strong hover:bg-border-strong text-text-primary text-sm flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed">
+              {running ? <Spinner size={15} /> : <FiPlay size={15} />}
+              {running ? 'Recherche en cours…' : 'Lancer la veille'}
             </button>
             <button onClick={() => setShowCriteres((v) => !v)} className="px-3 py-2 rounded-lg bg-accent hover:bg-accent-hover text-white text-sm flex items-center gap-2">
               <FiSliders size={15} /> Mes critères
@@ -142,6 +194,31 @@ const VeilleMissionsPanel = () => {
             <span className="text-xs px-2 py-1 rounded-full bg-neutral-bg text-neutral-text">Run {criteres.heure_run}</span>
           </div>
         )}
+
+        {/* Indicateur de progression / résultat du run */}
+        <AnimatePresence>
+          {(running || (runState && (runState.etape === 'erreur' || runState.etape === 'termine'))) && (
+            <motion.div
+              initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+              className={`mt-3 flex items-center gap-2 rounded-lg p-3 text-sm border ${
+                runState && runState.etape === 'erreur'
+                  ? 'bg-danger-bg text-danger-text border-danger-text/30'
+                  : runState && runState.etape === 'termine'
+                  ? 'bg-success-bg text-success-text border-success-text/30'
+                  : 'bg-info-bg text-info-text border-info-text/30'
+              }`}
+            >
+              {running ? <Spinner size={16} /> : runState && runState.etape === 'erreur' ? <FiAlertCircle size={16} /> : <FiCheck size={16} />}
+              <span>
+                {running
+                  ? (runState && (runState.message || ETAPE_LABEL[runState.etape])) || 'Analyse des annonces en cours, cela peut prendre une minute…'
+                  : runState && runState.etape === 'erreur'
+                  ? (runState.error || 'Erreur lors du run')
+                  : (runState && runState.message) || 'Terminé'}
+              </span>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Panneau critères */}

@@ -132,17 +132,38 @@ function normalizeJob(job) {
   };
 }
 
+// État du run courant (en mémoire, suivi temps réel via GET /api/veille/run/status).
+let runStatus = {
+  running: false, etape: null, message: null,
+  processed: 0, total: 0, report: null, error: null,
+  started_at: null, finished_at: null
+};
+const getRunStatus = () => runStatus;
+
 /**
  * Lance un run de veille complet. Renvoie un compte-rendu.
+ * Met à jour runStatus à chaque étape (suivi temps réel côté UI).
  * @param {Object} db - app.locals.db (utilise db.pool)
  */
 async function runVeille(db) {
+  if (runStatus.running) return { skipped: true, raison: 'Run déjà en cours' };
+
   const criteres = await getCriteres(db);
   if (!criteres) throw new Error('Critères de veille introuvables');
   if (!criteres.actif) return { skipped: true, raison: 'Veille désactivée' };
+  // Vérif clés en amont -> erreur claire (sinon "0 annonce" trompeur).
+  if (!process.env.JOOBLE_API_KEY) throw new Error('JOOBLE_API_KEY manquante dans .env');
+  if (!process.env.ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY manquante dans .env');
+
+  runStatus = {
+    running: true, etape: 'recuperation', message: 'Récupération des annonces…',
+    processed: 0, total: 0, report: null, error: null,
+    started_at: new Date().toISOString(), finished_at: null
+  };
 
   const report = { recuperees: 0, prefiltrees: 0, qualifiees: 0, inserees: 0, ignorees: 0, non_francophone: 0, rejet_langue: 0, erreurs: 0, llm_calls: 0 };
 
+  try {
   // a) Récupération Jooble (mots requis comme requêtes, plusieurs pages).
   const brutes = [];
   for (const kw of criteres.mots_requis || []) {
@@ -159,6 +180,8 @@ async function runVeille(db) {
   report.recuperees = brutes.length;
 
   // Dédup intra-run + normalisation.
+  runStatus.etape = 'filtrage';
+  runStatus.message = 'Filtrage des annonces…';
   const seen = new Set();
   const candidates = [];
   for (const job of brutes) {
@@ -167,6 +190,7 @@ async function runVeille(db) {
     seen.add(n.jooble_uid);
     candidates.push(n);
   }
+  runStatus.total = candidates.length;
 
   for (const annonce of candidates) {
     // Dédup base : ne jamais re-traiter une annonce déjà connue.
@@ -194,6 +218,9 @@ async function runVeille(db) {
     }
 
     // c) Qualification LLM.
+    runStatus.etape = 'qualification';
+    runStatus.processed = report.llm_calls;
+    runStatus.message = `Qualification IA… (${report.llm_calls + 1})`;
     let q;
     try {
       report.llm_calls++;
@@ -248,7 +275,22 @@ async function runVeille(db) {
     `-> ${report.qualifiees} qualifiées IA -> ${report.inserees} retenues (francophone + full remote)`
   );
   console.log('[Veille] Détail run:', report);
+
+  runStatus.etape = 'termine';
+  runStatus.report = report;
+  runStatus.message = report.inserees > 0
+    ? `Terminé : ${report.inserees} nouvelle(s) annonce(s)`
+    : 'Terminé : aucune nouvelle annonce cette fois';
   return report;
+  } catch (e) {
+    runStatus.etape = 'erreur';
+    runStatus.error = e.message || 'Erreur inconnue';
+    console.error('[Veille] Run échoué:', e.message);
+    throw e;
+  } finally {
+    runStatus.running = false;
+    runStatus.finished_at = new Date().toISOString();
+  }
 }
 
-module.exports = { runVeille, getCriteres };
+module.exports = { runVeille, getCriteres, getRunStatus };
