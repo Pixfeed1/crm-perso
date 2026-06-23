@@ -290,8 +290,21 @@ async function runVeille(db) {
   runStatus.total = candidates.length;
 
   for (const annonce of candidates) {
-    // Dédup base : ne jamais re-traiter une annonce déjà connue.
-    const known = await db.pool.query('SELECT 1 FROM veille_annonces WHERE jooble_uid = $1 LIMIT 1', [annonce.uid]);
+    // Dédup inter-run sur un identifiant STABLE, TOUS statuts confondus (y compris
+    // 'ecarte' / 'traite') : une annonce déjà connue n'est JAMAIS ré-insérée, même
+    // si elle revient d'une AUTRE source (uid différent). Clés : uid exact, OU URL
+    // normalisée, OU titre+entreprise normalisés (match inter-sources).
+    const lienNorm = (annonce.lien || '').toLowerCase().trim();
+    const titreNorm = (annonce.titre || '').toLowerCase().trim();
+    const entNorm = (annonce.entreprise || '').toLowerCase().trim();
+    const known = await db.pool.query(
+      `SELECT 1 FROM veille_annonces
+         WHERE jooble_uid = $1
+            OR ($2 <> '' AND lower(btrim(lien)) = $2)
+            OR ($3 <> '' AND lower(btrim(titre)) = $3 AND lower(btrim(coalesce(entreprise,''))) = $4)
+         LIMIT 1`,
+      [annonce.uid, lienNorm, titreNorm, entNorm]
+    );
     if (known.rows.length > 0) { report.rejets.doublon++; continue; }
 
     const texte = `${annonce.titre} ${annonce.description}`;
