@@ -1,17 +1,25 @@
 // backend/services/veilleMissions.js
 //
-// Agent "Veille missions" : récupère des annonces freelance (API Jooble), pré-filtre
-// gratuitement par mots-clés, qualifie au LLM (Anthropic Haiku) uniquement les annonces
-// retenues, applique un filtrage final (full remote, TJM plancher), puis insère en base.
+// Agent "Veille missions" : agrège des annonces freelance de PLUSIEURS sources
+// (France Travail = principale, JSearch = complément bridé, Jooble = secondaire),
+// pré-filtre gratuitement (mots-clés + langue FR), qualifie au LLM (Anthropic Haiku)
+// uniquement les annonces retenues, applique un filtrage final souple (francophone,
+// full remote, TJM plancher), puis insère en base. Moteur de qualif IA partagé.
 //
 // CLÉS API (.env) :
-//   JOOBLE_API_KEY     -> clé Jooble (https://jooble.org/api/about)
-//   ANTHROPIC_API_KEY  -> clé Anthropic (https://console.anthropic.com/)
+//   POLE_EMPLOI_CLIENT_ID/SECRET/SCOPE -> France Travail (déjà utilisé par l'onglet Offres)
+//   JSEARCH_API_KEY / JSEARCH_API_HOST -> JSearch RapidAPI (complément, quota limité)
+//   JOOBLE_API_KEY                     -> Jooble (https://jooble.org/api/about)
+//   ANTHROPIC_API_KEY                  -> Anthropic (https://console.anthropic.com/)
 // Voir aussi backend/.env.example.
 
+const poleEmploiService = require('./poleEmploiService');
+const googleJobsService = require('./googleJobsService'); // JSearch (RapidAPI)
+
 const LLM_MODEL = 'claude-haiku-4-5-20251001';
-const MAX_LLM_CALLS = 40;          // garde-fou coût : 40 qualifications LLM max par run
-const JOOBLE_PAGES = 3;            // nb de pages récupérées par mot-clé
+const MAX_LLM_CALLS = 60;          // garde-fou coût : 60 qualifications LLM max par run
+const JOOBLE_PAGES = 3;            // nb de pages récupérées par mot-clé (Jooble)
+const JSEARCH_MAX_CALLS = 2;       // complément bridé : 2 requêtes JSearch max par run (quota)
 
 const lower = (s) => (s || '').toString().toLowerCase();
 
@@ -117,11 +125,12 @@ Réponds UNIQUEMENT par un objet JSON valide, sans texte autour, avec EXACTEMENT
   }
 }
 
-// Normalise une annonce Jooble brute -> forme interne.
+// Normalise une annonce Jooble brute -> forme interne commune.
 function normalizeJob(job) {
   const lien = job.link || '';
   return {
-    jooble_uid: lien || `${job.title || ''}-${job.company || ''}-${job.updated || ''}`,
+    source: 'jooble',
+    uid: lien || `jooble-${job.title || ''}-${job.company || ''}-${job.updated || ''}`,
     titre: job.title || 'Sans titre',
     entreprise: job.company || '',
     source_label: `via Jooble${job.source ? ` · ${job.source}` : ''}`,
@@ -130,6 +139,40 @@ function normalizeJob(job) {
     date_annonce: job.updated ? job.updated.slice(0, 10) : null,
     montant_brut: job.salary || null
   };
+}
+
+// FRANCE TRAVAIL (source principale, francophone, gratuit). Réutilise poleEmploiService.
+async function fetchFranceTravail(keyword) {
+  if (!poleEmploiService.isConfigured()) return [];
+  const { offers } = await poleEmploiService.searchOffers({ motsCles: keyword, range: '0-149' });
+  return (offers || []).map((o) => ({
+    source: 'france_travail',
+    uid: `ft-${o.id}`,
+    titre: o.intitule || 'Offre',
+    entreprise: (o.entreprise && o.entreprise.nom) || '',
+    source_label: 'via France Travail',
+    lien: `https://candidat.pole-emploi.fr/offres/recherche/detail/${o.id}`,
+    description: o.description || '',
+    date_annonce: o.dateCreation ? o.dateCreation.slice(0, 10) : null,
+    montant_brut: (o.salaire && o.salaire.libelle) || null
+  }));
+}
+
+// JSEARCH (complément bridé, pays=fr). Réutilise googleJobsService.
+async function fetchJSearch(keyword) {
+  if (!googleJobsService.isConfigured()) return [];
+  const opps = await googleJobsService.searchOpportunities(keyword, { location: 'France' });
+  return (opps || []).map((o) => ({
+    source: 'jsearch',
+    uid: `js-${o.id || o.url || o.title}`,
+    titre: o.title || 'Offre',
+    entreprise: o.company_name || '',
+    source_label: 'via JSearch',
+    lien: o.url || '',
+    description: o.description || '',
+    date_annonce: o.posted_date ? String(o.posted_date).slice(0, 10) : null,
+    montant_brut: o.salary || null
+  }));
 }
 
 // État du run courant (en mémoire, suivi temps réel via GET /api/veille/run/status).
@@ -152,8 +195,13 @@ async function runVeille(db) {
   if (!criteres) throw new Error('Critères de veille introuvables');
   if (!criteres.actif) return { skipped: true, raison: 'Veille désactivée' };
   // Vérif clés en amont -> erreur claire (sinon "0 annonce" trompeur).
-  if (!process.env.JOOBLE_API_KEY) throw new Error('JOOBLE_API_KEY manquante dans .env');
   if (!process.env.ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY manquante dans .env');
+  const ftOk = poleEmploiService.isConfigured();
+  const jsOk = googleJobsService.isConfigured();
+  const joobleOk = !!process.env.JOOBLE_API_KEY;
+  if (!ftOk && !jsOk && !joobleOk) {
+    throw new Error('Aucune source configurée (.env) : France Travail, JSearch ou Jooble');
+  }
 
   runStatus = {
     running: true, etape: 'recuperation', message: 'Récupération des annonces…',
@@ -167,6 +215,11 @@ async function runVeille(db) {
     qualifiees_ia: 0,
     retenues: 0,
     rejets: { non_francophone: 0, non_remote: 0, tjm_insuffisant: 0, sans_montant_rejete: 0, doublon: 0 },
+    sources: {
+      france_travail: { recuperees: 0, retenues: 0 },
+      jsearch: { recuperees: 0, retenues: 0 },
+      jooble: { recuperees: 0, retenues: 0 }
+    },
     erreurs: 0,
     llm_calls: 0
   };
@@ -174,37 +227,71 @@ async function runVeille(db) {
   const ajoutRejet = (titre, raison) => { if (rejetsExemples.length < 8) rejetsExemples.push({ titre, raison }); };
 
   try {
-  // a) Récupération Jooble (mots requis comme requêtes, plusieurs pages).
+  // a) Récupération MULTI-SOURCES (toutes normalisées dans le même flux).
   const brutes = [];
-  for (const kw of criteres.mots_requis || []) {
-    for (let page = 1; page <= JOOBLE_PAGES; page++) {
+  const motsRequis = criteres.mots_requis || [];
+
+  // 1) FRANCE TRAVAIL — source principale (toutes les requêtes).
+  if (ftOk) {
+    for (const kw of motsRequis) {
       try {
-        const jobs = await fetchJooble(kw, page);
-        brutes.push(...jobs);
+        const offs = await fetchFranceTravail(kw);
+        brutes.push(...offs);
+      } catch (e) { report.erreurs++; console.error(`[Veille] France Travail "${kw}":`, e.message); }
+    }
+  }
+
+  // 2) JSEARCH — complément BRIDÉ (JSEARCH_MAX_CALLS requêtes max ; 429 -> on ignore).
+  if (jsOk) {
+    let jsCalls = 0;
+    for (const kw of motsRequis) {
+      if (jsCalls >= JSEARCH_MAX_CALLS) break;
+      jsCalls++;
+      try {
+        const offs = await fetchJSearch(kw);
+        brutes.push(...offs);
       } catch (e) {
+        console.error(`[Veille] JSearch "${kw}":`, e.message);
+        if (/limite|quota|429/i.test(e.message || '')) { console.log('[Veille] JSearch quota atteint -> source ignorée'); break; }
         report.erreurs++;
-        console.error(`[Veille] Jooble "${kw}" p${page}:`, e.message);
+      }
+    }
+  }
+
+  // 3) JOOBLE — source secondaire (inchangée).
+  if (joobleOk) {
+    for (const kw of motsRequis) {
+      for (let page = 1; page <= JOOBLE_PAGES; page++) {
+        try {
+          const jobs = await fetchJooble(kw, page);
+          brutes.push(...jobs.map(normalizeJob));
+        } catch (e) {
+          report.erreurs++;
+          console.error(`[Veille] Jooble "${kw}" p${page}:`, e.message);
+        }
       }
     }
   }
   report.recuperees = brutes.length;
 
-  // Dédup intra-run + normalisation.
+  // Dédup inter-sources : par uid (URL) OU titre+entreprise.
   runStatus.etape = 'filtrage';
   runStatus.message = 'Filtrage des annonces…';
   const seen = new Set();
   const candidates = [];
-  for (const job of brutes) {
-    const n = normalizeJob(job);
-    if (!n.jooble_uid || seen.has(n.jooble_uid)) continue;
-    seen.add(n.jooble_uid);
+  for (const n of brutes) {
+    if (!n || !n.uid) continue;
+    const key = n.lien ? `url:${n.lien}` : `te:${(n.titre || '').toLowerCase()}|${(n.entreprise || '').toLowerCase()}`;
+    if (seen.has(n.uid) || seen.has(key)) continue;
+    seen.add(n.uid); seen.add(key);
+    if (report.sources[n.source]) report.sources[n.source].recuperees++;
     candidates.push(n);
   }
   runStatus.total = candidates.length;
 
   for (const annonce of candidates) {
     // Dédup base : ne jamais re-traiter une annonce déjà connue.
-    const known = await db.pool.query('SELECT 1 FROM veille_annonces WHERE jooble_uid = $1 LIMIT 1', [annonce.jooble_uid]);
+    const known = await db.pool.query('SELECT 1 FROM veille_annonces WHERE jooble_uid = $1 LIMIT 1', [annonce.uid]);
     if (known.rows.length > 0) { report.rejets.doublon++; continue; }
 
     const texte = `${annonce.titre} ${annonce.description}`;
@@ -288,20 +375,27 @@ async function runVeille(db) {
             full_remote, montant, score, score_label, raison, brouillon, statut)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,'nouveau')
          ON CONFLICT (jooble_uid) DO NOTHING`,
-        [annonce.jooble_uid, annonce.titre, annonce.entreprise, annonce.source_label, annonce.lien,
+        [annonce.uid, annonce.titre, annonce.entreprise, annonce.source_label, annonce.lien,
          annonce.description, annonce.date_annonce, fullRemote, montantFinal,
          score, label, raison, (q.brouillon || '').slice(0, 2000)]
       );
       report.retenues++;
+      if (report.sources[annonce.source]) report.sources[annonce.source].retenues++;
     } catch (e) {
       report.erreurs++;
       console.error('[Veille] Insert:', e.message);
     }
   }
 
+  const s = report.sources;
   console.log(
     `[Veille] ${report.recuperees} récupérées -> ${report.apres_prefiltre_langue} filtrées (langue/mots) ` +
     `-> ${report.qualifiees_ia} qualifiées IA -> ${report.retenues} retenues`
+  );
+  console.log(
+    `[Veille] Par source — France Travail: ${s.france_travail.retenues} (sur ${s.france_travail.recuperees}), ` +
+    `JSearch: ${s.jsearch.retenues} (sur ${s.jsearch.recuperees}), ` +
+    `Jooble: ${s.jooble.retenues} (sur ${s.jooble.recuperees}) -> total retenues ${report.retenues}`
   );
   console.log('[Veille] Rejets:', report.rejets, '| LLM calls:', report.llm_calls, '| erreurs:', report.erreurs);
   if (rejetsExemples.length) {

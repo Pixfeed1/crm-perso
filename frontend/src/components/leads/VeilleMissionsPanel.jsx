@@ -239,6 +239,9 @@ const VeilleMissionsPanel = () => {
                 {!running && runState && runState.report && (
                   <div className="text-xs opacity-80 mt-0.5">
                     {runState.report.recuperees} récupérées → {runState.report.apres_prefiltre_langue} filtrées → {runState.report.qualifiees_ia} qualifiées → {runState.report.retenues} retenues
+                    {runState.report.sources && (
+                      <> · France Travail {runState.report.sources.france_travail.retenues} · JSearch {runState.report.sources.jsearch.retenues} · Jooble {runState.report.sources.jooble.retenues}</>
+                    )}
                     {runState.report.rejets && (
                       <> · rejets : {runState.report.rejets.non_francophone} langue, {runState.report.rejets.non_remote} sur site, {runState.report.rejets.tjm_insuffisant} TJM, {runState.report.rejets.doublon} doublons</>
                     )}
