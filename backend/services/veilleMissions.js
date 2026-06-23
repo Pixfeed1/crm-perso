@@ -11,9 +11,27 @@
 
 const LLM_MODEL = 'claude-haiku-4-5-20251001';
 const MAX_LLM_CALLS = 40;          // garde-fou coût : 40 qualifications LLM max par run
-const JOOBLE_PAGES = 2;            // nb de pages récupérées par mot-clé
+const JOOBLE_PAGES = 3;            // nb de pages récupérées par mot-clé
 
 const lower = (s) => (s || '').toString().toLowerCase();
+
+// Heuristique de langue (gratuite) : rejette les annonces manifestement anglophones
+// (aucun mot français courant ET plusieurs mots anglais courants). Sert de pré-écran
+// avant l'IA ; la décision finale "francophone" est confirmée par l'IA.
+const FR_HINTS = [' le ', ' la ', ' les ', ' des ', ' une ', ' un ', ' et ', ' pour ', ' vous ', ' nous ', ' avec ', ' sur ', ' dans ', ' du ', ' au ', ' aux ', ' en ', ' est ', ' ou ', ' qui ', ' notre ', ' nos ', ' développeur', 'télétravail', ' mission', ' entreprise', ' recherche', ' compétences', ' poste', ' société', ' rémunér'];
+const EN_HINTS = [' the ', ' and ', ' for ', ' you ', ' we ', ' with ', ' our ', ' is ', ' are ', ' to ', ' of ', ' in ', ' developer', ' remote ', ' team ', ' experience', ' skills', ' company', ' work ', ' join ', ' looking ', ' we\'re ', ' you\'ll '];
+
+function countHits(text, hints) {
+  const t = ` ${lower(text).replace(/\s+/g, ' ')} `;
+  return hints.reduce((n, h) => (t.includes(h) ? n + 1 : n), 0);
+}
+
+// true = à écarter d'office (massivement anglais, aucun marqueur français).
+function looksEnglishOnly(texte) {
+  const fr = countHits(texte, FR_HINTS);
+  const en = countHits(texte, EN_HINTS);
+  return fr === 0 && en >= 3;
+}
 
 // Récupère la ligne de critères (créée par autoInit).
 async function getCriteres(db) {
@@ -22,13 +40,15 @@ async function getCriteres(db) {
 }
 
 // Appel Jooble pour un mot-clé / une page. Renvoie un tableau d'annonces brutes.
+// IMPORTANT : on N'envoie PAS location:"France" (cela étrangle les résultats à ~1) ;
+// on cherche large et on filtre la langue/le remote ensuite (heuristique + IA).
 async function fetchJooble(keyword, page) {
   const key = process.env.JOOBLE_API_KEY;
   if (!key) throw new Error('JOOBLE_API_KEY manquante dans .env');
   const res = await fetch(`https://jooble.org/api/${key}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ keywords: keyword, location: 'France', page: String(page) })
+    body: JSON.stringify({ keywords: keyword, page: String(page) })
   });
   if (!res.ok) throw new Error(`Jooble HTTP ${res.status}`);
   const data = await res.json();
@@ -68,7 +88,7 @@ Entreprise : ${annonce.entreprise || ''}
 Description : ${(annonce.description || '').slice(0, 2000)}
 
 Réponds UNIQUEMENT par un objet JSON valide, sans texte autour, avec EXACTEMENT ces clés :
-{"full_remote": bool, "montant": "string (ex '400€/j', ou 'à confirmer' si absent)", "score": int (0-100, adéquation avec le profil), "score_label": "fort" | "à vérifier" | "faible", "raison": "phrase courte en français", "brouillon": "réponse FR personnalisée ~4 lignes, sans signature"}`;
+{"francophone": bool (true seulement si l'annonce est rédigée en français ET la mission peut se mener en français), "full_remote": bool, "montant": "string (ex '400€/j', ou 'à confirmer' si absent)", "score": int (0-100, adéquation avec le profil), "score_label": "fort" | "à vérifier" | "faible", "raison": "phrase courte en français", "brouillon": "réponse FR personnalisée ~4 lignes, sans signature"}`;
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -121,7 +141,7 @@ async function runVeille(db) {
   if (!criteres) throw new Error('Critères de veille introuvables');
   if (!criteres.actif) return { skipped: true, raison: 'Veille désactivée' };
 
-  const report = { recuperees: 0, prefiltrees: 0, qualifiees: 0, inserees: 0, ignorees: 0, erreurs: 0, llm_calls: 0 };
+  const report = { recuperees: 0, prefiltrees: 0, qualifiees: 0, inserees: 0, ignorees: 0, non_francophone: 0, rejet_langue: 0, erreurs: 0, llm_calls: 0 };
 
   // a) Récupération Jooble (mots requis comme requêtes, plusieurs pages).
   const brutes = [];
@@ -153,8 +173,16 @@ async function runVeille(db) {
     const known = await db.pool.query('SELECT 1 FROM veille_annonces WHERE jooble_uid = $1 LIMIT 1', [annonce.jooble_uid]);
     if (known.rows.length > 0) continue;
 
-    // b) Pré-filtre gratuit.
-    if (!passesPrefilter(`${annonce.titre} ${annonce.description}`, criteres.mots_requis, criteres.mots_exclus)) {
+    const texte = `${annonce.titre} ${annonce.description}`;
+
+    // b1) Pré-filtre mots-clés gratuit (>=1 requis, 0 exclu).
+    if (!passesPrefilter(texte, criteres.mots_requis, criteres.mots_exclus)) {
+      continue;
+    }
+    // b2) Pré-écran langue : écarte d'office les annonces manifestement anglophones
+    //     (économise des appels IA). La confirmation "francophone" reste faite par l'IA.
+    if (looksEnglishOnly(texte)) {
+      report.rejet_langue++;
       continue;
     }
     report.prefiltrees++;
@@ -179,6 +207,9 @@ async function runVeille(db) {
     report.qualifiees++;
 
     // d) Filtrage final.
+    // d0) Francophone confirmé par l'IA : sinon écartée (non insérée).
+    if (q.francophone === false) { report.non_francophone++; continue; }
+
     const fullRemote = q.full_remote === true;
     if (criteres.full_remote_only && !fullRemote) { report.ignorees++; continue; }
 
@@ -212,7 +243,11 @@ async function runVeille(db) {
     }
   }
 
-  console.log('[Veille] Run terminé:', report);
+  console.log(
+    `[Veille] Jooble: ${report.recuperees} récupérées -> ${report.prefiltrees} après pré-filtre langue/mots ` +
+    `-> ${report.qualifiees} qualifiées IA -> ${report.inserees} retenues (francophone + full remote)`
+  );
+  console.log('[Veille] Détail run:', report);
   return report;
 }
 
