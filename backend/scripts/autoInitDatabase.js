@@ -1304,6 +1304,66 @@ async function ensureObjectifParams(client) {
 }
 
 /**
+ * Migration idempotente : tables de l'agent "Veille missions" (annonces freelance).
+ * veille_criteres : 1 ligne éditable (mots-clés, TJM, full remote, heure du run).
+ * veille_annonces : annonces récupérées + qualifiées (dédup par jooble_uid).
+ */
+async function ensureVeilleTables(client) {
+  console.log('[AutoInit] Vérification des tables veille missions...');
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS veille_criteres (
+      id SERIAL PRIMARY KEY,
+      mots_requis TEXT[] NOT NULL DEFAULT '{}',
+      mots_exclus TEXT[] NOT NULL DEFAULT '{}',
+      full_remote_only BOOLEAN NOT NULL DEFAULT true,
+      tjm_min INTEGER NOT NULL DEFAULT 350,
+      garder_sans_montant BOOLEAN NOT NULL DEFAULT true,
+      profil_reference TEXT,
+      heure_run TEXT NOT NULL DEFAULT '07:30',
+      actif BOOLEAN NOT NULL DEFAULT true,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS veille_annonces (
+      id SERIAL PRIMARY KEY,
+      jooble_uid TEXT UNIQUE NOT NULL,
+      titre TEXT,
+      entreprise TEXT,
+      source_label TEXT,
+      lien TEXT,
+      description TEXT,
+      date_annonce DATE,
+      full_remote BOOLEAN,
+      montant TEXT,
+      score INTEGER DEFAULT 0,
+      score_label TEXT,
+      raison TEXT,
+      brouillon TEXT,
+      statut TEXT DEFAULT 'nouveau',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+  await client.query('CREATE INDEX IF NOT EXISTS idx_veille_annonces_score ON veille_annonces(score DESC);');
+  await client.query('CREATE INDEX IF NOT EXISTS idx_veille_annonces_statut ON veille_annonces(statut);');
+  // Seed de la ligne de critères si absente (valeurs initiales de la spec).
+  const exists = await client.query('SELECT 1 FROM veille_criteres LIMIT 1');
+  if (exists.rows.length === 0) {
+    await client.query(
+      `INSERT INTO veille_criteres (mots_requis, mots_exclus, full_remote_only, tjm_min, garder_sans_montant, profil_reference, heure_run, actif)
+       VALUES ($1, $2, true, 350, true, $3, '07:30', true)`,
+      [
+        ['wordpress', 'woocommerce', 'prestashop', 'next.js', 'php', 'développeur web freelance', 'intégrateur web', 'développeur full-stack'],
+        ['alternance', 'apprentissage', 'stage', 'stagiaire', 'CDI', 'CDD', 'intérim', 'régie', 'sur site', 'présentiel', 'on-site', 'offshore', 'junior', 'débutant', 'bénévole', 'non rémunéré', 'data scientist', 'mobile', 'iOS', 'Android', 'embarqué', 'salarié'],
+        'Développeur freelance spécialisé WordPress, WooCommerce, PrestaShop, Next.js et PHP. Full remote uniquement. Cherche du VRAI freelance (pas de CDI déguisé). TJM plancher 350€/jour.'
+      ]
+    );
+  }
+  console.log('  ✓ Tables veille missions vérifiées');
+}
+
+/**
  * Migration idempotente : met à jour le titre dans les signatures email DÉJÀ enregistrées
  * (company_settings.email_signature) — l'ancien HTML figé n'est pas régénéré sinon.
  * 'Chargé de Projet' (et la variante 'web') -> 'Fondateur & développeur'.
@@ -1366,6 +1426,8 @@ async function autoInitDatabase(pool) {
     await ensureSubscriptionPilotageColumns(client);
 
     await ensureObjectifParams(client);
+
+    await ensureVeilleTables(client);
     // Mise à jour du titre dans les signatures email déjà enregistrées
     await ensureSignatureTitleUpdate(client);
 

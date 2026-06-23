@@ -1,9 +1,10 @@
 // src/components/leads/ProspectionPanel.jsx
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiSearch, FiMapPin, FiUserPlus, FiExternalLink, FiAlertCircle, FiDollarSign, FiRefreshCw, FiEdit, FiPhone, FiGlobe, FiMail, FiArrowRight, FiTarget, FiSend, FiRadio } from 'react-icons/fi';
+import { FiSearch, FiMapPin, FiUserPlus, FiExternalLink, FiAlertCircle, FiDollarSign, FiRefreshCw, FiEdit, FiPhone, FiGlobe, FiMail, FiArrowRight, FiTarget, FiSend, FiRadio, FiCpu } from 'react-icons/fi';
 import { prospectionAPI } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
+import VeilleMissionsPanel from './VeilleMissionsPanel';
 
 // Badge SOURCE homogene (meme rendu pour toutes les sources, seul le libelle change).
 // Tokens semantiques uniquement (charte) : aucune couleur en dur.
@@ -402,8 +403,22 @@ const ProspectionPanel = ({ onLeadCreated, onNavigate }) => {
               </span>
             )}
           </button>
+          <button
+            onClick={() => setActiveTab('veille')}
+            className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+              activeTab === 'veille'
+                ? 'bg-accent text-white'
+                : 'bg-surface-strong text-text-secondary hover:bg-border-strong hover:text-text-primary'
+            }`}
+          >
+            <FiCpu size={15} />
+            <span>Veille missions</span>
+          </button>
         </div>
       </div>
+
+      {/* Contenu onglet Veille missions */}
+      {activeTab === 'veille' && <VeilleMissionsPanel />}
 
       {/* Contenu onglet Offres d'emploi */}
       {activeTab === 'jobs' && (

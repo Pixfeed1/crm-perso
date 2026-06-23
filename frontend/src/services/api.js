@@ -559,6 +559,18 @@ export const revenuesAPI = {
   }
 };
 
+// ===== VEILLE MISSIONS (agent annonces freelance) =====
+export const veilleAPI = {
+  getAnnonces: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return apiRequest(`/veille/annonces${qs ? `?${qs}` : ''}`);
+  },
+  ecarter: (id) => apiRequest(`/veille/annonces/${id}/ecarter`, 'POST'),
+  getCriteres: () => apiRequest('/veille/criteres'),
+  updateCriteres: (data) => apiRequest('/veille/criteres', 'PUT', data),
+  run: () => apiRequest('/veille/run', 'POST')
+};
+
 // ===== PILOTAGE CA / MRR (module Objectif) =====
 export const objectifAPI = {
   getSummary: (annee = 2027) => apiRequest(`/objectif/summary?annee=${annee}`),

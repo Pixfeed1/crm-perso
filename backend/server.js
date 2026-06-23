@@ -12,6 +12,7 @@ const db = require('./config/pgConfig'); // Changé pour utiliser PostgreSQL
 const { autoInitDatabase } = require('./scripts/autoInitDatabase');
 const scheduledEmailWorker = require('./services/scheduledEmailWorker');
 const maintenanceReminderWorker = require('./services/maintenanceReminderWorker');
+const veilleMissionsWorker = require('./services/veilleMissionsWorker');
 
 // Charger les variables d'environnement
 dotenv.config();
@@ -126,6 +127,7 @@ app.use('/api/projects', require('./routes/projectsRoutes'));
 app.use('/api/events', require('./routes/eventsRoutes'));
 app.use('/api/goals', require('./routes/goalsRoutes'));
 app.use('/api/objectif', require('./routes/objectifRoutes'));
+app.use('/api/veille', require('./routes/veilleRoutes'));
 app.use('/api/revenues', require('./routes/revenuesRoutes'));
 app.use('/api/reminders', require('./routes/reminderRoutes'));
 app.use('/api/search', require('./routes/searchRoutes'));
@@ -267,6 +269,10 @@ async function startServer() {
   maintenanceReminderWorker.initialize(app.locals.db);
   maintenanceReminderWorker.start(); // Tous les jours à 9h00
 
+  // Initialiser et démarrer le worker de veille missions (heure depuis veille_criteres)
+  veilleMissionsWorker.initialize(app.locals.db);
+  veilleMissionsWorker.start();
+
   // Démarrer le serveur HTTP
   const server = app.listen(PORT, () => {
     console.log('===========================================');
@@ -307,6 +313,7 @@ function gracefulShutdown() {
   // Arrêter les workers
   scheduledEmailWorker.stop();
   maintenanceReminderWorker.stop();
+  veilleMissionsWorker.stop();
 
   server.close(() => {
     console.log('Serveur HTTP fermé.');
