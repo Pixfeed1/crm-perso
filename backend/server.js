@@ -270,8 +270,9 @@ async function startServer() {
   maintenanceReminderWorker.start(); // Tous les jours à 9h00
 
   // Initialiser et démarrer le worker de veille missions (heure depuis veille_criteres)
+  // start() est async : on l'attend et on logue toute erreur (pas d'échec silencieux).
   veilleMissionsWorker.initialize(app.locals.db);
-  veilleMissionsWorker.start();
+  await veilleMissionsWorker.start().catch((e) => console.error('[Veille] Échec démarrage worker:', e.message));
 
   // Démarrer le serveur HTTP
   const server = app.listen(PORT, () => {

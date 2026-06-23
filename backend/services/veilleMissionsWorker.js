@@ -22,20 +22,30 @@ const initialize = (database) => {
 };
 
 const start = async () => {
-  if (!db) { console.error('[Veille] DB non initialisée'); return; }
-  if (cronJob) cronJob.stop();
+  console.log('[Veille] Démarrage du worker…');
+  if (!db) { console.error('[Veille] DB non initialisée — worker NON démarré'); return; }
+  if (cronJob) { cronJob.stop(); cronJob = null; }
+
+  // Lecture de l'heure (repli 07:30 si table absente / colonne vide / erreur).
   let schedule = '30 7 * * *';
   try {
     const c = await getCriteres(db);
     if (c && c.heure_run) schedule = toCron(c.heure_run);
+    else console.warn('[Veille] veille_criteres/heure_run introuvable — planning par défaut 07:30');
   } catch (e) {
-    console.error('[Veille] Lecture heure_run:', e.message);
+    console.error('[Veille] Lecture heure_run échouée (planning par défaut 07:30):', e.message);
   }
-  cronJob = cron.schedule(schedule, async () => {
-    console.log('[Veille] Run quotidien automatique...');
-    try { await runVeille(db); } catch (e) { console.error('[Veille] Run auto:', e.message); }
-  }, { scheduled: true, timezone: 'Europe/Paris' });
-  console.log(`[Veille] Cron démarré (schedule: ${schedule})`);
+
+  // Programmation du cron (toute erreur est loguée clairement, jamais silencieuse).
+  try {
+    cronJob = cron.schedule(schedule, async () => {
+      console.log('[Veille] Run quotidien automatique...');
+      try { await runVeille(db); } catch (e) { console.error('[Veille] Run auto:', e.message); }
+    }, { scheduled: true, timezone: 'Europe/Paris' });
+    console.log(`[Veille] Cron démarré (schedule: ${schedule})`);
+  } catch (e) {
+    console.error('[Veille] Échec de la programmation du cron:', e.message);
+  }
 };
 
 // Reprogramme le cron (appelé après modification de l'heure dans /criteres).
