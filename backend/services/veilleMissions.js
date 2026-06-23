@@ -41,6 +41,28 @@ function looksEnglishOnly(texte) {
   return fr === 0 && en >= 3;
 }
 
+// Scoring "type mission" (GRATUIT, avant l'IA) pour écarter le salariat (CDI/CDD…).
+// Chaque groupe ajoute/retire ses points une seule fois s'il matche. Score < 0 -> écarté.
+const MISSION_TITRE_POS = ['freelance', 'mission', 'prestation', 'indépendant', 'independant', 'consultant', 'régie', 'regie'];
+const MISSION_DESC_POS = ['tjm', 'régie', 'regie', 'client final', 'full remote', 'durée de mission', 'duree de mission'];
+const MISSION_TECHNOS = ['php', 'wordpress', 'prestashop', 'react', 'next.js', 'nextjs', 'python'];
+const CDI_TITRE_NEG = ['cdi', 'cdd', 'alternance', 'stage', 'apprentissage', 'salarié', 'salarie'];
+const CDI_DESC_NEG = ['rémunération annuelle', 'remuneration annuelle', 'mutuelle', 'tickets restaurant', 'ticket restaurant', 'contrat de travail', '13e mois', '13ème mois', '13eme mois'];
+
+const anyHit = (text, words) => words.some((w) => text.includes(w));
+
+function scoreMission(titre, description) {
+  const t = lower(titre);
+  const d = lower(description);
+  let score = 0;
+  if (anyHit(t, MISSION_TITRE_POS)) score += 40;
+  if (anyHit(d, MISSION_DESC_POS)) score += 30;
+  if (anyHit(`${t} ${d}`, MISSION_TECHNOS)) score += 20;
+  if (anyHit(t, CDI_TITRE_NEG)) score -= 100;
+  if (anyHit(d, CDI_DESC_NEG)) score -= 60;
+  return score;
+}
+
 // Récupère la ligne de critères (créée par autoInit).
 async function getCriteres(db) {
   const r = await db.pool.query('SELECT * FROM veille_criteres ORDER BY id ASC LIMIT 1');
@@ -214,7 +236,7 @@ async function runVeille(db) {
     apres_prefiltre_langue: 0,
     qualifiees_ia: 0,
     retenues: 0,
-    rejets: { non_francophone: 0, non_remote: 0, tjm_insuffisant: 0, sans_montant_rejete: 0, doublon: 0 },
+    rejets: { anti_cdi: 0, non_francophone: 0, non_remote: 0, tjm_insuffisant: 0, sans_montant_rejete: 0, doublon: 0 },
     sources: {
       france_travail: { recuperees: 0, retenues: 0 },
       jsearch: { recuperees: 0, retenues: 0 },
@@ -228,12 +250,15 @@ async function runVeille(db) {
 
   try {
   // a) Récupération MULTI-SOURCES (toutes normalisées dans le même flux).
+  // Requêtes orientées "mission" (éditables dans veille_criteres.requetes) ; repli sur
+  // les mots requis si la liste est vide.
   const brutes = [];
   const motsRequis = criteres.mots_requis || [];
+  const requetes = (criteres.requetes && criteres.requetes.length) ? criteres.requetes : motsRequis;
 
   // 1) FRANCE TRAVAIL — source principale (toutes les requêtes).
   if (ftOk) {
-    for (const kw of motsRequis) {
+    for (const kw of requetes) {
       try {
         const offs = await fetchFranceTravail(kw);
         brutes.push(...offs);
@@ -244,7 +269,7 @@ async function runVeille(db) {
   // 2) JSEARCH — complément BRIDÉ (JSEARCH_MAX_CALLS requêtes max ; 429 -> on ignore).
   if (jsOk) {
     let jsCalls = 0;
-    for (const kw of motsRequis) {
+    for (const kw of requetes) {
       if (jsCalls >= JSEARCH_MAX_CALLS) break;
       jsCalls++;
       try {
@@ -258,9 +283,9 @@ async function runVeille(db) {
     }
   }
 
-  // 3) JOOBLE — source secondaire (inchangée).
+  // 3) JOOBLE — source secondaire.
   if (joobleOk) {
-    for (const kw of motsRequis) {
+    for (const kw of requetes) {
       for (let page = 1; page <= JOOBLE_PAGES; page++) {
         try {
           const jobs = await fetchJooble(kw, page);
@@ -321,6 +346,14 @@ async function runVeille(db) {
       continue;
     }
     report.apres_prefiltre_langue++;
+
+    // b3) Scoring anti-CDI (GRATUIT, avant l'IA) : écarte le salariat. Score < 0 -> écarté.
+    const sMission = scoreMission(annonce.titre, annonce.description);
+    if (sMission < 0) {
+      report.rejets.anti_cdi++;
+      ajoutRejet(annonce.titre, `scoring anti-CDI (${sMission})`);
+      continue;
+    }
 
     // Garde-fou coût LLM.
     if (report.llm_calls >= MAX_LLM_CALLS) {
@@ -410,6 +443,7 @@ async function runVeille(db) {
     `JSearch: ${s.jsearch.retenues} (sur ${s.jsearch.recuperees}), ` +
     `Jooble: ${s.jooble.retenues} (sur ${s.jooble.recuperees}) -> total retenues ${report.retenues}`
   );
+  console.log(`[Veille] Écartés anti-CDI (avant IA): ${report.rejets.anti_cdi}`);
   console.log('[Veille] Rejets:', report.rejets, '| LLM calls:', report.llm_calls, '| erreurs:', report.erreurs);
   if (rejetsExemples.length) {
     console.log('[Veille] Exemples de rejets (titre — raison) :');

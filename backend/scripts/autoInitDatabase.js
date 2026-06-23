@@ -1347,6 +1347,18 @@ async function ensureVeilleTables(client) {
   `);
   await client.query('CREATE INDEX IF NOT EXISTS idx_veille_annonces_score ON veille_annonces(score DESC);');
   await client.query('CREATE INDEX IF NOT EXISTS idx_veille_annonces_statut ON veille_annonces(statut);');
+  // Requêtes orientées "mission" envoyées aux sources (éditable). Distinct des mots_requis
+  // (qui servent au pré-filtre/scoring). Idempotent.
+  await client.query("ALTER TABLE veille_criteres ADD COLUMN IF NOT EXISTS requetes TEXT[] NOT NULL DEFAULT '{}';");
+  // Seed des requêtes par défaut si la colonne est vide (orientées freelance/mission).
+  await client.query(`
+    UPDATE veille_criteres SET requetes = $1
+    WHERE requetes IS NULL OR cardinality(requetes) = 0
+  `, [[
+    'freelance PHP', 'mission PHP', 'freelance WordPress', 'mission WordPress',
+    'consultant WordPress', 'freelance PrestaShop', 'mission PrestaShop',
+    'freelance React', 'mission Next.js', 'régie web', 'prestataire web freelance'
+  ]]);
   // Seed de la ligne de critères si absente (valeurs initiales de la spec).
   const exists = await client.query('SELECT 1 FROM veille_criteres LIMIT 1');
   if (exists.rows.length === 0) {
