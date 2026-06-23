@@ -88,7 +88,7 @@ const VeilleMissionsPanel = () => {
     if (status && status.etape === 'erreur') {
       toast.error(status.error || 'Erreur lors du run');
     } else {
-      const n = status && status.report ? status.report.inserees : 0;
+      const n = status && status.report ? status.report.retenues : 0;
       toast.success(n > 0 ? `${n} nouvelle(s) annonce(s)` : 'Aucune nouvelle annonce cette fois');
       load();
     }
@@ -209,13 +209,24 @@ const VeilleMissionsPanel = () => {
               }`}
             >
               {running ? <Spinner size={16} /> : runState && runState.etape === 'erreur' ? <FiAlertCircle size={16} /> : <FiCheck size={16} />}
-              <span>
-                {running
-                  ? (runState && (runState.message || ETAPE_LABEL[runState.etape])) || 'Analyse des annonces en cours, cela peut prendre une minute…'
-                  : runState && runState.etape === 'erreur'
-                  ? (runState.error || 'Erreur lors du run')
-                  : (runState && runState.message) || 'Terminé'}
-              </span>
+              <div className="min-w-0">
+                <div>
+                  {running
+                    ? (runState && (runState.message || ETAPE_LABEL[runState.etape])) || 'Analyse des annonces en cours, cela peut prendre une minute…'
+                    : runState && runState.etape === 'erreur'
+                    ? (runState.error || 'Erreur lors du run')
+                    : (runState && runState.message) || 'Terminé'}
+                </div>
+                {/* Récap chiffré des étapes (après le run) */}
+                {!running && runState && runState.report && (
+                  <div className="text-xs opacity-80 mt-0.5">
+                    {runState.report.recuperees} récupérées → {runState.report.apres_prefiltre_langue} filtrées → {runState.report.qualifiees_ia} qualifiées → {runState.report.retenues} retenues
+                    {runState.report.rejets && (
+                      <> · rejets : {runState.report.rejets.non_francophone} langue, {runState.report.rejets.non_remote} sur site, {runState.report.rejets.tjm_insuffisant} TJM, {runState.report.rejets.doublon} doublons</>
+                    )}
+                  </div>
+                )}
+              </div>
             </motion.div>
           )}
         </AnimatePresence>

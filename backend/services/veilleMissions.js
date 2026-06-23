@@ -88,7 +88,7 @@ Entreprise : ${annonce.entreprise || ''}
 Description : ${(annonce.description || '').slice(0, 2000)}
 
 Réponds UNIQUEMENT par un objet JSON valide, sans texte autour, avec EXACTEMENT ces clés :
-{"francophone": bool (true seulement si l'annonce est rédigée en français ET la mission peut se mener en français), "full_remote": bool, "montant": "string (ex '400€/j', ou 'à confirmer' si absent)", "score": int (0-100, adéquation avec le profil), "score_label": "fort" | "à vérifier" | "faible", "raison": "phrase courte en français", "brouillon": "réponse FR personnalisée ~4 lignes, sans signature"}`;
+{"francophone": bool (mets false UNIQUEMENT si l'annonce est clairement dans une autre langue / la mission ne peut pas se mener en français ; en cas de doute mets true), "remote_statut": "full_remote" | "sur_site" | "non_precise" (mets "sur_site" UNIQUEMENT si l'annonce indique explicitement présentiel/sur site ; si le télétravail n'est pas précisé mets "non_precise"), "montant": "string (ex '400€/j', ou 'à confirmer' si non chiffré)", "score": int (0-100, adéquation avec le profil), "score_label": "fort" | "à vérifier" | "faible", "raison": "phrase courte en français", "brouillon": "réponse FR personnalisée ~4 lignes, sans signature"}`;
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -161,7 +161,17 @@ async function runVeille(db) {
     started_at: new Date().toISOString(), finished_at: null
   };
 
-  const report = { recuperees: 0, prefiltrees: 0, qualifiees: 0, inserees: 0, ignorees: 0, non_francophone: 0, rejet_langue: 0, erreurs: 0, llm_calls: 0 };
+  const report = {
+    recuperees: 0,
+    apres_prefiltre_langue: 0,
+    qualifiees_ia: 0,
+    retenues: 0,
+    rejets: { non_francophone: 0, non_remote: 0, tjm_insuffisant: 0, sans_montant_rejete: 0, doublon: 0 },
+    erreurs: 0,
+    llm_calls: 0
+  };
+  const rejetsExemples = []; // pour diagnostic : { titre, raison }
+  const ajoutRejet = (titre, raison) => { if (rejetsExemples.length < 8) rejetsExemples.push({ titre, raison }); };
 
   try {
   // a) Récupération Jooble (mots requis comme requêtes, plusieurs pages).
@@ -195,7 +205,7 @@ async function runVeille(db) {
   for (const annonce of candidates) {
     // Dédup base : ne jamais re-traiter une annonce déjà connue.
     const known = await db.pool.query('SELECT 1 FROM veille_annonces WHERE jooble_uid = $1 LIMIT 1', [annonce.jooble_uid]);
-    if (known.rows.length > 0) continue;
+    if (known.rows.length > 0) { report.rejets.doublon++; continue; }
 
     const texte = `${annonce.titre} ${annonce.description}`;
 
@@ -206,10 +216,11 @@ async function runVeille(db) {
     // b2) Pré-écran langue : écarte d'office les annonces manifestement anglophones
     //     (économise des appels IA). La confirmation "francophone" reste faite par l'IA.
     if (looksEnglishOnly(texte)) {
-      report.rejet_langue++;
+      report.rejets.non_francophone++;
+      ajoutRejet(annonce.titre, 'pré-écran langue : massivement anglais');
       continue;
     }
-    report.prefiltrees++;
+    report.apres_prefiltre_langue++;
 
     // Garde-fou coût LLM.
     if (report.llm_calls >= MAX_LLM_CALLS) {
@@ -231,28 +242,46 @@ async function runVeille(db) {
       continue;
     }
     if (!q) { report.erreurs++; continue; }
-    report.qualifiees++;
+    report.qualifiees_ia++;
 
-    // d) Filtrage final.
-    // d0) Francophone confirmé par l'IA : sinon écartée (non insérée).
-    if (q.francophone === false) { report.non_francophone++; continue; }
+    // d) Filtrage final — RÈGLE : ne rejeter que sur un critère VÉRIFIÉ négatif,
+    //    jamais sur un critère inconnu/non précisé.
 
-    const fullRemote = q.full_remote === true;
-    if (criteres.full_remote_only && !fullRemote) { report.ignorees++; continue; }
+    // d1) Francophone : rejeter UNIQUEMENT si clairement non français (doute -> garder).
+    if (q.francophone === false) {
+      report.rejets.non_francophone++;
+      ajoutRejet(annonce.titre, `IA : non francophone (${q.raison || ''})`);
+      continue;
+    }
 
+    // d2) Remote : rejeter UNIQUEMENT si explicitement sur site/présentiel.
+    //     'non_precise' -> on garde avec un tag "remote à confirmer".
+    const remoteStatut = q.remote_statut || (q.full_remote === true ? 'full_remote' : 'non_precise');
+    if (criteres.full_remote_only && remoteStatut === 'sur_site') {
+      report.rejets.non_remote++;
+      ajoutRejet(annonce.titre, 'IA : explicitement sur site / présentiel');
+      continue;
+    }
+    const fullRemote = remoteStatut === 'full_remote';
+    const remoteAConfirmer = remoteStatut === 'non_precise';
+
+    // d3) TJM : rejeter UNIQUEMENT si un montant est explicitement chiffré ET < tjm_min.
+    //     Sans montant -> garder en "à confirmer" (jamais de rejet).
     const montantStr = q.montant || (annonce.montant_brut ? String(annonce.montant_brut) : 'à confirmer');
     const montantNum = parseMontant(montantStr);
-    if (montantNum !== null) {
-      if (montantNum < criteres.tjm_min) { report.ignorees++; continue; }
-    } else if (!criteres.garder_sans_montant) {
-      report.ignorees++; continue;
+    if (montantNum !== null && montantNum < criteres.tjm_min) {
+      report.rejets.tjm_insuffisant++;
+      ajoutRejet(annonce.titre, `TJM ${montantNum}€ < plancher ${criteres.tjm_min}€`);
+      continue;
     }
+    const montantFinal = montantNum !== null ? montantStr : 'à confirmer';
 
     // e) Insert.
     try {
       const score = Math.max(0, Math.min(100, parseInt(q.score, 10) || 0));
       const label = ['fort', 'à vérifier', 'faible'].includes(q.score_label) ? q.score_label
         : (score >= 70 ? 'fort' : score >= 40 ? 'à vérifier' : 'faible');
+      const raison = remoteAConfirmer ? `Remote à confirmer · ${q.raison || ''}`.slice(0, 500) : (q.raison || '').slice(0, 500);
       await db.pool.query(
         `INSERT INTO veille_annonces
            (jooble_uid, titre, entreprise, source_label, lien, description, date_annonce,
@@ -260,10 +289,10 @@ async function runVeille(db) {
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,'nouveau')
          ON CONFLICT (jooble_uid) DO NOTHING`,
         [annonce.jooble_uid, annonce.titre, annonce.entreprise, annonce.source_label, annonce.lien,
-         annonce.description, annonce.date_annonce, fullRemote, montantNum !== null ? montantStr : 'à confirmer',
-         score, label, (q.raison || '').slice(0, 500), (q.brouillon || '').slice(0, 2000)]
+         annonce.description, annonce.date_annonce, fullRemote, montantFinal,
+         score, label, raison, (q.brouillon || '').slice(0, 2000)]
       );
-      report.inserees++;
+      report.retenues++;
     } catch (e) {
       report.erreurs++;
       console.error('[Veille] Insert:', e.message);
@@ -271,15 +300,19 @@ async function runVeille(db) {
   }
 
   console.log(
-    `[Veille] Jooble: ${report.recuperees} récupérées -> ${report.prefiltrees} après pré-filtre langue/mots ` +
-    `-> ${report.qualifiees} qualifiées IA -> ${report.inserees} retenues (francophone + full remote)`
+    `[Veille] ${report.recuperees} récupérées -> ${report.apres_prefiltre_langue} filtrées (langue/mots) ` +
+    `-> ${report.qualifiees_ia} qualifiées IA -> ${report.retenues} retenues`
   );
-  console.log('[Veille] Détail run:', report);
+  console.log('[Veille] Rejets:', report.rejets, '| LLM calls:', report.llm_calls, '| erreurs:', report.erreurs);
+  if (rejetsExemples.length) {
+    console.log('[Veille] Exemples de rejets (titre — raison) :');
+    rejetsExemples.forEach((r) => console.log(`   - ${r.titre} — ${r.raison}`));
+  }
 
   runStatus.etape = 'termine';
   runStatus.report = report;
-  runStatus.message = report.inserees > 0
-    ? `Terminé : ${report.inserees} nouvelle(s) annonce(s)`
+  runStatus.message = report.retenues > 0
+    ? `Terminé : ${report.retenues} nouvelle(s) annonce(s)`
     : 'Terminé : aucune nouvelle annonce cette fois';
   return report;
   } catch (e) {
