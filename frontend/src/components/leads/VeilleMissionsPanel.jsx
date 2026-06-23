@@ -59,12 +59,15 @@ const VeilleMissionsPanel = () => {
   const [showCriteres, setShowCriteres] = useState(false);
   const [scoreFilter, setScoreFilter] = useState('all'); // all | fort | verifier | faible
   const [search, setSearch] = useState('');
+  const [statutView, setStatutView] = useState('actives'); // 'actives' | 'ecartees'
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
+      // actives -> sans param (le backend exclut les écartées) ; ecartees -> statut=ecarte
+      const params = statutView === 'ecartees' ? { statut: 'ecarte' } : {};
       const [a, c] = await Promise.all([
-        veilleAPI.getAnnonces(),
+        veilleAPI.getAnnonces(params),
         veilleAPI.getCriteres().catch(() => null)
       ]);
       setAnnonces(Array.isArray(a) ? a : []);
@@ -74,7 +77,7 @@ const VeilleMissionsPanel = () => {
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast, statutView]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -122,11 +125,26 @@ const VeilleMissionsPanel = () => {
   };
 
   const ecarter = async (id) => {
+    const prev = annonces;
+    // Retrait optimiste : l'annonce disparaît immédiatement (animation de sortie).
+    setAnnonces((list) => list.filter((a) => a.id !== id));
     try {
       await veilleAPI.ecarter(id);
-      setAnnonces((prev) => prev.map((a) => (a.id === id ? { ...a, statut: 'ecarte' } : a)));
     } catch (e) {
-      toast.error('Erreur');
+      setAnnonces(prev); // rollback
+      toast.error(e.message || "Impossible d'écarter l'annonce");
+    }
+  };
+
+  const reactiver = async (id) => {
+    const prev = annonces;
+    setAnnonces((list) => list.filter((a) => a.id !== id)); // quitte la vue "Écartées"
+    try {
+      await veilleAPI.reactiver(id);
+      toast.success('Annonce réactivée');
+    } catch (e) {
+      setAnnonces(prev);
+      toast.error(e.message || 'Impossible de réactiver l\'annonce');
     }
   };
 
@@ -241,6 +259,16 @@ const VeilleMissionsPanel = () => {
         )}
       </AnimatePresence>
 
+      {/* Vue Actives / Écartées */}
+      <div className="flex gap-2">
+        {[{ key: 'actives', label: 'Actives' }, { key: 'ecartees', label: 'Écartées' }].map((v) => (
+          <button key={v.key} onClick={() => setStatutView(v.key)}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${statutView === v.key ? 'bg-accent text-white' : 'bg-surface-strong text-text-secondary hover:bg-border-strong'}`}>
+            {v.label}
+          </button>
+        ))}
+      </div>
+
       {/* Filtres rapides */}
       <div className="flex flex-col sm:flex-row gap-2">
         <div className="flex gap-2 flex-wrap">
@@ -261,13 +289,15 @@ const VeilleMissionsPanel = () => {
       ) : visibles.length === 0 ? (
         <div className="text-center py-10 bg-surface/30 rounded-xl border border-border">
           <FiCpu className="w-10 h-10 mx-auto text-text-muted mb-3" />
-          <p className="text-text-muted text-sm">Aucune annonce. Lance la veille ou ajuste tes critères.</p>
+          <p className="text-text-muted text-sm">
+            {statutView === 'ecartees' ? 'Aucune annonce écartée.' : 'Aucune annonce. Lance la veille ou ajuste tes critères.'}
+          </p>
         </div>
       ) : (
         <div className="space-y-3">
           <AnimatePresence initial={false}>
             {visibles.map((a) => (
-              <AnnonceCard key={a.id} annonce={a} onEcarter={ecarter} onCopier={copier} />
+              <AnnonceCard key={a.id} annonce={a} onEcarter={ecarter} onReactiver={reactiver} onCopier={copier} ecartee={statutView === 'ecartees'} />
             ))}
           </AnimatePresence>
         </div>
@@ -276,7 +306,7 @@ const VeilleMissionsPanel = () => {
   );
 };
 
-const AnnonceCard = ({ annonce, onEcarter, onCopier }) => {
+const AnnonceCard = ({ annonce, onEcarter, onReactiver, onCopier, ecartee }) => {
   const sm = scoreMeta(annonce.score_label, annonce.score);
   const ecarte = annonce.statut === 'ecarte';
   const faible = (annonce.score_label || '') === 'faible';
@@ -285,7 +315,9 @@ const AnnonceCard = ({ annonce, onEcarter, onCopier }) => {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+      layout
+      initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, x: -24, transition: { duration: 0.2 } }}
       className={`bg-surface border border-border rounded-xl p-4 transition-opacity ${ecarte || faible ? 'opacity-60' : ''}`}
     >
       <div className="flex items-start justify-between gap-3">
@@ -336,7 +368,11 @@ const AnnonceCard = ({ annonce, onEcarter, onCopier }) => {
         <button onClick={() => setEditing((v) => !v)} className="px-3 py-1.5 rounded-lg bg-surface-strong hover:bg-border-strong text-text-primary text-sm flex items-center gap-1.5">
           {editing ? <><FiCheck size={14} /> Terminer</> : <><FiEdit2 size={14} /> Éditer</>}
         </button>
-        {!ecarte && (
+        {ecartee ? (
+          <button onClick={() => onReactiver(annonce.id)} className="px-3 py-1.5 rounded-lg text-accent hover:bg-surface-strong text-sm flex items-center gap-1.5 ml-auto">
+            <FiRefreshCw size={14} /> Réactiver
+          </button>
+        ) : (
           <button onClick={() => onEcarter(annonce.id)} className="px-3 py-1.5 rounded-lg text-text-muted hover:text-danger-text hover:bg-surface-strong text-sm flex items-center gap-1.5 ml-auto">
             <FiXCircle size={14} /> Écarter
           </button>

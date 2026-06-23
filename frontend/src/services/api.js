@@ -566,6 +566,7 @@ export const veilleAPI = {
     return apiRequest(`/veille/annonces${qs ? `?${qs}` : ''}`);
   },
   ecarter: (id) => apiRequest(`/veille/annonces/${id}/ecarter`, 'POST'),
+  reactiver: (id) => apiRequest(`/veille/annonces/${id}/reactiver`, 'POST'),
   getCriteres: () => apiRequest('/veille/criteres'),
   updateCriteres: (data) => apiRequest('/veille/criteres', 'PUT', data),
   run: () => apiRequest('/veille/run', 'POST'),

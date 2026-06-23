@@ -10,7 +10,13 @@ const veilleController = {
     const conditions = [];
     const params = [];
     let i = 1;
-    if (statut) { conditions.push(`statut = $${i++}`); params.push(statut); }
+    if (statut) {
+      // Filtre explicite (ex. statut=ecarte pour l'onglet "Écartées").
+      conditions.push(`statut = $${i++}`); params.push(statut);
+    } else {
+      // Par défaut : on masque les annonces écartées (elles ne reviennent pas).
+      conditions.push(`statut <> 'ecarte'`);
+    }
     if (score_min) { conditions.push(`score >= $${i++}`); params.push(parseInt(score_min, 10) || 0); }
     if (q) { conditions.push(`(LOWER(titre) LIKE $${i} OR LOWER(description) LIKE $${i})`); params.push(`%${q.toLowerCase()}%`); i++; }
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
@@ -38,6 +44,22 @@ const veilleController = {
       res.json({ success: true });
     } catch (error) {
       console.error('[Veille] ecarter:', error.message);
+      res.status(500).json({ message: 'Erreur serveur' });
+    }
+  },
+
+  // POST /api/veille/annonces/:id/reactiver  (remet une annonce écartée en 'nouveau')
+  reactiver: async (req, res) => {
+    const db = req.app.locals.db;
+    try {
+      const r = await db.pool.query(
+        "UPDATE veille_annonces SET statut = 'nouveau' WHERE id = $1 RETURNING id",
+        [req.params.id]
+      );
+      if (r.rows.length === 0) return res.status(404).json({ message: 'Annonce introuvable' });
+      res.json({ success: true });
+    } catch (error) {
+      console.error('[Veille] reactiver:', error.message);
       res.status(500).json({ message: 'Erreur serveur' });
     }
   },

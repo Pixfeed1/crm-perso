@@ -8,6 +8,7 @@ router.use(authMiddleware);
 
 router.get('/annonces', veilleController.getAnnonces);
 router.post('/annonces/:id/ecarter', veilleController.ecarter);
+router.post('/annonces/:id/reactiver', veilleController.reactiver);
 router.get('/criteres', veilleController.getCriteres);
 router.put('/criteres', veilleController.updateCriteres);
 router.post('/run', veilleController.run);
