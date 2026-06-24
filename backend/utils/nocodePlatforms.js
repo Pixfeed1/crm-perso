@@ -18,9 +18,7 @@ const NOCODE_PLATFORMS = [
   { label: 'Site123', patterns: ['site123'] },
   { label: 'Strikingly', patterns: ['strikingly'] },
   { label: 'Google Sites', patterns: ['sites.google.com'] },
-  { label: 'Webflow', patterns: ['webflow.io', 'webflow.com'] },
-  // Shopify = hébergé/SaaS fermé. Retire cette entrée si tu fais du dev de thèmes Shopify.
-  { label: 'Shopify (hébergé)', patterns: ['myshopify.com', 'cdn.shopify.com', 'shopify'] }
+  { label: 'Webflow', patterns: ['webflow.io', 'webflow.com'] }
 ];
 
 // Détecte si un résultat de crawl est une plateforme no-code.
