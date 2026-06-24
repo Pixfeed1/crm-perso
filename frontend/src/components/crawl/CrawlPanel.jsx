@@ -51,6 +51,7 @@ const CrawlPanel = () => {
   const [results, setResults] = useState([]);
   const [selected, setSelected] = useState(new Set());
   const [platformFilter, setPlatformFilter] = useState('all');
+  const [showNocode, setShowNocode] = useState(false); // masquer les sites no-code par défaut
   const [starting, setStarting] = useState(false);
   const [adding, setAdding] = useState(false);
   const [pbTarget, setPbTarget] = useState(null); // { ids: [...] } pour "Pas de business"
@@ -193,8 +194,11 @@ const CrawlPanel = () => {
     }
   };
 
-  const platforms = Array.from(new Set(results.map((r) => r.platform || 'Inconnu')));
-  const visible = platformFilter === 'all' ? results : results.filter((r) => (r.platform || 'Inconnu') === platformFilter);
+  // Sites no-code/SaaS fermés masqués par défaut (filtrables via le bouton dédié).
+  const nocodeCount = results.filter((r) => r.is_nocode).length;
+  const baseResults = showNocode ? results : results.filter((r) => !r.is_nocode);
+  const platforms = Array.from(new Set(baseResults.map((r) => r.platform || 'Inconnu')));
+  const visible = platformFilter === 'all' ? baseResults : baseResults.filter((r) => (r.platform || 'Inconnu') === platformFilter);
   const selectableVisible = visible.filter((r) => !r.added_as_prospect);
 
   const progressPct = job && job.progress_total > 0 ? Math.round((job.progress_done / job.progress_total) * 100) : 0;
@@ -342,7 +346,7 @@ const CrawlPanel = () => {
                 onClick={() => setPlatformFilter('all')}
                 className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${platformFilter === 'all' ? 'bg-accent text-white' : 'bg-surface-strong text-text-secondary hover:bg-border-strong'}`}
               >
-                Tous ({results.length})
+                Tous ({baseResults.length})
               </button>
               {platforms.map((p) => (
                 <button
@@ -353,6 +357,15 @@ const CrawlPanel = () => {
                   {p}
                 </button>
               ))}
+              {nocodeCount > 0 && (
+                <button
+                  onClick={() => { setShowNocode((v) => !v); setPlatformFilter('all'); }}
+                  className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${showNocode ? 'bg-accent text-white' : 'bg-surface-strong text-text-muted hover:bg-border-strong'}`}
+                  title="Sites no-code/SaaS fermés (Wix, Squarespace, Webador…) — sans intérêt"
+                >
+                  {showNocode ? 'Masquer no-code' : `No-code exclus (${nocodeCount})`}
+                </button>
+              )}
             </div>
             <div className="flex flex-wrap gap-2">
               <button onClick={handleExport} className="px-3 py-2 bg-surface-strong hover:bg-border-strong text-text-primary rounded-lg text-sm flex items-center gap-1">

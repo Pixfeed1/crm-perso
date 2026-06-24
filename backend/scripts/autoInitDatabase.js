@@ -115,7 +115,8 @@ const DATABASE_SCHEMA = {
       error: 'TEXT',
       gerant: 'TEXT', // enrichissement futur (null)
       email: 'TEXT',  // enrichissement futur (null)
-      added_as_prospect: 'BOOLEAN DEFAULT FALSE'
+      added_as_prospect: 'BOOLEAN DEFAULT FALSE',
+      is_nocode: 'BOOLEAN DEFAULT FALSE' // site no-code/SaaS fermé -> masqué par défaut
     },
     indexes: [
       'CREATE INDEX IF NOT EXISTS idx_crawl_results_job ON crawl_results(job_id)'
@@ -1376,6 +1377,26 @@ async function ensureVeilleTables(client) {
 }
 
 /**
+ * Migration idempotente : marque is_nocode=TRUE sur les résultats de crawl DÉJÀ en base
+ * qui correspondent à une plateforme no-code (mêmes patterns que l'ingestion).
+ */
+async function ensureCrawlNoCodeBackfill(client) {
+  const { allPatterns } = require('../utils/nocodePlatforms');
+  const likeArr = allPatterns().map((p) => `%${p}%`);
+  try {
+    const r = await client.query(
+      `UPDATE crawl_results SET is_nocode = TRUE
+       WHERE COALESCE(is_nocode, FALSE) = FALSE
+         AND lower(concat_ws(' ', platform, signals, final_url, title, domain)) LIKE ANY($1)`,
+      [likeArr]
+    );
+    if (r.rowCount) console.log(`  ✓ Crawl no-code: ${r.rowCount} résultat(s) existant(s) marqué(s)`);
+  } catch (e) {
+    console.error('[AutoInit] Backfill no-code crawl:', e.message);
+  }
+}
+
+/**
  * Migration idempotente : met à jour le titre dans les signatures email DÉJÀ enregistrées
  * (company_settings.email_signature) — l'ancien HTML figé n'est pas régénéré sinon.
  * 'Chargé de Projet' (et la variante 'web') -> 'Fondateur & développeur'.
@@ -1440,6 +1461,8 @@ async function autoInitDatabase(pool) {
     await ensureObjectifParams(client);
 
     await ensureVeilleTables(client);
+
+    await ensureCrawlNoCodeBackfill(client);
     // Mise à jour du titre dans les signatures email déjà enregistrées
     await ensureSignatureTitleUpdate(client);
 

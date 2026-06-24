@@ -8,6 +8,7 @@ const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const { detectNoCode } = require('../utils/nocodePlatforms');
 
 // Constantes faciles à mettre à jour (override possible par variables d'env).
 const PYTHON_BIN = process.env.CC_PROSPECTOR_PYTHON || '/home/jurojinn/tools/cc_prospector/venv/bin/python';
@@ -193,17 +194,21 @@ async function ingestCsv(db, jobId, csvPath) {
     if (seen.has(norm)) continue; // déjà connu : on ignore silencieusement
     seen.add(norm);
     const httpRaw = hi >= 0 ? parseInt(row[hi], 10) : null;
+    const platform = pi >= 0 ? (row[pi] || null) : null;
+    const signals = si >= 0 ? (row[si] || null) : null;
+    const finalUrl = fi >= 0 ? (row[fi] || null) : null;
+    const title = ti >= 0 ? (row[ti] || null) : null;
+    // Filtre no-code/SaaS fermé (Wix, Squarespace, Webador...) : marqué -> masqué par défaut.
+    const { isNoCode } = detectNoCode({ platform, signals, final_url: finalUrl, title, domain });
     await db.pool.query(
-      `INSERT INTO crawl_results (job_id, domain, platform, signals, http_status, final_url, title, error)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      `INSERT INTO crawl_results (job_id, domain, platform, signals, http_status, final_url, title, error, is_nocode)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
       [
-        jobId, domain,
-        pi >= 0 ? (row[pi] || null) : null,
-        si >= 0 ? (row[si] || null) : null,
+        jobId, domain, platform, signals,
         Number.isNaN(httpRaw) ? null : httpRaw,
-        fi >= 0 ? (row[fi] || null) : null,
-        ti >= 0 ? (row[ti] || null) : null,
-        ei >= 0 ? (row[ei] || null) : null
+        finalUrl, title,
+        ei >= 0 ? (row[ei] || null) : null,
+        isNoCode
       ]
     );
   }
