@@ -57,3 +57,13 @@ MAX_REDIRECTS = 5            # limite de redirections (évite les boucles "Excee
 COMMIT_BATCH = 25           # commit tous les N pages traitées (persistance + reprise)
 POLITENESS_DELAY = 0.5      # pause (s) entre deux fetch de pages (ne pas marteler les sites)
 POLL_INTERVAL = 10          # mode --serve : intervalle (s) de vérification de la file de jobs
+
+# ===== Étape 2 — Google Search Console =====
+GSC_SCOPES = ["https://www.googleapis.com/auth/webmasters"]
+GSC_INITIAL_DAYS = 180          # backfill au tout premier sync (puis incrémental quotidien)
+GSC_LAG_DAYS = 3                # latence des données GSC : on s'arrête à aujourd'hui - 3 jours
+GSC_ROW_LIMIT = 25000           # lignes max par page de réponse Search Analytics (pagination)
+GSC_INSPECT_DAILY_CAP = 2000    # plafond URL Inspection / run / propriété (quota Google)
+GSC_INSPECT_TTL_DAYS = 14       # ne pas réinspecter une page vue il y a moins de N jours
+GSC_VALUE_WINDOW_DAYS = 90      # fenêtre d'impressions servant au value_score réel
+GSC_OAUTH_REDIRECT_PORT = 8765  # port du mini-serveur local pour le consentement (gsc_auth.py)

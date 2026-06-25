@@ -1482,6 +1482,12 @@ async function ensureSeoTables(client) {
   `);
   await client.query('CREATE UNIQUE INDEX IF NOT EXISTS uq_seo_pages_site_url  ON seo_pages(site_id, url);');
   await client.query('CREATE UNIQUE INDEX IF NOT EXISTS uq_seo_pages_site_wpid ON seo_pages(site_id, wp_id) WHERE wp_id IS NOT NULL;');
+  // Étape 2 (GSC) : cache des métriques Search Console sur la page (écrit par le worker lors
+  // du gsc_sync), pour que Node les lise sans agréger seo_gsc_daily à chaque requête.
+  await client.query('ALTER TABLE seo_pages ADD COLUMN IF NOT EXISTS gsc_clicks      INTEGER;');
+  await client.query('ALTER TABLE seo_pages ADD COLUMN IF NOT EXISTS gsc_impressions INTEGER;');
+  await client.query('ALTER TABLE seo_pages ADD COLUMN IF NOT EXISTS gsc_position    NUMERIC(8,2);');
+  await client.query('ALTER TABLE seo_pages ADD COLUMN IF NOT EXISTS gsc_synced_at   TIMESTAMP;');
   await client.query('CREATE INDEX        IF NOT EXISTS idx_seo_pages_site_health ON seo_pages(site_id, health);');
 
   await client.query(`
@@ -1594,6 +1600,27 @@ async function ensureSeoTables(client) {
   // (le worker finalise l'annulation) -> pas de nouveau job tant qu'il n'est pas 'cancelled'.
   await client.query('DROP INDEX IF EXISTS uq_seo_jobs_active;');
   await client.query("CREATE UNIQUE INDEX IF NOT EXISTS uq_seo_jobs_active ON seo_jobs(site_id) WHERE status IN ('pending','running','cancel_requested');");
+
+  // Étape 2 (GSC) : jetons OAuth Google, dans une table DÉDIÉE (pas en .env), multi-comptes.
+  // SÉCURITÉ : client_secret et refresh_token sont stockés EN CLAIR (même niveau de
+  // confidentialité que backend/.env, fichier hors dépôt). Ces colonnes ne doivent JAMAIS
+  // être renvoyées par une route Node (seul /api/seo/gsc/status expose connected/email/date).
+  // L'app OAuth étant publiée en Production, le refresh_token n'expire pas (aucune logique 7j).
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS seo_oauth_tokens (
+      id            SERIAL PRIMARY KEY,
+      provider      TEXT NOT NULL DEFAULT 'google',
+      account_email TEXT,
+      scope         TEXT,
+      client_id     TEXT NOT NULL,
+      client_secret TEXT NOT NULL,
+      refresh_token TEXT NOT NULL,
+      token_uri     TEXT NOT NULL DEFAULT 'https://oauth2.googleapis.com/token',
+      created_at    TIMESTAMP DEFAULT NOW(),
+      updated_at    TIMESTAMP DEFAULT NOW()
+    );
+  `);
+  await client.query("CREATE UNIQUE INDEX IF NOT EXISTS uq_seo_oauth_tokens ON seo_oauth_tokens(provider, COALESCE(account_email, ''));");
 
   console.log('  ✓ Tables SEO vérifiées');
 }

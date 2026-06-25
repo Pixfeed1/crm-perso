@@ -38,7 +38,17 @@ const seoController = {
         [siteId]
       );
       const links = await db.pool.query('SELECT COUNT(*)::int AS total_links FROM seo_links WHERE site_id = $1', [siteId]);
-      res.json({ ...pages.rows[0], total_links: links.rows[0].total_links });
+      // Totaux GSC sur 28 jours (depuis le cache des pages, écrit par le worker au gsc_sync).
+      const gsc = await db.pool.query(
+        `SELECT COALESCE(SUM(gsc_clicks), 0)::int AS gsc_clicks,
+                COALESCE(SUM(gsc_impressions), 0)::int AS gsc_impressions,
+                COUNT(*) FILTER (WHERE gsc_synced_at IS NOT NULL)::int AS gsc_pages,
+                MAX(gsc_synced_at) AS gsc_synced_at,
+                COUNT(*) FILTER (WHERE gsc_position IS NOT NULL AND gsc_position BETWEEN 11 AND 20)::int AS quasi_victoires
+         FROM seo_pages WHERE site_id = $1`,
+        [siteId]
+      );
+      res.json({ ...pages.rows[0], total_links: links.rows[0].total_links, ...gsc.rows[0] });
     } catch (e) {
       console.error('[SEO] getOverview:', e.message);
       res.status(500).json({ message: 'Erreur serveur' });
@@ -59,7 +69,8 @@ const seoController = {
       const { rows } = await db.pool.query(
         `SELECT id, wp_id, url, title, type, category,
                 internal_pagerank::float AS internal_pagerank, inlinks_count,
-                value_score::float AS value_score, health, indexation_status, wp_modified_at, last_crawl
+                value_score::float AS value_score, health, indexation_status, wp_modified_at, last_crawl,
+                gsc_clicks, gsc_impressions, gsc_position::float AS gsc_position, gsc_synced_at
          FROM seo_pages WHERE ${conds.join(' AND ')}
          ORDER BY ${sortCol} DESC NULLS LAST, url ASC
          LIMIT ${limit}`,
@@ -172,6 +183,47 @@ const seoController = {
     }
   },
 
+  // GET /api/seo/gsc/status -> état de la connexion OAuth Google Search Console.
+  // NE RENVOIE JAMAIS client_secret / refresh_token (secrets) : seulement connected/email/date.
+  getGscStatus: async (req, res) => {
+    const db = req.app.locals.db;
+    try {
+      const r = await db.pool.query(
+        "SELECT account_email, scope, updated_at FROM seo_oauth_tokens WHERE provider = 'google' ORDER BY updated_at DESC LIMIT 1"
+      );
+      if (r.rows.length === 0) return res.json({ connected: false });
+      const row = r.rows[0];
+      res.json({ connected: true, account_email: row.account_email, scope: row.scope, updated_at: row.updated_at });
+    } catch (e) {
+      console.error('[SEO] getGscStatus:', e.message);
+      res.status(500).json({ message: 'Erreur serveur' });
+    }
+  },
+
+  // GET /api/seo/quasi-victoires?site_id= -> pages en position moyenne 11-20 (à pousser).
+  getQuasiVictoires: async (req, res) => {
+    const db = req.app.locals.db;
+    const siteId = parseInt(req.query.site_id, 10);
+    if (!siteId) return res.status(400).json({ message: 'site_id requis' });
+    try {
+      const { rows } = await db.pool.query(
+        `SELECT id, url, title, category, health,
+                internal_pagerank::float AS internal_pagerank,
+                value_score::float AS value_score,
+                gsc_clicks, gsc_impressions, gsc_position::float AS gsc_position
+         FROM seo_pages
+         WHERE site_id = $1 AND gsc_position IS NOT NULL AND gsc_position BETWEEN 11 AND 20
+         ORDER BY gsc_impressions DESC NULLS LAST, gsc_position ASC
+         LIMIT 100`,
+        [siteId]
+      );
+      res.json(rows);
+    } catch (e) {
+      console.error('[SEO] getQuasiVictoires:', e.message);
+      res.status(500).json({ message: 'Erreur serveur' });
+    }
+  },
+
   // POST /api/seo/jobs { site_id, job_type } -> crée un job 'pending'.
   // SEULE écriture autorisée côté Node, et UNIQUEMENT sur seo_jobs (jamais seo_pages/seo_links).
   // Le worker Python est seul à passer le job en running/done/failed et à crawler.
@@ -180,7 +232,7 @@ const seoController = {
     const siteId = parseInt((req.body || {}).site_id, 10);
     const jobType = (req.body || {}).job_type;
     if (!siteId) return res.status(400).json({ message: 'site_id requis' });
-    if (!['crawl_full', 'crawl_incremental'].includes(jobType)) {
+    if (!['crawl_full', 'crawl_incremental', 'gsc_sync'].includes(jobType)) {
       return res.status(400).json({ message: 'job_type invalide' });
     }
     try {

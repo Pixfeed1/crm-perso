@@ -569,6 +569,8 @@ export const seoAPI = {
   },
   getGraph: (siteId) => apiRequest(`/seo/graph?site_id=${siteId}`),
   getAffamees: (siteId) => apiRequest(`/seo/affamees?site_id=${siteId}`),
+  getGscStatus: () => apiRequest('/seo/gsc/status'),
+  getQuasiVictoires: (siteId) => apiRequest(`/seo/quasi-victoires?site_id=${siteId}`),
   createJob: (siteId, jobType) => apiRequest('/seo/jobs', 'POST', { site_id: siteId, job_type: jobType }),
   getJob: (siteId) => apiRequest(`/seo/jobs?site_id=${siteId}`),
   cancelJob: (jobId) => apiRequest(`/seo/jobs/${jobId}/cancel`, 'POST')

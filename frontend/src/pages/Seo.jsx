@@ -8,7 +8,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
 import {
   FiShare2, FiRefreshCw, FiTrendingUp, FiAlertTriangle, FiLink, FiArrowRight, FiExternalLink,
-  FiPlay, FiLoader, FiCheckCircle, FiXCircle, FiClock, FiStopCircle, FiSlash
+  FiPlay, FiLoader, FiCheckCircle, FiXCircle, FiClock, FiStopCircle, FiSlash, FiSearch, FiTarget
 } from 'react-icons/fi';
 import { seoAPI } from '../services/api';
 import { useToast } from '../hooks/useToast';
@@ -21,6 +21,20 @@ const HEALTH_META = {
   saine: { cls: 'bg-success-bg text-success-text', label: 'Saine' }
 };
 const healthBadge = (h) => HEALTH_META[h] || { cls: 'bg-neutral-bg text-neutral-text', label: 'Non calculé' };
+// Badge d'indexation à partir du coverageState GSC (texte libre Google, EN).
+const indexBadge = (s) => {
+  if (!s) return null;
+  const low = s.toLowerCase();
+  if (low.includes('not indexed') || low.includes('excluded') || low.includes('error') || low.includes('noindex')) {
+    return { cls: 'bg-warning-bg text-warning-text', label: 'Non indexée' };
+  }
+  if (low.includes('indexed') || low.includes('submitted and indexed')) {
+    return { cls: 'bg-success-bg text-success-text', label: 'Indexée' };
+  }
+  return { cls: 'bg-neutral-bg text-neutral-text', label: s.length > 22 ? s.slice(0, 21) + '…' : s };
+};
+const fmtNum = (n) => (n == null ? '—' : Number(n).toLocaleString('fr-FR'));
+const fmtPos = (n) => (n == null ? '—' : Number(n).toFixed(1));
 const fmtDate = (s) => {
   if (!s) return '—';
   const d = new Date(s);
@@ -36,7 +50,9 @@ const Seo = () => {
   const [pages, setPages] = useState([]);
   const [affamees, setAffamees] = useState([]);
   const [orphelines, setOrphelines] = useState([]);
-  const [tab, setTab] = useState('jus'); // 'jus' | 'affamees' | 'orphelines'
+  const [quasiVictoires, setQuasiVictoires] = useState([]);
+  const [gscStatus, setGscStatus] = useState(null); // { connected, account_email, updated_at }
+  const [tab, setTab] = useState('jus'); // 'jus' | 'affamees' | 'orphelines' | 'quasi'
   const [sort, setSort] = useState('pagerank');
   const [healthFilter, setHealthFilter] = useState('all'); // filtre liste des pages
   const [loading, setLoading] = useState(true);
@@ -48,6 +64,7 @@ const Seo = () => {
     seoAPI.getSites()
       .then((s) => { setSites(s || []); if (s && s.length) setSiteId(s[0].id); else setLoading(false); })
       .catch(() => { toast.error('Erreur chargement des sites SEO'); setLoading(false); });
+    seoAPI.getGscStatus().then((g) => setGscStatus(g)).catch(() => {});
   }, [toast]);
 
   const load = useCallback(async () => {
@@ -56,15 +73,16 @@ const Seo = () => {
     try {
       const pagesParams = { sort, limit: 500 };
       if (healthFilter !== 'all') pagesParams.health = healthFilter;
-      const [ov, gr, pg, af, orph] = await Promise.all([
+      const [ov, gr, pg, af, orph, qv] = await Promise.all([
         seoAPI.getOverview(siteId),
         seoAPI.getGraph(siteId),
         seoAPI.getPages(siteId, pagesParams),
         seoAPI.getAffamees(siteId),
-        seoAPI.getPages(siteId, { health: 'orpheline', sort: 'value', limit: 500 })
+        seoAPI.getPages(siteId, { health: 'orpheline', sort: 'value', limit: 500 }),
+        seoAPI.getQuasiVictoires(siteId)
       ]);
       setOverview(ov); setGraph(gr || { nodes: [], edges: [] });
-      setPages(pg || []); setAffamees(af || []); setOrphelines(orph || []);
+      setPages(pg || []); setAffamees(af || []); setOrphelines(orph || []); setQuasiVictoires(qv || []);
     } catch (e) {
       toast.error('Erreur chargement SEO');
     } finally {
@@ -111,8 +129,9 @@ const Seo = () => {
     try {
       const res = await seoAPI.createJob(siteId, jobType);
       setJob(res.job);
-      if (res.already_active) toast.info('Un crawl est déjà en cours pour ce site');
-      else toast.success(jobType === 'crawl_full' ? 'Crawl complet lancé' : 'Crawl lancé');
+      const labels = { crawl_full: 'Crawl complet lancé', crawl_incremental: 'Crawl lancé', gsc_sync: 'Synchro Search Console lancée' };
+      if (res.already_active) toast.info('Une tâche est déjà en cours pour ce site');
+      else toast.success(labels[jobType] || 'Tâche lancée');
       pollJob(siteId);
     } catch (e) {
       toast.error(e.message || 'Impossible de lancer le crawl');
@@ -138,6 +157,8 @@ const Seo = () => {
 
   const jobActive = job && isActiveStatus(job.status);
   const jobCancellable = job && (job.status === 'pending' || job.status === 'running');
+  const jobNoun = job && job.job_type === 'gsc_sync' ? 'Synchro Search Console' : 'Crawl';
+  const gscConnected = gscStatus && gscStatus.connected;
 
   const cards = overview ? [
     { label: 'Pages', value: overview.total_pages, icon: FiShare2 },
@@ -145,7 +166,11 @@ const Seo = () => {
     { label: 'Orphelines', value: overview.orphelines, cls: 'text-danger-text' },
     { label: 'Affamées', value: overview.affamees, cls: 'text-warning-text' },
     { label: 'Réservoirs', value: overview.reservoirs, cls: 'text-info-text' },
-    { label: 'Saines', value: overview.saines, cls: 'text-success-text' }
+    { label: 'Saines', value: overview.saines, cls: 'text-success-text' },
+    ...(overview.gsc_pages ? [
+      { label: 'Impressions 28j', value: fmtNum(overview.gsc_impressions) },
+      { label: 'Clics 28j', value: fmtNum(overview.gsc_clicks) }
+    ] : [])
   ] : [];
 
   return (
@@ -188,6 +213,14 @@ const Seo = () => {
             >
               Complet
             </button>
+            <button
+              onClick={() => launchCrawl('gsc_sync')}
+              disabled={starting || jobActive || !gscConnected}
+              className="px-3 py-2 rounded-lg bg-surface-strong hover:bg-border-strong text-text-primary text-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              title={gscConnected ? 'Synchroniser Google Search Console' : 'Search Console non connecté (lancer gsc_auth.py)'}
+            >
+              <FiSearch size={15} /> Search Console
+            </button>
             {jobCancellable && (
               <button
                 onClick={cancelCrawl}
@@ -208,11 +241,11 @@ const Seo = () => {
             {job.status === 'running' ? (
               <div className="inline-flex items-center gap-2 text-sm bg-info-bg text-info-text border border-info-text/30 rounded-lg px-3 py-2">
                 <motion.span animate={{ rotate: 360 }} transition={{ duration: 0.9, repeat: Infinity, ease: 'linear' }} className="inline-flex"><FiLoader size={15} /></motion.span>
-                Crawl en cours{job.progress_total ? ` — ${job.progress_current}/${job.progress_total}` : '…'}
+                {jobNoun} en cours{job.progress_total ? ` — ${job.progress_current}/${job.progress_total}` : '…'}
               </div>
             ) : job.status === 'pending' ? (
               <div className="inline-flex items-center gap-2 text-sm bg-neutral-bg text-neutral-text border border-border rounded-lg px-3 py-2">
-                <FiClock size={15} /> Crawl en attente…
+                <FiClock size={15} /> {jobNoun} en attente…
               </div>
             ) : job.status === 'cancel_requested' ? (
               <div className="inline-flex items-center gap-2 text-sm bg-warning-bg text-warning-text border border-warning-text/30 rounded-lg px-3 py-2">
@@ -221,17 +254,33 @@ const Seo = () => {
               </div>
             ) : job.status === 'cancelled' ? (
               <div className="inline-flex items-center gap-2 text-sm bg-neutral-bg text-neutral-text border border-border rounded-lg px-3 py-2">
-                <FiSlash size={15} /> Crawl annulé{job.finished_at ? ` · ${fmtDate(job.finished_at)}` : ''}
+                <FiSlash size={15} /> {jobNoun} annulé{job.finished_at ? ` · ${fmtDate(job.finished_at)}` : ''}
               </div>
             ) : job.status === 'failed' ? (
               <div className="inline-flex items-center gap-2 text-sm bg-danger-bg text-danger-text border border-danger-text/30 rounded-lg px-3 py-2">
-                <FiXCircle size={15} /> Dernier crawl en échec{job.error ? ` : ${job.error}` : ''}
+                <FiXCircle size={15} /> Dernière tâche en échec{job.error ? ` : ${job.error}` : ''}
               </div>
             ) : job.status === 'done' ? (
               <div className="inline-flex items-center gap-2 text-sm bg-success-bg text-success-text border border-success-text/30 rounded-lg px-3 py-2">
-                <FiCheckCircle size={15} /> Dernier crawl terminé{job.finished_at ? ` · ${fmtDate(job.finished_at)}` : ''}
+                <FiCheckCircle size={15} /> {jobNoun} terminé{job.finished_at ? ` · ${fmtDate(job.finished_at)}` : ''}
               </div>
             ) : null}
+          </div>
+        )}
+
+        {/* État de connexion Google Search Console */}
+        {gscStatus && (
+          <div className="mb-4">
+            {gscConnected ? (
+              <div className="inline-flex items-center gap-2 text-sm bg-success-bg text-success-text border border-success-text/30 rounded-lg px-3 py-2">
+                <FiSearch size={14} /> Search Console connecté{gscStatus.account_email ? ` · ${gscStatus.account_email}` : ''}
+              </div>
+            ) : (
+              <div className="inline-flex items-start gap-2 text-sm bg-warning-bg text-warning-text border border-warning-text/30 rounded-lg px-3 py-2">
+                <FiSearch size={14} className="mt-0.5 flex-shrink-0" />
+                <span>Search Console non connecté. Lancez le consentement une fois&nbsp;: <code className="px-1 rounded bg-surface-strong/60">python gsc_auth.py</code> (voir seo_worker/README.md).</span>
+              </div>
+            )}
           </div>
         )}
 
@@ -257,7 +306,8 @@ const Seo = () => {
               {[
                 { k: 'jus', l: 'Jus interne' },
                 { k: 'affamees', l: `Pages affamées${affamees.length ? ` (${affamees.length})` : ''}` },
-                { k: 'orphelines', l: `Orphelines${orphelines.length ? ` (${orphelines.length})` : ''}` }
+                { k: 'orphelines', l: `Orphelines${orphelines.length ? ` (${orphelines.length})` : ''}` },
+                { k: 'quasi', l: `Quasi-victoires${quasiVictoires.length ? ` (${quasiVictoires.length})` : ''}` }
               ].map((t) => (
                 <button key={t.k} onClick={() => setTab(t.k)}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === t.k ? 'bg-accent text-white' : 'bg-surface-strong text-text-secondary hover:bg-border-strong'}`}>
@@ -315,12 +365,17 @@ const Seo = () => {
                           <th className="py-2 px-2 text-right">Jus</th>
                           <th className="py-2 px-2 text-right">Liens entrants</th>
                           <th className="py-2 px-2 text-right">Valeur</th>
+                          <th className="py-2 px-2 text-right">Impr.</th>
+                          <th className="py-2 px-2 text-right">Clics</th>
+                          <th className="py-2 px-2 text-right">Pos.</th>
+                          <th className="py-2 px-2">Index</th>
                           <th className="py-2 pl-2">État</th>
                         </tr>
                       </thead>
                       <tbody>
                         {pages.map((p) => {
                           const b = healthBadge(p.health);
+                          const ib = indexBadge(p.indexation_status);
                           return (
                             <tr key={p.id} className="border-b border-border/50">
                               <td className="py-2 pr-2 min-w-0">
@@ -332,6 +387,10 @@ const Seo = () => {
                               <td className="py-2 px-2 text-right text-text-secondary">{p.internal_pagerank != null ? Number(p.internal_pagerank).toFixed(4) : '—'}</td>
                               <td className="py-2 px-2 text-right text-text-secondary">{p.inlinks_count ?? '—'}</td>
                               <td className="py-2 px-2 text-right text-text-secondary">{p.value_score ?? '—'}</td>
+                              <td className="py-2 px-2 text-right text-text-secondary">{fmtNum(p.gsc_impressions)}</td>
+                              <td className="py-2 px-2 text-right text-text-secondary">{fmtNum(p.gsc_clicks)}</td>
+                              <td className="py-2 px-2 text-right text-text-secondary">{fmtPos(p.gsc_position)}</td>
+                              <td className="py-2 px-2">{ib ? <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${ib.cls}`}>{ib.label}</span> : <span className="text-text-muted text-xs">—</span>}</td>
                               <td className="py-2 pl-2"><span className={`text-xs px-2 py-0.5 rounded-full font-medium ${b.cls}`}>{b.label}</span></td>
                             </tr>
                           );
@@ -380,7 +439,7 @@ const Seo = () => {
                   </motion.div>
                 ))}
               </div>
-            ) : (
+            ) : tab === 'orphelines' ? (
               /* Orphelines : aucun lien entrant -> priorité indexation (triées par valeur) */
               <div className="bg-surface border border-border rounded-xl p-4">
                 <h3 className="text-sm font-semibold text-text-primary mb-1 flex items-center gap-2">
@@ -414,6 +473,54 @@ const Seo = () => {
                             <td className="py-2 px-2 text-right text-text-secondary">{p.internal_pagerank != null ? Number(p.internal_pagerank).toFixed(4) : '—'}</td>
                           </tr>
                         ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* Quasi-victoires : positions moyennes 11-20 (GSC) -> à pousser en priorité */
+              <div className="bg-surface border border-border rounded-xl p-4">
+                <h3 className="text-sm font-semibold text-text-primary mb-1 flex items-center gap-2">
+                  <FiTarget size={15} className="text-info-text" /> Quasi-victoires ({quasiVictoires.length})
+                </h3>
+                <p className="text-text-muted text-xs mb-3">Pages en position moyenne 11–20 sur Google : un coup de pouce (liens internes, contenu) peut les faire passer en page 1.</p>
+                {!gscConnected ? (
+                  <p className="text-text-muted text-sm py-6 text-center">Connectez Search Console et lancez une synchro pour voir ces données.</p>
+                ) : quasiVictoires.length === 0 ? (
+                  <p className="text-text-muted text-sm py-6 text-center">Aucune quasi-victoire (aucune page en position 11–20).</p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="text-text-muted text-xs text-left border-b border-border">
+                          <th className="py-2 pr-2">Page</th>
+                          <th className="py-2 px-2 text-right">Position</th>
+                          <th className="py-2 px-2 text-right">Impr.</th>
+                          <th className="py-2 px-2 text-right">Clics</th>
+                          <th className="py-2 px-2 text-right">Valeur</th>
+                          <th className="py-2 pl-2">État</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {quasiVictoires.map((p) => {
+                          const b = healthBadge(p.health);
+                          return (
+                            <tr key={p.id} className="border-b border-border/50">
+                              <td className="py-2 pr-2 min-w-0">
+                                <div className="text-text-primary truncate max-w-xs">{p.title || p.url}</div>
+                                <a href={p.url} target="_blank" rel="noopener noreferrer" className="text-text-muted text-xs hover:text-accent truncate inline-flex items-center gap-1 max-w-xs">
+                                  {p.url} <FiExternalLink size={10} />
+                                </a>
+                              </td>
+                              <td className="py-2 px-2 text-right text-info-text font-medium">{fmtPos(p.gsc_position)}</td>
+                              <td className="py-2 px-2 text-right text-text-secondary">{fmtNum(p.gsc_impressions)}</td>
+                              <td className="py-2 px-2 text-right text-text-secondary">{fmtNum(p.gsc_clicks)}</td>
+                              <td className="py-2 px-2 text-right text-text-secondary">{p.value_score ?? '—'}</td>
+                              <td className="py-2 pl-2"><span className={`text-xs px-2 py-0.5 rounded-full font-medium ${b.cls}`}>{b.label}</span></td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>

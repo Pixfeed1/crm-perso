@@ -2,3 +2,6 @@ __pycache__/
 *.pyc
 venv/
 .env
+# Secrets OAuth Google (ne jamais versionner)
+client_secret.json
+*.client_secret.json

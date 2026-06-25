@@ -74,7 +74,79 @@ Le worker upsert `seo_sites` au démarrage : **aucune** reconfiguration Google n
 - Le **PageRank est recalculé sur le graphe entier** à chaque run (un lien ajouté change le jus
   de tout le graphe).
 
+## Étape 2 : Google Search Console
+
+Une **seule** connexion OAuth sert **tous** les sites (chaque `seo_sites.gsc_property` mappe un
+site, ex. `sc-domain:jurojin.net`). Le worker reste la seule couche qui écrit ; la synchro se
+déclenche depuis l'UI via un job `gsc_sync` (même file `seo_jobs`, même service `--serve`).
+
+### Ce que fait `gsc_sync`
+1. **Search Analytics** (clics/impressions/position par date+page+requête) → `seo_gsc_daily`
+   (upsert idempotent). Backfill initial 180 j au premier run, puis incrémental quotidien
+   (s'arrête à aujourd'hui − 3 j, latence GSC).
+2. **URL Inspection** (statut d'indexation) → `seo_url_inspections` + recopie dans
+   `seo_pages.indexation_status`. **Plafond 2000 inspections/run** ; priorité aux pages jamais
+   inspectées puis aux plus anciennes (jamais de réinspection globale ; TTL 14 j).
+3. **Snapshot mensuel** : agrégation `seo_gsc_daily` → `seo_metrics_monthly` (mémoire longue
+   au-delà des 16 mois conservés par GSC).
+4. **`value_score` réel** : impressions GSC (échelle log normalisée) si la page en a ; sinon
+   **repli sur l'heuristique** par catégorie. `health` est recalculé sans recrawl (le PageRank
+   déjà en base est réutilisé).
+
+### Lancement
+```bash
+python run.py --gsc                  # synchro GSC de tous les sites (hors file de jobs)
+python run.py --gsc --site jurojin.net
+# En service : un job 'gsc_sync' créé depuis l'UI est traité automatiquement par --serve.
+```
+
+### Sécurité des jetons
+`client_secret` et `refresh_token` sont stockés **en clair** dans la table `seo_oauth_tokens`
+(même niveau de confidentialité que `backend/.env`). Ces champs ne sont **jamais** renvoyés par
+une route Node : seul `GET /api/seo/gsc/status` expose `connected` / `account_email` / `date`.
+L'app OAuth est publiée en **Production** → le `refresh_token` n'expire pas (aucune logique 7 j).
+
+### Consentement OAuth initial (une seule fois)
+
+Prérequis : créer un client **OAuth Desktop** dans Google Cloud, activer l'API **Search
+Console**, télécharger `client_secret.json`. Ce fichier est gitignoré.
+
+**Le `client_secret.json` est nécessaire DES DEUX CÔTÉS** : sur le poste (pour le flux de
+consentement) ET sur serveur2 (le mode `--store` y lit `client_id`/`client_secret` pour les
+enregistrer avec le token).
+
+#### Variante SANS tunnel (recommandée) — 2 étapes
+1. **Sur ton poste** (avec navigateur), `client_secret.json` dans `seo_worker/` :
+   ```bash
+   python gsc_auth.py
+   ```
+   Le navigateur s'ouvre → choisis le compte Google ayant accès aux propriétés GSC → accepte.
+   Le script **affiche le `refresh_token`** et la commande `--store` prête à coller.
+2. **Sur serveur2** (accès base + `client_secret.json` présent) :
+   ```bash
+   python gsc_auth.py --store --email=ton.email@gmail.com --refresh-token=COLLER_LE_TOKEN
+   ```
+   → écrit la connexion dans `seo_oauth_tokens`. Terminé, définitif.
+
+#### Variante TUNNEL SSH (tout sur serveur2, en un coup)
+```bash
+# depuis ton poste :
+ssh -L 8765:localhost:8765 user@serveur2
+# sur serveur2 (client_secret.json présent) :
+python gsc_auth.py --write-db --no-browser
+```
+Colle l'URL affichée dans ton navigateur local ; après consentement, le token est écrit
+directement en base.
+
+> Si « Aucun refresh_token renvoyé » : révoque l'accès de l'app dans le compte Google
+> (myaccount.google.com → Sécurité → accès tiers) puis relance — Google ne fournit le
+> `refresh_token` qu'au tout premier consentement.
+
+### Côté UI
+Bouton **« Search Console »** (crée un job `gsc_sync`, même badge/polling que le crawl),
+bandeau d'état de connexion, colonnes impressions/clics/position + badge d'indexation dans la
+liste des pages, et onglet **« Quasi-victoires »** (positions moyennes 11–20).
+
 ## Étapes suivantes
-- Étape 2 : Google Search Console (une connexion pour tous les sites) → `seo_gsc_daily`,
-  `seo_metrics_monthly`, `seo_url_inspections` (tables déjà créées, vides pour l'instant).
-- Étape 3 : croisements (pages affamées chiffrées, quasi-victoires, content decay, cannibalisation).
+- Étape 3 : croisements (pages affamées chiffrées par les impressions, content decay,
+  cannibalisation de requêtes, indexation croisée avec le maillage).

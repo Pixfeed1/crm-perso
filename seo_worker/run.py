@@ -16,12 +16,14 @@ Règles clés :
 """
 import argparse
 import json
+import math
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 import config
 import wp
 import pagerank as pr_mod
+import gsc
 from db import connect
 
 
@@ -268,6 +270,231 @@ def crawl_site(conn, site, full=False, no_resume=False, job_id=None):
         return False
 
 
+def gsc_value_score(impr, max_impr):
+    """value_score 0..100 à partir des impressions GSC (échelle log, normalisée au max du site)."""
+    if not impr or impr <= 0 or not max_impr or max_impr <= 0:
+        return None
+    return int(round(100.0 * math.log1p(impr) / math.log1p(max_impr)))
+
+
+def gsc_sync_site(conn, site, job_id=None):
+    """Synchro Google Search Console pour un site (étape 2). Renvoie True / False / 'cancelled'.
+
+    1) Search Analytics -> seo_gsc_daily (upsert idempotent).
+    2) URL Inspection   -> seo_url_inspections (+ seo_pages.indexation_status), plafonné.
+    3) Snapshot mensuel -> seo_metrics_monthly (mémoire longue au-delà des 16 mois GSC).
+    4) value_score RÉEL (impressions GSC, fallback heuristique) + recalcul health sans recrawl.
+    """
+    cur = conn.cursor()
+    domain = site["domain"]
+    gsc_property = site.get("gsc_property")
+    base = site["wp_base_url"].rstrip("/")
+    home_url = wp.normalize_url(base)
+    site_id = upsert_site(cur, site)
+    conn.commit()
+
+    if not gsc_property:
+        msg = f"gsc_property manquant pour {domain}"
+        print(f"[GSC] {msg}")
+        if job_id is not None:
+            cur.execute("UPDATE seo_jobs SET error = %s WHERE id = %s", (msg, job_id))
+            conn.commit()
+        return False
+
+    try:
+        creds = gsc.load_credentials(conn)
+    except Exception as e:
+        msg = f"OAuth GSC : échec du rafraîchissement ({str(e)[:200]})"
+        print(f"[GSC] {msg}")
+        if job_id is not None:
+            cur.execute("UPDATE seo_jobs SET error = %s WHERE id = %s", (msg, job_id))
+            conn.commit()
+        return False
+    if creds is None:
+        msg = "OAuth GSC non configuré (lancer gsc_auth.py)"
+        print(f"[GSC] {msg}")
+        if job_id is not None:
+            cur.execute("UPDATE seo_jobs SET error = %s WHERE id = %s", (msg, job_id))
+            conn.commit()
+        return False
+
+    today = datetime.now(timezone.utc).date()
+    end_d = today - timedelta(days=config.GSC_LAG_DAYS)
+
+    try:
+        # ---- 1) Search Analytics (date, page, query) ----
+        cur.execute("SELECT MAX(date) FROM seo_gsc_daily WHERE site_id = %s", (site_id,))
+        max_d = cur.fetchone()[0]
+        if max_d:
+            start_d = max_d + timedelta(days=1)          # incrémental : jour suivant le dernier connu
+        else:
+            start_d = end_d - timedelta(days=config.GSC_INITIAL_DAYS)  # premier sync : backfill
+        if start_d > end_d:
+            start_d = end_d  # rien de nouveau : on rafraîchit quand même le dernier jour dispo
+
+        print(f"\n=== GSC {domain} (site_id={site_id}) — Search Analytics {start_d} -> {end_d} ===")
+        rows = gsc.search_analytics(creds, gsc_property, start_d.isoformat(), end_d.isoformat())
+        print(f"  {len(rows)} lignes (date,page,query)")
+        inserted = 0
+        for row in rows:
+            cur.execute(
+                """INSERT INTO seo_gsc_daily (site_id, date, page_url, query, clicks, impressions, position)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s)
+                   ON CONFLICT (site_id, date, page_url, query) DO UPDATE
+                     SET clicks = EXCLUDED.clicks, impressions = EXCLUDED.impressions,
+                         position = EXCLUDED.position""",
+                (site_id, row["date"], row["page"], row["query"], row["clicks"], row["impressions"], row["position"]),
+            )
+            inserted += 1
+            if inserted % 500 == 0:
+                conn.commit()
+                if cancel_requested(cur, job_id):
+                    conn.commit()
+                    print("  [ANNULÉ] pendant Search Analytics")
+                    return "cancelled"
+        conn.commit()
+
+        # ---- 2) URL Inspection (priorité : jamais inspectées, puis plus anciennes ; plafond/jour) ----
+        cur.execute(
+            """SELECT p.url
+               FROM seo_pages p
+               LEFT JOIN seo_url_inspections i
+                 ON i.site_id = p.site_id AND i.page_url = p.url
+               WHERE p.site_id = %s
+                 AND (i.inspected_at IS NULL OR i.inspected_at < NOW() - (%s || ' days')::interval)
+               ORDER BY i.inspected_at ASC NULLS FIRST, p.url ASC
+               LIMIT %s""",
+            (site_id, config.GSC_INSPECT_TTL_DAYS, config.GSC_INSPECT_DAILY_CAP),
+        )
+        to_inspect = [r[0] for r in cur.fetchall()]
+        print(f"  URL Inspection : {len(to_inspect)} pages (plafond {config.GSC_INSPECT_DAILY_CAP})")
+        if job_id is not None:
+            cur.execute("UPDATE seo_jobs SET progress_total = %s, progress_current = 0 WHERE id = %s",
+                        (len(to_inspect), job_id))
+            conn.commit()
+
+        done = 0
+        for url in to_inspect:
+            try:
+                coverage, raw = gsc.inspect_url(creds, gsc_property, url)
+                cur.execute(
+                    """INSERT INTO seo_url_inspections (site_id, page_url, inspection_status, raw_response, inspected_at, updated_at)
+                       VALUES (%s, %s, %s, %s, NOW(), NOW())
+                       ON CONFLICT (site_id, page_url) DO UPDATE
+                         SET inspection_status = EXCLUDED.inspection_status,
+                             raw_response = EXCLUDED.raw_response,
+                             inspected_at = NOW(), updated_at = NOW()""",
+                    (site_id, url, coverage, json.dumps(raw)),
+                )
+                cur.execute(
+                    "UPDATE seo_pages SET indexation_status = %s, updated_at = NOW() WHERE site_id = %s AND url = %s",
+                    (coverage, site_id, url),
+                )
+            except Exception as e:
+                print(f"  [ERREUR inspection] {url}: {e}")
+            done += 1
+            if done % 25 == 0:
+                if job_id is not None:
+                    cur.execute("UPDATE seo_jobs SET progress_current = %s WHERE id = %s", (done, job_id))
+                conn.commit()
+                if cancel_requested(cur, job_id):
+                    conn.commit()
+                    print("  [ANNULÉ] pendant URL Inspection")
+                    return "cancelled"
+        conn.commit()
+
+        # ---- 3) Snapshot mensuel (agrégation seo_gsc_daily -> seo_metrics_monthly) ----
+        cur.execute(
+            """INSERT INTO seo_metrics_monthly (site_id, month, page_url, clicks, impressions, avg_position)
+               SELECT site_id, date_trunc('month', date)::date AS month, page_url,
+                      SUM(clicks), SUM(impressions),
+                      CASE WHEN SUM(impressions) > 0
+                           THEN SUM(impressions * position) / SUM(impressions)
+                           ELSE AVG(position) END
+               FROM seo_gsc_daily WHERE site_id = %s
+               GROUP BY site_id, month, page_url
+               ON CONFLICT (site_id, month, page_url) DO UPDATE
+                 SET clicks = EXCLUDED.clicks, impressions = EXCLUDED.impressions,
+                     avg_position = EXCLUDED.avg_position""",
+            (site_id,),
+        )
+        conn.commit()
+
+        # ---- 4) value_score réel + cache 28j + recalcul health (sans recrawl) ----
+        win_start = (end_d - timedelta(days=config.GSC_VALUE_WINDOW_DAYS)).isoformat()
+        d28_start = (end_d - timedelta(days=28)).isoformat()
+        # Impressions sur la fenêtre value (normalisées par URL).
+        cur.execute(
+            "SELECT page_url, SUM(impressions) FROM seo_gsc_daily WHERE site_id = %s AND date >= %s GROUP BY page_url",
+            (site_id, win_start),
+        )
+        impr_by_url = {}
+        for purl, simpr in cur.fetchall():
+            impr_by_url[wp.normalize_url(purl)] = impr_by_url.get(wp.normalize_url(purl), 0) + int(simpr or 0)
+        max_impr = max(impr_by_url.values()) if impr_by_url else 0
+        # Cache 28 jours (clics / impressions / position pondérée) par URL.
+        cur.execute(
+            """SELECT page_url, SUM(clicks), SUM(impressions),
+                      CASE WHEN SUM(impressions) > 0 THEN SUM(impressions * position) / SUM(impressions) ELSE NULL END
+               FROM seo_gsc_daily WHERE site_id = %s AND date >= %s GROUP BY page_url""",
+            (site_id, d28_start),
+        )
+        cache28 = {}
+        for purl, c, i, pos in cur.fetchall():
+            k = wp.normalize_url(purl)
+            agg = cache28.setdefault(k, {"clicks": 0, "impressions": 0, "pos_num": 0.0})
+            agg["clicks"] += int(c or 0)
+            agg["impressions"] += int(i or 0)
+            if pos is not None and i:
+                agg["pos_num"] += float(pos) * int(i)
+
+        # PageRank déjà en base : on récupère ratio pour recalculer health.
+        cur.execute("SELECT MAX(internal_pagerank) FROM seo_pages WHERE site_id = %s", (site_id,))
+        max_pr = float(cur.fetchone()[0] or 0)
+        cur.execute(
+            "SELECT url, category, type, internal_pagerank, inlinks_count FROM seo_pages WHERE site_id = %s",
+            (site_id,),
+        )
+        pages = cur.fetchall()
+        updated = 0
+        for url, category, ctype, pr_val, inlinks in pages:
+            impr = impr_by_url.get(url, 0)
+            value = gsc_value_score(impr, max_impr)
+            if value is None:  # pas de données GSC -> fallback heuristique
+                value = value_for_category(category, url, ctype, home_url)
+            ratio = (float(pr_val or 0) / max_pr) if max_pr > 0 else 0.0
+            health = classify_health(int(inlinks or 0), ratio, value)
+            c = cache28.get(url)
+            gsc_clicks = c["clicks"] if c else None
+            gsc_impr = c["impressions"] if c else None
+            gsc_pos = (c["pos_num"] / c["impressions"]) if (c and c["impressions"]) else None
+            cur.execute(
+                """UPDATE seo_pages
+                   SET value_score = %s, health = %s, gsc_clicks = %s, gsc_impressions = %s,
+                       gsc_position = %s, gsc_synced_at = NOW(), updated_at = NOW()
+                   WHERE site_id = %s AND url = %s""",
+                (value, health, gsc_clicks, gsc_impr, gsc_pos, site_id, url),
+            )
+            updated += 1
+            if updated % config.COMMIT_BATCH == 0:
+                conn.commit()
+        conn.commit()
+
+        print(f"  OK GSC {domain} : daily+={inserted} inspections={done} pages_maj={updated}")
+        return True
+
+    except Exception as e:
+        conn.rollback()
+        print(f"[ERREUR GSC] {domain}: {e}")
+        if job_id is not None:
+            try:
+                cur.execute("UPDATE seo_jobs SET error = %s WHERE id = %s", (str(e)[:500], job_id))
+                conn.commit()
+            except Exception:
+                conn.rollback()
+        return False
+
+
 def site_by_id(conn, site_id):
     cur = conn.cursor()
     cur.execute("SELECT id, domain, wp_base_url, gsc_property FROM seo_sites WHERE id = %s", (site_id,))
@@ -336,9 +563,12 @@ def serve():
                 conn.commit()
                 continue
             print(f"[SEO] Job #{job['id']} {job['job_type']} -> {site['domain']}")
-            full = job["job_type"] == "crawl_full"
             try:
-                ok = crawl_site(conn, site, full=full, job_id=job["id"])
+                if job["job_type"] == "gsc_sync":
+                    ok = gsc_sync_site(conn, site, job_id=job["id"])
+                else:
+                    full = job["job_type"] == "crawl_full"
+                    ok = crawl_site(conn, site, full=full, job_id=job["id"])
             except Exception as e:
                 ok = False
                 print(f"[SEO] Job #{job['id']} exception: {e}")
@@ -368,6 +598,7 @@ def main():
     ap.add_argument("--no-resume", action="store_true", help="run incrémental sans reprise du run précédent")
     ap.add_argument("--site", help="restreindre à un domaine (ex: jurojin.net)")
     ap.add_argument("--serve", action="store_true", help="service permanent : traite la file seo_jobs (un seul job à la fois)")
+    ap.add_argument("--gsc", action="store_true", help="synchro Google Search Console (hors file de jobs)")
     args = ap.parse_args()
 
     if args.serve:
@@ -383,7 +614,10 @@ def main():
     try:
         for site in sites:
             try:
-                crawl_site(conn, site, full=args.full, no_resume=args.no_resume)
+                if args.gsc:
+                    gsc_sync_site(conn, site)
+                else:
+                    crawl_site(conn, site, full=args.full, no_resume=args.no_resume)
             except Exception as e:
                 conn.rollback()
                 print(f"[ERREUR] {site['domain']}: {e}")
