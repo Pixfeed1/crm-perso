@@ -7,7 +7,7 @@
 //  - glisser un nœud = le repositionner (les arêtes suivent) ;
 //  - survol = tooltip, clic = panneau de détails (liens entrants/sortants).
 // Couleurs = tokens de thème via variables CSS (rgb(var(--…))), aucune couleur en dur.
-import React, { useMemo, useRef, useState, useCallback } from 'react';
+import React, { useMemo, useRef, useState, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { FiExternalLink, FiArrowRight, FiArrowLeft, FiX, FiZoomIn, FiZoomOut, FiMaximize } from 'react-icons/fi';
 
@@ -74,11 +74,7 @@ const SeoGraph = ({ data }) => {
     return { x: (v.x - view.tx) / view.k, y: (v.y - view.ty) / view.k };
   }, [toViewBox, view]);
 
-  if (!nodes.length) {
-    return <div className="text-center py-10 text-text-muted text-sm">Aucun nœud à afficher (le worker SEO n'a pas encore tourné pour ce site).</div>;
-  }
-
-  const zoomAround = (vx, vy, factor) => {
+  const zoomAround = useCallback((vx, vy, factor) => {
     setView((cur) => {
       const k = Math.min(Z_MAX, Math.max(Z_MIN, cur.k * factor));
       // garder le point (vx,vy) fixe : vx = gx*k + tx
@@ -86,15 +82,28 @@ const SeoGraph = ({ data }) => {
       const gy = (vy - cur.ty) / cur.k;
       return { k, tx: vx - gx * k, ty: vy - gy * k };
     });
-  };
+  }, []);
 
-  const onWheel = (e) => {
-    // Zoom molette UNIQUEMENT si la carte est activée (après un clic) -> sinon la page défile.
-    if (!engaged) return;
-    e.preventDefault();
-    const v = toViewBox(e.clientX, e.clientY);
-    zoomAround(v.x, v.y, e.deltaY < 0 ? 1.15 : 1 / 1.15);
-  };
+  // Listener molette NON passif (addEventListener avec { passive: false }) : un onWheel React est
+  // passif par défaut -> e.preventDefault() y est un no-op et déclenche le warning "Unable to
+  // preventDefault inside passive event listener". On l'attache donc nativement.
+  useEffect(() => {
+    const el = svgRef.current;
+    if (!el) return undefined;
+    const handler = (e) => {
+      // Zoom molette UNIQUEMENT si la carte est activée (après un clic) -> sinon la page défile.
+      if (!engaged) return;
+      e.preventDefault();
+      const v = toViewBox(e.clientX, e.clientY);
+      zoomAround(v.x, v.y, e.deltaY < 0 ? 1.15 : 1 / 1.15);
+    };
+    el.addEventListener('wheel', handler, { passive: false });
+    return () => el.removeEventListener('wheel', handler);
+  }, [engaged, toViewBox, zoomAround, nodes.length]);
+
+  if (!nodes.length) {
+    return <div className="text-center py-10 text-text-muted text-sm">Aucun nœud à afficher (le worker SEO n'a pas encore tourné pour ce site).</div>;
+  }
 
   const onMouseDownNode = (e, n) => {
     e.stopPropagation();
@@ -160,7 +169,7 @@ const SeoGraph = ({ data }) => {
         <svg
           ref={svgRef} viewBox={`0 0 ${W} ${H}`} className="w-full select-none"
           style={{ maxHeight: 540, cursor: drag.current && drag.current.type === 'pan' ? 'grabbing' : 'grab' }}
-          onWheel={onWheel} onMouseDown={onMouseDownBg}
+          onMouseDown={onMouseDownBg}
         >
           <g transform={`translate(${view.tx},${view.ty}) scale(${view.k})`}>
             {/* Arêtes */}
