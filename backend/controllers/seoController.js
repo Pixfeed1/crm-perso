@@ -115,23 +115,51 @@ const seoController = {
          LIMIT 50`,
         [siteId]
       );
-      // Réservoirs candidats (fort jus) pour suggérer des liens entrants.
-      const reservoirs = await db.pool.query(
-        `SELECT url, title, internal_pagerank FROM seo_pages
+
+      // Donneurs de liens candidats : pages à fort jus (réservoirs + saines), avec leur
+      // catégorie -> on privilégiera la MÊME catégorie que l'affamée (lien contextuel),
+      // avec repli sur les meilleurs réservoirs globaux.
+      const donors = await db.pool.query(
+        `SELECT url, title, category, health, internal_pagerank FROM seo_pages
          WHERE site_id = $1 AND internal_pagerank IS NOT NULL
-         ORDER BY internal_pagerank DESC LIMIT 10`,
+           AND health IN ('reservoir', 'saine')
+         ORDER BY internal_pagerank DESC
+         LIMIT 200`,
         [siteId]
       );
+      const donorRows = donors.rows;
+      const topReservoirs = donorRows.filter((d) => d.health === 'reservoir').slice(0, 10);
+
+      const norm = (c) => (c || '').toLowerCase().trim();
       const result = [];
       for (const page of affamees.rows) {
+        // Pages qui pointent DÉJÀ vers l'affamée -> à ne pas resuggérer.
         const existing = await db.pool.query(
           'SELECT from_url FROM seo_links WHERE site_id = $1 AND to_url = $2',
           [siteId, page.url]
         );
-        const linkingSet = new Set(existing.rows.map((r) => r.from_url));
-        const suggestions = reservoirs.rows
-          .filter((r) => r.url !== page.url && !linkingSet.has(r.url))
-          .slice(0, 5);
+        const linking = new Set(existing.rows.map((r) => r.from_url));
+        const cat = norm(page.category);
+
+        const eligible = (d) => d.url !== page.url && !linking.has(d.url);
+        // 1) Priorité : même catégorie (lien le plus pertinent).
+        const sameCat = cat ? donorRows.filter((d) => eligible(d) && norm(d.category) === cat) : [];
+        // 2) Repli : meilleurs réservoirs globaux (fort jus), puis autres donneurs.
+        const fallback = [...topReservoirs, ...donorRows].filter(eligible);
+
+        const seen = new Set();
+        const suggestions = [];
+        for (const d of [...sameCat, ...fallback]) {
+          if (seen.has(d.url)) continue;
+          seen.add(d.url);
+          suggestions.push({
+            url: d.url,
+            title: d.title,
+            internal_pagerank: d.internal_pagerank,
+            reason: cat && norm(d.category) === cat ? 'même catégorie' : (d.health === 'reservoir' ? 'réservoir (fort jus)' : 'page saine'),
+          });
+          if (suggestions.length >= 5) break;
+        }
         result.push({ ...page, suggestions });
       }
       res.json(result);
