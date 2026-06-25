@@ -17,9 +17,10 @@ const poleEmploiService = require('./poleEmploiService');
 const googleJobsService = require('./googleJobsService'); // JSearch (RapidAPI)
 
 const LLM_MODEL = 'claude-haiku-4-5-20251001';
-const MAX_LLM_CALLS = 60;          // garde-fou coût : 60 qualifications LLM max par run
-const JOOBLE_PAGES = 3;            // nb de pages récupérées par mot-clé (Jooble)
-const JSEARCH_MAX_CALLS = 2;       // complément bridé : 2 requêtes JSearch max par run (quota)
+const MAX_LLM_CALLS = 80;          // garde-fou coût : 80 qualifications LLM max par run
+const JOOBLE_PAGES = 5;            // nb de pages récupérées par mot-clé (Jooble) — + de volume
+const JSEARCH_MAX_CALLS = 3;       // complément bridé : 3 requêtes JSearch max par run (quota)
+const FT_RANGES = ['0-149', '150-299']; // France Travail : 2 pages de 150 -> + de volume
 
 const lower = (s) => (s || '').toString().toLowerCase();
 
@@ -35,18 +36,23 @@ function countHits(text, hints) {
 }
 
 // true = à écarter d'office (massivement anglais, aucun marqueur français).
+// Seuil prudent (en >= 4) pour ne PAS jeter une offre FR truffée de termes techniques anglais.
 function looksEnglishOnly(texte) {
   const fr = countHits(texte, FR_HINTS);
   const en = countHits(texte, EN_HINTS);
-  return fr === 0 && en >= 3;
+  return fr === 0 && en >= 4;
 }
 
-// Scoring "type mission" (GRATUIT, avant l'IA) pour écarter le salariat (CDI/CDD…).
-// Chaque groupe ajoute/retire ses points une seule fois s'il matche. Score < 0 -> écarté.
-const MISSION_TITRE_POS = ['freelance', 'mission', 'prestation', 'indépendant', 'independant', 'consultant', 'régie', 'regie'];
-const MISSION_DESC_POS = ['tjm', 'régie', 'regie', 'client final', 'full remote', 'durée de mission', 'duree de mission'];
-const MISSION_TECHNOS = ['php', 'wordpress', 'prestashop', 'react', 'next.js', 'nextjs', 'python'];
-const CDI_TITRE_NEG = ['cdi', 'cdd', 'alternance', 'stage', 'apprentissage', 'salarié', 'salarie'];
+// Scoring "type mission" (GRATUIT, avant l'IA). But : écarter le SALARIAT EXCLUSIF, sans
+// jeter les offres mixtes "CDI ou Freelance / Portage" (très fréquentes et VALABLES).
+const MISSION_TITRE_POS = ['freelance', 'mission', 'prestation', 'indépendant', 'independant', 'consultant', 'régie', 'regie', 'portage'];
+const MISSION_DESC_POS = ['tjm', 'régie', 'regie', 'client final', 'full remote', 'durée de mission', 'duree de mission', 'freelance', 'portage'];
+const MISSION_TECHNOS = ['php', 'wordpress', 'prestashop', 'react', 'next.js', 'nextjs', 'python', 'symfony', 'laravel'];
+// Marqueurs "c'est (aussi) une mission" : leur présence DÉSAMORCE la pénalité salariat.
+const MISSION_MARKERS = ['freelance', 'mission', 'portage', 'tjm', 'régie', 'regie', 'prestation', 'indépendant', 'independant', 'consultant', 'indé'];
+// Salariat STRICT (jamais du freelance) : titre.
+const CDI_TITRE_NEG = ['cdi', 'cdd', 'salarié', 'salarie'];
+// Indices salariat "doux" en description (pénalité seulement si AUCUN marqueur mission).
 const CDI_DESC_NEG = ['rémunération annuelle', 'remuneration annuelle', 'mutuelle', 'tickets restaurant', 'ticket restaurant', 'contrat de travail', '13e mois', '13ème mois', '13eme mois'];
 
 const anyHit = (text, words) => words.some((w) => text.includes(w));
@@ -54,12 +60,16 @@ const anyHit = (text, words) => words.some((w) => text.includes(w));
 function scoreMission(titre, description) {
   const t = lower(titre);
   const d = lower(description);
+  const all = `${t} ${d}`;
+  const hasMission = anyHit(all, MISSION_MARKERS); // "CDI ou Freelance", "Portage", "TJM"...
   let score = 0;
   if (anyHit(t, MISSION_TITRE_POS)) score += 40;
   if (anyHit(d, MISSION_DESC_POS)) score += 30;
-  if (anyHit(`${t} ${d}`, MISSION_TECHNOS)) score += 20;
-  if (anyHit(t, CDI_TITRE_NEG)) score -= 100;
-  if (anyHit(d, CDI_DESC_NEG)) score -= 60;
+  if (anyHit(all, MISSION_TECHNOS)) score += 20;
+  // Pénalité FORTE seulement si SALARIAT EXCLUSIF (CDI/CDD/salarié et AUCUN marqueur mission).
+  if (!hasMission && anyHit(t, CDI_TITRE_NEG)) score -= 100;
+  // Indices salariat en description : pénalité douce, et uniquement sans marqueur mission.
+  if (!hasMission && anyHit(d, CDI_DESC_NEG)) score -= 60;
   return score;
 }
 
@@ -118,7 +128,7 @@ Entreprise : ${annonce.entreprise || ''}
 Description : ${(annonce.description || '').slice(0, 2000)}
 
 Réponds UNIQUEMENT par un objet JSON valide, sans texte autour, avec EXACTEMENT ces clés :
-{"francophone": bool (mets false UNIQUEMENT si l'annonce est clairement dans une autre langue / la mission ne peut pas se mener en français ; en cas de doute mets true), "remote_statut": "full_remote" | "sur_site" | "non_precise" (mets "sur_site" UNIQUEMENT si l'annonce indique explicitement présentiel/sur site ; si le télétravail n'est pas précisé mets "non_precise"), "montant": "string (ex '400€/j', ou 'à confirmer' si non chiffré)", "score": int (0-100, adéquation avec le profil), "score_label": "fort" | "à vérifier" | "faible", "raison": "phrase courte en français", "brouillon": "réponse FR personnalisée ~4 lignes, sans signature"}`;
+{"francophone": bool (mets false UNIQUEMENT si l'annonce est clairement dans une autre langue / la mission ne peut pas se mener en français ; en cas de doute mets true), "remote_statut": "full_remote" | "sur_site" | "non_precise" ("full_remote" si télétravail total / remote / 100% télétravail ; "non_precise" si télétravail partiel/hybride (ex: 2 jours sur site) OU si non précisé ; "sur_site" UNIQUEMENT si présentiel strict explicite SANS aucun télétravail), "montant": "string (ex '400€/j', ou 'à confirmer' si non chiffré)", "score": int (0-100, adéquation avec le profil), "score_label": "fort" | "à vérifier" | "faible", "raison": "phrase courte en français", "brouillon": "réponse FR personnalisée ~4 lignes, sans signature"}`;
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -164,20 +174,32 @@ function normalizeJob(job) {
 }
 
 // FRANCE TRAVAIL (source principale, francophone, gratuit). Réutilise poleEmploiService.
+// Pagine sur plusieurs "range" (150 max/req) pour ramener plus de volume.
 async function fetchFranceTravail(keyword) {
   if (!poleEmploiService.isConfigured()) return [];
-  const { offers } = await poleEmploiService.searchOffers({ motsCles: keyword, range: '0-149' });
-  return (offers || []).map((o) => ({
-    source: 'france_travail',
-    uid: `ft-${o.id}`,
-    titre: o.intitule || 'Offre',
-    entreprise: (o.entreprise && o.entreprise.nom) || '',
-    source_label: 'via France Travail',
-    lien: `https://candidat.pole-emploi.fr/offres/recherche/detail/${o.id}`,
-    description: o.description || '',
-    date_annonce: o.dateCreation ? o.dateCreation.slice(0, 10) : null,
-    montant_brut: (o.salaire && o.salaire.libelle) || null
-  }));
+  const out = [];
+  for (const range of FT_RANGES) {
+    let offers = [];
+    try {
+      ({ offers } = await poleEmploiService.searchOffers({ motsCles: keyword, range }));
+    } catch (e) {
+      console.error(`[Veille] France Travail "${keyword}" range ${range}:`, e.message);
+      break; // 206/range hors limite -> on arrête la pagination pour ce mot-clé
+    }
+    if (!offers || offers.length === 0) break;
+    out.push(...offers.map((o) => ({
+      source: 'france_travail',
+      uid: `ft-${o.id}`,
+      titre: o.intitule || 'Offre',
+      entreprise: (o.entreprise && o.entreprise.nom) || '',
+      source_label: 'via France Travail',
+      lien: `https://candidat.pole-emploi.fr/offres/recherche/detail/${o.id}`,
+      description: o.description || '',
+      date_annonce: o.dateCreation ? o.dateCreation.slice(0, 10) : null,
+      montant_brut: (o.salaire && o.salaire.libelle) || null
+    })));
+  }
+  return out;
 }
 
 // JSEARCH (complément bridé, pays=fr). Réutilise googleJobsService.
@@ -245,8 +267,11 @@ async function runVeille(db) {
     erreurs: 0,
     llm_calls: 0
   };
-  const rejetsExemples = []; // pour diagnostic : { titre, raison }
-  const ajoutRejet = (titre, raison) => { if (rejetsExemples.length < 8) rejetsExemples.push({ titre, raison }); };
+  // Exemples d'écartés PAR catégorie (max 3) pour diagnostic.
+  const rejetsExemples = { langue: [], anti_cdi: [], remote: [], tjm: [] };
+  const ajoutRejet = (cat, titre, raison) => {
+    if (rejetsExemples[cat] && rejetsExemples[cat].length < 3) rejetsExemples[cat].push({ titre, raison });
+  };
 
   try {
   // a) Récupération MULTI-SOURCES (toutes normalisées dans le même flux).
@@ -342,7 +367,7 @@ async function runVeille(db) {
     //     (économise des appels IA). La confirmation "francophone" reste faite par l'IA.
     if (looksEnglishOnly(texte)) {
       report.rejets.non_francophone++;
-      ajoutRejet(annonce.titre, 'pré-écran langue : massivement anglais');
+      ajoutRejet('langue', annonce.titre, 'pré-écran : massivement anglais');
       continue;
     }
     report.apres_prefiltre_langue++;
@@ -351,7 +376,7 @@ async function runVeille(db) {
     const sMission = scoreMission(annonce.titre, annonce.description);
     if (sMission < 0) {
       report.rejets.anti_cdi++;
-      ajoutRejet(annonce.titre, `scoring anti-CDI (${sMission})`);
+      ajoutRejet('anti_cdi', annonce.titre, `score ${sMission}`);
       continue;
     }
 
@@ -383,7 +408,7 @@ async function runVeille(db) {
     // d1) Francophone : rejeter UNIQUEMENT si clairement non français (doute -> garder).
     if (q.francophone === false) {
       report.rejets.non_francophone++;
-      ajoutRejet(annonce.titre, `IA : non francophone (${q.raison || ''})`);
+      ajoutRejet('langue', annonce.titre, `IA non francophone (${q.raison || ''})`);
       continue;
     }
 
@@ -392,7 +417,7 @@ async function runVeille(db) {
     const remoteStatut = q.remote_statut || (q.full_remote === true ? 'full_remote' : 'non_precise');
     if (criteres.full_remote_only && remoteStatut === 'sur_site') {
       report.rejets.non_remote++;
-      ajoutRejet(annonce.titre, 'IA : explicitement sur site / présentiel');
+      ajoutRejet('remote', annonce.titre, 'IA : présentiel strict');
       continue;
     }
     const fullRemote = remoteStatut === 'full_remote';
@@ -404,7 +429,7 @@ async function runVeille(db) {
     const montantNum = parseMontant(montantStr);
     if (montantNum !== null && montantNum < criteres.tjm_min) {
       report.rejets.tjm_insuffisant++;
-      ajoutRejet(annonce.titre, `TJM ${montantNum}€ < plancher ${criteres.tjm_min}€`);
+      ajoutRejet('tjm', annonce.titre, `TJM ${montantNum}€ < ${criteres.tjm_min}€`);
       continue;
     }
     const montantFinal = montantNum !== null ? montantStr : 'à confirmer';
@@ -443,11 +468,20 @@ async function runVeille(db) {
     `JSearch: ${s.jsearch.retenues} (sur ${s.jsearch.recuperees}), ` +
     `Jooble: ${s.jooble.retenues} (sur ${s.jooble.recuperees}) -> total retenues ${report.retenues}`
   );
-  console.log(`[Veille] Écartés anti-CDI (avant IA): ${report.rejets.anti_cdi}`);
-  console.log('[Veille] Rejets:', report.rejets, '| LLM calls:', report.llm_calls, '| erreurs:', report.erreurs);
-  if (rejetsExemples.length) {
-    console.log('[Veille] Exemples de rejets (titre — raison) :');
-    rejetsExemples.forEach((r) => console.log(`   - ${r.titre} — ${r.raison}`));
+  const rj = report.rejets;
+  console.log(
+    `[Veille] Écartés par filtre — langue: ${rj.non_francophone}, anti-CDI: ${rj.anti_cdi}, ` +
+    `remote (présentiel): ${rj.non_remote}, TJM: ${rj.tjm_insuffisant}, doublon: ${rj.doublon}`
+  );
+  console.log('[Veille] Rejets (détail):', rj, '| LLM calls:', report.llm_calls, '| erreurs:', report.erreurs);
+  // Exemples par catégorie (3 max) pour vérifier qu'on ne jette pas de bonnes offres.
+  const labelCat = { langue: 'LANGUE', anti_cdi: 'ANTI-CDI', remote: 'REMOTE', tjm: 'TJM' };
+  for (const cat of Object.keys(rejetsExemples)) {
+    const ex = rejetsExemples[cat];
+    if (ex.length) {
+      console.log(`[Veille] Exemples écartés ${labelCat[cat]} :`);
+      ex.forEach((r) => console.log(`   - ${r.titre} — ${r.raison}`));
+    }
   }
 
   runStatus.etape = 'termine';
