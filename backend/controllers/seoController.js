@@ -170,6 +170,60 @@ const seoController = {
       console.error('[SEO] getAffamees:', e.message);
       res.status(500).json({ message: 'Erreur serveur' });
     }
+  },
+
+  // POST /api/seo/jobs { site_id, job_type } -> crée un job 'pending'.
+  // SEULE écriture autorisée côté Node, et UNIQUEMENT sur seo_jobs (jamais seo_pages/seo_links).
+  // Le worker Python est seul à passer le job en running/done/failed et à crawler.
+  createJob: async (req, res) => {
+    const db = req.app.locals.db;
+    const siteId = parseInt((req.body || {}).site_id, 10);
+    const jobType = (req.body || {}).job_type;
+    if (!siteId) return res.status(400).json({ message: 'site_id requis' });
+    if (!['crawl_full', 'crawl_incremental'].includes(jobType)) {
+      return res.status(400).json({ message: 'job_type invalide' });
+    }
+    try {
+      const site = await db.pool.query('SELECT id FROM seo_sites WHERE id = $1', [siteId]);
+      if (site.rows.length === 0) return res.status(404).json({ message: 'Site introuvable' });
+      try {
+        const r = await db.pool.query(
+          "INSERT INTO seo_jobs (site_id, job_type, status) VALUES ($1, $2, 'pending') RETURNING *",
+          [siteId, jobType]
+        );
+        return res.status(201).json({ job: r.rows[0], already_active: false });
+      } catch (e) {
+        // Conflit sur l'index unique partiel -> un job est déjà actif pour ce site.
+        if (e.code === '23505') {
+          const active = await db.pool.query(
+            "SELECT * FROM seo_jobs WHERE site_id = $1 AND status IN ('pending','running') ORDER BY created_at DESC LIMIT 1",
+            [siteId]
+          );
+          return res.status(200).json({ job: active.rows[0] || null, already_active: true });
+        }
+        throw e;
+      }
+    } catch (e) {
+      console.error('[SEO] createJob:', e.message);
+      res.status(500).json({ message: 'Erreur serveur' });
+    }
+  },
+
+  // GET /api/seo/jobs?site_id= -> dernier job du site (statut + progression).
+  getJob: async (req, res) => {
+    const db = req.app.locals.db;
+    const siteId = parseInt(req.query.site_id, 10);
+    if (!siteId) return res.status(400).json({ message: 'site_id requis' });
+    try {
+      const r = await db.pool.query(
+        'SELECT * FROM seo_jobs WHERE site_id = $1 ORDER BY created_at DESC LIMIT 1',
+        [siteId]
+      );
+      res.json(r.rows[0] || null);
+    } catch (e) {
+      console.error('[SEO] getJob:', e.message);
+      res.status(500).json({ message: 'Erreur serveur' });
+    }
   }
 };
 

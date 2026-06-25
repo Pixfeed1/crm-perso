@@ -25,6 +25,26 @@ python run.py --no-resume   # incrémental sans reprise (repart du début)
 python run.py --site jurojin.net   # un seul site
 ```
 
+### Mode service (file de jobs déclenchée depuis l'UI)
+Le worker peut tourner en **service permanent** qui consomme la table `seo_jobs` :
+```bash
+python run.py --serve     # boucle : prend le plus ancien job 'pending', l'exécute, recommence
+```
+- **Un seul job à la fois** (séquentiel), claim atomique (`FOR UPDATE SKIP LOCKED`).
+- Au repos, le service **dort** `POLL_INTERVAL` (10 s) → consommation ~nulle.
+- L'UI (bouton « Lancer le crawl ») crée un job via `POST /api/seo/jobs` ; le Node n'écrit
+  QUE dans `seo_jobs` (jamais `seo_pages`/`seo_links`) et ne crawle jamais.
+- Anti-double garanti en base (index unique partiel : 1 job actif max par site).
+
+Installation systemd (modèle `crm-pixfeed.service`) :
+```bash
+sudo cp crm-seo-worker.service /etc/systemd/system/
+# adapter les chemins (WorkingDirectory, EnvironmentFile, ExecStart) dans le fichier
+sudo systemctl daemon-reload
+sudo systemctl enable --now crm-seo-worker
+sudo journalctl -u crm-seo-worker -f      # logs
+```
+
 ### Persistance & reprise
 - **Commit par lots** (`config.COMMIT_BATCH`, défaut 25 pages) : la progression est persistée
   au fil de l'eau (visible immédiatement en base) et un crash ne perd qu'un lot.

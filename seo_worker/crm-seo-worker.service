@@ -1,0 +1,16 @@
+[Unit]
+Description=PixFeed SEO worker (file de jobs : crawl interne + PageRank)
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+# Adapter les chemins au serveur (modèle crm-pixfeed.service).
+WorkingDirectory=/var/www/vhosts/crm.pixfeed.net/seo_worker
+# Réutilise les variables DB_* du backend Node.
+EnvironmentFile=/var/www/vhosts/crm.pixfeed.net/backend/.env
+ExecStart=/var/www/vhosts/crm.pixfeed.net/seo_worker/venv/bin/python run.py --serve
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

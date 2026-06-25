@@ -4,10 +4,11 @@
 // Sélecteur de site, vue d'ensemble (santé), carte de flux (PageRank), liste des pages
 // triées par jus, et section "pages affamées" avec liens internes suggérés.
 // Données en LECTURE SEULE (worker Python seo_worker). Tokens de thème, react-icons, framer-motion.
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
 import {
-  FiShare2, FiRefreshCw, FiTrendingUp, FiAlertTriangle, FiLink, FiArrowRight, FiExternalLink
+  FiShare2, FiRefreshCw, FiTrendingUp, FiAlertTriangle, FiLink, FiArrowRight, FiExternalLink,
+  FiPlay, FiLoader, FiCheckCircle, FiXCircle, FiClock
 } from 'react-icons/fi';
 import { seoAPI } from '../services/api';
 import { useToast } from '../hooks/useToast';
@@ -39,6 +40,9 @@ const Seo = () => {
   const [sort, setSort] = useState('pagerank');
   const [healthFilter, setHealthFilter] = useState('all'); // filtre liste des pages
   const [loading, setLoading] = useState(true);
+  const [job, setJob] = useState(null);        // dernier job du site
+  const [starting, setStarting] = useState(false);
+  const jobPollRef = useRef(null);
 
   useEffect(() => {
     seoAPI.getSites()
@@ -69,6 +73,52 @@ const Seo = () => {
   }, [siteId, sort, healthFilter, toast]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Suivi du job de crawl : polling tant qu'il est pending/running ; recharge à la fin.
+  const stopJobPoll = () => { if (jobPollRef.current) { clearInterval(jobPollRef.current); jobPollRef.current = null; } };
+  const pollJob = useCallback((sid) => {
+    stopJobPoll();
+    jobPollRef.current = setInterval(async () => {
+      try {
+        const j = await seoAPI.getJob(sid);
+        setJob(j);
+        if (!j || (j.status !== 'pending' && j.status !== 'running')) {
+          stopJobPoll();
+          if (j && j.status === 'done') { toast.success('Crawl terminé'); load(); }
+          if (j && j.status === 'failed') toast.error('Crawl en échec');
+        }
+      } catch (e) { stopJobPoll(); }
+    }, 5000);
+  }, [load, toast]);
+
+  // Au changement de site : lire l'état du job, et reprendre le polling s'il est actif.
+  useEffect(() => {
+    if (!siteId) return;
+    stopJobPoll();
+    seoAPI.getJob(siteId).then((j) => {
+      setJob(j);
+      if (j && (j.status === 'pending' || j.status === 'running')) pollJob(siteId);
+    }).catch(() => {});
+    return stopJobPoll;
+  }, [siteId, pollJob]);
+
+  const launchCrawl = async (jobType) => {
+    if (!siteId) return;
+    setStarting(true);
+    try {
+      const res = await seoAPI.createJob(siteId, jobType);
+      setJob(res.job);
+      if (res.already_active) toast.info('Un crawl est déjà en cours pour ce site');
+      else toast.success(jobType === 'crawl_full' ? 'Crawl complet lancé' : 'Crawl lancé');
+      pollJob(siteId);
+    } catch (e) {
+      toast.error(e.message || 'Impossible de lancer le crawl');
+    } finally {
+      setStarting(false);
+    }
+  };
+
+  const jobActive = job && (job.status === 'pending' || job.status === 'running');
 
   const cards = overview ? [
     { label: 'Pages', value: overview.total_pages, icon: FiShare2 },
@@ -103,9 +153,49 @@ const Seo = () => {
             >
               {sites.map((s) => <option key={s.id} value={s.id}>{s.domain}</option>)}
             </select>
+            <button
+              onClick={() => launchCrawl('crawl_incremental')}
+              disabled={starting || jobActive}
+              className="px-3 py-2 rounded-lg bg-accent hover:bg-accent-hover text-white text-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Lancer un crawl incrémental"
+            >
+              <FiPlay size={15} /> Lancer le crawl
+            </button>
+            <button
+              onClick={() => launchCrawl('crawl_full')}
+              disabled={starting || jobActive}
+              className="px-3 py-2 rounded-lg bg-surface-strong hover:bg-border-strong text-text-primary text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Reconstruction complète du graphe"
+            >
+              Complet
+            </button>
             <button onClick={load} className="p-2 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-strong" title="Rafraîchir"><FiRefreshCw size={16} /></button>
           </div>
         </header>
+
+        {/* État du dernier job de crawl */}
+        {job && (
+          <div className="mb-4">
+            {job.status === 'running' ? (
+              <div className="inline-flex items-center gap-2 text-sm bg-info-bg text-info-text border border-info-text/30 rounded-lg px-3 py-2">
+                <motion.span animate={{ rotate: 360 }} transition={{ duration: 0.9, repeat: Infinity, ease: 'linear' }} className="inline-flex"><FiLoader size={15} /></motion.span>
+                Crawl en cours{job.progress_total ? ` — ${job.progress_current}/${job.progress_total}` : '…'}
+              </div>
+            ) : job.status === 'pending' ? (
+              <div className="inline-flex items-center gap-2 text-sm bg-neutral-bg text-neutral-text border border-border rounded-lg px-3 py-2">
+                <FiClock size={15} /> Crawl en attente…
+              </div>
+            ) : job.status === 'failed' ? (
+              <div className="inline-flex items-center gap-2 text-sm bg-danger-bg text-danger-text border border-danger-text/30 rounded-lg px-3 py-2">
+                <FiXCircle size={15} /> Dernier crawl en échec{job.error ? ` : ${job.error}` : ''}
+              </div>
+            ) : job.status === 'done' ? (
+              <div className="inline-flex items-center gap-2 text-sm bg-success-bg text-success-text border border-success-text/30 rounded-lg px-3 py-2">
+                <FiCheckCircle size={15} /> Dernier crawl terminé{job.finished_at ? ` · ${fmtDate(job.finished_at)}` : ''}
+              </div>
+            ) : null}
+          </div>
+        )}
 
         {sites.length === 0 && !loading ? (
           <div className="text-center py-16 bg-surface/30 rounded-xl border border-border">

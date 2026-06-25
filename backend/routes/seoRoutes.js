@@ -13,5 +13,8 @@ router.get('/overview', seoController.getOverview);
 router.get('/pages', seoController.getPages);
 router.get('/graph', seoController.getGraph);
 router.get('/affamees', seoController.getAffamees);
+// File de jobs : POST = créer une demande (seule écriture, sur seo_jobs uniquement) ; GET = statut.
+router.post('/jobs', seoController.createJob);
+router.get('/jobs', seoController.getJob);
 
 module.exports = router;

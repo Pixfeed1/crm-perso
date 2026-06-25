@@ -1564,6 +1564,28 @@ async function ensureSeoTables(client) {
   `);
   await client.query('CREATE INDEX IF NOT EXISTS idx_seo_crawl_runs_site ON seo_crawl_runs(site_id, started_at DESC);');
 
+  // File de jobs SEO : créée côté Node (POST), exécutée par le worker (un seul à la fois).
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS seo_jobs (
+      id               SERIAL PRIMARY KEY,
+      site_id          INTEGER NOT NULL REFERENCES seo_sites(id) ON DELETE CASCADE,
+      job_type         TEXT NOT NULL,
+      status           TEXT NOT NULL DEFAULT 'pending',
+      progress_current INTEGER NOT NULL DEFAULT 0,
+      progress_total   INTEGER NOT NULL DEFAULT 0,
+      error            TEXT,
+      created_at       TIMESTAMP DEFAULT NOW(),
+      started_at       TIMESTAMP,
+      finished_at      TIMESTAMP,
+      CONSTRAINT seo_jobs_type_chk   CHECK (job_type IN ('crawl_full','crawl_incremental','gsc_sync')),
+      CONSTRAINT seo_jobs_status_chk CHECK (status   IN ('pending','running','done','failed'))
+    );
+  `);
+  await client.query('CREATE INDEX IF NOT EXISTS idx_seo_jobs_site   ON seo_jobs(site_id, created_at DESC);');
+  await client.query('CREATE INDEX IF NOT EXISTS idx_seo_jobs_status ON seo_jobs(status, created_at);');
+  // Anti-double GARANTI : au plus 1 job actif (pending|running) par site.
+  await client.query("CREATE UNIQUE INDEX IF NOT EXISTS uq_seo_jobs_active ON seo_jobs(site_id) WHERE status IN ('pending','running');");
+
   console.log('  ✓ Tables SEO vérifiées');
 }
 

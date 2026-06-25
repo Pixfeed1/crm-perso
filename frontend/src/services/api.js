@@ -568,7 +568,9 @@ export const seoAPI = {
     return apiRequest(`/seo/pages?${qs}`);
   },
   getGraph: (siteId) => apiRequest(`/seo/graph?site_id=${siteId}`),
-  getAffamees: (siteId) => apiRequest(`/seo/affamees?site_id=${siteId}`)
+  getAffamees: (siteId) => apiRequest(`/seo/affamees?site_id=${siteId}`),
+  createJob: (siteId, jobType) => apiRequest('/seo/jobs', 'POST', { site_id: siteId, job_type: jobType }),
+  getJob: (siteId) => apiRequest(`/seo/jobs?site_id=${siteId}`)
 };
 
 // ===== VEILLE MISSIONS (agent annonces freelance) =====

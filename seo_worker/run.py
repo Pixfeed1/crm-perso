@@ -16,6 +16,7 @@ Règles clés :
 """
 import argparse
 import json
+import time
 from datetime import datetime, timezone
 
 import config
@@ -72,7 +73,7 @@ def upsert_site(cur, site):
     return cur.fetchone()[0]
 
 
-def crawl_site(conn, site, full=False, no_resume=False):
+def crawl_site(conn, site, full=False, no_resume=False, job_id=None):
     cur = conn.cursor()
     domain = site["domain"]
     base = site["wp_base_url"].rstrip("/")
@@ -121,6 +122,10 @@ def crawl_site(conn, site, full=False, no_resume=False):
             cur.execute("DELETE FROM seo_pages WHERE site_id = %s AND url <> ALL(%s)", (site_id, listed_urls))
             conn.commit()
 
+        if job_id is not None:
+            cur.execute("UPDATE seo_jobs SET progress_total = %s WHERE id = %s", (total, job_id))
+            conn.commit()
+
         processed = 0
         parsed = 0
         links = 0
@@ -156,6 +161,7 @@ def crawl_site(conn, site, full=False, no_resume=False):
                     or (mod and prev["modified"] is None)
                 )
                 if needs_parse:
+                    time.sleep(config.POLITENESS_DELAY)  # politesse : ne pas marteler le site
                     html = wp.fetch_html(url)
                     if html:
                         parsed += 1
@@ -192,6 +198,8 @@ def crawl_site(conn, site, full=False, no_resume=False):
                     "UPDATE seo_crawl_runs SET last_wp_id = %s, pages_processed = %s WHERE id = %s",
                     (last_wp_id, processed, run_id),
                 )
+                if job_id is not None:
+                    cur.execute("UPDATE seo_jobs SET progress_current = %s WHERE id = %s", (idx, job_id))
                 conn.commit()
                 print(f"  page {idx}/{total} — {domain} ({processed} traitées, {parsed} parsées)")
 
@@ -233,6 +241,7 @@ def crawl_site(conn, site, full=False, no_resume=False):
         )
         conn.commit()
         print(f"  OK pages={processed} parsées={parsed} liens+={links} noeuds_graphe={len(pr)}")
+        return True
 
     except Exception as e:
         # Échec : on conserve la progression commitée et on marque le run 'failed'
@@ -244,6 +253,75 @@ def crawl_site(conn, site, full=False, no_resume=False):
         except Exception:
             conn.rollback()
         print(f"[ERREUR site] {domain}: {e}")
+        return False
+
+
+def site_by_id(conn, site_id):
+    cur = conn.cursor()
+    cur.execute("SELECT id, domain, wp_base_url, gsc_property FROM seo_sites WHERE id = %s", (site_id,))
+    r = cur.fetchone()
+    if not r:
+        return None
+    return {"id": r[0], "domain": r[1], "wp_base_url": r[2], "gsc_property": r[3]}
+
+
+def claim_next_job(conn):
+    """Réserve atomiquement le plus ancien job 'pending' (un seul à la fois)."""
+    cur = conn.cursor()
+    cur.execute(
+        """UPDATE seo_jobs SET status = 'running', started_at = NOW()
+           WHERE id = (
+             SELECT id FROM seo_jobs WHERE status = 'pending'
+             ORDER BY created_at ASC FOR UPDATE SKIP LOCKED LIMIT 1
+           )
+           RETURNING id, site_id, job_type""",
+        (),
+    )
+    row = cur.fetchone()
+    conn.commit()
+    if not row:
+        return None
+    return {"id": row[0], "site_id": row[1], "job_type": row[2]}
+
+
+def serve():
+    """Service permanent : traite la file seo_jobs SÉQUENTIELLEMENT (un seul job à la fois)."""
+    conn = connect()
+    print(f"[SEO] Worker en service (poll {config.POLL_INTERVAL}s)")
+    try:
+        while True:
+            job = claim_next_job(conn)
+            if not job:
+                time.sleep(config.POLL_INTERVAL)
+                continue
+            site = site_by_id(conn, job["site_id"])
+            if not site:
+                conn.cursor().execute(
+                    "UPDATE seo_jobs SET status = 'failed', error = 'site introuvable', finished_at = NOW() WHERE id = %s",
+                    (job["id"],),
+                )
+                conn.commit()
+                continue
+            print(f"[SEO] Job #{job['id']} {job['job_type']} -> {site['domain']}")
+            full = job["job_type"] == "crawl_full"
+            try:
+                ok = crawl_site(conn, site, full=full, job_id=job["id"])
+            except Exception as e:
+                ok = False
+                print(f"[SEO] Job #{job['id']} exception: {e}")
+            cur = conn.cursor()
+            if ok:
+                cur.execute("UPDATE seo_jobs SET status = 'done', finished_at = NOW() WHERE id = %s", (job["id"],))
+            else:
+                cur.execute(
+                    "UPDATE seo_jobs SET status = 'failed', finished_at = NOW(), error = COALESCE(error, 'échec du crawl') WHERE id = %s",
+                    (job["id"],),
+                )
+            conn.commit()
+    except KeyboardInterrupt:
+        print("\n[SEO] Service arrêté.")
+    finally:
+        conn.close()
 
 
 def main():
@@ -251,7 +329,12 @@ def main():
     ap.add_argument("--full", action="store_true", help="reconstruction complète du graphe (purge liens + reparse total, ignore la reprise)")
     ap.add_argument("--no-resume", action="store_true", help="run incrémental sans reprise du run précédent")
     ap.add_argument("--site", help="restreindre à un domaine (ex: jurojin.net)")
+    ap.add_argument("--serve", action="store_true", help="service permanent : traite la file seo_jobs (un seul job à la fois)")
     args = ap.parse_args()
+
+    if args.serve:
+        serve()
+        return
 
     sites = [s for s in config.SITES if (not args.site or s["domain"] == args.site)]
     if not sites:
