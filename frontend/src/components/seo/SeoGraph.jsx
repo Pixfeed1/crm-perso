@@ -36,6 +36,7 @@ const SeoGraph = ({ data }) => {
   const [selected, setSelected] = useState(null);
   const [view, setView] = useState({ k: 1, tx: 0, ty: 0 }); // zoom + translation
   const [override, setOverride] = useState({});             // positions déplacées (url -> {x,y})
+  const [engaged, setEngaged] = useState(false);            // zoom molette actif seulement après un clic sur la carte
   const drag = useRef(null);                                // état de glisser en cours
 
   const { basePos, nodes, edges, byUrl, incoming, outgoing } = useMemo(() => {
@@ -88,6 +89,8 @@ const SeoGraph = ({ data }) => {
   };
 
   const onWheel = (e) => {
+    // Zoom molette UNIQUEMENT si la carte est activée (après un clic) -> sinon la page défile.
+    if (!engaged) return;
     e.preventDefault();
     const v = toViewBox(e.clientX, e.clientY);
     zoomAround(v.x, v.y, e.deltaY < 0 ? 1.15 : 1 / 1.15);
@@ -95,11 +98,13 @@ const SeoGraph = ({ data }) => {
 
   const onMouseDownNode = (e, n) => {
     e.stopPropagation();
+    setEngaged(true);
     const g = toGraph(e.clientX, e.clientY);
     const p = posOf(n.url);
     drag.current = { type: 'node', url: n.url, dx: g.x - p.x, dy: g.y - p.y, moved: false };
   };
   const onMouseDownBg = (e) => {
+    setEngaged(true);
     drag.current = { type: 'pan', startX: e.clientX, startY: e.clientY, tx0: view.tx, ty0: view.ty, moved: false };
   };
   const onMouseMove = (e) => {
@@ -136,8 +141,15 @@ const SeoGraph = ({ data }) => {
 
   return (
     <div>
-      <div className="relative w-full overflow-hidden" ref={wrapRef}
-        onMouseMove={onMouseMove} onMouseUp={endDrag} onMouseLeave={() => { endDrag(); setHover(null); }}>
+      <div className={`relative w-full overflow-hidden rounded-lg transition-shadow ${engaged ? 'ring-2 ring-accent/60' : ''}`} ref={wrapRef}
+        onMouseMove={onMouseMove} onMouseUp={endDrag}
+        onMouseLeave={() => { endDrag(); setHover(null); setEngaged(false); }}>
+        {/* Indice : zoom molette inactif tant qu'on n'a pas cliqué (évite de capter le scroll de page) */}
+        {!engaged && (
+          <div className="absolute bottom-2 left-2 z-10 text-xs text-text-muted bg-surface-strong/80 border border-border rounded-full px-2 py-1 pointer-events-none">
+            Cliquez sur la carte pour activer le zoom molette
+          </div>
+        )}
         {/* Contrôles zoom */}
         <div className="absolute top-2 right-2 z-10 flex flex-col gap-1">
           <button className={btn} title="Zoom +" onClick={() => zoomAround(CX, CY, 1.2)}><FiZoomIn size={15} /></button>
