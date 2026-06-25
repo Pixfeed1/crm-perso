@@ -57,6 +57,21 @@ const CDI_DESC_NEG = ['rémunération annuelle', 'remuneration annuelle', 'mutue
 
 const anyHit = (text, words) => words.some((w) => text.includes(w));
 
+// Technos HORS PÉRIMÈTRE (jamais pour ce profil) -> écartées d'office, avant l'IA.
+// ÉDITABLE. Match sur titre+description (insensible à la casse).
+const TECHNO_EXCLUS = [
+  'as400', 'as/400', 'rpg', 'cobol', 'mainframe', 'abap', ' sap ', 'sap ', ' sap', 'salesforce',
+  'servicenow', 'react native', 'react-native', 'flutter', 'embarqué', 'embarque', 'firmware',
+  'c++ embarqué', 'développeur mobile', 'developpeur mobile', 'application mobile', 'app mobile',
+  'mobile natif', 'natif ios', 'natif android'
+];
+
+// Renvoie le terme hors-périmètre matché, sinon null.
+function matchTechnoExclus(titre, description) {
+  const hay = ` ${lower(titre)} ${lower(description)} `;
+  return TECHNO_EXCLUS.find((w) => hay.includes(w)) || null;
+}
+
 function scoreMission(titre, description) {
   const t = lower(titre);
   const d = lower(description);
@@ -258,7 +273,7 @@ async function runVeille(db) {
     apres_prefiltre_langue: 0,
     qualifiees_ia: 0,
     retenues: 0,
-    rejets: { anti_cdi: 0, non_francophone: 0, non_remote: 0, tjm_insuffisant: 0, sans_montant_rejete: 0, doublon: 0 },
+    rejets: { anti_cdi: 0, techno: 0, non_francophone: 0, non_remote: 0, tjm_insuffisant: 0, sans_montant_rejete: 0, doublon: 0 },
     sources: {
       france_travail: { recuperees: 0, retenues: 0 },
       jsearch: { recuperees: 0, retenues: 0 },
@@ -268,7 +283,7 @@ async function runVeille(db) {
     llm_calls: 0
   };
   // Exemples d'écartés PAR catégorie (max 3) pour diagnostic.
-  const rejetsExemples = { langue: [], anti_cdi: [], remote: [], tjm: [] };
+  const rejetsExemples = { langue: [], anti_cdi: [], techno: [], remote: [], tjm: [] };
   const ajoutRejet = (cat, titre, raison) => {
     if (rejetsExemples[cat] && rejetsExemples[cat].length < 3) rejetsExemples[cat].push({ titre, raison });
   };
@@ -372,7 +387,15 @@ async function runVeille(db) {
     }
     report.apres_prefiltre_langue++;
 
-    // b3) Scoring anti-CDI (GRATUIT, avant l'IA) : écarte le salariat. Score < 0 -> écarté.
+    // b3) Techno hors périmètre (GRATUIT, avant l'IA) : as400, SAP, mobile natif… -> écarté.
+    const technoKo = matchTechnoExclus(annonce.titre, annonce.description);
+    if (technoKo) {
+      report.rejets.techno++;
+      ajoutRejet('techno', annonce.titre, `hors périmètre : ${technoKo.trim()}`);
+      continue;
+    }
+
+    // b4) Scoring anti-CDI (GRATUIT, avant l'IA) : écarte le salariat. Score < 0 -> écarté.
     const sMission = scoreMission(annonce.titre, annonce.description);
     if (sMission < 0) {
       report.rejets.anti_cdi++;
@@ -470,12 +493,12 @@ async function runVeille(db) {
   );
   const rj = report.rejets;
   console.log(
-    `[Veille] Écartés par filtre — langue: ${rj.non_francophone}, anti-CDI: ${rj.anti_cdi}, ` +
-    `remote (présentiel): ${rj.non_remote}, TJM: ${rj.tjm_insuffisant}, doublon: ${rj.doublon}`
+    `[Veille] Écartés par filtre — langue: ${rj.non_francophone}, techno (hors périmètre): ${rj.techno}, ` +
+    `anti-CDI: ${rj.anti_cdi}, remote (présentiel): ${rj.non_remote}, TJM: ${rj.tjm_insuffisant}, doublon: ${rj.doublon}`
   );
   console.log('[Veille] Rejets (détail):', rj, '| LLM calls:', report.llm_calls, '| erreurs:', report.erreurs);
   // Exemples par catégorie (3 max) pour vérifier qu'on ne jette pas de bonnes offres.
-  const labelCat = { langue: 'LANGUE', anti_cdi: 'ANTI-CDI', remote: 'REMOTE', tjm: 'TJM' };
+  const labelCat = { langue: 'LANGUE', techno: 'TECHNO (hors périmètre)', anti_cdi: 'ANTI-CDI', remote: 'REMOTE', tjm: 'TJM' };
   for (const cat of Object.keys(rejetsExemples)) {
     const ex = rejetsExemples[cat];
     if (ex.length) {

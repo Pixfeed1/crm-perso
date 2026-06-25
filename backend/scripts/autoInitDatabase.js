@@ -1304,6 +1304,28 @@ async function ensureObjectifParams(client) {
   console.log('  ✓ Table objectif_params vérifiée');
 }
 
+// Listes par défaut "full-stack généraliste" (recherche + pré-filtre).
+const VEILLE_MOTS_REQUIS = [
+  'wordpress', 'woocommerce', 'prestashop', 'php', 'next.js', 'react', 'node.js', 'nodejs',
+  'javascript', 'typescript', 'python', 'fastapi', 'django', 'flask', 'api rest',
+  'intégration api', 'stripe', 'développeur web', 'développeur full-stack', 'intégrateur web',
+  'freelance développeur', 'mission développeur', 'symfony', 'laravel', 'vue', 'vuejs', 'angular'
+];
+// Exclus = uniquement ce qui n'est JAMAIS pertinent. PAS de CDI/CDD/régie/présentiel/mobile ici :
+// ces cas sont gérés par les gates intelligents (anti-CDI, remote IA, techno hors périmètre).
+const VEILLE_MOTS_EXCLUS = [
+  'alternance', 'apprentissage', 'stage', 'stagiaire', 'intérim', 'offshore',
+  'junior', 'débutant', 'bénévole', 'non rémunéré', 'data scientist'
+];
+// Requêtes envoyées aux sources (orientées mission, couvrant le full-stack).
+const VEILLE_REQUETES = [
+  'freelance développeur web', 'mission développeur web', 'freelance full-stack', 'mission full-stack',
+  'freelance PHP', 'mission PHP', 'freelance React', 'mission React', 'freelance Node.js',
+  'freelance Next.js', 'mission Next.js', 'freelance Python', 'mission Python', 'freelance Symfony',
+  'freelance Laravel', 'freelance WordPress', 'mission WordPress', 'consultant WordPress',
+  'freelance PrestaShop', 'freelance Vue.js', 'régie web', 'prestataire web freelance'
+];
+
 /**
  * Migration idempotente : tables de l'agent "Veille missions" (annonces freelance).
  * veille_criteres : 1 ligne éditable (mots-clés, TJM, full remote, heure du run).
@@ -1351,29 +1373,47 @@ async function ensureVeilleTables(client) {
   // Requêtes orientées "mission" envoyées aux sources (éditable). Distinct des mots_requis
   // (qui servent au pré-filtre/scoring). Idempotent.
   await client.query("ALTER TABLE veille_criteres ADD COLUMN IF NOT EXISTS requetes TEXT[] NOT NULL DEFAULT '{}';");
-  // Seed des requêtes par défaut si la colonne est vide (orientées freelance/mission).
-  await client.query(`
-    UPDATE veille_criteres SET requetes = $1
-    WHERE requetes IS NULL OR cardinality(requetes) = 0
-  `, [[
-    'freelance PHP', 'mission PHP', 'freelance WordPress', 'mission WordPress',
-    'consultant WordPress', 'freelance PrestaShop', 'mission PrestaShop',
-    'freelance React', 'mission Next.js', 'régie web', 'prestataire web freelance'
-  ]]);
-  // Seed de la ligne de critères si absente (valeurs initiales de la spec).
+  // Seed des requêtes par défaut si la colonne est vide.
+  await client.query(
+    'UPDATE veille_criteres SET requetes = $1 WHERE requetes IS NULL OR cardinality(requetes) = 0',
+    [VEILLE_REQUETES]
+  );
+  // Seed de la ligne de critères si absente.
   const exists = await client.query('SELECT 1 FROM veille_criteres LIMIT 1');
   if (exists.rows.length === 0) {
     await client.query(
-      `INSERT INTO veille_criteres (mots_requis, mots_exclus, full_remote_only, tjm_min, garder_sans_montant, profil_reference, heure_run, actif)
-       VALUES ($1, $2, true, 350, true, $3, '07:30', true)`,
+      `INSERT INTO veille_criteres (mots_requis, mots_exclus, requetes, full_remote_only, tjm_min, garder_sans_montant, profil_reference, heure_run, actif)
+       VALUES ($1, $2, $3, true, 350, true, $4, '07:30', true)`,
       [
-        ['wordpress', 'woocommerce', 'prestashop', 'next.js', 'php', 'développeur web freelance', 'intégrateur web', 'développeur full-stack'],
-        ['alternance', 'apprentissage', 'stage', 'stagiaire', 'CDI', 'CDD', 'intérim', 'régie', 'sur site', 'présentiel', 'on-site', 'offshore', 'junior', 'débutant', 'bénévole', 'non rémunéré', 'data scientist', 'mobile', 'iOS', 'Android', 'embarqué', 'salarié'],
-        'Développeur freelance spécialisé WordPress, WooCommerce, PrestaShop, Next.js et PHP. Full remote uniquement. Cherche du VRAI freelance (pas de CDI déguisé). TJM plancher 350€/jour.'
+        VEILLE_MOTS_REQUIS,
+        VEILLE_MOTS_EXCLUS,
+        VEILLE_REQUETES,
+        'Développeur freelance full-stack : WordPress, WooCommerce, PrestaShop, PHP/Symfony/Laravel, JS/TypeScript, React, Next.js, Node.js, Python (FastAPI/Django/Flask), intégrations API/REST, Stripe, automatisations, migrations, Docker. Full remote. Vraies missions freelance (pas de CDI déguisé). TJM plancher 350€/jour.'
       ]
     );
   }
   console.log('  ✓ Tables veille missions vérifiées');
+}
+
+/**
+ * Élargissement (une seule fois) des critères de veille vers un périmètre full-stack.
+ * Ne s'applique QUE si la ligne est encore "étroite" (pas de 'python' dans mots_requis),
+ * pour ne pas écraser des critères que l'utilisateur aurait personnalisés ensuite.
+ * Nettoie aussi mots_exclus (retrait de CDI/CDD/régie/présentiel/mobile… désormais gérés
+ * par les gates intelligents anti-CDI / remote IA / techno hors périmètre).
+ */
+async function ensureVeilleCriteresBroaden(client) {
+  try {
+    const r = await client.query("SELECT id FROM veille_criteres WHERE NOT ('python' = ANY(mots_requis)) LIMIT 1");
+    if (r.rows.length === 0) return; // déjà élargi (ou personnalisé) -> on ne touche pas
+    await client.query(
+      'UPDATE veille_criteres SET mots_requis = $1, mots_exclus = $2, requetes = $3, updated_at = NOW() WHERE id = $4',
+      [VEILLE_MOTS_REQUIS, VEILLE_MOTS_EXCLUS, VEILLE_REQUETES, r.rows[0].id]
+    );
+    console.log('  ✓ Critères de veille élargis (périmètre full-stack)');
+  } catch (e) {
+    console.error('[AutoInit] Élargissement critères veille:', e.message);
+  }
 }
 
 /**
@@ -1461,6 +1501,8 @@ async function autoInitDatabase(pool) {
     await ensureObjectifParams(client);
 
     await ensureVeilleTables(client);
+
+    await ensureVeilleCriteresBroaden(client);
 
     await ensureCrawlNoCodeBackfill(client);
     // Mise à jour du titre dans les signatures email déjà enregistrées
