@@ -57,8 +57,9 @@ const seoController = {
     if (req.query.health) { conds.push(`health = $${params.length + 1}`); params.push(req.query.health); }
     try {
       const { rows } = await db.pool.query(
-        `SELECT id, wp_id, url, title, type, category, internal_pagerank, inlinks_count,
-                value_score, health, indexation_status, wp_modified_at, last_crawl
+        `SELECT id, wp_id, url, title, type, category,
+                internal_pagerank::float AS internal_pagerank, inlinks_count,
+                value_score::float AS value_score, health, indexation_status, wp_modified_at, last_crawl
          FROM seo_pages WHERE ${conds.join(' AND ')}
          ORDER BY ${sortCol} DESC NULLS LAST, url ASC
          LIMIT ${limit}`,
@@ -79,7 +80,8 @@ const seoController = {
     const limit = Math.min(parseInt(req.query.limit, 10) || 80, 300); // top N pages par jus
     try {
       const nodes = await db.pool.query(
-        `SELECT url, title, internal_pagerank, inlinks_count, health, value_score
+        `SELECT url, title, internal_pagerank::float AS internal_pagerank, inlinks_count,
+                health, value_score::float AS value_score
          FROM seo_pages WHERE site_id = $1
          ORDER BY internal_pagerank DESC NULLS LAST LIMIT ${limit}`,
         [siteId]
@@ -109,7 +111,8 @@ const seoController = {
     if (!siteId) return res.status(400).json({ message: 'site_id requis' });
     try {
       const affamees = await db.pool.query(
-        `SELECT id, url, title, category, internal_pagerank, inlinks_count, value_score
+        `SELECT id, url, title, category, internal_pagerank::float AS internal_pagerank,
+                inlinks_count, value_score::float AS value_score
          FROM seo_pages WHERE site_id = $1 AND health = 'affamee'
          ORDER BY value_score DESC NULLS LAST, internal_pagerank ASC NULLS FIRST
          LIMIT 50`,
@@ -120,7 +123,7 @@ const seoController = {
       // catégorie -> on privilégiera la MÊME catégorie que l'affamée (lien contextuel),
       // avec repli sur les meilleurs réservoirs globaux.
       const donors = await db.pool.query(
-        `SELECT url, title, category, health, internal_pagerank FROM seo_pages
+        `SELECT url, title, category, health, internal_pagerank::float AS internal_pagerank FROM seo_pages
          WHERE site_id = $1 AND internal_pagerank IS NOT NULL
            AND health IN ('reservoir', 'saine')
          ORDER BY internal_pagerank DESC

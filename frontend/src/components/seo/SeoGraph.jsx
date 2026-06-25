@@ -21,10 +21,10 @@ const CY = H / 2;
 
 const SeoGraph = ({ data }) => {
   const { positions, nodes, edges } = useMemo(() => {
-    const ns = [...(data?.nodes || [])].sort(
-      (a, b) => (b.internal_pagerank || 0) - (a.internal_pagerank || 0)
-    );
-    const maxPr = ns.reduce((m, n) => Math.max(m, n.internal_pagerank || 0), 0) || 1;
+    // PostgreSQL sérialise les NUMERIC en chaîne -> on force Number() partout.
+    const pr = (n) => Number(n.internal_pagerank) || 0;
+    const ns = [...(data?.nodes || [])].sort((a, b) => pr(b) - pr(a));
+    const maxPr = ns.reduce((m, n) => Math.max(m, pr(n)), 0) || 1;
     const pos = new Map();
     ns.forEach((n, i) => {
       const r = 20 * Math.sqrt(i);          // rayon croissant
@@ -32,7 +32,7 @@ const SeoGraph = ({ data }) => {
       pos.set(n.url, {
         x: CX + r * Math.cos(a),
         y: CY + r * Math.sin(a),
-        radius: 3 + 15 * Math.sqrt((n.internal_pagerank || 0) / maxPr),
+        radius: 3 + 15 * Math.sqrt(pr(n) / maxPr),
         node: n
       });
     });
@@ -74,7 +74,7 @@ const SeoGraph = ({ data }) => {
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: Math.min(i * 0.008, 0.6), duration: 0.3 }}
               >
-                <title>{`${n.title || n.url}\nPageRank: ${(n.internal_pagerank || 0).toFixed(4)} · liens entrants: ${n.inlinks_count ?? '—'} · ${n.health || 'non calculé'}`}</title>
+                <title>{`${n.title || n.url}\nPageRank: ${(Number(n.internal_pagerank) || 0).toFixed(4)} · liens entrants: ${n.inlinks_count ?? '—'} · ${n.health || 'non calculé'}`}</title>
               </motion.circle>
             );
           })}
