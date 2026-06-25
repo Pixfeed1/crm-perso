@@ -18,8 +18,12 @@ _SESSION = requests.Session()
 _SESSION.headers.update({"User-Agent": config.USER_AGENT})
 _SESSION.max_redirects = config.MAX_REDIRECTS  # évite les boucles de redirection
 
-_SKIP_EXT = re.compile(r"\.(jpg|jpeg|png|gif|webp|svg|pdf|zip|mp4|mp3|css|js|ico)(\?|$)", re.I)
-_SKIP_PATH = re.compile(r"/(wp-admin|wp-login|wp-json|feed|comments)(/|$)", re.I)
+# Extensions de fichiers médias/ressources à ne pas considérer comme des pages.
+_SKIP_EXT = re.compile(
+    r"\.(jpe?g|png|gif|webp|avif|svg|bmp|ico|pdf|zip|rar|7z|gz|tar|docx?|xlsx?|pptx?|"
+    r"mp4|mp3|wav|avi|mov|webm|woff2?|ttf|eot|css|js|json|xml|rss)(\?|#|$)", re.I)
+# Chemins non-contenu (dont les uploads médias).
+_SKIP_PATH = re.compile(r"/(wp-admin|wp-login|wp-json|wp-content/uploads|feed|comments|xmlrpc)(/|$|\.)", re.I)
 
 
 def _get(url, **kw):
@@ -50,8 +54,26 @@ def same_domain(url, domain):
     return host == domain or host.endswith("." + domain)
 
 
+# Types REST à NE PAS crawler : médias/pièces jointes + types d'infrastructure WP.
+# (Le crawl ne vise que de VRAIES pages de contenu : posts, pages, CPT publics.)
+EXCLUDE_REST_BASES = {
+    "media",            # pièces jointes / images -> beaucoup de 404, aucun intérêt SEO
+    "blocks", "wp_block",
+    "navigation", "menu-items", "nav_menu_item",
+    "templates", "template-parts",
+    "patterns", "wp_pattern",
+    "global-styles",
+    "font-families", "font-faces",
+    "menus", "menu-locations",
+}
+
+
 def discover_content_types(base_url):
-    """Renvoie la liste des rest_base des types exposés (posts, pages, CPT)."""
+    """Renvoie les rest_base des types de CONTENU exposés (posts, pages, CPT publics).
+
+    Exclut médias et types d'infrastructure WP (cf. EXCLUDE_REST_BASES) afin de ne PAS
+    fetcher des pièces jointes/images (sources des 404 en masse).
+    """
     try:
         r = _get(f"{base_url}/wp-json/wp/v2/types")
         r.raise_for_status()
@@ -62,8 +84,10 @@ def discover_content_types(base_url):
     bases = []
     for _, meta in (types or {}).items():
         rb = meta.get("rest_base")
-        if rb:
-            bases.append(rb)
+        slug = meta.get("slug")
+        if not rb or rb in EXCLUDE_REST_BASES or slug in ("attachment", "nav_menu_item"):
+            continue
+        bases.append(rb)
     # Toujours au moins posts + pages.
     for must in ("posts", "pages"):
         if must not in bases:
