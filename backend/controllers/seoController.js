@@ -209,6 +209,49 @@ const seoController = {
     }
   },
 
+  // POST /api/seo/jobs/:id/cancel -> demande l'annulation d'un job actif.
+  // Écriture sur seo_jobs UNIQUEMENT (comme createJob). Le worker arrête le crawl proprement.
+  //  - job 'pending' (pas encore pris) -> 'cancelled' directement (libère la file).
+  //  - job 'running'                   -> 'cancel_requested' (le worker finalise).
+  cancelJob: async (req, res) => {
+    const db = req.app.locals.db;
+    const jobId = parseInt(req.params.id, 10);
+    if (!jobId) return res.status(400).json({ message: 'id de job requis' });
+    try {
+      const r = await db.pool.query('SELECT id, status FROM seo_jobs WHERE id = $1', [jobId]);
+      const job = r.rows[0];
+      if (!job) return res.status(404).json({ message: 'Job introuvable' });
+      if (job.status === 'pending') {
+        const u = await db.pool.query(
+          "UPDATE seo_jobs SET status = 'cancelled', finished_at = NOW(), error = 'annulé depuis l''UI' WHERE id = $1 AND status = 'pending' RETURNING *",
+          [jobId]
+        );
+        // Course possible : le worker vient de le prendre -> il est maintenant 'running'.
+        if (u.rows.length === 0) {
+          const u2 = await db.pool.query(
+            "UPDATE seo_jobs SET status = 'cancel_requested' WHERE id = $1 AND status = 'running' RETURNING *",
+            [jobId]
+          );
+          return res.json({ job: u2.rows[0] || null });
+        }
+        return res.json({ job: u.rows[0] });
+      }
+      if (job.status === 'running') {
+        const u = await db.pool.query(
+          "UPDATE seo_jobs SET status = 'cancel_requested' WHERE id = $1 AND status = 'running' RETURNING *",
+          [jobId]
+        );
+        return res.json({ job: u.rows[0] || null });
+      }
+      // cancel_requested déjà demandé, ou job terminé (done/failed/cancelled).
+      if (job.status === 'cancel_requested') return res.json({ job });
+      return res.status(409).json({ message: 'Aucun crawl actif à annuler' });
+    } catch (e) {
+      console.error('[SEO] cancelJob:', e.message);
+      res.status(500).json({ message: 'Erreur serveur' });
+    }
+  },
+
   // GET /api/seo/jobs?site_id= -> dernier job du site (statut + progression).
   getJob: async (req, res) => {
     const db = req.app.locals.db;

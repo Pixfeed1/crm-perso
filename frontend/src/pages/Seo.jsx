@@ -8,7 +8,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
 import {
   FiShare2, FiRefreshCw, FiTrendingUp, FiAlertTriangle, FiLink, FiArrowRight, FiExternalLink,
-  FiPlay, FiLoader, FiCheckCircle, FiXCircle, FiClock
+  FiPlay, FiLoader, FiCheckCircle, FiXCircle, FiClock, FiStopCircle, FiSlash
 } from 'react-icons/fi';
 import { seoAPI } from '../services/api';
 import { useToast } from '../hooks/useToast';
@@ -76,16 +76,19 @@ const Seo = () => {
 
   // Suivi du job de crawl : polling tant qu'il est pending/running ; recharge à la fin.
   const stopJobPoll = () => { if (jobPollRef.current) { clearInterval(jobPollRef.current); jobPollRef.current = null; } };
+  // Un job est "actif" tant qu'il n'est pas terminé (cancel_requested = annulation en cours).
+  const isActiveStatus = (s) => s === 'pending' || s === 'running' || s === 'cancel_requested';
   const pollJob = useCallback((sid) => {
     stopJobPoll();
     jobPollRef.current = setInterval(async () => {
       try {
         const j = await seoAPI.getJob(sid);
         setJob(j);
-        if (!j || (j.status !== 'pending' && j.status !== 'running')) {
+        if (!j || !isActiveStatus(j.status)) {
           stopJobPoll();
           if (j && j.status === 'done') { toast.success('Crawl terminé'); load(); }
           if (j && j.status === 'failed') toast.error('Crawl en échec');
+          if (j && j.status === 'cancelled') { toast.info('Crawl annulé'); load(); }
         }
       } catch (e) { stopJobPoll(); }
     }, 5000);
@@ -97,7 +100,7 @@ const Seo = () => {
     stopJobPoll();
     seoAPI.getJob(siteId).then((j) => {
       setJob(j);
-      if (j && (j.status === 'pending' || j.status === 'running')) pollJob(siteId);
+      if (j && isActiveStatus(j.status)) pollJob(siteId);
     }).catch(() => {});
     return stopJobPoll;
   }, [siteId, pollJob]);
@@ -118,7 +121,23 @@ const Seo = () => {
     }
   };
 
-  const jobActive = job && (job.status === 'pending' || job.status === 'running');
+  const cancelCrawl = async () => {
+    if (!job || !job.id) return;
+    setStarting(true);
+    try {
+      const res = await seoAPI.cancelJob(job.id);
+      if (res.job) setJob(res.job);
+      toast.info(res.job && res.job.status === 'cancelled' ? 'Crawl annulé' : 'Arrêt du crawl demandé…');
+      pollJob(siteId);
+    } catch (e) {
+      toast.error(e.message || "Impossible d'arrêter le crawl");
+    } finally {
+      setStarting(false);
+    }
+  };
+
+  const jobActive = job && isActiveStatus(job.status);
+  const jobCancellable = job && (job.status === 'pending' || job.status === 'running');
 
   const cards = overview ? [
     { label: 'Pages', value: overview.total_pages, icon: FiShare2 },
@@ -169,6 +188,16 @@ const Seo = () => {
             >
               Complet
             </button>
+            {jobCancellable && (
+              <button
+                onClick={cancelCrawl}
+                disabled={starting}
+                className="px-3 py-2 rounded-lg bg-danger-bg text-danger-text border border-danger-text/30 hover:bg-danger-bg/70 text-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Arrêter le crawl en cours"
+              >
+                <FiStopCircle size={15} /> Arrêter
+              </button>
+            )}
             <button onClick={load} className="p-2 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-strong" title="Rafraîchir"><FiRefreshCw size={16} /></button>
           </div>
         </header>
@@ -184,6 +213,15 @@ const Seo = () => {
             ) : job.status === 'pending' ? (
               <div className="inline-flex items-center gap-2 text-sm bg-neutral-bg text-neutral-text border border-border rounded-lg px-3 py-2">
                 <FiClock size={15} /> Crawl en attente…
+              </div>
+            ) : job.status === 'cancel_requested' ? (
+              <div className="inline-flex items-center gap-2 text-sm bg-warning-bg text-warning-text border border-warning-text/30 rounded-lg px-3 py-2">
+                <motion.span animate={{ rotate: 360 }} transition={{ duration: 0.9, repeat: Infinity, ease: 'linear' }} className="inline-flex"><FiLoader size={15} /></motion.span>
+                Annulation en cours…
+              </div>
+            ) : job.status === 'cancelled' ? (
+              <div className="inline-flex items-center gap-2 text-sm bg-neutral-bg text-neutral-text border border-border rounded-lg px-3 py-2">
+                <FiSlash size={15} /> Crawl annulé{job.finished_at ? ` · ${fmtDate(job.finished_at)}` : ''}
               </div>
             ) : job.status === 'failed' ? (
               <div className="inline-flex items-center gap-2 text-sm bg-danger-bg text-danger-text border border-danger-text/30 rounded-lg px-3 py-2">

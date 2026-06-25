@@ -203,6 +203,18 @@ def crawl_site(conn, site, full=False, no_resume=False, job_id=None):
                 conn.commit()
                 print(f"  page {idx}/{total} — {domain} ({processed} traitées, {parsed} parsées)")
 
+                # Annulation demandée depuis l'UI : on arrête PROPREMENT après ce lot.
+                # La progression est déjà commitée ; on marque le run 'failed' pour que le
+                # prochain crawl reprenne après last_wp_id. Pas de recalcul PageRank ici.
+                if cancel_requested(cur, job_id):
+                    cur.execute(
+                        "UPDATE seo_crawl_runs SET status = 'failed', finished_at = NOW(), pages_processed = %s WHERE id = %s",
+                        (processed, run_id),
+                    )
+                    conn.commit()
+                    print(f"  [ANNULÉ] {domain} sur demande — {processed} pages traitées avant arrêt")
+                    return "cancelled"
+
         # Dernier lot.
         cur.execute(
             "UPDATE seo_crawl_runs SET last_wp_id = %s, pages_processed = %s WHERE id = %s",
@@ -265,6 +277,15 @@ def site_by_id(conn, site_id):
     return {"id": r[0], "domain": r[1], "wp_base_url": r[2], "gsc_property": r[3]}
 
 
+def cancel_requested(cur, job_id):
+    """True si une annulation a été demandée sur ce job (status 'cancel_requested')."""
+    if job_id is None:
+        return False
+    cur.execute("SELECT status FROM seo_jobs WHERE id = %s", (job_id,))
+    row = cur.fetchone()
+    return bool(row and row[0] == "cancel_requested")
+
+
 def claim_next_job(conn):
     """Réserve atomiquement le plus ancien job 'pending' (un seul à la fois)."""
     cur = conn.cursor()
@@ -287,6 +308,18 @@ def claim_next_job(conn):
 def serve():
     """Service permanent : traite la file seo_jobs SÉQUENTIELLEMENT (un seul job à la fois)."""
     conn = connect()
+    # Upsert de TOUS les sites configurés dès le démarrage : ils apparaissent dans le
+    # sélecteur de l'UI même sans crawl préalable (sinon : poule/œuf — impossible de
+    # lancer le premier crawl d'un site jamais crawlé).
+    cur0 = conn.cursor()
+    for site in config.SITES:
+        try:
+            sid = upsert_site(cur0, site)
+            conn.commit()
+            print(f"[SEO] Site prêt : {site['domain']} (site_id={sid})")
+        except Exception as e:
+            conn.rollback()
+            print(f"[SEO] Upsert site {site.get('domain')} échoué : {e}")
     print(f"[SEO] Worker en service (poll {config.POLL_INTERVAL}s)")
     try:
         while True:
@@ -310,8 +343,13 @@ def serve():
                 ok = False
                 print(f"[SEO] Job #{job['id']} exception: {e}")
             cur = conn.cursor()
-            if ok:
+            if ok is True:
                 cur.execute("UPDATE seo_jobs SET status = 'done', finished_at = NOW() WHERE id = %s", (job["id"],))
+            elif ok == "cancelled":
+                cur.execute(
+                    "UPDATE seo_jobs SET status = 'cancelled', finished_at = NOW(), error = 'annulé depuis l''UI' WHERE id = %s",
+                    (job["id"],),
+                )
             else:
                 cur.execute(
                     "UPDATE seo_jobs SET status = 'failed', finished_at = NOW(), error = COALESCE(error, 'échec du crawl') WHERE id = %s",

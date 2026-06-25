@@ -1578,13 +1578,22 @@ async function ensureSeoTables(client) {
       started_at       TIMESTAMP,
       finished_at      TIMESTAMP,
       CONSTRAINT seo_jobs_type_chk   CHECK (job_type IN ('crawl_full','crawl_incremental','gsc_sync')),
-      CONSTRAINT seo_jobs_status_chk CHECK (status   IN ('pending','running','done','failed'))
+      CONSTRAINT seo_jobs_status_chk CHECK (status   IN ('pending','running','cancel_requested','cancelled','done','failed'))
     );
   `);
   await client.query('CREATE INDEX IF NOT EXISTS idx_seo_jobs_site   ON seo_jobs(site_id, created_at DESC);');
   await client.query('CREATE INDEX IF NOT EXISTS idx_seo_jobs_status ON seo_jobs(status, created_at);');
-  // Anti-double GARANTI : au plus 1 job actif (pending|running) par site.
-  await client.query("CREATE UNIQUE INDEX IF NOT EXISTS uq_seo_jobs_active ON seo_jobs(site_id) WHERE status IN ('pending','running');");
+
+  // Migration idempotente (bases existantes) : autoriser l'annulation d'un crawl.
+  // CREATE TABLE IF NOT EXISTS ne met pas à jour une contrainte déjà créée -> on la recrée.
+  await client.query('ALTER TABLE seo_jobs DROP CONSTRAINT IF EXISTS seo_jobs_status_chk;');
+  await client.query(
+    "ALTER TABLE seo_jobs ADD CONSTRAINT seo_jobs_status_chk CHECK (status IN ('pending','running','cancel_requested','cancelled','done','failed'));"
+  );
+  // Anti-double GARANTI : au plus 1 job actif par site. 'cancel_requested' reste "actif"
+  // (le worker finalise l'annulation) -> pas de nouveau job tant qu'il n'est pas 'cancelled'.
+  await client.query('DROP INDEX IF EXISTS uq_seo_jobs_active;');
+  await client.query("CREATE UNIQUE INDEX IF NOT EXISTS uq_seo_jobs_active ON seo_jobs(site_id) WHERE status IN ('pending','running','cancel_requested');");
 
   console.log('  ✓ Tables SEO vérifiées');
 }
