@@ -18,15 +18,32 @@ SITES = [
     },
 ]
 
-# Heuristique value_score par catégorie (0..100). Les piliers Blender/3D sont prioritaires.
-# Correspondance par sous-chaîne (insensible à la casse) sur la catégorie/slug WP.
-CATEGORY_VALUE = [
-    (["blender", "3d", "modélisation", "modelisation", "rendu", "geometry", "shader"], 90),
-    (["tutoriel", "tutorial", "guide", "glossaire"], 75),
-    (["blog", "article", "actualité", "actualite", "news"], 50),
+# Heuristique value_score (0..100), TEMPORAIRE (remplacée par les impressions GSC à l'étape 2).
+# Correspondance par sous-chaîne (insensible à la casse) sur catégorie + url + type.
+# Pilier 90 réservé au VRAI contenu 3D/Blender (et au CPT "glossaire" = glossaire 3D).
+PILLAR_3D = [
+    "blender", "3d", "modélisation", "modelisation", "rendu", "render", "shader",
+    "sculpt", "geometry node", "nodes", "uv mapping", "texturing", "topologie", "rigging",
 ]
+# CPT (type) considérés comme piliers 3D.
+PILLAR_TYPES = ["glossaire"]
+# Tech/conso grand public -> faible valeur (ne PAS confondre avec les piliers 3D).
+TECH_CONSO = [
+    "guide-achat", "guide-d-achat", "/achat", "meilleur", "comparatif", "/test-",
+    "aspirateur", "iphone", "samsung", "galaxy", "smartphone", "montre", "ecouteurs",
+    "écouteurs", "televiseur", "téléviseur", "pc-portable", "casque", "imprimante",
+]
+# Tutoriels/guides génériques (valeur moyenne) si pas tech-conso ni 3D.
+GENERIC_GUIDE = ["tutoriel", "tutorial", "tuto", "guide"]
+
+VALUE_PILLAR = 90
+VALUE_GENERIC = 60
+VALUE_TECH_CONSO = 30
 VALUE_DEFAULT = 40          # catégorie inconnue
 VALUE_HOME_HUB = 100        # accueil / hubs
+
+# Types WordPress à NE JAMAIS enregistrer comme pages (médias / pièces jointes).
+EXCLUDE_TYPES = {"attachment"}
 
 # Seuils de santé (sur le pagerank normalisé 0..1 relatif au max du site).
 HEALTH_AFFAMEE_PR_RATIO = 0.25   # pagerank < 25% du max

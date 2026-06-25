@@ -126,7 +126,11 @@ def list_content(base_url):
             if not isinstance(data, list) or not data:
                 break
             for it in data:
-                items.append(_normalize_item(it, rest_base))
+                norm = _normalize_item(it, rest_base)
+                # Garde-fou : ne jamais enregistrer une pièce jointe / média comme page.
+                if norm["type"] in config.EXCLUDE_TYPES or not norm["url"]:
+                    continue
+                items.append(norm)
             total_pages = int(r.headers.get("X-WP-TotalPages", "1") or 1)
             if page >= total_pages:
                 break

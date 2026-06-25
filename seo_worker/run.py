@@ -33,13 +33,18 @@ def parse_dt(s):
         return None
 
 
-def value_for_category(category, url, home_url):
+def value_for_category(category, url, ctype, home_url):
+    """Heuristique TEMPORAIRE (remplacée par les impressions GSC à l'étape 2).
+    Pilier 90 = vrai 3D/Blender (et CPT glossaire) ; tech-conso 30 ; guide générique 60."""
     if url == home_url:
         return config.VALUE_HOME_HUB
-    c = (category or "").lower()
-    for keys, val in config.CATEGORY_VALUE:
-        if any(k in c for k in keys):
-            return val
+    hay = f"{category or ''} {url or ''} {ctype or ''}".lower()
+    if (ctype or "").lower() in config.PILLAR_TYPES or any(k in hay for k in config.PILLAR_3D):
+        return config.VALUE_PILLAR
+    if any(k in hay for k in config.TECH_CONSO):
+        return config.VALUE_TECH_CONSO
+    if any(k in hay for k in config.GENERIC_GUIDE):
+        return config.VALUE_GENERIC
     return config.VALUE_DEFAULT
 
 
@@ -107,6 +112,14 @@ def crawl_site(conn, site, full=False, no_resume=False):
         items = wp.list_content(base)
         total = len(items)
         print(f"\n=== {domain} (site_id={site_id}) mode={mode} — {total} contenus ===")
+
+        # Purge des pages/liens OBSOLÈTES : la liste REST est toujours complète, donc tout
+        # ce qui n'y figure plus (anciens attachments, contenus supprimés) est retiré.
+        listed_urls = [it["url"] for it in items if it["url"]]
+        if listed_urls:  # garde-fou : ne jamais purger si la liste REST est vide (échec listing)
+            cur.execute("DELETE FROM seo_links WHERE site_id = %s AND from_url <> ALL(%s)", (site_id, listed_urls))
+            cur.execute("DELETE FROM seo_pages WHERE site_id = %s AND url <> ALL(%s)", (site_id, listed_urls))
+            conn.commit()
 
         processed = 0
         parsed = 0
@@ -195,13 +208,13 @@ def crawl_site(conn, site, full=False, no_resume=False):
         pr, inlinks = pr_mod.compute(edges)
         max_pr = max(pr.values()) if pr else 0.0
 
-        cur.execute("SELECT url, category FROM seo_pages WHERE site_id = %s", (site_id,))
+        cur.execute("SELECT url, category, type FROM seo_pages WHERE site_id = %s", (site_id,))
         rows = cur.fetchall()
-        for i, (url, category) in enumerate(rows, 1):
+        for i, (url, category, ctype) in enumerate(rows, 1):
             page_pr = float(pr.get(url, 0.0))
             page_in = int(inlinks.get(url, 0))
             ratio = (page_pr / max_pr) if max_pr > 0 else 0.0
-            value = value_for_category(category, url, home_url)
+            value = value_for_category(category, url, ctype, home_url)
             health = classify_health(page_in, ratio, value)
             cur.execute(
                 """UPDATE seo_pages
