@@ -19,10 +19,22 @@ pip install -r requirements.txt
 
 ### Exécution
 ```bash
-python run.py            # incrémental : ne re-parse que les contenus modifiés (wp_modified_at)
-python run.py --full     # reconstruction complète du graphe de liens
+python run.py            # incrémental + REPRISE auto si le run précédent a été interrompu
+python run.py --full     # reconstruction complète (purge liens + reparse total, ignore la reprise)
+python run.py --no-resume   # incrémental sans reprise (repart du début)
 python run.py --site jurojin.net   # un seul site
 ```
+
+### Persistance & reprise
+- **Commit par lots** (`config.COMMIT_BATCH`, défaut 25 pages) : la progression est persistée
+  au fil de l'eau (visible immédiatement en base) et un crash ne perd qu'un lot.
+- Table **`seo_crawl_runs`** : chaque run y est tracé (`status`, `last_wp_id`, `pages_processed`).
+  Si un run plante (status `failed`/`running`), le suivant **reprend** après `last_wp_id`
+  (contenus triés par `wp_id` croissant). `--full` ou `--no-resume` ignorent la reprise.
+- **Liens** : DELETE global réservé à `--full`. En incrémental/reprise, on ne touche qu'aux
+  liens des pages effectivement reparsées (delete/reload par `from_url`).
+- Robustesse : timeout HTTP, max 5 redirections, `try/except` autour du fetch ET du parsing
+  (une page cassée est loguée et sautée, jamais d'interruption du run).
 
 ### Cron (ex. tous les jours à 04:00)
 ```

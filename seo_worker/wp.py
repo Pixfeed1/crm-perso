@@ -16,6 +16,7 @@ import config
 
 _SESSION = requests.Session()
 _SESSION.headers.update({"User-Agent": config.USER_AGENT})
+_SESSION.max_redirects = config.MAX_REDIRECTS  # évite les boucles de redirection
 
 _SKIP_EXT = re.compile(r"\.(jpg|jpeg|png|gif|webp|svg|pdf|zip|mp4|mp3|css|js|ico)(\?|$)", re.I)
 _SKIP_PATH = re.compile(r"/(wp-admin|wp-login|wp-json|feed|comments)(/|$)", re.I)
@@ -70,18 +71,20 @@ def discover_content_types(base_url):
     return bases
 
 
-def iter_content(base_url):
-    """Itère sur tous les contenus de tous les types exposés.
-
-    Renvoie des dicts : wp_id, url, title, type, category, modified_at, html (ou None).
+def list_content(base_url):
+    """Liste TOUS les contenus (métadonnées seulement, sans HTML) de tous les types exposés,
+    triés par wp_id croissant. Matérialisé en liste -> permet d'afficher i/N et de reprendre.
+    Ordre par id asc (orderby=id&order=asc) pour une reprise déterministe via last_wp_id.
     """
+    items = []
     for rest_base in discover_content_types(base_url):
         page = 1
         while True:
             try:
                 r = _get(
                     f"{base_url}/wp-json/wp/v2/{rest_base}",
-                    params={"per_page": 100, "page": page, "_embed": 1},
+                    params={"per_page": 100, "page": page, "_embed": 1,
+                            "orderby": "id", "order": "asc"},
                 )
             except Exception as e:
                 print(f"[wp] {rest_base} p{page} erreur: {e}")
@@ -91,15 +94,22 @@ def iter_content(base_url):
             if not r.ok:
                 print(f"[wp] {rest_base} p{page} HTTP {r.status_code}")
                 break
-            items = r.json()
-            if not isinstance(items, list) or not items:
+            try:
+                data = r.json()
+            except Exception as e:
+                print(f"[wp] {rest_base} p{page} JSON invalide: {e}")
                 break
-            for it in items:
-                yield _normalize_item(it, rest_base)
+            if not isinstance(data, list) or not data:
+                break
+            for it in data:
+                items.append(_normalize_item(it, rest_base))
             total_pages = int(r.headers.get("X-WP-TotalPages", "1") or 1)
             if page >= total_pages:
                 break
             page += 1
+    # Tri global par wp_id croissant (None en dernier).
+    items.sort(key=lambda x: (x["wp_id"] is None, x["wp_id"] or 0))
+    return items
 
 
 def _normalize_item(it, rest_base):
@@ -136,20 +146,34 @@ def _strip_html(s):
 
 
 def fetch_html(url):
+    """Récupère le HTML d'une page. Tolérant : timeout, boucles de redirection, etc. -> None."""
     try:
         r = _get(url)
         if r.ok and "text/html" in r.headers.get("Content-Type", ""):
             return r.text
+        if not r.ok:
+            print(f"[wp] fetch_html {url}: HTTP {r.status_code}")
+    except requests.exceptions.TooManyRedirects:
+        print(f"[wp] fetch_html {url}: boucle de redirection (> {config.MAX_REDIRECTS})")
+    except requests.exceptions.Timeout:
+        print(f"[wp] fetch_html {url}: timeout (> {config.HTTP_TIMEOUT}s)")
+    except requests.exceptions.RequestException as e:
+        print(f"[wp] fetch_html {url}: {e}")
     except Exception as e:
         print(f"[wp] fetch_html {url}: {e}")
     return None
 
 
 def extract_links(html, page_url, domain):
-    """Liens internes (même domaine) sortant de la page. Renvoie [(to_url, anchor)]."""
+    """Liens internes (même domaine) sortant de la page. Renvoie [(to_url, anchor)].
+    Tolérant : toute erreur de parsing -> liste vide (jamais d'exception remontée)."""
     out = []
     seen = set()
-    soup = BeautifulSoup(html, "lxml")
+    try:
+        soup = BeautifulSoup(html, "lxml")
+    except Exception as e:
+        print(f"[wp] extract_links parse {page_url}: {e}")
+        return out
     for a in soup.find_all("a", href=True):
         href = a["href"].strip()
         if not href or href.startswith(("#", "mailto:", "tel:", "javascript:")):

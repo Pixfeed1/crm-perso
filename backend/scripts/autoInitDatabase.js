@@ -1548,6 +1548,22 @@ async function ensureSeoTables(client) {
   await client.query('CREATE UNIQUE INDEX IF NOT EXISTS uq_seo_url_inspections ON seo_url_inspections(site_id, page_url);');
   await client.query('CREATE INDEX        IF NOT EXISTS idx_seo_url_inspections_site_inspected ON seo_url_inspections(site_id, inspected_at);');
 
+  // Suivi des runs de crawl (écrit par le worker) -> permet la reprise après interruption.
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS seo_crawl_runs (
+      id              SERIAL PRIMARY KEY,
+      site_id         INTEGER NOT NULL REFERENCES seo_sites(id) ON DELETE CASCADE,
+      started_at      TIMESTAMP DEFAULT NOW(),
+      finished_at     TIMESTAMP,
+      last_wp_id      BIGINT,
+      pages_processed INTEGER NOT NULL DEFAULT 0,
+      status          TEXT NOT NULL DEFAULT 'running',
+      created_at      TIMESTAMP DEFAULT NOW(),
+      CONSTRAINT seo_crawl_runs_status_chk CHECK (status IN ('running','done','failed'))
+    );
+  `);
+  await client.query('CREATE INDEX IF NOT EXISTS idx_seo_crawl_runs_site ON seo_crawl_runs(site_id, started_at DESC);');
+
   console.log('  ✓ Tables SEO vérifiées');
 }
 

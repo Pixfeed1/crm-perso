@@ -36,3 +36,5 @@ HEALTH_RESERVOIR_PR_RATIO = 0.6  # pagerank >= 60% du max -> réservoir/hub
 # User-Agent du crawler.
 USER_AGENT = "PixFeedSEO/1.0 (+https://crm.pixfeed.net)"
 HTTP_TIMEOUT = 20
+MAX_REDIRECTS = 5            # limite de redirections (évite les boucles "Exceeded 30 redirects")
+COMMIT_BATCH = 25           # commit tous les N pages traitées (persistance + reprise)
