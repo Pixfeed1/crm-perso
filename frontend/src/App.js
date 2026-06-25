@@ -20,6 +20,7 @@ import Calendar from './pages/Calendar';
 import Revenues from './pages/Revenues';
 import Activities from './pages/Activities';
 import Goals from './pages/Goals';
+import Seo from './pages/Seo';
 import Reports from './pages/Reports';
 import Quotes from './pages/Quotes';
 import Invoices from './pages/Invoices';
@@ -156,6 +157,14 @@ const App = () => {
             <ProtectedRoute>
               <Layout>
                 <Goals />
+              </Layout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/seo" element={
+            <ProtectedRoute>
+              <Layout>
+                <Seo />
               </Layout>
             </ProtectedRoute>
           } />

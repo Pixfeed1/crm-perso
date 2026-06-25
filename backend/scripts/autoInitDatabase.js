@@ -1437,6 +1437,121 @@ async function ensureCrawlNoCodeBackfill(client) {
 }
 
 /**
+ * Migration idempotente : schéma COMPLET du module SEO (multi-site).
+ * DDL uniquement (provisioning). Les DONNÉES sont écrites exclusivement par le worker
+ * Python seo_worker ; le Node ne fait que lire ces tables.
+ * Toutes les tables liées : FK (site_id) -> seo_sites(id) ON DELETE CASCADE.
+ */
+async function ensureSeoTables(client) {
+  console.log('[AutoInit] Vérification des tables SEO...');
+
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS seo_sites (
+      id           SERIAL PRIMARY KEY,
+      domain       TEXT NOT NULL UNIQUE,
+      wp_base_url  TEXT,
+      gsc_property TEXT,
+      created_at   TIMESTAMP DEFAULT NOW(),
+      updated_at   TIMESTAMP DEFAULT NOW()
+    );
+  `);
+
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS seo_pages (
+      id                SERIAL PRIMARY KEY,
+      site_id           INTEGER NOT NULL REFERENCES seo_sites(id) ON DELETE CASCADE,
+      wp_id             BIGINT,
+      url               TEXT NOT NULL,
+      title             TEXT,
+      type              TEXT,
+      category          TEXT,
+      wp_modified_at    TIMESTAMP,
+      internal_pagerank NUMERIC,
+      inlinks_count     INTEGER,
+      value_score       NUMERIC,
+      health            TEXT,
+      indexation_status TEXT,
+      seo_meta          JSONB,
+      last_crawl        TIMESTAMP,
+      created_at        TIMESTAMP DEFAULT NOW(),
+      updated_at        TIMESTAMP DEFAULT NOW(),
+      CONSTRAINT seo_pages_health_chk  CHECK (health IS NULL OR health IN ('orpheline','reservoir','affamee','saine')),
+      CONSTRAINT seo_pages_pr_chk      CHECK (internal_pagerank IS NULL OR internal_pagerank >= 0),
+      CONSTRAINT seo_pages_inlinks_chk CHECK (inlinks_count IS NULL OR inlinks_count >= 0)
+    );
+  `);
+  await client.query('CREATE UNIQUE INDEX IF NOT EXISTS uq_seo_pages_site_url  ON seo_pages(site_id, url);');
+  await client.query('CREATE UNIQUE INDEX IF NOT EXISTS uq_seo_pages_site_wpid ON seo_pages(site_id, wp_id) WHERE wp_id IS NOT NULL;');
+  await client.query('CREATE INDEX        IF NOT EXISTS idx_seo_pages_site_health ON seo_pages(site_id, health);');
+
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS seo_links (
+      id         SERIAL PRIMARY KEY,
+      site_id    INTEGER NOT NULL REFERENCES seo_sites(id) ON DELETE CASCADE,
+      from_url   TEXT NOT NULL,
+      to_url     TEXT NOT NULL,
+      anchor     TEXT NOT NULL DEFAULT '',
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+  `);
+  await client.query('CREATE UNIQUE INDEX IF NOT EXISTS uq_seo_links ON seo_links(site_id, from_url, to_url, anchor);');
+  await client.query('CREATE INDEX        IF NOT EXISTS idx_seo_links_site ON seo_links(site_id);');
+
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS seo_gsc_daily (
+      id          SERIAL PRIMARY KEY,
+      site_id     INTEGER NOT NULL REFERENCES seo_sites(id) ON DELETE CASCADE,
+      date        DATE NOT NULL,
+      page_url    TEXT NOT NULL,
+      query       TEXT NOT NULL,
+      clicks      INTEGER NOT NULL DEFAULT 0,
+      impressions INTEGER NOT NULL DEFAULT 0,
+      position    NUMERIC(8,2),
+      created_at  TIMESTAMP DEFAULT NOW(),
+      CONSTRAINT seo_gsc_daily_clicks_chk CHECK (clicks >= 0),
+      CONSTRAINT seo_gsc_daily_impr_chk   CHECK (impressions >= 0)
+    );
+  `);
+  await client.query('CREATE UNIQUE INDEX IF NOT EXISTS uq_seo_gsc_daily ON seo_gsc_daily(site_id, date, page_url, query);');
+  await client.query('CREATE INDEX        IF NOT EXISTS idx_seo_gsc_daily_site_date ON seo_gsc_daily(site_id, date);');
+  await client.query('CREATE INDEX        IF NOT EXISTS idx_seo_gsc_daily_site_pos  ON seo_gsc_daily(site_id, position);');
+
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS seo_metrics_monthly (
+      id           SERIAL PRIMARY KEY,
+      site_id      INTEGER NOT NULL REFERENCES seo_sites(id) ON DELETE CASCADE,
+      month        DATE NOT NULL,
+      page_url     TEXT NOT NULL,
+      clicks       INTEGER NOT NULL DEFAULT 0,
+      impressions  INTEGER NOT NULL DEFAULT 0,
+      avg_position NUMERIC(8,2),
+      created_at   TIMESTAMP DEFAULT NOW(),
+      CONSTRAINT seo_metrics_monthly_clicks_chk CHECK (clicks >= 0),
+      CONSTRAINT seo_metrics_monthly_impr_chk   CHECK (impressions >= 0)
+    );
+  `);
+  await client.query('CREATE UNIQUE INDEX IF NOT EXISTS uq_seo_metrics_monthly ON seo_metrics_monthly(site_id, month, page_url);');
+  await client.query('CREATE INDEX        IF NOT EXISTS idx_seo_metrics_monthly_site_month ON seo_metrics_monthly(site_id, month);');
+
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS seo_url_inspections (
+      id                SERIAL PRIMARY KEY,
+      site_id           INTEGER NOT NULL REFERENCES seo_sites(id) ON DELETE CASCADE,
+      page_url          TEXT NOT NULL,
+      inspection_status TEXT,
+      raw_response      JSONB,
+      inspected_at      TIMESTAMP,
+      created_at        TIMESTAMP DEFAULT NOW(),
+      updated_at        TIMESTAMP DEFAULT NOW()
+    );
+  `);
+  await client.query('CREATE UNIQUE INDEX IF NOT EXISTS uq_seo_url_inspections ON seo_url_inspections(site_id, page_url);');
+  await client.query('CREATE INDEX        IF NOT EXISTS idx_seo_url_inspections_site_inspected ON seo_url_inspections(site_id, inspected_at);');
+
+  console.log('  ✓ Tables SEO vérifiées');
+}
+
+/**
  * Migration idempotente : met à jour le titre dans les signatures email DÉJÀ enregistrées
  * (company_settings.email_signature) — l'ancien HTML figé n'est pas régénéré sinon.
  * 'Chargé de Projet' (et la variante 'web') -> 'Fondateur & développeur'.
@@ -1505,6 +1620,8 @@ async function autoInitDatabase(pool) {
     await ensureVeilleCriteresBroaden(client);
 
     await ensureCrawlNoCodeBackfill(client);
+
+    await ensureSeoTables(client);
     // Mise à jour du titre dans les signatures email déjà enregistrées
     await ensureSignatureTitleUpdate(client);
 

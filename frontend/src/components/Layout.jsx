@@ -18,6 +18,7 @@ import { FiFileText as QuotesIcon } from 'react-icons/fi';
 import { FiFile as InvoicesIcon } from 'react-icons/fi';
 import { FiLogOut as LogoutIcon } from 'react-icons/fi';
 import { FiBell, FiSettings, FiTool as MaintenanceIcon } from 'react-icons/fi';
+import { FiShare2 as SeoIcon } from 'react-icons/fi';
 
 // Import des modals
 import RemindersModal from './reminders/RemindersModal';
@@ -92,6 +93,7 @@ const Layout = ({ children }) => {
     { path: '/revenues', label: 'Revenus', icon: <RevenuesIcon /> },
     { path: '/activities', label: 'Activités', icon: <ActivitiesIcon /> },
     { path: '/goals', label: 'Objectifs', icon: <GoalsIcon /> },
+    { path: '/seo', label: 'SEO', icon: <SeoIcon /> },
     { path: '/reports', label: 'Rapports', icon: <ReportsIcon /> },
     // Ajouter l'option de déconnexion
     { path: '/logout', label: 'Déconnexion', icon: <LogoutIcon />, isLogout: true }

@@ -559,6 +559,18 @@ export const revenuesAPI = {
   }
 };
 
+// ===== SEO (lecture seule : données produites par le worker Python seo_worker) =====
+export const seoAPI = {
+  getSites: () => apiRequest('/seo/sites'),
+  getOverview: (siteId) => apiRequest(`/seo/overview?site_id=${siteId}`),
+  getPages: (siteId, params = {}) => {
+    const qs = new URLSearchParams({ site_id: siteId, ...params }).toString();
+    return apiRequest(`/seo/pages?${qs}`);
+  },
+  getGraph: (siteId) => apiRequest(`/seo/graph?site_id=${siteId}`),
+  getAffamees: (siteId) => apiRequest(`/seo/affamees?site_id=${siteId}`)
+};
+
 // ===== VEILLE MISSIONS (agent annonces freelance) =====
 export const veilleAPI = {
   getAnnonces: (params = {}) => {
