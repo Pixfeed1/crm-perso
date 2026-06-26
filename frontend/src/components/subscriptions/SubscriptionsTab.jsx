@@ -41,6 +41,14 @@ const billingStatusConfig = {
 const formatAmount = (amount) =>
   new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(amount || 0);
 
+const formatSentAt = (iso) => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d)) return '';
+  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }) +
+    ' à ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+};
+
 const periodicityLabel = (sub) => {
   const count = parseInt(sub.interval_count, 10) || 1;
   if (count === 1) return sub.interval === 'year' ? 'Annuel' : 'Mensuel';
@@ -355,6 +363,12 @@ const SubscriptionsTab = () => {
                       <span className="text-text-primary font-medium">{formatAmount(sub.amount_eur)}</span>
                       {' · '}{periodicityLabel(sub)}
                     </p>
+                    {sub.link_sent_at && (
+                      <p className="text-text-muted text-xs mt-1 flex items-center gap-1.5">
+                        <FiSend size={11} className="text-text-muted" />
+                        Lien envoyé le {formatSentAt(sub.link_sent_at)}{sub.link_sent_to ? ` à ${sub.link_sent_to}` : ''}
+                      </p>
+                    )}
                   </div>
 
                   <div className="flex flex-wrap gap-2">

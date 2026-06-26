@@ -36,6 +36,7 @@ def normalize_url(url):
     if not url:
         return None
     url, _ = urldefrag(url)
+    url = url.split("#", 1)[0]  # garde-fou explicite : jamais de fragment stocké
     p = urlparse(url)
     if p.scheme not in ("http", "https"):
         return None

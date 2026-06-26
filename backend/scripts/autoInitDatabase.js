@@ -611,6 +611,8 @@ const DATABASE_SCHEMA = {
       cond_included: 'TEXT', // conditions PDF : lignes incluses (une par ligne)
       cond_excluded: 'TEXT', // conditions PDF : lignes exclues (une par ligne)
       cond_modalites: 'TEXT', // conditions PDF : modalités (Clé : valeur par ligne)
+      link_sent_at: 'TIMESTAMP', // date du dernier envoi du lien de paiement par email
+      link_sent_to: 'VARCHAR(255)', // adresse à laquelle le lien a été envoyé
       created_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP',
       updated_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'
     },
@@ -1268,6 +1270,9 @@ async function ensureSubscriptionPilotageColumns(client) {
   await client.query('ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS stripe_price_id VARCHAR(255);');
   await client.query('ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS date_fin TIMESTAMP;');
   await client.query("ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS devise VARCHAR(3) DEFAULT 'EUR';");
+  // Trace de l'envoi du lien de paiement (affichée sur la carte de l'abonnement).
+  await client.query('ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS link_sent_at TIMESTAMP;');
+  await client.query('ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS link_sent_to VARCHAR(255);');
   // Backfill date_fin pour les abonnements déjà résiliés (à partir de billing_cancel_at/updated_at).
   await client.query("UPDATE subscriptions SET date_fin = COALESCE(billing_cancel_at, updated_at) WHERE billing_status = 'canceled' AND date_fin IS NULL;");
   console.log('  ✓ Colonnes pilotage subscriptions vérifiées');

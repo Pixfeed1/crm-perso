@@ -24,8 +24,19 @@ except Exception:  # dépendances Google non installées
     HttpError = Exception
 
 
+class QuotaExceeded(Exception):
+    """Quota URL Inspection Google épuisé (HTTP 429) — reprise le lendemain."""
+
+
 def google_available():
     return _GOOGLE_OK
+
+
+def strip_fragment(url):
+    """Retire le fragment (#ancre) d'une URL. Une URL d'inspection ne doit JAMAIS en contenir."""
+    if not url:
+        return url
+    return url.split("#", 1)[0]
 
 
 def load_token_row(conn):
@@ -108,9 +119,10 @@ def search_analytics(creds, gsc_property, start_date, end_date):
 
 
 def inspect_url(creds, gsc_property, page_url):
-    """Inspecte une URL -> (coverage_state, raw_dict). coverage_state peut être None."""
+    """Inspecte une URL -> (coverage_state, raw_dict). coverage_state peut être None.
+    Le fragment (#ancre) est systématiquement retiré : Google ne connaît pas les URLs ancrées."""
     svc = _service(creds, "searchconsole", "v1")
-    body = {"inspectionUrl": page_url, "siteUrl": gsc_property}
+    body = {"inspectionUrl": strip_fragment(page_url), "siteUrl": gsc_property}
     resp = _execute_with_retry(svc.urlInspection().index().inspect(body=body))
     result = (resp or {}).get("inspectionResult", {})
     index_status = result.get("indexStatusResult", {})
@@ -119,7 +131,9 @@ def inspect_url(creds, gsc_property, page_url):
 
 
 def _execute_with_retry(request, tries=4):
-    """Exécute un appel Google avec backoff sur 429/5xx (quota/erreurs transitoires)."""
+    """Exécute un appel Google avec backoff sur 5xx (erreurs transitoires).
+    Le 429 (quota épuisé) ne se résout PAS en quelques secondes -> on lève QuotaExceeded
+    immédiatement (le quota URL Inspection se réinitialise quotidiennement)."""
     delay = 2
     last = None
     for attempt in range(tries):
@@ -128,10 +142,14 @@ def _execute_with_retry(request, tries=4):
         except HttpError as e:  # noqa
             status = getattr(getattr(e, "resp", None), "status", None)
             last = e
-            if status in (429, 500, 503) and attempt < tries - 1:
+            if status == 429:
+                raise QuotaExceeded(str(e))
+            if status in (500, 503) and attempt < tries - 1:
                 time.sleep(delay)
                 delay *= 2
                 continue
+            raise
+        except QuotaExceeded:
             raise
         except Exception as e:
             last = e

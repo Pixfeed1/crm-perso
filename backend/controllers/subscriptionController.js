@@ -14,6 +14,7 @@ const SELECT_WITH_CLIENT = `
          s.stripe_customer_id, s.stripe_subscription_id, s.billing_pay_token,
          s.billing_status, s.billing_cancel_at,
          s.cond_intro, s.cond_included, s.cond_excluded, s.cond_modalites, s.created_at,
+         s.link_sent_at, s.link_sent_to,
          c.name AS client_name, c.email AS client_email
   FROM subscriptions s
   LEFT JOIN crm_clients c ON s.client_id = c.id
@@ -301,6 +302,11 @@ module.exports = {
         message,
         attachments
       });
+      // Trace de l'envoi (affichée sur la carte).
+      await db.pool.query(
+        'UPDATE subscriptions SET link_sent_at = NOW(), link_sent_to = $1, updated_at = NOW() WHERE id = $2',
+        [sub.client_email, id]
+      );
       res.json({ success: true, sentTo: sub.client_email });
     } catch (error) {
       const status = error.statusCode || 500;

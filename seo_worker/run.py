@@ -392,18 +392,21 @@ def gsc_sync_site(conn, site, job_id=None):
         use_trailing = bool(gsc_urls) and slashed >= len(gsc_urls) / 2
 
         def inspect_target(u):
-            """URL à inspecter : canonique GSC si connue, sinon variante slash selon le site."""
-            if u in canon_by_norm:
-                return canon_by_norm[u]
-            path = urlparse(u).path or ""
-            if use_trailing and path not in ("", "/") and not u.endswith("/"):
-                return u + "/"
-            return u
+            """URL à inspecter : canonique GSC si connue, sinon variante slash selon le site.
+            Toujours sans fragment (#ancre) : Google ne connaît pas les URLs ancrées."""
+            base = gsc.strip_fragment(u)
+            if base in canon_by_norm:
+                return gsc.strip_fragment(canon_by_norm[base])
+            path = urlparse(base).path or ""
+            if use_trailing and path not in ("", "/") and not base.endswith("/"):
+                return base + "/"
+            return base
 
         cap = config.GSC_INSPECT_DAILY_CAP
         debug = bool(os.environ.get("GSC_DEBUG"))
         api_calls = 0
         done = 0
+        quota_hit = False
         for url in to_inspect:
             try:
                 target = inspect_target(url)
@@ -419,7 +422,7 @@ def gsc_sync_site(conn, site, job_id=None):
                 # Filet : si "unknown" alors qu'on n'a pas testé la variante slash, réessayer
                 # une fois avec le slash basculé (borné par le quota d'inspections).
                 if coverage and "unknown" in coverage.lower() and api_calls < cap:
-                    alt = url[:-1] if url.endswith("/") else url + "/"
+                    alt = gsc.strip_fragment(url) + "/"
                     if alt != target:
                         cov2, raw2 = gsc.inspect_url(creds, gsc_property, alt)
                         api_calls += 1
@@ -438,6 +441,13 @@ def gsc_sync_site(conn, site, job_id=None):
                     "UPDATE seo_pages SET indexation_status = %s, updated_at = NOW() WHERE site_id = %s AND url = %s",
                     (coverage, site_id, url),
                 )
+            except gsc.QuotaExceeded:
+                # Quota Google épuisé : on ARRÊTE NET (sans marquer la page 'unknown' -> on
+                # conserve le statut précédent), reprise au prochain run (quota quotidien).
+                quota_hit = True
+                print(f"  [GSC] Quota URL Inspection épuisé ({api_calls} inspections faites) — arrêt, reprise demain.")
+                conn.commit()
+                break
             except Exception as e:
                 print(f"  [ERREUR inspection] {url}: {e}")
             done += 1
@@ -528,7 +538,8 @@ def gsc_sync_site(conn, site, job_id=None):
                 conn.commit()
         conn.commit()
 
-        print(f"  OK GSC {domain} : daily+={inserted} inspections={done} pages_maj={updated}")
+        quota_note = " (quota inspection épuisé — reste à inspecter au prochain run)" if quota_hit else ""
+        print(f"  OK GSC {domain} : daily+={inserted} inspections={done} pages_maj={updated}{quota_note}")
         return True
 
     except Exception as e:
@@ -584,12 +595,13 @@ def gsc_debug_site(conn, site, n=3):
     print(f"  URLs GSC distinctes={len(gsc_urls)} | avec slash final={slashed} | use_trailing={use_trailing}")
 
     def target_for(nrm):
-        if nrm in canon_by_norm:
-            return canon_by_norm[nrm]
-        path = urlparse(nrm).path or ""
-        if use_trailing and path not in ("", "/") and not nrm.endswith("/"):
-            return nrm + "/"
-        return nrm
+        base = gsc.strip_fragment(nrm)
+        if base in canon_by_norm:
+            return gsc.strip_fragment(canon_by_norm[base])
+        path = urlparse(base).path or ""
+        if use_trailing and path not in ("", "/") and not base.endswith("/"):
+            return base + "/"
+        return base
 
     # n pages à plus fortes impressions (donc forcément indexées par Google).
     cur.execute(
