@@ -94,6 +94,133 @@ module.exports = {
   },
 
   /**
+   * PUT /api/subscriptions/:id - modifie un abonnement.
+   * Garde-fou Stripe : si le prélèvement est ACTIF, on autorise client/libellé/conditions
+   * mais PAS le montant/périodicité (sinon l'affichage/PDF différerait du vrai prélèvement).
+   */
+  updateSubscription: async (req, res) => {
+    const db = req.app.locals.db;
+    const { id } = req.params;
+    const {
+      client_id, label, amount_eur, interval, interval_count,
+      cond_intro, cond_included, cond_excluded, cond_modalites
+    } = req.body || {};
+
+    if (!client_id || !label) {
+      return res.status(400).json({ message: 'Client et libellé sont obligatoires.' });
+    }
+    try {
+      const cur = await db.pool.query('SELECT billing_status FROM subscriptions WHERE id = $1', [id]);
+      if (cur.rows.length === 0) {
+        return res.status(404).json({ message: 'Abonnement introuvable.' });
+      }
+      const billingActive = cur.rows[0].billing_status === 'active';
+
+      const fields = [
+        'client_id = $1', 'label = $2',
+        'cond_intro = $3', 'cond_included = $4', 'cond_excluded = $5', 'cond_modalites = $6',
+        'updated_at = NOW()'
+      ];
+      const params = [
+        client_id, label,
+        cond_intro ?? null, cond_included ?? null, cond_excluded ?? null, cond_modalites ?? null
+      ];
+
+      // Montant / périodicité : éditables UNIQUEMENT si Stripe n'est pas déjà actif.
+      if (!billingActive) {
+        if (amount_eur !== undefined) {
+          const amount = Number(amount_eur);
+          if (!amount || amount <= 0) {
+            return res.status(400).json({ message: 'Le montant doit être supérieur à 0.' });
+          }
+          params.push(amount);
+          fields.push(`amount_eur = $${params.length}`);
+        }
+        if (interval !== undefined) {
+          params.push(interval === 'year' ? 'year' : 'month');
+          fields.push(`billing_interval = $${params.length}`);
+        }
+        if (interval_count !== undefined) {
+          params.push(Math.max(parseInt(interval_count, 10) || 1, 1));
+          fields.push(`interval_count = $${params.length}`);
+        }
+      }
+
+      params.push(id);
+      await db.pool.query(`UPDATE subscriptions SET ${fields.join(', ')} WHERE id = $${params.length}`, params);
+      const updated = await db.pool.query(`${SELECT_WITH_CLIENT} WHERE s.id = $1`, [id]);
+      res.json({ ...updated.rows[0], amount_locked: billingActive });
+    } catch (error) {
+      console.error('[Subscription] Erreur mise à jour:', error);
+      res.status(500).json({ message: 'Erreur lors de la mise à jour' });
+    }
+  },
+
+  /**
+   * GET /api/subscriptions/:id/preview - aperçu (lecture seule) de ce que recevra le client :
+   * destinataire, sujet + corps de l'email, et le PDF de conditions rendu en HTML.
+   * Ne crée AUCUNE session Stripe (utilise le lien existant si présent, sinon un placeholder).
+   */
+  previewSubscription: async (req, res) => {
+    const db = req.app.locals.db;
+    const { id } = req.params;
+    const message = (req.query && req.query.message) || '';
+    const includeConditions = !(req.query && (req.query.includeConditions === 'false' || req.query.includeConditions === false));
+    try {
+      const { rows } = await db.pool.query(
+        `SELECT s.label, s.amount_eur, s.billing_interval, s.interval_count, s.billing_pay_token,
+                s.cond_intro, s.cond_included, s.cond_excluded, s.cond_modalites,
+                c.name AS client_name, c.email AS client_email
+         FROM subscriptions s LEFT JOIN crm_clients c ON s.client_id = c.id
+         WHERE s.id = $1`,
+        [id]
+      );
+      const sub = rows[0];
+      if (!sub) {
+        return res.status(404).json({ message: 'Abonnement introuvable.' });
+      }
+      const url = sub.billing_pay_token
+        ? `https://pay.pixfeed.net/${sub.billing_pay_token}`
+        : 'https://pay.pixfeed.net/(lien généré à l’envoi)';
+
+      const signature = await emailService.getSelectedSignature(db);
+      const email = emailService.buildSubscriptionLinkEmail({
+        clientName: sub.client_name, url, label: sub.label, signature, message
+      });
+
+      let conditionsHtml = null;
+      if (includeConditions) {
+        try {
+          conditionsHtml = await conditionsService.renderConditionsHtml('abonnement', {
+            label: sub.label,
+            price: formatEur(sub.amount_eur),
+            period: periodLabel(sub.billing_interval, sub.interval_count),
+            date: new Date().toLocaleDateString('fr-FR'),
+            client_name: sub.client_name || '',
+            intro: sub.cond_intro || '',
+            included: sub.cond_included || '',
+            excluded: sub.cond_excluded || '',
+            modalites: sub.cond_modalites || ''
+          });
+        } catch (pdfErr) {
+          conditionsHtml = null;
+        }
+      }
+
+      res.json({
+        recipient: sub.client_email || null,
+        hasEmail: !!sub.client_email,
+        subject: email.subject,
+        emailHtml: email.html,
+        conditionsHtml
+      });
+    } catch (error) {
+      console.error('[Subscription] Erreur prévisualisation:', error);
+      res.status(500).json({ message: 'Erreur lors de la prévisualisation' });
+    }
+  },
+
+  /**
    * POST /api/subscriptions/:id/billing/checkout
    * Renvoie le lien COURT (pay.pixfeed.net/{token}). La session Stripe est créée au clic.
    */

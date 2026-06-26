@@ -84,21 +84,35 @@ const objectifController = {
     try {
       const params = await getOrCreateParams(pool, annee);
 
-      // MRR normalisé (mensuel EUR) + clients actifs, sur les abos actifs.
+      // MRR normalisé (mensuel EUR) sur les abos RÉELLEMENT prélevés (billing_status='active').
       const normalize = `amount_eur / (CASE billing_interval WHEN 'year' THEN 12 WHEN 'quarter' THEN 3 ELSE 1 END * GREATEST(COALESCE(interval_count, 1), 1))`;
-      const mrrRes = await pool.query(
-        `SELECT COALESCE(SUM(${normalize}), 0)::float AS mrr,
-                COUNT(DISTINCT client_id) AS clients
-         FROM subscriptions WHERE billing_status = 'active'`
+      const subsRes = await pool.query(
+        `SELECT COALESCE(SUM(${normalize}), 0)::float AS mrr FROM subscriptions WHERE billing_status = 'active'`
       );
-      const mrr = Number(mrrRes.rows[0].mrr) || 0;
-      const clients = parseInt(mrrRes.rows[0].clients, 10) || 0;
+      // + contrats de maintenance réellement prélevés (montant toujours mensuel).
+      const maintRes = await pool.query(
+        `SELECT COALESCE(SUM(monthly_amount), 0)::float AS mrr FROM maintenance_contracts WHERE billing_status = 'active'`
+      );
+      const mrr = (Number(subsRes.rows[0].mrr) || 0) + (Number(maintRes.rows[0].mrr) || 0);
 
-      // MRR à risque (impayés).
+      // Clients récurrents distincts (abos + maintenance prélevés), sans double-comptage.
+      const clientsRes = await pool.query(
+        `SELECT COUNT(*) AS clients FROM (
+           SELECT client_id FROM subscriptions         WHERE billing_status = 'active' AND client_id IS NOT NULL
+           UNION
+           SELECT client_id FROM maintenance_contracts WHERE billing_status = 'active' AND client_id IS NOT NULL
+         ) u`
+      );
+      const clients = parseInt(clientsRes.rows[0].clients, 10) || 0;
+
+      // MRR à risque (impayés) : abos + maintenance en past_due.
       const riskRes = await pool.query(
         `SELECT COALESCE(SUM(${normalize}), 0)::float AS v FROM subscriptions WHERE billing_status = 'past_due'`
       );
-      const mrrARisque = Number(riskRes.rows[0].v) || 0;
+      const maintRiskRes = await pool.query(
+        `SELECT COALESCE(SUM(monthly_amount), 0)::float AS v FROM maintenance_contracts WHERE billing_status = 'past_due'`
+      );
+      const mrrARisque = (Number(riskRes.rows[0].v) || 0) + (Number(maintRiskRes.rows[0].v) || 0);
 
       // Churn 3 mois (approximatif : abos résiliés sur 3 mois / base active+résiliés).
       const churnRes = await pool.query(

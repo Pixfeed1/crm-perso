@@ -7,7 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   FiRepeat, FiPlus, FiTrash2, FiSend, FiCopy, FiCheck, FiLink,
-  FiUser, FiX, FiSlash, FiRotateCcw
+  FiUser, FiX, FiSlash, FiRotateCcw, FiEdit2, FiEye, FiAlertTriangle
 } from 'react-icons/fi';
 import { subscriptionsAPI, clientsAPI } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
@@ -53,9 +53,11 @@ const SubscriptionsTab = () => {
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Création
+  // Création / édition (même modale)
   const [formOpen, setFormOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [editingId, setEditingId] = useState(null);          // null = création ; sinon = id édité
+  const [editBillingActive, setEditBillingActive] = useState(false); // verrouille montant/périodicité
   const [form, setForm] = useState({
     client_id: '', label: '', amount_eur: '', periodicity: 'month', interval_count: 2,
     cond_intro: '', cond_included: '', cond_excluded: '', cond_modalites: ''
@@ -65,7 +67,14 @@ const SubscriptionsTab = () => {
   // Email d'envoi du lien
   const [emailTarget, setEmailTarget] = useState(null);
 
+  // Prévisualisation (lecture seule) de ce que reçoit le client
+  const [previewTarget, setPreviewTarget] = useState(null);
+  const [previewData, setPreviewData] = useState(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+
   const openForm = () => {
+    setEditingId(null);
+    setEditBillingActive(false);
     setForm({
       client_id: '', label: '', amount_eur: '', periodicity: 'month', interval_count: 2,
       cond_intro: '', cond_included: '', cond_excluded: '',
@@ -73,6 +82,42 @@ const SubscriptionsTab = () => {
     });
     setModalitesTouched(false);
     setFormOpen(true);
+  };
+
+  const openEdit = (sub) => {
+    const periodicity = sub.interval === 'year'
+      ? 'year'
+      : ((parseInt(sub.interval_count, 10) || 1) > 1 ? 'custom' : 'month');
+    setEditingId(sub.id);
+    setEditBillingActive(sub.billing_status === 'active');
+    setForm({
+      client_id: sub.client_id || '',
+      label: sub.label || '',
+      amount_eur: sub.amount_eur ?? '',
+      periodicity,
+      interval_count: parseInt(sub.interval_count, 10) || 2,
+      cond_intro: sub.cond_intro || '',
+      cond_included: sub.cond_included || '',
+      cond_excluded: sub.cond_excluded || '',
+      cond_modalites: sub.cond_modalites || buildDefaultModalites(periodicity, sub.interval_count)
+    });
+    setModalitesTouched(true); // ne pas écraser les conditions existantes
+    setFormOpen(true);
+  };
+
+  const openPreview = async (sub) => {
+    setPreviewTarget(sub);
+    setPreviewData(null);
+    setPreviewLoading(true);
+    try {
+      const data = await subscriptionsAPI.preview(sub.id, { includeConditions: true });
+      setPreviewData(data);
+    } catch (error) {
+      toast.error(error.message || "Erreur lors de la prévisualisation");
+      setPreviewTarget(null);
+    } finally {
+      setPreviewLoading(false);
+    }
   };
 
   // Régénère les modalités par défaut quand la périodicité change (si non éditées à la main).
@@ -126,33 +171,47 @@ const SubscriptionsTab = () => {
     }
   };
 
-  const handleCreate = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.client_id || !form.label || !form.amount_eur) {
-      toast.error('Client, libellé et montant sont obligatoires');
+    if (!form.client_id || !form.label) {
+      toast.error('Client et libellé sont obligatoires');
+      return;
+    }
+    const editingLockedAmount = editingId && editBillingActive;
+    if (!editingLockedAmount && !form.amount_eur) {
+      toast.error('Le montant est obligatoire');
       return;
     }
     const interval = form.periodicity === 'year' ? 'year' : 'month';
     const interval_count = form.periodicity === 'custom' ? Math.max(parseInt(form.interval_count, 10) || 1, 1) : 1;
+    const base = {
+      client_id: form.client_id,
+      label: form.label,
+      cond_intro: form.cond_intro || null,
+      cond_included: form.cond_included || null,
+      cond_excluded: form.cond_excluded || null,
+      cond_modalites: form.cond_modalites || null
+    };
+    // Montant/périodicité : envoyés à la création, et en édition seulement si Stripe pas actif.
+    if (!editingLockedAmount) {
+      base.amount_eur = Number(form.amount_eur);
+      base.interval = interval;
+      base.interval_count = interval_count;
+    }
     try {
       setSaving(true);
-      await subscriptionsAPI.create({
-        client_id: form.client_id,
-        label: form.label,
-        amount_eur: Number(form.amount_eur),
-        interval,
-        interval_count,
-        cond_intro: form.cond_intro || null,
-        cond_included: form.cond_included || null,
-        cond_excluded: form.cond_excluded || null,
-        cond_modalites: form.cond_modalites || null
-      });
-      toast.success('Abonnement créé');
+      if (editingId) {
+        await subscriptionsAPI.update(editingId, base);
+        toast.success('Abonnement mis à jour');
+      } else {
+        await subscriptionsAPI.create(base);
+        toast.success('Abonnement créé');
+      }
       setFormOpen(false);
       fetchSubscriptions();
     } catch (error) {
-      console.error('Erreur création abonnement:', error);
-      toast.error(error.message || "Erreur lors de la création de l'abonnement");
+      console.error('Erreur enregistrement abonnement:', error);
+      toast.error(error.message || "Erreur lors de l'enregistrement de l'abonnement");
     } finally {
       setSaving(false);
     }
@@ -302,6 +361,24 @@ const SubscriptionsTab = () => {
                     <motion.button
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
+                      onClick={() => openEdit(sub)}
+                      className="p-2 bg-surface-muted/60 hover:bg-surface-muted text-text-secondary rounded-lg transition-colors"
+                      title="Modifier l'abonnement"
+                    >
+                      <FiEdit2 size={16} />
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => openPreview(sub)}
+                      className="p-2 bg-surface-muted/60 hover:bg-surface-muted text-text-secondary rounded-lg transition-colors"
+                      title="Prévisualiser l'email et les conditions"
+                    >
+                      <FiEye size={16} />
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
                       onClick={() => handleGenerateLink(sub)}
                       disabled={loadingLink === sub.id}
                       className="p-2 bg-accent/30 hover:bg-accent/50 text-indigo-300 rounded-lg transition-colors disabled:opacity-50"
@@ -400,12 +477,12 @@ const SubscriptionsTab = () => {
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex justify-between items-center px-6 py-4 border-b border-border shrink-0">
-                <h2 className="text-xl font-bold text-text-primary">Nouvel abonnement</h2>
+                <h2 className="text-xl font-bold text-text-primary">{editingId ? "Modifier l'abonnement" : 'Nouvel abonnement'}</h2>
                 <button onClick={() => setFormOpen(false)} className="text-text-muted hover:text-text-primary">
                   <FiX size={22} />
                 </button>
               </div>
-              <form onSubmit={handleCreate} className="flex flex-col min-h-0 flex-1">
+              <form onSubmit={handleSubmit} className="flex flex-col min-h-0 flex-1">
                 <div className="p-6 space-y-4 overflow-y-auto flex-1 min-h-0">
                 <div>
                   <label className="block text-sm text-text-secondary mb-1">Client</label>
@@ -434,6 +511,13 @@ const SubscriptionsTab = () => {
                   />
                 </div>
 
+                {editBillingActive && (
+                  <div className="flex items-start gap-2 text-xs text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-lg p-2.5">
+                    <FiAlertTriangle size={14} className="mt-0.5 flex-shrink-0" />
+                    <span>Le prélèvement Stripe est actif : le montant et la périodicité sont verrouillés (les modifier ici ne changerait pas le prélèvement réel). Pour changer le prix, arrêtez l'abonnement puis recréez-en un.</span>
+                  </div>
+                )}
+
                 <div>
                   <label className="block text-sm text-text-secondary mb-1">Montant (€)</label>
                   <input
@@ -443,8 +527,9 @@ const SubscriptionsTab = () => {
                     value={form.amount_eur}
                     onChange={(e) => setForm({ ...form, amount_eur: e.target.value })}
                     placeholder="0.00"
-                    className="w-full px-3 py-2 bg-surface/60 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-indigo-500"
-                    required
+                    disabled={editBillingActive}
+                    className="w-full px-3 py-2 bg-surface/60 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                    required={!editBillingActive}
                   />
                 </div>
 
@@ -453,7 +538,8 @@ const SubscriptionsTab = () => {
                   <select
                     value={form.periodicity}
                     onChange={(e) => setForm({ ...form, periodicity: e.target.value })}
-                    className="w-full px-3 py-2 bg-surface/60 border border-border rounded-lg text-text-primary focus:outline-none focus:border-indigo-500"
+                    disabled={editBillingActive}
+                    className="w-full px-3 py-2 bg-surface/60 border border-border rounded-lg text-text-primary focus:outline-none focus:border-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <option value="month">Mensuel</option>
                     <option value="year">Annuel</option>
@@ -470,7 +556,8 @@ const SubscriptionsTab = () => {
                       step="1"
                       value={form.interval_count}
                       onChange={(e) => setForm({ ...form, interval_count: e.target.value })}
-                      className="w-full px-3 py-2 bg-surface/60 border border-border rounded-lg text-text-primary focus:outline-none focus:border-indigo-500"
+                      disabled={editBillingActive}
+                      className="w-full px-3 py-2 bg-surface/60 border border-border rounded-lg text-text-primary focus:outline-none focus:border-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
                     />
                   </div>
                 )}
@@ -538,7 +625,7 @@ const SubscriptionsTab = () => {
                     disabled={saving}
                     className="flex-1 px-4 py-2.5 bg-accent hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
                   >
-                    {saving ? 'Création...' : "Créer l'abonnement"}
+                    {saving ? 'Enregistrement...' : (editingId ? 'Enregistrer' : "Créer l'abonnement")}
                   </button>
                 </div>
               </form>
@@ -650,6 +737,102 @@ const SubscriptionsTab = () => {
                   className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
                 >
                   Supprimer
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modale d'aperçu (ce que le client va recevoir) */}
+      <AnimatePresence>
+        {previewTarget && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[10000] flex items-center justify-center p-4"
+            onClick={() => setPreviewTarget(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 20 }}
+              className="bg-surface-muted border border-border rounded-2xl max-w-2xl w-full flex flex-col max-h-[90vh] overflow-hidden"
+              style={{ maxHeight: '90dvh' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex justify-between items-center px-6 py-4 border-b border-border shrink-0">
+                <h2 className="text-xl font-bold text-text-primary">Aperçu de l'envoi</h2>
+                <button onClick={() => setPreviewTarget(null)} className="text-text-muted hover:text-text-primary">
+                  <FiX size={22} />
+                </button>
+              </div>
+              <div className="p-6 space-y-4 overflow-y-auto flex-1 min-h-0">
+                {previewLoading ? (
+                  <p className="text-text-muted text-sm text-center py-8">Chargement de l'aperçu…</p>
+                ) : previewData ? (
+                  <>
+                    {/* Destinataire (pour vérifier le bon mail) */}
+                    <div>
+                      <p className="text-xs text-text-muted mb-1">Destinataire</p>
+                      {previewData.hasEmail ? (
+                        <p className="text-text-primary font-medium">{previewData.recipient}</p>
+                      ) : (
+                        <p className="flex items-center gap-2 text-rose-300 font-medium">
+                          <FiAlertTriangle size={14} /> Aucune adresse email sur la fiche client — l'envoi échouera.
+                        </p>
+                      )}
+                      <p className="text-xs text-text-muted mt-1">
+                        L'email vient de la fiche client. Mauvais mail ? Corrigez-le sur le client, ou changez le client lié via « Modifier ».
+                      </p>
+                    </div>
+
+                    {/* Sujet */}
+                    <div>
+                      <p className="text-xs text-text-muted mb-1">Sujet</p>
+                      <p className="text-text-primary">{previewData.subject}</p>
+                    </div>
+
+                    {/* Corps de l'email */}
+                    <div>
+                      <p className="text-xs text-text-muted mb-1">Corps de l'email</p>
+                      <iframe
+                        title="Aperçu de l'email"
+                        srcDoc={previewData.emailHtml}
+                        className="w-full h-56 bg-white rounded-lg border border-border"
+                      />
+                    </div>
+
+                    {/* Conditions (PDF joint) */}
+                    {previewData.conditionsHtml && (
+                      <div>
+                        <p className="text-xs text-text-muted mb-1">Conditions (PDF joint à l'email)</p>
+                        <iframe
+                          title="Aperçu des conditions"
+                          srcDoc={previewData.conditionsHtml}
+                          className="w-full h-96 bg-white rounded-lg border border-border"
+                        />
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-text-muted text-sm text-center py-8">Aperçu indisponible.</p>
+                )}
+              </div>
+              <div className="flex gap-3 px-6 py-4 border-t border-border shrink-0 bg-surface-muted">
+                <button
+                  onClick={() => setPreviewTarget(null)}
+                  className="flex-1 px-4 py-2.5 border-2 border-overlay/20 text-text-primary hover:bg-overlay/10 rounded-lg font-medium transition-all"
+                >
+                  Fermer
+                </button>
+                <button
+                  onClick={() => { const t = previewTarget; setPreviewTarget(null); setEmailTarget(t); }}
+                  disabled={!previewData || !previewData.hasEmail}
+                  className="flex-1 px-4 py-2.5 bg-accent hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  <FiSend size={15} /> Envoyer…
                 </button>
               </div>
             </motion.div>

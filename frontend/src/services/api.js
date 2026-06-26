@@ -1173,7 +1173,13 @@ export const maintenanceContractsAPI = {
 export const subscriptionsAPI = {
   getAll: () => apiRequest('/subscriptions'),
   create: (data) => apiRequest('/subscriptions', 'POST', data),
+  update: (id, data) => apiRequest(`/subscriptions/${id}`, 'PUT', data),
   delete: (id) => apiRequest(`/subscriptions/${id}`, 'DELETE'),
+  // Aperçu (lecture seule) de l'email + conditions avant envoi -> { recipient, hasEmail, subject, emailHtml, conditionsHtml }
+  preview: (id, params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return apiRequest(`/subscriptions/${id}/preview${qs ? `?${qs}` : ''}`);
+  },
   // Lien court de paiement (pay.pixfeed.net/{token}) -> { url }
   createBillingCheckout: (id) => apiRequest(`/subscriptions/${id}/billing/checkout`, 'POST'),
   // Envoyer le lien au client par email (payload: { message, includeConditions, attachments })

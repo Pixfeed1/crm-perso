@@ -31,7 +31,9 @@ const getStats = async (db) => {
       COUNT(*) FILTER (WHERE status = 'active') as active_contracts,
       COUNT(*) FILTER (WHERE status = 'paused') as paused_contracts,
       COUNT(*) FILTER (WHERE next_report_due <= CURRENT_DATE) as reports_due,
-      COALESCE(SUM(monthly_amount) FILTER (WHERE status = 'active'), 0) as monthly_revenue,
+      -- Revenus = uniquement les contrats réellement prélevés via Stripe (billing_status='active'),
+      -- et non les contrats simplement créés/actifs mais sans prélèvement en cours.
+      COALESCE(SUM(monthly_amount) FILTER (WHERE billing_status = 'active'), 0) as monthly_revenue,
       COALESCE(AVG(pagespeed_mobile) FILTER (WHERE pagespeed_mobile IS NOT NULL), 0) as avg_pagespeed_mobile,
       COALESCE(AVG(pagespeed_desktop) FILTER (WHERE pagespeed_desktop IS NOT NULL), 0) as avg_pagespeed_desktop
     FROM maintenance_contracts

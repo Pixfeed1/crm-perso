@@ -658,7 +658,9 @@ class EmailService {
    * Envoie au client le lien de paiement (récurrent) d'un abonnement libre.
    * `message` prime sur le corps par défaut ; `attachments` pour les pièces jointes.
    */
-  async sendSubscriptionLink({ to, clientName, url, label, signature, message = '', attachments = [] }) {
+  // Construit le contenu de l'email d'abonnement (sujet + html + texte), SANS l'envoyer.
+  // Réutilisé par l'envoi ET par la prévisualisation (mêmes rendus -> aperçu fidèle).
+  buildSubscriptionLinkEmail({ clientName, url, label, signature, message = '' }) {
     const emailSignature = signature || this.getDefaultSignature();
     const escapeHtml = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     const what = label ? `votre abonnement « ${escapeHtml(label)} »` : 'votre abonnement';
@@ -683,13 +685,16 @@ class EmailService {
       </div>
     `;
 
-    return await this.sendEmail({
-      to,
+    return {
       subject: `Mise en place du paiement de ${label ? `« ${label} »` : 'votre abonnement'}`,
       html,
-      text: `${introText}\n${url}`,
-      attachments
-    });
+      text: `${introText}\n${url}`
+    };
+  }
+
+  async sendSubscriptionLink({ to, clientName, url, label, signature, message = '', attachments = [] }) {
+    const { subject, html, text } = this.buildSubscriptionLinkEmail({ clientName, url, label, signature, message });
+    return await this.sendEmail({ to, subject, html, text, attachments });
   }
 
   /**

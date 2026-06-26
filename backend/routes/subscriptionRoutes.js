@@ -13,6 +13,12 @@ router.get('/', subscriptionController.getAllSubscriptions);
 // POST /api/subscriptions - créer un abonnement
 router.post('/', subscriptionController.createSubscription);
 
+// PUT /api/subscriptions/:id - modifier un abonnement
+router.put('/:id', subscriptionController.updateSubscription);
+
+// GET /api/subscriptions/:id/preview - aperçu (email + conditions) avant envoi
+router.get('/:id/preview', subscriptionController.previewSubscription);
+
 // POST /api/subscriptions/:id/billing/checkout - lien court de paiement (pay.pixfeed.net/{token})
 router.post('/:id/billing/checkout', subscriptionController.createBillingCheckout);
 
