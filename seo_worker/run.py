@@ -17,6 +17,7 @@ Règles clés :
 import argparse
 import json
 import math
+import os
 import time
 from datetime import datetime, timezone, timedelta
 from urllib.parse import urlparse
@@ -400,6 +401,7 @@ def gsc_sync_site(conn, site, job_id=None):
             return u
 
         cap = config.GSC_INSPECT_DAILY_CAP
+        debug = bool(os.environ.get("GSC_DEBUG"))
         api_calls = 0
         done = 0
         for url in to_inspect:
@@ -407,6 +409,13 @@ def gsc_sync_site(conn, site, job_id=None):
                 target = inspect_target(url)
                 coverage, raw = gsc.inspect_url(creds, gsc_property, target)
                 api_calls += 1
+                if debug and done < 3:
+                    isr = (raw or {}).get("inspectionResult", {}).get("indexStatusResult", {})
+                    print(f"  [GSC_DEBUG] seo_pages.url={url!r}")
+                    print(f"             URL inspectée      ={target!r}")
+                    print(f"             coverageState={isr.get('coverageState')!r} verdict={isr.get('verdict')!r} "
+                          f"indexingState={isr.get('indexingState')!r} pageFetchState={isr.get('pageFetchState')!r}")
+                    print(f"             googleCanonical={isr.get('googleCanonical')!r} userCanonical={isr.get('userCanonical')!r}")
                 # Filet : si "unknown" alors qu'on n'a pas testé la variante slash, réessayer
                 # une fois avec le slash basculé (borné par le quota d'inspections).
                 if coverage and "unknown" in coverage.lower() and api_calls < cap:
@@ -534,6 +543,93 @@ def gsc_sync_site(conn, site, job_id=None):
         return False
 
 
+def gsc_debug_site(conn, site, n=3):
+    """Investigation URL Inspection : pour les n pages à plus fortes impressions, inspecte
+    À LA FOIS l'URL canonique GSC ET l'URL que le worker enverrait, et logge la réponse
+    complète de Google (coverageState/verdict/indexingState/...) + le JSON brut.
+    Aucune écriture en base. Usage : python run.py --gsc-debug --site jurojin.net
+    """
+    cur = conn.cursor()
+    # Lecture seule : on ne crée rien, on lit le site déjà enregistré.
+    cur.execute("SELECT id FROM seo_sites WHERE domain = %s", (site["domain"],))
+    row = cur.fetchone()
+    if not row:
+        print(f"  Site {site['domain']} absent de seo_sites (lancer le worker --serve d'abord).")
+        return
+    site_id = row[0]
+    gsc_property = site.get("gsc_property")
+    print(f"\n=== GSC DEBUG {site['domain']} (site_id={site_id}) property={gsc_property!r} ===")
+    if not gsc_property:
+        print("  gsc_property manquant.")
+        return
+    try:
+        creds = gsc.load_credentials(conn)
+    except Exception as e:
+        print(f"  OAuth : échec ({e})")
+        return
+    if creds is None:
+        print("  OAuth GSC non configuré (lancer gsc_auth.py).")
+        return
+
+    # Convention de slash + map canonique, identiques à gsc_sync_site.
+    cur.execute("SELECT page_url FROM seo_gsc_daily WHERE site_id = %s GROUP BY page_url", (site_id,))
+    gsc_urls = [r[0] for r in cur.fetchall()]
+    canon_by_norm = {}
+    for gurl in gsc_urls:
+        nrm = wp.normalize_url(gurl)
+        if nrm and nrm not in canon_by_norm:
+            canon_by_norm[nrm] = gurl
+    slashed = sum(1 for u in gsc_urls if (urlparse(u).path or "").endswith("/"))
+    use_trailing = bool(gsc_urls) and slashed >= len(gsc_urls) / 2
+    print(f"  URLs GSC distinctes={len(gsc_urls)} | avec slash final={slashed} | use_trailing={use_trailing}")
+
+    def target_for(nrm):
+        if nrm in canon_by_norm:
+            return canon_by_norm[nrm]
+        path = urlparse(nrm).path or ""
+        if use_trailing and path not in ("", "/") and not nrm.endswith("/"):
+            return nrm + "/"
+        return nrm
+
+    # n pages à plus fortes impressions (donc forcément indexées par Google).
+    cur.execute(
+        """SELECT page_url, SUM(impressions) AS imp FROM seo_gsc_daily
+           WHERE site_id = %s GROUP BY page_url ORDER BY imp DESC LIMIT %s""",
+        (site_id, n),
+    )
+    top = cur.fetchall()
+    for page_url, imp in top:
+        nrm = wp.normalize_url(page_url)
+        cur.execute("SELECT url FROM seo_pages WHERE site_id = %s AND url = %s", (site_id, nrm))
+        in_pages = cur.fetchone() is not None
+        target = target_for(nrm)
+        print("\n------------------------------------------------------------")
+        print(f"  canonical GSC (page_url) : {page_url!r}  (impressions={imp})")
+        print(f"  normalize_url(GSC)       : {nrm!r}")
+        print(f"  présent dans seo_pages   : {in_pages}")
+        print(f"  URL inspectée par worker : {target!r}")
+        print(f"  canonical == cible ?     : {page_url == target}")
+        for tag, u in (("canonical GSC", page_url), ("cible worker ", target)):
+            try:
+                _cov, raw = gsc.inspect_url(creds, gsc_property, u)
+                isr = (raw or {}).get("inspectionResult", {}).get("indexStatusResult", {})
+                print(f"    [{tag}] {u!r}")
+                print(f"        coverageState={isr.get('coverageState')!r} verdict={isr.get('verdict')!r} "
+                      f"indexingState={isr.get('indexingState')!r} pageFetchState={isr.get('pageFetchState')!r}")
+                print(f"        googleCanonical={isr.get('googleCanonical')!r} userCanonical={isr.get('userCanonical')!r}")
+            except Exception as e:
+                print(f"    [{tag}] {u!r} -> ERREUR : {e}")
+
+    # JSON brut complet pour la 1re page (canonical GSC) : la vérité, sans interprétation.
+    if top:
+        try:
+            _cov, raw = gsc.inspect_url(creds, gsc_property, top[0][0])
+            print("\n  --- inspectionResult BRUT (1re page, canonical GSC) ---")
+            print(json.dumps(raw, indent=2, ensure_ascii=False))
+        except Exception as e:
+            print(f"  JSON brut indisponible : {e}")
+
+
 def site_by_id(conn, site_id):
     cur = conn.cursor()
     cur.execute("SELECT id, domain, wp_base_url, gsc_property FROM seo_sites WHERE id = %s", (site_id,))
@@ -638,6 +734,8 @@ def main():
     ap.add_argument("--site", help="restreindre à un domaine (ex: jurojin.net)")
     ap.add_argument("--serve", action="store_true", help="service permanent : traite la file seo_jobs (un seul job à la fois)")
     ap.add_argument("--gsc", action="store_true", help="synchro Google Search Console (hors file de jobs)")
+    ap.add_argument("--gsc-debug", action="store_true", help="investigation URL Inspection (canonical GSC vs cible worker + JSON brut)")
+    ap.add_argument("--gsc-inspect", metavar="URL", help="inspecte UNE URL exacte et affiche la réponse brute de Google")
     args = ap.parse_args()
 
     if args.serve:
@@ -649,11 +747,31 @@ def main():
         print(f"Aucun site '{args.site}' dans config.SITES")
         return
 
+    # Inspection d'une URL exacte (comparaison caractère par caractère côté humain).
+    if args.gsc_inspect:
+        conn = connect()
+        try:
+            site = sites[0]
+            creds = gsc.load_credentials(conn)
+            if creds is None:
+                print("OAuth GSC non configuré (lancer gsc_auth.py).")
+                return
+            prop = site.get("gsc_property")
+            print(f"property={prop!r}")
+            print(f"inspectionUrl={args.gsc_inspect!r}")
+            _cov, raw = gsc.inspect_url(creds, prop, args.gsc_inspect)
+            print(json.dumps(raw, indent=2, ensure_ascii=False))
+        finally:
+            conn.close()
+        return
+
     conn = connect()
     try:
         for site in sites:
             try:
-                if args.gsc:
+                if args.gsc_debug:
+                    gsc_debug_site(conn, site)
+                elif args.gsc:
                     gsc_sync_site(conn, site)
                 else:
                     crawl_site(conn, site, full=args.full, no_resume=args.no_resume)
