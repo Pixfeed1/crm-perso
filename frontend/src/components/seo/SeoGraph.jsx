@@ -10,6 +10,7 @@
 import React, { useMemo, useRef, useState, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { FiExternalLink, FiArrowRight, FiArrowLeft, FiX, FiZoomIn, FiZoomOut, FiMaximize } from 'react-icons/fi';
+import { decodeHtml } from '../../utils/formatters';
 
 const HEALTH_VAR = {
   orpheline: '--danger-text', affamee: '--warning-text', reservoir: '--info-text', saine: '--success-text'
@@ -18,7 +19,7 @@ const HEALTH_LABEL = { orpheline: 'Orpheline', affamee: 'Affamée', reservoir: '
 const nodeColor = (h) => `rgb(var(${HEALTH_VAR[h] || '--neutral-text'}))`;
 const prNum = (n) => Number(n && n.internal_pagerank) || 0;
 const shortLabel = (n) => {
-  const t = n.title || n.url || '';
+  const t = decodeHtml(n.title) || n.url || '';
   return t.length > 26 ? t.slice(0, 25) + '…' : t;
 };
 
@@ -145,7 +146,7 @@ const SeoGraph = ({ data }) => {
   const activeUrl = (hover && hover.node.url) || selected || null;
   const isEdgeActive = (e) => activeUrl && (e.from_url === activeUrl || e.to_url === activeUrl);
   const selNode = selected ? byUrl.get(selected) : null;
-  const titleOf = (url) => (byUrl.get(url) && (byUrl.get(url).title || url)) || url;
+  const titleOf = (url) => (byUrl.get(url) && (decodeHtml(byUrl.get(url).title) || url)) || url;
   const btn = 'p-1.5 rounded-lg bg-surface-strong hover:bg-border-strong text-text-secondary';
 
   return (
@@ -220,7 +221,7 @@ const SeoGraph = ({ data }) => {
         {hover && !drag.current && (
           <div className="absolute z-10 pointer-events-none bg-surface-strong border border-border rounded-lg p-2 shadow-lg text-xs max-w-xs"
             style={{ left: Math.min(hover.x + 12, W - 40), top: hover.y + 12 }}>
-            <div className="text-text-primary font-medium break-words">{hover.node.title || hover.node.url}</div>
+            <div className="text-text-primary font-medium break-words">{decodeHtml(hover.node.title) || hover.node.url}</div>
             <div className="text-text-muted break-all mt-0.5">{hover.node.url}</div>
             <div className="flex flex-wrap gap-1.5 mt-1.5">
               <span className="px-1.5 py-0.5 rounded-full font-medium" style={{ backgroundColor: 'rgb(var(--surface-muted))', color: nodeColor(hover.node.health) }}>{HEALTH_LABEL[hover.node.health] || 'Non calculé'}</span>
@@ -245,7 +246,7 @@ const SeoGraph = ({ data }) => {
         <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="mt-3 bg-surface-muted/60 border border-border rounded-xl p-3">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <div className="text-text-primary font-medium break-words">{selNode.title || selNode.url}</div>
+              <div className="text-text-primary font-medium break-words">{decodeHtml(selNode.title) || selNode.url}</div>
               <a href={selNode.url} target="_blank" rel="noopener noreferrer" className="text-text-muted text-xs hover:text-accent inline-flex items-center gap-1 break-all">{selNode.url} <FiExternalLink size={10} /></a>
             </div>
             <button onClick={() => setSelected(null)} className="p-1 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-strong flex-shrink-0"><FiX size={16} /></button>

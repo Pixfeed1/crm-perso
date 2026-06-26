@@ -19,6 +19,7 @@ import json
 import math
 import time
 from datetime import datetime, timezone, timedelta
+from urllib.parse import urlparse
 
 import config
 import wp
@@ -373,10 +374,48 @@ def gsc_sync_site(conn, site, job_id=None):
                         (len(to_inspect), job_id))
             conn.commit()
 
+        # IMPORTANT : on inspecte l'URL telle que Google l'indexe (souvent AVEC slash final),
+        # pas l'URL normalisée (sans slash) -> sinon coverageState = "URL is unknown to Google".
+        # 1) URL canonique exacte connue de GSC (Search Analytics) si la page a des impressions.
+        cur.execute(
+            "SELECT page_url FROM seo_gsc_daily WHERE site_id = %s GROUP BY page_url", (site_id,)
+        )
+        gsc_urls = [r[0] for r in cur.fetchall()]
+        canon_by_norm = {}
+        for gurl in gsc_urls:
+            n = wp.normalize_url(gurl)
+            if n and n not in canon_by_norm:
+                canon_by_norm[n] = gurl
+        # 2) Convention de slash final déduite de ce que Google indexe réellement.
+        slashed = sum(1 for u in gsc_urls if (urlparse(u).path or "").endswith("/"))
+        use_trailing = bool(gsc_urls) and slashed >= len(gsc_urls) / 2
+
+        def inspect_target(u):
+            """URL à inspecter : canonique GSC si connue, sinon variante slash selon le site."""
+            if u in canon_by_norm:
+                return canon_by_norm[u]
+            path = urlparse(u).path or ""
+            if use_trailing and path not in ("", "/") and not u.endswith("/"):
+                return u + "/"
+            return u
+
+        cap = config.GSC_INSPECT_DAILY_CAP
+        api_calls = 0
         done = 0
         for url in to_inspect:
             try:
-                coverage, raw = gsc.inspect_url(creds, gsc_property, url)
+                target = inspect_target(url)
+                coverage, raw = gsc.inspect_url(creds, gsc_property, target)
+                api_calls += 1
+                # Filet : si "unknown" alors qu'on n'a pas testé la variante slash, réessayer
+                # une fois avec le slash basculé (borné par le quota d'inspections).
+                if coverage and "unknown" in coverage.lower() and api_calls < cap:
+                    alt = url[:-1] if url.endswith("/") else url + "/"
+                    if alt != target:
+                        cov2, raw2 = gsc.inspect_url(creds, gsc_property, alt)
+                        api_calls += 1
+                        if cov2 and "unknown" not in cov2.lower():
+                            coverage, raw = cov2, raw2
                 cur.execute(
                     """INSERT INTO seo_url_inspections (site_id, page_url, inspection_status, raw_response, inspected_at, updated_at)
                        VALUES (%s, %s, %s, %s, NOW(), NOW())

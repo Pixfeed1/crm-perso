@@ -6,6 +6,7 @@
   + bonus yoast_head_json si présent.
 - Extraction des liens internes (même domaine).
 """
+import html
 import re
 from urllib.parse import urljoin, urlparse, urldefrag
 
@@ -170,7 +171,9 @@ def _first_category(it):
 
 
 def _strip_html(s):
-    return re.sub(r"<[^>]+>", "", s or "").strip()
+    # Retire les balises PUIS décode les entités HTML (&rsquo; &amp; &eacute; ...) que
+    # WordPress stocke dans title.rendered, pour enregistrer un titre propre à la source.
+    return html.unescape(re.sub(r"<[^>]+>", "", s or "")).strip()
 
 
 def fetch_html(url):

@@ -66,6 +66,30 @@ export const formatNumber = (number) => {
 };
 
 /**
+ * Décode les entités HTML d'une chaîne (&rsquo; &amp; &eacute; &ndash; ...).
+ * WordPress stocke les titres avec des entités ; on les rend lisibles à l'affichage.
+ * Utilise un <textarea> (décode TOUTES les entités) avec un cache mémoire.
+ * @param {string} str - Chaîne potentiellement encodée
+ * @returns {string} Chaîne décodée
+ */
+const _htmlEntityCache = new Map();
+export const decodeHtml = (str) => {
+  if (!str || typeof str !== 'string') return str;
+  if (str.indexOf('&') === -1) return str; // rien à décoder
+  if (_htmlEntityCache.has(str)) return _htmlEntityCache.get(str);
+  let decoded = str;
+  try {
+    const el = document.createElement('textarea');
+    el.innerHTML = str;
+    decoded = el.value;
+  } catch (e) {
+    decoded = str;
+  }
+  _htmlEntityCache.set(str, decoded);
+  return decoded;
+};
+
+/**
  * Formate une date longue (avec mois complet)
  * @param {string} dateString - Date au format ISO
  * @returns {string} Date formatée

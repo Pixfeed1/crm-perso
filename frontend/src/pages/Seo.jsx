@@ -12,6 +12,7 @@ import {
 } from 'react-icons/fi';
 import { seoAPI } from '../services/api';
 import { useToast } from '../hooks/useToast';
+import { decodeHtml } from '../utils/formatters';
 import SeoGraph from '../components/seo/SeoGraph';
 
 const HEALTH_META = {
@@ -379,7 +380,7 @@ const Seo = () => {
                           return (
                             <tr key={p.id} className="border-b border-border/50">
                               <td className="py-2 pr-2 min-w-0">
-                                <div className="text-text-primary truncate max-w-xs">{p.title || p.url}</div>
+                                <div className="text-text-primary truncate max-w-xs">{decodeHtml(p.title) || p.url}</div>
                                 <a href={p.url} target="_blank" rel="noopener noreferrer" className="text-text-muted text-xs hover:text-accent truncate inline-flex items-center gap-1 max-w-xs">
                                   {p.url} <FiExternalLink size={10} />
                                 </a>
@@ -414,7 +415,7 @@ const Seo = () => {
                     className="bg-surface border border-border rounded-xl p-4">
                     <div className="flex items-start justify-between gap-3 flex-wrap">
                       <div className="min-w-0">
-                        <div className="text-text-primary font-medium break-words">{p.title || p.url}</div>
+                        <div className="text-text-primary font-medium break-words">{decodeHtml(p.title) || p.url}</div>
                         <a href={p.url} target="_blank" rel="noopener noreferrer" className="text-text-muted text-xs hover:text-accent inline-flex items-center gap-1">{p.url} <FiExternalLink size={10} /></a>
                       </div>
                       <div className="flex gap-2 text-xs flex-shrink-0">
@@ -463,7 +464,7 @@ const Seo = () => {
                         {orphelines.map((p) => (
                           <tr key={p.id} className="border-b border-border/50">
                             <td className="py-2 pr-2 min-w-0">
-                              <div className="text-text-primary truncate max-w-xs">{p.title || p.url}</div>
+                              <div className="text-text-primary truncate max-w-xs">{decodeHtml(p.title) || p.url}</div>
                               <a href={p.url} target="_blank" rel="noopener noreferrer" className="text-text-muted text-xs hover:text-accent truncate inline-flex items-center gap-1 max-w-xs">
                                 {p.url} <FiExternalLink size={10} />
                               </a>
@@ -508,7 +509,7 @@ const Seo = () => {
                           return (
                             <tr key={p.id} className="border-b border-border/50">
                               <td className="py-2 pr-2 min-w-0">
-                                <div className="text-text-primary truncate max-w-xs">{p.title || p.url}</div>
+                                <div className="text-text-primary truncate max-w-xs">{decodeHtml(p.title) || p.url}</div>
                                 <a href={p.url} target="_blank" rel="noopener noreferrer" className="text-text-muted text-xs hover:text-accent truncate inline-flex items-center gap-1 max-w-xs">
                                   {p.url} <FiExternalLink size={10} />
                                 </a>
