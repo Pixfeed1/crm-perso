@@ -1,0 +1,21 @@
+[Unit]
+Description=CRM MCP SEO (connecteur lecture seule des données SEO pour Claude)
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+# Adapter les chemins au serveur (modèle crm-pixfeed.service / crm-seo-worker.service).
+WorkingDirectory=/var/www/vhosts/crm.pixfeed.net/mcp_seo
+EnvironmentFile=/var/www/vhosts/crm.pixfeed.net/mcp_seo/.env
+ExecStart=/usr/bin/node server.js
+Restart=always
+RestartSec=5
+# Durcissement systemd (service en lecture seule, aucune écriture disque nécessaire hors log).
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/www/vhosts/crm.pixfeed.net/mcp_seo
+
+[Install]
+WantedBy=multi-user.target

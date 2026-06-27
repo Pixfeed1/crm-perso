@@ -278,6 +278,9 @@ def extract_onpage(html_doc, page_url):
             tag.decompose()
         text = soup.get_text(" ", strip=True)
         a["word_count"] = len(text.split()) if text else 0
+        # Extrait de contenu (pour le maillage sémantique via le serveur MCP) : ~2000 premiers
+        # caractères du texte visible, déjà en main -> aucune requête en plus.
+        a["excerpt"] = text[:2000] if text else ""
     except Exception as e:
         print(f"[wp] extract_onpage {page_url}: {e}")
         a["_partial"] = True

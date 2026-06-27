@@ -1,0 +1,41 @@
+# mcp_seo/nginx-mcp-seo.conf.example
+# Reverse proxy HTTPS pour le serveur MCP SEO. TLS Let's Encrypt (certbot).
+# Le service Node écoute UNIQUEMENT sur 127.0.0.1:8790 ; nginx termine le TLS en façade.
+#
+# 1) Obtenir le certificat :
+#      sudo certbot --nginx -d mcp-seo.crm.pixfeed.net
+# 2) Déposer ce bloc (adapté) dans la conf nginx, recharger : sudo nginx -t && sudo systemctl reload nginx
+
+server {
+    listen 80;
+    server_name mcp-seo.crm.pixfeed.net;
+    # Redirection systématique vers HTTPS — jamais de HTTP clair.
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name mcp-seo.crm.pixfeed.net;
+
+    ssl_certificate     /etc/letsencrypt/live/mcp-seo.crm.pixfeed.net/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/mcp-seo.crm.pixfeed.net/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+
+    # MCP (Streamable HTTP). On NE met PAS le token ici : il est fourni par le client
+    # dans le header Authorization et vérifié par le service Node.
+    location /mcp {
+        proxy_pass http://127.0.0.1:8790/mcp;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto https;
+        # Streamable HTTP / SSE : pas de bufferisation, connexions longues.
+        proxy_buffering off;
+        proxy_read_timeout 3600s;
+        chunked_transfer_encoding on;
+    }
+
+    location /health {
+        proxy_pass http://127.0.0.1:8790/health;
+    }
+}
