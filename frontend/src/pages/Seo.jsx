@@ -5,7 +5,7 @@
 // triées par jus, et section "pages affamées" avec liens internes suggérés.
 // Données en LECTURE SEULE (worker Python seo_worker). Tokens de thème, react-icons, framer-motion.
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   FiShare2, FiRefreshCw, FiTrendingUp, FiAlertTriangle, FiLink, FiArrowRight, FiExternalLink,
   FiPlay, FiLoader, FiCheckCircle, FiXCircle, FiClock, FiStopCircle, FiSlash, FiSearch, FiTarget,
@@ -78,6 +78,7 @@ const Seo = () => {
   const [loading, setLoading] = useState(true);
   const [job, setJob] = useState(null);        // dernier job du site
   const [starting, setStarting] = useState(false);
+  const [confirmJob, setConfirmJob] = useState(null); // type de job en attente de confirmation
   const jobPollRef = useRef(null);
 
   useEffect(() => {
@@ -151,6 +152,16 @@ const Seo = () => {
     return stopJobPoll;
   }, [siteId, pollJob]);
 
+  // Demande de lancement : garde anti-double côté UI puis ouvre la modale de confirmation.
+  const requestLaunch = (jobType) => {
+    if (!siteId) return;
+    if (jobActive) {
+      toast.info('Une tâche est déjà en cours, impossible d’en lancer une seconde.');
+      return;
+    }
+    setConfirmJob(jobType);
+  };
+
   const launchCrawl = async (jobType) => {
     if (!siteId) return;
     setStarting(true);
@@ -158,7 +169,8 @@ const Seo = () => {
       const res = await seoAPI.createJob(siteId, jobType);
       setJob(res.job);
       const labels = { crawl_full: 'Crawl complet lancé', crawl_incremental: 'Crawl lancé', gsc_sync: 'Synchro Search Console lancée' };
-      if (res.already_active) toast.info('Une tâche est déjà en cours pour ce site');
+      // already_active : course (double-clic) refusée en base par l'index unique partiel.
+      if (res.already_active) toast.info('Une synchronisation est déjà en cours, impossible d’en lancer une seconde.');
       else toast.success(labels[jobType] || 'Tâche lancée');
       pollJob(siteId);
     } catch (e) {
@@ -166,6 +178,12 @@ const Seo = () => {
     } finally {
       setStarting(false);
     }
+  };
+
+  const confirmLaunch = async () => {
+    const jobType = confirmJob;
+    setConfirmJob(null);
+    if (jobType) await launchCrawl(jobType);
   };
 
   const cancelCrawl = async () => {
@@ -218,6 +236,27 @@ const Seo = () => {
   const jobNoun = job && job.job_type === 'gsc_sync' ? 'Synchro Search Console' : 'Crawl';
   const gscConnected = gscStatus && gscStatus.connected;
 
+  // Contenu d'un bouton de lancement : si CE type de job tourne, on l'indique explicitement
+  // (spinner + progression X/Y) ; sinon libellé normal. Le polling rafraîchit `job` -> le
+  // bouton se grise/anime tout seul sans recharger la page.
+  const isThisJobRunning = (jobType) => jobActive && job.job_type === jobType;
+  const spinner = <motion.span animate={{ rotate: 360 }} transition={{ duration: 0.9, repeat: Infinity, ease: 'linear' }} className="inline-flex"><FiLoader size={15} /></motion.span>;
+  const runningLabel = (jobType) => {
+    const noun = jobType === 'gsc_sync' ? 'Synchro' : 'Crawl';
+    const prog = job && job.progress_total ? ` ${job.progress_current}/${job.progress_total}` : '';
+    return `${noun} en cours…${prog}`;
+  };
+
+  // Texte de la modale de confirmation selon le type de job.
+  const hoursSinceGscSync = overview && overview.gsc_synced_at
+    ? (Date.now() - new Date(overview.gsc_synced_at).getTime()) / 3600000 : null;
+  const gscRanRecently = confirmJob === 'gsc_sync' && hoursSinceGscSync != null && hoursSinceGscSync < 24;
+  const confirmMeta = {
+    crawl_incremental: { title: 'Lancer le crawl ?', body: 'Un crawl incrémental recrawle uniquement les pages modifiées depuis le dernier passage.' },
+    crawl_full: { title: 'Reconstruction complète ?', body: 'Le site entier sera recrawlé et le graphe de liens reconstruit. C’est plus long qu’un crawl incrémental.' },
+    gsc_sync: { title: 'Lancer la synchronisation Search Console ?', body: 'Cela inspecte toutes les pages et consomme du quota Google. Une seule par jour suffit.' }
+  }[confirmJob] || {};
+
   const cards = overview ? [
     { label: 'Pages', value: overview.total_pages, icon: FiShare2 },
     { label: 'Liens internes', value: overview.total_links, icon: FiLink },
@@ -256,28 +295,28 @@ const Seo = () => {
               {sites.map((s) => <option key={s.id} value={s.id}>{s.domain}</option>)}
             </select>
             <button
-              onClick={() => launchCrawl('crawl_incremental')}
+              onClick={() => requestLaunch('crawl_incremental')}
               disabled={starting || jobActive}
               className="px-3 py-2 rounded-lg bg-accent hover:bg-accent-hover text-white text-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               title="Lancer un crawl incrémental"
             >
-              <FiPlay size={15} /> Lancer le crawl
+              {isThisJobRunning('crawl_incremental') ? <>{spinner} {runningLabel('crawl_incremental')}</> : <><FiPlay size={15} /> Lancer le crawl</>}
             </button>
             <button
-              onClick={() => launchCrawl('crawl_full')}
+              onClick={() => requestLaunch('crawl_full')}
               disabled={starting || jobActive}
-              className="px-3 py-2 rounded-lg bg-surface-strong hover:bg-border-strong text-text-primary text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 py-2 rounded-lg bg-surface-strong hover:bg-border-strong text-text-primary text-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               title="Reconstruction complète du graphe"
             >
-              Complet
+              {isThisJobRunning('crawl_full') ? <>{spinner} {runningLabel('crawl_full')}</> : 'Complet'}
             </button>
             <button
-              onClick={() => launchCrawl('gsc_sync')}
+              onClick={() => requestLaunch('gsc_sync')}
               disabled={starting || jobActive || !gscConnected}
               className="px-3 py-2 rounded-lg bg-surface-strong hover:bg-border-strong text-text-primary text-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               title={gscConnected ? 'Synchroniser Google Search Console' : 'Search Console non connecté (lancer gsc_auth.py)'}
             >
-              <FiSearch size={15} /> Search Console
+              {isThisJobRunning('gsc_sync') ? <>{spinner} {runningLabel('gsc_sync')}</> : <><FiSearch size={15} /> Search Console</>}
             </button>
             {jobCancellable && (
               <button
@@ -807,6 +846,59 @@ const Seo = () => {
           </>
         )}
       </div>
+
+      {/* Modale de confirmation avant lancement (évite les lancements accidentels / quota) */}
+      <AnimatePresence>
+        {confirmJob && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-overlay/60 backdrop-blur-sm z-[10000] flex items-center justify-center p-4"
+            onClick={() => setConfirmJob(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 16 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 16 }}
+              className="bg-surface-muted border border-border rounded-2xl max-w-md w-full p-6"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-start gap-3 mb-3">
+                <div className="w-10 h-10 rounded-xl bg-accent/15 text-accent flex items-center justify-center flex-shrink-0">
+                  {confirmJob === 'gsc_sync' ? <FiSearch size={18} /> : <FiPlay size={18} />}
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-text-primary">{confirmMeta.title}</h3>
+                  <p className="text-text-secondary text-sm mt-1">{confirmMeta.body}</p>
+                </div>
+              </div>
+
+              {gscRanRecently && (
+                <div className="flex items-start gap-2 text-sm bg-warning-bg text-warning-text border border-warning-text/30 rounded-lg p-3 mb-3">
+                  <FiAlertTriangle size={15} className="mt-0.5 flex-shrink-0" />
+                  <span>
+                    Une synchro a déjà tourné il y a {Math.max(1, Math.round(hoursSinceGscSync))} h. Le quota Google est
+                    limité (~2000/jour) — relancer maintenant pourrait l’épuiser. Continuer ?
+                  </span>
+                </div>
+              )}
+
+              <div className="flex gap-3 mt-2">
+                <button
+                  onClick={() => setConfirmJob(null)}
+                  className="flex-1 px-4 py-2.5 border border-border text-text-primary hover:bg-surface-strong rounded-lg font-medium transition-colors"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={confirmLaunch}
+                  disabled={starting}
+                  className="flex-1 px-4 py-2.5 bg-accent hover:bg-accent-hover text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
+                >
+                  <FiPlay size={15} /> Lancer
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
