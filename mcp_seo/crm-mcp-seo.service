@@ -4,18 +4,22 @@ After=network.target postgresql.service
 
 [Service]
 Type=simple
-# Adapter les chemins au serveur (modèle crm-pixfeed.service / crm-seo-worker.service).
-WorkingDirectory=/var/www/vhosts/crm.pixfeed.net/mcp_seo
-EnvironmentFile=/var/www/vhosts/crm.pixfeed.net/mcp_seo/.env
+# Tourne sous le compte propriétaire du projet.
+User=jurojinn
+Group=jurojinn
+WorkingDirectory=/home/jurojinn/crm.pixfeed.net/mcp_seo
+EnvironmentFile=/home/jurojinn/crm.pixfeed.net/mcp_seo/.env
+# Adapter si node n'est pas dans /usr/bin (vérifier avec `which node`).
 ExecStart=/usr/bin/node server.js
 Restart=always
 RestartSec=5
-# Durcissement systemd (service en lecture seule, aucune écriture disque nécessaire hors log).
+# Durcissement systemd.
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
-ProtectHome=true
-ReadWritePaths=/var/www/vhosts/crm.pixfeed.net/mcp_seo
+# Le projet est dans /home -> NE PAS mettre ProtectHome=true (rendrait /home inaccessible).
+ProtectHome=false
+ReadWritePaths=/home/jurojinn/crm.pixfeed.net/mcp_seo
 
 [Install]
 WantedBy=multi-user.target

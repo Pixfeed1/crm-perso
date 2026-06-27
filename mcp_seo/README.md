@@ -27,10 +27,10 @@ n'écrit/modifie/supprime. La table `seo_oauth_tokens` (secrets) n'est **jamais*
 ## Installation (serveur2)
 ```bash
 # 1) Rôle SELECT-only (superuser), puis reporter le mot de passe dans .env
-sudo -u postgres psql -d crm_db -f setup.sql
+sudo -u postgres psql -d jurojinn_mcrm -f setup.sql
 
 # 2) Dépendances + configuration
-cd mcp_seo
+cd /home/jurojinn/crm.pixfeed.net/mcp_seo
 npm install
 cp .env.example .env
 # éditer .env :  MCP_SEO_TOKEN=$(openssl rand -hex 32)  + MCP_DB_PASSWORD=...
