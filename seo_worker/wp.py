@@ -149,6 +149,10 @@ def _normalize_item(it, rest_base):
     if isinstance(it.get("title"), dict):
         title = it["title"].get("rendered", "")
     category = _first_category(it)
+    # Focus keyword Yoast (vue "Yoast vs réel"), exposé via register_rest_field (functions.php).
+    # Absent si le snippet n'est pas posé -> chaîne vide, la vue 3 reste juste vide (ne casse rien).
+    fkw = it.get("focus_keyword")
+    fkw = fkw.strip() if isinstance(fkw, str) else ""
     return {
         "wp_id": it.get("id"),
         "url": url,
@@ -156,6 +160,7 @@ def _normalize_item(it, rest_base):
         "type": it.get("type") or rest_base,
         "category": category,
         "modified_at": it.get("modified_gmt") or it.get("modified"),
+        "focus_keyword": fkw,
         "_yoast": it.get("yoast_head_json") if isinstance(it.get("yoast_head_json"), dict) else None,
     }
 

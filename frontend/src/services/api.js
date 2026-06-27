@@ -573,6 +573,21 @@ export const seoAPI = {
   getQuasiVictoires: (siteId) => apiRequest(`/seo/quasi-victoires?site_id=${siteId}`),
   getOpportunites: (siteId, minImpr = 20) => apiRequest(`/seo/opportunites?site_id=${siteId}&min_impressions=${minImpr}`),
   getAudit: (siteId) => apiRequest(`/seo/audit?site_id=${siteId}`),
+  // Suivi de positions (rank tracker)
+  getPositionsSummary: (siteId, days = 28) => apiRequest(`/seo/positions/summary?site_id=${siteId}&days=${days}`),
+  getPositionsKeywords: (siteId, params = {}) => {
+    const qs = new URLSearchParams({ site_id: siteId, ...params }).toString();
+    return apiRequest(`/seo/positions/keywords?${qs}`);
+  },
+  getPositionKeywordSeries: (siteId, keyword, days = 28) =>
+    apiRequest(`/seo/positions/keyword?site_id=${siteId}&keyword=${encodeURIComponent(keyword)}&days=${days}`),
+  getPositionsPages: (siteId, days = 28) => apiRequest(`/seo/positions/pages?site_id=${siteId}&days=${days}`),
+  getPositionsPage: (siteId, url, days = 28) =>
+    apiRequest(`/seo/positions/page?site_id=${siteId}&url=${encodeURIComponent(url)}&days=${days}`),
+  getPositionsYoast: (siteId, days = 28) => apiRequest(`/seo/positions/yoast?site_id=${siteId}&days=${days}`),
+  getTrackedKeywords: (siteId) => apiRequest(`/seo/tracked?site_id=${siteId}`),
+  addTrackedKeyword: (siteId, keyword) => apiRequest('/seo/tracked', 'POST', { site_id: siteId, keyword }),
+  deleteTrackedKeyword: (id) => apiRequest(`/seo/tracked/${id}`, 'DELETE'),
   createJob: (siteId, jobType, targetUrl) => apiRequest('/seo/jobs', 'POST', { site_id: siteId, job_type: jobType, target_url: targetUrl }),
   getJob: (siteId) => apiRequest(`/seo/jobs?site_id=${siteId}`),
   getJobById: (jobId) => apiRequest(`/seo/jobs/${jobId}`),

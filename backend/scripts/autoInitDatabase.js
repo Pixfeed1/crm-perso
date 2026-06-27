@@ -1493,6 +1493,9 @@ async function ensureSeoTables(client) {
   await client.query('ALTER TABLE seo_pages ADD COLUMN IF NOT EXISTS gsc_impressions INTEGER;');
   await client.query('ALTER TABLE seo_pages ADD COLUMN IF NOT EXISTS gsc_position    NUMERIC(8,2);');
   await client.query('ALTER TABLE seo_pages ADD COLUMN IF NOT EXISTS gsc_synced_at   TIMESTAMP;');
+  // Suivi de positions (vue 3 Yoast vs réel) : focus keyword Yoast, additif (aucun impact
+  // sur Opportunités/audit/PageRank), écrit par le worker au crawl si exposé via REST.
+  await client.query('ALTER TABLE seo_pages ADD COLUMN IF NOT EXISTS focus_keyword TEXT;');
   await client.query('CREATE INDEX        IF NOT EXISTS idx_seo_pages_site_health ON seo_pages(site_id, health);');
 
   await client.query(`
@@ -1526,6 +1529,8 @@ async function ensureSeoTables(client) {
   await client.query('CREATE UNIQUE INDEX IF NOT EXISTS uq_seo_gsc_daily ON seo_gsc_daily(site_id, date, page_url, query);');
   await client.query('CREATE INDEX        IF NOT EXISTS idx_seo_gsc_daily_site_date ON seo_gsc_daily(site_id, date);');
   await client.query('CREATE INDEX        IF NOT EXISTS idx_seo_gsc_daily_site_pos  ON seo_gsc_daily(site_id, position);');
+  // Suivi de positions : lectures par mot-clé (rank tracker) sur la dimension query déjà en base.
+  await client.query('CREATE INDEX        IF NOT EXISTS idx_seo_gsc_daily_site_query ON seo_gsc_daily(site_id, query, date);');
 
   await client.query(`
     CREATE TABLE IF NOT EXISTS seo_metrics_monthly (
@@ -1666,6 +1671,18 @@ async function ensureSeoTables(client) {
     );
   `);
   await client.query('CREATE UNIQUE INDEX IF NOT EXISTS uq_seo_audit_site ON seo_audit(site_id);');
+
+  // Watchlist de mots-clés suivis (rank tracker) : config UTILISATEUR -> Node PEUT y écrire
+  // (exception, comme seo_jobs). Les DONNÉES GSC restent écrites par le worker uniquement.
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS seo_tracked_keywords (
+      id         SERIAL PRIMARY KEY,
+      site_id    INTEGER NOT NULL REFERENCES seo_sites(id) ON DELETE CASCADE,
+      keyword    TEXT NOT NULL,
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+  `);
+  await client.query('CREATE UNIQUE INDEX IF NOT EXISTS uq_seo_tracked_keywords ON seo_tracked_keywords(site_id, keyword);');
 
   console.log('  ✓ Tables SEO vérifiées');
 }

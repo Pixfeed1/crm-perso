@@ -15,6 +15,7 @@ import { seoAPI } from '../services/api';
 import { useToast } from '../hooks/useToast';
 import { decodeHtml } from '../utils/formatters';
 import SeoGraph from '../components/seo/SeoGraph';
+import PositionsTab from '../components/seo/PositionsTab';
 
 const HEALTH_META = {
   orpheline: { cls: 'bg-danger-bg text-danger-text', label: 'Orpheline' },
@@ -435,7 +436,8 @@ const Seo = () => {
                 { k: 'orphelines', l: `Orphelines${orphelines.length ? ` (${orphelines.length})` : ''}` },
                 { k: 'quasi', l: `Quasi-victoires${quasiVictoires.length ? ` (${quasiVictoires.length})` : ''}` },
                 { k: 'opportunites', l: `Opportunités${opportunites.length ? ` (${opportunites.length})` : ''}` },
-                { k: 'audit', l: `Audit technique${audit && audit.score != null ? ` (${audit.score}/100)` : ''}` }
+                { k: 'audit', l: `Audit technique${audit && audit.score != null ? ` (${audit.score}/100)` : ''}` },
+                { k: 'positions', l: 'Suivi de positions' }
               ].map((t) => (
                 <button key={t.k} onClick={() => setTab(t.k)}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === t.k ? 'bg-accent text-white' : 'bg-surface-strong text-text-secondary hover:bg-border-strong'}`}>
@@ -724,7 +726,7 @@ const Seo = () => {
                   </motion.div>
                 ))}
               </div>
-            ) : (
+            ) : tab === 'audit' ? (
               /* Audit technique : vue d'ensemble de TOUS les problèmes du site, par gravité */
               <div className="space-y-4">
                 {!audit ? (
@@ -798,6 +800,9 @@ const Seo = () => {
                   </>
                 )}
               </div>
+            ) : (
+              /* Suivi de positions (rank tracker) — composant dédié */
+              <PositionsTab siteId={siteId} gscConnected={gscConnected} />
             )}
           </>
         )}

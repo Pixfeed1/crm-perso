@@ -463,6 +463,307 @@ const seoController = {
     }
   },
 
+  // ===== SUIVI DE POSITIONS (rank tracker, 100% GSC) — endpoints LECTURE SEULE =====
+  // Position d'un mot-clé = SUM(impressions*position)/SUM(impressions) (MÊME formule que le
+  // cache gsc_position du module Opportunités). Fenêtre glissante `days` (défaut 28, = cache).
+
+  // GET /api/seo/positions/summary?site_id=&days= -> cartes de synthèse + distribution.
+  getPositionsSummary: async (req, res) => {
+    const db = req.app.locals.db;
+    const siteId = parseInt(req.query.site_id, 10);
+    if (!siteId) return res.status(400).json({ message: 'site_id requis' });
+    const days = Math.min(Math.max(parseInt(req.query.days, 10) || 28, 1), 365);
+    try {
+      const { rows } = await db.pool.query(
+        `WITH bounds AS (SELECT MAX(date) AS maxd FROM seo_gsc_daily WHERE site_id = $1),
+         cur AS (
+           SELECT query, SUM(clicks) AS clicks, SUM(impressions) AS impr,
+                  CASE WHEN SUM(impressions) > 0 THEN SUM(impressions * position) / SUM(impressions) END AS pos
+           FROM seo_gsc_daily, bounds
+           WHERE site_id = $1 AND date > bounds.maxd - $2::int AND date <= bounds.maxd
+           GROUP BY query
+         )
+         SELECT COUNT(*)::int AS total_keywords,
+                COUNT(*) FILTER (WHERE pos <= 3)::int  AS top3,
+                COUNT(*) FILTER (WHERE pos <= 10)::int AS top10,
+                COUNT(*) FILTER (WHERE pos <= 50)::int AS top50,
+                COUNT(*) FILTER (WHERE pos > 3  AND pos <= 10)::int AS b_4_10,
+                COUNT(*) FILTER (WHERE pos > 10 AND pos <= 20)::int AS b_11_20,
+                COUNT(*) FILTER (WHERE pos > 20 AND pos <= 50)::int AS b_21_50,
+                COUNT(*) FILTER (WHERE pos > 50)::int AS b_50p,
+                COALESCE(SUM(impr), 0)::int AS impressions,
+                COALESCE(SUM(clicks), 0)::int AS clicks,
+                CASE WHEN SUM(impr) > 0 THEN (SUM(impr * pos) / SUM(impr))::float END AS avg_position
+         FROM cur`,
+        [siteId, days]
+      );
+      const r = rows[0] || {};
+      const impressions = Number(r.impressions) || 0;
+      res.json({
+        days,
+        total_keywords: r.total_keywords || 0,
+        top3: r.top3 || 0, top10: r.top10 || 0, top50: r.top50 || 0,
+        avg_position: r.avg_position,
+        impressions, clicks: Number(r.clicks) || 0,
+        ctr: impressions > 0 ? (Number(r.clicks) || 0) / impressions : 0,
+        distribution: [
+          { bucket: 'Top 3', count: r.top3 || 0 },
+          { bucket: '4-10', count: r.b_4_10 || 0 },
+          { bucket: '11-20', count: r.b_11_20 || 0 },
+          { bucket: '21-50', count: r.b_21_50 || 0 },
+          { bucket: '50+', count: r.b_50p || 0 }
+        ]
+      });
+    } catch (e) {
+      console.error('[SEO] getPositionsSummary:', e.message);
+      res.status(500).json({ message: 'Erreur serveur' });
+    }
+  },
+
+  // GET /api/seo/positions/keywords?site_id=&days=&search=&tracked=0|1 -> liste mots-clés + delta.
+  getPositionsKeywords: async (req, res) => {
+    const db = req.app.locals.db;
+    const siteId = parseInt(req.query.site_id, 10);
+    if (!siteId) return res.status(400).json({ message: 'site_id requis' });
+    const days = Math.min(Math.max(parseInt(req.query.days, 10) || 28, 1), 365);
+    const search = (req.query.search || '').trim();
+    const tracked = req.query.tracked === '1' ? 1 : 0;
+    try {
+      const { rows } = await db.pool.query(
+        `WITH bounds AS (SELECT MAX(date) AS maxd FROM seo_gsc_daily WHERE site_id = $1),
+         cur AS (
+           SELECT query, SUM(clicks) AS clicks, SUM(impressions) AS impr,
+                  CASE WHEN SUM(impressions) > 0 THEN SUM(impressions * position) / SUM(impressions) END AS pos
+           FROM seo_gsc_daily, bounds
+           WHERE site_id = $1 AND date > bounds.maxd - $2::int AND date <= bounds.maxd
+           GROUP BY query
+         ),
+         prev AS (
+           SELECT query,
+                  CASE WHEN SUM(impressions) > 0 THEN SUM(impressions * position) / SUM(impressions) END AS pos
+           FROM seo_gsc_daily, bounds
+           WHERE site_id = $1 AND date > bounds.maxd - ($2::int * 2) AND date <= bounds.maxd - $2::int
+           GROUP BY query
+         ),
+         bestpage AS (
+           SELECT DISTINCT ON (query) query, page_url FROM (
+             SELECT query, page_url, SUM(impressions) AS imp
+             FROM seo_gsc_daily, bounds
+             WHERE site_id = $1 AND date > bounds.maxd - $2::int AND date <= bounds.maxd
+             GROUP BY query, page_url
+           ) z ORDER BY query, imp DESC
+         )
+         SELECT c.query, c.clicks::int AS clicks, c.impr::int AS impressions,
+                c.pos::float AS position, p.pos::float AS prev_position,
+                (p.pos - c.pos)::float AS delta,
+                CASE WHEN c.impr > 0 THEN (c.clicks::float / c.impr) ELSE 0 END AS ctr,
+                bp.page_url, (t.keyword IS NOT NULL) AS tracked
+         FROM cur c
+         LEFT JOIN prev p ON p.query = c.query
+         LEFT JOIN bestpage bp ON bp.query = c.query
+         LEFT JOIN seo_tracked_keywords t ON t.site_id = $1 AND t.keyword = c.query
+         WHERE ($3 = '' OR c.query ILIKE '%' || $3 || '%')
+           AND ($4 = 0 OR t.keyword IS NOT NULL)
+         ORDER BY c.impr DESC
+         LIMIT 500`,
+        [siteId, days, search, tracked]
+      );
+      res.json(rows);
+    } catch (e) {
+      console.error('[SEO] getPositionsKeywords:', e.message);
+      res.status(500).json({ message: 'Erreur serveur' });
+    }
+  },
+
+  // GET /api/seo/positions/keyword?site_id=&keyword=&days= -> série temporelle d'un mot-clé.
+  getPositionKeywordSeries: async (req, res) => {
+    const db = req.app.locals.db;
+    const siteId = parseInt(req.query.site_id, 10);
+    const keyword = (req.query.keyword || '').trim();
+    if (!siteId || !keyword) return res.status(400).json({ message: 'site_id et keyword requis' });
+    const days = Math.min(Math.max(parseInt(req.query.days, 10) || 28, 1), 365);
+    try {
+      const { rows } = await db.pool.query(
+        `SELECT date,
+                CASE WHEN SUM(impressions) > 0 THEN (SUM(impressions * position) / SUM(impressions))::float END AS position,
+                SUM(impressions)::int AS impressions, SUM(clicks)::int AS clicks
+         FROM seo_gsc_daily
+         WHERE site_id = $1 AND query = $2
+           AND date > (SELECT MAX(date) FROM seo_gsc_daily WHERE site_id = $1) - $3::int
+         GROUP BY date ORDER BY date`,
+        [siteId, keyword, days]
+      );
+      res.json(rows);
+    } catch (e) {
+      console.error('[SEO] getPositionKeywordSeries:', e.message);
+      res.status(500).json({ message: 'Erreur serveur' });
+    }
+  },
+
+  // GET /api/seo/positions/pages?site_id=&days= -> pages ayant des requêtes (sélecteur vue 2).
+  getPositionsPages: async (req, res) => {
+    const db = req.app.locals.db;
+    const siteId = parseInt(req.query.site_id, 10);
+    if (!siteId) return res.status(400).json({ message: 'site_id requis' });
+    const days = Math.min(Math.max(parseInt(req.query.days, 10) || 28, 1), 365);
+    try {
+      const { rows } = await db.pool.query(
+        `SELECT g.page_url, SUM(g.impressions)::int AS impressions,
+                COUNT(DISTINCT g.query)::int AS keywords, sp.title
+         FROM seo_gsc_daily g
+         LEFT JOIN seo_pages sp ON sp.site_id = $1 AND sp.url = rtrim(g.page_url, '/')
+         WHERE g.site_id = $1
+           AND g.date > (SELECT MAX(date) FROM seo_gsc_daily WHERE site_id = $1) - $2::int
+         GROUP BY g.page_url, sp.title
+         ORDER BY impressions DESC LIMIT 500`,
+        [siteId, days]
+      );
+      res.json(rows);
+    } catch (e) {
+      console.error('[SEO] getPositionsPages:', e.message);
+      res.status(500).json({ message: 'Erreur serveur' });
+    }
+  },
+
+  // GET /api/seo/positions/page?site_id=&url=&days= -> mots-clés de la page + série de la page.
+  getPositionsPage: async (req, res) => {
+    const db = req.app.locals.db;
+    const siteId = parseInt(req.query.site_id, 10);
+    const pageUrl = (req.query.url || '').trim();
+    if (!siteId || !pageUrl) return res.status(400).json({ message: 'site_id et url requis' });
+    const days = Math.min(Math.max(parseInt(req.query.days, 10) || 28, 1), 365);
+    try {
+      const kw = await db.pool.query(
+        `WITH bounds AS (SELECT MAX(date) AS maxd FROM seo_gsc_daily WHERE site_id = $1),
+         cur AS (
+           SELECT query, SUM(clicks) AS clicks, SUM(impressions) AS impr,
+                  CASE WHEN SUM(impressions) > 0 THEN SUM(impressions * position) / SUM(impressions) END AS pos
+           FROM seo_gsc_daily, bounds
+           WHERE site_id = $1 AND page_url = $2 AND date > bounds.maxd - $3::int AND date <= bounds.maxd
+           GROUP BY query
+         ),
+         prev AS (
+           SELECT query, CASE WHEN SUM(impressions) > 0 THEN SUM(impressions * position) / SUM(impressions) END AS pos
+           FROM seo_gsc_daily, bounds
+           WHERE site_id = $1 AND page_url = $2 AND date > bounds.maxd - ($3::int * 2) AND date <= bounds.maxd - $3::int
+           GROUP BY query
+         )
+         SELECT c.query, c.clicks::int AS clicks, c.impr::int AS impressions,
+                c.pos::float AS position, (p.pos - c.pos)::float AS delta,
+                CASE WHEN c.impr > 0 THEN (c.clicks::float / c.impr) ELSE 0 END AS ctr
+         FROM cur c LEFT JOIN prev p ON p.query = c.query
+         ORDER BY c.impr DESC LIMIT 500`,
+        [siteId, pageUrl, days]
+      );
+      const series = await db.pool.query(
+        `SELECT date,
+                CASE WHEN SUM(impressions) > 0 THEN (SUM(impressions * position) / SUM(impressions))::float END AS position,
+                SUM(impressions)::int AS impressions, SUM(clicks)::int AS clicks
+         FROM seo_gsc_daily
+         WHERE site_id = $1 AND page_url = $2
+           AND date > (SELECT MAX(date) FROM seo_gsc_daily WHERE site_id = $1) - $3::int
+         GROUP BY date ORDER BY date`,
+        [siteId, pageUrl, days]
+      );
+      res.json({ keywords: kw.rows, series: series.rows });
+    } catch (e) {
+      console.error('[SEO] getPositionsPage:', e.message);
+      res.status(500).json({ message: 'Erreur serveur' });
+    }
+  },
+
+  // GET /api/seo/positions/yoast?site_id=&days= -> focus keyword visé vs position réelle GSC.
+  getPositionsYoast: async (req, res) => {
+    const db = req.app.locals.db;
+    const siteId = parseInt(req.query.site_id, 10);
+    if (!siteId) return res.status(400).json({ message: 'site_id requis' });
+    const days = Math.min(Math.max(parseInt(req.query.days, 10) || 28, 1), 365);
+    try {
+      const { rows } = await db.pool.query(
+        `WITH bounds AS (SELECT MAX(date) AS maxd FROM seo_gsc_daily WHERE site_id = $1)
+         SELECT sp.url, sp.title, sp.focus_keyword,
+                fk.pos::float AS focus_position, fk.impr::int AS focus_impressions,
+                best.query AS top_query, best.pos::float AS top_position, best.impr::int AS top_impressions
+         FROM seo_pages sp
+         LEFT JOIN LATERAL (
+           SELECT CASE WHEN SUM(impressions) > 0 THEN SUM(impressions * position) / SUM(impressions) END AS pos,
+                  SUM(impressions) AS impr
+           FROM seo_gsc_daily g, bounds
+           WHERE g.site_id = sp.site_id AND rtrim(g.page_url, '/') = sp.url
+             AND lower(g.query) = lower(sp.focus_keyword)
+             AND g.date > bounds.maxd - $2::int
+         ) fk ON true
+         LEFT JOIN LATERAL (
+           SELECT query, SUM(impressions) AS impr,
+                  CASE WHEN SUM(impressions) > 0 THEN SUM(impressions * position) / SUM(impressions) END AS pos
+           FROM seo_gsc_daily g, bounds
+           WHERE g.site_id = sp.site_id AND rtrim(g.page_url, '/') = sp.url AND g.date > bounds.maxd - $2::int
+           GROUP BY query ORDER BY impr DESC LIMIT 1
+         ) best ON true
+         WHERE sp.site_id = $1 AND sp.focus_keyword IS NOT NULL AND sp.focus_keyword <> ''
+         ORDER BY sp.value_score DESC NULLS LAST
+         LIMIT 300`,
+        [siteId, days]
+      );
+      res.json(rows);
+    } catch (e) {
+      console.error('[SEO] getPositionsYoast:', e.message);
+      res.status(500).json({ message: 'Erreur serveur' });
+    }
+  },
+
+  // ----- Watchlist : Node ÉCRIT seo_tracked_keywords (config utilisateur, exception) -----
+  getTrackedKeywords: async (req, res) => {
+    const db = req.app.locals.db;
+    const siteId = parseInt(req.query.site_id, 10);
+    if (!siteId) return res.status(400).json({ message: 'site_id requis' });
+    try {
+      const { rows } = await db.pool.query(
+        'SELECT id, keyword FROM seo_tracked_keywords WHERE site_id = $1 ORDER BY keyword ASC',
+        [siteId]
+      );
+      res.json(rows);
+    } catch (e) {
+      console.error('[SEO] getTrackedKeywords:', e.message);
+      res.status(500).json({ message: 'Erreur serveur' });
+    }
+  },
+
+  addTrackedKeyword: async (req, res) => {
+    const db = req.app.locals.db;
+    const siteId = parseInt((req.body || {}).site_id, 10);
+    const keyword = ((req.body || {}).keyword || '').trim();
+    if (!siteId || !keyword) return res.status(400).json({ message: 'site_id et keyword requis' });
+    try {
+      const r = await db.pool.query(
+        `INSERT INTO seo_tracked_keywords (site_id, keyword) VALUES ($1, $2)
+         ON CONFLICT (site_id, keyword) DO NOTHING RETURNING id, keyword`,
+        [siteId, keyword]
+      );
+      if (r.rows.length === 0) {
+        const ex = await db.pool.query('SELECT id, keyword FROM seo_tracked_keywords WHERE site_id = $1 AND keyword = $2', [siteId, keyword]);
+        return res.status(200).json(ex.rows[0] || null);
+      }
+      res.status(201).json(r.rows[0]);
+    } catch (e) {
+      console.error('[SEO] addTrackedKeyword:', e.message);
+      res.status(500).json({ message: 'Erreur serveur' });
+    }
+  },
+
+  deleteTrackedKeyword: async (req, res) => {
+    const db = req.app.locals.db;
+    const id = parseInt(req.params.id, 10);
+    if (!id) return res.status(400).json({ message: 'id requis' });
+    try {
+      await db.pool.query('DELETE FROM seo_tracked_keywords WHERE id = $1', [id]);
+      res.json({ success: true });
+    } catch (e) {
+      console.error('[SEO] deleteTrackedKeyword:', e.message);
+      res.status(500).json({ message: 'Erreur serveur' });
+    }
+  },
+
   // POST /api/seo/jobs { site_id, job_type } -> crée un job 'pending'.
   // SEULE écriture autorisée côté Node, et UNIQUEMENT sur seo_jobs (jamais seo_pages/seo_links).
   // Le worker Python est seul à passer le job en running/done/failed et à crawler.

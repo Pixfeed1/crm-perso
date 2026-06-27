@@ -172,6 +172,30 @@ ne casse JAMAIS le crawl.
 - Lecture : `GET /api/seo/audit?site_id=` (catégories par gravité + score /100), onglet
   « Audit technique » dans l'UI. Seuils ajustables dans `config.py` (AUDIT_*).
 
+## Suivi de positions (rank tracker)
+100% GSC, sur la dimension `query` DÉJÀ collectée dans `seo_gsc_daily` (date, page, query,
+clics, impressions, position). Aucune nouvelle collecte ; position = `SUM(impr*pos)/SUM(impr)`
+(même formule que le cache Opportunités), fenêtre 28j par défaut (7/28/90 dans l'UI).
+- Endpoints lecture seule `/api/seo/positions/*` (summary, keywords, keyword, pages, page, yoast).
+- Watchlist `seo_tracked_keywords` : **Node peut écrire** (config utilisateur, exception comme
+  `seo_jobs`). Les données GSC restent écrites par le worker uniquement.
+
+### Vue « Yoast vs réel » — snippet REQUIS (à coller AVANT un crawl)
+Le focus keyword Yoast (`_yoast_wpseo_focuskw`) n'est pas exposé par l'API REST. Colle ceci
+dans le `functions.php` du thème, **puis relance un crawl** (sinon `focus_keyword` reste vide
+partout et la vue 3 est vide — les vues 1 et 2 marchent quand même) :
+```php
+add_action('rest_api_init', function () {
+  foreach (['post','page','glossaire','guide','anime','film','logiciel','serie','acteur'] as $pt) {
+    register_rest_field($pt, 'focus_keyword', [
+      'get_callback' => function ($obj) { return get_post_meta($obj['id'], '_yoast_wpseo_focuskw', true); },
+      'schema' => ['type' => 'string'],
+    ]);
+  }
+});
+```
+Le worker lit alors `focus_keyword` au crawl et le stocke dans `seo_pages.focus_keyword`.
+
 ## Étapes suivantes
 - Étape 3 (suite) : content decay (besoin de plusieurs mois de `seo_metrics_monthly`),
   cannibalisation de requêtes, indexation fiabilisée.

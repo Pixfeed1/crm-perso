@@ -221,13 +221,14 @@ def crawl_site(conn, site, full=False, no_resume=False, job_id=None):
                 cur.execute("SAVEPOINT pg")  # isole l'erreur d'UNE page sans perdre le lot
                 mod = parse_dt(item["modified_at"])
                 cur.execute(
-                    """INSERT INTO seo_pages (site_id, wp_id, url, title, type, category, wp_modified_at)
-                       VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    """INSERT INTO seo_pages (site_id, wp_id, url, title, type, category, wp_modified_at, focus_keyword)
+                       VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                        ON CONFLICT (site_id, url) DO UPDATE
                          SET wp_id = EXCLUDED.wp_id, title = EXCLUDED.title, type = EXCLUDED.type,
                              category = EXCLUDED.category, wp_modified_at = EXCLUDED.wp_modified_at,
+                             focus_keyword = EXCLUDED.focus_keyword,
                              updated_at = NOW()""",
-                    (site_id, item["wp_id"], url, item["title"], item["type"], item["category"], mod),
+                    (site_id, item["wp_id"], url, item["title"], item["type"], item["category"], mod, item.get("focus_keyword")),
                 )
 
                 prev = existing.get(url)
