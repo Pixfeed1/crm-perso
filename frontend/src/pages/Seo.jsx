@@ -8,7 +8,8 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
 import {
   FiShare2, FiRefreshCw, FiTrendingUp, FiAlertTriangle, FiLink, FiArrowRight, FiExternalLink,
-  FiPlay, FiLoader, FiCheckCircle, FiXCircle, FiClock, FiStopCircle, FiSlash, FiSearch, FiTarget
+  FiPlay, FiLoader, FiCheckCircle, FiXCircle, FiClock, FiStopCircle, FiSlash, FiSearch, FiTarget,
+  FiChevronDown, FiChevronRight, FiInfo, FiAlertOctagon, FiActivity
 } from 'react-icons/fi';
 import { seoAPI } from '../services/api';
 import { useToast } from '../hooks/useToast';
@@ -36,6 +37,14 @@ const indexBadge = (s) => {
 };
 const fmtNum = (n) => (n == null ? '—' : Number(n).toLocaleString('fr-FR'));
 const fmtPos = (n) => (n == null ? '—' : Number(n).toFixed(1));
+// Style + icône par gravité d'audit (tokens sémantiques, aucune couleur en dur).
+const SEVERITY_META = {
+  critical: { cls: 'bg-danger-bg text-danger-text', Icon: FiAlertOctagon, label: 'Critique' },
+  warning: { cls: 'bg-warning-bg text-warning-text', Icon: FiAlertTriangle, label: 'Avertissement' },
+  notice: { cls: 'bg-neutral-bg text-neutral-text', Icon: FiInfo, label: 'Notice' }
+};
+// Couleur du score de santé : vert >=80, ambre >=50, rouge en dessous.
+const scoreCls = (s) => (s >= 80 ? 'text-success-text' : s >= 50 ? 'text-warning-text' : 'text-danger-text');
 const fmtDate = (s) => {
   if (!s) return '—';
   const d = new Date(s);
@@ -53,6 +62,8 @@ const Seo = () => {
   const [orphelines, setOrphelines] = useState([]);
   const [quasiVictoires, setQuasiVictoires] = useState([]);
   const [opportunites, setOpportunites] = useState([]);
+  const [audit, setAudit] = useState(null);
+  const [openCat, setOpenCat] = useState(null); // catégorie d'audit dépliée
   const [oppMinImpr, setOppMinImpr] = useState(20); // plancher d'impressions (28j) ajustable
   const [gscStatus, setGscStatus] = useState(null); // { connected, account_email, updated_at }
   const [tab, setTab] = useState('jus'); // 'jus' | 'affamees' | 'orphelines' | 'quasi'
@@ -81,16 +92,18 @@ const Seo = () => {
     try {
       const pagesParams = { sort, limit: 500 };
       if (healthFilter !== 'all') pagesParams.health = healthFilter;
-      const [ov, gr, pg, af, orph, qv] = await Promise.all([
+      const [ov, gr, pg, af, orph, qv, au] = await Promise.all([
         seoAPI.getOverview(siteId),
         seoAPI.getGraph(siteId),
         seoAPI.getPages(siteId, pagesParams),
         seoAPI.getAffamees(siteId),
         seoAPI.getPages(siteId, { health: 'orpheline', sort: 'value', limit: 500 }),
-        seoAPI.getQuasiVictoires(siteId)
+        seoAPI.getQuasiVictoires(siteId),
+        seoAPI.getAudit(siteId)
       ]);
       setOverview(ov); setGraph(gr || { nodes: [], edges: [] });
       setPages(pg || []); setAffamees(af || []); setOrphelines(orph || []); setQuasiVictoires(qv || []);
+      setAudit(au || null);
     } catch (e) {
       toast.error('Erreur chargement SEO');
     } finally {
@@ -421,7 +434,8 @@ const Seo = () => {
                 { k: 'affamees', l: `Pages affamées${affamees.length ? ` (${affamees.length})` : ''}` },
                 { k: 'orphelines', l: `Orphelines${orphelines.length ? ` (${orphelines.length})` : ''}` },
                 { k: 'quasi', l: `Quasi-victoires${quasiVictoires.length ? ` (${quasiVictoires.length})` : ''}` },
-                { k: 'opportunites', l: `Opportunités${opportunites.length ? ` (${opportunites.length})` : ''}` }
+                { k: 'opportunites', l: `Opportunités${opportunites.length ? ` (${opportunites.length})` : ''}` },
+                { k: 'audit', l: `Audit technique${audit && audit.score != null ? ` (${audit.score}/100)` : ''}` }
               ].map((t) => (
                 <button key={t.k} onClick={() => setTab(t.k)}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === t.k ? 'bg-accent text-white' : 'bg-surface-strong text-text-secondary hover:bg-border-strong'}`}>
@@ -640,7 +654,7 @@ const Seo = () => {
                   </div>
                 )}
               </div>
-            ) : (
+            ) : tab === 'opportunites' ? (
               /* Opportunités : potentiel gâché = demande Google × marge × déficit de maillage */
               <div className="space-y-3">
                 <div className="bg-surface border border-border rounded-xl p-4">
@@ -709,6 +723,80 @@ const Seo = () => {
                     )}
                   </motion.div>
                 ))}
+              </div>
+            ) : (
+              /* Audit technique : vue d'ensemble de TOUS les problèmes du site, par gravité */
+              <div className="space-y-4">
+                {!audit ? (
+                  <div className="text-center py-10 bg-surface/30 rounded-xl border border-border">
+                    <FiActivity className="w-10 h-10 mx-auto text-text-muted mb-3" />
+                    <p className="text-text-muted text-sm">Aucun audit pour l'instant. Lancez un crawl : le worker extrait l'audit du HTML déjà récupéré.</p>
+                  </div>
+                ) : (
+                  <>
+                    {/* Score de santé + sitemap */}
+                    <div className="bg-surface border border-border rounded-xl p-4 flex flex-wrap items-center justify-between gap-4">
+                      <div className="flex items-center gap-4">
+                        <div className={`text-4xl font-bold ${scoreCls(audit.score)}`}>{audit.score}<span className="text-text-muted text-lg font-normal">/100</span></div>
+                        <div>
+                          <div className="text-sm font-semibold text-text-primary flex items-center gap-2"><FiActivity size={15} /> Santé technique</div>
+                          <div className="text-text-muted text-xs">{audit.total_pages} pages auditées</div>
+                        </div>
+                      </div>
+                      <div className="text-xs text-text-muted">
+                        Sitemap : {audit.sitemap && audit.sitemap.fetched
+                          ? <>trouvé ({fmtNum(audit.sitemap.count)} URLs{audit.sitemap.orphans_404 ? `, ${audit.sitemap.orphans_404} en 404` : ''})</>
+                          : 'non trouvé'}
+                      </div>
+                    </div>
+
+                    {audit.categories.length === 0 ? (
+                      <div className="text-center py-10 bg-surface/30 rounded-xl border border-border">
+                        <FiCheckCircle className="w-10 h-10 mx-auto text-success-text mb-3" />
+                        <p className="text-text-muted text-sm">Aucun problème technique détecté.</p>
+                      </div>
+                    ) : audit.categories.map((c) => {
+                      const meta = SEVERITY_META[c.severity] || SEVERITY_META.notice;
+                      const Icon = meta.Icon;
+                      const open = openCat === c.key;
+                      return (
+                        <div key={c.key} className="bg-surface border border-border rounded-xl overflow-hidden">
+                          <button
+                            onClick={() => setOpenCat(open ? null : c.key)}
+                            className="w-full flex items-center justify-between gap-3 px-4 py-3 hover:bg-surface-strong/40 transition-colors text-left"
+                          >
+                            <span className="flex items-center gap-2 min-w-0">
+                              <span className={`px-2 py-0.5 rounded-full text-xs font-medium flex items-center gap-1 ${meta.cls}`}><Icon size={12} /> {meta.label}</span>
+                              <span className="text-text-primary text-sm font-medium truncate">{c.label}</span>
+                            </span>
+                            <span className="flex items-center gap-2 flex-shrink-0">
+                              <span className="text-text-primary font-bold text-sm">{c.count}</span>
+                              {open ? <FiChevronDown size={16} className="text-text-muted" /> : <FiChevronRight size={16} className="text-text-muted" />}
+                            </span>
+                          </button>
+                          {open && (
+                            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="border-t border-border">
+                              <ul className="divide-y divide-border/50 max-h-96 overflow-y-auto">
+                                {c.pages.map((pg, i) => (
+                                  <li key={`${c.key}-${i}`} className="px-4 py-2 flex items-start justify-between gap-3">
+                                    <div className="min-w-0">
+                                      {pg.title && <div className="text-text-primary text-sm truncate max-w-md">{decodeHtml(pg.title)}</div>}
+                                      <a href={pg.url} target="_blank" rel="noopener noreferrer" className="text-text-muted text-xs hover:text-accent inline-flex items-center gap-1 break-all">{pg.url} <FiExternalLink size={10} /></a>
+                                    </div>
+                                    {pg.detail && <span className="text-xs text-text-secondary flex-shrink-0">{pg.detail}</span>}
+                                  </li>
+                                ))}
+                                {c.count > c.pages.length && (
+                                  <li className="px-4 py-2 text-xs text-text-muted">… et {c.count - c.pages.length} autres</li>
+                                )}
+                              </ul>
+                            </motion.div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </>
+                )}
               </div>
             )}
           </>

@@ -67,3 +67,12 @@ GSC_INSPECT_DAILY_CAP = 2000    # plafond URL Inspection / run / propriété (qu
 GSC_INSPECT_TTL_DAYS = 14       # ne pas réinspecter une page vue il y a moins de N jours
 GSC_VALUE_WINDOW_DAYS = 90      # fenêtre d'impressions servant au value_score réel
 GSC_OAUTH_REDIRECT_PORT = 8765  # port du mini-serveur local pour le consentement (gsc_auth.py)
+
+# ===== Audit technique on-page (extrait du HTML déjà crawlé) =====
+AUDIT_TITLE_MIN = 30          # title trop court en dessous (notice)
+AUDIT_TITLE_MAX = 60          # title trop long au-dessus (notice)
+AUDIT_DESC_MIN = 70           # meta description trop courte en dessous (notice)
+AUDIT_DESC_MAX = 160          # meta description trop longue au-dessus (notice)
+AUDIT_THIN_WORDS = 300        # contenu mince en dessous (avertissement)
+AUDIT_DEPTH_ALERT = 4         # profondeur de crawl >= N -> avertissement
+AUDIT_SITEMAP_HEAD_CAP = 100  # nb max de HEAD sur les orphelins sitemap (1 run, +politesse)

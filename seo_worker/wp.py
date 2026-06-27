@@ -8,6 +8,7 @@
 """
 import html
 import re
+import time
 from urllib.parse import urljoin, urlparse, urldefrag
 
 import requests
@@ -178,22 +179,151 @@ def _strip_html(s):
 
 
 def fetch_html(url):
-    """Récupère le HTML d'une page. Tolérant : timeout, boucles de redirection, etc. -> None."""
+    """Récupère le HTML d'une page. Renvoie (html|None, meta).
+    meta = {status, final_url, redirect_chain (URLs intermédiaires), loop (bool), error}.
+    La détection de redirection réutilise CE fetch (r.history) -> AUCUNE requête en plus.
+    Tolérant : aucune exception remontée."""
+    meta = {"status": None, "final_url": None, "redirect_chain": [], "loop": False, "error": None}
     try:
         r = _get(url)
+        meta["status"] = r.status_code
+        meta["final_url"] = r.url
+        meta["redirect_chain"] = [h.url for h in r.history]  # max MAX_REDIRECTS sauts
         if r.ok and "text/html" in r.headers.get("Content-Type", ""):
-            return r.text
+            return r.text, meta
         if not r.ok:
             print(f"[wp] fetch_html {url}: HTTP {r.status_code}")
     except requests.exceptions.TooManyRedirects:
+        meta["loop"] = True
+        meta["error"] = "redirect_loop"
         print(f"[wp] fetch_html {url}: boucle de redirection (> {config.MAX_REDIRECTS})")
     except requests.exceptions.Timeout:
+        meta["error"] = "timeout"
         print(f"[wp] fetch_html {url}: timeout (> {config.HTTP_TIMEOUT}s)")
     except requests.exceptions.RequestException as e:
+        meta["error"] = "request_error"
         print(f"[wp] fetch_html {url}: {e}")
     except Exception as e:
+        meta["error"] = "error"
         print(f"[wp] fetch_html {url}: {e}")
-    return None
+    return None, meta
+
+
+def extract_onpage(html_doc, page_url):
+    """Audit technique on-page à partir du HTML DÉJÀ crawlé. AUCUNE requête réseau.
+    Tolérant : toute erreur -> dict partiel marqué _partial (ne casse jamais le crawl)."""
+    a = {}
+    try:
+        soup = BeautifulSoup(html_doc, "lxml")
+        head = soup.head or soup
+        title = (soup.title.string.strip() if (soup.title and soup.title.string) else "")
+        title = html.unescape(title)
+        a["title"] = title
+        a["title_len"] = len(title)
+
+        md = head.find("meta", attrs={"name": "description"})
+        desc = md["content"].strip() if (md and md.get("content")) else ""
+        desc = html.unescape(desc)
+        a["description"] = desc
+        a["desc_present"] = bool(desc)
+        a["desc_len"] = len(desc)
+
+        h1s = soup.find_all("h1")
+        a["h1_count"] = len(h1s)
+        first_h1 = h1s[0].get_text(" ", strip=True).strip().lower() if h1s else ""
+        a["h1_equals_title"] = bool(first_h1 and title and first_h1 == title.strip().lower())
+
+        # Saut de niveau Hn (ex. H1 -> H3 sans H2).
+        levels = [int(t.name[1]) for t in soup.find_all(re.compile(r"^h[1-6]$"))]
+        gap = False
+        prev = 0
+        for lv in levels:
+            if prev and lv > prev + 1:
+                gap = True
+                break
+            prev = lv
+        a["heading_gap"] = gap
+
+        canon = head.find("link", attrs={"rel": "canonical"})
+        chref = canon["href"].strip() if (canon and canon.get("href")) else ""
+        ncanon = normalize_url(chref) if chref else None
+        a["has_canonical"] = bool(chref)
+        a["canonical_other"] = bool(ncanon and ncanon != page_url)
+
+        robots = head.find("meta", attrs={"name": "robots"})
+        rc = robots["content"].lower() if (robots and robots.get("content")) else ""
+        a["is_noindex"] = "noindex" in rc
+
+        imgs = soup.find_all("img")
+        a["images_total"] = len(imgs)
+        a["images_without_alt"] = sum(1 for im in imgs if not (im.get("alt") or "").strip())
+
+        # Mixed content : ressources http:// sur une page https (AVANT de retirer les scripts).
+        mixed = []
+        if (page_url or "").startswith("https://"):
+            for tag in soup.find_all(["img", "script", "link", "source", "iframe", "audio", "video"]):
+                for attr in ("src", "href"):
+                    v = tag.get(attr)
+                    if v and v.strip().lower().startswith("http://"):
+                        mixed.append(v.strip())
+        a["mixed_content"] = list(dict.fromkeys(mixed))[:50]
+
+        # Nombre de mots du texte visible (on retire scripts/styles en dernier).
+        for tag in soup(["script", "style", "noscript"]):
+            tag.decompose()
+        text = soup.get_text(" ", strip=True)
+        a["word_count"] = len(text.split()) if text else 0
+    except Exception as e:
+        print(f"[wp] extract_onpage {page_url}: {e}")
+        a["_partial"] = True
+    return a
+
+
+def fetch_sitemap(base):
+    """Ensemble des URLs (normalisées) du sitemap. Essaie sitemap_index.xml puis sitemap.xml,
+    suit les sous-sitemaps (plafonné + politesse). Tolérant -> (set(urls), sitemap_url|None)."""
+    seen = set()
+    page_urls = set()
+
+    def grab(sm_url, depth=0):
+        if sm_url in seen or depth > 3:
+            return
+        seen.add(sm_url)
+        try:
+            r = _get(sm_url)
+            if not r.ok:
+                return
+            txt = r.text
+        except Exception as e:
+            print(f"[wp] fetch_sitemap {sm_url}: {e}")
+            return
+        locs = re.findall(r"<loc>\s*([^<\s]+)\s*</loc>", txt, re.I)
+        if "<sitemapindex" in txt.lower():
+            for child in locs[:50]:
+                time.sleep(config.POLITENESS_DELAY)  # politesse sur les sous-sitemaps
+                grab(child.strip(), depth + 1)
+        else:
+            for u in locs:
+                n = normalize_url(u.strip())
+                if n:
+                    page_urls.add(n)
+
+    for cand in (f"{base}/sitemap_index.xml", f"{base}/sitemap.xml"):
+        grab(cand)
+        if page_urls:
+            return page_urls, cand
+    return page_urls, None
+
+
+def head_status(url):
+    """Code HTTP d'une URL via HEAD léger (fallback GET si HEAD refusé). None si échec."""
+    try:
+        r = _SESSION.head(url, timeout=config.HTTP_TIMEOUT, allow_redirects=True)
+        if r.status_code in (403, 405):  # certains serveurs refusent HEAD
+            r = _get(url)
+        return r.status_code
+    except Exception:
+        return None
 
 
 def extract_links(html, page_url, domain):

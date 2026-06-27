@@ -19,6 +19,7 @@ import json
 import math
 import os
 import time
+from collections import deque
 from datetime import datetime, timezone, timedelta
 from urllib.parse import urlparse
 
@@ -75,6 +76,78 @@ def upsert_site(cur, site):
         (site["domain"], site["wp_base_url"], site["gsc_property"]),
     )
     return cur.fetchone()[0]
+
+
+def audit_postprocess(conn, site_id, home_url, edges, base):
+    """Audit niveau graphe/site (transaction séparée, le crawl est déjà commité) :
+    - profondeur de crawl = plus court chemin depuis l'accueil (BFS sur le graphe déjà en main),
+    - présence dans le sitemap par page,
+    - orphelins sitemap (URLs au sitemap absentes des pages crawlées) HEADés (plafonné) -> 404.
+    N'écrit QUE dans seo_onpage_issues / seo_audit (jamais seo_pages/seo_links)."""
+    cur = conn.cursor()
+
+    # 1) Profondeur depuis la home (BFS, réutilise le graphe -> aucune requête réseau).
+    adj = {}
+    for f, t in edges:
+        adj.setdefault(f, []).append(t)
+    depth = {}
+    if home_url:
+        depth[home_url] = 0
+        dq = deque([home_url])
+        while dq:
+            u = dq.popleft()
+            for v in adj.get(u, []):
+                if v not in depth:
+                    depth[v] = depth[u] + 1
+                    dq.append(v)
+
+    # 2) Sitemap (1 fetch + sous-sitemaps plafonnés/polis).
+    sitemap_urls, sitemap_url = wp.fetch_sitemap(base)
+
+    # 3) Profondeur + présence sitemap mergées dans l'audit de CHAQUE page.
+    cur.execute("SELECT url FROM seo_pages WHERE site_id = %s", (site_id,))
+    page_urls = [r[0] for r in cur.fetchall()]
+    page_set = set(page_urls)
+    n = 0
+    for u in page_urls:
+        merge = {
+            "crawl_depth": depth.get(u),
+            "in_sitemap": (u in sitemap_urls) if sitemap_urls else None,
+        }
+        cur.execute(
+            """INSERT INTO seo_onpage_issues (site_id, url, data, updated_at)
+               VALUES (%s, %s, %s, NOW())
+               ON CONFLICT (site_id, url) DO UPDATE
+                 SET data = seo_onpage_issues.data || EXCLUDED.data, updated_at = NOW()""",
+            (site_id, u, json.dumps(merge)),
+        )
+        n += 1
+        if n % config.COMMIT_BATCH == 0:
+            conn.commit()
+    conn.commit()
+
+    # 4) Orphelins sitemap -> HEAD plafonné (+ politesse) pour isoler les 404.
+    orphans_404 = []
+    if sitemap_urls:
+        checked = 0
+        for u in (x for x in sitemap_urls if x not in page_set):
+            if checked >= config.AUDIT_SITEMAP_HEAD_CAP:
+                break
+            time.sleep(config.POLITENESS_DELAY)
+            checked += 1
+            if wp.head_status(u) == 404:
+                orphans_404.append(u)
+    cur.execute(
+        """INSERT INTO seo_audit (site_id, sitemap_url, sitemap_fetched, sitemap_count, orphans_404, updated_at)
+           VALUES (%s, %s, %s, %s, %s, NOW())
+           ON CONFLICT (site_id) DO UPDATE
+             SET sitemap_url = EXCLUDED.sitemap_url, sitemap_fetched = EXCLUDED.sitemap_fetched,
+                 sitemap_count = EXCLUDED.sitemap_count, orphans_404 = EXCLUDED.orphans_404, updated_at = NOW()""",
+        (site_id, sitemap_url, bool(sitemap_url), len(sitemap_urls), json.dumps(orphans_404)),
+    )
+    conn.commit()
+    print(f"  [AUDIT] profondeur+sitemap OK (sitemap={'oui' if sitemap_url else 'non'}, "
+          f"urls={len(sitemap_urls)}, 404={len(orphans_404)})")
 
 
 def crawl_site(conn, site, full=False, no_resume=False, job_id=None):
@@ -143,6 +216,7 @@ def crawl_site(conn, site, full=False, no_resume=False, job_id=None):
             if resume_from is not None and item["wp_id"] is not None and item["wp_id"] <= resume_from:
                 continue
 
+            audit_data = None  # données d'audit on-page de CETTE page (None = pas réauditée)
             try:
                 cur.execute("SAVEPOINT pg")  # isole l'erreur d'UNE page sans perdre le lot
                 mod = parse_dt(item["modified_at"])
@@ -166,7 +240,7 @@ def crawl_site(conn, site, full=False, no_resume=False, job_id=None):
                 )
                 if needs_parse:
                     time.sleep(config.POLITENESS_DELAY)  # politesse : ne pas marteler le site
-                    html = wp.fetch_html(url)
+                    html, fetch_meta = wp.fetch_html(url)
                     if html:
                         parsed += 1
                         meta = wp.extract_seo_meta(html, item.get("_yoast"))
@@ -187,6 +261,20 @@ def crawl_site(conn, site, full=False, no_resume=False, job_id=None):
                                 (site_id, url, to_url, anchor or ""),
                             )
                             links += 1
+                    # Préparation de l'audit on-page À PARTIR DU HTML DÉJÀ EN MAIN (aucune requête
+                    # en plus). Try/except dédié : une extraction qui échoue NE casse jamais la
+                    # page ni le crawl (audit_data reste None ou partiel).
+                    try:
+                        ad = wp.extract_onpage(html, url) if html else {}
+                        ad["http_status"] = fetch_meta.get("status")
+                        ad["redirect_chain"] = fetch_meta.get("redirect_chain") or []
+                        ad["redirect_loop"] = bool(fetch_meta.get("loop"))
+                        ad["fetch_error"] = fetch_meta.get("error")
+                        ad["audited"] = True
+                        audit_data = ad
+                    except Exception as ae:
+                        audit_data = {"audited": False}
+                        print(f"[AUDIT] extraction {url}: {ae}")
                 cur.execute("RELEASE SAVEPOINT pg")
                 processed += 1
                 if item["wp_id"] is not None:
@@ -195,6 +283,24 @@ def crawl_site(conn, site, full=False, no_resume=False, job_id=None):
                 cur.execute("ROLLBACK TO SAVEPOINT pg")  # on conserve les pages déjà faites du lot
                 print(f"[ERREUR page] {url}: {e}")
                 continue
+
+            # Audit on-page : écrit dans une table DÉDIÉE, APRÈS le savepoint de la page, dans
+            # SON PROPRE savepoint -> un souci d'audit ne touche jamais seo_pages/seo_links.
+            if audit_data is not None:
+                try:
+                    cur.execute("SAVEPOINT audit")
+                    cur.execute(
+                        """INSERT INTO seo_onpage_issues (site_id, url, data, audited_at, updated_at)
+                           VALUES (%s, %s, %s, NOW(), NOW())
+                           ON CONFLICT (site_id, url) DO UPDATE
+                             SET data = seo_onpage_issues.data || EXCLUDED.data,
+                                 audited_at = NOW(), updated_at = NOW()""",
+                        (site_id, url, json.dumps(audit_data)),
+                    )
+                    cur.execute("RELEASE SAVEPOINT audit")
+                except Exception as ae:
+                    cur.execute("ROLLBACK TO SAVEPOINT audit")
+                    print(f"[AUDIT] page non auditée {url}: {ae}")
 
             # Commit par lots : persiste la progression + permet la reprise.
             if processed % config.COMMIT_BATCH == 0:
@@ -250,6 +356,15 @@ def crawl_site(conn, site, full=False, no_resume=False, job_id=None):
             if i % config.COMMIT_BATCH == 0:
                 conn.commit()
         conn.commit()
+
+        # Audit post-graphe (profondeur de crawl + cohérence sitemap), TOTALEMENT isolé :
+        # les données de crawl/PageRank sont déjà commitées -> un souci d'audit ne fait jamais
+        # échouer le run (au pire, l'audit profondeur/sitemap n'est pas rafraîchi ce run-ci).
+        try:
+            audit_postprocess(conn, site_id, home_url, edges, base)
+        except Exception as ae:
+            conn.rollback()
+            print(f"[AUDIT] post-traitement ignoré ({domain}): {ae}")
 
         cur.execute(
             "UPDATE seo_crawl_runs SET status = 'done', finished_at = NOW(), pages_processed = %s WHERE id = %s",

@@ -16,6 +16,7 @@ router.get('/affamees', seoController.getAffamees);
 router.get('/gsc/status', seoController.getGscStatus);
 router.get('/quasi-victoires', seoController.getQuasiVictoires);
 router.get('/opportunites', seoController.getOpportunites);
+router.get('/audit', seoController.getAudit);
 // File de jobs : POST = créer une demande (seule écriture, sur seo_jobs uniquement) ; GET = statut.
 router.post('/jobs', seoController.createJob);
 router.get('/jobs', seoController.getJob);

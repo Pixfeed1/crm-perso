@@ -323,6 +323,146 @@ const seoController = {
     }
   },
 
+  // GET /api/seo/audit?site_id= -> audit technique on-page agrégé (vue d'ensemble du site).
+  // LECTURE SEULE : agrège seo_onpage_issues (écrit par le worker) + seo_audit (sitemap) +
+  // doublons calculés ici. Renvoie catégories triées par gravité + score /100.
+  getAudit: async (req, res) => {
+    const db = req.app.locals.db;
+    const siteId = parseInt(req.query.site_id, 10);
+    if (!siteId) return res.status(400).json({ message: 'site_id requis' });
+    // Seuils (miroir de config.py côté worker — ajustables).
+    const T = { titleMin: 30, titleMax: 60, descMin: 70, descMax: 160, thin: 300, depth: 4 };
+    const MAX_PAGES_PER_CAT = 300;
+    try {
+      const { rows } = await db.pool.query(
+        `SELECT p.url, p.title, p.value_score::float AS value_score,
+                p.internal_pagerank::float AS internal_pagerank, i.data AS audit
+         FROM seo_pages p
+         LEFT JOIN seo_onpage_issues i ON i.site_id = p.site_id AND i.url = p.url
+         WHERE p.site_id = $1`,
+        [siteId]
+      );
+      const siteRow = await db.pool.query(
+        'SELECT sitemap_url, sitemap_fetched, sitemap_count, orphans_404 FROM seo_audit WHERE site_id = $1',
+        [siteId]
+      );
+      const siteAudit = siteRow.rows[0] || null;
+      const total = rows.length;
+
+      // Doublons title / meta description.
+      const titleCount = new Map();
+      const descCount = new Map();
+      for (const r of rows) {
+        const t = (r.title || '').trim().toLowerCase();
+        if (t) titleCount.set(t, (titleCount.get(t) || 0) + 1);
+        const d = ((r.audit && r.audit.description) || '').trim().toLowerCase();
+        if (d) descCount.set(d, (descCount.get(d) || 0) + 1);
+      }
+      const hasDepth = rows.some((r) => r.audit && r.audit.crawl_depth != null);
+
+      // Spécification des catégories : {key,label,severity,test,detail}.
+      const A = (r) => r.audit || {};
+      const specs = [
+        { key: 'broken', label: 'Pages cassées (HTTP ≥ 400 / erreur)', severity: 'critical',
+          test: (r) => { const a = A(r); return (a.http_status && a.http_status >= 400) || (a.fetch_error && a.fetch_error !== 'redirect_loop'); },
+          detail: (r) => { const a = A(r); return a.http_status ? `HTTP ${a.http_status}` : (a.fetch_error || 'erreur'); } },
+        { key: 'redirect_loop', label: 'Boucles de redirection', severity: 'critical',
+          test: (r) => A(r).redirect_loop === true, detail: () => 'boucle de redirection (fuit le PageRank)' },
+        { key: 'noindex', label: 'Pages en noindex', severity: 'critical',
+          test: (r) => A(r).is_noindex === true, detail: () => 'meta robots noindex (désindexation)' },
+
+        { key: 'redirect_chain', label: 'Redirections en chaîne', severity: 'warning',
+          test: (r) => (A(r).redirect_chain || []).length >= 2,
+          detail: (r) => `${(A(r).redirect_chain || []).length} sauts` },
+        { key: 'mixed_content', label: 'Mixed content (ressources http://)', severity: 'warning',
+          test: (r) => (A(r).mixed_content || []).length > 0,
+          detail: (r) => `${(A(r).mixed_content || []).length} ressource(s) http://` },
+        { key: 'h1', label: 'H1 absent ou multiple', severity: 'warning',
+          test: (r) => { const a = A(r); return a.audited && (a.h1_count === 0 || a.h1_count > 1); },
+          detail: (r) => `${A(r).h1_count} H1` },
+        { key: 'title_missing', label: 'Title manquant', severity: 'warning',
+          test: (r) => { const a = A(r); return a.audited && a.title_len === 0; }, detail: () => 'aucun title' },
+        { key: 'desc_missing', label: 'Meta description manquante', severity: 'warning',
+          test: (r) => { const a = A(r); return a.audited && a.desc_present === false; }, detail: () => 'aucune meta description' },
+        { key: 'thin', label: 'Contenu mince (< ' + T.thin + ' mots)', severity: 'warning',
+          test: (r) => { const a = A(r); return a.word_count != null && a.word_count < T.thin; },
+          detail: (r) => `${A(r).word_count} mots` },
+        { key: 'depth', label: 'Profondeur de crawl élevée (≥ ' + T.depth + ')', severity: 'warning',
+          test: (r) => { const a = A(r); return (a.crawl_depth != null && a.crawl_depth >= T.depth) || (hasDepth && a.crawl_depth == null); },
+          detail: (r) => { const a = A(r); return a.crawl_depth == null ? 'non atteignable depuis l’accueil' : `${a.crawl_depth} clics`; } },
+        { key: 'canonical_other', label: 'Canonical pointant ailleurs', severity: 'warning',
+          test: (r) => A(r).canonical_other === true, detail: () => 'canonical ≠ URL de la page' },
+        { key: 'dup_title', label: 'Titres dupliqués', severity: 'warning',
+          test: (r) => { const t = (r.title || '').trim().toLowerCase(); return t && titleCount.get(t) > 1; },
+          detail: () => 'title identique à d’autres pages' },
+        { key: 'dup_desc', label: 'Meta descriptions dupliquées', severity: 'warning',
+          test: (r) => { const d = ((A(r).description) || '').trim().toLowerCase(); return d && descCount.get(d) > 1; },
+          detail: () => 'description identique à d’autres pages' },
+        { key: 'missing_sitemap', label: 'Pages importantes absentes du sitemap', severity: 'warning',
+          test: (r) => A(r).in_sitemap === false && (Number(r.value_score) || 0) >= 60,
+          detail: (r) => `valeur ${r.value_score ?? '—'}, hors sitemap` },
+
+        { key: 'title_len', label: 'Title trop court / trop long', severity: 'notice',
+          test: (r) => { const a = A(r); return a.audited && a.title_len > 0 && (a.title_len < T.titleMin || a.title_len > T.titleMax); },
+          detail: (r) => `${A(r).title_len} car.` },
+        { key: 'desc_len', label: 'Meta description trop courte / trop longue', severity: 'notice',
+          test: (r) => { const a = A(r); return a.desc_present && (a.desc_len < T.descMin || a.desc_len > T.descMax); },
+          detail: (r) => `${A(r).desc_len} car.` },
+        { key: 'h1_equals_title', label: 'H1 identique au title', severity: 'notice',
+          test: (r) => A(r).h1_equals_title === true, detail: () => 'H1 = title' },
+        { key: 'heading_gap', label: 'Saut de niveau de titres (Hn)', severity: 'notice',
+          test: (r) => A(r).heading_gap === true, detail: () => 'hiérarchie Hn incohérente' },
+        { key: 'images_alt', label: 'Images sans attribut alt', severity: 'notice',
+          test: (r) => (A(r).images_without_alt || 0) > 0,
+          detail: (r) => `${A(r).images_without_alt}/${A(r).images_total || 0} sans alt` }
+      ];
+
+      const categories = [];
+      for (const s of specs) {
+        const pages = [];
+        for (const r of rows) {
+          if (s.test(r)) {
+            if (pages.length < MAX_PAGES_PER_CAT) pages.push({ url: r.url, title: r.title, detail: s.detail(r) });
+            else pages.push(null); // garde le compte exact sans gonfler le payload
+          }
+        }
+        const count = pages.length;
+        if (count > 0) categories.push({ key: s.key, label: s.label, severity: s.severity, count, pages: pages.filter(Boolean) });
+      }
+
+      // Orphelins sitemap 404 (niveau site).
+      const orphans = Array.isArray(siteAudit && siteAudit.orphans_404) ? siteAudit.orphans_404 : [];
+      if (orphans.length) {
+        categories.push({
+          key: 'sitemap_404', label: 'URLs du sitemap en 404', severity: 'notice', count: orphans.length,
+          pages: orphans.slice(0, MAX_PAGES_PER_CAT).map((u) => ({ url: u, title: '', detail: 'présente au sitemap mais 404' }))
+        });
+      }
+
+      // Tri par gravité puis par nombre décroissant.
+      const order = { critical: 0, warning: 1, notice: 2 };
+      categories.sort((a, b) => (order[a.severity] - order[b.severity]) || (b.count - a.count));
+
+      // Score /100 : pénalité pondérée par gravité, normalisée au nombre de pages.
+      const w = { critical: 3, warning: 1, notice: 0.3 };
+      let penalty = 0;
+      for (const c of categories) penalty += c.count * w[c.severity];
+      const score = total > 0 ? Math.max(0, Math.round(100 - (penalty / total) * (100 / 3))) : 100;
+
+      res.json({
+        score,
+        total_pages: total,
+        categories,
+        sitemap: siteAudit
+          ? { fetched: siteAudit.sitemap_fetched, url: siteAudit.sitemap_url, count: siteAudit.sitemap_count, orphans_404: orphans.length }
+          : { fetched: false, url: null, count: 0, orphans_404: 0 }
+      });
+    } catch (e) {
+      console.error('[SEO] getAudit:', e.message);
+      res.status(500).json({ message: 'Erreur serveur' });
+    }
+  },
+
   // POST /api/seo/jobs { site_id, job_type } -> crée un job 'pending'.
   // SEULE écriture autorisée côté Node, et UNIQUEMENT sur seo_jobs (jamais seo_pages/seo_links).
   // Le worker Python est seul à passer le job en running/done/failed et à crawler.

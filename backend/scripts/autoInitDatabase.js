@@ -1636,6 +1636,37 @@ async function ensureSeoTables(client) {
   `);
   await client.query("CREATE UNIQUE INDEX IF NOT EXISTS uq_seo_oauth_tokens ON seo_oauth_tokens(provider, COALESCE(account_email, ''));");
 
+  // Audit technique on-page : table DÉDIÉE, totalement isolée de seo_pages (GSC/maillage)
+  // pour ne jamais risquer le module Opportunités ni le PageRank. Écrite par le worker au
+  // crawl, à partir du HTML déjà récupéré. `data` JSONB = tous les champs d'audit par page.
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS seo_onpage_issues (
+      id         SERIAL PRIMARY KEY,
+      site_id    INTEGER NOT NULL REFERENCES seo_sites(id) ON DELETE CASCADE,
+      url        TEXT NOT NULL,
+      data       JSONB NOT NULL DEFAULT '{}'::jsonb,
+      audited_at TIMESTAMP,
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW()
+    );
+  `);
+  await client.query('CREATE UNIQUE INDEX IF NOT EXISTS uq_seo_onpage_issues ON seo_onpage_issues(site_id, url);');
+  await client.query('CREATE INDEX IF NOT EXISTS idx_seo_onpage_issues_site ON seo_onpage_issues(site_id);');
+
+  // Audit niveau site (sitemap) : 1 ligne par site, isolée elle aussi.
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS seo_audit (
+      id               SERIAL PRIMARY KEY,
+      site_id          INTEGER NOT NULL REFERENCES seo_sites(id) ON DELETE CASCADE,
+      sitemap_url      TEXT,
+      sitemap_fetched  BOOLEAN NOT NULL DEFAULT false,
+      sitemap_count    INTEGER NOT NULL DEFAULT 0,
+      orphans_404      JSONB NOT NULL DEFAULT '[]'::jsonb,
+      updated_at       TIMESTAMP DEFAULT NOW()
+    );
+  `);
+  await client.query('CREATE UNIQUE INDEX IF NOT EXISTS uq_seo_audit_site ON seo_audit(site_id);');
+
   console.log('  ✓ Tables SEO vérifiées');
 }
 

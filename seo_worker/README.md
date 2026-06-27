@@ -158,6 +158,20 @@ Bouton **« Search Console »** (crée un job `gsc_sync`, même badge/polling qu
 bandeau d'état de connexion, colonnes impressions/clics/position + badge d'indexation dans la
 liste des pages, et onglet **« Quasi-victoires »** (positions moyennes 11–20).
 
+## Audit technique on-page
+Extrait au crawl, **à partir du HTML déjà récupéré** (aucune requête en plus pour les vérifs
+de base). Écrit dans des tables DÉDIÉES (`seo_onpage_issues` par page, `seo_audit` au niveau
+site) — totalement isolées de `seo_pages` (GSC/maillage). Toute l'extraction d'audit est
+encadrée par try/except + savepoint propre : une page au HTML bizarre n'est pas auditée mais
+ne casse JAMAIS le crawl.
+- Base (depuis le HTML) : title (longueur), meta description, H1 (nb, = title ?), saut de Hn,
+  nb de mots (thin), images sans alt, canonical, noindex, mixed content (http:// sur https).
+- Profondeur : redirections chaîne/boucle (réutilise `r.history` du fetch, max 5 sauts),
+  profondeur de crawl (BFS depuis l'accueil sur le graphe), cohérence sitemap (fetch unique
+  + HEAD plafonné `AUDIT_SITEMAP_HEAD_CAP` avec politesse pour isoler les 404).
+- Lecture : `GET /api/seo/audit?site_id=` (catégories par gravité + score /100), onglet
+  « Audit technique » dans l'UI. Seuils ajustables dans `config.py` (AUDIT_*).
+
 ## Étapes suivantes
-- Étape 3 : croisements (pages affamées chiffrées par les impressions, content decay,
-  cannibalisation de requêtes, indexation croisée avec le maillage).
+- Étape 3 (suite) : content decay (besoin de plusieurs mois de `seo_metrics_monthly`),
+  cannibalisation de requêtes, indexation fiabilisée.

@@ -572,6 +572,7 @@ export const seoAPI = {
   getGscStatus: () => apiRequest('/seo/gsc/status'),
   getQuasiVictoires: (siteId) => apiRequest(`/seo/quasi-victoires?site_id=${siteId}`),
   getOpportunites: (siteId, minImpr = 20) => apiRequest(`/seo/opportunites?site_id=${siteId}&min_impressions=${minImpr}`),
+  getAudit: (siteId) => apiRequest(`/seo/audit?site_id=${siteId}`),
   createJob: (siteId, jobType, targetUrl) => apiRequest('/seo/jobs', 'POST', { site_id: siteId, job_type: jobType, target_url: targetUrl }),
   getJob: (siteId) => apiRequest(`/seo/jobs?site_id=${siteId}`),
   getJobById: (jobId) => apiRequest(`/seo/jobs/${jobId}`),
