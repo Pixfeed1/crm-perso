@@ -3,6 +3,50 @@
 // Module SEO — LECTURE SEULE STRICTE. Aucune écriture : toutes les données SEO sont
 // produites par le worker Python (seo_worker). Ce contrôleur ne fait que des SELECT.
 
+// Pages légales / utilitaires : fort jus via le footer, mais AUCUN lien éditorial possible
+// ni pertinence thématique -> on ne les propose JAMAIS comme donneuses de liens.
+// Regex (insensible à la casse) sur un segment de chemin de l'URL.
+const LEGAL_DONOR_REGEX = '(^|/)(mentions-legales|mentions|politique-de-confidentialite|confidentialite|privacy|nous-contacter|contact|cgu|cgv|legal)(/|$)';
+
+// Vrai si l'URL est la page d'accueil (racine du domaine, sans chemin).
+const isHomeUrl = (url) => /^https?:\/\/[^/]+\/?$/.test(url || '');
+
+// Construit jusqu'à 5 suggestions de liens internes vers `page`.
+// Ordre de préférence : même catégorie > accueil > réservoirs (fort jus) > autres pages saines.
+// `donorRows` EXCLUT déjà les pages légales (filtrées dans la requête SQL).
+async function buildLinkSuggestions(db, siteId, page, donorRows, topReservoirs) {
+  const existing = await db.pool.query(
+    'SELECT from_url FROM seo_links WHERE site_id = $1 AND to_url = $2',
+    [siteId, page.url]
+  );
+  const linking = new Set(existing.rows.map((r) => r.from_url));
+  const norm = (c) => (c || '').toLowerCase().trim();
+  const cat = norm(page.category);
+  const eligible = (d) => d.url !== page.url && !linking.has(d.url);
+
+  const sameCat = cat ? donorRows.filter((d) => eligible(d) && norm(d.category) === cat) : [];
+  const home = donorRows.filter((d) => eligible(d) && isHomeUrl(d.url));
+  const others = [...topReservoirs, ...donorRows].filter(eligible);
+
+  const seen = new Set();
+  const suggestions = [];
+  for (const d of [...sameCat, ...home, ...others]) {
+    if (seen.has(d.url)) continue;
+    seen.add(d.url);
+    suggestions.push({
+      url: d.url,
+      title: d.title,
+      internal_pagerank: d.internal_pagerank,
+      reason: cat && norm(d.category) === cat ? 'même catégorie'
+        : isHomeUrl(d.url) ? "page d'accueil"
+        : d.health === 'reservoir' ? 'réservoir (fort jus)'
+        : 'page saine'
+    });
+    if (suggestions.length >= 5) break;
+  }
+  return suggestions;
+}
+
 const seoController = {
   // GET /api/seo/sites -> liste des sites (sélecteur).
   getSites: async (req, res) => {
@@ -130,50 +174,23 @@ const seoController = {
         [siteId]
       );
 
-      // Donneurs de liens candidats : pages à fort jus (réservoirs + saines), avec leur
-      // catégorie -> on privilégiera la MÊME catégorie que l'affamée (lien contextuel),
-      // avec repli sur les meilleurs réservoirs globaux.
+      // Donneurs de liens candidats : pages de CONTENU à fort jus (réservoirs + saines),
+      // en EXCLUANT les pages légales/utilitaires (cf. LEGAL_DONOR_REGEX).
       const donors = await db.pool.query(
         `SELECT url, title, category, health, internal_pagerank::float AS internal_pagerank FROM seo_pages
          WHERE site_id = $1 AND internal_pagerank IS NOT NULL
            AND health IN ('reservoir', 'saine')
+           AND url !~* $2
          ORDER BY internal_pagerank DESC
          LIMIT 200`,
-        [siteId]
+        [siteId, LEGAL_DONOR_REGEX]
       );
       const donorRows = donors.rows;
       const topReservoirs = donorRows.filter((d) => d.health === 'reservoir').slice(0, 10);
 
-      const norm = (c) => (c || '').toLowerCase().trim();
       const result = [];
       for (const page of affamees.rows) {
-        // Pages qui pointent DÉJÀ vers l'affamée -> à ne pas resuggérer.
-        const existing = await db.pool.query(
-          'SELECT from_url FROM seo_links WHERE site_id = $1 AND to_url = $2',
-          [siteId, page.url]
-        );
-        const linking = new Set(existing.rows.map((r) => r.from_url));
-        const cat = norm(page.category);
-
-        const eligible = (d) => d.url !== page.url && !linking.has(d.url);
-        // 1) Priorité : même catégorie (lien le plus pertinent).
-        const sameCat = cat ? donorRows.filter((d) => eligible(d) && norm(d.category) === cat) : [];
-        // 2) Repli : meilleurs réservoirs globaux (fort jus), puis autres donneurs.
-        const fallback = [...topReservoirs, ...donorRows].filter(eligible);
-
-        const seen = new Set();
-        const suggestions = [];
-        for (const d of [...sameCat, ...fallback]) {
-          if (seen.has(d.url)) continue;
-          seen.add(d.url);
-          suggestions.push({
-            url: d.url,
-            title: d.title,
-            internal_pagerank: d.internal_pagerank,
-            reason: cat && norm(d.category) === cat ? 'même catégorie' : (d.health === 'reservoir' ? 'réservoir (fort jus)' : 'page saine'),
-          });
-          if (suggestions.length >= 5) break;
-        }
+        const suggestions = await buildLinkSuggestions(db, siteId, page, donorRows, topReservoirs);
         result.push({ ...page, suggestions });
       }
       res.json(result);
@@ -260,16 +277,17 @@ const seoController = {
         [siteId, minImpr, maxPr]
       );
 
-      // Donneurs de liens (mêmes règles que les pages affamées).
+      // Donneurs de liens (mêmes règles que les pages affamées) : pages de contenu à fort jus,
+      // pages légales/utilitaires EXCLUES.
       const donors = await db.pool.query(
         `SELECT url, title, category, health, internal_pagerank::float AS internal_pagerank FROM seo_pages
          WHERE site_id = $1 AND internal_pagerank IS NOT NULL AND health IN ('reservoir', 'saine')
+           AND url !~* $2
          ORDER BY internal_pagerank DESC LIMIT 200`,
-        [siteId]
+        [siteId, LEGAL_DONOR_REGEX]
       );
       const donorRows = donors.rows;
       const topReservoirs = donorRows.filter((d) => d.health === 'reservoir').slice(0, 10);
-      const norm = (c) => (c || '').toLowerCase().trim();
 
       const result = [];
       for (const p of cand.rows) {
@@ -293,29 +311,8 @@ const seoController = {
         if (inl <= 2) bits.push(`${inl} lien entrant${inl > 1 ? 's' : ''}`);
         if (maxPr > 0 && prRatio < 0.6) bits.push('faible jus interne');
 
-        // Suggestions de liens internes (même logique que getAffamees).
-        const existing = await db.pool.query(
-          'SELECT from_url FROM seo_links WHERE site_id = $1 AND to_url = $2',
-          [siteId, p.url]
-        );
-        const linking = new Set(existing.rows.map((r) => r.from_url));
-        const cat = norm(p.category);
-        const eligible = (d) => d.url !== p.url && !linking.has(d.url);
-        const sameCat = cat ? donorRows.filter((d) => eligible(d) && norm(d.category) === cat) : [];
-        const fallback = [...topReservoirs, ...donorRows].filter(eligible);
-        const seen = new Set();
-        const suggestions = [];
-        for (const d of [...sameCat, ...fallback]) {
-          if (seen.has(d.url)) continue;
-          seen.add(d.url);
-          suggestions.push({
-            url: d.url,
-            title: d.title,
-            internal_pagerank: d.internal_pagerank,
-            reason: cat && norm(d.category) === cat ? 'même catégorie' : (d.health === 'reservoir' ? 'réservoir (fort jus)' : 'page saine')
-          });
-          if (suggestions.length >= 5) break;
-        }
+        // Suggestions de liens internes (même logique factorisée que getAffamees).
+        const suggestions = await buildLinkSuggestions(db, siteId, p, donorRows, topReservoirs);
         result.push({ ...p, score, reason: bits.join(' · '), suggestions });
       }
       result.sort((a, b) => b.score - a.score);
