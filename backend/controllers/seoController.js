@@ -250,12 +250,12 @@ const seoController = {
                 value_score::float AS value_score,
                 gsc_impressions, gsc_clicks, gsc_position::float AS gsc_position
          FROM seo_pages
-         WHERE site_id = $1 AND COALESCE(gsc_impressions, 0) >= $2
+         WHERE site_id = $1 AND COALESCE(gsc_impressions, 0) >= $2::int
            AND (
              (gsc_position IS NOT NULL AND gsc_position BETWEEN 11 AND 50)
              OR COALESCE(inlinks_count, 0) <= 2
              OR health IN ('orpheline', 'affamee')
-             OR (internal_pagerank IS NOT NULL AND $3 > 0 AND internal_pagerank / $3 < 0.6)
+             OR (internal_pagerank IS NOT NULL AND $3::float > 0 AND internal_pagerank / $3::float < 0.6)
            )`,
         [siteId, minImpr, maxPr]
       );
