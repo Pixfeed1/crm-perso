@@ -1585,18 +1585,27 @@ async function ensureSeoTables(client) {
       progress_current INTEGER NOT NULL DEFAULT 0,
       progress_total   INTEGER NOT NULL DEFAULT 0,
       error            TEXT,
+      target_url       TEXT,
+      result           JSONB,
       created_at       TIMESTAMP DEFAULT NOW(),
       started_at       TIMESTAMP,
       finished_at      TIMESTAMP,
-      CONSTRAINT seo_jobs_type_chk   CHECK (job_type IN ('crawl_full','crawl_incremental','gsc_sync')),
+      CONSTRAINT seo_jobs_type_chk   CHECK (job_type IN ('crawl_full','crawl_incremental','gsc_sync','gsc_test')),
       CONSTRAINT seo_jobs_status_chk CHECK (status   IN ('pending','running','cancel_requested','cancelled','done','failed'))
     );
   `);
   await client.query('CREATE INDEX IF NOT EXISTS idx_seo_jobs_site   ON seo_jobs(site_id, created_at DESC);');
   await client.query('CREATE INDEX IF NOT EXISTS idx_seo_jobs_status ON seo_jobs(status, created_at);');
+  // Mode test GSC : URL à inspecter + résultat brut renvoyés via le job (bases existantes).
+  await client.query('ALTER TABLE seo_jobs ADD COLUMN IF NOT EXISTS target_url TEXT;');
+  await client.query('ALTER TABLE seo_jobs ADD COLUMN IF NOT EXISTS result JSONB;');
 
-  // Migration idempotente (bases existantes) : autoriser l'annulation d'un crawl.
+  // Migration idempotente (bases existantes) : autoriser l'annulation + le job de test.
   // CREATE TABLE IF NOT EXISTS ne met pas à jour une contrainte déjà créée -> on la recrée.
+  await client.query('ALTER TABLE seo_jobs DROP CONSTRAINT IF EXISTS seo_jobs_type_chk;');
+  await client.query(
+    "ALTER TABLE seo_jobs ADD CONSTRAINT seo_jobs_type_chk CHECK (job_type IN ('crawl_full','crawl_incremental','gsc_sync','gsc_test'));"
+  );
   await client.query('ALTER TABLE seo_jobs DROP CONSTRAINT IF EXISTS seo_jobs_status_chk;');
   await client.query(
     "ALTER TABLE seo_jobs ADD CONSTRAINT seo_jobs_status_chk CHECK (status IN ('pending','running','cancel_requested','cancelled','done','failed'));"

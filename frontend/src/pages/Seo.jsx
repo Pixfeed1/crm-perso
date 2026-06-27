@@ -54,6 +54,11 @@ const Seo = () => {
   const [quasiVictoires, setQuasiVictoires] = useState([]);
   const [gscStatus, setGscStatus] = useState(null); // { connected, account_email, updated_at }
   const [tab, setTab] = useState('jus'); // 'jus' | 'affamees' | 'orphelines' | 'quasi'
+  // Mode test GSC : inspecter UNE url (1 inspection, rien en base) avant une synchro complète.
+  const [testUrl, setTestUrl] = useState('');
+  const [testJob, setTestJob] = useState(null);
+  const [testing, setTesting] = useState(false);
+  const testPollRef = useRef(null);
   const [sort, setSort] = useState('pagerank');
   const [healthFilter, setHealthFilter] = useState('all'); // filtre liste des pages
   const [loading, setLoading] = useState(true);
@@ -153,6 +158,36 @@ const Seo = () => {
       toast.error(e.message || "Impossible d'arrêter le crawl");
     } finally {
       setStarting(false);
+    }
+  };
+
+  // ----- Mode test GSC (inspecte 1 URL via un job gsc_test, suivi par id) -----
+  const stopTestPoll = () => { if (testPollRef.current) { clearInterval(testPollRef.current); testPollRef.current = null; } };
+  useEffect(() => stopTestPoll, []);
+  const runGscTest = async () => {
+    const url = testUrl.trim();
+    if (!siteId || !url) return;
+    setTesting(true);
+    setTestJob(null);
+    try {
+      const res = await seoAPI.createJob(siteId, 'gsc_test', url);
+      const id = res.job && res.job.id;
+      if (!id) { toast.error('Impossible de lancer le test'); setTesting(false); return; }
+      setTestJob(res.job);
+      stopTestPoll();
+      testPollRef.current = setInterval(async () => {
+        try {
+          const j = await seoAPI.getJobById(id);
+          setTestJob(j);
+          if (!j || (j.status !== 'pending' && j.status !== 'running' && j.status !== 'cancel_requested')) {
+            stopTestPoll();
+            setTesting(false);
+          }
+        } catch (e) { stopTestPoll(); setTesting(false); }
+      }, 3000);
+    } catch (e) {
+      toast.error(e.message || 'Erreur lors du test');
+      setTesting(false);
     }
   };
 
@@ -288,6 +323,68 @@ const Seo = () => {
                 <FiSearch size={14} className="mt-0.5 flex-shrink-0" />
                 <span>Search Console non connecté. Lancez le consentement une fois&nbsp;: <code className="px-1 rounded bg-surface-strong/60">python gsc_auth.py</code> (voir seo_worker/README.md).</span>
               </div>
+            )}
+          </div>
+        )}
+
+        {/* Mode test GSC : inspecter UNE URL (1 inspection, rien en base) avant une synchro complète */}
+        {gscConnected && (
+          <div className="mb-5 bg-surface border border-border rounded-xl p-3">
+            <div className="flex items-center gap-2 mb-2">
+              <FiTarget size={14} className="text-text-muted" />
+              <span className="text-sm font-medium text-text-primary">Tester l'indexation d'une page</span>
+              <span className="text-xs text-text-muted">(1 inspection, sans lancer la synchro complète)</span>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input
+                type="text"
+                value={testUrl}
+                onChange={(e) => setTestUrl(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') runGscTest(); }}
+                placeholder="https://jurojin.net/ma-page/"
+                className="flex-1 min-w-0 px-3 py-2 bg-surface-muted border border-border rounded-lg text-text-primary placeholder-text-muted text-sm focus:outline-none focus:border-accent"
+              />
+              <button
+                onClick={runGscTest}
+                disabled={testing || !testUrl.trim()}
+                className="px-4 py-2 rounded-lg bg-accent hover:bg-accent-hover text-white text-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {testing ? (
+                  <><motion.span animate={{ rotate: 360 }} transition={{ duration: 0.9, repeat: Infinity, ease: 'linear' }} className="inline-flex"><FiLoader size={14} /></motion.span> Test…</>
+                ) : (<><FiSearch size={14} /> Tester</>)}
+              </button>
+            </div>
+
+            {/* Résultat du test */}
+            {testJob && (testJob.status === 'pending' || testJob.status === 'running') && (
+              <p className="text-xs text-text-muted mt-2">Inspection en cours… (le worker traite la demande)</p>
+            )}
+            {testJob && testJob.status === 'done' && testJob.result && (
+              <div className="mt-3 text-sm">
+                {testJob.result.ok ? (
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-success-bg text-success-text">OK</span>
+                      <span className="text-text-secondary break-all">{testJob.result.url_sent}</span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-0.5 text-xs text-text-secondary mt-1">
+                      <div><span className="text-text-muted">coverageState :</span> {testJob.result.coverageState ?? '—'}</div>
+                      <div><span className="text-text-muted">verdict :</span> {testJob.result.verdict ?? '—'}</div>
+                      <div><span className="text-text-muted">indexingState :</span> {testJob.result.indexingState ?? '—'}</div>
+                      <div><span className="text-text-muted">pageFetchState :</span> {testJob.result.pageFetchState ?? '—'}</div>
+                      <div className="sm:col-span-2 break-all"><span className="text-text-muted">googleCanonical :</span> {testJob.result.googleCanonical ?? '—'}</div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-start gap-2 text-warning-text">
+                    <FiAlertTriangle size={14} className="mt-0.5 flex-shrink-0" />
+                    <span className="break-all">{testJob.result.error || 'Inspection en échec'}</span>
+                  </div>
+                )}
+              </div>
+            )}
+            {testJob && (testJob.status === 'failed' || testJob.status === 'cancelled') && (
+              <p className="text-xs text-danger-text mt-2">Test interrompu ({testJob.status}).</p>
             )}
           </div>
         )}

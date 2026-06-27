@@ -563,6 +563,55 @@ def gsc_sync_site(conn, site, job_id=None):
         return False
 
 
+def gsc_inspect_result(creds, gsc_property, url):
+    """Inspecte UNE url et renvoie un dict structuré (sans rien écrire en base).
+    1 seule inspection -> consommation quota minimale."""
+    sent = gsc.strip_fragment(url)
+    try:
+        coverage, raw = gsc.inspect_url(creds, gsc_property, sent)
+        isr = (raw or {}).get("inspectionResult", {}).get("indexStatusResult", {})
+        return {
+            "ok": True,
+            "url_sent": sent,
+            "coverageState": isr.get("coverageState"),
+            "verdict": isr.get("verdict"),
+            "indexingState": isr.get("indexingState"),
+            "pageFetchState": isr.get("pageFetchState"),
+            "googleCanonical": isr.get("googleCanonical"),
+            "userCanonical": isr.get("userCanonical"),
+        }
+    except gsc.QuotaExceeded:
+        return {"ok": False, "url_sent": sent, "error": "Quota d'inspection Google épuisé — réessayez demain."}
+    except Exception as e:
+        return {"ok": False, "url_sent": sent, "error": str(e)[:300]}
+
+
+def gsc_test_job(conn, site, target_url, job_id=None):
+    """Job 'gsc_test' : inspecte UNE url et stocke le résultat brut dans seo_jobs.result.
+    N'écrit JAMAIS dans seo_pages / seo_url_inspections. Ne déclenche pas la synchro complète."""
+    cur = conn.cursor()
+    gsc_property = site.get("gsc_property")
+    if not target_url:
+        result = {"ok": False, "error": "Aucune URL à tester."}
+    elif not gsc_property:
+        result = {"ok": False, "error": f"gsc_property manquant pour {site['domain']}."}
+    else:
+        try:
+            creds = gsc.load_credentials(conn)
+        except Exception as e:
+            creds = None
+            result = {"ok": False, "error": f"OAuth GSC : {str(e)[:200]}"}
+        if creds is None:
+            result = {"ok": False, "error": "OAuth GSC non configuré (lancer gsc_auth.py)."}
+        else:
+            result = gsc_inspect_result(creds, gsc_property, target_url)
+    if job_id is not None:
+        cur.execute("UPDATE seo_jobs SET result = %s WHERE id = %s", (json.dumps(result), job_id))
+        conn.commit()
+    print(f"[GSC TEST] {site['domain']} {target_url!r} -> {result}")
+    return True
+
+
 def gsc_debug_site(conn, site, n=3):
     """Investigation URL Inspection : pour les n pages à plus fortes impressions, inspecte
     À LA FOIS l'URL canonique GSC ET l'URL que le worker enverrait, et logge la réponse
@@ -678,14 +727,14 @@ def claim_next_job(conn):
              SELECT id FROM seo_jobs WHERE status = 'pending'
              ORDER BY created_at ASC FOR UPDATE SKIP LOCKED LIMIT 1
            )
-           RETURNING id, site_id, job_type""",
+           RETURNING id, site_id, job_type, target_url""",
         (),
     )
     row = cur.fetchone()
     conn.commit()
     if not row:
         return None
-    return {"id": row[0], "site_id": row[1], "job_type": row[2]}
+    return {"id": row[0], "site_id": row[1], "job_type": row[2], "target_url": row[3]}
 
 
 def serve():
@@ -720,7 +769,9 @@ def serve():
                 continue
             print(f"[SEO] Job #{job['id']} {job['job_type']} -> {site['domain']}")
             try:
-                if job["job_type"] == "gsc_sync":
+                if job["job_type"] == "gsc_test":
+                    ok = gsc_test_job(conn, site, job.get("target_url"), job_id=job["id"])
+                elif job["job_type"] == "gsc_sync":
                     ok = gsc_sync_site(conn, site, job_id=job["id"])
                 else:
                     full = job["job_type"] == "crawl_full"
@@ -756,7 +807,8 @@ def main():
     ap.add_argument("--serve", action="store_true", help="service permanent : traite la file seo_jobs (un seul job à la fois)")
     ap.add_argument("--gsc", action="store_true", help="synchro Google Search Console (hors file de jobs)")
     ap.add_argument("--gsc-debug", action="store_true", help="investigation URL Inspection (canonical GSC vs cible worker + JSON brut)")
-    ap.add_argument("--gsc-inspect", metavar="URL", help="inspecte UNE URL exacte et affiche la réponse brute de Google")
+    ap.add_argument("--gsc-test", metavar="URL", help="MODE TEST : inspecte UNE seule URL (1 inspection, rien en base)")
+    ap.add_argument("--gsc-inspect", metavar="URL", help="alias de --gsc-test")
     args = ap.parse_args()
 
     if args.serve:
@@ -768,20 +820,35 @@ def main():
         print(f"Aucun site '{args.site}' dans config.SITES")
         return
 
-    # Inspection d'une URL exacte (comparaison caractère par caractère côté humain).
-    if args.gsc_inspect:
+    # MODE TEST : inspecte UNE seule URL (1 inspection, AUCUNE écriture, pas de synchro complète).
+    test_url = args.gsc_test or args.gsc_inspect
+    if test_url:
         conn = connect()
         try:
             site = sites[0]
-            creds = gsc.load_credentials(conn)
-            if creds is None:
-                print("OAuth GSC non configuré (lancer gsc_auth.py).")
-                return
             prop = site.get("gsc_property")
-            print(f"property={prop!r}")
-            print(f"inspectionUrl={args.gsc_inspect!r}")
-            _cov, raw = gsc.inspect_url(creds, prop, args.gsc_inspect)
-            print(json.dumps(raw, indent=2, ensure_ascii=False))
+            try:
+                creds = gsc.load_credentials(conn)
+            except Exception as e:
+                print(f"ERREUR  OAuth GSC : {e}")
+                return
+            if creds is None:
+                print("ERREUR  OAuth GSC non configuré (lancer gsc_auth.py).")
+                return
+            res = gsc_inspect_result(creds, prop, test_url)
+            print(f"\n=== MODE TEST GSC — {site['domain']} (property={prop}) ===")
+            print(f"  URL demandée  : {test_url!r}")
+            print(f"  URL envoyée   : {res.get('url_sent')!r}  (fragment # retiré)")
+            if res.get("ok"):
+                print(f"  OK")
+                print(f"  coverageState : {res.get('coverageState')!r}")
+                print(f"  verdict       : {res.get('verdict')!r}")
+                print(f"  indexingState : {res.get('indexingState')!r}")
+                print(f"  pageFetchState: {res.get('pageFetchState')!r}")
+                print(f"  googleCanonical: {res.get('googleCanonical')!r}")
+                print(f"  userCanonical : {res.get('userCanonical')!r}")
+            else:
+                print(f"  ERREUR : {res.get('error')}")
         finally:
             conn.close()
         return

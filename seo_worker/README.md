@@ -142,6 +142,17 @@ directement en base.
 > (myaccount.google.com → Sécurité → accès tiers) puis relance — Google ne fournit le
 > `refresh_token` qu'au tout premier consentement.
 
+### Mode TEST (ne jamais cramer le quota pour découvrir un bug)
+Inspecte **UNE seule URL** (1 inspection, **aucune** écriture en base, pas de synchro complète) :
+```bash
+python run.py --gsc-test "https://jurojin.net/ma-page/" --site jurojin.net
+```
+Affiche l'URL réellement envoyée à Google (fragment `#` retiré), `coverageState`, `verdict`,
+`indexingState`, `pageFetchState`, `googleCanonical`, et un OK/ERREUR lisible. `--gsc-inspect`
+en est un alias. `--gsc-debug` reste l'investigation approfondie (canonique GSC vs cible, top
+pages, JSON brut). Depuis l'UI : champ **« Tester l'indexation d'une page »** (crée un job
+`gsc_test`, 1 inspection). Workflow : corriger un bug → tester 1 URL → si OK, lancer la synchro.
+
 ### Côté UI
 Bouton **« Search Console »** (crée un job `gsc_sync`, même badge/polling que le crawl),
 bandeau d'état de connexion, colonnes impressions/clics/position + badge d'indexation dans la

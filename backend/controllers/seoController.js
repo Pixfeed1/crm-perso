@@ -231,17 +231,22 @@ const seoController = {
     const db = req.app.locals.db;
     const siteId = parseInt((req.body || {}).site_id, 10);
     const jobType = (req.body || {}).job_type;
+    const targetUrl = ((req.body || {}).target_url || '').trim();
     if (!siteId) return res.status(400).json({ message: 'site_id requis' });
-    if (!['crawl_full', 'crawl_incremental', 'gsc_sync'].includes(jobType)) {
+    if (!['crawl_full', 'crawl_incremental', 'gsc_sync', 'gsc_test'].includes(jobType)) {
       return res.status(400).json({ message: 'job_type invalide' });
+    }
+    // Le mode test exige une URL à inspecter (1 seule inspection, aucune écriture SEO).
+    if (jobType === 'gsc_test' && !targetUrl) {
+      return res.status(400).json({ message: 'URL à tester requise' });
     }
     try {
       const site = await db.pool.query('SELECT id FROM seo_sites WHERE id = $1', [siteId]);
       if (site.rows.length === 0) return res.status(404).json({ message: 'Site introuvable' });
       try {
         const r = await db.pool.query(
-          "INSERT INTO seo_jobs (site_id, job_type, status) VALUES ($1, $2, 'pending') RETURNING *",
-          [siteId, jobType]
+          "INSERT INTO seo_jobs (site_id, job_type, status, target_url) VALUES ($1, $2, 'pending', $3) RETURNING *",
+          [siteId, jobType, jobType === 'gsc_test' ? targetUrl : null]
         );
         return res.status(201).json({ job: r.rows[0], already_active: false });
       } catch (e) {
@@ -310,13 +315,29 @@ const seoController = {
     const siteId = parseInt(req.query.site_id, 10);
     if (!siteId) return res.status(400).json({ message: 'site_id requis' });
     try {
+      // Exclut les jobs de test (gsc_test) : ils ont leur propre suivi par id et ne doivent
+      // pas polluer le badge d'état des crawls/synchros.
       const r = await db.pool.query(
-        'SELECT * FROM seo_jobs WHERE site_id = $1 ORDER BY created_at DESC LIMIT 1',
+        "SELECT * FROM seo_jobs WHERE site_id = $1 AND job_type <> 'gsc_test' ORDER BY created_at DESC LIMIT 1",
         [siteId]
       );
       res.json(r.rows[0] || null);
     } catch (e) {
       console.error('[SEO] getJob:', e.message);
+      res.status(500).json({ message: 'Erreur serveur' });
+    }
+  },
+
+  // GET /api/seo/jobs/:id -> un job précis (utilisé pour suivre un test gsc_test).
+  getJobById: async (req, res) => {
+    const db = req.app.locals.db;
+    const id = parseInt(req.params.id, 10);
+    if (!id) return res.status(400).json({ message: 'id requis' });
+    try {
+      const r = await db.pool.query('SELECT * FROM seo_jobs WHERE id = $1', [id]);
+      res.json(r.rows[0] || null);
+    } catch (e) {
+      console.error('[SEO] getJobById:', e.message);
       res.status(500).json({ message: 'Erreur serveur' });
     }
   }

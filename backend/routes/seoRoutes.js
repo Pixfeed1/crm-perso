@@ -18,6 +18,7 @@ router.get('/quasi-victoires', seoController.getQuasiVictoires);
 // File de jobs : POST = créer une demande (seule écriture, sur seo_jobs uniquement) ; GET = statut.
 router.post('/jobs', seoController.createJob);
 router.get('/jobs', seoController.getJob);
+router.get('/jobs/:id', seoController.getJobById);
 // Annulation d'un crawl actif (écriture sur seo_jobs uniquement).
 router.post('/jobs/:id/cancel', seoController.cancelJob);
 
