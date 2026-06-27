@@ -224,6 +224,108 @@ const seoController = {
     }
   },
 
+  // GET /api/seo/opportunites?site_id=&min_impressions= -> pages à fort potentiel sous-exploité.
+  // Croise la demande Google (impressions/clics/position GSC) avec le maillage interne
+  // (pagerank/inlinks/health). Score = demande × marge de progression × déficit de maillage.
+  // LECTURE SEULE (cache GSC 28j déjà écrit par le worker). Suggestions de liens comme affamées.
+  getOpportunites: async (req, res) => {
+    const db = req.app.locals.db;
+    const siteId = parseInt(req.query.site_id, 10);
+    if (!siteId) return res.status(400).json({ message: 'site_id requis' });
+    const minImpr = Math.max(parseInt(req.query.min_impressions, 10) || 20, 0);
+    try {
+      const maxRes = await db.pool.query(
+        `SELECT COALESCE(MAX(gsc_impressions), 0)::float AS max_impr,
+                COALESCE(MAX(internal_pagerank), 0)::float AS max_pr
+         FROM seo_pages WHERE site_id = $1`,
+        [siteId]
+      );
+      const maxImpr = Number(maxRes.rows[0].max_impr) || 0;
+      const maxPr = Number(maxRes.rows[0].max_pr) || 0;
+
+      // Candidates : Google s'y intéresse (impressions >= plancher) ET signe d'étranglement.
+      const cand = await db.pool.query(
+        `SELECT id, url, title, category, health,
+                internal_pagerank::float AS internal_pagerank, inlinks_count,
+                value_score::float AS value_score,
+                gsc_impressions, gsc_clicks, gsc_position::float AS gsc_position
+         FROM seo_pages
+         WHERE site_id = $1 AND COALESCE(gsc_impressions, 0) >= $2
+           AND (
+             (gsc_position IS NOT NULL AND gsc_position BETWEEN 11 AND 50)
+             OR COALESCE(inlinks_count, 0) <= 2
+             OR health IN ('orpheline', 'affamee')
+             OR (internal_pagerank IS NOT NULL AND $3 > 0 AND internal_pagerank / $3 < 0.6)
+           )`,
+        [siteId, minImpr, maxPr]
+      );
+
+      // Donneurs de liens (mêmes règles que les pages affamées).
+      const donors = await db.pool.query(
+        `SELECT url, title, category, health, internal_pagerank::float AS internal_pagerank FROM seo_pages
+         WHERE site_id = $1 AND internal_pagerank IS NOT NULL AND health IN ('reservoir', 'saine')
+         ORDER BY internal_pagerank DESC LIMIT 200`,
+        [siteId]
+      );
+      const donorRows = donors.rows;
+      const topReservoirs = donorRows.filter((d) => d.health === 'reservoir').slice(0, 10);
+      const norm = (c) => (c || '').toLowerCase().trim();
+
+      const result = [];
+      for (const p of cand.rows) {
+        const impr = Number(p.gsc_impressions) || 0;
+        const imprF = maxImpr > 0 ? Math.log1p(impr) / Math.log1p(maxImpr) : 0;
+        const pos = p.gsc_position == null ? null : Number(p.gsc_position);
+        const posF = pos == null ? 0.5 : pos <= 10 ? 0.2 : pos <= 20 ? 1.0 : pos <= 50 ? 0.6 : 0.25;
+        const prRatio = maxPr > 0 ? (Number(p.internal_pagerank) || 0) / maxPr : 0;
+        const inl = Number(p.inlinks_count) || 0;
+        const inlF = inl <= 2 ? 1 : inl <= 5 ? 0.5 : 0.1;
+        const maillageDeficit = Math.min(Math.max(0.6 * (1 - prRatio) + 0.4 * inlF, 0), 1);
+        const score = Math.round(100 * imprF * (0.4 + 0.6 * posF) * (0.4 + 0.6 * maillageDeficit));
+
+        // Diagnostic lisible.
+        const bits = [];
+        if (pos != null) {
+          const page = pos > 10 && pos <= 20 ? ' (page 2)' : pos > 20 && pos <= 50 ? ' (page 3-5)' : '';
+          bits.push(`position ${pos.toFixed(1)}${page}`);
+        }
+        bits.push(`${impr} impressions`);
+        if (inl <= 2) bits.push(`${inl} lien entrant${inl > 1 ? 's' : ''}`);
+        if (maxPr > 0 && prRatio < 0.6) bits.push('faible jus interne');
+
+        // Suggestions de liens internes (même logique que getAffamees).
+        const existing = await db.pool.query(
+          'SELECT from_url FROM seo_links WHERE site_id = $1 AND to_url = $2',
+          [siteId, p.url]
+        );
+        const linking = new Set(existing.rows.map((r) => r.from_url));
+        const cat = norm(p.category);
+        const eligible = (d) => d.url !== p.url && !linking.has(d.url);
+        const sameCat = cat ? donorRows.filter((d) => eligible(d) && norm(d.category) === cat) : [];
+        const fallback = [...topReservoirs, ...donorRows].filter(eligible);
+        const seen = new Set();
+        const suggestions = [];
+        for (const d of [...sameCat, ...fallback]) {
+          if (seen.has(d.url)) continue;
+          seen.add(d.url);
+          suggestions.push({
+            url: d.url,
+            title: d.title,
+            internal_pagerank: d.internal_pagerank,
+            reason: cat && norm(d.category) === cat ? 'même catégorie' : (d.health === 'reservoir' ? 'réservoir (fort jus)' : 'page saine')
+          });
+          if (suggestions.length >= 5) break;
+        }
+        result.push({ ...p, score, reason: bits.join(' · '), suggestions });
+      }
+      result.sort((a, b) => b.score - a.score);
+      res.json(result.slice(0, 50));
+    } catch (e) {
+      console.error('[SEO] getOpportunites:', e.message);
+      res.status(500).json({ message: 'Erreur serveur' });
+    }
+  },
+
   // POST /api/seo/jobs { site_id, job_type } -> crée un job 'pending'.
   // SEULE écriture autorisée côté Node, et UNIQUEMENT sur seo_jobs (jamais seo_pages/seo_links).
   // Le worker Python est seul à passer le job en running/done/failed et à crawler.

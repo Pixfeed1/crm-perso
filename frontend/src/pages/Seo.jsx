@@ -52,6 +52,8 @@ const Seo = () => {
   const [affamees, setAffamees] = useState([]);
   const [orphelines, setOrphelines] = useState([]);
   const [quasiVictoires, setQuasiVictoires] = useState([]);
+  const [opportunites, setOpportunites] = useState([]);
+  const [oppMinImpr, setOppMinImpr] = useState(20); // plancher d'impressions (28j) ajustable
   const [gscStatus, setGscStatus] = useState(null); // { connected, account_email, updated_at }
   const [tab, setTab] = useState('jus'); // 'jus' | 'affamees' | 'orphelines' | 'quasi'
   // Mode test GSC : inspecter UNE url (1 inspection, rien en base) avant une synchro complète.
@@ -97,6 +99,12 @@ const Seo = () => {
   }, [siteId, sort, healthFilter, toast]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Opportunités : chargées à part pour réagir au sélecteur "impressions min" sans tout recharger.
+  useEffect(() => {
+    if (!siteId) return;
+    seoAPI.getOpportunites(siteId, oppMinImpr).then((d) => setOpportunites(d || [])).catch(() => {});
+  }, [siteId, oppMinImpr]);
 
   // Suivi du job de crawl : polling tant qu'il est pending/running ; recharge à la fin.
   const stopJobPoll = () => { if (jobPollRef.current) { clearInterval(jobPollRef.current); jobPollRef.current = null; } };
@@ -412,7 +420,8 @@ const Seo = () => {
                 { k: 'jus', l: 'Jus interne' },
                 { k: 'affamees', l: `Pages affamées${affamees.length ? ` (${affamees.length})` : ''}` },
                 { k: 'orphelines', l: `Orphelines${orphelines.length ? ` (${orphelines.length})` : ''}` },
-                { k: 'quasi', l: `Quasi-victoires${quasiVictoires.length ? ` (${quasiVictoires.length})` : ''}` }
+                { k: 'quasi', l: `Quasi-victoires${quasiVictoires.length ? ` (${quasiVictoires.length})` : ''}` },
+                { k: 'opportunites', l: `Opportunités${opportunites.length ? ` (${opportunites.length})` : ''}` }
               ].map((t) => (
                 <button key={t.k} onClick={() => setTab(t.k)}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === t.k ? 'bg-accent text-white' : 'bg-surface-strong text-text-secondary hover:bg-border-strong'}`}>
@@ -583,7 +592,7 @@ const Seo = () => {
                   </div>
                 )}
               </div>
-            ) : (
+            ) : tab === 'quasi' ? (
               /* Quasi-victoires : positions moyennes 11-20 (GSC) -> à pousser en priorité */
               <div className="bg-surface border border-border rounded-xl p-4">
                 <h3 className="text-sm font-semibold text-text-primary mb-1 flex items-center gap-2">
@@ -630,6 +639,76 @@ const Seo = () => {
                     </table>
                   </div>
                 )}
+              </div>
+            ) : (
+              /* Opportunités : potentiel gâché = demande Google × marge × déficit de maillage */
+              <div className="space-y-3">
+                <div className="bg-surface border border-border rounded-xl p-4">
+                  <div className="flex items-start justify-between gap-3 flex-wrap">
+                    <div>
+                      <h3 className="text-sm font-semibold text-text-primary mb-1 flex items-center gap-2">
+                        <FiTrendingUp size={15} className="text-accent" /> Potentiel gâché ({opportunites.length})
+                      </h3>
+                      <p className="text-text-muted text-xs">Pages qui intéressent Google (impressions) mais étranglées par le maillage : triées par score d'opportunité.</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-text-muted text-xs">Impressions min</span>
+                      <select
+                        value={oppMinImpr}
+                        onChange={(e) => setOppMinImpr(parseInt(e.target.value, 10))}
+                        className="px-2 py-1 bg-surface-muted border border-border rounded-lg text-text-primary text-xs focus:outline-none focus:border-accent"
+                      >
+                        {[10, 20, 50, 100].map((v) => <option key={v} value={v}>{v}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {!gscConnected ? (
+                  <div className="text-center py-10 bg-surface/30 rounded-xl border border-border">
+                    <FiTrendingUp className="w-10 h-10 mx-auto text-text-muted mb-3" />
+                    <p className="text-text-muted text-sm">Connectez Search Console et lancez une synchro pour révéler les opportunités.</p>
+                  </div>
+                ) : opportunites.length === 0 ? (
+                  <div className="text-center py-10 bg-surface/30 rounded-xl border border-border">
+                    <p className="text-text-muted text-sm">Aucune opportunité au-dessus de {oppMinImpr} impressions/28j. Baissez le seuil pour élargir.</p>
+                  </div>
+                ) : opportunites.map((p) => (
+                  <motion.div key={p.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+                    className="bg-surface border border-border rounded-xl p-4">
+                    <div className="flex items-start justify-between gap-3 flex-wrap">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-accent/15 text-accent">Score {p.score}</span>
+                          <span className="text-text-primary font-medium break-words">{decodeHtml(p.title) || p.url}</span>
+                        </div>
+                        <a href={p.url} target="_blank" rel="noopener noreferrer" className="text-text-muted text-xs hover:text-accent inline-flex items-center gap-1 break-all mt-0.5">{p.url} <FiExternalLink size={10} /></a>
+                        {p.reason && <p className="text-text-muted text-xs mt-1">{p.reason}</p>}
+                      </div>
+                      <div className="flex flex-wrap gap-1.5 text-xs flex-shrink-0">
+                        <span className="px-2 py-0.5 rounded-full bg-neutral-bg text-neutral-text">{fmtNum(p.gsc_impressions)} impr.</span>
+                        <span className="px-2 py-0.5 rounded-full bg-neutral-bg text-neutral-text">{fmtNum(p.gsc_clicks)} clics</span>
+                        <span className="px-2 py-0.5 rounded-full bg-info-bg text-info-text">pos. {fmtPos(p.gsc_position)}</span>
+                        <span className="px-2 py-0.5 rounded-full bg-neutral-bg text-neutral-text">jus {p.internal_pagerank != null ? Number(p.internal_pagerank).toFixed(4) : '—'}</span>
+                        <span className="px-2 py-0.5 rounded-full bg-neutral-bg text-neutral-text">{p.inlinks_count ?? '—'} entrants</span>
+                      </div>
+                    </div>
+                    {p.suggestions && p.suggestions.length > 0 && (
+                      <div className="mt-3 border-t border-border/60 pt-2">
+                        <div className="text-xs text-text-muted mb-1 flex items-center gap-1"><FiLink size={12} /> Liens internes à ajouter (depuis ces pages) :</div>
+                        <ul className="space-y-1">
+                          {p.suggestions.map((s) => (
+                            <li key={s.url} className="text-sm text-text-secondary flex items-center gap-1.5 flex-wrap">
+                              <FiArrowRight size={12} className="text-accent flex-shrink-0" />
+                              <a href={s.url} target="_blank" rel="noopener noreferrer" className="hover:text-accent truncate">{decodeHtml(s.title) || s.url}</a>
+                              {s.reason && <span className="text-xs px-1.5 py-0.5 rounded-full bg-neutral-bg text-neutral-text">{s.reason}</span>}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </motion.div>
+                ))}
               </div>
             )}
           </>
