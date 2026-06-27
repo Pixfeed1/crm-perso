@@ -540,6 +540,15 @@ def gsc_sync_site(conn, site, job_id=None):
 
         quota_note = " (quota inspection épuisé — reste à inspecter au prochain run)" if quota_hit else ""
         print(f"  OK GSC {domain} : daily+={inserted} inspections={done} pages_maj={updated}{quota_note}")
+        # Remonte un message clair dans le job (affiché dans l'UI) si le quota a été touché :
+        # la synchro a bien tourné (analytics + snapshot + value_score), seules des inspections
+        # restent à faire au prochain run. Le job reste 'done', avec cette note.
+        if quota_hit and job_id is not None:
+            cur.execute(
+                "UPDATE seo_jobs SET error = %s WHERE id = %s",
+                (f"Quota d'inspection Google épuisé ({done} pages inspectées) — indexation reprise au prochain run (demain).", job_id),
+            )
+            conn.commit()
         return True
 
     except Exception as e:

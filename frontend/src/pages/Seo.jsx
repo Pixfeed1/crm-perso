@@ -262,8 +262,15 @@ const Seo = () => {
                 <FiXCircle size={15} /> Dernière tâche en échec{job.error ? ` : ${job.error}` : ''}
               </div>
             ) : job.status === 'done' ? (
-              <div className="inline-flex items-center gap-2 text-sm bg-success-bg text-success-text border border-success-text/30 rounded-lg px-3 py-2">
-                <FiCheckCircle size={15} /> {jobNoun} terminé{job.finished_at ? ` · ${fmtDate(job.finished_at)}` : ''}
+              <div className="flex flex-col gap-1.5">
+                <div className="inline-flex items-center gap-2 text-sm bg-success-bg text-success-text border border-success-text/30 rounded-lg px-3 py-2 self-start">
+                  <FiCheckCircle size={15} /> {jobNoun} terminé{job.finished_at ? ` · ${fmtDate(job.finished_at)}` : ''}
+                </div>
+                {job.error && (
+                  <div className="inline-flex items-center gap-2 text-sm bg-warning-bg text-warning-text border border-warning-text/30 rounded-lg px-3 py-2 self-start">
+                    <FiClock size={15} /> {job.error}
+                  </div>
+                )}
               </div>
             ) : null}
           </div>
