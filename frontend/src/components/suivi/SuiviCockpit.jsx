@@ -15,6 +15,7 @@ import { useToast } from '../../hooks/useToast';
 import LogExchangeModal from '../common/LogExchangeModal';
 import InteractionHistoryModal from '../common/InteractionHistoryModal';
 import { statusMeta, reachedMeta, channelLabel } from '../../utils/relationStatus';
+import { decodeHtml } from '../../utils/decodeHtml';
 
 const fmtDM = (s) => {
   if (!s) return '';
@@ -96,7 +97,12 @@ const SuiviCockpit = () => {
     setLoading(true);
     try {
       const res = await interactionsAPI.getCockpit();
-      setData(res || { stats: {}, contacts: [] });
+      // Décodage des entités HTML des libellés scrapés (nom + site), une seule fois :
+      // profite à l'affichage, à la recherche et aux modales (log/historique).
+      const clean = res && Array.isArray(res.contacts)
+        ? { ...res, contacts: res.contacts.map((c) => ({ ...c, contact_name: decodeHtml(c.contact_name), site: decodeHtml(c.site) })) }
+        : res;
+      setData(clean || { stats: {}, contacts: [] });
     } catch (error) {
       console.error('Erreur cockpit suivi:', error);
       toast.error('Erreur lors du chargement du suivi');
