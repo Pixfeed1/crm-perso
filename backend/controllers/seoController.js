@@ -241,6 +241,131 @@ const seoController = {
     }
   },
 
+  // GET /api/seo/cannibalisation?site_id=&days=&min_impressions= -> requêtes où PLUSIEURS pages
+  // du site captent des impressions (Google hésite -> positions/CTR diluées). LECTURE SEULE.
+  getCannibalisation: async (req, res) => {
+    const db = req.app.locals.db;
+    const siteId = parseInt(req.query.site_id, 10);
+    if (!siteId) return res.status(400).json({ message: 'site_id requis' });
+    const days = Math.min(Math.max(parseInt(req.query.days, 10) || 28, 1), 365);
+    const minImpr = Math.max(parseInt(req.query.min_impressions, 10) || 10, 1);
+    try {
+      const { rows } = await db.pool.query(
+        `WITH bounds AS (SELECT MAX(date) AS maxd FROM seo_gsc_daily WHERE site_id = $1),
+         per AS (
+           SELECT query, page_url, SUM(clicks) AS clicks, SUM(impressions) AS impr,
+                  CASE WHEN SUM(impressions) > 0 THEN SUM(impressions * position) / SUM(impressions) END AS pos
+           FROM seo_gsc_daily, bounds
+           WHERE site_id = $1 AND date > bounds.maxd - $2::int AND date <= bounds.maxd
+           GROUP BY query, page_url
+         ),
+         comp AS (SELECT * FROM per WHERE impr >= $3::int),
+         q AS (
+           SELECT query, COUNT(*) AS n, SUM(impr) AS tot_impr, SUM(clicks) AS tot_clicks
+           FROM comp GROUP BY query HAVING COUNT(*) >= 2
+         )
+         SELECT c.query, c.page_url, c.clicks::int AS clicks, c.impr::int AS impressions,
+                c.pos::float AS position, q.n::int AS pages_count,
+                q.tot_impr::int AS total_impressions, q.tot_clicks::int AS total_clicks,
+                p.title, p.category
+         FROM comp c
+         JOIN q ON q.query = c.query
+         LEFT JOIN seo_pages p ON p.site_id = $1 AND rtrim(p.url, '/') = rtrim(c.page_url, '/')
+         ORDER BY q.tot_impr DESC, c.query, c.impr DESC
+         LIMIT 1000`,
+        [siteId, days, minImpr]
+      );
+      // Regroupement par requête -> { query, pages_count, total_*, pages: [...] }.
+      const byQuery = new Map();
+      for (const r of rows) {
+        if (!byQuery.has(r.query)) {
+          byQuery.set(r.query, {
+            query: r.query, pages_count: r.pages_count,
+            total_impressions: r.total_impressions, total_clicks: r.total_clicks, pages: []
+          });
+        }
+        byQuery.get(r.query).pages.push({
+          url: r.page_url, title: r.title, category: r.category,
+          impressions: r.impressions, clicks: r.clicks, position: r.position
+        });
+      }
+      res.json(Array.from(byQuery.values()));
+    } catch (e) {
+      console.error('[SEO] getCannibalisation:', e.message);
+      res.status(500).json({ message: 'Erreur serveur' });
+    }
+  },
+
+  // GET /api/seo/ctr-anomalies?site_id=&days=&min_impressions= -> requêtes bien positionnées
+  // mais au CTR très en dessous de l'attendu pour leur position -> title/meta à réécrire.
+  getCtrAnomalies: async (req, res) => {
+    const db = req.app.locals.db;
+    const siteId = parseInt(req.query.site_id, 10);
+    if (!siteId) return res.status(400).json({ message: 'site_id requis' });
+    const days = Math.min(Math.max(parseInt(req.query.days, 10) || 28, 1), 365);
+    const minImpr = Math.max(parseInt(req.query.min_impressions, 10) || 30, 1);
+    try {
+      const { rows } = await db.pool.query(
+        `WITH bounds AS (SELECT MAX(date) AS maxd FROM seo_gsc_daily WHERE site_id = $1),
+         cur AS (
+           SELECT query, SUM(clicks) AS clicks, SUM(impressions) AS impr,
+                  CASE WHEN SUM(impressions) > 0 THEN SUM(impressions * position) / SUM(impressions) END AS pos
+           FROM seo_gsc_daily, bounds
+           WHERE site_id = $1 AND date > bounds.maxd - $2::int AND date <= bounds.maxd
+           GROUP BY query
+         ),
+         bestpage AS (
+           SELECT DISTINCT ON (query) query, page_url FROM (
+             SELECT query, page_url, SUM(impressions) AS imp
+             FROM seo_gsc_daily, bounds
+             WHERE site_id = $1 AND date > bounds.maxd - $2::int AND date <= bounds.maxd
+             GROUP BY query, page_url
+           ) z ORDER BY query, imp DESC
+         )
+         SELECT c.query, c.clicks::int AS clicks, c.impr::int AS impressions, c.pos::float AS position,
+                bp.page_url, p.title,
+                (i.data->>'desc_present')::boolean AS desc_present,
+                (i.data->>'desc_len')::int AS desc_len,
+                (i.data->>'title_len')::int AS title_len
+         FROM cur c
+         LEFT JOIN bestpage bp ON bp.query = c.query
+         LEFT JOIN seo_pages p ON p.site_id = $1 AND rtrim(p.url, '/') = rtrim(bp.page_url, '/')
+         LEFT JOIN seo_onpage_issues i ON i.site_id = $1 AND rtrim(i.url, '/') = rtrim(bp.page_url, '/')
+         WHERE c.impr >= $3::int AND c.pos IS NOT NULL AND c.pos <= 20
+         ORDER BY c.impr DESC
+         LIMIT 1000`,
+        [siteId, days, minImpr]
+      );
+      // CTR attendu moyen par position (courbe organique approx.) -> clics manqués = impr × écart.
+      const expectedCtr = (pos) => {
+        const table = { 1: 0.28, 2: 0.15, 3: 0.11, 4: 0.08, 5: 0.06, 6: 0.05, 7: 0.04, 8: 0.032, 9: 0.028, 10: 0.025 };
+        const r = Math.round(pos);
+        if (r <= 10) return table[Math.max(1, r)] || 0.025;
+        if (r <= 15) return 0.015;
+        return 0.01;
+      };
+      const out = rows.map((r) => {
+        const ctr = r.impressions > 0 ? r.clicks / r.impressions : 0;
+        const exp = expectedCtr(r.position);
+        const missed = Math.max(0, Math.round(r.impressions * (exp - ctr)));
+        return {
+          query: r.query, url: r.page_url, title: r.title,
+          impressions: r.impressions, clicks: r.clicks, position: r.position,
+          ctr, expected_ctr: exp, missed_clicks: missed,
+          desc_present: r.desc_present, desc_len: r.desc_len, title_len: r.title_len
+        };
+      })
+        // On ne garde que les anomalies réelles : CTR < 60% de l'attendu ET gain potentiel net.
+        .filter((r) => r.ctr < r.expected_ctr * 0.6 && r.missed_clicks >= 5)
+        .sort((a, b) => b.missed_clicks - a.missed_clicks)
+        .slice(0, 100);
+      res.json(out);
+    } catch (e) {
+      console.error('[SEO] getCtrAnomalies:', e.message);
+      res.status(500).json({ message: 'Erreur serveur' });
+    }
+  },
+
   // GET /api/seo/opportunites?site_id=&min_impressions= -> pages à fort potentiel sous-exploité.
   // Croise la demande Google (impressions/clics/position GSC) avec le maillage interne
   // (pagerank/inlinks/health). Score = demande × marge de progression × déficit de maillage.

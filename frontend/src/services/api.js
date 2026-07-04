@@ -571,6 +571,8 @@ export const seoAPI = {
   getAffamees: (siteId) => apiRequest(`/seo/affamees?site_id=${siteId}`),
   getGscStatus: () => apiRequest('/seo/gsc/status'),
   getQuasiVictoires: (siteId) => apiRequest(`/seo/quasi-victoires?site_id=${siteId}`),
+  getCannibalisation: (siteId, days = 28) => apiRequest(`/seo/cannibalisation?site_id=${siteId}&days=${days}`),
+  getCtrAnomalies: (siteId, days = 28) => apiRequest(`/seo/ctr-anomalies?site_id=${siteId}&days=${days}`),
   getOpportunites: (siteId, minImpr = 20) => apiRequest(`/seo/opportunites?site_id=${siteId}&min_impressions=${minImpr}`),
   getAudit: (siteId) => apiRequest(`/seo/audit?site_id=${siteId}`),
   // Suivi de positions (rank tracker)

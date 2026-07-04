@@ -62,6 +62,8 @@ const Seo = () => {
   const [affamees, setAffamees] = useState([]);
   const [orphelines, setOrphelines] = useState([]);
   const [quasiVictoires, setQuasiVictoires] = useState([]);
+  const [cannibalisation, setCannibalisation] = useState([]);
+  const [ctrAnomalies, setCtrAnomalies] = useState([]);
   const [opportunites, setOpportunites] = useState([]);
   const [audit, setAudit] = useState(null);
   const [openCat, setOpenCat] = useState(null); // catégorie d'audit dépliée
@@ -94,17 +96,20 @@ const Seo = () => {
     try {
       const pagesParams = { sort, limit: 500 };
       if (healthFilter !== 'all') pagesParams.health = healthFilter;
-      const [ov, gr, pg, af, orph, qv, au] = await Promise.all([
+      const [ov, gr, pg, af, orph, qv, cannib, ctr, au] = await Promise.all([
         seoAPI.getOverview(siteId),
         seoAPI.getGraph(siteId),
         seoAPI.getPages(siteId, pagesParams),
         seoAPI.getAffamees(siteId),
         seoAPI.getPages(siteId, { health: 'orpheline', sort: 'value', limit: 500 }),
         seoAPI.getQuasiVictoires(siteId),
+        seoAPI.getCannibalisation(siteId),
+        seoAPI.getCtrAnomalies(siteId),
         seoAPI.getAudit(siteId)
       ]);
       setOverview(ov); setGraph(gr || { nodes: [], edges: [] });
       setPages(pg || []); setAffamees(af || []); setOrphelines(orph || []); setQuasiVictoires(qv || []);
+      setCannibalisation(cannib || []); setCtrAnomalies(ctr || []);
       setAudit(au || null);
     } catch (e) {
       toast.error('Erreur chargement SEO');
@@ -474,6 +479,8 @@ const Seo = () => {
                 { k: 'affamees', l: `Pages affamées${affamees.length ? ` (${affamees.length})` : ''}` },
                 { k: 'orphelines', l: `Orphelines${orphelines.length ? ` (${orphelines.length})` : ''}` },
                 { k: 'quasi', l: `Quasi-victoires${quasiVictoires.length ? ` (${quasiVictoires.length})` : ''}` },
+                { k: 'cannibalisation', l: `Cannibalisation${cannibalisation.length ? ` (${cannibalisation.length})` : ''}` },
+                { k: 'ctr', l: `CTR à optimiser${ctrAnomalies.length ? ` (${ctrAnomalies.length})` : ''}` },
                 { k: 'opportunites', l: `Opportunités${opportunites.length ? ` (${opportunites.length})` : ''}` },
                 { k: 'audit', l: `Audit technique${audit && audit.score != null ? ` (${audit.score}/100)` : ''}` },
                 { k: 'positions', l: 'Suivi de positions' }
@@ -694,6 +701,93 @@ const Seo = () => {
                     </table>
                   </div>
                 )}
+              </div>
+            ) : tab === 'cannibalisation' ? (
+              /* Cannibalisation : requêtes où plusieurs pages du site se concurrencent (GSC) */
+              <div className="space-y-3">
+                <div className="bg-surface border border-border rounded-xl p-4">
+                  <h3 className="text-sm font-semibold text-text-primary mb-1 flex items-center gap-2">
+                    <FiAlertTriangle size={15} className="text-warning-text" /> Cannibalisation ({cannibalisation.length})
+                  </h3>
+                  <p className="text-text-muted text-xs">Requêtes où plusieurs de tes pages se disputent la même intention : Google hésite, tes positions et ton CTR se diluent. Choisis UNE page cible par requête (renforce-la, et désoptimise ou redirige les autres).</p>
+                </div>
+                {!gscConnected ? (
+                  <div className="text-center py-10 bg-surface/30 rounded-xl border border-border">
+                    <FiAlertTriangle className="w-10 h-10 mx-auto text-text-muted mb-3" />
+                    <p className="text-text-muted text-sm">Connectez Search Console et lancez une synchro pour détecter la cannibalisation.</p>
+                  </div>
+                ) : cannibalisation.length === 0 ? (
+                  <div className="text-center py-10 bg-surface/30 rounded-xl border border-border">
+                    <p className="text-text-muted text-sm">Aucune cannibalisation détectée (aucune requête avec ≥ 2 pages concurrentes).</p>
+                  </div>
+                ) : cannibalisation.map((c) => (
+                  <motion.div key={c.query} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+                    className="bg-surface border border-border rounded-xl p-4">
+                    <div className="flex items-start justify-between gap-3 flex-wrap">
+                      <span className="text-text-primary font-medium break-words">« {c.query} »</span>
+                      <div className="flex flex-wrap gap-1.5 text-xs flex-shrink-0">
+                        <span className="px-2 py-0.5 rounded-full bg-warning-bg text-warning-text font-medium">{c.pages_count} pages</span>
+                        <span className="px-2 py-0.5 rounded-full bg-neutral-bg text-neutral-text">{fmtNum(c.total_impressions)} impr.</span>
+                        <span className="px-2 py-0.5 rounded-full bg-neutral-bg text-neutral-text">{fmtNum(c.total_clicks)} clics</span>
+                      </div>
+                    </div>
+                    <ul className="mt-2 border-t border-border/60 pt-2 space-y-1">
+                      {c.pages.map((pg, i) => (
+                        <li key={pg.url} className="text-sm text-text-secondary flex items-center gap-1.5 flex-wrap">
+                          <span className={`px-1.5 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${i === 0 ? 'bg-accent/15 text-accent' : 'bg-neutral-bg text-neutral-text'}`}>{i === 0 ? 'principale' : `#${i + 1}`}</span>
+                          <a href={pg.url} target="_blank" rel="noopener noreferrer" className="hover:text-accent truncate">{decodeHtml(pg.title) || pg.url}</a>
+                          <span className="text-xs text-text-muted flex-shrink-0">{fmtNum(pg.impressions)} impr · {fmtNum(pg.clicks)} clics · pos {fmtPos(pg.position)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </motion.div>
+                ))}
+              </div>
+            ) : tab === 'ctr' ? (
+              /* CTR à optimiser : bien positionné mais peu cliqué -> title/meta à réécrire */
+              <div className="space-y-3">
+                <div className="bg-surface border border-border rounded-xl p-4">
+                  <h3 className="text-sm font-semibold text-text-primary mb-1 flex items-center gap-2">
+                    <FiTarget size={15} className="text-accent" /> CTR à optimiser ({ctrAnomalies.length})
+                  </h3>
+                  <p className="text-text-muted text-xs">Pages bien positionnées mais peu cliquées (CTR très en dessous de la moyenne pour leur position). Réécris le <b>title</b> et la <b>meta description</b> pour récupérer des clics. Triées par clics potentiels récupérables.</p>
+                </div>
+                {!gscConnected ? (
+                  <div className="text-center py-10 bg-surface/30 rounded-xl border border-border">
+                    <FiTarget className="w-10 h-10 mx-auto text-text-muted mb-3" />
+                    <p className="text-text-muted text-sm">Connectez Search Console et lancez une synchro pour révéler les pages au CTR faible.</p>
+                  </div>
+                ) : ctrAnomalies.length === 0 ? (
+                  <div className="text-center py-10 bg-surface/30 rounded-xl border border-border">
+                    <p className="text-text-muted text-sm">Aucune anomalie de CTR notable. Tes titres/metas tiennent la route 👍</p>
+                  </div>
+                ) : ctrAnomalies.map((r) => (
+                  <motion.div key={`${r.query}-${r.url}`} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+                    className="bg-surface border border-border rounded-xl p-4">
+                    <div className="flex items-start justify-between gap-3 flex-wrap">
+                      <div className="min-w-0">
+                        <span className="text-text-primary font-medium break-words">« {r.query} »</span>
+                        <a href={r.url} target="_blank" rel="noopener noreferrer" className="text-text-muted text-xs hover:text-accent inline-flex items-center gap-1 break-all mt-0.5">{decodeHtml(r.title) || r.url} <FiExternalLink size={10} /></a>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5 text-xs flex-shrink-0">
+                        <span className="px-2 py-0.5 rounded-full bg-accent/15 text-accent font-medium">+{fmtNum(r.missed_clicks)} clics potentiels</span>
+                        <span className="px-2 py-0.5 rounded-full bg-info-bg text-info-text">pos. {fmtPos(r.position)}</span>
+                        <span className="px-2 py-0.5 rounded-full bg-neutral-bg text-neutral-text">{fmtNum(r.impressions)} impr.</span>
+                        <span className="px-2 py-0.5 rounded-full bg-warning-bg text-warning-text">CTR {(r.ctr * 100).toFixed(1)}% / attendu ~{(r.expected_ctr * 100).toFixed(0)}%</span>
+                      </div>
+                    </div>
+                    {(() => {
+                      const tips = [];
+                      if (r.desc_present === false) tips.push('Pas de meta description');
+                      else if (r.desc_len != null && r.desc_len < 70) tips.push(`Meta description courte (${r.desc_len} car.)`);
+                      else if (r.desc_len != null && r.desc_len > 160) tips.push(`Meta description longue (${r.desc_len} car.)`);
+                      if (r.title_len != null && r.title_len > 60) tips.push(`Title long (${r.title_len} car.)`);
+                      return tips.length ? (
+                        <p className="text-xs text-text-muted mt-2 flex items-center gap-1"><FiInfo size={11} /> {tips.join(' · ')}</p>
+                      ) : null;
+                    })()}
+                  </motion.div>
+                ))}
               </div>
             ) : tab === 'opportunites' ? (
               /* Opportunités : potentiel gâché = demande Google × marge × déficit de maillage */

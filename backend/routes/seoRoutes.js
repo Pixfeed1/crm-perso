@@ -15,6 +15,8 @@ router.get('/graph', seoController.getGraph);
 router.get('/affamees', seoController.getAffamees);
 router.get('/gsc/status', seoController.getGscStatus);
 router.get('/quasi-victoires', seoController.getQuasiVictoires);
+router.get('/cannibalisation', seoController.getCannibalisation);
+router.get('/ctr-anomalies', seoController.getCtrAnomalies);
 router.get('/opportunites', seoController.getOpportunites);
 router.get('/audit', seoController.getAudit);
 // Suivi de positions (rank tracker) — lecture seule sur seo_gsc_daily.
