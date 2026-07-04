@@ -95,13 +95,13 @@ app.use(express.json({ limit: '1mb' }));
 
 app.get('/health', (req, res) => res.json({ ok: true }));
 
-// Garde commune sur /mcp : auth + rate limit + log.
+// Garde commune sur /mcp : auth + rate limit + log (statut réel loggé en fin de réponse).
 app.use('/mcp', (req, res, next) => {
   const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').toString().split(',')[0].trim();
   if (!authOk(req)) { log(ip, 'auth', 401); return res.status(401).json({ error: 'Unauthorized' }); }
   if (rateLimited(ip)) { log(ip, 'rate', 429); return res.status(429).json({ error: 'Too Many Requests' }); }
   const tool = (req.body && req.body.params && req.body.params.name) || (req.body && req.body.method) || '';
-  log(ip, `ok ${tool}`, 200);
+  res.on('finish', () => log(ip, tool || '-', res.statusCode));
   next();
 });
 

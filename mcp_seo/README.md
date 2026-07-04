@@ -58,8 +58,23 @@ curl -s https://mcp-seo.crm.pixfeed.net/mcp \
 ```
 
 ## Connexion côté Claude
-- **Claude Desktop / Claude Code** : ajouter un serveur MCP distant (Streamable HTTP) pointant
-  sur `https://mcp-seo.crm.pixfeed.net/mcp` avec le header `Authorization: Bearer <token>`.
+- **Claude Desktop** : le fichier de config (`claude_desktop_config.json`) n'injecte pas de
+  header `Authorization` statique vers un serveur HTTP distant. On passe par le pont
+  `mcp-remote` (qui ajoute le header et parle Streamable HTTP au serveur) :
+  ```json
+  {
+    "mcpServers": {
+      "crm-seo": {
+        "command": "npx",
+        "args": ["-y", "mcp-remote", "https://mcp-seo.crm.pixfeed.net/mcp",
+                 "--header", "Authorization: Bearer TON_TOKEN"]
+      }
+    }
+  }
+  ```
+  (Node/npx requis sur la machine où tourne Claude Desktop. Redémarrer Claude Desktop après.)
+- **Claude Code** : `claude mcp add --transport http crm-seo https://mcp-seo.crm.pixfeed.net/mcp
+  --header "Authorization: Bearer TON_TOKEN"` (le CLI gère le header directement).
 - **Claude.ai web (connecteur)** : le connecteur web privilégie OAuth ; le Bearer statique
   cible d'abord Desktop/Code/scripts. Si tu veux le brancher dans le web, on ajoutera un
   petit wrapper OAuth (non inclus dans cette V1, conforme au choix B1).

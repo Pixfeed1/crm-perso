@@ -51,8 +51,8 @@ export async function getOpportunities(pool, siteId, minImpr = 20) {
   const topReservoirs = donorRows.filter((d) => d.health === 'reservoir').slice(0, 10);
   const norm = (c) => (c || '').toLowerCase().trim();
 
-  const out = [];
-  for (const p of cand.rows) {
+  // 1) Score de chaque candidate (aucune requête ici).
+  const scored = cand.rows.map((p) => {
     const impr = Number(p.gsc_impressions) || 0;
     const imprF = maxImpr > 0 ? Math.log1p(impr) / Math.log1p(maxImpr) : 0;
     const pos = p.gsc_position == null ? null : Number(p.gsc_position);
@@ -62,10 +62,29 @@ export async function getOpportunities(pool, siteId, minImpr = 20) {
     const inlF = inl <= 2 ? 1 : inl <= 5 ? 0.5 : 0.1;
     const deficit = Math.min(Math.max(0.6 * (1 - prRatio) + 0.4 * inlF, 0), 1);
     const score = Math.round(100 * imprF * (0.4 + 0.6 * posF) * (0.4 + 0.6 * deficit));
+    return { p, pos, score };
+  });
 
-    // Suggestions : même catégorie > accueil > réservoirs > saines, hors pages déjà liées.
-    const existing = await pool.query('SELECT from_url FROM seo_links WHERE site_id = $1 AND to_url = $2', [siteId, p.url]);
-    const linking = new Set(existing.rows.map((r) => r.from_url));
+  // 2) On ne garde que le top 50 AVANT de chercher les suggestions (évite le N+1 inutile).
+  scored.sort((a, b) => b.score - a.score);
+  const top = scored.slice(0, 50);
+
+  // 3) UNE seule requête pour les liens entrants des 50 pages retenues -> Map(to_url -> Set(from_url)).
+  const topUrls = top.map((s) => s.p.url);
+  const linkedBy = new Map();
+  if (topUrls.length) {
+    const links = await pool.query(
+      'SELECT from_url, to_url FROM seo_links WHERE site_id = $1 AND to_url = ANY($2)', [siteId, topUrls]
+    );
+    for (const r of links.rows) {
+      if (!linkedBy.has(r.to_url)) linkedBy.set(r.to_url, new Set());
+      linkedBy.get(r.to_url).add(r.from_url);
+    }
+  }
+
+  // 4) Suggestions : même catégorie > accueil > réservoirs > saines, hors pages déjà liées.
+  return top.map(({ p, pos, score }) => {
+    const linking = linkedBy.get(p.url) || new Set();
     const cat = norm(p.category);
     const eligible = (d) => d.url !== p.url && !linking.has(d.url);
     const sameCat = cat ? donorRows.filter((d) => eligible(d) && norm(d.category) === cat) : [];
@@ -79,14 +98,12 @@ export async function getOpportunities(pool, siteId, minImpr = 20) {
       suggestions.push({ url: d.url, title: d.title, reason: cat && norm(d.category) === cat ? 'même catégorie' : isHomeUrl(d.url) ? "page d'accueil" : d.health === 'reservoir' ? 'réservoir' : 'page saine' });
       if (suggestions.length >= 5) break;
     }
-    out.push({
+    return {
       url: p.url, title: p.title, category: p.category, score,
       gsc_impressions: p.gsc_impressions, gsc_clicks: p.gsc_clicks, gsc_position: pos,
       internal_pagerank: p.internal_pagerank, inlinks_count: p.inlinks_count, suggestions
-    });
-  }
-  out.sort((a, b) => b.score - a.score);
-  return out.slice(0, 50);
+    };
+  });
 }
 
 // ---- get_page_content : métadonnées + extrait de texte (pour le maillage sémantique) ----
