@@ -733,7 +733,8 @@ const seoController = {
     const days = Math.min(Math.max(parseInt(req.query.days, 10) || 28, 1), 365);
     try {
       const { rows } = await db.pool.query(
-        `SELECT g.page_url, SUM(g.impressions)::int AS impressions,
+        `SELECT g.page_url, SUM(g.impressions)::int AS impressions, SUM(g.clicks)::int AS clicks,
+                CASE WHEN SUM(g.impressions) > 0 THEN (SUM(g.impressions * g.position) / SUM(g.impressions))::float END AS position,
                 COUNT(DISTINCT g.query)::int AS keywords, sp.title
          FROM seo_gsc_daily g
          LEFT JOIN seo_pages sp ON sp.site_id = $1 AND sp.url = rtrim(g.page_url, '/')

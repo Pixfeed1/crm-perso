@@ -269,11 +269,26 @@ const PositionsTab = ({ siteId, gscConnected }) => {
       {/* VUE 2 — PAR ARTICLE */}
       {sub === 'page' && (
         <div className="space-y-3">
-          <select value={selPage} onChange={(e) => openPage(e.target.value)}
-            className="w-full px-3 py-2 bg-surface-muted border border-border rounded-lg text-text-primary text-sm focus:outline-none focus:border-accent">
-            <option value="">Choisir un article…</option>
-            {pages.map((p) => <option key={p.page_url} value={p.page_url}>{(p.title ? decodeHtml(p.title) + ' — ' : '') + p.page_url} ({p.keywords} mots-clés)</option>)}
-          </select>
+          {/* Liste d'articles cliquables : on voit d'un coup d'œil combien de mots-clés porte
+              chaque page + sa position moyenne, et on clique pour dérouler ses mots-clés. */}
+          <div className="bg-surface border border-border rounded-xl divide-y divide-border/50 max-h-80 overflow-y-auto">
+            {pages.length === 0 ? (
+              <p className="text-text-muted text-sm py-6 text-center">Aucun article positionné sur cette période.</p>
+            ) : pages.map((p) => (
+              <button key={p.page_url} onClick={() => openPage(p.page_url)}
+                className={`w-full text-left px-4 py-2.5 flex items-center justify-between gap-3 transition-colors ${selPage === p.page_url ? 'bg-accent/10' : 'hover:bg-surface-strong/40'}`}>
+                <div className="min-w-0">
+                  <div className="text-sm text-text-primary truncate">{decodeHtml(p.title) || p.page_url}</div>
+                  <div className="text-text-muted text-xs truncate">{p.page_url}</div>
+                </div>
+                <div className="flex items-center gap-1.5 text-xs flex-shrink-0">
+                  <span className="px-2 py-0.5 rounded-full bg-accent/15 text-accent font-medium">{p.keywords} mots-clés</span>
+                  <span className="px-2 py-0.5 rounded-full bg-info-bg text-info-text">pos. {fmtPos(p.position)}</span>
+                  <span className="px-2 py-0.5 rounded-full bg-neutral-bg text-neutral-text hidden sm:inline">{fmtNum(p.impressions)} impr.</span>
+                </div>
+              </button>
+            ))}
+          </div>
 
           {pageData && (
             <>
