@@ -1496,6 +1496,9 @@ async function ensureSeoTables(client) {
   // Suivi de positions (vue 3 Yoast vs réel) : focus keyword Yoast, additif (aucun impact
   // sur Opportunités/audit/PageRank), écrit par le worker au crawl si exposé via REST.
   await client.query('ALTER TABLE seo_pages ADD COLUMN IF NOT EXISTS focus_keyword TEXT;');
+  // Étiquettes WordPress (post_tag + taxonomies custom des CPT), écrites par le worker au
+  // crawl (_embed déjà téléchargé). Servent au maillage par tags communs dans les suggestions.
+  await client.query("ALTER TABLE seo_pages ADD COLUMN IF NOT EXISTS tags JSONB NOT NULL DEFAULT '[]'::jsonb;");
   await client.query('CREATE INDEX        IF NOT EXISTS idx_seo_pages_site_health ON seo_pages(site_id, health);');
 
   await client.query(`

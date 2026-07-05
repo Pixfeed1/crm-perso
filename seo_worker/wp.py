@@ -148,7 +148,7 @@ def _normalize_item(it, rest_base):
     title = ""
     if isinstance(it.get("title"), dict):
         title = it["title"].get("rendered", "")
-    category = _first_category(it)
+    category, tags = _extract_terms(it)
     # Focus keyword Yoast (vue "Yoast vs réel"), exposé via register_rest_field (functions.php).
     # Absent si le snippet n'est pas posé -> chaîne vide, la vue 3 reste juste vide (ne casse rien).
     fkw = it.get("focus_keyword")
@@ -159,22 +159,42 @@ def _normalize_item(it, rest_base):
         "title": _strip_html(title),
         "type": it.get("type") or rest_base,
         "category": category,
+        "tags": tags,
         "modified_at": it.get("modified_gmt") or it.get("modified"),
         "focus_keyword": fkw,
         "_yoast": it.get("yoast_head_json") if isinstance(it.get("yoast_head_json"), dict) else None,
     }
 
 
-def _first_category(it):
-    """Tente de récupérer un libellé de catégorie via _embedded (tolérant)."""
+def _extract_terms(it):
+    """Catégorie + étiquettes depuis _embedded['wp:term'] (déjà téléchargé via _embed=1).
+    - category : premier terme de taxonomy 'category' (compat : sinon premier tag).
+    - tags : TOUS les autres termes (post_tag + taxonomies custom des CPT : genres,
+      studios...), dédoublonnés (insensible à la casse), plafonnés à 30.
+    Sert au maillage par tags communs (deux pages taguées pareil = candidates de lien)."""
     emb = it.get("_embedded") or {}
-    terms = emb.get("wp:term") or []
-    for group in terms:
+    groups = emb.get("wp:term") or []
+    category = None
+    tags, seen = [], set()
+    for group in groups:
         for t in group or []:
             tax = (t or {}).get("taxonomy")
-            if tax in ("category", "post_tag") and t.get("name"):
-                return t["name"]
-    return None
+            name = _strip_html((t or {}).get("name") or "")
+            if not name:
+                continue
+            if tax == "category":
+                if category is None:
+                    category = name
+                continue
+            key = name.lower()
+            if key not in seen:
+                seen.add(key)
+                tags.append(name)
+    # Compat ancien comportement (_first_category prenait category OU post_tag) :
+    # un CPT sans taxonomy 'category' garde son premier terme comme catégorie.
+    if category is None and tags:
+        category = tags[0]
+    return category, tags[:30]
 
 
 def _strip_html(s):

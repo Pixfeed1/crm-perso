@@ -27,7 +27,7 @@ export async function getOpportunities(pool, siteId, minImpr = 20) {
   const maxPr = Number(maxRes.rows[0].max_pr) || 0;
 
   const cand = await pool.query(
-    `SELECT id, url, title, category, health,
+    `SELECT id, url, title, category, tags, health,
             internal_pagerank::float AS internal_pagerank, inlinks_count,
             value_score::float AS value_score,
             gsc_impressions, gsc_clicks, gsc_position::float AS gsc_position
@@ -42,7 +42,7 @@ export async function getOpportunities(pool, siteId, minImpr = 20) {
   );
 
   const donors = await pool.query(
-    `SELECT url, title, category, health, internal_pagerank::float AS internal_pagerank FROM seo_pages
+    `SELECT url, title, category, tags, health, internal_pagerank::float AS internal_pagerank FROM seo_pages
      WHERE site_id = $1 AND internal_pagerank IS NOT NULL AND health IN ('reservoir','saine')
        AND url !~* $2
      ORDER BY internal_pagerank DESC LIMIT 200`, [siteId, LEGAL_DONOR_REGEX]
@@ -82,24 +82,42 @@ export async function getOpportunities(pool, siteId, minImpr = 20) {
     }
   }
 
-  // 4) Suggestions : même catégorie > accueil > réservoirs > saines, hors pages déjà liées.
+  // 4) Suggestions : tags communs > même catégorie > accueil > réservoirs > saines,
+  //    hors pages déjà liées (même logique que /api/seo/opportunites).
   return top.map(({ p, pos, score }) => {
     const linking = linkedBy.get(p.url) || new Set();
     const cat = norm(p.category);
     const eligible = (d) => d.url !== p.url && !linking.has(d.url);
+    const pageTags = new Set((Array.isArray(p.tags) ? p.tags : []).map(norm).filter(Boolean));
+    const sharedTags = (d) => {
+      if (!pageTags.size || !Array.isArray(d.tags)) return 0;
+      let n = 0;
+      for (const t of d.tags) if (pageTags.has(norm(t))) n++;
+      return n;
+    };
+    const byTags = pageTags.size
+      ? donorRows.filter((d) => eligible(d) && sharedTags(d) > 0).sort((a, b) => sharedTags(b) - sharedTags(a))
+      : [];
     const sameCat = cat ? donorRows.filter((d) => eligible(d) && norm(d.category) === cat) : [];
     const home = donorRows.filter((d) => eligible(d) && isHomeUrl(d.url));
     const others = [...topReservoirs, ...donorRows].filter(eligible);
     const seen = new Set();
     const suggestions = [];
-    for (const d of [...sameCat, ...home, ...others]) {
+    for (const d of [...byTags, ...sameCat, ...home, ...others]) {
       if (seen.has(d.url)) continue;
       seen.add(d.url);
-      suggestions.push({ url: d.url, title: d.title, reason: cat && norm(d.category) === cat ? 'même catégorie' : isHomeUrl(d.url) ? "page d'accueil" : d.health === 'reservoir' ? 'réservoir' : 'page saine' });
+      const nTags = sharedTags(d);
+      suggestions.push({
+        url: d.url, title: d.title,
+        reason: nTags > 0 ? `${nTags} tag${nTags > 1 ? 's' : ''} en commun${cat && norm(d.category) === cat ? ' · même catégorie' : ''}`
+          : cat && norm(d.category) === cat ? 'même catégorie'
+          : isHomeUrl(d.url) ? "page d'accueil"
+          : d.health === 'reservoir' ? 'réservoir' : 'page saine'
+      });
       if (suggestions.length >= 5) break;
     }
     return {
-      url: p.url, title: p.title, category: p.category, score,
+      url: p.url, title: p.title, category: p.category, tags: p.tags || [], score,
       gsc_impressions: p.gsc_impressions, gsc_clicks: p.gsc_clicks, gsc_position: pos,
       internal_pagerank: p.internal_pagerank, inlinks_count: p.inlinks_count, suggestions
     };
@@ -109,7 +127,7 @@ export async function getOpportunities(pool, siteId, minImpr = 20) {
 // ---- get_page_content : métadonnées + extrait de texte (pour le maillage sémantique) ----
 export async function getPageContent(pool, siteId, url) {
   const { rows } = await pool.query(
-    `SELECT p.url, p.title, p.type, p.category, p.focus_keyword, p.seo_meta, i.data AS audit
+    `SELECT p.url, p.title, p.type, p.category, p.tags, p.focus_keyword, p.seo_meta, i.data AS audit
      FROM seo_pages p LEFT JOIN seo_onpage_issues i ON i.site_id = p.site_id AND i.url = p.url
      WHERE p.site_id = $1 AND (p.url = $2 OR rtrim(p.url,'/') = rtrim($2,'/'))
      LIMIT 1`, [siteId, url]
@@ -123,6 +141,7 @@ export async function getPageContent(pool, siteId, url) {
     title: p.title,
     type: p.type,
     category: p.category,
+    tags: p.tags || [],
     focus_keyword: p.focus_keyword || null,
     meta_description: meta.description || audit.description || null,
     word_count: audit.word_count ?? null,
@@ -134,14 +153,14 @@ export async function getPageContent(pool, siteId, url) {
 // ---- list_link_targets : cibles de maillage candidates (CPT de contenu) ----
 export async function listLinkTargets(pool, siteId, category = null) {
   const { rows } = await pool.query(
-    `SELECT url, title, category, type, internal_pagerank::float AS internal_pagerank
+    `SELECT url, title, category, tags, type, internal_pagerank::float AS internal_pagerank
      FROM seo_pages
      WHERE site_id = $1 AND type = ANY($2)
        AND ($3::text IS NULL OR lower(category) = lower($3))
      ORDER BY internal_pagerank DESC NULLS LAST
      LIMIT 500`, [siteId, TARGET_TYPES, category]
   );
-  return rows.map((r) => ({ url: r.url, title: r.title, slug: slugOf(r.url), category: r.category, type: r.type }));
+  return rows.map((r) => ({ url: r.url, title: r.title, slug: slugOf(r.url), category: r.category, tags: r.tags || [], type: r.type }));
 }
 
 // ---- get_page_keywords : requêtes GSC d'une page (fenêtre glissante) ----

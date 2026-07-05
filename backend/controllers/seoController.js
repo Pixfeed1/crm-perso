@@ -24,20 +24,35 @@ async function buildLinkSuggestions(db, siteId, page, donorRows, topReservoirs) 
   const cat = norm(page.category);
   const eligible = (d) => d.url !== page.url && !linking.has(d.url);
 
+  // Tags communs = signal sémantique le plus spécifique (plus fin que la catégorie) ->
+  // priorité maximale, triés par nombre de tags partagés décroissant.
+  const pageTags = new Set((Array.isArray(page.tags) ? page.tags : []).map(norm).filter(Boolean));
+  const sharedTags = (d) => {
+    if (!pageTags.size || !Array.isArray(d.tags)) return 0;
+    let n = 0;
+    for (const t of d.tags) if (pageTags.has(norm(t))) n++;
+    return n;
+  };
+  const byTags = pageTags.size
+    ? donorRows.filter((d) => eligible(d) && sharedTags(d) > 0).sort((a, b) => sharedTags(b) - sharedTags(a))
+    : [];
+
   const sameCat = cat ? donorRows.filter((d) => eligible(d) && norm(d.category) === cat) : [];
   const home = donorRows.filter((d) => eligible(d) && isHomeUrl(d.url));
   const others = [...topReservoirs, ...donorRows].filter(eligible);
 
   const seen = new Set();
   const suggestions = [];
-  for (const d of [...sameCat, ...home, ...others]) {
+  for (const d of [...byTags, ...sameCat, ...home, ...others]) {
     if (seen.has(d.url)) continue;
     seen.add(d.url);
+    const nTags = sharedTags(d);
     suggestions.push({
       url: d.url,
       title: d.title,
       internal_pagerank: d.internal_pagerank,
-      reason: cat && norm(d.category) === cat ? 'même catégorie'
+      reason: nTags > 0 ? `${nTags} tag${nTags > 1 ? 's' : ''} en commun${cat && norm(d.category) === cat ? ' · même catégorie' : ''}`
+        : cat && norm(d.category) === cat ? 'même catégorie'
         : isHomeUrl(d.url) ? "page d'accueil"
         : d.health === 'reservoir' ? 'réservoir (fort jus)'
         : 'page saine'
@@ -166,7 +181,7 @@ const seoController = {
     if (!siteId) return res.status(400).json({ message: 'site_id requis' });
     try {
       const affamees = await db.pool.query(
-        `SELECT id, url, title, category, internal_pagerank::float AS internal_pagerank,
+        `SELECT id, url, title, category, tags, internal_pagerank::float AS internal_pagerank,
                 inlinks_count, value_score::float AS value_score
          FROM seo_pages WHERE site_id = $1 AND health = 'affamee'
          ORDER BY value_score DESC NULLS LAST, internal_pagerank ASC NULLS FIRST
@@ -177,7 +192,7 @@ const seoController = {
       // Donneurs de liens candidats : pages de CONTENU à fort jus (réservoirs + saines),
       // en EXCLUANT les pages légales/utilitaires (cf. LEGAL_DONOR_REGEX).
       const donors = await db.pool.query(
-        `SELECT url, title, category, health, internal_pagerank::float AS internal_pagerank FROM seo_pages
+        `SELECT url, title, category, tags, health, internal_pagerank::float AS internal_pagerank FROM seo_pages
          WHERE site_id = $1 AND internal_pagerank IS NOT NULL
            AND health IN ('reservoir', 'saine')
            AND url !~* $2
@@ -387,7 +402,7 @@ const seoController = {
 
       // Candidates : Google s'y intéresse (impressions >= plancher) ET signe d'étranglement.
       const cand = await db.pool.query(
-        `SELECT id, url, title, category, health,
+        `SELECT id, url, title, category, tags, health,
                 internal_pagerank::float AS internal_pagerank, inlinks_count,
                 value_score::float AS value_score,
                 gsc_impressions, gsc_clicks, gsc_position::float AS gsc_position
@@ -405,7 +420,7 @@ const seoController = {
       // Donneurs de liens (mêmes règles que les pages affamées) : pages de contenu à fort jus,
       // pages légales/utilitaires EXCLUES.
       const donors = await db.pool.query(
-        `SELECT url, title, category, health, internal_pagerank::float AS internal_pagerank FROM seo_pages
+        `SELECT url, title, category, tags, health, internal_pagerank::float AS internal_pagerank FROM seo_pages
          WHERE site_id = $1 AND internal_pagerank IS NOT NULL AND health IN ('reservoir', 'saine')
            AND url !~* $2
          ORDER BY internal_pagerank DESC LIMIT 200`,
