@@ -13,8 +13,47 @@ const isHomeUrl = (url) => /^https?:\/\/[^/]+\/?$/.test(url || '');
 
 // Construit jusqu'à 5 suggestions de liens internes vers `page`.
 // Ordre de préférence : même catégorie > accueil > réservoirs (fort jus) > autres pages saines.
+// Chevauchement de requêtes GSC : pour chaque page cible, les donneurs qui captent des
+// impressions sur les MÊMES requêtes Google (fenêtre 28j) = relation sémantique prouvée
+// par Google. UNE seule requête groupée pour toutes les cibles (pas de N+1). Renvoie
+// Map(cible -> Map(donneur -> { shared, queries[] })), URLs normalisées sans slash final.
+// Les requêtes partagées servent aussi d'idées d'ANCRE pour le lien.
+const rtrimSlash = (u) => (u || '').replace(/\/+$/, '');
+async function buildQueryOverlap(db, siteId, targetUrls, donorUrls, days = 28) {
+  const targets = [...new Set(targetUrls.map(rtrimSlash))];
+  const donors = [...new Set(donorUrls.map(rtrimSlash))];
+  const overlap = new Map();
+  if (!targets.length || !donors.length) return overlap;
+  const { rows } = await db.pool.query(
+    `WITH bounds AS (SELECT MAX(date) AS maxd FROM seo_gsc_daily WHERE site_id = $1),
+     t AS (
+       SELECT rtrim(page_url, '/') AS url, query, SUM(impressions) AS impr
+       FROM seo_gsc_daily, bounds
+       WHERE site_id = $1 AND date > bounds.maxd - $2::int AND rtrim(page_url, '/') = ANY($3)
+       GROUP BY 1, 2
+     ),
+     d AS (
+       SELECT rtrim(page_url, '/') AS url, query, SUM(impressions) AS impr
+       FROM seo_gsc_daily, bounds
+       WHERE site_id = $1 AND date > bounds.maxd - $2::int AND rtrim(page_url, '/') = ANY($4)
+       GROUP BY 1, 2
+     )
+     SELECT t.url AS target_url, d.url AS donor_url, COUNT(*)::int AS shared,
+            (ARRAY_AGG(t.query ORDER BY LEAST(t.impr, d.impr) DESC))[1:3] AS queries
+     FROM t JOIN d ON d.query = t.query AND d.url <> t.url
+     GROUP BY t.url, d.url`,
+    [siteId, days, targets, donors]
+  );
+  for (const r of rows) {
+    if (!overlap.has(r.target_url)) overlap.set(r.target_url, new Map());
+    overlap.get(r.target_url).set(r.donor_url, { shared: r.shared, queries: r.queries || [] });
+  }
+  return overlap;
+}
+
 // `donorRows` EXCLUT déjà les pages légales (filtrées dans la requête SQL).
-async function buildLinkSuggestions(db, siteId, page, donorRows, topReservoirs) {
+// `overlapMap` (optionnel) : résultat de buildQueryOverlap pour le palier "requêtes partagées".
+async function buildLinkSuggestions(db, siteId, page, donorRows, topReservoirs, overlapMap) {
   const existing = await db.pool.query(
     'SELECT from_url FROM seo_links WHERE site_id = $1 AND to_url = $2',
     [siteId, page.url]
@@ -24,8 +63,15 @@ async function buildLinkSuggestions(db, siteId, page, donorRows, topReservoirs) 
   const cat = norm(page.category);
   const eligible = (d) => d.url !== page.url && !linking.has(d.url);
 
-  // Tags communs = signal sémantique le plus spécifique (plus fin que la catégorie) ->
-  // priorité maximale, triés par nombre de tags partagés décroissant.
+  // Requêtes GSC partagées = signal le plus fiable (Google lui-même relie les deux pages) ->
+  // palier n°1, trié par nombre de requêtes communes. Les requêtes servent d'idées d'ancre.
+  const pageOverlap = (overlapMap && overlapMap.get(rtrimSlash(page.url))) || new Map();
+  const sharedQueries = (d) => (pageOverlap.get(rtrimSlash(d.url)) || { shared: 0 }).shared;
+  const byQueries = pageOverlap.size
+    ? donorRows.filter((d) => eligible(d) && sharedQueries(d) > 0).sort((a, b) => sharedQueries(b) - sharedQueries(a))
+    : [];
+
+  // Tags communs = signal sémantique éditorial (plus fin que la catégorie) -> palier n°2.
   const pageTags = new Set((Array.isArray(page.tags) ? page.tags : []).map(norm).filter(Boolean));
   const sharedTags = (d) => {
     if (!pageTags.size || !Array.isArray(d.tags)) return 0;
@@ -43,19 +89,27 @@ async function buildLinkSuggestions(db, siteId, page, donorRows, topReservoirs) 
 
   const seen = new Set();
   const suggestions = [];
-  for (const d of [...byTags, ...sameCat, ...home, ...others]) {
+  for (const d of [...byQueries, ...byTags, ...sameCat, ...home, ...others]) {
     if (seen.has(d.url)) continue;
     seen.add(d.url);
+    const nQ = sharedQueries(d);
     const nTags = sharedTags(d);
+    // Raison composée : on empile les signaux présents (requêtes > tags > catégorie).
+    const parts = [];
+    if (nQ > 0) parts.push(`${nQ} requête${nQ > 1 ? 's' : ''} Google partagée${nQ > 1 ? 's' : ''}`);
+    if (nTags > 0) parts.push(`${nTags} tag${nTags > 1 ? 's' : ''} en commun`);
+    if (cat && norm(d.category) === cat) parts.push('même catégorie');
+    const reason = parts.length ? parts.join(' · ')
+      : isHomeUrl(d.url) ? "page d'accueil"
+      : d.health === 'reservoir' ? 'réservoir (fort jus)'
+      : 'page saine';
+    const anchors = nQ > 0 ? (pageOverlap.get(rtrimSlash(d.url)).queries || []) : [];
     suggestions.push({
       url: d.url,
       title: d.title,
       internal_pagerank: d.internal_pagerank,
-      reason: nTags > 0 ? `${nTags} tag${nTags > 1 ? 's' : ''} en commun${cat && norm(d.category) === cat ? ' · même catégorie' : ''}`
-        : cat && norm(d.category) === cat ? 'même catégorie'
-        : isHomeUrl(d.url) ? "page d'accueil"
-        : d.health === 'reservoir' ? 'réservoir (fort jus)'
-        : 'page saine'
+      reason,
+      ...(anchors.length ? { anchors } : {})
     });
     if (suggestions.length >= 5) break;
   }
@@ -202,10 +256,14 @@ const seoController = {
       );
       const donorRows = donors.rows;
       const topReservoirs = donorRows.filter((d) => d.health === 'reservoir').slice(0, 10);
+      // Chevauchement de requêtes GSC : calculé UNE fois pour toutes les affamées.
+      const overlapMap = await buildQueryOverlap(
+        db, siteId, affamees.rows.map((p) => p.url), donorRows.map((d) => d.url)
+      );
 
       const result = [];
       for (const page of affamees.rows) {
-        const suggestions = await buildLinkSuggestions(db, siteId, page, donorRows, topReservoirs);
+        const suggestions = await buildLinkSuggestions(db, siteId, page, donorRows, topReservoirs, overlapMap);
         result.push({ ...page, suggestions });
       }
       res.json(result);
@@ -428,6 +486,10 @@ const seoController = {
       );
       const donorRows = donors.rows;
       const topReservoirs = donorRows.filter((d) => d.health === 'reservoir').slice(0, 10);
+      // Chevauchement de requêtes GSC : calculé UNE fois pour toutes les candidates.
+      const overlapMap = await buildQueryOverlap(
+        db, siteId, cand.rows.map((p) => p.url), donorRows.map((d) => d.url)
+      );
 
       const result = [];
       for (const p of cand.rows) {
@@ -452,7 +514,7 @@ const seoController = {
         if (maxPr > 0 && prRatio < 0.6) bits.push('faible jus interne');
 
         // Suggestions de liens internes (même logique factorisée que getAffamees).
-        const suggestions = await buildLinkSuggestions(db, siteId, p, donorRows, topReservoirs);
+        const suggestions = await buildLinkSuggestions(db, siteId, p, donorRows, topReservoirs, overlapMap);
         result.push({ ...p, score, reason: bits.join(' · '), suggestions });
       }
       result.sort((a, b) => b.score - a.score);

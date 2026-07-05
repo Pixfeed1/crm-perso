@@ -607,6 +607,7 @@ const Seo = () => {
                               <FiArrowRight size={12} className="text-accent flex-shrink-0" />
                               <a href={s.url} target="_blank" rel="noopener noreferrer" className="hover:text-accent truncate">{s.title || s.url}</a>
                               {s.reason && <span className="text-xs px-1.5 py-0.5 rounded-full bg-neutral-bg text-neutral-text">{s.reason}</span>}
+                              {s.anchors && s.anchors.length > 0 && <span className="text-xs text-text-muted">ancre : « {s.anchors[0]} »</span>}
                             </li>
                           ))}
                         </ul>
@@ -851,6 +852,7 @@ const Seo = () => {
                               <FiArrowRight size={12} className="text-accent flex-shrink-0" />
                               <a href={s.url} target="_blank" rel="noopener noreferrer" className="hover:text-accent truncate">{decodeHtml(s.title) || s.url}</a>
                               {s.reason && <span className="text-xs px-1.5 py-0.5 rounded-full bg-neutral-bg text-neutral-text">{s.reason}</span>}
+                              {s.anchors && s.anchors.length > 0 && <span className="text-xs text-text-muted">ancre : « {s.anchors[0]} »</span>}
                             </li>
                           ))}
                         </ul>

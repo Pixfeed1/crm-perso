@@ -9,6 +9,7 @@ const TARGET_TYPES = ['glossaire', 'guide', 'anime', 'film', 'logiciel', 'serie'
 const LEGAL_DONOR_REGEX = '(^|/)(mentions-legales|mentions|politique-de-confidentialite|confidentialite|privacy|nous-contacter|contact|cgu|cgv|legal)(/|$)';
 
 const isHomeUrl = (url) => /^https?:\/\/[^/]+\/?$/.test(url || '');
+const rtrimSlash = (u) => (u || '').replace(/\/+$/, '');
 const slugOf = (url) => {
   try {
     const p = new URL(url).pathname.replace(/\/+$/, '');
@@ -82,12 +83,48 @@ export async function getOpportunities(pool, siteId, minImpr = 20) {
     }
   }
 
-  // 4) Suggestions : tags communs > même catégorie > accueil > réservoirs > saines,
-  //    hors pages déjà liées (même logique que /api/seo/opportunites).
+  // 3bis) Chevauchement de requêtes GSC (une requête groupée) : donneurs captant des
+  // impressions sur les MÊMES requêtes Google que la cible -> relation prouvée par Google.
+  // Les requêtes partagées servent d'idées d'ancre. Map(cible -> Map(donneur -> {shared, queries})).
+  const overlapMap = new Map();
+  if (topUrls.length && donorRows.length) {
+    const ov = await pool.query(
+      `WITH bounds AS (SELECT MAX(date) AS maxd FROM seo_gsc_daily WHERE site_id = $1),
+       t AS (
+         SELECT rtrim(page_url, '/') AS url, query, SUM(impressions) AS impr
+         FROM seo_gsc_daily, bounds
+         WHERE site_id = $1 AND date > bounds.maxd - 28 AND rtrim(page_url, '/') = ANY($2)
+         GROUP BY 1, 2
+       ),
+       d AS (
+         SELECT rtrim(page_url, '/') AS url, query, SUM(impressions) AS impr
+         FROM seo_gsc_daily, bounds
+         WHERE site_id = $1 AND date > bounds.maxd - 28 AND rtrim(page_url, '/') = ANY($3)
+         GROUP BY 1, 2
+       )
+       SELECT t.url AS target_url, d.url AS donor_url, COUNT(*)::int AS shared,
+              (ARRAY_AGG(t.query ORDER BY LEAST(t.impr, d.impr) DESC))[1:3] AS queries
+       FROM t JOIN d ON d.query = t.query AND d.url <> t.url
+       GROUP BY t.url, d.url`,
+      [siteId, [...new Set(topUrls.map(rtrimSlash))], [...new Set(donorRows.map((d) => rtrimSlash(d.url)))]]
+    );
+    for (const r of ov.rows) {
+      if (!overlapMap.has(r.target_url)) overlapMap.set(r.target_url, new Map());
+      overlapMap.get(r.target_url).set(r.donor_url, { shared: r.shared, queries: r.queries || [] });
+    }
+  }
+
+  // 4) Suggestions : requêtes Google partagées > tags communs > même catégorie > accueil >
+  //    réservoirs > saines, hors pages déjà liées (même logique que /api/seo/opportunites).
   return top.map(({ p, pos, score }) => {
     const linking = linkedBy.get(p.url) || new Set();
     const cat = norm(p.category);
     const eligible = (d) => d.url !== p.url && !linking.has(d.url);
+    const pageOverlap = overlapMap.get(rtrimSlash(p.url)) || new Map();
+    const sharedQueries = (d) => (pageOverlap.get(rtrimSlash(d.url)) || { shared: 0 }).shared;
+    const byQueries = pageOverlap.size
+      ? donorRows.filter((d) => eligible(d) && sharedQueries(d) > 0).sort((a, b) => sharedQueries(b) - sharedQueries(a))
+      : [];
     const pageTags = new Set((Array.isArray(p.tags) ? p.tags : []).map(norm).filter(Boolean));
     const sharedTags = (d) => {
       if (!pageTags.size || !Array.isArray(d.tags)) return 0;
@@ -103,16 +140,22 @@ export async function getOpportunities(pool, siteId, minImpr = 20) {
     const others = [...topReservoirs, ...donorRows].filter(eligible);
     const seen = new Set();
     const suggestions = [];
-    for (const d of [...byTags, ...sameCat, ...home, ...others]) {
+    for (const d of [...byQueries, ...byTags, ...sameCat, ...home, ...others]) {
       if (seen.has(d.url)) continue;
       seen.add(d.url);
+      const nQ = sharedQueries(d);
       const nTags = sharedTags(d);
+      const parts = [];
+      if (nQ > 0) parts.push(`${nQ} requête${nQ > 1 ? 's' : ''} Google partagée${nQ > 1 ? 's' : ''}`);
+      if (nTags > 0) parts.push(`${nTags} tag${nTags > 1 ? 's' : ''} en commun`);
+      if (cat && norm(d.category) === cat) parts.push('même catégorie');
+      const anchors = nQ > 0 ? (pageOverlap.get(rtrimSlash(d.url)).queries || []) : [];
       suggestions.push({
         url: d.url, title: d.title,
-        reason: nTags > 0 ? `${nTags} tag${nTags > 1 ? 's' : ''} en commun${cat && norm(d.category) === cat ? ' · même catégorie' : ''}`
-          : cat && norm(d.category) === cat ? 'même catégorie'
+        reason: parts.length ? parts.join(' · ')
           : isHomeUrl(d.url) ? "page d'accueil"
-          : d.health === 'reservoir' ? 'réservoir' : 'page saine'
+          : d.health === 'reservoir' ? 'réservoir' : 'page saine',
+        ...(anchors.length ? { anchors } : {})
       });
       if (suggestions.length >= 5) break;
     }
