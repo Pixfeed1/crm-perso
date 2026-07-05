@@ -51,9 +51,28 @@ async function buildQueryOverlap(db, siteId, targetUrls, donorUrls, days = 28) {
   return overlap;
 }
 
+// Similarité de contenu (TF-IDF calculée par le worker, table seo_similar_pages) :
+// Map(cible -> Map(page similaire -> score)), une seule requête pour toutes les cibles.
+async function buildSimilarityMap(db, siteId, targetUrls) {
+  const targets = [...new Set(targetUrls.map(rtrimSlash))];
+  const map = new Map();
+  if (!targets.length) return map;
+  const { rows } = await db.pool.query(
+    `SELECT rtrim(url, '/') AS url, rtrim(similar_url, '/') AS similar_url, score::float AS score
+     FROM seo_similar_pages WHERE site_id = $1 AND rtrim(url, '/') = ANY($2)`,
+    [siteId, targets]
+  );
+  for (const r of rows) {
+    if (!map.has(r.url)) map.set(r.url, new Map());
+    map.get(r.url).set(r.similar_url, r.score);
+  }
+  return map;
+}
+
 // `donorRows` EXCLUT déjà les pages légales (filtrées dans la requête SQL).
 // `overlapMap` (optionnel) : résultat de buildQueryOverlap pour le palier "requêtes partagées".
-async function buildLinkSuggestions(db, siteId, page, donorRows, topReservoirs, overlapMap) {
+// `simMap` (optionnel) : résultat de buildSimilarityMap pour le palier "contenu similaire".
+async function buildLinkSuggestions(db, siteId, page, donorRows, topReservoirs, overlapMap, simMap) {
   const existing = await db.pool.query(
     'SELECT from_url FROM seo_links WHERE site_id = $1 AND to_url = $2',
     [siteId, page.url]
@@ -83,21 +102,31 @@ async function buildLinkSuggestions(db, siteId, page, donorRows, topReservoirs, 
     ? donorRows.filter((d) => eligible(d) && sharedTags(d) > 0).sort((a, b) => sharedTags(b) - sharedTags(a))
     : [];
 
+  // Contenu similaire (TF-IDF worker) = palier n°3 : relie les pages qui parlent du même
+  // sujet même sans tag ni historique GSC commun (pages récentes notamment).
+  const pageSim = (simMap && simMap.get(rtrimSlash(page.url))) || new Map();
+  const simScore = (d) => pageSim.get(rtrimSlash(d.url)) || 0;
+  const bySim = pageSim.size
+    ? donorRows.filter((d) => eligible(d) && simScore(d) > 0).sort((a, b) => simScore(b) - simScore(a))
+    : [];
+
   const sameCat = cat ? donorRows.filter((d) => eligible(d) && norm(d.category) === cat) : [];
   const home = donorRows.filter((d) => eligible(d) && isHomeUrl(d.url));
   const others = [...topReservoirs, ...donorRows].filter(eligible);
 
   const seen = new Set();
   const suggestions = [];
-  for (const d of [...byQueries, ...byTags, ...sameCat, ...home, ...others]) {
+  for (const d of [...byQueries, ...byTags, ...bySim, ...sameCat, ...home, ...others]) {
     if (seen.has(d.url)) continue;
     seen.add(d.url);
     const nQ = sharedQueries(d);
     const nTags = sharedTags(d);
-    // Raison composée : on empile les signaux présents (requêtes > tags > catégorie).
+    const sim = simScore(d);
+    // Raison composée : on empile les signaux présents (requêtes > tags > similarité > catégorie).
     const parts = [];
     if (nQ > 0) parts.push(`${nQ} requête${nQ > 1 ? 's' : ''} Google partagée${nQ > 1 ? 's' : ''}`);
     if (nTags > 0) parts.push(`${nTags} tag${nTags > 1 ? 's' : ''} en commun`);
+    if (sim > 0) parts.push(`contenu similaire (${Math.round(sim * 100)} %)`);
     if (cat && norm(d.category) === cat) parts.push('même catégorie');
     const reason = parts.length ? parts.join(' · ')
       : isHomeUrl(d.url) ? "page d'accueil"
@@ -256,14 +285,16 @@ const seoController = {
       );
       const donorRows = donors.rows;
       const topReservoirs = donorRows.filter((d) => d.health === 'reservoir').slice(0, 10);
-      // Chevauchement de requêtes GSC : calculé UNE fois pour toutes les affamées.
-      const overlapMap = await buildQueryOverlap(
-        db, siteId, affamees.rows.map((p) => p.url), donorRows.map((d) => d.url)
-      );
+      // Chevauchement de requêtes GSC + similarité de contenu : UNE fois pour toutes les affamées.
+      const affameeUrls = affamees.rows.map((p) => p.url);
+      const [overlapMap, simMap] = await Promise.all([
+        buildQueryOverlap(db, siteId, affameeUrls, donorRows.map((d) => d.url)),
+        buildSimilarityMap(db, siteId, affameeUrls)
+      ]);
 
       const result = [];
       for (const page of affamees.rows) {
-        const suggestions = await buildLinkSuggestions(db, siteId, page, donorRows, topReservoirs, overlapMap);
+        const suggestions = await buildLinkSuggestions(db, siteId, page, donorRows, topReservoirs, overlapMap, simMap);
         result.push({ ...page, suggestions });
       }
       res.json(result);
@@ -486,10 +517,12 @@ const seoController = {
       );
       const donorRows = donors.rows;
       const topReservoirs = donorRows.filter((d) => d.health === 'reservoir').slice(0, 10);
-      // Chevauchement de requêtes GSC : calculé UNE fois pour toutes les candidates.
-      const overlapMap = await buildQueryOverlap(
-        db, siteId, cand.rows.map((p) => p.url), donorRows.map((d) => d.url)
-      );
+      // Chevauchement de requêtes GSC + similarité de contenu : UNE fois pour toutes les candidates.
+      const candUrls = cand.rows.map((p) => p.url);
+      const [overlapMap, simMap] = await Promise.all([
+        buildQueryOverlap(db, siteId, candUrls, donorRows.map((d) => d.url)),
+        buildSimilarityMap(db, siteId, candUrls)
+      ]);
 
       const result = [];
       for (const p of cand.rows) {
@@ -514,7 +547,7 @@ const seoController = {
         if (maxPr > 0 && prRatio < 0.6) bits.push('faible jus interne');
 
         // Suggestions de liens internes (même logique factorisée que getAffamees).
-        const suggestions = await buildLinkSuggestions(db, siteId, p, donorRows, topReservoirs, overlapMap);
+        const suggestions = await buildLinkSuggestions(db, siteId, p, donorRows, topReservoirs, overlapMap, simMap);
         result.push({ ...p, score, reason: bits.join(' · '), suggestions });
       }
       result.sort((a, b) => b.score - a.score);

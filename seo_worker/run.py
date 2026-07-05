@@ -368,6 +368,16 @@ def crawl_site(conn, site, full=False, no_resume=False, job_id=None):
             conn.rollback()
             print(f"[AUDIT] post-traitement ignoré ({domain}): {ae}")
 
+        # Similarité de contenu (TF-IDF sur les extraits) : même isolation que l'audit —
+        # un échec ici ne fait jamais échouer le crawl (au pire, les paires ne sont pas
+        # rafraîchies ce run-ci et les suggestions gardent les anciennes).
+        try:
+            import similarity
+            similarity.compute_similar_pages(conn, site_id)
+        except Exception as se:
+            conn.rollback()
+            print(f"[SIMILARITY] étape ignorée ({domain}): {se}")
+
         cur.execute(
             "UPDATE seo_crawl_runs SET status = 'done', finished_at = NOW(), pages_processed = %s WHERE id = %s",
             (processed, run_id),

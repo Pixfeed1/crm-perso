@@ -19,7 +19,8 @@ GRANT SELECT ON
   seo_metrics_monthly,
   seo_onpage_issues,
   seo_audit,
-  seo_tracked_keywords
+  seo_tracked_keywords,
+  seo_similar_pages
 TO mcp_seo_ro;
 
 -- Aucun autre droit : ce rôle ne voit RIEN d'autre (ni écriture, ni autres tables).

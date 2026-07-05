@@ -1687,6 +1687,22 @@ async function ensureSeoTables(client) {
   `);
   await client.query('CREATE UNIQUE INDEX IF NOT EXISTS uq_seo_tracked_keywords ON seo_tracked_keywords(site_id, keyword);');
 
+  // Similarité de contenu (TF-IDF sur les extraits, calculée par le worker après chaque
+  // crawl) : top N pages similaires par page. Sert de signal n°3 aux suggestions de liens.
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS seo_similar_pages (
+      id          SERIAL PRIMARY KEY,
+      site_id     INTEGER NOT NULL REFERENCES seo_sites(id) ON DELETE CASCADE,
+      url         TEXT NOT NULL,
+      similar_url TEXT NOT NULL,
+      score       NUMERIC(5,4) NOT NULL,
+      updated_at  TIMESTAMP DEFAULT NOW(),
+      CONSTRAINT seo_similar_pages_score_chk CHECK (score >= 0 AND score <= 1)
+    );
+  `);
+  await client.query('CREATE UNIQUE INDEX IF NOT EXISTS uq_seo_similar_pages ON seo_similar_pages(site_id, url, similar_url);');
+  await client.query('CREATE INDEX IF NOT EXISTS idx_seo_similar_pages_site_url ON seo_similar_pages(site_id, url);');
+
   console.log('  ✓ Tables SEO vérifiées');
 }
 

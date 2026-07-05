@@ -114,6 +114,21 @@ export async function getOpportunities(pool, siteId, minImpr = 20) {
     }
   }
 
+  // 3ter) Similarité de contenu (TF-IDF calculée par le worker, table seo_similar_pages) :
+  // Map(cible -> Map(page similaire -> score)). Une seule requête groupée.
+  const simMap = new Map();
+  if (topUrls.length) {
+    const sim = await pool.query(
+      `SELECT rtrim(url, '/') AS url, rtrim(similar_url, '/') AS similar_url, score::float AS score
+       FROM seo_similar_pages WHERE site_id = $1 AND rtrim(url, '/') = ANY($2)`,
+      [siteId, [...new Set(topUrls.map(rtrimSlash))]]
+    );
+    for (const r of sim.rows) {
+      if (!simMap.has(r.url)) simMap.set(r.url, new Map());
+      simMap.get(r.url).set(r.similar_url, r.score);
+    }
+  }
+
   // 4) Suggestions : requêtes Google partagées > tags communs > même catégorie > accueil >
   //    réservoirs > saines, hors pages déjà liées (même logique que /api/seo/opportunites).
   return top.map(({ p, pos, score }) => {
@@ -135,19 +150,26 @@ export async function getOpportunities(pool, siteId, minImpr = 20) {
     const byTags = pageTags.size
       ? donorRows.filter((d) => eligible(d) && sharedTags(d) > 0).sort((a, b) => sharedTags(b) - sharedTags(a))
       : [];
+    const pageSim = simMap.get(rtrimSlash(p.url)) || new Map();
+    const simScore = (d) => pageSim.get(rtrimSlash(d.url)) || 0;
+    const bySim = pageSim.size
+      ? donorRows.filter((d) => eligible(d) && simScore(d) > 0).sort((a, b) => simScore(b) - simScore(a))
+      : [];
     const sameCat = cat ? donorRows.filter((d) => eligible(d) && norm(d.category) === cat) : [];
     const home = donorRows.filter((d) => eligible(d) && isHomeUrl(d.url));
     const others = [...topReservoirs, ...donorRows].filter(eligible);
     const seen = new Set();
     const suggestions = [];
-    for (const d of [...byQueries, ...byTags, ...sameCat, ...home, ...others]) {
+    for (const d of [...byQueries, ...byTags, ...bySim, ...sameCat, ...home, ...others]) {
       if (seen.has(d.url)) continue;
       seen.add(d.url);
       const nQ = sharedQueries(d);
       const nTags = sharedTags(d);
+      const sim = simScore(d);
       const parts = [];
       if (nQ > 0) parts.push(`${nQ} requête${nQ > 1 ? 's' : ''} Google partagée${nQ > 1 ? 's' : ''}`);
       if (nTags > 0) parts.push(`${nTags} tag${nTags > 1 ? 's' : ''} en commun`);
+      if (sim > 0) parts.push(`contenu similaire (${Math.round(sim * 100)} %)`);
       if (cat && norm(d.category) === cat) parts.push('même catégorie');
       const anchors = nQ > 0 ? (pageOverlap.get(rtrimSlash(d.url)).queries || []) : [];
       suggestions.push({
