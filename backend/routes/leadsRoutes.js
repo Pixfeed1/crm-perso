@@ -91,7 +91,7 @@ router.get('/:id', async (req, res) => {
 // Créer un nouveau lead
 router.post('/', async (req, res) => {
   const db = req.app.locals.db;
-  const { name, company, type, status, source, notes, email, phone, score, tags, assigned_to } = req.body;
+  const { name, company, type, status, source, notes, email, phone, facebook_url, instagram_url, score, tags, assigned_to } = req.body;
 
   if (!name || !status) {
     return res.status(400).json({ message: 'Nom et statut sont requis' });
@@ -107,6 +107,8 @@ router.post('/', async (req, res) => {
       notes,
       email,
       phone,
+      facebook_url,
+      instagram_url,
       score,
       tags,
       assigned_to
@@ -173,7 +175,7 @@ router.post('/import', async (req, res) => {
 router.put('/:id', async (req, res) => {
   const db = req.app.locals.db;
   const { id } = req.params;
-  const { name, company, type, status, source, notes } = req.body;
+  const { name, company, type, status, source, notes, email, phone, facebook_url, instagram_url } = req.body;
 
   try {
     // Vérifier si le lead existe
@@ -188,7 +190,11 @@ router.put('/:id', async (req, res) => {
       type,
       status,
       source,
-      notes
+      notes,
+      email,
+      phone,
+      facebook_url,
+      instagram_url
     });
 
     res.json(updatedLead);

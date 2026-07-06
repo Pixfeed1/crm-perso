@@ -1192,6 +1192,9 @@ async function ensureInteractionsColumns(client) {
   // Statut de relation (suivi/prospection) sur les contacts : leads ET clients.
   await client.query("ALTER TABLE leads ADD COLUMN IF NOT EXISTS relation_status VARCHAR(20) DEFAULT 'nouveau';");
   await client.query("ALTER TABLE crm_clients ADD COLUMN IF NOT EXISTS relation_status VARCHAR(20) DEFAULT 'nouveau';");
+  // Réseaux sociaux du lead (outreach multi-canal : liens cliquables vers le profil).
+  await client.query('ALTER TABLE leads ADD COLUMN IF NOT EXISTS facebook_url TEXT;');
+  await client.query('ALTER TABLE leads ADD COLUMN IF NOT EXISTS instagram_url TEXT;');
   // Plateforme (techno du site) sur les contacts, pour le filtre plateforme du cockpit Suivi.
   await client.query('ALTER TABLE leads ADD COLUMN IF NOT EXISTS platform VARCHAR(50);');
   await client.query('ALTER TABLE crm_clients ADD COLUMN IF NOT EXISTS platform VARCHAR(50);');

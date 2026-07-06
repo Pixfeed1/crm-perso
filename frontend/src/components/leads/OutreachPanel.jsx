@@ -9,9 +9,9 @@
 // modèles par défaut ; DM : modèles par défaut. Charte : tokens de thème.
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  FiMail, FiMessageCircle, FiSend, FiClock, FiCheck, FiX,
+  FiMail, FiSend, FiClock, FiCheck, FiX,
   FiUser, FiPhone, FiCopy, FiChevronDown, FiChevronUp,
-  FiInstagram, FiFacebook, FiZap, FiMessageSquare
+  FiInstagram, FiFacebook, FiZap, FiMessageSquare, FiExternalLink
 } from 'react-icons/fi';
 import { interactionsAPI, emailTemplatesAPI } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
@@ -23,6 +23,22 @@ const CHANNELS = [
   { id: 'instagram', label: 'Instagram', icon: FiInstagram }
 ];
 const channelLabel = (id) => (CHANNELS.find((c) => c.id === id) || {}).label || id;
+
+// URL du profil social d'un lead : accepte une URL complète ou un simple pseudo (@x ou x).
+const socialUrl = (channel, value) => {
+  const v = (value || '').trim();
+  if (!v) return null;
+  if (/^https?:\/\//i.test(v)) return v;
+  const handle = v.replace(/^@/, '');
+  return channel === 'facebook' ? `https://facebook.com/${handle}` : `https://instagram.com/${handle}`;
+};
+// URL du profil pour un canal donné du lead (null si non renseigné ou canal email).
+const leadChannelUrl = (lead, channel) => {
+  if (!lead) return null;
+  if (channel === 'facebook') return socialUrl('facebook', lead.facebook_url);
+  if (channel === 'instagram') return socialUrl('instagram', lead.instagram_url);
+  return null;
+};
 
 // Modèles par défaut (les templates email PERSISTÉS du module Email s'y ajoutent).
 const DEFAULT_TEMPLATES = {
@@ -352,6 +368,18 @@ const OutreachPanel = ({ leads = [] }) => {
                       <FiPhone size={15} className="text-text-primary" />
                     </a>
                   )}
+                  {leadChannelUrl(selectedLead, 'facebook') && (
+                    <a href={leadChannelUrl(selectedLead, 'facebook')} target="_blank" rel="noopener noreferrer"
+                      className="p-2 bg-surface-strong hover:bg-border-strong rounded-lg transition-colors" title="Ouvrir le profil Facebook">
+                      <FiFacebook size={15} className="text-text-primary" />
+                    </a>
+                  )}
+                  {leadChannelUrl(selectedLead, 'instagram') && (
+                    <a href={leadChannelUrl(selectedLead, 'instagram')} target="_blank" rel="noopener noreferrer"
+                      className="p-2 bg-surface-strong hover:bg-border-strong rounded-lg transition-colors" title="Ouvrir le profil Instagram">
+                      <FiInstagram size={15} className="text-text-primary" />
+                    </a>
+                  )}
                 </div>
               </div>
 
@@ -375,6 +403,26 @@ const OutreachPanel = ({ leads = [] }) => {
                   );
                 })}
               </div>
+
+              {/* Profil du canal actif : lien direct pour ouvrir la page FB/IG du lead
+                  (ou rappel de le renseigner dans la fiche si absent). */}
+              {activeChannel !== 'email' && (
+                leadChannelUrl(selectedLead, activeChannel) ? (
+                  <a
+                    href={leadChannelUrl(selectedLead, activeChannel)}
+                    target="_blank" rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 text-sm text-accent hover:text-accent-hover"
+                  >
+                    {activeChannel === 'facebook' ? <FiFacebook size={14} /> : <FiInstagram size={14} />}
+                    Ouvrir le profil {channelLabel(activeChannel)} <FiExternalLink size={12} />
+                  </a>
+                ) : (
+                  <p className="text-xs text-text-muted">
+                    Pas de profil {channelLabel(activeChannel)} renseigné — ajoute-le dans la fiche du lead
+                    (champ « {channelLabel(activeChannel)} ») pour pouvoir l'ouvrir d'un clic.
+                  </p>
+                )
+              )}
 
               {/* Statut actuel du canal */}
               {(activeStatus || activeFollowup) && (

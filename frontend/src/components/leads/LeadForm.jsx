@@ -14,6 +14,8 @@ const LeadForm = ({ lead = {}, onSave, onCancel }) => {
     type: lead.type || 'company',
     status: lead.status || 'nouveau',
     source: lead.source || '',
+    facebook_url: lead.facebook_url || '',
+    instagram_url: lead.instagram_url || '',
     notes: lead.notes || ''
   });
 
@@ -240,6 +242,36 @@ const LeadForm = ({ lead = {}, onSave, onCancel }) => {
                 </option>
               ))}
             </select>
+          </div>
+
+          {/* Réseaux sociaux (outreach multi-canal) */}
+          <div>
+            <label htmlFor="facebook_url" className="block text-xs sm:text-sm font-medium text-text-secondary mb-1">
+              Facebook (URL ou pseudo)
+            </label>
+            <input
+              type="text"
+              id="facebook_url"
+              name="facebook_url"
+              value={formData.facebook_url}
+              onChange={handleInputChange}
+              placeholder="https://facebook.com/… ou pseudo"
+              className="w-full bg-surface/50 border border-border rounded-lg px-3 py-2 sm:px-4 sm:py-2 text-text-primary text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            />
+          </div>
+          <div>
+            <label htmlFor="instagram_url" className="block text-xs sm:text-sm font-medium text-text-secondary mb-1">
+              Instagram (URL ou pseudo)
+            </label>
+            <input
+              type="text"
+              id="instagram_url"
+              name="instagram_url"
+              value={formData.instagram_url}
+              onChange={handleInputChange}
+              placeholder="https://instagram.com/… ou @pseudo"
+              className="w-full bg-surface/50 border border-border rounded-lg px-3 py-2 sm:px-4 sm:py-2 text-text-primary text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            />
           </div>
         </div>
 

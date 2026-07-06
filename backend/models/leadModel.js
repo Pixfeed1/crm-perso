@@ -74,6 +74,8 @@ const createLead = (db, leadData) => {
       notes,
       email,
       phone,
+      facebook_url,
+      instagram_url,
       score = 0,
       tags,
       assigned_to
@@ -85,8 +87,8 @@ const createLead = (db, leadData) => {
 
     const query = `
       INSERT INTO leads (
-        name, company, type, status, source, notes, email, phone, score, tags, assigned_to, created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        name, company, type, status, source, notes, email, phone, facebook_url, instagram_url, score, tags, assigned_to, created_at, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
       RETURNING id
     `;
 
@@ -94,7 +96,7 @@ const createLead = (db, leadData) => {
 
     db.get(
       query,
-      [name, company || null, type, status, source || null, notes || null, email || null, phone || null, score, tags || null, assigned_to || null, now, now],
+      [name, company || null, type, status, source || null, notes || null, email || null, phone || null, facebook_url || null, instagram_url || null, score, tags || null, assigned_to || null, now, now],
       function(err, result) {
         if (err) {
           reject(err);
@@ -141,6 +143,22 @@ const updateLead = (db, id, leadData) => {
     if (leadData.notes !== undefined) {
       fields.push(`notes = $${paramIndex++}`);
       values.push(leadData.notes);
+    }
+    if (leadData.email !== undefined) {
+      fields.push(`email = $${paramIndex++}`);
+      values.push(leadData.email);
+    }
+    if (leadData.phone !== undefined) {
+      fields.push(`phone = $${paramIndex++}`);
+      values.push(leadData.phone);
+    }
+    if (leadData.facebook_url !== undefined) {
+      fields.push(`facebook_url = $${paramIndex++}`);
+      values.push(leadData.facebook_url);
+    }
+    if (leadData.instagram_url !== undefined) {
+      fields.push(`instagram_url = $${paramIndex++}`);
+      values.push(leadData.instagram_url);
     }
 
     if (fields.length === 0) {
