@@ -680,12 +680,7 @@ const Leads = () => {
             }}
           />
         ) : view === 'outreach' ? (
-          <OutreachPanel
-            leads={filteredLeads}
-            onLeadUpdated={(updatedLead) => {
-              setLeads(leads.map(l => l.id === updatedLead.id ? updatedLead : l));
-            }}
-          />
+          <OutreachPanel leads={filteredLeads} />
         ) : view === 'kanban' ? (
           /* Vue Kanban */
           <KanbanView

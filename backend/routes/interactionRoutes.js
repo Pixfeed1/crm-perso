@@ -14,6 +14,9 @@ router.get('/followups', interactionController.getFollowups);
 // GET /api/interactions/cockpit - cockpit "Suivi" (1 ligne par contact, filtrable)
 router.get('/cockpit', interactionController.getCockpit);
 
+// GET /api/interactions/outreach-summary - dernier statut outreach par lead/canal
+router.get('/outreach-summary', interactionController.getOutreachSummary);
+
 // GET /api/interactions/contact/:contactType/:contactId - timeline d'un contact
 router.get('/contact/:contactType/:contactId', interactionController.getByContact);
 

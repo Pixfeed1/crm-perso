@@ -179,6 +179,51 @@ const interactionController = {
   },
 
   /**
+   * GET /api/interactions/outreach-summary
+   * Résumé outreach multi-canal des LEADS : dernier statut par (lead, canal) + prochaine
+   * relance en attente. Les interactions d'outreach sont taggées via la colonne `result`
+   * ('outreach:<canal>:<statut>', canal: email|facebook|instagram, statut: sent|responded|
+   * not_interested) — le panneau Outreach écrit des interactions STANDARD (visibles dans
+   * le Suivi/historique) et ce résumé les relit. Renvoie { [lead_id]: { email: {...},
+   * facebook: {...}, instagram: {...}, next_followup } }.
+   */
+  getOutreachSummary: async (req, res) => {
+    const db = req.app.locals.db;
+    try {
+      const [statuses, followups] = await Promise.all([
+        db.pool.query(
+          `SELECT DISTINCT ON (contact_id, split_part(result, ':', 2))
+                  contact_id, split_part(result, ':', 2) AS channel,
+                  split_part(result, ':', 3) AS status, date
+           FROM interactions
+           WHERE contact_type = 'lead' AND result LIKE 'outreach:%'
+           ORDER BY contact_id, split_part(result, ':', 2), date DESC`
+        ),
+        db.pool.query(
+          `SELECT contact_id, MIN(next_followup_date) AS next_followup
+           FROM interactions
+           WHERE contact_type = 'lead' AND result LIKE 'outreach:%'
+             AND next_followup_date IS NOT NULL AND followup_done = FALSE
+           GROUP BY contact_id`
+        )
+      ]);
+      const out = {};
+      for (const r of statuses.rows) {
+        if (!out[r.contact_id]) out[r.contact_id] = {};
+        out[r.contact_id][r.channel] = { status: r.status, date: r.date };
+      }
+      for (const r of followups.rows) {
+        if (!out[r.contact_id]) out[r.contact_id] = {};
+        out[r.contact_id].next_followup = r.next_followup;
+      }
+      res.json(out);
+    } catch (e) {
+      console.error('[Interactions] getOutreachSummary:', e.message);
+      res.status(500).json({ message: 'Erreur serveur' });
+    }
+  },
+
+  /**
    * GET /api/interactions/cockpit
    * Cockpit "Suivi" : TOUS les prospects + clients (même sans échange), avec leur dernière
    * interaction (dernier contact + joint?) et leur prochaine relance (date + canal).

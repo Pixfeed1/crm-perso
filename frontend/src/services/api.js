@@ -1218,6 +1218,7 @@ export const interactionsAPI = {
   delete: (id) => apiRequest(`/interactions/${id}`, 'DELETE'),
   getFollowups: () => apiRequest('/interactions/followups'),
   getCockpit: () => apiRequest('/interactions/cockpit'),
+  getOutreachSummary: () => apiRequest('/interactions/outreach-summary'),
   setContactStatus: (contact_type, contact_id, relation_status) =>
     apiRequest('/interactions/contact-status', 'PATCH', { contact_type, contact_id, relation_status })
 };
