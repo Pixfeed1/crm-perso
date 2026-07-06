@@ -497,75 +497,49 @@ const leadController = {
   },
 
   /**
-   * Récupérer les statistiques Kanban (nombre de leads par statut + taux de conversion)
+   * Récupérer les statistiques Kanban (nombre de leads par statut + taux de conversion).
+   * Statuts FRANÇAIS (les vrais du CRM : LeadForm/LeadFilter/imports). Les éventuels
+   * anciens statuts anglais résiduels sont mappés pour ne perdre aucun lead au comptage.
    */
-  getKanbanStats: (req, res) => {
+  getKanbanStats: async (req, res) => {
     const db = req.app.locals.db;
+    // Anciens statuts anglais (code d'origine du kanban) -> statuts réels.
+    const LEGACY = { new: 'nouveau', contacted: 'contacte', proposal: 'qualifié', negotiation: 'négociation', won: 'client', lost: 'perdu' };
+    try {
+      const { rows } = await db.pool.query('SELECT status, COUNT(*)::int AS count FROM leads GROUP BY status');
 
-    // Récupérer le nombre de leads par statut
-    const statsQuery = `
-      SELECT
-        status,
-        COUNT(*) as count
-      FROM leads
-      GROUP BY status
-    `;
-
-    db.all(statsQuery, [], (err, stats) => {
-      if (err) {
-        console.error('Erreur lors de la récupération des statistiques Kanban:', err);
-        return res.status(500).json({ message: 'Erreur serveur', error: err.message });
+      const statsByStatus = {
+        nouveau: { count: 0 },
+        contacte: { count: 0 },
+        prospect: { count: 0 },
+        'qualifié': { count: 0 },
+        'négociation': { count: 0 },
+        client: { count: 0 },
+        perdu: { count: 0 }
+      };
+      let totalLeads = 0;
+      for (const r of rows) {
+        totalLeads += r.count;
+        const key = statsByStatus[r.status] ? r.status : LEGACY[r.status];
+        if (key && statsByStatus[key]) statsByStatus[key].count += r.count;
       }
 
-      // Créer un objet avec les statistiques par statut
-      const statsByStatus = {
-        new: { count: 0 },
-        contacted: { count: 0 },
-        proposal: { count: 0 },
-        negotiation: { count: 0 },
-        won: { count: 0 },
-        lost: { count: 0 }
-      };
-
-      // Remplir avec les données de la base
-      stats.forEach(stat => {
-        if (statsByStatus[stat.status]) {
-          statsByStatus[stat.status] = {
-            count: stat.count
-          };
-        }
-      });
-
-      // Calculer les totaux
-      const totalLeads = stats.reduce((sum, stat) => sum + stat.count, 0);
-
-      // Calculer les taux de conversion
-      const activeLeads = statsByStatus.new.count +
-                          statsByStatus.contacted.count +
-                          statsByStatus.proposal.count +
-                          statsByStatus.negotiation.count;
-
-      const closedLeads = statsByStatus.won.count + statsByStatus.lost.count;
-
-      const winRate = closedLeads > 0
-        ? Math.round((statsByStatus.won.count / closedLeads) * 100)
-        : 0;
-
-      const conversionRate = totalLeads > 0
-        ? Math.round((statsByStatus.won.count / totalLeads) * 100)
-        : 0;
-
+      const won = statsByStatus.client.count;
+      const closedLeads = won + statsByStatus.perdu.count;
       res.json({
         by_status: statsByStatus,
         totals: {
           total_leads: totalLeads,
-          active_leads: activeLeads,
+          active_leads: totalLeads - closedLeads,
           closed_leads: closedLeads,
-          win_rate: winRate,
-          conversion_rate: conversionRate
+          win_rate: closedLeads > 0 ? Math.round((won / closedLeads) * 100) : 0,
+          conversion_rate: totalLeads > 0 ? Math.round((won / totalLeads) * 100) : 0
         }
       });
-    });
+    } catch (err) {
+      console.error('Erreur lors de la récupération des statistiques Kanban:', err);
+      res.status(500).json({ message: 'Erreur serveur' });
+    }
   }
 };
 

@@ -299,10 +299,15 @@ const Leads = () => {
       );
 
       setLeads(updatedLeads);
-      setSelectedLead({ ...selectedLead, ...updatedLead });
+      // Ne rafraîchir la fiche ouverte QUE si c'est bien ce lead (un drag & drop kanban
+      // ne doit pas ouvrir la fiche du lead déplacé).
+      if (selectedLead && selectedLead.id === id) {
+        setSelectedLead({ ...selectedLead, ...updatedLead });
+      }
     } catch (error) {
       console.error('Erreur lors de la mise à jour du lead:', error);
       toast.error("Une erreur est survenue lors de la mise à jour du lead.");
+      throw error; // laisse le kanban réagir (drop annulé)
     }
   };
 

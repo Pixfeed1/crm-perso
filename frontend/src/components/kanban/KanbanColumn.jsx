@@ -1,52 +1,39 @@
 // src/components/kanban/KanbanColumn.jsx
+// Colonne du Kanban prospects. Charte : tokens de thème uniquement (pas de couleur en dur).
 import React from 'react';
 import { motion } from 'framer-motion';
 
-const KanbanColumn = ({ column, leads, count, budget, onDragOver, onDrop, isDraggingOver, children }) => {
+const KanbanColumn = ({ column, count, onDragOver, onDrop, isDropTarget, children }) => {
+  const { Icon } = column;
   return (
     <motion.div
-      className="flex-shrink-0 w-80 flex flex-col"
-      initial={{ opacity: 0, x: -20 }}
+      className="flex-shrink-0 w-72 flex flex-col"
+      initial={{ opacity: 0, x: -12 }}
       animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.3 }}
+      transition={{ duration: 0.25 }}
     >
       {/* En-tête de la colonne */}
-      <div className={`p-4 rounded-t-xl bg-gradient-to-r ${column.color} border-b border-overlay/10`}>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-xl text-text-primary">{column.icon}</span>
-            <h3 className="font-semibold text-text-primary text-lg">{column.title}</h3>
-            <span className="text-xs bg-overlay/20 text-text-primary px-2 py-1 rounded-full font-medium">
-              {count}
-            </span>
-          </div>
-        </div>
-        {budget > 0 && (
-          <div className="mt-2 text-xs text-text-primary/80">
-            Budget: {new Intl.NumberFormat('fr-FR', {
-              style: 'currency',
-              currency: 'EUR',
-              maximumFractionDigits: 0
-            }).format(budget)}
-          </div>
-        )}
+      <div className="p-3 rounded-t-xl bg-surface border border-b-0 border-border flex items-center gap-2">
+        <span className={`w-7 h-7 rounded-lg flex items-center justify-center ${column.chip}`}>
+          <Icon size={14} />
+        </span>
+        <h3 className="font-semibold text-text-primary text-sm">{column.title}</h3>
+        <span className={`ml-auto text-xs px-2 py-0.5 rounded-full font-medium ${column.chip}`}>{count}</span>
       </div>
 
       {/* Zone de drop avec scroll */}
       <div
-        className={`flex-1 ${column.bgColor} ${column.borderColor} border-x border-b rounded-b-xl p-3 overflow-y-auto transition-all duration-200 ${
-          isDraggingOver ? 'bg-opacity-30 border-opacity-50' : 'border-opacity-20'
+        className={`flex-1 bg-surface/40 border border-border rounded-b-xl p-2.5 overflow-y-auto transition-colors ${
+          isDropTarget ? 'border-accent/60 bg-accent/5' : ''
         }`}
         onDragOver={onDragOver}
         onDrop={onDrop}
-        style={{ minHeight: '500px', maxHeight: 'calc(100vh - 300px)' }}
+        style={{ minHeight: '400px', maxHeight: 'calc(100vh - 300px)' }}
       >
-        <div className="space-y-3">
+        <div className="space-y-2.5">
           {children}
-          {leads.length === 0 && (
-            <div className="text-center text-text-muted text-sm py-8">
-              Aucun lead dans cette colonne
-            </div>
+          {count === 0 && (
+            <div className="text-center text-text-muted text-xs py-8">Aucun lead</div>
           )}
         </div>
       </div>

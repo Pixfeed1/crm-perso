@@ -1,98 +1,70 @@
 // src/components/kanban/KanbanCard.jsx
+// Carte d'un prospect dans le Kanban. Charte : tokens de thème ; libellés scrapés décodés
+// (entités HTML) comme dans le Suivi. Pas de champ budget : il n'existe pas sur les leads.
 import React from 'react';
 import { motion } from 'framer-motion';
-import { FiMail, FiPhone, FiBriefcase, FiDollarSign, FiUser } from 'react-icons/fi';
+import { FiMail, FiPhone, FiBriefcase, FiUser } from 'react-icons/fi';
+import { decodeHtml } from '../../utils/decodeHtml';
 
 const KanbanCard = ({ lead, onDragStart, onDragEnd, onClick, isDragging }) => {
   return (
     <motion.div
-      className={`bg-surface/50 backdrop-blur-sm border border-border rounded-lg p-4 cursor-move hover:bg-surface-strong/50 transition-all ${
+      className={`bg-surface border border-border rounded-lg p-3 cursor-move hover:border-border-strong transition-all ${
         isDragging ? 'opacity-50 scale-95' : 'opacity-100'
       }`}
       draggable
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
-      onClick={(e) => {
-        // Ne pas déclencher onClick si on est en train de drag
-        if (!isDragging) {
-          onClick();
-        }
-      }}
-      initial={{ opacity: 0, y: 10 }}
+      onClick={() => { if (!isDragging) onClick(); }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -10 }}
-      whileHover={{ scale: 1.02 }}
-      transition={{ duration: 0.2 }}
+      whileHover={{ scale: 1.01 }}
+      transition={{ duration: 0.15 }}
     >
       {/* Nom du lead */}
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex-1">
-          <h4 className="text-text-primary font-semibold text-base mb-1">{lead.name}</h4>
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <div className="flex-1 min-w-0">
+          <h4 className="text-text-primary font-semibold text-sm mb-0.5 truncate">{decodeHtml(lead.name)}</h4>
           {lead.company && (
-            <div className="flex items-center gap-1 text-text-muted text-sm">
-              <FiBriefcase className="text-xs" />
-              <span>{lead.company}</span>
+            <div className="flex items-center gap-1 text-text-muted text-xs">
+              <FiBriefcase size={11} className="flex-shrink-0" />
+              <span className="truncate">{decodeHtml(lead.company)}</span>
             </div>
           )}
         </div>
         {lead.type === 'company' && (
-          <div className="bg-purple-500/20 text-purple-300 px-2 py-1 rounded text-xs">
-            Entreprise
-          </div>
+          <span className="bg-accent/15 text-accent px-2 py-0.5 rounded-full text-xs flex-shrink-0">Entreprise</span>
         )}
         {lead.type === 'individual' && (
-          <div className="bg-blue-500/20 text-blue-300 px-2 py-1 rounded text-xs flex items-center gap-1">
-            <FiUser className="text-xs" />
-            Individuel
-          </div>
+          <span className="bg-info-bg text-info-text px-2 py-0.5 rounded-full text-xs flex items-center gap-1 flex-shrink-0">
+            <FiUser size={11} /> Individuel
+          </span>
         )}
       </div>
 
       {/* Informations de contact */}
-      <div className="space-y-2 mb-3">
-        {lead.email && (
-          <div className="flex items-center gap-2 text-text-secondary text-sm">
-            <FiMail className="text-indigo-400 text-xs flex-shrink-0" />
-            <span className="truncate">{lead.email}</span>
-          </div>
-        )}
-        {lead.phone && (
-          <div className="flex items-center gap-2 text-text-secondary text-sm">
-            <FiPhone className="text-green-400 text-xs flex-shrink-0" />
-            <span>{lead.phone}</span>
-          </div>
-        )}
+      {(lead.email || lead.phone) && (
+        <div className="space-y-1 mb-2">
+          {lead.email && (
+            <div className="flex items-center gap-1.5 text-text-secondary text-xs">
+              <FiMail size={11} className="text-text-muted flex-shrink-0" />
+              <span className="truncate">{lead.email}</span>
+            </div>
+          )}
+          {lead.phone && (
+            <div className="flex items-center gap-1.5 text-text-secondary text-xs">
+              <FiPhone size={11} className="text-text-muted flex-shrink-0" />
+              <span>{lead.phone}</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Source + date de création */}
+      <div className="flex items-center justify-between gap-2 text-xs text-text-muted">
+        {lead.source ? <span className="truncate">Source : {lead.source}</span> : <span />}
+        {lead.created_at && <span className="flex-shrink-0">{new Date(lead.created_at).toLocaleDateString('fr-FR')}</span>}
       </div>
-
-      {/* Budget */}
-      {lead.budget && (
-        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border">
-          <FiDollarSign className="text-amber-400" />
-          <span className="text-amber-400 font-semibold">
-            {new Intl.NumberFormat('fr-FR', {
-              style: 'currency',
-              currency: 'EUR',
-              maximumFractionDigits: 0
-            }).format(lead.budget)}
-          </span>
-        </div>
-      )}
-
-      {/* Source */}
-      {lead.source && (
-        <div className="mt-2">
-          <span className="text-xs text-gray-500">
-            Source: {lead.source}
-          </span>
-        </div>
-      )}
-
-      {/* Date de création */}
-      {lead.created_at && (
-        <div className="mt-2 text-xs text-gray-500">
-          Créé le {new Date(lead.created_at).toLocaleDateString('fr-FR')}
-        </div>
-      )}
     </motion.div>
   );
 };
