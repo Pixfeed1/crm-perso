@@ -41,7 +41,8 @@ import GoalProgress from '../components/dashboard/GoalProgress';
 import EmailAutocomplete from '../components/common/EmailAutocomplete';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
-import { dashboardAPI, reviewRequestsAPI, clientsAPI } from '../services/api';
+import { dashboardAPI, reviewRequestsAPI, clientsAPI, interactionsAPI, seoAPI } from '../services/api';
+import { decodeHtml } from '../utils/decodeHtml';
 import { useToast } from '../hooks/useToast';
 
 const Dashboard = () => {
@@ -64,6 +65,9 @@ const Dashboard = () => {
   const [showNewMenu, setShowNewMenu] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [reviewStats, setReviewStats] = useState(null);
+  // Widgets des modules récents : relances dues (Suivi) + santé SEO du premier site.
+  const [dueFollowups, setDueFollowups] = useState([]);
+  const [seoWidget, setSeoWidget] = useState(null); // { domain, score, overview }
   const [dateFilter, setDateFilter] = useState('month'); // month, quarter, year, all
   const newMenuRef = useRef(null);
   const filtersRef = useRef(null);
@@ -115,6 +119,29 @@ const Dashboard = () => {
         setReviewStats(stats);
       } catch (error) {
         console.error('Erreur lors de la récupération des stats d\'avis:', error);
+      }
+
+      // Relances dues (cockpit Suivi) — best-effort, le dashboard vit sans.
+      try {
+        const f = await interactionsAPI.getFollowups();
+        setDueFollowups(Array.isArray(f) ? f : []);
+      } catch (error) {
+        console.error('Erreur relances dues:', error);
+      }
+
+      // Santé SEO du premier site (score audit + vue d'ensemble) — best-effort.
+      try {
+        const sites = await seoAPI.getSites();
+        if (Array.isArray(sites) && sites.length) {
+          const site = sites[0];
+          const [ov, audit] = await Promise.all([
+            seoAPI.getOverview(site.id).catch(() => null),
+            seoAPI.getAudit(site.id).catch(() => null)
+          ]);
+          if (ov) setSeoWidget({ domain: site.domain, score: audit?.score ?? null, overview: ov });
+        }
+      } catch (error) {
+        console.error('Erreur widget SEO:', error);
       }
     } catch (error) {
       console.error('Erreur lors de la récupération des données du tableau de bord:', error);
@@ -686,6 +713,110 @@ const Dashboard = () => {
               </div>
             </motion.div>
           </motion.section>
+
+          {/* ========== SUIVI (relances dues) & SEO ========== */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Relances à faire (cockpit Suivi) */}
+            <motion.section
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.15 }}
+              className={`bg-surface/30 backdrop-blur rounded-2xl p-6 shadow-xl shadow-black/20 ${!seoWidget ? 'lg:col-span-2' : ''}`}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-medium text-text-primary flex items-center gap-2">
+                  <FiClock className="text-warning-text" size={18} /> Relances à faire
+                  {dueFollowups.length > 0 && (
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-warning-bg text-warning-text font-semibold">{dueFollowups.length}</span>
+                  )}
+                </h2>
+                <button
+                  onClick={() => navigate('/portefeuille?tab=suivi')}
+                  className="text-sm text-accent hover:text-accent-hover transition-colors"
+                >
+                  Ouvrir le Suivi →
+                </button>
+              </div>
+              {dueFollowups.length === 0 ? (
+                <p className="text-text-muted text-sm py-6 text-center">Aucune relance due — tout est à jour 🎉</p>
+              ) : (
+                <div className="space-y-2">
+                  {dueFollowups.slice(0, 5).map((f) => {
+                    const due = new Date(f.next_followup_date);
+                    const lateDays = Math.floor((Date.now() - due.getTime()) / 86400000);
+                    return (
+                      <button
+                        key={f.id}
+                        onClick={() => navigate('/portefeuille?tab=suivi')}
+                        className="w-full flex items-center justify-between gap-3 p-2.5 rounded-lg bg-surface-muted/50 hover:bg-surface-strong/50 transition-colors text-left"
+                      >
+                        <div className="min-w-0">
+                          <div className="text-sm text-text-primary truncate">{decodeHtml(f.contact_name) || 'Contact'}</div>
+                          <div className="text-xs text-text-muted">
+                            {f.contact_type === 'lead' ? 'Prospect' : 'Client'}
+                            {f.next_followup_channel ? ` · ${f.next_followup_channel}` : ''}
+                          </div>
+                        </div>
+                        <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 font-medium ${lateDays > 0 ? 'bg-danger-bg text-danger-text' : 'bg-warning-bg text-warning-text'}`}>
+                          {lateDays > 0 ? `${lateDays} j de retard` : "aujourd'hui"}
+                        </span>
+                      </button>
+                    );
+                  })}
+                  {dueFollowups.length > 5 && (
+                    <p className="text-xs text-text-muted text-center pt-1">+ {dueFollowups.length - 5} autre{dueFollowups.length - 5 > 1 ? 's' : ''}…</p>
+                  )}
+                </div>
+              )}
+            </motion.section>
+
+            {/* Santé SEO du site */}
+            {seoWidget && (
+              <motion.section
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="bg-surface/30 backdrop-blur rounded-2xl p-6 shadow-xl shadow-black/20"
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-medium text-text-primary flex items-center gap-2">
+                    <FiTrendingUpIcon className="text-accent" size={18} /> SEO — {seoWidget.domain}
+                  </h2>
+                  <button onClick={() => navigate('/seo')} className="text-sm text-accent hover:text-accent-hover transition-colors">
+                    Ouvrir le SEO →
+                  </button>
+                </div>
+                <div className="flex items-center gap-4 mb-4">
+                  {seoWidget.score != null && (
+                    <div className={`text-4xl font-bold ${seoWidget.score >= 80 ? 'text-success-text' : seoWidget.score >= 50 ? 'text-warning-text' : 'text-danger-text'}`}>
+                      {seoWidget.score}<span className="text-text-muted text-base font-normal">/100</span>
+                    </div>
+                  )}
+                  <div className="text-xs text-text-muted">
+                    Santé technique
+                    {seoWidget.overview.last_crawl && (
+                      <> · dernier crawl : {new Date(seoWidget.overview.last_crawl).toLocaleDateString('fr-FR')}</>
+                    )}
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {[
+                    { label: 'Pages', value: seoWidget.overview.total_pages },
+                    { label: 'Orphelines', value: seoWidget.overview.orphelines, cls: 'text-danger-text' },
+                    { label: 'Affamées', value: seoWidget.overview.affamees, cls: 'text-warning-text' },
+                    ...(seoWidget.overview.gsc_impressions != null
+                      ? [{ label: 'Impr. 28j', value: Number(seoWidget.overview.gsc_impressions).toLocaleString('fr-FR') }]
+                      : [{ label: 'Liens internes', value: seoWidget.overview.total_links }])
+                  ].map((c) => (
+                    <div key={c.label} className="bg-surface-muted/50 rounded-lg p-2.5 text-center">
+                      <div className={`text-lg font-bold ${c.cls || 'text-text-primary'}`}>{c.value ?? '—'}</div>
+                      <div className="text-xs text-text-muted">{c.label}</div>
+                    </div>
+                  ))}
+                </div>
+              </motion.section>
+            )}
+          </div>
 
           {/* ========== GRAPHIQUES & VISUALISATIONS ========== */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
