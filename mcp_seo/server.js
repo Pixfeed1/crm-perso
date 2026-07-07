@@ -88,6 +88,13 @@ function buildServer() {
   );
 
   server.tool(
+    'list_sites',
+    "Liste les sites suivis dans le CRM : site_id, domaine, nombre de pages, dates de dernier crawl et de dernière synchro Search Console. À appeler EN PREMIER pour connaître le site_id à passer aux autres outils.",
+    {},
+    async () => ok(await tools.listSites(pool))
+  );
+
+  server.tool(
     'get_site_overview',
     "Vue d'ensemble du site : pages par santé (orphelines/affamées/réservoirs/saines), liens internes, non indexées, impressions/clics GSC 28j, quasi-victoires (positions 11-20), dates de dernier crawl et synchro.",
     { site_id: z.number().int() },

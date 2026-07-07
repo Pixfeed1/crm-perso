@@ -16,6 +16,7 @@ CRM), **lecture seule stricte**, limité aux tables SEO.
 | `get_cannibalisation` | `site_id`, `days?`, `min_impressions?` | `seo_gsc_daily` (requêtes disputées par plusieurs pages) |
 | `get_ctr_anomalies` | `site_id`, `days?`, `min_impressions?` | `seo_gsc_daily` + `seo_onpage_issues` (CTR sous l'attendu -> titles/metas à réécrire) |
 | `get_page_links` | `site_id`, `url` | `seo_links` + `seo_pages` (liens entrants/sortants d'une page, avec ancres) |
+| `list_sites` | — | `seo_sites` + `seo_pages` (site_id, domaine, volumétrie — à appeler en premier) |
 
 Aucun SQL ne vient de Claude : uniquement des **SELECT paramétrés prédéfinis**. Aucun outil
 n'écrit/modifie/supprime. La table `seo_oauth_tokens` (secrets) n'est **jamais** accessible.

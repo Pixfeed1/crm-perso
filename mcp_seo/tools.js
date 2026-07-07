@@ -426,3 +426,15 @@ export async function getPageLinks(pool, siteId, url) {
     outbound: outbound.rows
   };
 }
+
+// ---- list_sites : sites suivis dans le CRM (à appeler en premier pour trouver le site_id) ----
+export async function listSites(pool) {
+  const { rows } = await pool.query(
+    `SELECT s.id AS site_id, s.domain,
+            (SELECT COUNT(*)::int FROM seo_pages p WHERE p.site_id = s.id) AS pages,
+            (SELECT MAX(p.last_crawl) FROM seo_pages p WHERE p.site_id = s.id) AS last_crawl,
+            (SELECT MAX(p.gsc_synced_at) FROM seo_pages p WHERE p.site_id = s.id) AS gsc_synced_at
+     FROM seo_sites s ORDER BY s.id`
+  );
+  return rows;
+}
