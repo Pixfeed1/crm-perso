@@ -254,7 +254,10 @@ export async function getSiteOverview(pool, siteId) {
               COUNT(*) FILTER (WHERE health = 'reservoir')::int AS reservoirs,
               COUNT(*) FILTER (WHERE health = 'affamee')::int  AS affamees,
               COUNT(*) FILTER (WHERE health = 'saine')::int    AS saines,
-              COUNT(*) FILTER (WHERE indexation_status IS NOT NULL AND indexation_status <> 'indexed')::int AS non_indexees,
+              COUNT(*) FILTER (
+                WHERE indexation_status IS NOT NULL
+                  AND NOT (indexation_status ILIKE '%indexed%' AND indexation_status NOT ILIKE '%not indexed%')
+              )::int AS non_indexees,
               MAX(last_crawl) AS last_crawl
        FROM seo_pages WHERE site_id = $1`, [siteId]
     ),
