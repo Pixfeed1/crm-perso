@@ -244,3 +244,182 @@ export async function getPageKeywords(pool, siteId, url, days = 28) {
     ctr: r.impressions > 0 ? r.clicks / r.impressions : 0
   }));
 }
+
+// ---- get_site_overview : vue d'ensemble du site (santé, maillage, GSC 28j) ----
+export async function getSiteOverview(pool, siteId) {
+  const [pages, links, gsc] = await Promise.all([
+    pool.query(
+      `SELECT COUNT(*)::int AS total_pages,
+              COUNT(*) FILTER (WHERE health = 'orpheline')::int AS orphelines,
+              COUNT(*) FILTER (WHERE health = 'reservoir')::int AS reservoirs,
+              COUNT(*) FILTER (WHERE health = 'affamee')::int  AS affamees,
+              COUNT(*) FILTER (WHERE health = 'saine')::int    AS saines,
+              COUNT(*) FILTER (WHERE indexation_status IS NOT NULL AND indexation_status <> 'indexed')::int AS non_indexees,
+              MAX(last_crawl) AS last_crawl
+       FROM seo_pages WHERE site_id = $1`, [siteId]
+    ),
+    pool.query('SELECT COUNT(*)::int AS total_links FROM seo_links WHERE site_id = $1', [siteId]),
+    pool.query(
+      `SELECT COALESCE(SUM(gsc_clicks), 0)::int AS gsc_clicks_28j,
+              COALESCE(SUM(gsc_impressions), 0)::int AS gsc_impressions_28j,
+              MAX(gsc_synced_at) AS gsc_synced_at,
+              COUNT(*) FILTER (WHERE gsc_position IS NOT NULL AND gsc_position BETWEEN 11 AND 20)::int AS quasi_victoires
+       FROM seo_pages WHERE site_id = $1`, [siteId]
+    )
+  ]);
+  return { ...pages.rows[0], total_links: links.rows[0].total_links, ...gsc.rows[0] };
+}
+
+// ---- get_audit : audit technique agrégé (sitemap + compteurs de problèmes on-page) ----
+export async function getAudit(pool, siteId) {
+  const [site, issues] = await Promise.all([
+    pool.query(
+      `SELECT sitemap_url, sitemap_fetched, sitemap_count,
+              jsonb_array_length(COALESCE(orphans_404, '[]'::jsonb))::int AS urls_sitemap_en_404,
+              updated_at
+       FROM seo_audit WHERE site_id = $1`, [siteId]
+    ),
+    pool.query(
+      `SELECT COUNT(*)::int AS pages_auditees,
+              COUNT(*) FILTER (WHERE (data->>'desc_present') = 'false')::int AS meta_description_absente,
+              COUNT(*) FILTER (WHERE (data->>'desc_len')::int > 160)::int AS meta_description_trop_longue,
+              COUNT(*) FILTER (WHERE (data->>'title_len')::int > 60)::int AS title_trop_long,
+              COUNT(*) FILTER (WHERE (data->>'h1_count')::int <> 1)::int AS h1_absent_ou_multiple,
+              COUNT(*) FILTER (WHERE (data->>'is_noindex') = 'true')::int AS pages_noindex,
+              COUNT(*) FILTER (WHERE (data->>'canonical_other') = 'true')::int AS canonical_vers_autre_url,
+              COUNT(*) FILTER (WHERE COALESCE(data->>'heading_gap', '') NOT IN ('', '0', 'false', 'null'))::int AS saut_de_niveau_hn,
+              COUNT(*) FILTER (WHERE jsonb_array_length(COALESCE(data->'mixed_content', '[]'::jsonb)) > 0)::int AS pages_avec_mixed_content,
+              COUNT(*) FILTER (WHERE (data->>'http_status')::int >= 400)::int AS pages_en_erreur_http,
+              COUNT(*) FILTER (WHERE (data->>'word_count')::int < 300)::int AS contenu_court_moins_300_mots,
+              COALESCE(SUM((data->>'images_without_alt')::int), 0)::int AS images_sans_alt
+       FROM seo_onpage_issues WHERE site_id = $1`, [siteId]
+    )
+  ]);
+  return { sitemap: site.rows[0] || null, ...issues.rows[0] };
+}
+
+// ---- get_cannibalisation : requêtes où PLUSIEURS pages du site captent des impressions ----
+// (même logique que /api/seo/cannibalisation : Google hésite -> positions/CTR dilués)
+export async function getCannibalisation(pool, siteId, days = 28, minImpr = 10) {
+  const { rows } = await pool.query(
+    `WITH bounds AS (SELECT MAX(date) AS maxd FROM seo_gsc_daily WHERE site_id = $1),
+     per AS (
+       SELECT query, page_url, SUM(clicks) AS clicks, SUM(impressions) AS impr,
+              CASE WHEN SUM(impressions) > 0 THEN SUM(impressions * position) / SUM(impressions) END AS pos
+       FROM seo_gsc_daily, bounds
+       WHERE site_id = $1 AND date > bounds.maxd - $2::int AND date <= bounds.maxd
+       GROUP BY query, page_url
+     ),
+     comp AS (SELECT * FROM per WHERE impr >= $3::int),
+     q AS (
+       SELECT query, COUNT(*) AS n, SUM(impr) AS tot_impr, SUM(clicks) AS tot_clicks
+       FROM comp GROUP BY query HAVING COUNT(*) >= 2
+     )
+     SELECT c.query, c.page_url, c.clicks::int AS clicks, c.impr::int AS impressions,
+            c.pos::float AS position, q.n::int AS pages_count,
+            q.tot_impr::int AS total_impressions, q.tot_clicks::int AS total_clicks, p.title
+     FROM comp c
+     JOIN q ON q.query = c.query
+     LEFT JOIN seo_pages p ON p.site_id = $1 AND rtrim(p.url, '/') = rtrim(c.page_url, '/')
+     ORDER BY q.tot_impr DESC, c.query, c.impr DESC
+     LIMIT 500`,
+    [siteId, days, minImpr]
+  );
+  const byQuery = new Map();
+  for (const r of rows) {
+    if (!byQuery.has(r.query)) {
+      byQuery.set(r.query, {
+        query: r.query, pages_count: r.pages_count,
+        total_impressions: r.total_impressions, total_clicks: r.total_clicks, pages: []
+      });
+    }
+    byQuery.get(r.query).pages.push({
+      url: r.page_url, title: r.title, impressions: r.impressions, clicks: r.clicks, position: r.position
+    });
+  }
+  return Array.from(byQuery.values());
+}
+
+// ---- get_ctr_anomalies : bien positionné mais peu cliqué -> title/meta à réécrire ----
+// (même logique que /api/seo/ctr-anomalies, trié par clics potentiels récupérables)
+export async function getCtrAnomalies(pool, siteId, days = 28, minImpr = 30) {
+  const { rows } = await pool.query(
+    `WITH bounds AS (SELECT MAX(date) AS maxd FROM seo_gsc_daily WHERE site_id = $1),
+     cur AS (
+       SELECT query, SUM(clicks) AS clicks, SUM(impressions) AS impr,
+              CASE WHEN SUM(impressions) > 0 THEN SUM(impressions * position) / SUM(impressions) END AS pos
+       FROM seo_gsc_daily, bounds
+       WHERE site_id = $1 AND date > bounds.maxd - $2::int AND date <= bounds.maxd
+       GROUP BY query
+     ),
+     bestpage AS (
+       SELECT DISTINCT ON (query) query, page_url FROM (
+         SELECT query, page_url, SUM(impressions) AS imp
+         FROM seo_gsc_daily, bounds
+         WHERE site_id = $1 AND date > bounds.maxd - $2::int AND date <= bounds.maxd
+         GROUP BY query, page_url
+       ) z ORDER BY query, imp DESC
+     )
+     SELECT c.query, c.clicks::int AS clicks, c.impr::int AS impressions, c.pos::float AS position,
+            bp.page_url, p.title,
+            (i.data->>'desc_present')::boolean AS desc_present,
+            (i.data->>'desc_len')::int AS desc_len,
+            (i.data->>'title_len')::int AS title_len
+     FROM cur c
+     LEFT JOIN bestpage bp ON bp.query = c.query
+     LEFT JOIN seo_pages p ON p.site_id = $1 AND rtrim(p.url, '/') = rtrim(bp.page_url, '/')
+     LEFT JOIN seo_onpage_issues i ON i.site_id = $1 AND rtrim(i.url, '/') = rtrim(bp.page_url, '/')
+     WHERE c.impr >= $3::int AND c.pos IS NOT NULL AND c.pos <= 20
+     ORDER BY c.impr DESC
+     LIMIT 500`,
+    [siteId, days, minImpr]
+  );
+  const expectedCtr = (pos) => {
+    const table = { 1: 0.28, 2: 0.15, 3: 0.11, 4: 0.08, 5: 0.06, 6: 0.05, 7: 0.04, 8: 0.032, 9: 0.028, 10: 0.025 };
+    const r = Math.round(pos);
+    if (r <= 10) return table[Math.max(1, r)] || 0.025;
+    if (r <= 15) return 0.015;
+    return 0.01;
+  };
+  return rows.map((r) => {
+    const ctr = r.impressions > 0 ? r.clicks / r.impressions : 0;
+    const exp = expectedCtr(r.position);
+    const missed = Math.max(0, Math.round(r.impressions * (exp - ctr)));
+    return {
+      query: r.query, url: r.page_url, title: r.title,
+      impressions: r.impressions, clicks: r.clicks, position: r.position,
+      ctr, expected_ctr: exp, missed_clicks: missed,
+      desc_present: r.desc_present, desc_len: r.desc_len, title_len: r.title_len
+    };
+  })
+    .filter((r) => r.ctr < r.expected_ctr * 0.6 && r.missed_clicks >= 5)
+    .sort((a, b) => b.missed_clicks - a.missed_clicks)
+    .slice(0, 50);
+}
+
+// ---- get_page_links : liens internes entrants et sortants d'une page (avec ancres) ----
+export async function getPageLinks(pool, siteId, url) {
+  const [inbound, outbound] = await Promise.all([
+    pool.query(
+      `SELECT l.from_url AS url, l.anchor, p.title, p.health, p.internal_pagerank::float AS internal_pagerank
+       FROM seo_links l
+       LEFT JOIN seo_pages p ON p.site_id = l.site_id AND rtrim(p.url, '/') = rtrim(l.from_url, '/')
+       WHERE l.site_id = $1 AND rtrim(l.to_url, '/') = rtrim($2, '/')
+       ORDER BY p.internal_pagerank DESC NULLS LAST LIMIT 200`, [siteId, url]
+    ),
+    pool.query(
+      `SELECT l.to_url AS url, l.anchor, p.title, p.health, p.internal_pagerank::float AS internal_pagerank
+       FROM seo_links l
+       LEFT JOIN seo_pages p ON p.site_id = l.site_id AND rtrim(p.url, '/') = rtrim(l.to_url, '/')
+       WHERE l.site_id = $1 AND rtrim(l.from_url, '/') = rtrim($2, '/')
+       ORDER BY p.internal_pagerank DESC NULLS LAST LIMIT 200`, [siteId, url]
+    )
+  ]);
+  return {
+    url,
+    inbound_count: inbound.rows.length,
+    outbound_count: outbound.rows.length,
+    inbound: inbound.rows,
+    outbound: outbound.rows
+  };
+}

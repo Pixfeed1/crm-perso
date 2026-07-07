@@ -87,6 +87,41 @@ function buildServer() {
     async ({ site_id, url, days }) => ok(await tools.getPageKeywords(pool, site_id, url, days ?? 28))
   );
 
+  server.tool(
+    'get_site_overview',
+    "Vue d'ensemble du site : pages par santé (orphelines/affamées/réservoirs/saines), liens internes, non indexées, impressions/clics GSC 28j, quasi-victoires (positions 11-20), dates de dernier crawl et synchro.",
+    { site_id: z.number().int() },
+    async ({ site_id }) => ok(await tools.getSiteOverview(pool, site_id))
+  );
+
+  server.tool(
+    'get_audit',
+    "Audit technique agrégé : état du sitemap (URLs, 404) et compteurs de problèmes on-page (meta description absente/trop longue, title trop long, H1 absent/multiple, noindex, canonical vers autre URL, mixed content, erreurs HTTP, contenu court, images sans alt).",
+    { site_id: z.number().int() },
+    async ({ site_id }) => ok(await tools.getAudit(pool, site_id))
+  );
+
+  server.tool(
+    'get_cannibalisation',
+    "Cannibalisation de mots-clés : requêtes Google où PLUSIEURS pages du site captent des impressions (positions et CTR dilués). Par requête : pages concurrentes avec impressions/clics/position. Choisir UNE page cible par requête.",
+    { site_id: z.number().int(), days: z.number().int().optional(), min_impressions: z.number().int().optional() },
+    async ({ site_id, days, min_impressions }) => ok(await tools.getCannibalisation(pool, site_id, days ?? 28, min_impressions ?? 10))
+  );
+
+  server.tool(
+    'get_ctr_anomalies',
+    "Pages bien positionnées mais peu cliquées (CTR très sous la moyenne attendue pour leur position) : title/meta description à réécrire. Triées par clics potentiels récupérables, avec les défauts on-page connus (meta absente/courte/longue, title long).",
+    { site_id: z.number().int(), days: z.number().int().optional(), min_impressions: z.number().int().optional() },
+    async ({ site_id, days, min_impressions }) => ok(await tools.getCtrAnomalies(pool, site_id, days ?? 28, min_impressions ?? 30))
+  );
+
+  server.tool(
+    'get_page_links',
+    "Liens internes d'une page : entrants (qui pointe vers elle, avec ancres et jus des donneurs) et sortants (vers quelles pages elle pointe). Essentiel pour raisonner le maillage d'une page précise.",
+    { site_id: z.number().int(), url: z.string() },
+    async ({ site_id, url }) => ok(await tools.getPageLinks(pool, site_id, url))
+  );
+
   return server;
 }
 

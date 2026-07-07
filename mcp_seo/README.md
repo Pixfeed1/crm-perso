@@ -11,6 +11,11 @@ CRM), **lecture seule stricte**, limité aux tables SEO.
 | `get_page_content` | `site_id`, `url` | `seo_pages` + `seo_onpage_issues` (titre, meta, catégorie, focus keyword, word_count, **extrait de texte**) |
 | `list_link_targets` | `site_id`, `category?` | `seo_pages` (CPT de contenu : glossaire, guide, anime, film, logiciel, serie, acteur, post, page) — titre, url, slug |
 | `get_page_keywords` | `site_id`, `url`, `days?` (défaut 28) | `seo_gsc_daily` (requêtes : position, impressions, clics, CTR) |
+| `get_site_overview` | `site_id` | `seo_pages` + `seo_links` (santé, maillage, GSC 28j, quasi-victoires) |
+| `get_audit` | `site_id` | `seo_audit` + `seo_onpage_issues` (sitemap + compteurs de problèmes on-page) |
+| `get_cannibalisation` | `site_id`, `days?`, `min_impressions?` | `seo_gsc_daily` (requêtes disputées par plusieurs pages) |
+| `get_ctr_anomalies` | `site_id`, `days?`, `min_impressions?` | `seo_gsc_daily` + `seo_onpage_issues` (CTR sous l'attendu -> titles/metas à réécrire) |
+| `get_page_links` | `site_id`, `url` | `seo_links` + `seo_pages` (liens entrants/sortants d'une page, avec ancres) |
 
 Aucun SQL ne vient de Claude : uniquement des **SELECT paramétrés prédéfinis**. Aucun outil
 n'écrit/modifie/supprime. La table `seo_oauth_tokens` (secrets) n'est **jamais** accessible.
