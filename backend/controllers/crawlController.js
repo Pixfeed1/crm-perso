@@ -10,6 +10,7 @@ const path = require('path');
 const os = require('os');
 const { detectNoCode } = require('../utils/nocodePlatforms');
 const { decodeHtml } = require('../utils/decodeHtml');
+const { isAntibotTitle } = require('../utils/antibotTitle');
 
 // Constantes faciles à mettre à jour (override possible par variables d'env).
 const PYTHON_BIN = process.env.CC_PROSPECTOR_PYTHON || '/home/jurojinn/tools/cc_prospector/venv/bin/python';
@@ -199,7 +200,10 @@ async function ingestCsv(db, jobId, csvPath) {
     const signals = si >= 0 ? (row[si] || null) : null;
     const finalUrl = fi >= 0 ? (row[fi] || null) : null;
     // Le <title> scrapé est encodé en HTML (&#039; &eacute; ...) -> on le décode à l'ingestion.
-    const title = ti >= 0 ? (decodeHtml(row[ti]) || null) : null;
+    // Et si c'est un titre de page anti-bot (Cloudflare "Just a moment..." etc.), on le jette :
+    // le domaine servira de nom à la promotion en prospect.
+    let title = ti >= 0 ? (decodeHtml(row[ti]) || null) : null;
+    if (isAntibotTitle(title)) title = null;
     // Filtre no-code/SaaS fermé (Wix, Squarespace, Webador...) : marqué -> masqué par défaut.
     const { isNoCode } = detectNoCode({ platform, signals, final_url: finalUrl, title, domain });
     await db.pool.query(
@@ -381,7 +385,7 @@ const crawlController = {
           await db.pool.query(
             `INSERT INTO leads (name, company, type, status, source, notes, relation_status, created_at, updated_at)
              VALUES ($1, $2, 'company', 'nouveau', 'Crawl', $3, $4, NOW(), NOW())`,
-            [decodeHtml(r.title) || r.domain, r.domain, notes, statusVal]
+            [(isAntibotTitle(r.title) ? null : decodeHtml(r.title)) || r.domain, r.domain, notes, statusVal]
           );
           await db.pool.query('UPDATE crawl_results SET added_as_prospect = TRUE WHERE id = $1', [r.id]);
           created++;
