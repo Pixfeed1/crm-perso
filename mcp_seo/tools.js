@@ -438,3 +438,21 @@ export async function listSites(pool) {
   );
   return rows;
 }
+
+// ---- search_pages : chercher des pages par mot-clé/sujet (URL, titre, focus keyword, tags) ----
+// Évite le jeu de devinettes sur les slugs : renvoie les pages qui matchent + leurs métriques.
+export async function searchPages(pool, siteId, q, limit = 20) {
+  const pattern = `%${(q || '').trim()}%`;
+  const { rows } = await pool.query(
+    `SELECT url, title, type, category, health, inlinks_count,
+            internal_pagerank::float AS internal_pagerank,
+            gsc_impressions, gsc_clicks, gsc_position::float AS gsc_position
+     FROM seo_pages
+     WHERE site_id = $1
+       AND (url ILIKE $2 OR title ILIKE $2 OR focus_keyword ILIKE $2 OR tags::text ILIKE $2)
+     ORDER BY gsc_impressions DESC NULLS LAST, internal_pagerank DESC NULLS LAST
+     LIMIT $3`,
+    [siteId, pattern, Math.min(Math.max(parseInt(limit, 10) || 20, 1), 100)]
+  );
+  return rows;
+}

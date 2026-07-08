@@ -123,6 +123,13 @@ function buildServer() {
   );
 
   server.tool(
+    'search_pages',
+    "Recherche des pages du site par mot-clé/sujet (match sur URL, titre, focus keyword et tags) : renvoie url, titre, type, catégorie, santé, liens entrants, jus interne et métriques GSC (impressions/clics/position). À utiliser pour trouver le contenu existant sur un sujet SANS deviner les slugs.",
+    { site_id: z.number().int(), q: z.string(), limit: z.number().int().optional() },
+    async ({ site_id, q, limit }) => ok(await tools.searchPages(pool, site_id, q, limit ?? 20))
+  );
+
+  server.tool(
     'get_page_links',
     "Liens internes d'une page : entrants (qui pointe vers elle, avec ancres et jus des donneurs) et sortants (vers quelles pages elle pointe). Essentiel pour raisonner le maillage d'une page précise.",
     { site_id: z.number().int(), url: z.string() },
