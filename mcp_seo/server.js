@@ -13,6 +13,7 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { z } from 'zod';
 import { pool } from './db.js';
 import * as tools from './tools.js';
+import * as bing from './bing.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -127,6 +128,20 @@ function buildServer() {
     "Recherche des pages du site par mot-clé/sujet (match sur URL, titre, focus keyword et tags) : renvoie url, titre, type, catégorie, santé, liens entrants, jus interne et métriques GSC (impressions/clics/position). À utiliser pour trouver le contenu existant sur un sujet SANS deviner les slugs.",
     { site_id: z.number().int(), q: z.string(), limit: z.number().int().optional() },
     async ({ site_id, q, limit }) => ok(await tools.searchPages(pool, site_id, q, limit ?? 20))
+  );
+
+  server.tool(
+    'get_keyword_volume',
+    "Volume de recherche d'un mot-clé (impressions Bing sur 3 mois glissants, via l'API Bing Webmaster Tools). known=false = mot-clé inconnu de Bing (volume quasi nul). Pour calibrer la demande AVANT d'écrire un contenu.",
+    { q: z.string(), country: z.string().optional(), language: z.string().optional() },
+    async ({ q, country, language }) => ok(await bing.getKeywordVolume(q, country ?? 'fr', language ?? 'fr-FR'))
+  );
+
+  server.tool(
+    'get_related_keywords',
+    "Mots-clés associés à une requête avec leurs volumes (impressions Bing 3 mois) : révèle les variantes et sujets adjacents auxquels on n'a pas pensé. Triés par volume décroissant.",
+    { q: z.string(), country: z.string().optional(), language: z.string().optional(), limit: z.number().int().optional() },
+    async ({ q, country, language, limit }) => ok(await bing.getRelatedKeywords(q, country ?? 'fr', language ?? 'fr-FR', limit ?? 25))
   );
 
   server.tool(

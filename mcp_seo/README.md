@@ -18,6 +18,12 @@ CRM), **lecture seule stricte**, limité aux tables SEO.
 | `get_page_links` | `site_id`, `url` | `seo_links` + `seo_pages` (liens entrants/sortants d'une page, avec ancres) |
 | `list_sites` | — | `seo_sites` + `seo_pages` (site_id, domaine, volumétrie — à appeler en premier) |
 | `search_pages` | `site_id`, `q`, `limit?` | `seo_pages` (recherche par sujet sur URL/titre/focus keyword/tags + métriques) |
+| `get_keyword_volume` | `q`, `country?`, `language?` | API Bing WMT (impressions 3 mois d'un mot-clé — calibrer la demande) |
+| `get_related_keywords` | `q`, `country?`, `language?`, `limit?` | API Bing WMT (variantes + volumes, triées par volume) |
+
+Les deux outils Bing nécessitent `BING_WMT_API_KEY` dans le `.env` (clé gratuite :
+bing.com/webmasters → Paramètres → API access). Cache en mémoire 24h — le rôle SQL
+du connecteur reste strictement lecture seule.
 
 Aucun SQL ne vient de Claude : uniquement des **SELECT paramétrés prédéfinis**. Aucun outil
 n'écrit/modifie/supprime. La table `seo_oauth_tokens` (secrets) n'est **jamais** accessible.
