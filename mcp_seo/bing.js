@@ -64,7 +64,9 @@ export async function getKeywordVolume(q, country = 'fr', language = 'fr-FR') {
     query,
     country,
     language,
+    // Impressions = requête exacte ; BroadImpressions = requête élargie (variantes incluses).
     impressions_3m: known ? Number(d.Impressions ?? d.impressions ?? 0) : 0,
+    broad_impressions_3m: known ? Number(d.BroadImpressions ?? d.broadImpressions ?? 0) : 0,
     known,
     period: { start: startDate, end: endDate },
     source: 'bing_webmaster_tools'
