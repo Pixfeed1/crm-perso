@@ -94,3 +94,41 @@ export async function getRelatedKeywords(q, country = 'fr', language = 'fr-FR', 
   cacheSet(ck, out);
   return { ...out, related: related.slice(0, cap), cached: false };
 }
+
+// ---- Backlinks via Bing WMT (GetLinkCounts / GetUrlLinks) : données GRATUITES là où
+// Ahrefs/Majestic facturent. siteUrl = la propriété validée dans Bing WMT.
+
+// Nombre de backlinks par page du site (quelles pages attirent des liens).
+export async function getBacklinkCounts(siteUrl, limit = 50) {
+  const cap = Math.min(Math.max(parseInt(limit, 10) || 50, 1), 200);
+  const ck = `blc:${siteUrl}`;
+  const hit = cacheGet(ck);
+  if (hit) return { ...hit, counts: hit.counts.slice(0, cap), cached: true };
+
+  const d = await callBing('GetLinkCounts', { siteUrl, page: 0 });
+  const rows = Array.isArray(d) ? d : (Array.isArray(d?.Links) ? d.Links : []);
+  const counts = rows
+    .map((r) => ({ url: r.Url ?? r.url ?? null, backlinks: Number(r.Count ?? r.count ?? 0) }))
+    .filter((r) => r.url)
+    .sort((a, b) => b.backlinks - a.backlinks);
+  const out = { site: siteUrl, total_pages_listed: counts.length, counts, source: 'bing_webmaster_tools' };
+  cacheSet(ck, out);
+  return { ...out, counts: counts.slice(0, cap), cached: false };
+}
+
+// Les backlinks d'une page précise : qui pointe vers elle (URL source + titre).
+export async function getPageBacklinks(siteUrl, pageUrl, limit = 100) {
+  const cap = Math.min(Math.max(parseInt(limit, 10) || 100, 1), 500);
+  const ck = `bl:${siteUrl}:${pageUrl}`;
+  const hit = cacheGet(ck);
+  if (hit) return { ...hit, links: hit.links.slice(0, cap), cached: true };
+
+  const d = await callBing('GetUrlLinks', { siteUrl, link: pageUrl, page: 0 });
+  const rows = Array.isArray(d) ? d : (Array.isArray(d?.Links) ? d.Links : []);
+  const links = rows
+    .map((r) => ({ source_url: r.Url ?? r.url ?? null, title: r.Title ?? r.title ?? null }))
+    .filter((r) => r.source_url);
+  const out = { site: siteUrl, page: pageUrl, backlinks_count: links.length, links, source: 'bing_webmaster_tools' };
+  cacheSet(ck, out);
+  return { ...out, links: links.slice(0, cap), cached: false };
+}

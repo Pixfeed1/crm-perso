@@ -145,6 +145,20 @@ function buildServer() {
   );
 
   server.tool(
+    'get_backlink_counts',
+    "Backlinks EXTERNES vus par Bing : nombre de liens entrants par page du site (quelles pages attirent des liens). site_url = la propriété validée dans Bing Webmaster Tools (ex. https://jurojin.net/). Gratuit là où Ahrefs facture.",
+    { site_url: z.string(), limit: z.number().int().optional() },
+    async ({ site_url, limit }) => ok(await bing.getBacklinkCounts(site_url, limit ?? 50))
+  );
+
+  server.tool(
+    'get_page_backlinks',
+    "Backlinks EXTERNES d'une page précise vus par Bing : les URLs sources qui pointent vers elle (avec leur titre). Complète get_page_links (liens INTERNES) avec la vue externe.",
+    { site_url: z.string(), url: z.string(), limit: z.number().int().optional() },
+    async ({ site_url, url, limit }) => ok(await bing.getPageBacklinks(site_url, url, limit ?? 100))
+  );
+
+  server.tool(
     'get_page_links',
     "Liens internes d'une page : entrants (qui pointe vers elle, avec ancres et jus des donneurs) et sortants (vers quelles pages elle pointe). Essentiel pour raisonner le maillage d'une page précise.",
     { site_id: z.number().int(), url: z.string() },

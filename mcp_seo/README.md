@@ -20,6 +20,8 @@ CRM), **lecture seule stricte**, limité aux tables SEO.
 | `search_pages` | `site_id`, `q`, `limit?` | `seo_pages` (recherche par sujet sur URL/titre/focus keyword/tags + métriques) |
 | `get_keyword_volume` | `q`, `country?`, `language?` | API Bing WMT (impressions 3 mois d'un mot-clé — calibrer la demande) |
 | `get_related_keywords` | `q`, `country?`, `language?`, `limit?` | API Bing WMT (variantes + volumes, triées par volume) |
+| `get_backlink_counts` | `site_url`, `limit?` | API Bing WMT (nb de backlinks externes par page du site) |
+| `get_page_backlinks` | `site_url`, `url`, `limit?` | API Bing WMT (les URLs sources qui pointent vers une page) |
 
 Les deux outils Bing nécessitent `BING_WMT_API_KEY` dans le `.env` (clé gratuite :
 bing.com/webmasters → Paramètres → API access). Cache en mémoire 24h — le rôle SQL
