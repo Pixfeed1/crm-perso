@@ -124,7 +124,8 @@ export async function getPageBacklinks(siteUrl, pageUrl, limit = 100) {
   if (hit) return { ...hit, links: hit.links.slice(0, cap), cached: true };
 
   const d = await callBing('GetUrlLinks', { siteUrl, link: pageUrl, page: 0 });
-  const rows = Array.isArray(d) ? d : (Array.isArray(d?.Links) ? d.Links : []);
+  // Format réel constaté en prod : { __type: "LinkDetails...", Details: [...], TotalPages: n }.
+  const rows = Array.isArray(d?.Details) ? d.Details : (Array.isArray(d?.Links) ? d.Links : (Array.isArray(d) ? d : []));
   const links = rows
     .map((r) => ({ source_url: r.Url ?? r.url ?? null, title: r.Title ?? r.title ?? null }))
     .filter((r) => r.source_url);
