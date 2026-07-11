@@ -8,7 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   FiBell, FiAlertTriangle, FiStar, FiMessageCircle, FiSlash, FiSearch,
-  FiPhone, FiMail, FiFileText, FiCheck, FiRotateCcw, FiClock
+  FiPhone, FiMail, FiFileText, FiCheck, FiRotateCcw, FiClock, FiMoon
 } from 'react-icons/fi';
 import { interactionsAPI } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
@@ -48,15 +48,16 @@ const initials = (name) => (name || '?').trim().split(/\s+/).slice(0, 2).map((w)
 const COUNTERS = [
   { key: 'relance_today', label: 'À relancer aujourd\'hui', icon: FiBell },
   { key: 'overdue', label: 'En retard', icon: FiAlertTriangle },
+  { key: 'dormants', label: 'Dormants (90j+)', icon: FiMoon },
   { key: 'nouveaux', label: 'Nouveaux à traiter', icon: FiStar },
   { key: 'en_discussion', label: 'En discussion', icon: FiMessageCircle },
-  { key: 'sans_reponse', label: 'Sans réponse', icon: FiPhone },
-  { key: 'pas_business', label: 'Pas de business', icon: FiSlash }
+  { key: 'sans_reponse', label: 'Sans réponse', icon: FiPhone }
 ];
 
 const TABS = [
   { key: 'relance_today', label: 'À relancer' },
   { key: 'overdue', label: 'En retard' },
+  { key: 'dormants', label: 'Dormants' },
   { key: 'nouveaux', label: 'Nouveaux' },
   { key: 'en_discussion', label: 'En discussion' },
   { key: 'devis_envoye', label: 'Devis envoyé' },
@@ -65,12 +66,20 @@ const TABS = [
   { key: 'all', label: 'Tous' }
 ];
 
+// Dormant : contact ACTIF déjà contacté (y compris client gagné — c'est la base qui répond
+// à ~20% !), dernier échange il y a 90j+ et AUCUNE relance planifiée = chaud mais oublié.
+const isDormant = (r, today) => Boolean(
+  r.relation_status !== 'pas_business' && !r.next_followup && r.last_date
+  && (today - dayOf(r.last_date)) > 90 * 86400000
+);
+
 const matchesFilter = (r, filter) => {
   const today = dayOf(new Date());
   const active = r.relation_status !== 'pas_business';
   switch (filter) {
     case 'relance_today': return active && r.next_followup && dayOf(r.next_followup).getTime() === today.getTime();
     case 'overdue': return active && r.next_followup && dayOf(r.next_followup) < today;
+    case 'dormants': return isDormant(r, today);
     case 'nouveaux': return r.relation_status === 'nouveau';
     case 'en_discussion': return r.relation_status === 'en_discussion';
     case 'devis_envoye': return r.relation_status === 'devis_envoye';

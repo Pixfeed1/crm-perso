@@ -272,6 +272,10 @@ const interactionController = {
         nouveaux: rows.filter((r) => r.relation_status === 'nouveau').length,
         en_discussion: rows.filter((r) => r.relation_status === 'en_discussion').length,
         sans_reponse: rows.filter((r) => active(r) && r.relation_status !== 'gagne' && r.relation_status !== 'perdu' && r.last_reached === 'pas_reponse').length,
+        // Dormants : contacts DÉJÀ contactés (y compris clients gagnés — les 20% de réponse !)
+        // dont le dernier échange date de 90j+ et sans relance planifiée = la base chaude oubliée.
+        dormants: rows.filter((r) => active(r) && !r.next_followup && r.last_date
+          && (today - dayOf(r.last_date)) > 90 * 86400000).length,
         pas_business: rows.filter((r) => r.relation_status === 'pas_business').length
       };
 

@@ -52,6 +52,11 @@ const DEFAULT_TEMPLATES = {
       id: 'def-2', name: 'Relance',
       subject: 'Re: Collaboration {{entreprise}}',
       body: `Bonjour {{prénom}},\n\nJe me permets de revenir vers vous suite à mon précédent message.\n\nAvez-vous eu le temps d'y réfléchir ?\n\nBien cordialement`
+    },
+    {
+      id: 'def-3', name: 'Premier contact e-commerce (plateforme)',
+      subject: 'Votre boutique {{plateforme}} — {{site}}',
+      body: `Bonjour {{prénom}},\n\nEn parcourant {{site}}, j'ai vu que votre boutique tourne sous {{plateforme}}.\n\n[Observation concrète sur LEUR site : vitesse, fiche produit, référencement...]\n\nJ'accompagne des boutiques {{plateforme}} sur ce type de sujets. Seriez-vous ouvert à un échange rapide de 15 minutes ?\n\nBien cordialement`
     }
   ],
   facebook: [
@@ -152,7 +157,11 @@ const OutreachPanel = ({ leads = [] }) => {
       .replace(/\{\{nom\}\}/gi, name)
       .replace(/\{\{entreprise\}\}/gi, company)
       .replace(/\{\{email\}\}/gi, lead.email || '')
-      .replace(/\{\{téléphone\}\}/gi, lead.phone || '');
+      .replace(/\{\{téléphone\}\}/gi, lead.phone || '')
+      // Personnalisation qui fait la différence en cold : la plateforme détectée au crawl
+      // ("votre boutique PrestaShop...") et le site du lead.
+      .replace(/\{\{plateforme\}\}/gi, lead.platform || 'votre site')
+      .replace(/\{\{site\}\}/gi, decodeHtml(lead.company) || '');
   };
 
   const applyTemplate = (template) => {
@@ -203,6 +212,10 @@ const OutreachPanel = ({ leads = [] }) => {
         notes: `[Outreach ${label}]\n${body}`
       });
       toast.success(`${activeChannel === 'email' ? 'Email' : 'Message'} marqué comme envoyé !`);
+      // Nudge relance : un cold SANS relance ne rapporte quasi jamais (la majorité des
+      // réponses arrivent à la 2e/3e touche) -> on ouvre directement le choix de relance.
+      setShowFollowupPicker(true);
+      toast.info('Planifie la relance maintenant (J+3 recommandé)');
     } catch (e) { /* déjà signalé */ }
   };
 
@@ -474,7 +487,7 @@ const OutreachPanel = ({ leads = [] }) => {
               <div>
                 <label className="block text-sm font-medium text-text-secondary mb-1">
                   Message
-                  <span className="text-xs text-text-muted ml-2">Variables : {'{{prénom}}'}, {'{{nom}}'}, {'{{entreprise}}'}, {'{{email}}'}</span>
+                  <span className="text-xs text-text-muted ml-2">Variables : {'{{prénom}}'}, {'{{nom}}'}, {'{{entreprise}}'}, {'{{email}}'}, {'{{plateforme}}'}, {'{{site}}'}</span>
                 </label>
                 <textarea
                   value={message}
