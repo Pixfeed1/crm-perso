@@ -5,7 +5,7 @@
 // Charte : tokens de thème, react-icons, framer-motion. Aucune couleur en dur.
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiSearch, FiDownload, FiUserPlus, FiGlobe, FiCheckCircle, FiAlertTriangle, FiLoader, FiTrash2, FiClock, FiSlash, FiX } from 'react-icons/fi';
+import { FiSearch, FiDownload, FiUserPlus, FiGlobe, FiCheckCircle, FiAlertTriangle, FiLoader, FiTrash2, FiClock, FiSlash, FiX, FiMail, FiPhone, FiFacebook, FiInstagram, FiShield } from 'react-icons/fi';
 import { crawlAPI } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
 
@@ -416,6 +416,7 @@ const CrawlPanel = () => {
                       </th>
                       <th className="px-4 py-3">Domaine</th>
                       <th className="px-4 py-3">Plateforme</th>
+                      <th className="px-4 py-3">Contact</th>
                       <th className="px-4 py-3">Titre</th>
                       <th className="px-4 py-3 w-10"></th>
                     </tr>
@@ -439,9 +440,33 @@ const CrawlPanel = () => {
                           <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${platformBadge(r.platform)}`}>
                             {r.platform || 'Inconnu'}
                           </span>
+                          {r.platform_version && (
+                            <span className="ml-1 text-xs text-text-muted">{r.platform_version.replace(/^\S+\s/, 'v')}</span>
+                          )}
+                          {r.ssl_ok === false && (
+                            <span className="ml-2 text-xs px-1.5 py-0.5 rounded-full bg-danger-bg text-danger-text inline-flex items-center gap-1" title="Certificat SSL invalide — argument commercial">
+                              <FiShield size={10} /> SSL
+                            </span>
+                          )}
                           {r.added_as_prospect && (
                             <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-success-bg text-success-text">Déjà prospect</span>
                           )}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2 text-text-muted">
+                            {r.email
+                              ? <a href={`mailto:${r.email}`} title={r.email} className="hover:text-accent"><FiMail size={15} /></a>
+                              : <FiMail size={15} className="opacity-20" title="Pas d'email" />}
+                            {r.phone
+                              ? <a href={`tel:${r.phone.replace(/\s/g, '')}`} title={r.phone} className="hover:text-accent"><FiPhone size={15} /></a>
+                              : <FiPhone size={15} className="opacity-20" title="Pas de téléphone" />}
+                            {r.facebook_url && (
+                              <a href={r.facebook_url} target="_blank" rel="noopener noreferrer" title="Facebook" className="hover:text-accent"><FiFacebook size={15} /></a>
+                            )}
+                            {r.instagram_url && (
+                              <a href={r.instagram_url} target="_blank" rel="noopener noreferrer" title="Instagram" className="hover:text-accent"><FiInstagram size={15} /></a>
+                            )}
+                          </div>
                         </td>
                         <td className="px-4 py-3 text-text-secondary truncate max-w-xs">{r.title || '—'}</td>
                         <td className="px-4 py-3 text-right">

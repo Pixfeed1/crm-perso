@@ -332,17 +332,19 @@ const crawlController = {
       if (jr.rows.length === 0) return res.status(404).json({ message: 'Job introuvable' });
       // Dédoublonné par domaine, trié par plateforme puis domaine
       const { rows } = await db.pool.query(
-        `SELECT DISTINCT ON (domain) domain, platform, title, http_status, final_url
+        `SELECT DISTINCT ON (domain) domain, platform, platform_version, title, http_status, final_url,
+                email, phone, facebook_url, instagram_url, ssl_ok
          FROM crawl_results WHERE job_id = $1
          ORDER BY domain, platform`,
         [id]
       );
       rows.sort((a, b) => (a.platform || '').localeCompare(b.platform || '') || (a.domain || '').localeCompare(b.domain || ''));
 
-      const header = ['Domaine', 'Plateforme', 'Titre', 'Statut HTTP', 'URL finale'];
+      const header = ['Domaine', 'Plateforme', 'Version', 'Email', 'Téléphone', 'Facebook', 'Instagram', 'SSL', 'Titre', 'Statut HTTP', 'URL finale'];
       const lines = [header.join(',')];
       for (const r of rows) {
-        lines.push([r.domain, r.platform, r.title, r.http_status, r.final_url].map(csvEscape).join(','));
+        const ssl = r.ssl_ok === true ? 'oui' : r.ssl_ok === false ? 'non' : '';
+        lines.push([r.domain, r.platform, r.platform_version, r.email, r.phone, r.facebook_url, r.instagram_url, ssl, r.title, r.http_status, r.final_url].map(csvEscape).join(','));
       }
       const csv = '﻿' + lines.join('\r\n'); // BOM UTF-8
 
