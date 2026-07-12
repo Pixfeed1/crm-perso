@@ -177,6 +177,11 @@ async function ingestCsv(db, jobId, csvPath) {
   const idx = (name) => header.indexOf(name);
   const di = idx('domain'), pi = idx('platform'), si = idx('signals'),
     hi = idx('http_status'), fi = idx('final_url'), ti = idx('title'), ei = idx('error');
+  // Colonnes d'enrichissement (cc_prospector) — absentes des anciens CSV : idx = -1 -> null.
+  const emi = idx('email'), phi = idx('phone'), fbi = idx('facebook_url'), igi = idx('instagram_url'),
+    pvi = idx('platform_version'), sli = idx('ssl_ok'), pri = idx('protected');
+  const cell = (row, i) => (i >= 0 ? ((row[i] || '').trim() || null) : null);
+  const boolCell = (row, i) => { const v = cell(row, i); return v == null ? null : /^(oui|true|1|yes)$/i.test(v); };
 
   // Dédoublonnage de sécurité : domaines déjà présents en base (tous jobs) + intra-CSV.
   const seen = new Set();
@@ -207,14 +212,18 @@ async function ingestCsv(db, jobId, csvPath) {
     // Filtre no-code/SaaS fermé (Wix, Squarespace, Webador...) : marqué -> masqué par défaut.
     const { isNoCode } = detectNoCode({ platform, signals, final_url: finalUrl, title, domain });
     await db.pool.query(
-      `INSERT INTO crawl_results (job_id, domain, platform, signals, http_status, final_url, title, error, is_nocode)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      `INSERT INTO crawl_results
+         (job_id, domain, platform, signals, http_status, final_url, title, error, is_nocode,
+          email, phone, facebook_url, instagram_url, platform_version, ssl_ok, protected)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
       [
         jobId, domain, platform, signals,
         Number.isNaN(httpRaw) ? null : httpRaw,
         finalUrl, title,
         ei >= 0 ? (row[ei] || null) : null,
-        isNoCode
+        isNoCode,
+        cell(row, emi), cell(row, phi), cell(row, fbi), cell(row, igi),
+        cell(row, pvi), boolCell(row, sli), boolCell(row, pri) || false
       ]
     );
   }
@@ -376,16 +385,19 @@ const crawlController = {
       for (const r of rows) {
         const notes = [
           userNote || null,
-          r.platform ? `Plateforme : ${r.platform}` : null,
+          r.platform ? `Plateforme : ${r.platform}${r.platform_version ? ` (${r.platform_version})` : ''}` : null,
+          r.ssl_ok === false ? '⚠️ Certificat SSL invalide (argument commercial)' : null,
           r.final_url ? `URL : ${r.final_url}` : null,
           'Source : Crawl Common Crawl'
         ].filter(Boolean).join('\n');
         try {
-          // Mêmes colonnes que la création de lead standard + statut de relation (suivi).
+          // Colonnes standard + enrichissement cc_prospector (email/tel/réseaux) -> le lead
+          // arrive directement exploitable dans l'Outreach multi-canal.
           await db.pool.query(
-            `INSERT INTO leads (name, company, type, status, source, notes, relation_status, created_at, updated_at)
-             VALUES ($1, $2, 'company', 'nouveau', 'Crawl', $3, $4, NOW(), NOW())`,
-            [(isAntibotTitle(r.title) ? null : decodeHtml(r.title)) || r.domain, r.domain, notes, statusVal]
+            `INSERT INTO leads (name, company, type, status, source, notes, email, phone, facebook_url, instagram_url, relation_status, created_at, updated_at)
+             VALUES ($1, $2, 'company', 'nouveau', 'Crawl', $3, $4, $5, $6, $7, $8, NOW(), NOW())`,
+            [(isAntibotTitle(r.title) ? null : decodeHtml(r.title)) || r.domain, r.domain, notes,
+             r.email || null, r.phone || null, r.facebook_url || null, r.instagram_url || null, statusVal]
           );
           await db.pool.query('UPDATE crawl_results SET added_as_prospect = TRUE WHERE id = $1', [r.id]);
           created++;
@@ -402,6 +414,28 @@ const crawlController = {
       console.error('[Crawl] Erreur to-prospect:', error);
       res.status(500).json({ message: 'Erreur serveur' });
     }
+  }
+};
+
+// GET /api/portefeuille/crawl/exclude.txt -> liste des domaines déjà connus (un par ligne),
+// pour alimenter cc_prospector --exclude et ne jamais re-prospecter un domaine déjà traité.
+crawlController.exportExclude = async (req, res) => {
+  const db = req.app.locals.db;
+  try {
+    const { rows } = await db.pool.query(
+      `SELECT domain FROM crawl_results WHERE domain IS NOT NULL
+       UNION
+       SELECT company FROM leads WHERE company IS NOT NULL AND company <> ''`
+    );
+    const domains = [...new Set(
+      rows.map((r) => normalizeDomain(r.domain)).filter(Boolean)
+    )].sort();
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="exclude.txt"');
+    res.send(domains.join('\n') + '\n');
+  } catch (e) {
+    console.error('[Crawl] exportExclude:', e.message);
+    res.status(500).json({ message: 'Erreur serveur' });
   }
 };
 

@@ -114,7 +114,13 @@ const DATABASE_SCHEMA = {
       title: 'TEXT',
       error: 'TEXT',
       gerant: 'TEXT', // enrichissement futur (null)
-      email: 'TEXT',  // enrichissement futur (null)
+      email: 'TEXT',  // enrichi par cc_prospector (regex sur la home)
+      phone: 'TEXT',            // idem
+      facebook_url: 'TEXT',     // profil social -> pré-remplit le lead (outreach multi-canal)
+      instagram_url: 'TEXT',
+      platform_version: 'TEXT', // ex 'PrestaShop 1.6.1.24' -> angle commercial (version obsolète)
+      ssl_ok: 'BOOLEAN',        // certificat TLS valide ? (null si http) — un 'non' = prospect chaud
+      protected: 'BOOLEAN DEFAULT FALSE', // page derrière anti-bot (Cloudflare) au crawl
       added_as_prospect: 'BOOLEAN DEFAULT FALSE',
       is_nocode: 'BOOLEAN DEFAULT FALSE' // site no-code/SaaS fermé -> masqué par défaut
     },

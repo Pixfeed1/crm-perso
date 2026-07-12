@@ -7,6 +7,10 @@ const authMiddleware = require('../middleware/authMiddleware');
 
 router.use(authMiddleware);
 
+// GET /api/portefeuille/crawl/exclude.txt - domaines déjà connus (crawl_results + leads),
+// à passer à cc_prospector via --exclude pour ne jamais re-sortir un domaine traité.
+router.get('/exclude.txt', crawlController.exportExclude);
+
 // GET /api/portefeuille/crawl - historique des crawls
 router.get('/', crawlController.list);
 
