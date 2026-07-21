@@ -7,13 +7,14 @@ const express = require('express');
 const router = express.Router();
 const quoteModel = require('../models/quoteModel');
 
-// GET /api/public/quotes/:id - Récupérer un devis (public, pour signature client)
-router.get('/quotes/:id', async (req, res) => {
+// GET /api/public/quotes/:token - Récupérer un devis (public, pour signature client).
+// SÉCURITÉ : accès par JETON OPAQUE uniquement (jamais l'id séquentiel) -> pas d'énumération.
+router.get('/quotes/:token', async (req, res) => {
   const db = req.app.locals.db;
-  const { id } = req.params;
+  const { token } = req.params;
 
   try {
-    const quote = await quoteModel.getQuoteById(db, id);
+    const quote = await quoteModel.getQuoteByToken(db, token);
     if (!quote) {
       return res.status(404).json({ message: 'Devis non trouvé' });
     }

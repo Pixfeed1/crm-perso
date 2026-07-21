@@ -1,4 +1,8 @@
 // backend/models/quoteModel.js
+const crypto = require('crypto');
+
+// Jeton opaque non devinable pour l'accès public au devis (jamais l'id séquentiel).
+const generatePublicToken = () => crypto.randomBytes(32).toString('hex');
 
 /**
  * Convertit les chaînes vides en NULL pour les champs numériques/dates
@@ -180,10 +184,11 @@ const createQuote = async (db, quoteData) => {
           escompte_percent, escompte_days, validity_days, notes,
           issue_date, expiry_date,
           title, project_id, discount_type, discount_value, discount_amount,
-          payment_methods, payment_details, tva_regime, additional_info, additional_files
+          payment_methods, payment_details, tva_regime, additional_info, additional_files,
+          public_token
         ) VALUES (
           $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25,
-          $26, $27, $28, $29, $30, $31, $32, $33, $34, $35
+          $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36
         ) RETURNING id
       `;
 
@@ -222,7 +227,8 @@ const createQuote = async (db, quoteData) => {
         JSON.stringify(payment_details),
         tva_regime,
         sanitizeValue(additional_info),
-        JSON.stringify(additional_files)
+        JSON.stringify(additional_files),
+        generatePublicToken()
       ];
 
       db.pool.query(query, params, (err, result) => {
@@ -452,10 +458,29 @@ const signQuote = (db, id, signatureData) => {
   });
 };
 
+// Accès public par jeton opaque (jamais l'id séquentiel). Retourne null si le jeton
+// est absent/inconnu -> pas d'énumération possible.
+const getQuoteByToken = (db, token) => {
+  return new Promise((resolve, reject) => {
+    if (!token || typeof token !== 'string' || token.length < 32) return resolve(null);
+    db.pool.query(
+      `SELECT q.*, c.name AS client_company, c.email AS client_company_email, c.address AS client_company_address
+       FROM quotes q LEFT JOIN crm_clients c ON q.client_id = c.id
+       WHERE q.public_token = $1`,
+      [token],
+      (err, result) => {
+        if (err) return reject(err);
+        resolve(result.rows[0] || null);
+      }
+    );
+  });
+};
+
 module.exports = {
   generateQuoteNumber,
   getAllQuotes,
   getQuoteById,
+  getQuoteByToken,
   createQuote,
   updateQuote,
   deleteQuote,

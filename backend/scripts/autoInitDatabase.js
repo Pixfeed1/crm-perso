@@ -312,13 +312,15 @@ const DATABASE_SCHEMA = {
       signed_by: 'TEXT',
       signature_data: 'TEXT',
       show_logo: 'BOOLEAN DEFAULT true',
+      public_token: 'VARCHAR(64)', // jeton opaque pour l'accès public au devis (jamais l'id séquentiel)
       created_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP',
       updated_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'
     },
     indexes: [
       'CREATE INDEX IF NOT EXISTS idx_quotes_client_id ON quotes(client_id)',
       'CREATE INDEX IF NOT EXISTS idx_quotes_status ON quotes(status)',
-      'CREATE INDEX IF NOT EXISTS idx_quotes_project_id ON quotes(project_id)'
+      'CREATE INDEX IF NOT EXISTS idx_quotes_project_id ON quotes(project_id)',
+      'CREATE UNIQUE INDEX IF NOT EXISTS uq_quotes_public_token ON quotes(public_token) WHERE public_token IS NOT NULL'
     ]
   },
 
@@ -1720,6 +1722,19 @@ async function ensureSeoTables(client) {
  * (company_settings.email_signature) — l'ancien HTML figé n'est pas régénéré sinon.
  * 'Chargé de Projet' (et la variante 'web') -> 'Fondateur & développeur'.
  */
+/**
+ * Backfill idempotent : attribue un jeton opaque (32 octets hex) à chaque devis qui n'en a
+ * pas encore. Ferme la faille d'énumération séquentielle sur /api/public/quotes/:token.
+ */
+async function ensureQuotePublicTokens(client) {
+  const crypto = require('crypto');
+  const { rows } = await client.query('SELECT id FROM quotes WHERE public_token IS NULL');
+  for (const r of rows) {
+    await client.query('UPDATE quotes SET public_token = $1 WHERE id = $2', [crypto.randomBytes(32).toString('hex'), r.id]);
+  }
+  if (rows.length) console.log(`  ✓ ${rows.length} devis dotés d'un jeton public`);
+}
+
 async function ensureSignatureTitleUpdate(client) {
   console.log('\n🔧 Mise à jour du titre dans les signatures email enregistrées...');
   const replacements = [
@@ -1786,6 +1801,9 @@ async function autoInitDatabase(pool) {
     await ensureCrawlNoCodeBackfill(client);
 
     await ensureSeoTables(client);
+
+    // Backfill : jeton opaque sur les devis existants sans token (accès public sécurisé).
+    await ensureQuotePublicTokens(client);
     // Mise à jour du titre dans les signatures email déjà enregistrées
     await ensureSignatureTitleUpdate(client);
 
