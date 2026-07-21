@@ -313,7 +313,14 @@ const quoteController = {
       }
 
       // Générer le PDF
-      const pdfBuffer = await pdfService.generateQuotePDF(quote, companySettings, tvaRegime);
+      // PDF en pièce jointe : si Chrome/Puppeteer est indisponible sur le serveur, on
+      // n'échoue PAS l'envoi — l'email part sans PJ (l'attachement est optionnel).
+      let pdfBuffer = null;
+      try {
+        pdfBuffer = await pdfService.generateQuotePDF(quote, companySettings, tvaRegime);
+      } catch (pdfErr) {
+        console.error('[Quote] PDF non généré (email envoyé sans pièce jointe):', pdfErr.message);
+      }
 
       // Récupérer la signature email
       const signature = companySettings.email_signature || '';

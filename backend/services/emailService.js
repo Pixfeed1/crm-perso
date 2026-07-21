@@ -152,7 +152,7 @@ class EmailService {
       throw new Error('Service email non initialisé. Vérifiez votre configuration .env');
     }
 
-    const { to, subject, html, text, attachments = [], ccToSelf = false, from = null, replyTo = null } = options;
+    const { to, subject, html, text, attachments = [], ccToSelf = false, cc = null, from = null, replyTo = null } = options;
 
     // Validation
     if (!to) {
@@ -193,10 +193,11 @@ class EmailService {
 
     mailOptions.replyTo = replyTo || process.env.EMAIL_USER;
 
-    // Ajouter copie à soi-même si demandé
-    if (ccToSelf) {
-      mailOptions.cc = process.env.EMAIL_USER;
-    }
+    // CC : soit une adresse explicite (cc), soit une copie à soi-même (ccToSelf), soit les deux.
+    const ccList = [];
+    if (cc) ccList.push(cc);
+    if (ccToSelf && process.env.EMAIL_USER) ccList.push(process.env.EMAIL_USER);
+    if (ccList.length) mailOptions.cc = [...new Set(ccList)].join(', ');
 
     try {
       const info = await this.transporter.sendMail(mailOptions);

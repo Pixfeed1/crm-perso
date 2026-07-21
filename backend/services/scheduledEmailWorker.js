@@ -115,7 +115,7 @@ class ScheduledEmailWorker {
           path: att.path,
           contentType: att.content_type
         })),
-        ccToSelf: !!email.cc_email
+        cc: email.cc_email || null
       });
 
       // Marquer comme envoyé

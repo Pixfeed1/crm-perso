@@ -67,7 +67,10 @@ router.get('/:id', async (req, res) => {
 // Créer un nouveau revenu
 router.post('/', async (req, res) => {
   const db = req.app.locals.db;
-  const { amount, date, description, project_id, lead_id, type } = req.body;
+  // On transmet TOUS les champs gérés par le modèle (statut, client, moyen de paiement...),
+  // sinon le prévisionnel ('planned') et le 'payé' manuel étaient perdus (forçage 'pending').
+  const { amount, date, description, project_id, lead_id, type,
+    status, client_id, payment_method, invoice_number, notes } = req.body;
 
   if (!amount || !date || !type) {
     return res.status(400).json({ message: 'Montant, date et type sont requis' });
@@ -80,7 +83,12 @@ router.post('/', async (req, res) => {
       description,
       project_id,
       lead_id,
-      type
+      type,
+      status,
+      client_id,
+      payment_method,
+      invoice_number,
+      notes
     });
 
     res.status(201).json(revenue);
@@ -94,7 +102,8 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   const db = req.app.locals.db;
   const { id } = req.params;
-  const { amount, date, description, project_id, lead_id, type } = req.body;
+  const { amount, date, description, project_id, lead_id, type,
+    status, client_id, payment_method, invoice_number, notes } = req.body;
 
   try {
     // Vérifier si le revenu existe
@@ -109,7 +118,12 @@ router.put('/:id', async (req, res) => {
       description,
       project_id,
       lead_id,
-      type
+      type,
+      status,
+      client_id,
+      payment_method,
+      invoice_number,
+      notes
     });
 
     res.json(updatedRevenue);

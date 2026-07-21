@@ -1,6 +1,7 @@
 // backend/services/pdfService.js
 const puppeteer = require('puppeteer-core');
 const reportTemplate = require('./reportTemplate');
+const documentTemplate = require('./documentTemplate');
 
 /**
  * Service de génération de PDF pour les rapports de maintenance
@@ -114,6 +115,22 @@ class PDFService {
    */
   async generateMaintenanceReportPDF(report, data) {
     const html = this.generateReportHTML(report, data);
+    return await this.generatePDF(html);
+  }
+
+  /**
+   * Génère le PDF d'un DEVIS (attaché à l'email au client).
+   */
+  async generateQuotePDF(quote, company = {}, tvaRegime = null) {
+    const html = documentTemplate.renderQuote(quote, company, tvaRegime);
+    return await this.generatePDF(html);
+  }
+
+  /**
+   * Génère le PDF d'une FACTURE (attaché à l'email au client).
+   */
+  async generateInvoicePDF(invoice, company = {}, tvaRegime = null) {
+    const html = documentTemplate.renderInvoice(invoice, company, tvaRegime);
     return await this.generatePDF(html);
   }
 

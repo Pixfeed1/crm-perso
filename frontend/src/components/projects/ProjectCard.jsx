@@ -137,7 +137,7 @@ const ProjectCard = ({ project, isSelected, onClick }) => {
         {/* Titre et client */}
         <div className="mb-3">
           <h3 className="font-semibold text-text-primary">{project.name || 'Projet sans nom'}</h3>
-          <p className="text-sm text-purple-300">{project.lead_name || 'Aucun client associé'}</p>
+          <p className="text-sm text-purple-300">{project.display_name || project.client_name || project.lead_name || 'Aucun client associé'}</p>
         </div>
         
         {/* Dates */}

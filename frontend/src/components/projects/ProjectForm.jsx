@@ -12,8 +12,11 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
   const [formData, setFormData] = useState({
     name: project.name || '',
     type: project.type || 'site-web',
+    // Un projet est rattaché SOIT à un client SOIT à un lead : on garde les deux ids
+    // (l'un des deux à null) au lieu de tout mettre dans lead_id (bug historique).
+    client_id: project.client_id || '',
     lead_id: project.lead_id || '',
-    lead_name: project.lead_name || '',
+    lead_name: project.lead_name || project.client_name || '',
     description: project.description || '',
     start_date: project.start_date || new Date().toISOString().split('T')[0],
     end_date: project.end_date || '',
@@ -131,15 +134,17 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
     const selectedItem = leads.find(item => item.id === selectedId);
 
     if (selectedItem) {
-      // Stocker l'ID original (sans préfixe client- ou lead-)
+      // Selon le type sélectionné, on remplit client_id OU lead_id (l'autre à vide).
       setFormData(prev => ({
         ...prev,
-        lead_id: selectedItem.originalId,
+        client_id: selectedItem.type === 'client' ? selectedItem.originalId : '',
+        lead_id: selectedItem.type === 'lead' ? selectedItem.originalId : '',
         lead_name: selectedItem.name
       }));
     } else {
       setFormData(prev => ({
         ...prev,
+        client_id: '',
         lead_id: '',
         lead_name: ''
       }));
@@ -194,7 +199,8 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
       // Préparation des données à envoyer
       const projectData = {
         ...formData,
-        // Convertir les valeurs appropriées
+        // Rattachement : client_id ET lead_id transmis (l'un des deux à null selon la sélection).
+        client_id: formData.client_id ? parseInt(formData.client_id) : null,
         lead_id: formData.lead_id ? parseInt(formData.lead_id) : null,
         amount: formData.amount === '' ? 0 : parseFloat(formData.amount),
         // Assurer que les dates sont au bon format
@@ -284,7 +290,7 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
             <select
               id="lead_id"
               name="lead_id"
-              value={leads.find(item => item.originalId === formData.lead_id)?.id || ''}
+              value={formData.client_id ? `client-${formData.client_id}` : formData.lead_id ? `lead-${formData.lead_id}` : ''}
               onChange={handleLeadChange}
               className={`w-full bg-surface-strong border ${
                 errors.lead_id ? 'border-rose-500' : 'border-border-strong'

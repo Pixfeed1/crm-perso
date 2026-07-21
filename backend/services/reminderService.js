@@ -6,13 +6,13 @@ const emailService = require('./emailService');
 /**
  * SERVICE D'ENVOI DE RELANCES AUTOMATIQUES
  *
- * Gère l'envoi d'emails de relance pour les factures impayées
- * et la création d'enregistrements dans l'historique
+ * GÃ¨re l'envoi d'emails de relance pour les factures impayÃ©es
+ * et la crÃ©ation d'enregistrements dans l'historique.
  */
 
 /**
- * Génère le contenu HTML d'un email de relance
- * @param {Object} invoice - Données de la facture
+ * GÃ©nÃ¨re le contenu HTML d'un email de relance.
+ * @param {Object} invoice - DonnÃ©es de la facture
  * @param {number} reminderLevel - Niveau de relance (1, 2, 3)
  * @param {Object} config - Configuration des relances
  * @returns {string} - Contenu HTML de l'email
@@ -41,20 +41,20 @@ const generateReminderEmailHtml = (invoice, reminderLevel, config) => {
   // Messages selon le niveau de relance
   const messages = {
     1: {
-      title: '=Ë Rappel de paiement',
+      title: 'ðŸ’¶ Rappel de paiement',
       intro: 'Nous vous rappelons qu\'une facture reste en attente de paiement.',
       tone: 'cordial',
       color: '#F59E0B' // amber
     },
     2: {
-      title: '  2ème rappel - Facture impayée',
-      intro: 'Malgré notre précédent rappel, nous constatons que votre facture reste impayée.',
+      title: 'âš ï¸ 2Ã¨me rappel - Facture impayÃ©e',
+      intro: 'MalgrÃ© notre prÃ©cÃ©dent rappel, nous constatons que votre facture reste impayÃ©e.',
       tone: 'ferme',
       color: '#EF4444' // red
     },
     3: {
-      title: '=4 Dernier rappel - Facture en souffrance',
-      intro: 'Nous vous informons que votre facture est toujours impayée malgré nos précédents rappels.',
+      title: 'ðŸ”´ Dernier rappel - Facture en souffrance',
+      intro: 'Nous vous informons que votre facture est toujours impayÃ©e malgrÃ© nos prÃ©cÃ©dents rappels.',
       tone: 'formel',
       color: '#DC2626' // dark red
     }
@@ -76,7 +76,7 @@ const generateReminderEmailHtml = (invoice, reminderLevel, config) => {
           <td align="center">
             <table width="600" cellpadding="0" cellspacing="0" style="background-color: #FFFFFF; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
 
-              <!-- En-tête avec bande de couleur -->
+              <!-- En-tÃªte avec bande de couleur -->
               <tr>
                 <td style="background-color: ${message.color}; padding: 20px; border-radius: 8px 8px 0 0;">
                   <h1 style="margin: 0; color: #FFFFFF; font-size: 24px;">
@@ -96,12 +96,12 @@ const generateReminderEmailHtml = (invoice, reminderLevel, config) => {
                     ${message.intro}
                   </p>
 
-                  <!-- Encadré facture -->
+                  <!-- EncadrÃ© facture -->
                   <div style="background-color: #FEF3C7; border-left: 4px solid ${message.color}; padding: 20px; margin: 25px 0; border-radius: 4px;">
                     <table width="100%" cellpadding="0" cellspacing="0">
                       <tr>
                         <td style="padding: 8px 0;">
-                          <strong style="color: #92400E;">Facture n° :</strong>
+                          <strong style="color: #92400E;">Facture nÂ° :</strong>
                         </td>
                         <td style="padding: 8px 0; text-align: right;">
                           <span style="color: #92400E; font-weight: 600;">${invoice.invoice_number}</span>
@@ -109,7 +109,7 @@ const generateReminderEmailHtml = (invoice, reminderLevel, config) => {
                       </tr>
                       <tr>
                         <td style="padding: 8px 0;">
-                          <strong style="color: #92400E;">Date d'émission :</strong>
+                          <strong style="color: #92400E;">Date d'Ã©mission :</strong>
                         </td>
                         <td style="padding: 8px 0; text-align: right;">
                           <span style="color: #92400E;">${formatDate(invoice.issue_date)}</span>
@@ -117,7 +117,7 @@ const generateReminderEmailHtml = (invoice, reminderLevel, config) => {
                       </tr>
                       <tr>
                         <td style="padding: 8px 0;">
-                          <strong style="color: #92400E;">Date d'échéance :</strong>
+                          <strong style="color: #92400E;">Date d'Ã©chÃ©ance :</strong>
                         </td>
                         <td style="padding: 8px 0; text-align: right;">
                           <span style="color: #DC2626; font-weight: 600;">${formatDate(invoice.due_date)}</span>
@@ -133,7 +133,7 @@ const generateReminderEmailHtml = (invoice, reminderLevel, config) => {
                       </tr>
                       <tr style="border-top: 2px solid ${message.color};">
                         <td style="padding: 12px 0 0 0;">
-                          <strong style="color: #92400E; font-size: 18px;">Montant dû :</strong>
+                          <strong style="color: #92400E; font-size: 18px;">Montant dÃ» :</strong>
                         </td>
                         <td style="padding: 12px 0 0 0; text-align: right;">
                           <span style="color: #DC2626; font-size: 22px; font-weight: 700;">${formatAmount(invoice.amount_remaining || invoice.total_ttc)}</span>
@@ -144,19 +144,19 @@ const generateReminderEmailHtml = (invoice, reminderLevel, config) => {
 
                   ${reminderLevel === 1 ? `
                     <p style="margin: 20px 0 15px 0; font-size: 16px; color: #374151; line-height: 1.5;">
-                      Si vous avez déjà effectué ce règlement, veuillez ne pas tenir compte de ce message.
+                      Si vous avez dÃ©jÃ  effectuÃ© ce rÃ¨glement, veuillez ne pas tenir compte de ce message.
                     </p>
                     <p style="margin: 0 0 15px 0; font-size: 16px; color: #374151; line-height: 1.5;">
-                      Dans le cas contraire, nous vous remercions de bien vouloir procéder au paiement dans les plus brefs délais.
+                      Dans le cas contraire, nous vous remercions de bien vouloir procÃ©der au paiement dans les plus brefs dÃ©lais.
                     </p>
                   ` : ''}
 
                   ${reminderLevel === 2 ? `
                     <p style="margin: 20px 0 15px 0; font-size: 16px; color: #374151; line-height: 1.5;">
-                      Nous vous demandons de régulariser votre situation <strong>dans les 7 jours</strong> suivant la réception de ce courrier.
+                      Nous vous demandons de rÃ©gulariser votre situation <strong>dans les 7 jours</strong> suivant la rÃ©ception de ce courrier.
                     </p>
                     <p style="margin: 0 0 15px 0; font-size: 16px; color: #374151; line-height: 1.5;">
-                      Si vous rencontrez des difficultés de paiement, nous vous invitons à nous contacter rapidement afin de trouver ensemble une solution.
+                      Si vous rencontrez des difficultÃ©s de paiement, nous vous invitons Ã  nous contacter rapidement afin de trouver ensemble une solution.
                     </p>
                   ` : ''}
 
@@ -165,19 +165,19 @@ const generateReminderEmailHtml = (invoice, reminderLevel, config) => {
                       <strong>Ceci constitue notre dernier rappel amiable.</strong>
                     </p>
                     <p style="margin: 0 0 15px 0; font-size: 16px; color: #374151; line-height: 1.5;">
-                      À défaut de règlement sous <strong>5 jours ouvrés</strong>, nous serons contraints d'engager une procédure de recouvrement contentieux, conformément aux dispositions légales en vigueur.
+                      Ã€ dÃ©faut de rÃ¨glement sous <strong>5 jours ouvrÃ©s</strong>, nous serons contraints d'engager une procÃ©dure de recouvrement contentieux, conformÃ©ment aux dispositions lÃ©gales en vigueur.
                     </p>
                     <p style="margin: 0 0 15px 0; font-size: 16px; color: #374151; line-height: 1.5;">
-                      Nous vous rappelons que des pénalités de retard ainsi qu'une indemnité forfaitaire de 40 ¬ pour frais de recouvrement pourront être appliquées.
+                      Nous vous rappelons que des pÃ©nalitÃ©s de retard ainsi qu'une indemnitÃ© forfaitaire de 40 â‚¬ pour frais de recouvrement pourront Ãªtre appliquÃ©es.
                     </p>
                   ` : ''}
 
                   <p style="margin: 20px 0 15px 0; font-size: 16px; color: #374151; line-height: 1.5;">
-                    Pour toute question, n'hésitez pas à nous contacter.
+                    Pour toute question, n'hÃ©sitez pas Ã  nous contacter.
                   </p>
 
                   <p style="margin: 30px 0 0 0; font-size: 16px; color: #374151;">
-                    ${reminderLevel >= 2 ? 'Salutations distinguées' : 'Cordialement'}
+                    ${reminderLevel >= 2 ? 'Salutations distinguÃ©es' : 'Cordialement'}
                   </p>
                 </td>
               </tr>
@@ -186,8 +186,8 @@ const generateReminderEmailHtml = (invoice, reminderLevel, config) => {
               <tr>
                 <td style="background-color: #F3F4F6; padding: 20px; border-radius: 0 0 8px 8px; border-top: 1px solid #E5E7EB;">
                   <p style="margin: 0; font-size: 12px; color: #6B7280; text-align: center; line-height: 1.4;">
-                    Ce message a été envoyé automatiquement depuis notre système de gestion.<br>
-                    Merci de ne pas répondre directement à cet email.
+                    Ce message a Ã©tÃ© envoyÃ© automatiquement depuis notre systÃ¨me de gestion.<br>
+                    Merci de ne pas rÃ©pondre directement Ã  cet email.
                   </p>
                 </td>
               </tr>
@@ -204,8 +204,8 @@ const generateReminderEmailHtml = (invoice, reminderLevel, config) => {
 };
 
 /**
- * Génère le sujet de l'email de relance
- * @param {Object} invoice - Données de la facture
+ * GÃ©nÃ¨re le sujet de l'email de relance.
+ * @param {Object} invoice - DonnÃ©es de la facture
  * @param {number} reminderLevel - Niveau de relance
  * @param {Object} config - Configuration des relances
  * @returns {string} - Sujet de l'email
@@ -213,8 +213,8 @@ const generateReminderEmailHtml = (invoice, reminderLevel, config) => {
 const generateReminderSubject = (invoice, reminderLevel, config) => {
   const subjectTemplates = {
     1: config.email_subject_1 || 'Rappel - Facture {invoice_number} en attente de paiement',
-    2: config.email_subject_2 || '2ème rappel - Facture {invoice_number} en retard',
-    3: config.email_subject_3 || 'Dernier rappel - Facture {invoice_number} impayée'
+    2: config.email_subject_2 || '2Ã¨me rappel - Facture {invoice_number} en retard',
+    3: config.email_subject_3 || 'Dernier rappel - Facture {invoice_number} impayÃ©e'
   };
 
   const template = subjectTemplates[reminderLevel] || subjectTemplates[1];
@@ -227,20 +227,20 @@ const generateReminderSubject = (invoice, reminderLevel, config) => {
 };
 
 /**
- * Envoie un email de relance pour une facture
- * @param {Object} db - Instance de la base de données
- * @param {Object} invoice - Données de la facture
+ * Envoie un email de relance pour une facture.
+ * @param {Object} db - Instance de la base de donnÃ©es
+ * @param {Object} invoice - DonnÃ©es de la facture
  * @param {number} reminderLevel - Niveau de relance (1, 2, 3)
- * @returns {Promise<Object>} - Résultat de l'envoi
+ * @returns {Promise<Object>} - RÃ©sultat de l'envoi
  */
 const sendReminderEmail = async (db, invoice, reminderLevel) => {
   try {
-    // Vérifier que l'email client existe
+    // VÃ©rifier que l'email client existe
     if (!invoice.client_email) {
-      throw new Error('Aucun email défini pour ce client');
+      throw new Error('Aucun email dÃ©fini pour ce client');
     }
 
-    // Récupérer la configuration
+    // RÃ©cupÃ©rer la configuration
     const config = await reminderModel.getReminderConfig(db);
 
     // Calculer le nombre de jours de retard
@@ -248,7 +248,7 @@ const sendReminderEmail = async (db, invoice, reminderLevel) => {
     const today = new Date();
     const daysOverdue = Math.floor((today - dueDate) / (1000 * 60 * 60 * 24));
 
-    // Générer le contenu de l'email
+    // GÃ©nÃ©rer le contenu de l'email
     const subject = generateReminderSubject(invoice, reminderLevel, config);
     const html = generateReminderEmailHtml(invoice, reminderLevel, config);
 
@@ -257,20 +257,20 @@ const sendReminderEmail = async (db, invoice, reminderLevel) => {
       to: invoice.client_email,
       subject,
       html,
-      ccToSelf: true // Copie pour l'expéditeur
+      ccToSelf: true // Copie pour l'expÃ©diteur
     });
 
-    // Créer l'enregistrement dans l'historique
+    // CrÃ©er l'enregistrement dans l'historique
     const reminderRecord = await reminderModel.createReminder(db, {
       invoice_id: invoice.id,
       reminder_level: reminderLevel,
       email_sent_to: invoice.client_email,
       days_overdue: daysOverdue,
       status: 'sent',
-      notes: `Email envoyé avec succès. Message ID: ${emailResult.messageId}`
+      notes: `Email envoyÃ© avec succÃ¨s. Message ID: ${emailResult.messageId}`
     });
 
-    console.log(` Relance niveau ${reminderLevel} envoyée pour facture ${invoice.invoice_number}`);
+    console.log(`âœ… Relance niveau ${reminderLevel} envoyÃ©e pour facture ${invoice.invoice_number}`);
 
     return {
       success: true,
@@ -278,9 +278,9 @@ const sendReminderEmail = async (db, invoice, reminderLevel) => {
       emailResult
     };
   } catch (error) {
-    console.error(`L Erreur lors de l'envoi de la relance pour facture ${invoice.invoice_number}:`, error);
+    console.error(`âŒ Erreur lors de l'envoi de la relance pour facture ${invoice.invoice_number}:`, error);
 
-    // Enregistrer l'échec dans l'historique
+    // Enregistrer l'Ã©chec dans l'historique
     try {
       await reminderModel.createReminder(db, {
         invoice_id: invoice.id,
@@ -289,10 +289,10 @@ const sendReminderEmail = async (db, invoice, reminderLevel) => {
         days_overdue: Math.floor((new Date() - new Date(invoice.due_date)) / (1000 * 60 * 60 * 24)),
         status: 'failed',
         error_message: error.message,
-        notes: `Échec de l'envoi : ${error.message}`
+        notes: `Ã‰chec de l'envoi : ${error.message}`
       });
     } catch (dbError) {
-      console.error('Erreur lors de l\'enregistrement de l\'échec:', dbError);
+      console.error('Erreur lors de l\'enregistrement de l\'Ã©chec:', dbError);
     }
 
     return {
@@ -303,10 +303,10 @@ const sendReminderEmail = async (db, invoice, reminderLevel) => {
 };
 
 /**
- * Envoie des relances en batch pour plusieurs factures
- * @param {Object} db - Instance de la base de données
+ * Envoie des relances en batch pour plusieurs factures.
+ * @param {Object} db - Instance de la base de donnÃ©es
  * @param {Array} invoices - Liste des factures avec next_reminder_level
- * @returns {Promise<Object>} - Résultat de l'envoi en batch
+ * @returns {Promise<Object>} - RÃ©sultat de l'envoi en batch
  */
 const sendBatchReminders = async (db, invoices) => {
   const results = {
@@ -331,11 +331,11 @@ const sendBatchReminders = async (db, invoices) => {
       error: result.error || null
     });
 
-    // Pause de 1 seconde entre chaque envoi pour éviter de surcharger le serveur email
+    // Pause de 1 seconde entre chaque envoi pour Ã©viter de surcharger le serveur email
     await new Promise(resolve => setTimeout(resolve, 1000));
   }
 
-  console.log(`\n=ç Envoi batch terminé: ${results.sent} réussis, ${results.failed} échecs`);
+  console.log(`\nðŸ“§ Envoi batch terminÃ© : ${results.sent} rÃ©ussis, ${results.failed} Ã©checs`);
 
   return results;
 };

@@ -383,7 +383,14 @@ const invoiceController = {
       }
 
       // Générer le PDF
-      const pdfBuffer = await pdfService.generateInvoicePDF(invoice, companySettings, tvaRegime);
+      // PDF en pièce jointe : si Chrome/Puppeteer est indisponible, l'email part quand même
+      // sans PJ (l'attachement est optionnel) plutôt que d'échouer en 500.
+      let pdfBuffer = null;
+      try {
+        pdfBuffer = await pdfService.generateInvoicePDF(invoice, companySettings, tvaRegime);
+      } catch (pdfErr) {
+        console.error('[Invoice] PDF non généré (email envoyé sans pièce jointe):', pdfErr.message);
+      }
 
       // Récupérer la signature email depuis les paramètres
       const signature = companySettings.email_signature || '';
