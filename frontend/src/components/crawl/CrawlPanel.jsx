@@ -55,6 +55,27 @@ const isObsolete = (platform, version) => {
   return false;
 };
 
+// Problèmes détectés gratuitement (audit) = autant d'angles d'approche concrets.
+// Chaque entrée : { key, label court (badge), title (détail au survol), poids (score) }.
+const auditFlags = (r) => {
+  const f = [];
+  if (r.mentions_legales === false) f.push({ key: 'ml', label: 'sans mentions légales', title: 'Aucune page mentions légales — obligation légale (LCEN)', poids: 15 });
+  if (r.mobile_ok === false) f.push({ key: 'mobile', label: 'non responsive', title: "Pas de balise viewport — s'affiche mal sur mobile", poids: 15 });
+  if (r.ssl_expire_jours != null && r.ssl_expire_jours < 30) {
+    const urgent = r.ssl_expire_jours < 0;
+    f.push({ key: 'sslexp', label: urgent ? 'SSL expiré' : `SSL expire ${r.ssl_expire_jours}j`, title: `Certificat TLS ${urgent ? 'déjà expiré' : `expire dans ${r.ssl_expire_jours} jours`}`, poids: 15 });
+  }
+  if (r.spf === false) f.push({ key: 'spf', label: 'sans SPF', title: 'Pas de SPF — les emails du domaine risquent de partir en spam', poids: 8 });
+  if (r.dmarc === false) f.push({ key: 'dmarc', label: 'sans DMARC', title: 'Pas de DMARC — domaine usurpable (phishing)', poids: 5 });
+  if (r.rgpd_confidentialite === false) f.push({ key: 'rgpd', label: 'sans confidentialité', title: 'Pas de politique de confidentialité (RGPD)', poids: 5 });
+  if (r.cookie_banner === false) f.push({ key: 'cookie', label: 'sans bandeau cookies', title: 'Aucun bandeau/CMP cookies (CNIL)', poids: 3 });
+  if (r.meta_desc === false) f.push({ key: 'meta', label: 'SEO: meta desc', title: 'Meta description manquante (SEO de base)', poids: 3 });
+  if (r.h1_present === false) f.push({ key: 'h1', label: 'SEO: H1', title: 'Aucune balise H1 (SEO de base)', poids: 3 });
+  if (r.analytics === false) f.push({ key: 'analytics', label: 'sans audience', title: "Aucune mesure d'audience (Analytics/pixel) installée", poids: 3 });
+  if (r.serveur_php) f.push({ key: 'php', label: r.serveur_php, title: `Version serveur exposée dans les entêtes : ${r.serveur_php}`, poids: 5 });
+  return f;
+};
+
 // Score de priorité (0-100) : croise les signaux d'un prospect chaud.
 const prospectScore = (r) => {
   let s = 0;
@@ -64,8 +85,10 @@ const prospectScore = (r) => {
   if (isObsolete(r.platform, r.platform_version)) s += 20; // version obsolète = angle sécurité
   if (['WooCommerce', 'PrestaShop'].includes(r.platform)) s += 10; // e-commerce = budget
   if (r.gerant) s += 5;                                   // dirigeant connu (SIRENE)
+  // Chaque problème d'audit détecté = angle d'approche -> monte la priorité.
+  for (const flag of auditFlags(r)) s += flag.poids;
   if (r.parked) s -= 50;                                  // domaine parké -> tout en bas
-  return s;
+  return Math.max(0, Math.min(100, s));
 };
 
 const CrawlPanel = () => {
@@ -251,6 +274,7 @@ const CrawlPanel = () => {
       case 'ssl_ko': return r.ssl_ok === false;
       case 'obsolete': return isObsolete(r.platform, r.platform_version);
       case 'social': return !!(r.facebook_url || r.instagram_url);
+      case 'opportunites': return auditFlags(r).length > 0; // au moins un problème détecté
       default: return true;
     }
   };
@@ -430,6 +454,7 @@ const CrawlPanel = () => {
               {/* Filtres d'enrichissement : cibler les prospects chauds */}
               {[
                 { k: 'email', l: '📧 Avec email' },
+                { k: 'opportunites', l: '🎯 À corriger' },
                 { k: 'ssl_ko', l: '🔓 SSL invalide' },
                 { k: 'obsolete', l: '⚠️ Version obsolète' },
                 { k: 'social', l: '📱 Réseau social' }
@@ -555,6 +580,17 @@ const CrawlPanel = () => {
                           )}
                           {r.added_as_prospect && (
                             <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-success-bg text-success-text">Déjà prospect</span>
+                          )}
+                          {/* Badges d'audit gratuit : autant d'angles d'approche pour l'email */}
+                          {auditFlags(r).length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {auditFlags(r).map((f) => (
+                                <span key={f.key} title={f.title}
+                                  className="text-xs px-1.5 py-0.5 rounded-full bg-warning-bg text-warning-text">
+                                  {f.label}
+                                </span>
+                              ))}
+                            </div>
                           )}
                         </td>
                         <td className="px-4 py-3">

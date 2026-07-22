@@ -16,7 +16,10 @@ La partie envoi d'emails N'EST PAS incluse (volontairement).
 
 Colonnes CSV enrichies (ingérées par le CRM) :
   domain, platform, platform_version, signals, http_status, final_url, title,
-  email, phone, facebook_url, instagram_url, ssl_ok, protected, error
+  email, phone, facebook_url, instagram_url, ssl_ok, protected, lang, parked,
+  + audit gratuit (0 token IA) : mobile_ok, meta_desc, h1_present,
+  mentions_legales, rgpd_confidentialite, cookie_banner, analytics, poids_ko,
+  copyright_annee, serveur_php, spf, dmarc, ssl_expire_jours, error
 """
 
 import argparse
@@ -196,6 +199,84 @@ def extract_contacts(html: str, domain: str) -> dict:
 
 
 # --------------------------------------------------------------------------- #
+#  AUDIT GRATUIT DE LA PAGE (0 token IA — que du parsing HTML/entêtes)
+#  Chaque signal = un argument commercial concret et vérifiable pour l'approche.
+# --------------------------------------------------------------------------- #
+
+_META_DESC_RE = re.compile(
+    r'<meta[^>]+name=["\']description["\'][^>]+content=["\']([^"\']*)["\']', re.IGNORECASE)
+_VIEWPORT_RE = re.compile(r'<meta[^>]+name=["\']viewport["\']', re.IGNORECASE)
+_H1_RE = re.compile(r"<h1[\s>]", re.IGNORECASE)
+# © 2019 / &copy; 2020 / Copyright 2021  (année isolée, capturée)
+_COPYRIGHT_RE = re.compile(r"(?:©|&copy;|copyright)[^0-9]{0,20}(20\d{2})", re.IGNORECASE)
+# Plage d'années "2018-2024" (on prend la borne haute comme "dernière mise à jour").
+_YEAR_RANGE_RE = re.compile(r"(20\d{2})\s*[-–]\s*(20\d{2})")
+
+# Liens/pages légaux obligatoires en France (présents en pied de page sur ~toutes les home).
+_MENTIONS_MARKERS = ["mentions-legales", "mentions légales", "mentions_legales",
+                     "mentions-légales", "/mentions", "legal-notice"]
+_PRIVACY_MARKERS = ["politique-de-confidentialite", "politique de confidentialité",
+                    "confidentialité", "confidentialite", "donnees-personnelles",
+                    "données personnelles", "privacy-policy", "privacy", "vie-privee",
+                    "vie privée", "protection-des-donnees", "rgpd", "gdpr"]
+# Bandeau cookies : CMP connues + formulations FR/EN courantes.
+_COOKIE_MARKERS = ["tarteaucitron", "cookiebot", "axeptio", "didomi", "orejime",
+                   "cookie-consent", "cookieconsent", "cookie-law", "cookieyes",
+                   "complianz", "accepter les cookies", "gérer les cookies",
+                   "politique de cookies", "we use cookies", "ce site utilise des cookies",
+                   "utilise des cookies", "gestion des cookies", "consentement"]
+# Mesure d'audience / pixels.
+_ANALYTICS_MARKERS = ["google-analytics.com", "googletagmanager.com", "gtag/js", "gtag(",
+                      "analytics.js", "matomo.js", "matomo.php", "piwik",
+                      "connect.facebook.net", "fbevents.js", "fbq(", "static.hotjar.com",
+                      "clarity.ms", "plausible.io"]
+
+
+def analyze_site(html: str, headers: dict) -> dict:
+    """Audit gratuit : SEO de base, conformité légale/RGPD, cookies, analytics,
+    poids HTML, fraîcheur (année de copyright), fuite de version serveur/PHP."""
+    low = html.lower()
+    hdr = {str(k).lower(): str(v) for k, v in headers.items()}
+    out = {}
+
+    # SEO de base
+    out["mobile_ok"] = "oui" if _VIEWPORT_RE.search(html) else "non"
+    md = _META_DESC_RE.search(html)
+    out["meta_desc"] = "oui" if (md and md.group(1).strip()) else "non"
+    out["h1_present"] = "oui" if _H1_RE.search(html) else "non"
+
+    # Conformité légale / RGPD (obligations françaises)
+    out["mentions_legales"] = "oui" if any(m in low for m in _MENTIONS_MARKERS) else "non"
+    out["rgpd_confidentialite"] = "oui" if any(m in low for m in _PRIVACY_MARKERS) else "non"
+    out["cookie_banner"] = "oui" if any(m in low for m in _COOKIE_MARKERS) else "non"
+
+    # Mesure d'audience
+    out["analytics"] = "oui" if any(m in low for m in _ANALYTICS_MARKERS) else "non"
+
+    # Poids du HTML (proxy de lourdeur) en Ko
+    out["poids_ko"] = str(round(len(html.encode("utf-8", "ignore")) / 1024))
+
+    # Fraîcheur : borne haute des années de copyright trouvées
+    years = [int(y) for y in _COPYRIGHT_RE.findall(html)]
+    for a, b in _YEAR_RANGE_RE.findall(html):
+        years += [int(a), int(b)]
+    years = [y for y in years if 2000 <= y <= 2099]
+    out["copyright_annee"] = str(max(years)) if years else ""
+
+    # Fuite de version : PHP (X-Powered-By) sinon serveur (Server) — surface d'attaque connue
+    xpb = hdr.get("x-powered-by", "")
+    srv = hdr.get("server", "")
+    leak = ""
+    mphp = re.search(r"php/\d+(?:\.\d+){1,3}", xpb, re.IGNORECASE)
+    if mphp:
+        leak = mphp.group(0).upper().replace("PHP/", "PHP ")
+    elif re.search(r"/\d+\.\d", srv):  # Apache/2.2.15, nginx/1.10.3…
+        leak = srv[:40]
+    out["serveur_php"] = leak
+    return out
+
+
+# --------------------------------------------------------------------------- #
 #  ÉTAPE 2 : DÉTECTION EN DIRECT (async)
 # --------------------------------------------------------------------------- #
 
@@ -207,11 +288,69 @@ UA = (
 CSV_FIELDS = [
     "domain", "platform", "platform_version", "signals", "http_status",
     "final_url", "title", "email", "phone", "facebook_url", "instagram_url",
-    "ssl_ok", "protected", "lang", "parked", "error",
+    "ssl_ok", "protected", "lang", "parked",
+    # --- audit gratuit ajouté ---
+    "mobile_ok", "meta_desc", "h1_present", "mentions_legales", "rgpd_confidentialite",
+    "cookie_banner", "analytics", "poids_ko", "copyright_annee", "serveur_php",
+    "spf", "dmarc", "ssl_expire_jours",
+    "error",
 ]
 
 # Pages où chercher un email si la home n'en donne pas (obligatoires en FR -> presque toujours là).
 CONTACT_PATHS = ["/contact", "/nous-contacter", "/mentions-legales", "/contact-us"]
+
+
+def _bare_domain(domain: str) -> str:
+    d = re.sub(r"^https?://", "", domain.strip().lower()).split("/")[0]
+    return d[4:] if d.startswith("www.") else d
+
+
+async def check_dns(bare_domain: str, timeout: float) -> dict:
+    """SPF / DMARC via DNS-over-HTTPS (dns.google) — pas de résolveur DNS local requis.
+    'oui'/'non' si la requête aboutit, '' (inconnu) si le lookup échoue."""
+    out = {"spf": "", "dmarc": ""}
+    if not bare_domain:
+        return out
+    try:
+        async with httpx.AsyncClient(timeout=min(timeout, 6.0), follow_redirects=True,
+                                     headers={"accept": "application/dns-json"}) as c:
+            r = await c.get("https://dns.google/resolve",
+                            params={"name": bare_domain, "type": "TXT"})
+            txts = " ".join(a.get("data", "") for a in r.json().get("Answer", [])).lower()
+            out["spf"] = "oui" if "v=spf1" in txts else "non"
+            r2 = await c.get("https://dns.google/resolve",
+                             params={"name": f"_dmarc.{bare_domain}", "type": "TXT"})
+            t2 = " ".join(a.get("data", "") for a in r2.json().get("Answer", [])).lower()
+            out["dmarc"] = "oui" if "v=dmarc1" in t2 else "non"
+    except Exception:
+        pass  # lookup indisponible -> inconnu
+    return out
+
+
+def _ssl_days_sync(host: str, timeout: float) -> str:
+    """Jours restants avant expiration du certificat TLS (handshake direct sur :443)."""
+    import ssl
+    import socket
+    from datetime import datetime, timezone
+    try:
+        ctx = ssl.create_default_context()
+        with socket.create_connection((host, 443), timeout=min(timeout, 6.0)) as sock:
+            with ctx.wrap_socket(sock, server_hostname=host) as ss:
+                cert = ss.getpeercert()
+        na = cert.get("notAfter") if cert else None
+        if not na:
+            return ""
+        exp = datetime.strptime(na, "%b %d %H:%M:%S %Y %Z").replace(tzinfo=timezone.utc)
+        return str((exp - datetime.now(timezone.utc)).days)
+    except Exception:
+        return ""
+
+
+async def ssl_expiry_days(host: str, timeout: float) -> str:
+    try:
+        return await asyncio.to_thread(_ssl_days_sync, host, timeout)
+    except Exception:
+        return ""
 
 
 async def find_email_on_contact(client, base_url, domain):
@@ -268,6 +407,12 @@ async def detect_one(domain: str, sem, timeout: float) -> dict:
                         # Email de secours : si la home n'en donne pas, on tente les pages contact.
                         if not contacts["email"] and not protected:
                             contacts["email"] = await find_email_on_contact(client, str(r.url), domain)
+                    # Audit gratuit (HTML/entêtes) + DNS (SPF/DMARC) + expiration TLS.
+                    site = analyze_site(html, dict(r.headers))
+                    bare = _bare_domain(domain)
+                    final_https = str(r.url).lower().startswith("https")
+                    dns = await check_dns(bare, timeout)
+                    ssl_days = await ssl_expiry_days(r.url.host or bare, timeout) if final_https else ""
                     result.update(
                         platform=platform,
                         platform_version=extract_version(html, platform),
@@ -279,8 +424,11 @@ async def detect_one(domain: str, sem, timeout: float) -> dict:
                         protected=("oui" if protected else "non"),
                         lang=detect_lang(html),
                         parked=("oui" if is_parked(html, title) else "non"),
+                        ssl_expire_jours=ssl_days,
                         error="",
                         **contacts,
+                        **site,
+                        **dns,
                     )
                     return result
                 except (httpx.ConnectError, httpx.ConnectTimeout, Exception) as e:
@@ -300,6 +448,7 @@ async def run_detect(domains, output, concurrency, timeout):
     done = 0
     counts = {}
     enriched = {"email": 0, "phone": 0, "social": 0}
+    audit = {"mentions_ko": 0, "mobile_ko": 0, "spf_ko": 0, "ssl_bientot": 0}
 
     with open(output, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=CSV_FIELDS)
@@ -317,6 +466,15 @@ async def run_detect(domains, output, concurrency, timeout):
                 enriched["phone"] += 1
             if res["facebook_url"] or res["instagram_url"]:
                 enriched["social"] += 1
+            if res.get("mentions_legales") == "non":
+                audit["mentions_ko"] += 1
+            if res.get("mobile_ok") == "non":
+                audit["mobile_ko"] += 1
+            if res.get("spf") == "non":
+                audit["spf_ko"] += 1
+            sd = res.get("ssl_expire_jours")
+            if sd not in (None, "") and sd.lstrip("-").isdigit() and int(sd) < 30:
+                audit["ssl_bientot"] += 1
             if done % 25 == 0 or done == total:
                 print(f"  ... {done}/{total} traités", file=sys.stderr)
 
@@ -328,6 +486,11 @@ async def run_detect(domains, output, concurrency, timeout):
     print(f"  email          {enriched['email']}")
     print(f"  téléphone      {enriched['phone']}")
     print(f"  réseau social  {enriched['social']}")
+    print("Signaux d'approche (audit gratuit) :")
+    print(f"  sans mentions légales   {audit['mentions_ko']}")
+    print(f"  non responsive (mobile) {audit['mobile_ko']}")
+    print(f"  sans SPF (emails->spam) {audit['spf_ko']}")
+    print(f"  SSL expire < 30 j       {audit['ssl_bientot']}")
 
 
 # --------------------------------------------------------------------------- #

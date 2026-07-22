@@ -125,6 +125,20 @@ const DATABASE_SCHEMA = {
       protected: 'BOOLEAN DEFAULT FALSE', // page derrière anti-bot (Cloudflare) au crawl
       lang: 'VARCHAR(5)',       // langue déclarée du site (ex 'fr')
       parked: 'BOOLEAN DEFAULT FALSE', // domaine parké/en vente/vide -> sans intérêt
+      // --- Audit gratuit (cc_prospector, 0 token IA) : chaque colonne = un angle d'approche ---
+      mobile_ok: 'BOOLEAN',            // <meta viewport> présent ? non = site pas responsive
+      meta_desc: 'BOOLEAN',            // meta description présente ? (SEO de base)
+      h1_present: 'BOOLEAN',           // <h1> présent ? (SEO de base)
+      mentions_legales: 'BOOLEAN',     // page/lien mentions légales ? non = non-conforme LCEN
+      rgpd_confidentialite: 'BOOLEAN', // politique de confidentialité ? non = risque RGPD
+      cookie_banner: 'BOOLEAN',        // bandeau cookies / CMP ? non = risque CNIL
+      analytics: 'BOOLEAN',            // mesure d'audience (GA/Matomo/pixel) ? non = ne mesure rien
+      poids_ko: 'INTEGER',             // poids du HTML en Ko (proxy de lourdeur)
+      copyright_annee: 'INTEGER',      // année de copyright la plus récente (fraîcheur du site)
+      serveur_php: 'TEXT',             // version serveur/PHP fuitée dans les entêtes (faille connue)
+      spf: 'BOOLEAN',                  // enregistrement SPF ? non = emails partent en spam
+      dmarc: 'BOOLEAN',                // enregistrement DMARC ? non = domaine usurpable
+      ssl_expire_jours: 'INTEGER',     // jours avant expiration du certificat TLS (< 30 = urgent)
       added_as_prospect: 'BOOLEAN DEFAULT FALSE',
       is_nocode: 'BOOLEAN DEFAULT FALSE' // site no-code/SaaS fermé -> masqué par défaut
     },

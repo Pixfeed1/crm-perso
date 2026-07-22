@@ -182,8 +182,15 @@ async function ingestCsv(db, jobId, csvPath) {
   const emi = idx('email'), phi = idx('phone'), fbi = idx('facebook_url'), igi = idx('instagram_url'),
     pvi = idx('platform_version'), sli = idx('ssl_ok'), pri = idx('protected'),
     lgi = idx('lang'), pki = idx('parked');
+  // Colonnes d'audit gratuit (ajoutées ensuite) — idx = -1 -> null (rétro-compatible).
+  const moi = idx('mobile_ok'), mdi = idx('meta_desc'), h1i = idx('h1_present'),
+    mli = idx('mentions_legales'), rgi = idx('rgpd_confidentialite'), cbi = idx('cookie_banner'),
+    ani = idx('analytics'), poi = idx('poids_ko'), coi = idx('copyright_annee'),
+    spi = idx('serveur_php'), sfi = idx('spf'), dmi = idx('dmarc'), sei = idx('ssl_expire_jours');
   const cell = (row, i) => (i >= 0 ? ((row[i] || '').trim() || null) : null);
   const boolCell = (row, i) => { const v = cell(row, i); return v == null ? null : /^(oui|true|1|yes)$/i.test(v); };
+  // Entier ou null (jamais NaN) — pour poids_ko / copyright_annee / ssl_expire_jours.
+  const intCell = (row, i) => { const v = cell(row, i); if (v == null) return null; const n = parseInt(v, 10); return Number.isNaN(n) ? null : n; };
 
   // Dédoublonnage de sécurité : domaines déjà présents en base (tous jobs) + intra-CSV.
   const seen = new Set();
@@ -216,8 +223,11 @@ async function ingestCsv(db, jobId, csvPath) {
     await db.pool.query(
       `INSERT INTO crawl_results
          (job_id, domain, platform, signals, http_status, final_url, title, error, is_nocode,
-          email, phone, facebook_url, instagram_url, platform_version, ssl_ok, protected, lang, parked)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
+          email, phone, facebook_url, instagram_url, platform_version, ssl_ok, protected, lang, parked,
+          mobile_ok, meta_desc, h1_present, mentions_legales, rgpd_confidentialite, cookie_banner,
+          analytics, poids_ko, copyright_annee, serveur_php, spf, dmarc, ssl_expire_jours)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18,
+               $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31)`,
       [
         jobId, domain, platform, signals,
         Number.isNaN(httpRaw) ? null : httpRaw,
@@ -226,7 +236,11 @@ async function ingestCsv(db, jobId, csvPath) {
         isNoCode,
         cell(row, emi), cell(row, phi), cell(row, fbi), cell(row, igi),
         cell(row, pvi), boolCell(row, sli), boolCell(row, pri) || false,
-        cell(row, lgi), boolCell(row, pki) || false
+        cell(row, lgi), boolCell(row, pki) || false,
+        boolCell(row, moi), boolCell(row, mdi), boolCell(row, h1i), boolCell(row, mli),
+        boolCell(row, rgi), boolCell(row, cbi), boolCell(row, ani),
+        intCell(row, poi), intCell(row, coi), cell(row, spi),
+        boolCell(row, sfi), boolCell(row, dmi), intCell(row, sei)
       ]
     );
   }
@@ -336,18 +350,25 @@ const crawlController = {
       // Dédoublonné par domaine, trié par plateforme puis domaine
       const { rows } = await db.pool.query(
         `SELECT DISTINCT ON (domain) domain, platform, platform_version, title, http_status, final_url,
-                email, phone, facebook_url, instagram_url, ssl_ok
+                email, phone, facebook_url, instagram_url, ssl_ok,
+                mobile_ok, mentions_legales, rgpd_confidentialite, spf, dmarc,
+                ssl_expire_jours, serveur_php, copyright_annee
          FROM crawl_results WHERE job_id = $1
          ORDER BY domain, platform`,
         [id]
       );
       rows.sort((a, b) => (a.platform || '').localeCompare(b.platform || '') || (a.domain || '').localeCompare(b.domain || ''));
 
-      const header = ['Domaine', 'Plateforme', 'Version', 'Email', 'Téléphone', 'Facebook', 'Instagram', 'SSL', 'Titre', 'Statut HTTP', 'URL finale'];
+      const oui = (v) => v === true ? 'oui' : v === false ? 'non' : '';
+      const header = ['Domaine', 'Plateforme', 'Version', 'Email', 'Téléphone', 'Facebook', 'Instagram',
+        'SSL', 'Mobile OK', 'Mentions légales', 'Confidentialité', 'SPF', 'DMARC',
+        'SSL expire (j)', 'Serveur/PHP', 'Copyright', 'Titre', 'Statut HTTP', 'URL finale'];
       const lines = [header.join(',')];
       for (const r of rows) {
-        const ssl = r.ssl_ok === true ? 'oui' : r.ssl_ok === false ? 'non' : '';
-        lines.push([r.domain, r.platform, r.platform_version, r.email, r.phone, r.facebook_url, r.instagram_url, ssl, r.title, r.http_status, r.final_url].map(csvEscape).join(','));
+        lines.push([r.domain, r.platform, r.platform_version, r.email, r.phone, r.facebook_url, r.instagram_url,
+          oui(r.ssl_ok), oui(r.mobile_ok), oui(r.mentions_legales), oui(r.rgpd_confidentialite),
+          oui(r.spf), oui(r.dmarc), r.ssl_expire_jours ?? '', r.serveur_php, r.copyright_annee ?? '',
+          r.title, r.http_status, r.final_url].map(csvEscape).join(','));
       }
       const csv = '﻿' + lines.join('\r\n'); // BOM UTF-8
 
@@ -387,13 +408,32 @@ const crawlController = {
       );
       let created = 0;
       let lastError = null;
+      const anneeCourante = new Date().getFullYear();
       for (const r of rows) {
+        // Angles d'approche détectés gratuitement (audit) -> arguments concrets pour l'email.
+        const angles = [
+          r.mentions_legales === false ? '• Pas de mentions légales (obligation légale LCEN)' : null,
+          r.mobile_ok === false ? '• Site non responsive (mauvais affichage mobile)' : null,
+          (r.ssl_expire_jours != null && r.ssl_expire_jours < 30)
+            ? `• Certificat SSL expire dans ${r.ssl_expire_jours} j` : null,
+          r.ssl_ok === false ? '• Certificat SSL invalide/absent' : null,
+          r.spf === false ? '• Pas de SPF (emails à risque de finir en spam)' : null,
+          r.dmarc === false ? '• Pas de DMARC (domaine usurpable)' : null,
+          r.rgpd_confidentialite === false ? '• Pas de politique de confidentialité (RGPD)' : null,
+          r.cookie_banner === false ? '• Pas de bandeau cookies (CNIL)' : null,
+          r.meta_desc === false ? '• Meta description manquante (SEO)' : null,
+          r.h1_present === false ? '• Pas de balise H1 (SEO)' : null,
+          r.analytics === false ? "• Aucune mesure d'audience installée" : null,
+          r.serveur_php ? `• Version serveur exposée : ${r.serveur_php}` : null,
+          (r.copyright_annee && r.copyright_annee < anneeCourante - 1)
+            ? `• Copyright figé à ${r.copyright_annee} (site qui semble peu maintenu)` : null
+        ].filter(Boolean);
         const notes = [
           userNote || null,
           r.raison_sociale ? `Raison sociale : ${r.raison_sociale}${r.siren ? ` (SIREN ${r.siren})` : ''}` : null,
           r.gerant ? `Dirigeant : ${r.gerant}` : null,
           r.platform ? `Plateforme : ${r.platform}${r.platform_version ? ` (${r.platform_version})` : ''}` : null,
-          r.ssl_ok === false ? '⚠️ Certificat SSL invalide (argument commercial)' : null,
+          angles.length ? `Angles d'approche détectés :\n${angles.join('\n')}` : null,
           r.final_url ? `URL : ${r.final_url}` : null,
           'Source : Crawl Common Crawl'
         ].filter(Boolean).join('\n');
