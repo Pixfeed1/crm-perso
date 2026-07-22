@@ -28,7 +28,9 @@ const lower = (s) => (s || '').toString().toLowerCase();
 // (aucun mot français courant ET plusieurs mots anglais courants). Sert de pré-écran
 // avant l'IA ; la décision finale "francophone" est confirmée par l'IA.
 const FR_HINTS = [' le ', ' la ', ' les ', ' des ', ' une ', ' un ', ' et ', ' pour ', ' vous ', ' nous ', ' avec ', ' sur ', ' dans ', ' du ', ' au ', ' aux ', ' en ', ' est ', ' ou ', ' qui ', ' notre ', ' nos ', ' développeur', 'télétravail', ' mission', ' entreprise', ' recherche', ' compétences', ' poste', ' société', ' rémunér'];
-const EN_HINTS = [' the ', ' and ', ' for ', ' you ', ' we ', ' with ', ' our ', ' is ', ' are ', ' to ', ' of ', ' in ', ' developer', ' remote ', ' team ', ' experience', ' skills', ' company', ' work ', ' join ', ' looking ', ' we\'re ', ' you\'ll '];
+// NB : 'remote'/'full remote' est un anglicisme courant dans le freelance FR -> PAS un
+// indice de langue anglaise (retiré). Le statut remote est jugé par l'IA, pas par ces mots.
+const EN_HINTS = [' the ', ' and ', ' for ', ' you ', ' we ', ' with ', ' our ', ' is ', ' are ', ' to ', ' of ', ' in ', ' developer', ' team ', ' experience', ' skills', ' company', ' work ', ' join ', ' looking ', ' we\'re ', ' you\'ll '];
 
 function countHits(text, hints) {
   const t = ` ${lower(text).replace(/\s+/g, ' ')} `;
