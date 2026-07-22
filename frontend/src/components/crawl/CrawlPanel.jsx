@@ -5,7 +5,7 @@
 // Charte : tokens de thème, react-icons, framer-motion. Aucune couleur en dur.
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiSearch, FiDownload, FiUserPlus, FiGlobe, FiCheckCircle, FiAlertTriangle, FiLoader, FiTrash2, FiClock, FiSlash, FiX, FiMail, FiPhone, FiFacebook, FiInstagram, FiShield } from 'react-icons/fi';
+import { FiSearch, FiDownload, FiUserPlus, FiGlobe, FiCheckCircle, FiAlertTriangle, FiLoader, FiTrash2, FiClock, FiSlash, FiX, FiMail, FiPhone, FiFacebook, FiInstagram, FiShield, FiEdit3, FiCopy, FiCpu, FiRefreshCw } from 'react-icons/fi';
 import { crawlAPI } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
 
@@ -107,6 +107,12 @@ const CrawlPanel = () => {
   const [adding, setAdding] = useState(false);
   const [pbTarget, setPbTarget] = useState(null); // { ids: [...] } pour "Pas de business"
   const [pbNote, setPbNote] = useState('');
+  // Rédaction d'email par Claude : { result } cible, état de génération et brouillon.
+  const [draftTarget, setDraftTarget] = useState(null); // le résultat (r) visé
+  const [draftLoading, setDraftLoading] = useState(false);
+  const [draftData, setDraftData] = useState(null); // { subject, body, problemes }
+  const [draftTon, setDraftTon] = useState('humain');
+  const [draftError, setDraftError] = useState('');
   const [pbSaving, setPbSaving] = useState(false);
   const [history, setHistory] = useState([]);
   const pollRef = useRef(null);
@@ -260,6 +266,33 @@ const CrawlPanel = () => {
     } finally {
       setPbSaving(false);
     }
+  };
+
+  // Rédaction d'email par Claude à partir des problèmes détectés (générée à la demande).
+  const generateDraft = useCallback(async (r, ton) => {
+    setDraftLoading(true); setDraftError('');
+    try {
+      const res = await crawlAPI.draftEmail(jobId, r.id, { ton });
+      setDraftData({ subject: res.subject || '', body: res.body || '', problemes: res.problemes || [] });
+    } catch (e) {
+      setDraftError(e.message || 'Échec de la rédaction');
+      setDraftData(null);
+    } finally {
+      setDraftLoading(false);
+    }
+  }, [jobId]);
+
+  const openDraft = (r) => {
+    setDraftTarget(r); setDraftData(null); setDraftError(''); setDraftTon('humain');
+    generateDraft(r, 'humain');
+  };
+
+  const copyDraft = async () => {
+    if (!draftData) return;
+    try {
+      await navigator.clipboard.writeText(`Objet : ${draftData.subject}\n\n${draftData.body}`);
+      toast.success('Email copié');
+    } catch { toast.info('Copie impossible'); }
   };
 
   // Sites no-code/SaaS fermés masqués par défaut (filtrables via le bouton dédié).
@@ -611,6 +644,13 @@ const CrawlPanel = () => {
                         </td>
                         <td className="px-4 py-3 text-text-secondary truncate max-w-xs">{r.title || '—'}</td>
                         <td className="px-4 py-3 text-right">
+                          <button
+                            onClick={() => openDraft(r)}
+                            className="p-2 rounded-lg text-text-muted hover:text-accent hover:bg-surface-strong"
+                            title="Rédiger un email de prospection avec Claude"
+                          >
+                            <FiEdit3 size={15} />
+                          </button>
                           {!r.added_as_prospect && (
                             <button
                               onClick={() => { setPbNote(''); setPbTarget({ ids: [r.id] }); }}
@@ -667,6 +707,103 @@ const CrawlPanel = () => {
                 <button onClick={confirmPasBusiness} disabled={pbSaving}
                   className="flex-1 px-4 py-2.5 bg-accent hover:bg-accent-hover text-white rounded-lg font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
                   <FiSlash size={16} /> {pbSaving ? 'Classement…' : 'Classer'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modale : email de prospection rédigé par Claude */}
+      <AnimatePresence>
+        {draftTarget && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[10000] flex items-center justify-center p-4"
+            onClick={() => setDraftTarget(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 20 }}
+              className="panel-bg border border-border rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex justify-between items-center px-6 py-4 border-b border-border">
+                <h2 className="text-lg font-bold text-text-primary flex items-center gap-2">
+                  <FiCpu size={18} /> Email de prospection — {draftTarget.domain}
+                </h2>
+                <button onClick={() => setDraftTarget(null)} className="text-text-muted hover:text-text-primary"><FiX size={20} /></button>
+              </div>
+
+              <div className="p-6 space-y-4">
+                {/* Sélecteur de ton */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm text-text-secondary">Ton :</span>
+                  {[
+                    { k: 'humain', l: 'Humain' },
+                    { k: 'direct', l: 'Direct' },
+                    { k: 'doux', l: 'Doux' }
+                  ].map((t) => (
+                    <button key={t.k}
+                      onClick={() => { setDraftTon(t.k); generateDraft(draftTarget, t.k); }}
+                      disabled={draftLoading}
+                      className={`px-3 py-1.5 rounded-lg text-sm transition-colors disabled:opacity-50 ${draftTon === t.k ? 'bg-accent text-white' : 'bg-surface-strong text-text-secondary hover:bg-border-strong'}`}>
+                      {t.l}
+                    </button>
+                  ))}
+                  <button onClick={() => generateDraft(draftTarget, draftTon)} disabled={draftLoading}
+                    className="ml-auto px-3 py-1.5 rounded-lg text-sm bg-surface-strong text-text-secondary hover:bg-border-strong flex items-center gap-1.5 disabled:opacity-50">
+                    <FiRefreshCw size={14} /> Régénérer
+                  </button>
+                </div>
+
+                {/* Problèmes utilisés (transparence : d'où vient l'email) */}
+                {draftData && draftData.problemes && draftData.problemes.length > 0 && (
+                  <div className="text-xs text-text-muted bg-surface-muted/50 border border-border rounded-lg p-3">
+                    <div className="font-medium mb-1">Détecté par notre audit (0 token) — Claude a puisé là-dedans :</div>
+                    <ul className="list-disc list-inside space-y-0.5">
+                      {draftData.problemes.slice(0, 6).map((p, i) => <li key={i}>{p}</li>)}
+                    </ul>
+                  </div>
+                )}
+
+                {draftLoading ? (
+                  <div className="flex items-center gap-2 text-text-secondary text-sm py-8 justify-center">
+                    <motion.span animate={{ rotate: 360 }} transition={{ duration: 0.9, repeat: Infinity, ease: 'linear' }} className="inline-flex">
+                      <FiLoader size={18} />
+                    </motion.span>
+                    Claude rédige l'email…
+                  </div>
+                ) : draftError ? (
+                  <div className="text-sm bg-danger-bg text-danger-text border border-danger-text/30 rounded-lg p-3">
+                    {draftError}
+                  </div>
+                ) : draftData ? (
+                  <>
+                    <div>
+                      <label className="block text-sm text-text-secondary mb-1">Objet</label>
+                      <input value={draftData.subject}
+                        onChange={(e) => setDraftData((d) => ({ ...d, subject: e.target.value }))}
+                        className="w-full px-3 py-2 bg-surface-muted border border-border rounded-lg text-text-primary focus:outline-none focus:border-accent" />
+                    </div>
+                    <div>
+                      <label className="block text-sm text-text-secondary mb-1">Corps (à relire avant envoi)</label>
+                      <textarea value={draftData.body}
+                        onChange={(e) => setDraftData((d) => ({ ...d, body: e.target.value }))}
+                        rows={12}
+                        className="w-full px-3 py-2 bg-surface-muted border border-border rounded-lg text-text-primary focus:outline-none focus:border-accent resize-y whitespace-pre-wrap" />
+                    </div>
+                  </>
+                ) : null}
+              </div>
+
+              <div className="flex gap-3 px-6 py-4 border-t border-border">
+                <button onClick={() => setDraftTarget(null)}
+                  className="flex-1 px-4 py-2.5 border-2 border-border text-text-primary hover:bg-surface-strong rounded-lg font-medium transition-all">
+                  Fermer
+                </button>
+                <button onClick={copyDraft} disabled={!draftData || draftLoading}
+                  className="flex-1 px-4 py-2.5 bg-accent hover:bg-accent-hover text-white rounded-lg font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+                  <FiCopy size={16} /> Copier l'email
                 </button>
               </div>
             </motion.div>

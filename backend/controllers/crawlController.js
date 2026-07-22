@@ -12,6 +12,46 @@ const { detectNoCode } = require('../utils/nocodePlatforms');
 const { decodeHtml } = require('../utils/decodeHtml');
 const { isAntibotTitle } = require('../utils/antibotTitle');
 const sireneEnrich = require('../services/sireneEnrich');
+const coldEmailService = require('../services/coldEmailService');
+
+// Version obsolète (plus maintenue) — miroir de la logique frontend, côté serveur.
+function isObsoleteVersion(platform, version) {
+  if (!version) return false;
+  const m = String(version).match(/(\d+)\.(\d+)/);
+  if (!m) return false;
+  const major = parseInt(m[1], 10), minor = parseInt(m[2], 10);
+  const p = (platform || '').toLowerCase();
+  if (p.includes('prestashop')) return major < 1 || (major === 1 && minor < 7);
+  if (p.includes('woocommerce')) return major < 7;
+  if (p.includes('wordpress')) return major < 6;
+  return false;
+}
+
+// Traduit les signaux d'audit (booléens/int en base) en phrases CLAIRES, orientées
+// bénéfice client — la matière première que Claude choisira pour rédiger (1 ou 2).
+function problemesLisibles(r) {
+  const annee = new Date().getFullYear();
+  const out = [];
+  if (r.mentions_legales === false) out.push("Le site n'a pas de page de mentions légales, alors que c'est une obligation légale en France.");
+  if (r.mobile_ok === false) out.push("Le site n'est pas adapté aux mobiles : il s'affiche mal sur téléphone (la majorité des visiteurs aujourd'hui).");
+  if (r.ssl_expire_jours != null && r.ssl_expire_jours < 30) {
+    out.push(r.ssl_expire_jours < 0
+      ? "Le certificat de sécurité (HTTPS) a expiré : les visiteurs voient une alerte rouge en arrivant sur le site."
+      : `Le certificat de sécurité (HTTPS) expire dans ${r.ssl_expire_jours} jours ; ensuite les visiteurs verront une alerte de sécurité.`);
+  } else if (r.ssl_ok === false) {
+    out.push("Le site n'a pas de certificat de sécurité valide (le cadenas HTTPS), ce qui fait fuir les visiteurs et pénalise le référencement Google.");
+  }
+  if (r.spf === false) out.push("Le domaine n'a pas de configuration SPF : les emails envoyés depuis cette adresse risquent d'atterrir dans les spams des clients.");
+  if (r.dmarc === false) out.push("Le domaine n'est pas protégé par DMARC : il peut être usurpé pour envoyer de faux emails en son nom.");
+  if (r.rgpd_confidentialite === false) out.push("Il manque une politique de confidentialité, obligatoire avec le RGPD.");
+  if (r.cookie_banner === false) out.push("Il n'y a pas de bandeau de consentement aux cookies (demandé par la CNIL).");
+  if (isObsoleteVersion(r.platform, r.platform_version)) out.push(`Le site tourne sur une version de ${r.platform} qui n'est plus maintenue : c'est un risque de sécurité et de bugs.`);
+  if (r.meta_desc === false || r.h1_present === false) out.push("Des éléments SEO de base manquent (description ou titre principal), ce qui limite la visibilité sur Google.");
+  if (r.analytics === false) out.push("Aucun outil de mesure d'audience n'est installé : impossible de savoir combien de visiteurs viennent, ni d'où.");
+  if (r.serveur_php) out.push(`La version du serveur (${r.serveur_php}) est visible publiquement et n'est plus à jour (surface d'attaque connue).`);
+  if (r.copyright_annee && r.copyright_annee < annee - 1) out.push(`Le pied de page affiche encore © ${r.copyright_annee}, ce qui donne l'impression d'un site peu suivi.`);
+  return out;
+}
 
 // Constantes faciles à mettre à jour (override possible par variables d'env).
 const PYTHON_BIN = process.env.CC_PROSPECTOR_PYTHON || '/home/jurojinn/tools/cc_prospector/venv/bin/python';
@@ -494,6 +534,45 @@ crawlController.enrichResults = async (req, res) => {
   } catch (e) {
     console.error('[Crawl] enrichResults:', e.message);
     res.status(500).json({ message: 'Erreur serveur' });
+  }
+};
+
+// POST /api/portefeuille/crawl/:id/draft-email { result_id, ton?, sender? }
+// Rédige un email de prospection personnalisé (Claude Haiku) à partir des problèmes
+// détectés par NOTRE audit. Ne fait QUE rédiger — aucun envoi. ~0,003 $/email.
+crawlController.draftEmail = async (req, res) => {
+  const db = req.app.locals.db;
+  const { id } = req.params;
+  const resultId = parseInt(req.body?.result_id, 10);
+  const ton = (req.body?.ton || 'humain').toString();
+  if (Number.isNaN(resultId)) return res.status(400).json({ message: 'result_id requis' });
+  try {
+    const { rows } = await db.pool.query(
+      'SELECT * FROM crawl_results WHERE job_id = $1 AND id = $2',
+      [parseInt(id, 10), resultId]
+    );
+    if (rows.length === 0) return res.status(404).json({ message: 'Résultat introuvable' });
+    const r = rows[0];
+    const prospect = {
+      domain: r.domain,
+      company: r.domain,
+      raison_sociale: r.raison_sociale || null,
+      dirigeant: r.gerant || null,
+      platform: r.platform || null,
+      platform_version: r.platform_version || null,
+      problemes: problemesLisibles(r)
+    };
+    const draft = await coldEmailService.draftColdEmail(prospect, {
+      ton,
+      sender: req.body?.sender || {}
+    });
+    res.json({ ...draft, problemes: prospect.problemes });
+  } catch (e) {
+    console.error('[Crawl] draftEmail:', e.message);
+    const msg = /ANTHROPIC_API_KEY/.test(e.message)
+      ? 'Clé Anthropic non configurée sur le serveur (ANTHROPIC_API_KEY).'
+      : `Échec de la rédaction : ${e.message}`;
+    res.status(500).json({ message: msg });
   }
 };
 
