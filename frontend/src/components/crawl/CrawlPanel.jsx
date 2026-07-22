@@ -42,6 +42,32 @@ const PLATFORM_BADGE = {
 };
 const platformBadge = (p) => PLATFORM_BADGE[p] || 'bg-neutral-bg text-neutral-text';
 
+// Version obsolète (plus maintenue = faille de sécurité = argument commercial).
+const isObsolete = (platform, version) => {
+  if (!version) return false;
+  const m = version.match(/(\d+)\.(\d+)/);
+  if (!m) return false;
+  const major = parseInt(m[1], 10), minor = parseInt(m[2], 10);
+  const p = (platform || '').toLowerCase();
+  if (p.includes('prestashop')) return major < 1 || (major === 1 && minor < 7); // < 1.7 non maintenu
+  if (p.includes('woocommerce')) return major < 7;
+  if (p.includes('wordpress')) return major < 6;
+  return false;
+};
+
+// Score de priorité (0-100) : croise les signaux d'un prospect chaud.
+const prospectScore = (r) => {
+  let s = 0;
+  if (r.email) s += 35;                                   // joignable par email
+  if (r.facebook_url || r.instagram_url) s += 10;         // joignable en DM
+  if (r.ssl_ok === false) s += 20;                        // SSL cassé = angle de vente
+  if (isObsolete(r.platform, r.platform_version)) s += 20; // version obsolète = angle sécurité
+  if (['WooCommerce', 'PrestaShop'].includes(r.platform)) s += 10; // e-commerce = budget
+  if (r.gerant) s += 5;                                   // dirigeant connu (SIRENE)
+  if (r.parked) s -= 50;                                  // domaine parké -> tout en bas
+  return s;
+};
+
 const CrawlPanel = () => {
   const { toast } = useToast();
   const [techno, setTechno] = useState('ecommerce');
@@ -52,6 +78,8 @@ const CrawlPanel = () => {
   const [selected, setSelected] = useState(new Set());
   const [platformFilter, setPlatformFilter] = useState('all');
   const [showNocode, setShowNocode] = useState(false); // masquer les sites no-code par défaut
+  const [enrichFilter, setEnrichFilter] = useState('all'); // 'all'|'email'|'ssl_ko'|'obsolete'|'social'
+  const [hideParked, setHideParked] = useState(true); // masquer les domaines parkés par défaut
   const [starting, setStarting] = useState(false);
   const [adding, setAdding] = useState(false);
   const [pbTarget, setPbTarget] = useState(null); // { ids: [...] } pour "Pas de business"
@@ -177,6 +205,23 @@ const CrawlPanel = () => {
     }
   };
 
+  // Enrichissement SIRENE (raison sociale + dirigeant) des lignes sélectionnées.
+  const [enriching, setEnriching] = useState(false);
+  const handleEnrich = async () => {
+    const ids = [...selected];
+    if (ids.length === 0) return;
+    try {
+      setEnriching(true);
+      const res = await crawlAPI.enrich(jobId, ids);
+      toast.success(`${res.enriched}/${res.total} société(s) enrichie(s) via SIRENE`);
+      poll(jobId);
+    } catch (error) {
+      toast.error(error.message || "Erreur lors de l'enrichissement");
+    } finally {
+      setEnriching(false);
+    }
+  };
+
   // "Pas de business" : crée des leads en statut pas_business (+ note), traités/exclus.
   const confirmPasBusiness = async () => {
     if (!pbTarget || pbTarget.ids.length === 0) return;
@@ -198,7 +243,23 @@ const CrawlPanel = () => {
   const nocodeCount = results.filter((r) => r.is_nocode).length;
   const baseResults = showNocode ? results : results.filter((r) => !r.is_nocode);
   const platforms = Array.from(new Set(baseResults.map((r) => r.platform || 'Inconnu')));
-  const visible = platformFilter === 'all' ? baseResults : baseResults.filter((r) => (r.platform || 'Inconnu') === platformFilter);
+
+  // Filtre d'enrichissement (a un email / SSL invalide / version obsolète / a un réseau).
+  const passEnrich = (r) => {
+    switch (enrichFilter) {
+      case 'email': return !!r.email;
+      case 'ssl_ko': return r.ssl_ok === false;
+      case 'obsolete': return isObsolete(r.platform, r.platform_version);
+      case 'social': return !!(r.facebook_url || r.instagram_url);
+      default: return true;
+    }
+  };
+  let visible = baseResults
+    .filter((r) => hideParked ? !r.parked : true)
+    .filter((r) => platformFilter === 'all' ? true : (r.platform || 'Inconnu') === platformFilter)
+    .filter(passEnrich);
+  // Tri par score de priorité décroissant (les prospects chauds en haut).
+  visible = [...visible].sort((a, b) => prospectScore(b) - prospectScore(a));
   const selectableVisible = visible.filter((r) => !r.added_as_prospect);
 
   const progressPct = job && job.progress_total > 0 ? Math.round((job.progress_done / job.progress_total) * 100) : 0;
@@ -366,10 +427,40 @@ const CrawlPanel = () => {
                   {showNocode ? 'Masquer no-code' : `No-code exclus (${nocodeCount})`}
                 </button>
               )}
+              {/* Filtres d'enrichissement : cibler les prospects chauds */}
+              {[
+                { k: 'email', l: '📧 Avec email' },
+                { k: 'ssl_ko', l: '🔓 SSL invalide' },
+                { k: 'obsolete', l: '⚠️ Version obsolète' },
+                { k: 'social', l: '📱 Réseau social' }
+              ].map((f) => (
+                <button
+                  key={f.k}
+                  onClick={() => setEnrichFilter((v) => v === f.k ? 'all' : f.k)}
+                  className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${enrichFilter === f.k ? 'bg-accent text-white' : 'bg-surface-strong text-text-secondary hover:bg-border-strong'}`}
+                >
+                  {f.l}
+                </button>
+              ))}
+              <button
+                onClick={() => setHideParked((v) => !v)}
+                className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${!hideParked ? 'bg-accent text-white' : 'bg-surface-strong text-text-muted hover:bg-border-strong'}`}
+                title="Domaines parkés / en vente / vides"
+              >
+                {hideParked ? 'Parkés masqués' : 'Parkés affichés'}
+              </button>
             </div>
             <div className="flex flex-wrap gap-2">
               <button onClick={handleExport} className="px-3 py-2 bg-surface-strong hover:bg-border-strong text-text-primary rounded-lg text-sm flex items-center gap-1">
                 <FiDownload size={15} /> Télécharger le CSV
+              </button>
+              <button
+                onClick={handleEnrich}
+                disabled={enriching || selected.size === 0}
+                className="px-3 py-2 bg-surface-strong hover:bg-border-strong text-text-primary rounded-lg text-sm flex items-center gap-1 disabled:opacity-50"
+                title="Enrichir via SIRENE (raison sociale + dirigeant) — gratuit"
+              >
+                <FiGlobe size={15} /> {enriching ? 'Enrichissement…' : 'Enrichir SIRENE'}{selected.size > 0 ? ` (${selected.size})` : ''}
               </button>
               <button
                 onClick={handleAddProspects}
@@ -435,6 +526,15 @@ const CrawlPanel = () => {
                           {r.final_url ? (
                             <a href={r.final_url} target="_blank" rel="noopener noreferrer" className="hover:text-accent">{r.domain}</a>
                           ) : r.domain}
+                          {/* Enrichissement SIRENE : raison sociale + dirigeant */}
+                          {(r.raison_sociale || r.gerant) && (
+                            <div className="text-xs text-text-muted mt-0.5">
+                              {r.raison_sociale}{r.raison_sociale && r.gerant ? ' · ' : ''}{r.gerant && `👤 ${r.gerant}`}
+                            </div>
+                          )}
+                          {r.parked && (
+                            <span className="ml-1 text-xs px-1.5 py-0.5 rounded-full bg-neutral-bg text-neutral-text">parké</span>
+                          )}
                         </td>
                         <td className="px-4 py-3">
                           <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${platformBadge(r.platform)}`}>
@@ -442,6 +542,11 @@ const CrawlPanel = () => {
                           </span>
                           {r.platform_version && (
                             <span className="ml-1 text-xs text-text-muted">{r.platform_version.replace(/^\S+\s/, 'v')}</span>
+                          )}
+                          {isObsolete(r.platform, r.platform_version) && (
+                            <span className="ml-2 text-xs px-1.5 py-0.5 rounded-full bg-warning-bg text-warning-text inline-flex items-center gap-1" title="Version obsolète — plus maintenue (argument sécurité)">
+                              <FiAlertTriangle size={10} /> obsolète
+                            </span>
                           )}
                           {r.ssl_ok === false && (
                             <span className="ml-2 text-xs px-1.5 py-0.5 rounded-full bg-danger-bg text-danger-text inline-flex items-center gap-1" title="Certificat SSL invalide — argument commercial">

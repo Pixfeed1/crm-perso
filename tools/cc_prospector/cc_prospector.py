@@ -108,6 +108,26 @@ def is_antibot_title(title: str) -> bool:
     return any(p in low for p in ANTIBOT_PATTERNS)
 
 
+# Signatures de domaine "parké" / en vente / vide (aucun intérêt commercial).
+_PARKED_PATTERNS = [
+    "domain is for sale", "domaine à vendre", "this domain", "buy this domain",
+    "parked", "sedoparking", "afternic", "dan.com", "godaddy.com/domains",
+    "site en construction", "under construction", "coming soon", "bientôt disponible",
+    "default web page", "apache2 ubuntu default", "welcome to nginx", "index of /",
+]
+
+
+def is_parked(html: str, title: str) -> bool:
+    blob = (title + " " + html[:2000]).lower()
+    return any(p in blob for p in _PARKED_PATTERNS)
+
+
+def detect_lang(html: str) -> str:
+    """Langue déclarée dans <html lang="..."> (ex 'fr'). '' si absente."""
+    m = re.search(r'<html[^>]+lang=["\']([a-zA-Z-]{2,5})["\']', html, re.IGNORECASE)
+    return m.group(1).split("-")[0].lower() if m else ""
+
+
 def detect_platform(html: str, headers: dict) -> tuple[str, list[str]]:
     text = html.lower()
     hdr = {str(k).lower(): str(v).lower() for k, v in headers.items()}
@@ -187,8 +207,25 @@ UA = (
 CSV_FIELDS = [
     "domain", "platform", "platform_version", "signals", "http_status",
     "final_url", "title", "email", "phone", "facebook_url", "instagram_url",
-    "ssl_ok", "protected", "error",
+    "ssl_ok", "protected", "lang", "parked", "error",
 ]
+
+# Pages où chercher un email si la home n'en donne pas (obligatoires en FR -> presque toujours là).
+CONTACT_PATHS = ["/contact", "/nous-contacter", "/mentions-legales", "/contact-us"]
+
+
+async def find_email_on_contact(client, base_url, domain):
+    """Fetch cible des pages contact/mentions pour récupérer un email si la home n'en a pas."""
+    for path in CONTACT_PATHS:
+        try:
+            r = await client.get(base_url.rstrip("/") + path)
+            if r.status_code == 200:
+                c = extract_contacts(r.text or "", domain)
+                if c["email"]:
+                    return c["email"]
+        except Exception:
+            continue
+    return ""
 
 
 def candidate_urls(domain: str) -> list[str]:
@@ -223,11 +260,14 @@ async def detect_one(domain: str, sem, timeout: float) -> dict:
                         timeout=timeout, verify=verify,
                     ) as client:
                         r = await client.get(url)
-                    html = r.text or ""
-                    platform, signals = detect_platform(html, dict(r.headers))
-                    title = extract_title(html)
-                    protected = is_antibot_title(title)
-                    contacts = extract_contacts(html, domain)
+                        html = r.text or ""
+                        platform, signals = detect_platform(html, dict(r.headers))
+                        title = extract_title(html)
+                        protected = is_antibot_title(title)
+                        contacts = extract_contacts(html, domain)
+                        # Email de secours : si la home n'en donne pas, on tente les pages contact.
+                        if not contacts["email"] and not protected:
+                            contacts["email"] = await find_email_on_contact(client, str(r.url), domain)
                     result.update(
                         platform=platform,
                         platform_version=extract_version(html, platform),
@@ -237,6 +277,8 @@ async def detect_one(domain: str, sem, timeout: float) -> dict:
                         title="" if protected else title,
                         ssl_ok=("oui" if (is_https and verify) else ("non" if is_https else "")),
                         protected=("oui" if protected else "non"),
+                        lang=detect_lang(html),
+                        parked=("oui" if is_parked(html, title) else "non"),
                         error="",
                         **contacts,
                     )

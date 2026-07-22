@@ -1246,6 +1246,7 @@ export const crawlAPI = {
   get: (id) => apiRequest(`/portefeuille/crawl/${id}`),
   delete: (id) => apiRequest(`/portefeuille/crawl/${id}`, 'DELETE'),
   toProspect: (id, result_ids, extra = {}) => apiRequest(`/portefeuille/crawl/${id}/to-prospect`, 'POST', { result_ids, ...extra }),
+  enrich: (id, result_ids) => apiRequest(`/portefeuille/crawl/${id}/enrich`, 'POST', { result_ids }),
   exportCsv: (id) => apiRequestRaw(`/portefeuille/crawl/${id}/export.csv`)
 };
 

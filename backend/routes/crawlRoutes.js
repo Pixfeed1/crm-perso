@@ -23,6 +23,9 @@ router.get('/:id', crawlController.get);
 // GET /api/portefeuille/crawl/:id/export.csv - CSV nettoyé
 router.get('/:id/export.csv', crawlController.exportCsv);
 
+// POST /api/portefeuille/crawl/:id/enrich - enrichissement SIRENE des résultats sélectionnés
+router.post('/:id/enrich', crawlController.enrichResults);
+
 // POST /api/portefeuille/crawl/:id/to-prospect - convertit des résultats en prospects
 router.post('/:id/to-prospect', crawlController.toProspect);
 

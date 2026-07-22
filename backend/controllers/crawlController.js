@@ -11,6 +11,7 @@ const os = require('os');
 const { detectNoCode } = require('../utils/nocodePlatforms');
 const { decodeHtml } = require('../utils/decodeHtml');
 const { isAntibotTitle } = require('../utils/antibotTitle');
+const sireneEnrich = require('../services/sireneEnrich');
 
 // Constantes faciles à mettre à jour (override possible par variables d'env).
 const PYTHON_BIN = process.env.CC_PROSPECTOR_PYTHON || '/home/jurojinn/tools/cc_prospector/venv/bin/python';
@@ -179,7 +180,8 @@ async function ingestCsv(db, jobId, csvPath) {
     hi = idx('http_status'), fi = idx('final_url'), ti = idx('title'), ei = idx('error');
   // Colonnes d'enrichissement (cc_prospector) — absentes des anciens CSV : idx = -1 -> null.
   const emi = idx('email'), phi = idx('phone'), fbi = idx('facebook_url'), igi = idx('instagram_url'),
-    pvi = idx('platform_version'), sli = idx('ssl_ok'), pri = idx('protected');
+    pvi = idx('platform_version'), sli = idx('ssl_ok'), pri = idx('protected'),
+    lgi = idx('lang'), pki = idx('parked');
   const cell = (row, i) => (i >= 0 ? ((row[i] || '').trim() || null) : null);
   const boolCell = (row, i) => { const v = cell(row, i); return v == null ? null : /^(oui|true|1|yes)$/i.test(v); };
 
@@ -214,8 +216,8 @@ async function ingestCsv(db, jobId, csvPath) {
     await db.pool.query(
       `INSERT INTO crawl_results
          (job_id, domain, platform, signals, http_status, final_url, title, error, is_nocode,
-          email, phone, facebook_url, instagram_url, platform_version, ssl_ok, protected)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
+          email, phone, facebook_url, instagram_url, platform_version, ssl_ok, protected, lang, parked)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
       [
         jobId, domain, platform, signals,
         Number.isNaN(httpRaw) ? null : httpRaw,
@@ -223,7 +225,8 @@ async function ingestCsv(db, jobId, csvPath) {
         ei >= 0 ? (row[ei] || null) : null,
         isNoCode,
         cell(row, emi), cell(row, phi), cell(row, fbi), cell(row, igi),
-        cell(row, pvi), boolCell(row, sli), boolCell(row, pri) || false
+        cell(row, pvi), boolCell(row, sli), boolCell(row, pri) || false,
+        cell(row, lgi), boolCell(row, pki) || false
       ]
     );
   }
@@ -387,6 +390,8 @@ const crawlController = {
       for (const r of rows) {
         const notes = [
           userNote || null,
+          r.raison_sociale ? `Raison sociale : ${r.raison_sociale}${r.siren ? ` (SIREN ${r.siren})` : ''}` : null,
+          r.gerant ? `Dirigeant : ${r.gerant}` : null,
           r.platform ? `Plateforme : ${r.platform}${r.platform_version ? ` (${r.platform_version})` : ''}` : null,
           r.ssl_ok === false ? '⚠️ Certificat SSL invalide (argument commercial)' : null,
           r.final_url ? `URL : ${r.final_url}` : null,
@@ -416,6 +421,39 @@ const crawlController = {
       console.error('[Crawl] Erreur to-prospect:', error);
       res.status(500).json({ message: 'Erreur serveur' });
     }
+  }
+};
+
+// POST /api/portefeuille/crawl/:id/enrich { result_ids } -> enrichissement SIRENE (raison
+// sociale + dirigeant) des résultats sélectionnés. Gratuit (API publique), best-effort.
+crawlController.enrichResults = async (req, res) => {
+  const db = req.app.locals.db;
+  const { id } = req.params;
+  const ids = Array.isArray(req.body?.result_ids)
+    ? req.body.result_ids.map((v) => parseInt(v, 10)).filter((v) => !Number.isNaN(v)) : [];
+  if (ids.length === 0) return res.status(400).json({ message: 'Aucun résultat sélectionné' });
+  try {
+    const { rows } = await db.pool.query(
+      'SELECT id, domain, title FROM crawl_results WHERE job_id = $1 AND id = ANY($2::int[])',
+      [parseInt(id, 10), ids]
+    );
+    let enriched = 0;
+    for (const r of rows) {
+      // Requête : le titre de la home (souvent la vraie enseigne), repli sur la racine du domaine.
+      const query = (decodeHtml(r.title) || '').trim() || normalizeDomain(r.domain).split('.')[0];
+      const data = await sireneEnrich.enrich(query);
+      if (data.found) {
+        await db.pool.query(
+          'UPDATE crawl_results SET raison_sociale = $1, gerant = $2, siren = $3 WHERE id = $4',
+          [data.raison_sociale, data.dirigeant, data.siren, r.id]
+        );
+        enriched++;
+      }
+    }
+    res.json({ enriched, total: rows.length });
+  } catch (e) {
+    console.error('[Crawl] enrichResults:', e.message);
+    res.status(500).json({ message: 'Erreur serveur' });
   }
 };
 
