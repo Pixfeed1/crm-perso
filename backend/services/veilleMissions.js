@@ -47,6 +47,61 @@ function looksEnglishOnly(texte) {
   return fr === 0 && en >= 2;
 }
 
+// ─── Filtre géographique (GRATUIT) ───────────────────────────────────────────
+// Jooble / JSearch agrègent des offres du MONDE ENTIER. Sans filtre on récupère des
+// annonces de Miami, Philadelphie, Londres… hors sujet. On filtre sur la LOCALISATION
+// renvoyée par la source, en 3 temps (prudent, ne jette jamais une bonne offre FR) :
+//   1) marqueur francophone (France, Belgique, Suisse, Luxembourg, Monaco, Québec…)
+//      ou "remote/télétravail" -> ON GARDE.
+//   2) sinon, marqueur étranger explicite (pays/ville non francophone, code d'État US)
+//      -> ON ÉCARTE d'office (avant l'IA, gratuit).
+//   3) sinon (localisation vide ou ambiguë) -> on NE tranche PAS ici : la langue + l'IA
+//      décident. Évite de jeter une petite ville FR absente de la liste.
+const LOC_FR = [
+  'france', 'french', 'paris', 'lyon', 'marseille', 'toulouse', 'bordeaux', 'lille',
+  'nantes', 'strasbourg', 'nice', 'rennes', 'montpellier', 'grenoble', 'reims', 'rouen',
+  'toulon', 'metz', 'nancy', 'dijon', 'angers', 'brest', 'tours', 'clermont', 'orléans',
+  'orleans', 'caen', 'aix-en-provence', 'annecy', 'pau', 'bayonne', 'perpignan', 'avignon',
+  'le mans', 'saint-étienne', 'saint-etienne', 'villeurbanne', 'nîmes', 'nimes', 'cannes',
+  'île-de-france', 'ile-de-france', ' idf', 'hauts-de-france', 'occitanie', 'bretagne',
+  'normandie', 'nouvelle-aquitaine', 'grand est', 'auvergne', 'provence', 'sur-mer',
+  'belgique', 'belgium', 'bruxelles', 'brussels', 'wallonie', 'liège', 'liege', 'namur', 'charleroi',
+  'suisse', 'switzerland', 'schweiz', 'genève', 'geneve', 'geneva', 'lausanne', 'zürich', 'zurich', 'romandie',
+  'luxembourg', 'monaco', 'québec', 'quebec', 'montréal', 'montreal'
+];
+const LOC_REMOTE = [
+  'remote', 'télétravail', 'teletravail', 'télé-travail', 'anywhere', 'france entière',
+  'france entiere', 'partout en france', 'home office', 'home-office', 'distanciel',
+  'à distance', 'a distance', 'full remote'
+];
+const LOC_ETRANGER = [
+  'united states', ' usa', 'u.s.a', 'états-unis', 'etats-unis', 'united kingdom', ' uk ',
+  'england', 'germany', 'deutschland', 'allemagne', 'spain', 'españa', 'espagne', 'italy',
+  'italia', 'italie', 'india', 'inde', 'netherlands', 'nederland', 'pays-bas', 'poland',
+  'polska', 'pologne', 'portugal', 'brazil', 'brasil', 'brésil', 'mexico', 'méxico',
+  'romania', 'roumanie', 'ireland', 'irlande', 'australia', 'australie', 'singapore', 'singapour',
+  'miami', 'philadelphia', 'philadelphie', 'new york', 'los angeles', 'chicago', 'houston',
+  'dallas', 'austin', 'san francisco', 'san jose', 'seattle', 'boston', 'atlanta', 'denver',
+  'phoenix', 'las vegas', 'san diego', 'charlotte', 'columbus', 'detroit', 'tampa', 'orlando',
+  'london', 'londres', 'manchester', 'birmingham', 'berlin', 'münchen', 'munich', 'hamburg',
+  'frankfurt', 'francfort', 'madrid', 'barcelona', 'barcelone', 'amsterdam', 'rotterdam',
+  'dublin', 'lisbon', 'lisboa', 'lisbonne', 'warsaw', 'varsovie', 'bucharest', 'bucarest',
+  'bangalore', 'bengaluru', 'mumbai', 'delhi', 'hyderabad', 'pune', 'toronto', 'vancouver'
+];
+// Code d'État US en fin de segment : "Tampa, FL", "Austin, TX"… (dernier recours,
+// après les listes francophone/remote qui priment).
+const US_STATE_RE = /,\s*(a[lkz]|ar|c[aot]|de|fl|ga|hi|i[adln]|k[sy]|la|m[adeinost]|n[cdehjmvy]|o[hkr]|pa|ri|s[cd]|t[nx]|ut|v[at]|w[aivy])(\b|,|\s|$)/;
+
+function localisationHorsZone(loc) {
+  const l = ` ${lower(loc).trim()} `;
+  if (l.trim() === '') return false;                        // pas d'info -> ne tranche pas ici
+  if (LOC_REMOTE.some((w) => l.includes(w))) return false;  // remote -> garder
+  if (LOC_FR.some((w) => l.includes(w))) return false;      // francophone -> garder
+  if (LOC_ETRANGER.some((w) => l.includes(w))) return true; // étranger explicite -> écarter
+  if (US_STATE_RE.test(l)) return true;                     // "Ville, ST" US -> écarter
+  return false;                                             // ambigu -> langue/IA décident
+}
+
 // Scoring "type mission" (GRATUIT, avant l'IA). But : écarter le SALARIAT EXCLUSIF, sans
 // jeter les offres mixtes "CDI ou Freelance / Portage" (très fréquentes et VALABLES).
 const MISSION_TITRE_POS = ['freelance', 'mission', 'prestation', 'indépendant', 'independant', 'consultant', 'régie', 'regie', 'portage'];
@@ -188,7 +243,8 @@ function normalizeJob(job) {
     lien,
     description: job.snippet || '',
     date_annonce: job.updated ? job.updated.slice(0, 10) : null,
-    montant_brut: job.salary || null
+    montant_brut: job.salary || null,
+    localisation: job.location || ''
   };
 }
 
@@ -215,7 +271,8 @@ async function fetchFranceTravail(keyword) {
       lien: `https://candidat.pole-emploi.fr/offres/recherche/detail/${o.id}`,
       description: o.description || '',
       date_annonce: o.dateCreation ? o.dateCreation.slice(0, 10) : null,
-      montant_brut: (o.salaire && o.salaire.libelle) || null
+      montant_brut: (o.salaire && o.salaire.libelle) || null,
+      localisation: (o.lieuTravail && o.lieuTravail.libelle) || '' // FR-only : passe toujours
     })));
   }
   return out;
@@ -234,7 +291,8 @@ async function fetchJSearch(keyword) {
     lien: o.url || '',
     description: o.description || '',
     date_annonce: o.posted_date ? String(o.posted_date).slice(0, 10) : null,
-    montant_brut: o.salary || null
+    montant_brut: o.salary || null,
+    localisation: o.location || o.city || ''
   }));
 }
 
@@ -251,12 +309,14 @@ const getRunStatus = () => runStatus;
  * Met à jour runStatus à chaque étape (suivi temps réel côté UI).
  * @param {Object} db - app.locals.db (utilise db.pool)
  */
-async function runVeille(db) {
+async function runVeille(db, opts = {}) {
   if (runStatus.running) return { skipped: true, raison: 'Run déjà en cours' };
 
   const criteres = await getCriteres(db);
   if (!criteres) throw new Error('Critères de veille introuvables');
-  if (!criteres.actif) return { skipped: true, raison: 'Veille désactivée' };
+  // Pause : le flag `actif` coupe le run AUTOMATIQUE (cron). Un déclenchement MANUEL
+  // (opts.force, depuis le bouton "Lancer la veille") passe outre la pause.
+  if (!criteres.actif && !opts.force) return { skipped: true, raison: 'Veille en pause' };
   // Vérif clés en amont -> erreur claire (sinon "0 annonce" trompeur).
   if (!process.env.ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY manquante dans .env');
   const ftOk = poleEmploiService.isConfigured();
@@ -277,7 +337,7 @@ async function runVeille(db) {
     apres_prefiltre_langue: 0,
     qualifiees_ia: 0,
     retenues: 0,
-    rejets: { anti_cdi: 0, techno: 0, non_francophone: 0, non_remote: 0, tjm_insuffisant: 0, sans_montant_rejete: 0, doublon: 0 },
+    rejets: { anti_cdi: 0, techno: 0, non_francophone: 0, hors_zone: 0, non_remote: 0, tjm_insuffisant: 0, sans_montant_rejete: 0, doublon: 0 },
     sources: {
       france_travail: { recuperees: 0, retenues: 0 },
       jsearch: { recuperees: 0, retenues: 0 },
@@ -291,7 +351,7 @@ async function runVeille(db) {
   };
   if (!ftOk) console.warn('[Veille] France Travail NON configuré (POLE_EMPLOI_CLIENT_ID/SECRET) -> source francophone absente.');
   // Exemples d'écartés PAR catégorie (max 3) pour diagnostic.
-  const rejetsExemples = { langue: [], anti_cdi: [], techno: [], remote: [], tjm: [] };
+  const rejetsExemples = { langue: [], zone: [], anti_cdi: [], techno: [], remote: [], tjm: [] };
   const ajoutRejet = (cat, titre, raison) => {
     if (rejetsExemples[cat] && rejetsExemples[cat].length < 3) rejetsExemples[cat].push({ titre, raison });
   };
@@ -386,7 +446,16 @@ async function runVeille(db) {
     if (!passesPrefilter(texte, criteres.mots_requis, criteres.mots_exclus)) {
       continue;
     }
-    // b2) Pré-écran langue : écarte d'office les annonces manifestement anglophones
+    // b2) Filtre géographique GRATUIT : écarte d'office toute annonce dont la
+    //     LOCALISATION est clairement hors zone francophone (Miami, Philadelphie,
+    //     Londres…). C'est LE filtre qui tue le bruit Jooble/JSearch mondial.
+    if (localisationHorsZone(annonce.localisation)) {
+      report.rejets.hors_zone++;
+      ajoutRejet('zone', annonce.titre, `hors zone : ${annonce.localisation}`);
+      continue;
+    }
+
+    // b2bis) Pré-écran langue : écarte d'office les annonces manifestement anglophones
     //     (économise des appels IA). La confirmation "francophone" reste faite par l'IA.
     if (looksEnglishOnly(texte)) {
       report.rejets.non_francophone++;
@@ -501,12 +570,13 @@ async function runVeille(db) {
   );
   const rj = report.rejets;
   console.log(
-    `[Veille] Écartés par filtre — langue: ${rj.non_francophone}, techno (hors périmètre): ${rj.techno}, ` +
-    `anti-CDI: ${rj.anti_cdi}, remote (présentiel): ${rj.non_remote}, TJM: ${rj.tjm_insuffisant}, doublon: ${rj.doublon}`
+    `[Veille] Écartés par filtre — hors zone (géo): ${rj.hors_zone}, langue: ${rj.non_francophone}, ` +
+    `techno (hors périmètre): ${rj.techno}, anti-CDI: ${rj.anti_cdi}, remote (présentiel): ${rj.non_remote}, ` +
+    `TJM: ${rj.tjm_insuffisant}, doublon: ${rj.doublon}`
   );
   console.log('[Veille] Rejets (détail):', rj, '| LLM calls:', report.llm_calls, '| erreurs:', report.erreurs);
   // Exemples par catégorie (3 max) pour vérifier qu'on ne jette pas de bonnes offres.
-  const labelCat = { langue: 'LANGUE', techno: 'TECHNO (hors périmètre)', anti_cdi: 'ANTI-CDI', remote: 'REMOTE', tjm: 'TJM' };
+  const labelCat = { langue: 'LANGUE', zone: 'HORS ZONE (géo)', techno: 'TECHNO (hors périmètre)', anti_cdi: 'ANTI-CDI', remote: 'REMOTE', tjm: 'TJM' };
   for (const cat of Object.keys(rejetsExemples)) {
     const ex = rejetsExemples[cat];
     if (ex.length) {

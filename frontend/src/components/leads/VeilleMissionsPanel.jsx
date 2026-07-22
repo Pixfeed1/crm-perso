@@ -7,7 +7,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   FiCpu, FiSliders, FiExternalLink, FiCopy, FiEdit2, FiXCircle, FiRefreshCw,
-  FiPlay, FiCheck, FiX, FiAlertCircle, FiLoader
+  FiPlay, FiPause, FiCheck, FiX, FiAlertCircle, FiLoader
 } from 'react-icons/fi';
 import { veilleAPI } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
@@ -124,6 +124,26 @@ const VeilleMissionsPanel = () => {
     }, 2000);
   };
 
+  // Bascule pause/active de la veille (coupe le run AUTOMATIQUE quotidien ; le bouton
+  // "Lancer la veille" reste utilisable même en pause). Mise à jour optimiste.
+  const [togglingPause, setTogglingPause] = useState(false);
+  const togglePause = async () => {
+    if (!criteres || togglingPause) return;
+    const next = !criteres.actif;
+    setTogglingPause(true);
+    setCriteres((c) => ({ ...c, actif: next })); // optimiste
+    try {
+      const updated = await veilleAPI.updateCriteres({ actif: next });
+      setCriteres(updated);
+      toast.success(next ? 'Veille réactivée (run auto quotidien)' : 'Veille mise en pause (run auto stoppé)');
+    } catch (e) {
+      setCriteres((c) => ({ ...c, actif: !next })); // rollback
+      toast.error('Impossible de changer l\'état de la veille');
+    } finally {
+      setTogglingPause(false);
+    }
+  };
+
   const ecarter = async (id) => {
     const prev = annonces;
     // Retrait optimiste : l'annonce disparaît immédiatement (animation de sortie).
@@ -192,6 +212,20 @@ const VeilleMissionsPanel = () => {
           </div>
           <div className="flex items-center gap-2">
             <button onClick={load} className="p-2 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-strong" title="Rafraîchir"><FiRefreshCw size={16} /></button>
+            {criteres && (
+              <button
+                onClick={togglePause}
+                disabled={togglingPause}
+                title={criteres.actif ? 'Mettre la veille en pause (stoppe le run automatique quotidien)' : 'Réactiver la veille automatique'}
+                className={`px-3 py-2 rounded-lg text-sm flex items-center gap-2 disabled:opacity-60 ${
+                  criteres.actif
+                    ? 'bg-surface-strong hover:bg-border-strong text-text-primary'
+                    : 'bg-warning-bg text-warning-text hover:opacity-90'
+                }`}
+              >
+                {criteres.actif ? <><FiPause size={15} /> Mettre en pause</> : <><FiPlay size={15} /> En pause — réactiver</>}
+              </button>
+            )}
             <button onClick={runNow} disabled={running} className="px-3 py-2 rounded-lg bg-surface-strong hover:bg-border-strong text-text-primary text-sm flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed">
               {running ? <Spinner size={15} /> : <FiPlay size={15} />}
               {running ? 'Recherche en cours…' : 'Lancer la veille'}
@@ -205,6 +239,9 @@ const VeilleMissionsPanel = () => {
         {/* Rappel des critères en pastilles */}
         {criteres && (
           <div className="flex flex-wrap gap-2 mt-3">
+            <span className={`text-xs px-2 py-1 rounded-full font-medium ${criteres.actif ? 'bg-success-bg text-success-text' : 'bg-warning-bg text-warning-text'}`}>
+              {criteres.actif ? '● Active' : '⏸ En pause'}
+            </span>
             <span className="text-xs px-2 py-1 rounded-full bg-success-bg text-success-text">Requis : {(criteres.mots_requis || []).length}</span>
             <span className="text-xs px-2 py-1 rounded-full bg-danger-bg text-danger-text">Exclus : {(criteres.mots_exclus || []).length}</span>
             {criteres.full_remote_only && <span className="text-xs px-2 py-1 rounded-full bg-info-bg text-info-text">Full remote</span>}
@@ -243,7 +280,7 @@ const VeilleMissionsPanel = () => {
                       <> · France Travail {runState.report.sources.france_travail.retenues} · JSearch {runState.report.sources.jsearch.retenues} · Jooble {runState.report.sources.jooble.retenues}</>
                     )}
                     {runState.report.rejets && (
-                      <> · rejets : {runState.report.rejets.anti_cdi || 0} CDI, {runState.report.rejets.techno || 0} techno, {runState.report.rejets.non_francophone} langue, {runState.report.rejets.non_remote} sur site, {runState.report.rejets.tjm_insuffisant} TJM, {runState.report.rejets.doublon} doublons</>
+                      <> · rejets : {runState.report.rejets.hors_zone || 0} hors zone, {runState.report.rejets.anti_cdi || 0} CDI, {runState.report.rejets.techno || 0} techno, {runState.report.rejets.non_francophone} langue, {runState.report.rejets.non_remote} sur site, {runState.report.rejets.tjm_insuffisant} TJM, {runState.report.rejets.doublon} doublons</>
                     )}
                   </div>
                 )}

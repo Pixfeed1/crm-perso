@@ -116,7 +116,8 @@ const veilleController = {
       return res.status(409).json({ message: 'Un run est déjà en cours', status: getRunStatus() });
     }
     // Lancement en arrière-plan : la réponse part tout de suite, le front poll /run/status.
-    runVeille(db).catch((e) => console.error('[Veille] run arrière-plan:', e.message));
+    // force:true -> un run MANUEL passe outre la pause (flag actif). Seul le cron la respecte.
+    runVeille(db, { force: true }).catch((e) => console.error('[Veille] run arrière-plan:', e.message));
     res.status(202).json({ started: true, status: getRunStatus() });
   },
 
