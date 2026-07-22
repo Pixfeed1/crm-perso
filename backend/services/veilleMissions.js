@@ -35,12 +35,14 @@ function countHits(text, hints) {
   return hints.reduce((n, h) => (t.includes(h) ? n + 1 : n), 0);
 }
 
-// true = à écarter d'office (massivement anglais, aucun marqueur français).
-// Seuil prudent (en >= 4) pour ne PAS jeter une offre FR truffée de termes techniques anglais.
+// true = à écarter d'office (annonce non francophone). On exige AU MOINS un marqueur
+// français : une vraie offre FR contient quasi toujours plusieurs mots-outils (le, la, et,
+// pour, mission...). fr === 0 => pas français. Le seuil en >= 2 attrape aussi les annonces
+// anglaises COURTES (titre + snippet) que l'ancien seuil (en >= 4) laissait passer.
 function looksEnglishOnly(texte) {
   const fr = countHits(texte, FR_HINTS);
   const en = countHits(texte, EN_HINTS);
-  return fr === 0 && en >= 4;
+  return fr === 0 && en >= 2;
 }
 
 // Scoring "type mission" (GRATUIT, avant l'IA). But : écarter le SALARIAT EXCLUSIF, sans
@@ -279,9 +281,13 @@ async function runVeille(db) {
       jsearch: { recuperees: 0, retenues: 0 },
       jooble: { recuperees: 0, retenues: 0 }
     },
+    // Quelles sources sont réellement CONFIGURÉES (clés en .env) : évite un "0 annonce"
+    // trompeur quand p.ex. France Travail n'a pas ses identifiants.
+    sources_configurees: { france_travail: ftOk, jsearch: jsOk, jooble: joobleOk },
     erreurs: 0,
     llm_calls: 0
   };
+  if (!ftOk) console.warn('[Veille] France Travail NON configuré (POLE_EMPLOI_CLIENT_ID/SECRET) -> source francophone absente.');
   // Exemples d'écartés PAR catégorie (max 3) pour diagnostic.
   const rejetsExemples = { langue: [], anti_cdi: [], techno: [], remote: [], tjm: [] };
   const ajoutRejet = (cat, titre, raison) => {
