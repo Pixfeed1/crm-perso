@@ -238,6 +238,8 @@ export const leadsAPI = {
   },
   // Envoi immédiat d'un email depuis une fiche prospect (+ log Suivi côté serveur)
   sendEmail: (id, payload) => apiRequest(`/leads/${id}/send-email`, 'POST', payload),
+  // Rédaction d'un email de prospection par Claude (à partir des problèmes détectés).
+  draftEmail: (id, opts = {}) => apiRequest(`/leads/${id}/draft-email`, 'POST', opts),
   getById: (id) => {
     console.log(`Appel API: récupération du lead ID ${id}`);
     return apiRequest(`/leads/${id}`);
@@ -1247,8 +1249,6 @@ export const crawlAPI = {
   delete: (id) => apiRequest(`/portefeuille/crawl/${id}`, 'DELETE'),
   toProspect: (id, result_ids, extra = {}) => apiRequest(`/portefeuille/crawl/${id}/to-prospect`, 'POST', { result_ids, ...extra }),
   enrich: (id, result_ids) => apiRequest(`/portefeuille/crawl/${id}/enrich`, 'POST', { result_ids }),
-  // Rédaction d'un email de prospection par Claude (à partir des problèmes détectés).
-  draftEmail: (id, result_id, opts = {}) => apiRequest(`/portefeuille/crawl/${id}/draft-email`, 'POST', { result_id, ...opts }),
   exportCsv: (id) => apiRequestRaw(`/portefeuille/crawl/${id}/export.csv`)
 };
 

@@ -5,7 +5,7 @@
 // Réutilise l'envoi email existant (leadsAPI.sendEmail / scheduledEmailsAPI) et le log Suivi.
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiMail, FiSend, FiClock, FiX, FiTrash2 } from 'react-icons/fi';
+import { FiMail, FiSend, FiClock, FiX, FiTrash2, FiCpu, FiLoader } from 'react-icons/fi';
 import { leadsAPI, scheduledEmailsAPI, emailTemplatesAPI, emailSignaturesAPI } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
 import { CHANNELS } from '../../utils/relationStatus';
@@ -69,6 +69,8 @@ const ProspectEmails = ({ lead }) => {
   const [relanceDate, setRelanceDate] = useState('');
   const [relanceChannel, setRelanceChannel] = useState('appel');
   const [sending, setSending] = useState(false);
+  const [drafting, setDrafting] = useState(false);
+  const [draftTon, setDraftTon] = useState('humain');
 
   // Nom utilisé pour {prenom} selon le destinataire courant (contact choisi sinon lead).
   const recipientName = (email) => {
@@ -121,6 +123,23 @@ const ProspectEmails = ({ lead }) => {
   const signatureContent = () => {
     const s = signatures.find((x) => String(x.id) === String(signatureId));
     return s ? s.content : '';
+  };
+
+  // Rédaction du corps par Claude à partir des problèmes détectés par l'audit du crawl.
+  // Claude ne signe pas : la signature par défaut (Paramètres) est ajoutée à l'envoi.
+  const generateWithClaude = async () => {
+    if (drafting) return;
+    setDrafting(true);
+    try {
+      const res = await leadsAPI.draftEmail(lead.id, { ton: draftTon });
+      if (res.subject) setSubject(res.subject);
+      setBody(res.body || '');
+      toast.success('Brouillon rédigé par Claude');
+    } catch (e) {
+      toast.error(e.message || 'Échec de la rédaction');
+    } finally {
+      setDrafting(false);
+    }
   };
 
   const handleSend = async () => {
@@ -264,19 +283,29 @@ const ProspectEmails = ({ lead }) => {
                 </div>
 
                 <div>
-                  <label className="block text-sm text-text-secondary mb-1">Message</label>
+                  <div className="flex items-center justify-between gap-2 mb-1 flex-wrap">
+                    <label className="text-sm text-text-secondary">Message</label>
+                    <div className="flex items-center gap-1.5">
+                      <select value={draftTon} onChange={(e) => setDraftTon(e.target.value)} disabled={drafting}
+                        className="px-2 py-1 text-xs bg-surface-muted border border-border rounded-lg text-text-secondary focus:outline-none focus:border-accent disabled:opacity-50"
+                        title="Ton de l'email">
+                        <option value="humain">Ton humain</option>
+                        <option value="direct">Ton direct</option>
+                        <option value="doux">Ton doux</option>
+                      </select>
+                      <button type="button" onClick={generateWithClaude} disabled={drafting}
+                        title="Rédiger le message avec Claude à partir des problèmes détectés sur le site"
+                        className="px-2.5 py-1 text-xs rounded-lg bg-accent/15 text-accent hover:bg-accent/25 flex items-center gap-1.5 disabled:opacity-50">
+                        {drafting
+                          ? <motion.span animate={{ rotate: 360 }} transition={{ duration: 0.9, repeat: Infinity, ease: 'linear' }} className="inline-flex"><FiLoader size={13} /></motion.span>
+                          : <FiCpu size={13} />}
+                        {drafting ? 'Rédaction…' : 'Rédiger avec Claude'}
+                      </button>
+                    </div>
+                  </div>
                   <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={9}
                     className="w-full px-3 py-2 bg-surface-muted border border-border rounded-lg text-text-primary focus:outline-none focus:border-accent resize-y" />
-                  <p className="text-xs text-text-muted mt-1">Variables {'{constat}'} et autres non résolues : éditez-les directement.</p>
-                </div>
-
-                <div>
-                  <label className="block text-sm text-text-secondary mb-1">Signature</label>
-                  <select value={signatureId} onChange={(e) => setSignatureId(e.target.value)}
-                    className="w-full px-3 py-2 bg-surface-muted border border-border rounded-lg text-text-primary focus:outline-none focus:border-accent">
-                    <option value="">— Aucune —</option>
-                    {signatures.map((s) => <option key={s.id} value={s.id}>{s.name}{s.is_default ? ' (défaut)' : ''}</option>)}
-                  </select>
+                  <p className="text-xs text-text-muted mt-1">La signature par défaut (Paramètres) est ajoutée automatiquement à l'envoi.</p>
                 </div>
 
                 <div>

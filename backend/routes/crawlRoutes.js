@@ -29,9 +29,6 @@ router.post('/:id/enrich', crawlController.enrichResults);
 // POST /api/portefeuille/crawl/:id/to-prospect - convertit des résultats en prospects
 router.post('/:id/to-prospect', crawlController.toProspect);
 
-// POST /api/portefeuille/crawl/:id/draft-email - rédige un email de prospection (Claude Haiku)
-router.post('/:id/draft-email', crawlController.draftEmail);
-
 // DELETE /api/portefeuille/crawl/:id - supprime le job + ses résultats
 router.delete('/:id', crawlController.remove);
 

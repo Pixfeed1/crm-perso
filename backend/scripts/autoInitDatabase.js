@@ -1221,6 +1221,9 @@ async function ensureInteractionsColumns(client) {
   // Réseaux sociaux du lead (outreach multi-canal : liens cliquables vers le profil).
   await client.query('ALTER TABLE leads ADD COLUMN IF NOT EXISTS facebook_url TEXT;');
   await client.query('ALTER TABLE leads ADD COLUMN IF NOT EXISTS instagram_url TEXT;');
+  // Lien vers le résultat de crawl d'origine -> permet de retrouver les données d'audit
+  // riches (plateforme, SSL, mentions légales, SPF…) pour la rédaction d'email par Claude.
+  await client.query('ALTER TABLE leads ADD COLUMN IF NOT EXISTS crawl_result_id INTEGER;');
   // Plateforme (techno du site) sur les contacts, pour le filtre plateforme du cockpit Suivi.
   await client.query('ALTER TABLE leads ADD COLUMN IF NOT EXISTS platform VARCHAR(50);');
   await client.query('ALTER TABLE crm_clients ADD COLUMN IF NOT EXISTS platform VARCHAR(50);');

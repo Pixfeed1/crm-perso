@@ -5,9 +5,42 @@ const authMiddleware = require('../middleware/authMiddleware');
 const leadController = require('../controllers/leadController');
 const leadModel = require('../models/leadModel');
 const emailService = require('../services/emailService');
+const coldEmailService = require('../services/coldEmailService');
+const { problemesLisibles } = require('../utils/crawlAngles');
 
 // Appliquer le middleware d'authentification à toutes les routes
 router.use(authMiddleware);
+
+// Récupère la signature par défaut (Paramètres) — source unique pour tous les mails
+// de l'outil. Repli sur '' si aucune signature définie.
+async function defaultSignature(db) {
+  try {
+    const r = await db.pool.query('SELECT content FROM email_signatures ORDER BY is_default DESC, id ASC LIMIT 1');
+    return (r.rows[0] && r.rows[0].content) || '';
+  } catch { return ''; }
+}
+
+// Reconstitue la liste des problèmes détectés pour un lead : d'abord via son
+// crawl_result_id (données d'audit structurées), sinon en repli en parsant les
+// « Angles d'approche détectés » stockés dans les notes.
+async function problemesDuLead(db, lead) {
+  if (lead.crawl_result_id) {
+    try {
+      const cr = await db.pool.query('SELECT * FROM crawl_results WHERE id = $1', [lead.crawl_result_id]);
+      if (cr.rows[0]) {
+        return { row: cr.rows[0], problemes: problemesLisibles(cr.rows[0]) };
+      }
+    } catch { /* repli notes */ }
+  }
+  // Repli : extraire les puces « • … » du bloc d'angles dans les notes.
+  const notes = lead.notes || '';
+  const problemes = notes.split('\n')
+    .map((l) => l.trim())
+    .filter((l) => l.startsWith('•'))
+    .map((l) => l.replace(/^•\s*/, '').trim())
+    .filter(Boolean);
+  return { row: null, problemes };
+}
 
 // POST /api/leads/:id/send-email — envoi immédiat depuis une fiche prospect + log Suivi.
 // Réutilise emailService (SMTP .env) ; logge une interaction email (table interactions).
@@ -21,10 +54,12 @@ router.post('/:id/send-email', async (req, res) => {
   const channels = ['appel', 'email', 'sms', 'autre'];
   const followupChannel = next_followup_date && channels.includes(next_followup_channel) ? next_followup_channel : null;
   try {
+    // Signature : celle fournie, sinon TOUJOURS la signature par défaut des Paramètres.
+    const sig = signature || await defaultSignature(db);
     const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     const html = `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.6;color:#374151;">`
       + `<div style="white-space:pre-wrap;">${esc(body)}</div>`
-      + (signature ? `<div style="margin-top:18px;">${signature}</div>` : '')
+      + (sig ? `<div style="margin-top:18px;">${sig}</div>` : '')
       + `</div>`;
     await emailService.sendEmail({ to, subject, html, text: body });
     // Log automatique COMPLET dans Suivi (destinataire + sujet + corps intégral)
@@ -50,6 +85,39 @@ router.post('/:id/send-email', async (req, res) => {
   } catch (error) {
     console.error('[Lead] Erreur envoi email:', error);
     res.status(500).json({ message: error.message || "Erreur lors de l'envoi de l'email" });
+  }
+});
+
+// POST /api/leads/:id/draft-email { ton? } — rédige un email de prospection (Claude Haiku)
+// à partir des problèmes détectés par l'audit. Ne fait QUE rédiger (aucun envoi). ~0,003 $.
+router.post('/:id/draft-email', async (req, res) => {
+  const db = req.app.locals.db;
+  const { id } = req.params;
+  const ton = (req.body?.ton || 'humain').toString();
+  try {
+    const lr = await db.pool.query('SELECT * FROM leads WHERE id = $1', [id]);
+    if (lr.rows.length === 0) return res.status(404).json({ message: 'Prospect introuvable' });
+    const lead = lr.rows[0];
+    const { row, problemes } = await problemesDuLead(db, lead);
+    // Plateforme / dirigeant : depuis le crawl_result si dispo, sinon parsés des notes.
+    const platMatch = (lead.notes || '').match(/Plateforme\s*:\s*([^\n(]+)(?:\(([^)]+)\))?/i);
+    const prospect = {
+      domain: lead.company || lead.name || '',
+      company: lead.company || '',
+      raison_sociale: (row && row.raison_sociale) || null,
+      dirigeant: (row && row.gerant) || null,
+      platform: (row && row.platform) || (platMatch && platMatch[1].trim()) || null,
+      platform_version: (row && row.platform_version) || (platMatch && platMatch[2] && platMatch[2].trim()) || null,
+      problemes
+    };
+    const draft = await coldEmailService.draftColdEmail(prospect, { ton });
+    res.json({ ...draft, problemes });
+  } catch (e) {
+    console.error('[Lead] draftEmail:', e.message);
+    const msg = /ANTHROPIC_API_KEY/.test(e.message)
+      ? 'Clé Anthropic non configurée sur le serveur (ANTHROPIC_API_KEY).'
+      : `Échec de la rédaction : ${e.message}`;
+    res.status(500).json({ message: msg });
   }
 });
 
