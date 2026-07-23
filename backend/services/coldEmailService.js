@@ -37,6 +37,26 @@ const TONS = {
     "Ton doux et consultatif, approche conseil sans aucune pression, très rassurant."
 };
 
+// Formule de politesse de fin adaptée au moment de la journée (heure Europe/Paris).
+// L'email est généré au moment où l'on clique, donc au plus près de l'envoi.
+function formuleDeFin(date = new Date()) {
+  let h;
+  try {
+    // fr-FR formate en « 10 h » -> parseInt lit bien le nombre en tête. hour12:false.
+    const s = new Intl.DateTimeFormat('fr-FR', {
+      timeZone: 'Europe/Paris', hour: 'numeric', hour12: false
+    }).format(date);
+    h = parseInt(s, 10);
+    if (Number.isNaN(h)) h = date.getHours();
+    if (h === 24) h = 0; // minuit selon l'ICU
+  } catch {
+    h = date.getHours();
+  }
+  if (h < 12) return 'Belle matinée';
+  if (h < 14) return 'Bon appétit';          // créneau déjeuner
+  return 'Belle fin de journée';
+}
+
 function buildSystemPrompt(ton) {
   const consigneTon = TONS[ton] || TONS.humain;
   return [
@@ -44,6 +64,13 @@ function buildSystemPrompt(ton) {
     "à un commerçant/artisan dont tu viens de regarder le site.",
     "Objectif : engager une conversation, PAS vendre agressivement.",
     consigneTon,
+    "",
+    "STYLE (très important) :",
+    "- Écris comme un VRAI humain qui a pris deux minutes pour regarder le site.",
+    "- Le texte doit COULER naturellement. N'enchaîne SURTOUT PAS les points avec",
+    "  « D'abord… Ensuite… » ni une liste mécanique : intègre-les dans des phrases fluides.",
+    "- Commence par « Bonjour, » puis une phrase d'accroche naturelle (ex. « je suis tombé",
+    "  sur votre site … et j'ai jeté un œil »). Varie les formulations, ne sois pas robotique.",
     "",
     "RÈGLES STRICTES :",
     "- N'invente AUCUN fait. Utilise UNIQUEMENT les problèmes fournis dans les données.",
@@ -53,8 +80,10 @@ function buildSystemPrompt(ton) {
     "  « offre exceptionnelle »), fausse urgence, flatterie fausse, jargon technique lourd,",
     "  emojis à outrance (0 ou 1 maximum).",
     "- Longueur du corps : 90 à 150 mots. Phrases courtes.",
-    "- Termine par UNE question ouverte simple (proposer un échange, pas un rdv forcé).",
-    "- Signe avec le prénom et l'entreprise fournis.",
+    "- Avant-dernière ligne : UNE question ouverte simple (proposer un échange, pas un rdv forcé).",
+    "- DERNIÈRE partie = formule de politesse : utilise EXACTEMENT la formule de fin fournie",
+    "  dans les données (ex. « Belle matinée »), suivie d'un retour à la ligne puis la signature",
+    "  (prénom + « — » + entreprise, ou entreprise seule si aucun prénom fourni).",
     "- Écris en français.",
     "",
     "Réponds UNIQUEMENT avec un objet JSON valide, sans texte autour, de la forme :",
@@ -89,6 +118,8 @@ function buildUserPrompt(prospect, sender) {
     `- Entreprise : ${sender.entreprise}`,
     `- Activité : ${sender.metier}`,
     "",
+    `FORMULE DE FIN À UTILISER (obligatoire, telle quelle) : ${sender.formuleFin}`,
+    "",
     `Écris l'email à ${cible}.`
   ].filter(Boolean);
   return lignes.join("\n");
@@ -121,6 +152,8 @@ async function draftColdEmail(prospect, options = {}) {
 
   const ton = options.ton || 'humain';
   const sender = senderIdentity(options.sender || {});
+  // Formule de fin selon l'heure (surchargeable via options.formuleFin pour tester).
+  sender.formuleFin = options.formuleFin || formuleDeFin();
   const system = buildSystemPrompt(ton);
   const userPrompt = buildUserPrompt(prospect, sender);
 
