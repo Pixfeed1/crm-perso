@@ -3,7 +3,7 @@
 // Fiche prospect : bouton "Envoyer un email" -> modale (modèle éditable + signature,
 // envoi immédiat ou différé) + liste des emails programmés (annulables tant que pending).
 // Réutilise l'envoi email existant (leadsAPI.sendEmail / scheduledEmailsAPI) et le log Suivi.
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiMail, FiSend, FiClock, FiX, FiTrash2, FiCpu, FiLoader } from 'react-icons/fi';
 import { leadsAPI, scheduledEmailsAPI, emailTemplatesAPI, emailSignaturesAPI } from '../../services/api';
@@ -42,7 +42,7 @@ const formatDT = (s) => {
   return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 };
 
-const ProspectEmails = ({ lead }) => {
+const ProspectEmails = ({ lead, autoCompose = false }) => {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [templates, setTemplates] = useState([]);
@@ -141,6 +141,16 @@ const ProspectEmails = ({ lead }) => {
       setDrafting(false);
     }
   };
+
+  // Deep-link « Prospecter » depuis le Crawl : ouvre la modale + lance Claude, une seule fois.
+  const autoFired = useRef(false);
+  useEffect(() => {
+    if (autoCompose && !autoFired.current && lead && lead.id) {
+      autoFired.current = true;
+      (async () => { await openModal(); generateWithClaude(); })();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoCompose, lead]);
 
   const handleSend = async () => {
     if (!to || !subject || !body) { toast.error('Destinataire, objet et message requis'); return; }

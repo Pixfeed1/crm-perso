@@ -14,7 +14,7 @@ import ProspectEmails from './ProspectEmails';
 import LeadForm from './LeadForm';
 import ConfirmModal from '../common/ConfirmModal';
 
-const LeadDetails = ({ lead, onUpdate, onDelete, onAddContact, onUpdateContact, onDeleteContact, onAddInteraction, onUpdateInteraction, onDeleteInteraction }) => {
+const LeadDetails = ({ lead, autoCompose = false, onUpdate, onDelete, onAddContact, onUpdateContact, onDeleteContact, onAddInteraction, onUpdateInteraction, onDeleteInteraction }) => {
   const { toast } = useToast();
   const { confirm, confirmState } = useConfirm();
   const [isEditing, setIsEditing] = useState(false);
@@ -409,7 +409,7 @@ const LeadDetails = ({ lead, onUpdate, onDelete, onAddContact, onUpdateContact, 
       <ContactFollowup contactType="lead" contactId={lead.id} phone={lead.phone} />
 
       {/* Emails : modèle éditable + signature, envoi immédiat ou programmé */}
-      <ProspectEmails lead={lead} />
+      <ProspectEmails lead={lead} autoCompose={autoCompose} />
 
       {/* Popup de confirmation de suppression */}
       <AnimatePresence>

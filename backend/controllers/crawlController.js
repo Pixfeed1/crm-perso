@@ -409,6 +409,7 @@ const crawlController = {
       );
       let created = 0;
       let lastError = null;
+      const leadIds = []; // IDs des leads créés (pour le raccourci « Prospecter » -> fiche)
       const anneeCourante = new Date().getFullYear();
       for (const r of rows) {
         // Angles d'approche détectés gratuitement (audit) -> arguments concrets pour l'email.
@@ -441,13 +442,14 @@ const crawlController = {
         try {
           // Colonnes standard + enrichissement cc_prospector (email/tel/réseaux) -> le lead
           // arrive directement exploitable dans l'Outreach multi-canal.
-          await db.pool.query(
+          const ins = await db.pool.query(
             `INSERT INTO leads (name, company, type, status, source, notes, email, phone, facebook_url, instagram_url, relation_status, crawl_result_id, created_at, updated_at)
-             VALUES ($1, $2, 'company', 'nouveau', 'Crawl', $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())`,
+             VALUES ($1, $2, 'company', 'nouveau', 'Crawl', $3, $4, $5, $6, $7, $8, $9, NOW(), NOW()) RETURNING id`,
             [(isAntibotTitle(r.title) ? null : decodeHtml(r.title)) || r.domain, r.domain, notes,
              r.email || null, r.phone || null, r.facebook_url || null, r.instagram_url || null, statusVal, r.id]
           );
           await db.pool.query('UPDATE crawl_results SET added_as_prospect = TRUE WHERE id = $1', [r.id]);
+          if (ins.rows[0]) leadIds.push(ins.rows[0].id);
           created++;
         } catch (e) {
           lastError = e.message;
@@ -457,7 +459,7 @@ const crawlController = {
       if (created === 0 && lastError) {
         return res.status(500).json({ message: `Création impossible : ${lastError}` });
       }
-      res.json({ created });
+      res.json({ created, lead_ids: leadIds });
     } catch (error) {
       console.error('[Crawl] Erreur to-prospect:', error);
       res.status(500).json({ message: 'Erreur serveur' });

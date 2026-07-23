@@ -1,5 +1,6 @@
 // src/pages/Leads.jsx
 import React, { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiUsers, FiPlus, FiDownload, FiUpload, FiGrid, FiList, FiTrello, FiSearch, FiSend } from 'react-icons/fi';
 import { leadsAPI, exportAPI } from '../services/api';
@@ -28,6 +29,8 @@ const Leads = () => {
   const [isAddingLead, setIsAddingLead] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [showDetails, setShowDetails] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [autoComposeLeadId, setAutoComposeLeadId] = useState(null); // depuis ?lead=&compose=claude
   const [view, setView] = useState('cards'); // 'cards', 'table' ou 'kanban'
   const [filters, setFilters] = useState({
     search: '',
@@ -211,6 +214,17 @@ const Leads = () => {
       setShowDetails(true); // Afficher les détails sur mobile
     }
   };
+
+  // Deep-link depuis le Crawl : ?lead=<id>&compose=claude -> ouvre la fiche + rédaction Claude.
+  useEffect(() => {
+    const leadId = searchParams.get('lead');
+    if (leadId) {
+      handleSelectLead({ id: leadId });
+      if (searchParams.get('compose') === 'claude') setAutoComposeLeadId(String(leadId));
+      setSearchParams({}, { replace: true }); // nettoie l'URL (évite de re-déclencher au refresh)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Import de leads depuis un fichier JSON
   const handleImportClick = () => {
@@ -813,6 +827,7 @@ const Leads = () => {
           <div className="relative w-full max-w-4xl my-8">
             <LeadDetails
               lead={selectedLead}
+              autoCompose={!!autoComposeLeadId && selectedLead && String(selectedLead.id) === autoComposeLeadId}
               onUpdate={handleUpdateLead}
               onDelete={handleDeleteLead}
               onAddContact={handleAddContact}

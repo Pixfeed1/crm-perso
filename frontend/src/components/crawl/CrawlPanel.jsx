@@ -6,6 +6,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiSearch, FiDownload, FiUserPlus, FiGlobe, FiCheckCircle, FiAlertTriangle, FiLoader, FiTrash2, FiClock, FiSlash, FiX, FiMail, FiPhone, FiFacebook, FiInstagram, FiShield } from 'react-icons/fi';
+import { useNavigate } from 'react-router-dom';
 import { crawlAPI } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
 
@@ -93,6 +94,7 @@ const prospectScore = (r) => {
 
 const CrawlPanel = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [techno, setTechno] = useState('ecommerce');
   const [nbSites, setNbSites] = useState(50);
   const [jobId, setJobId] = useState(null);
@@ -259,6 +261,28 @@ const CrawlPanel = () => {
       toast.error(error.message || 'Erreur lors du classement');
     } finally {
       setPbSaving(false);
+    }
+  };
+
+  // Raccourci « Prospecter » : crée le prospect en 1 clic PUIS ouvre sa fiche avec la
+  // modale d'email + rédaction Claude prête (pipeline propre : tracking garanti, sans friction).
+  const [prospecting, setProspecting] = useState(null); // id du résultat en cours
+  const prospecterEtRediger = async (r) => {
+    if (prospecting) return;
+    setProspecting(r.id);
+    try {
+      const res = await crawlAPI.toProspect(jobId, [r.id], { relation_status: 'nouveau' });
+      const leadId = res.lead_ids && res.lead_ids[0];
+      if (leadId) {
+        navigate(`/leads?lead=${leadId}&compose=claude`);
+      } else {
+        toast.info('Ce site est déjà un prospect');
+        poll(jobId);
+      }
+    } catch (e) {
+      toast.error(e.message || 'Erreur lors du passage en prospect');
+    } finally {
+      setProspecting(null);
     }
   };
 
@@ -611,6 +635,18 @@ const CrawlPanel = () => {
                         </td>
                         <td className="px-4 py-3 text-text-secondary truncate max-w-xs">{r.title || '—'}</td>
                         <td className="px-4 py-3 text-right">
+                          {!r.added_as_prospect && (
+                            <button
+                              onClick={() => prospecterEtRediger(r)}
+                              disabled={prospecting === r.id}
+                              className="p-2 rounded-lg text-text-muted hover:text-accent hover:bg-surface-strong disabled:opacity-50"
+                              title="Prospecter : passer en prospect et rédiger l'email"
+                            >
+                              {prospecting === r.id
+                                ? <motion.span animate={{ rotate: 360 }} transition={{ duration: 0.9, repeat: Infinity, ease: 'linear' }} className="inline-flex"><FiLoader size={15} /></motion.span>
+                                : <FiUserPlus size={15} />}
+                            </button>
+                          )}
                           {!r.added_as_prospect && (
                             <button
                               onClick={() => { setPbNote(''); setPbTarget({ ids: [r.id] }); }}
