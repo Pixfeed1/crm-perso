@@ -81,9 +81,11 @@ function buildSystemPrompt(ton) {
     "  emojis à outrance (0 ou 1 maximum).",
     "- Longueur du corps : 90 à 150 mots. Phrases courtes.",
     "- Avant-dernière ligne : UNE question ouverte simple (proposer un échange, pas un rdv forcé).",
-    "- DERNIÈRE partie = formule de politesse : utilise EXACTEMENT la formule de fin fournie",
-    "  dans les données (ex. « Belle matinée »), suivie d'un retour à la ligne puis la signature",
-    "  (prénom + « — » + entreprise, ou entreprise seule si aucun prénom fourni).",
+    "- DERNIÈRE ligne = formule de politesse : utilise EXACTEMENT la formule de fin fournie",
+    "  dans les données (ex. « Belle matinée »), suivie d'une virgule.",
+    "- NE SIGNE PAS. N'ajoute NI nom, NI « PixFeed », NI bloc de coordonnées après la formule :",
+    "  la signature est ajoutée AUTOMATIQUEMENT par le CRM après ton texte. Le body doit se",
+    "  TERMINER sur la formule de politesse (rien après).",
     "- Écris en français.",
     "",
     "Réponds UNIQUEMENT avec un objet JSON valide, sans texte autour, de la forme :",
@@ -111,14 +113,11 @@ function buildUserPrompt(prospect, sender) {
       ? `PROBLÈMES DÉTECTÉS (choisis-en 1 ou 2, les plus parlants) :\n${problemes.map((p) => `- ${p}`).join("\n")}`
       : "PROBLÈMES DÉTECTÉS : aucun signal fort — reste général, propose simplement un regard extérieur sur le site.",
     "",
-    "EXPÉDITEUR (pour la signature) :",
-    sender.nom
-      ? `- Prénom : ${sender.nom}`
-      : "- Prénom : NON FOURNI — signe uniquement avec le nom de l'entreprise, n'invente aucun prénom.",
-    `- Entreprise : ${sender.entreprise}`,
-    `- Activité : ${sender.metier}`,
+    "CONTEXTE EXPÉDITEUR (uniquement pour ajuster le propos — NE PAS signer avec) :",
+    `- Activité de l'expéditeur : ${sender.metier}`,
+    "  (La signature du CRM sera ajoutée automatiquement après : ne mets aucune signature toi-même.)",
     "",
-    `FORMULE DE FIN À UTILISER (obligatoire, telle quelle) : ${sender.formuleFin}`,
+    `FORMULE DE FIN À UTILISER (obligatoire, telle quelle, en toute dernière ligne) : ${sender.formuleFin}`,
     "",
     `Écris l'email à ${cible}.`
   ].filter(Boolean);
