@@ -7,6 +7,7 @@ const leadModel = require('../models/leadModel');
 const emailService = require('../services/emailService');
 const coldEmailService = require('../services/coldEmailService');
 const { problemesLisibles } = require('../utils/crawlAngles');
+const { statusForRelation, relationForStatus } = require('../utils/leadStatusSync');
 
 // Appliquer le middleware d'authentification à toutes les routes
 router.use(authMiddleware);
@@ -248,7 +249,7 @@ router.post('/import', async (req, res) => {
 router.put('/:id', async (req, res) => {
   const db = req.app.locals.db;
   const { id } = req.params;
-  const { name, company, type, status, source, notes, email, phone, facebook_url, instagram_url } = req.body;
+  const { name, company, type, status, source, notes, email, phone, facebook_url, instagram_url, relation_status } = req.body;
 
   try {
     // Vérifier si le lead existe
@@ -257,7 +258,7 @@ router.put('/:id', async (req, res) => {
       return res.status(404).json({ message: 'Lead non trouvé' });
     }
 
-    const updatedLead = await leadModel.updateLead(db, id, {
+    await leadModel.updateLead(db, id, {
       name,
       company,
       type,
@@ -270,7 +271,25 @@ router.put('/:id', async (req, res) => {
       instagram_url
     });
 
-    res.json(updatedLead);
+    // Synchro bidirectionnelle status <-> relation_status (une seule vérité).
+    // Si relation_status explicite -> il prime et pilote le status Kanban.
+    // Sinon un changement de status (ex. glissé du Kanban) met à jour le Suivi.
+    try {
+      if (relation_status) {
+        await db.pool.query('UPDATE leads SET relation_status = $1 WHERE id = $2', [relation_status, id]);
+        const kb = statusForRelation(relation_status);
+        if (kb) await db.pool.query('UPDATE leads SET status = $1 WHERE id = $2', [kb, id]);
+      } else if (status) {
+        const rel = relationForStatus(status);
+        if (rel) await db.pool.query('UPDATE leads SET relation_status = $1 WHERE id = $2', [rel, id]);
+      }
+    } catch (e) {
+      console.error('[Lead] Synchro statut PUT:', e.message);
+    }
+
+    // On renvoie le lead re-lu pour refléter les deux statuts synchronisés.
+    const finalLead = await leadModel.getLeadById(db, id);
+    res.json(finalLead);
   } catch (error) {
     console.error('Erreur lors de la mise à jour du lead:', error);
     res.status(500).json({ message: 'Erreur serveur' });

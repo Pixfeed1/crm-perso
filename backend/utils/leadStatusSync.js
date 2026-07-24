@@ -22,4 +22,23 @@ function statusForRelation(relation) {
   return RELATION_TO_STATUS[relation] || null;
 }
 
-module.exports = { RELATION_TO_STATUS, statusForRelation };
+// Mapping inverse status (Kanban) -> relation_status (Suivi), pour la synchro
+// bidirectionnelle (déplacer une carte dans le Kanban met à jour le Suivi).
+// Volontairement approximatif : le Kanban est plus grossier que le Suivi
+// (contacte/prospect/qualifié retombent tous sur 'en_discussion').
+const STATUS_TO_RELATION = {
+  nouveau: 'nouveau',
+  contacte: 'en_discussion',
+  prospect: 'en_discussion',
+  'qualifié': 'en_discussion',
+  'négociation': 'devis_envoye',
+  client: 'gagne',
+  perdu: 'perdu',
+  pas_business: 'pas_business'
+};
+
+function relationForStatus(status) {
+  return STATUS_TO_RELATION[status] || null;
+}
+
+module.exports = { RELATION_TO_STATUS, statusForRelation, STATUS_TO_RELATION, relationForStatus };
