@@ -14,6 +14,28 @@ import ProspectEmails from './ProspectEmails';
 import LeadForm from './LeadForm';
 import ConfirmModal from '../common/ConfirmModal';
 
+// Checklist d'audit du site (issue du crawl) : problèmes d'abord (angles de vente),
+// puis points conformes. ok=false => problème, ok=true => conforme.
+const buildAuditItems = (a) => {
+  if (!a) return [];
+  const items = [];
+  if (a.ssl_ok === false) items.push({ ok: false, label: 'Pas de certificat SSL valide' });
+  else if (a.ssl_ok === true) items.push({ ok: true, label: 'SSL valide' });
+  if (a.ssl_expire_jours != null && a.ssl_expire_jours < 30)
+    items.push({ ok: false, label: a.ssl_expire_jours < 0 ? 'Certificat SSL expiré' : `SSL expire dans ${a.ssl_expire_jours} j` });
+  if (a.mobile_ok === false) items.push({ ok: false, label: 'Site non responsive (mobile)' });
+  else if (a.mobile_ok === true) items.push({ ok: true, label: 'Responsive mobile' });
+  if (a.mentions_legales === false) items.push({ ok: false, label: 'Pas de mentions légales (obligation légale)' });
+  if (a.rgpd_confidentialite === false) items.push({ ok: false, label: 'Pas de politique de confidentialité (RGPD)' });
+  if (a.cookie_banner === false) items.push({ ok: false, label: 'Pas de bandeau cookies (CNIL)' });
+  if (a.spf === false) items.push({ ok: false, label: 'Pas de SPF (emails à risque de spam)' });
+  if (a.dmarc === false) items.push({ ok: false, label: 'Pas de DMARC (domaine usurpable)' });
+  if (a.meta_desc === false || a.h1_present === false) items.push({ ok: false, label: 'SEO de base incomplet (meta description / H1)' });
+  if (a.analytics === false) items.push({ ok: false, label: "Aucune mesure d'audience installée" });
+  if (a.serveur_php) items.push({ ok: false, label: `Serveur exposé : ${a.serveur_php}` });
+  return items.sort((x, y) => Number(x.ok) - Number(y.ok)); // problèmes d'abord
+};
+
 const LeadDetails = ({ lead, autoCompose = false, onUpdate, onDelete, onAddContact, onUpdateContact, onDeleteContact, onAddInteraction, onUpdateInteraction, onDeleteInteraction }) => {
   const { toast } = useToast();
   const { confirm, confirmState } = useConfirm();
@@ -142,9 +164,8 @@ const LeadDetails = ({ lead, autoCompose = false, onUpdate, onDelete, onAddConta
 
       toast.success('Lead converti en client avec succès !');
 
-      // Mettre à jour le statut du lead à "won" (le backend l'a déjà fait)
-      // Le lead reste dans la base pour les statistiques mais disparaît de la vue
-      await onUpdate(lead.id, { status: 'won' });
+      // Le backend a déjà passé le lead en 'client' / 'gagne' ; on aligne l'état local.
+      await onUpdate(lead.id, { status: 'client', relation_status: 'gagne' });
 
     } catch (error) {
       console.error('Erreur lors de la conversion du lead:', error);
@@ -237,8 +258,8 @@ const LeadDetails = ({ lead, autoCompose = false, onUpdate, onDelete, onAddConta
         </div>
 
         <div className="flex space-x-2 flex-shrink-0">
-          {/* Bouton "Convertir en client" - visible uniquement si le lead n'est pas déjà gagné ou perdu */}
-          {lead.status !== 'won' && lead.status !== 'lost' && (
+          {/* Bouton "Convertir en client" - masqué si le lead est déjà client/gagné ou perdu */}
+          {!['client', 'won', 'perdu', 'lost'].includes(lead.status) && lead.relation_status !== 'gagne' && (
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -334,15 +355,42 @@ const LeadDetails = ({ lead, autoCompose = false, onUpdate, onDelete, onAddConta
           </div>
         </div>
         
-        {/* Panneau de droite (Notes) */}
-        <div className="bg-surface/30 backdrop-blur-sm rounded-xl p-4 sm:p-5">
-          <h3 className="text-base sm:text-lg font-medium text-text-primary mb-3 sm:mb-4 flex items-center gap-2">
-            <FiFileText className="text-base sm:text-lg" />
-            Notes
-          </h3>
+        {/* Panneau de droite (Audit du site + Notes) */}
+        <div className="bg-surface/30 backdrop-blur-sm rounded-xl p-4 sm:p-5 space-y-5">
+          {/* Checklist d'audit issue du crawl : l'argumentaire de vente, visible et exploitable */}
+          {lead.crawl_audit && buildAuditItems(lead.crawl_audit).length > 0 && (
+            <div>
+              <h3 className="text-base sm:text-lg font-medium text-text-primary mb-3 flex items-center gap-2 flex-wrap">
+                <FiClipboard className="text-base sm:text-lg" />
+                Audit du site
+                {lead.crawl_audit.platform && lead.crawl_audit.platform !== 'Inconnu' && (
+                  <span className="text-xs font-normal text-text-muted">
+                    · {lead.crawl_audit.platform}{lead.crawl_audit.platform_version ? ` ${lead.crawl_audit.platform_version.replace(/^\S+\s/, 'v')}` : ''}
+                  </span>
+                )}
+              </h3>
+              <ul className="space-y-1.5">
+                {buildAuditItems(lead.crawl_audit).map((it, i) => (
+                  <li key={i} className="flex items-start gap-2 text-sm">
+                    {it.ok
+                      ? <FiCheckCircle className="text-success-text mt-0.5 flex-shrink-0" size={15} />
+                      : <FiXCircle className="text-warning-text mt-0.5 flex-shrink-0" size={15} />}
+                    <span className={it.ok ? 'text-text-muted' : 'text-text-primary'}>{it.label}</span>
+                  </li>
+                ))}
+              </ul>
+              <p className="text-xs text-text-muted mt-3">Ces points alimentent l'email de prospection rédigé par Claude.</p>
+            </div>
+          )}
 
-          <div className="bg-surface-muted/50 rounded-lg p-3 sm:p-4 min-h-[100px] sm:min-h-[120px] text-text-secondary text-sm sm:text-base">
-            {lead.notes || 'Aucune note pour ce lead.'}
+          <div>
+            <h3 className="text-base sm:text-lg font-medium text-text-primary mb-3 sm:mb-4 flex items-center gap-2">
+              <FiFileText className="text-base sm:text-lg" />
+              Notes
+            </h3>
+            <div className="bg-surface-muted/50 rounded-lg p-3 sm:p-4 min-h-[100px] sm:min-h-[120px] text-text-secondary text-sm sm:text-base whitespace-pre-wrap">
+              {lead.notes || 'Aucune note pour ce lead.'}
+            </div>
           </div>
         </div>
       </div>

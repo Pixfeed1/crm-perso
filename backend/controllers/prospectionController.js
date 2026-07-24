@@ -369,97 +369,49 @@ exports.importOpportunityAsLead = async (req, res) => {
       });
     }
 
-    const db = req.db;
+    const db = req.app.locals.db; // FIX: la connexion vit sur app.locals.db (pas req.db)
 
-    // Vérifier si ce lead n'existe pas déjà
-    let existingLead = null;
+    const companyName = opportunity.company_name || opportunity.name || 'Entreprise confidentielle';
+    const email = opportunity.email || null;
 
-    if (opportunity.email) {
-      existingLead = await new Promise((resolve, reject) => {
-        db.get(
-          'SELECT id, company_name FROM leads WHERE LOWER(email) = LOWER(?)',
-          [opportunity.email],
-          (err, row) => {
-            if (err) reject(err);
-            else resolve(row);
-          }
-        );
-      });
+    // Anti-doublon : par email, sinon par nom d'entreprise (vraie colonne `company`).
+    let existing = null;
+    if (email) {
+      const r = await db.pool.query('SELECT id, company FROM leads WHERE LOWER(email) = LOWER($1) LIMIT 1', [email]);
+      existing = r.rows[0] || null;
+    }
+    if (!existing && companyName) {
+      const r = await db.pool.query('SELECT id, company FROM leads WHERE LOWER(company) = LOWER($1) LIMIT 1', [companyName]);
+      existing = r.rows[0] || null;
+    }
+    if (existing) {
+      return res.status(409).json({ success: false, message: 'Ce lead existe déjà dans le CRM', existingLead: existing });
     }
 
-    if (!existingLead && opportunity.company_name && opportunity.city) {
-      existingLead = await new Promise((resolve, reject) => {
-        db.get(
-          'SELECT id, company_name FROM leads WHERE LOWER(company_name) = LOWER(?) AND LOWER(city) = LOWER(?)',
-          [opportunity.company_name, opportunity.city],
-          (err, row) => {
-            if (err) reject(err);
-            else resolve(row);
-          }
-        );
-      });
-    }
+    // La table `leads` n'a pas de colonnes ville/CP/secteur/site : on conserve ces infos
+    // dans les notes plutôt que de les perdre (ou de cibler des colonnes inexistantes).
+    const extra = [
+      opportunity.website ? `Site : ${opportunity.website}` : null,
+      opportunity.sector ? `Secteur : ${opportunity.sector}` : null,
+      [opportunity.postal_code, opportunity.city].filter(Boolean).join(' ').trim() || null,
+      opportunity.department ? `Département : ${opportunity.department}` : null
+    ].filter(Boolean);
+    const notes = [opportunity.notes || null, extra.length ? extra.join('\n') : null].filter(Boolean).join('\n');
 
-    if (existingLead) {
-      return res.status(409).json({
-        success: false,
-        message: 'Ce lead existe déjà dans le CRM',
-        existingLead: existingLead
-      });
-    }
+    const ins = await db.pool.query(
+      `INSERT INTO leads (name, company, type, status, relation_status, source, notes, email, phone, created_at, updated_at)
+       VALUES ($1, $2, 'company', 'nouveau', 'nouveau', $3, $4, $5, $6, NOW(), NOW()) RETURNING id`,
+      [companyName, opportunity.company_name || null, opportunity.source || 'Prospection', notes || null, email, opportunity.phone || null]
+    );
+    const leadId = ins.rows[0].id;
 
-    // Créer le lead
-    const leadData = {
-      company_name: opportunity.company_name || 'Entreprise confidentielle',
-      email: opportunity.email || null,
-      phone: opportunity.phone || null,
-      city: opportunity.city || null,
-      postal_code: opportunity.postal_code || null,
-      department: opportunity.department || null,
-      country: opportunity.country || 'France',
-      sector: opportunity.sector || null,
-      website: opportunity.website || null,
-      source: opportunity.source || 'prospection',
-      status: opportunity.status || 'new',
-      notes: opportunity.notes || '',
-      user_id: userId
-    };
-
-    const leadId = await new Promise((resolve, reject) => {
-      db.run(
-        `INSERT INTO leads (
-          company_name, email, phone, city, postal_code, department,
-          country, sector, website, source, status, notes, user_id
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          leadData.company_name,
-          leadData.email,
-          leadData.phone,
-          leadData.city,
-          leadData.postal_code,
-          leadData.department,
-          leadData.country,
-          leadData.sector,
-          leadData.website,
-          leadData.source,
-          leadData.status,
-          leadData.notes,
-          leadData.user_id
-        ],
-        function (err) {
-          if (err) reject(err);
-          else resolve(this.lastID);
-        }
-      );
-    });
-
-    console.log(`[Prospection] ✓ Lead créé: ${leadData.company_name} (ID: ${leadId})`);
+    console.log(`[Prospection] ✓ Lead créé: ${companyName} (ID: ${leadId})`);
 
     res.json({
       success: true,
       message: 'Lead créé avec succès',
-      leadId: leadId,
-      lead: { id: leadId, ...leadData }
+      leadId,
+      lead: { id: leadId, name: companyName, company: opportunity.company_name || null, email }
     });
 
   } catch (error) {

@@ -134,9 +134,14 @@ class ScheduledEmailWorker {
              VALUES ('lead', $1, 'email', NOW(), $2, FALSE)`,
             [email.related_id, notes]
           );
-          // Première prise de contact : "Nouveau" -> "Contacté".
+          // Première prise de contact : "Nouveau" -> "Contacté" sur les DEUX machines
+          // à états (Kanban `status` + Suivi `relation_status`), sans écraser un statut avancé.
           await this.db.pool.query(
             "UPDATE leads SET status = 'contacte', updated_at = NOW() WHERE id = $1 AND (status IS NULL OR status = 'nouveau')",
+            [email.related_id]
+          );
+          await this.db.pool.query(
+            "UPDATE leads SET relation_status = 'en_discussion' WHERE id = $1 AND (relation_status IS NULL OR relation_status = 'nouveau')",
             [email.related_id]
           );
         } catch (logErr) {

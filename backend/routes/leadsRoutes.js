@@ -73,9 +73,14 @@ router.post('/:id/send-email', async (req, res) => {
         [id, notes, next_followup_date || null, followupChannel]
       );
       // Première prise de contact : fait passer le lead "Nouveau" -> "Contacté"
-      // (n'écrase pas un statut déjà avancé manuellement).
+      // sur les DEUX machines à états (Kanban `status` + Suivi `relation_status`),
+      // sans écraser un statut déjà avancé manuellement.
       await db.pool.query(
         "UPDATE leads SET status = 'contacte', updated_at = NOW() WHERE id = $1 AND (status IS NULL OR status = 'nouveau')",
+        [id]
+      );
+      await db.pool.query(
+        "UPDATE leads SET relation_status = 'en_discussion' WHERE id = $1 AND (relation_status IS NULL OR relation_status = 'nouveau')",
         [id]
       );
     } catch (logErr) {
@@ -216,7 +221,7 @@ router.post('/import', async (req, res) => {
         name: leadData.name,
         company: leadData.company || null,
         type: leadData.type || 'individual',
-        status: leadData.status || 'new',
+        status: leadData.status || 'nouveau',
         source: leadData.source || null,
         notes: leadData.notes || null,
         email: leadData.email || null,

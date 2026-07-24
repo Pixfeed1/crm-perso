@@ -216,7 +216,7 @@ const convertFromLead = (db, leadId, conversionData = {}) => {
               const newClientId = result?.id || this.lastID;
 
               db.run('UPDATE projects SET client_id = $1, lead_id = NULL WHERE lead_id = $2', [newClientId, leadId], () => {
-                db.run('UPDATE leads SET status = $1, updated_at = $2 WHERE id = $3', ['won', now, leadId], () => {
+                db.run("UPDATE leads SET status = 'client', relation_status = 'gagne', updated_at = $1 WHERE id = $2", [now, leadId], () => {
                   db.get(`SELECT * FROM crm_clients WHERE id = $1`, [newClientId], (err, client) => {
                     if (err) {
                       reject(err);

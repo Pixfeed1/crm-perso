@@ -3,6 +3,8 @@
 // Suivi des prises de contact (interactions) — leads ET clients.
 // Table polymorphe `interactions` (contact_type + contact_id).
 
+const { statusForRelation } = require('../utils/leadStatusSync');
+
 const VALID_TYPES = ['email', 'appel', 'sms', 'note', 'rdv'];
 const VALID_CONTACT_TYPES = ['lead', 'client'];
 const VALID_REACHED = ['joint', 'pas_reponse', 'message'];
@@ -73,6 +75,11 @@ const interactionController = {
         const table = contact_type === 'lead' ? 'leads' : 'crm_clients';
         try {
           await db.pool.query(`UPDATE ${table} SET relation_status = $1 WHERE id = $2`, [statusVal, contact_id]);
+          // Synchro du statut Kanban (leads) pour ne pas avoir deux états divergents.
+          if (contact_type === 'lead') {
+            const kanban = statusForRelation(statusVal);
+            if (kanban) await db.pool.query('UPDATE leads SET status = $1 WHERE id = $2', [kanban, contact_id]);
+          }
         } catch (e) {
           console.error('[Interaction] Echec maj relation_status:', e.message);
         }
@@ -103,6 +110,11 @@ const interactionController = {
       const table = contact_type === 'lead' ? 'leads' : 'crm_clients';
       const r = await db.pool.query(`UPDATE ${table} SET relation_status = $1 WHERE id = $2 RETURNING id`, [relation_status, contact_id]);
       if (r.rowCount === 0) return res.status(404).json({ message: 'Contact introuvable' });
+      // Synchro du statut Kanban (leads) — une seule source de vérité.
+      if (contact_type === 'lead') {
+        const kanban = statusForRelation(relation_status);
+        if (kanban) await db.pool.query('UPDATE leads SET status = $1 WHERE id = $2', [kanban, contact_id]).catch(() => {});
+      }
       res.json({ success: true, relation_status });
     } catch (error) {
       console.error('[Interaction] Erreur maj statut:', error);
