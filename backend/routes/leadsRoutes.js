@@ -74,7 +74,9 @@ router.post('/:id/send-email', async (req, res) => {
     const token = await emailTracking.createTracking(db, { contact_id: id, to_email: to, subject });
     await emailService.sendEmail({ to, subject, html: emailTracking.wrapHtml(html, token), text: body });
     // Relance AUTOMATIQUE : si aucune date de relance n'est saisie, on programme J+3
-    // (canal email) pour ne jamais oublier de relancer un prospect.
+    // (canal email) pour ne jamais oublier de relancer un prospect. relance_step=1
+    // amorce la cascade (J+3 -> J+7) ; une date manuelle reste hors cascade (step NULL).
+    const isAutoRelance = !next_followup_date;
     const followupDate = next_followup_date || inDays(3);
     const followupChan = next_followup_date ? followupChannel : 'email';
     // Log automatique COMPLET dans Suivi (destinataire + sujet + corps intégral)
@@ -83,9 +85,9 @@ router.post('/:id/send-email', async (req, res) => {
       const corps = String(body).trim();
       const notes = `À : ${to}\nObjet : ${subject}${corps ? `\n\n${corps}` : ''}`;
       await db.pool.query(
-        `INSERT INTO interactions (contact_type, contact_id, type, date, notes, next_followup_date, next_followup_channel, followup_done)
-         VALUES ('lead', $1, 'email', NOW(), $2, $3, $4, FALSE)`,
-        [id, notes, followupDate, followupChan]
+        `INSERT INTO interactions (contact_type, contact_id, type, date, notes, next_followup_date, next_followup_channel, followup_done, relance_step)
+         VALUES ('lead', $1, 'email', NOW(), $2, $3, $4, FALSE, $5)`,
+        [id, notes, followupDate, followupChan, isAutoRelance ? 1 : null]
       );
       // Première prise de contact : fait passer le lead "Nouveau" -> "Contacté"
       // sur les DEUX machines à états (Kanban `status` + Suivi `relation_status`),

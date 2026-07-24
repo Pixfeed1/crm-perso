@@ -1245,6 +1245,9 @@ async function ensureInteractionsColumns(client) {
     );
   `);
   await client.query('CREATE INDEX IF NOT EXISTS idx_email_tracking_contact ON email_tracking(contact_type, contact_id);');
+
+  // Étape de la cascade de relance auto (1 = J+3, 2 = J+7). NULL = relance manuelle (hors cascade).
+  await client.query('ALTER TABLE interactions ADD COLUMN IF NOT EXISTS relance_step INTEGER;');
   // Plateforme (techno du site) sur les contacts, pour le filtre plateforme du cockpit Suivi.
   await client.query('ALTER TABLE leads ADD COLUMN IF NOT EXISTS platform VARCHAR(50);');
   await client.query('ALTER TABLE crm_clients ADD COLUMN IF NOT EXISTS platform VARCHAR(50);');

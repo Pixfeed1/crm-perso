@@ -5,6 +5,10 @@
 
 const { statusForRelation } = require('../utils/leadStatusSync');
 
+// Cascade de relance automatique, en jours depuis le 1er email : J+3 puis J+7.
+// L'index (step-1) donne le décalage ; la longueur borne le nombre de relances.
+const RELANCE_OFFSETS = [3, 7];
+
 const VALID_TYPES = ['email', 'appel', 'sms', 'note', 'rdv'];
 const VALID_CONTACT_TYPES = ['lead', 'client'];
 const VALID_REACHED = ['joint', 'pas_reponse', 'message'];
@@ -138,7 +142,35 @@ const interactionController = {
       if (rows.length === 0) {
         return res.status(404).json({ message: 'Interaction introuvable' });
       }
-      res.json(rows[0]);
+      const it = rows[0];
+
+      // CASCADE de relance auto : une relance auto (relance_step) marquée FAITE, sur un
+      // prospect toujours actif, programme automatiquement l'étape suivante (J+3 -> J+7).
+      let nextFollowup = null;
+      if (done && it.relance_step && it.contact_type === 'lead' && it.relance_step < RELANCE_OFFSETS.length) {
+        try {
+          const cr = await db.pool.query('SELECT relation_status FROM leads WHERE id = $1', [it.contact_id]);
+          const rel = cr.rows[0] && cr.rows[0].relation_status;
+          // On stoppe si le prospect a une issue (gagné/perdu) ou a été écarté / a répondu.
+          const stopped = ['gagne', 'perdu', 'pas_business'].includes(rel);
+          if (!stopped) {
+            const nextStep = it.relance_step + 1;                 // 2
+            const base = it.date ? new Date(it.date) : new Date(); // date du 1er email
+            base.setDate(base.getDate() + RELANCE_OFFSETS[nextStep - 1]); // + J+7
+            const ymd = base.toISOString().slice(0, 10);
+            const ins = await db.pool.query(
+              `INSERT INTO interactions (contact_type, contact_id, type, date, notes, next_followup_date, next_followup_channel, followup_done, relance_step)
+               VALUES ('lead', $1, 'note', NOW(), $2, $3, 'email', FALSE, $4) RETURNING *`,
+              [it.contact_id, `Relance automatique #${nextStep} (J+${RELANCE_OFFSETS[nextStep - 1]}) — sans réponse`, ymd, nextStep]
+            );
+            nextFollowup = ins.rows[0];
+          }
+        } catch (e) {
+          console.error('[Interaction] Cascade relance:', e.message);
+        }
+      }
+
+      res.json({ ...it, next_followup_created: nextFollowup });
     } catch (error) {
       console.error('[Interaction] Erreur maj relance:', error);
       res.status(500).json({ message: 'Erreur serveur' });

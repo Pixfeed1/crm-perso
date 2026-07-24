@@ -151,9 +151,18 @@ const SuiviCockpit = () => {
   const markDone = async (r) => {
     if (!r.followup_id) return;
     try {
-      await interactionsAPI.markFollowupDone(r.followup_id, true);
+      const res = await interactionsAPI.markFollowupDone(r.followup_id, true);
+      // Cascade auto : si le backend a déjà programmé la relance suivante (J+7), on l'annonce
+      // et on n'ouvre PAS la modale de reprogrammation (déjà fait).
+      const auto = res && res.next_followup_created;
+      if (auto) {
+        const d = auto.next_followup_date;
+        toast.success(`Relance clôturée — prochaine relance auto le ${d ? new Date(d).toLocaleDateString('fr-FR') : 'J+7'}`);
+        load();
+        return;
+      }
       toast.success('Relance clôturée');
-      // Propose d'en reprogrammer une (modale de log, type note).
+      // Sinon (relance manuelle ou fin de cascade) : propose d'en reprogrammer une.
       setLogTarget({
         contact_type: r.contact_type, contact_id: r.contact_id, name: r.contact_name,
         phone: r.contact_phone, type: 'note', relation_status: r.relation_status, reprogram: true
