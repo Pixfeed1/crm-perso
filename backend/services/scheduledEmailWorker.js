@@ -2,6 +2,7 @@
 const cron = require('node-cron');
 const scheduledEmailModel = require('../models/scheduledEmailModel');
 const emailService = require('./emailService');
+const emailTracking = require('./emailTracking');
 
 /**
  * WORKER POUR L'ENVOI AUTOMATIQUE DES EMAILS PROGRAMMÉS
@@ -104,11 +105,17 @@ class ScheduledEmailWorker {
       // Préparer les pièces jointes
       const attachments = email.attachments || [];
 
+      // Tracking ouvertures/clics pour les emails liés à un prospect (lead).
+      const trackContactId = email.related_type === 'lead' ? email.related_id : null;
+      const token = trackContactId
+        ? await emailTracking.createTracking(this.db, { contact_id: trackContactId, to_email: email.to_email, subject: email.subject })
+        : null;
+
       // Envoyer l'email
       await emailService.sendEmail({
         to: email.to_email,
         subject: email.subject,
-        html: email.body_html,
+        html: emailTracking.wrapHtml(email.body_html, token),
         text: email.body_text || '',
         attachments: attachments.map(att => ({
           filename: att.filename,

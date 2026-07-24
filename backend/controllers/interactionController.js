@@ -263,13 +263,23 @@ const interactionController = {
            FROM interactions
            WHERE followup_done = FALSE AND next_followup_date IS NOT NULL
            ORDER BY contact_type, contact_id, next_followup_date ASC
+         ),
+         mail AS (
+           SELECT contact_id,
+                  COALESCE(SUM(open_count), 0)::int AS opens,
+                  COALESCE(SUM(click_count), 0)::int AS clicks,
+                  MAX(last_open_at) AS last_open
+           FROM email_tracking WHERE contact_type = 'lead'
+           GROUP BY contact_id
          )
          SELECT c.contact_type, c.contact_id, c.contact_name, c.contact_email, c.contact_phone, c.relation_status, c.platform, c.site,
                 n.next_followup, n.next_followup_channel, n.followup_id,
-                l.last_type, l.last_reached, l.last_date, l.last_result
+                l.last_type, l.last_reached, l.last_date, l.last_result,
+                COALESCE(m.opens, 0) AS email_opens, COALESCE(m.clicks, 0) AS email_clicks, m.last_open AS email_last_open
          FROM contacts c
          LEFT JOIN last_ex l ON l.contact_type = c.contact_type AND l.contact_id = c.contact_id
          LEFT JOIN next_ex n ON n.contact_type = c.contact_type AND n.contact_id = c.contact_id
+         LEFT JOIN mail m ON c.contact_type = 'lead' AND m.contact_id = c.contact_id
          ORDER BY (n.next_followup IS NULL), n.next_followup ASC, l.last_date DESC NULLS LAST, c.contact_name ASC`
       );
 
@@ -288,7 +298,9 @@ const interactionController = {
         // dont le dernier échange date de 90j+ et sans relance planifiée = la base chaude oubliée.
         dormants: rows.filter((r) => active(r) && !r.next_followup && r.last_date
           && (today - dayOf(r.last_date)) > 90 * 86400000).length,
-        pas_business: rows.filter((r) => r.relation_status === 'pas_business').length
+        pas_business: rows.filter((r) => r.relation_status === 'pas_business').length,
+        // Prospects « chauds » : ont ouvert (ou cliqué) au moins un email de prospection.
+        ouverts: rows.filter((r) => active(r) && (r.email_opens > 0 || r.email_clicks > 0)).length
       };
 
       res.json({ stats, contacts: rows });

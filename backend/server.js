@@ -105,6 +105,7 @@ console.log('===============================');
 // Routes publiques (AVANT authMiddleware)
 app.use('/api/public', require('./routes/publicRoutes'));
 app.use('/api/webhooks', require('./routes/webhookRoutes'));
+app.use('/api/track', require('./routes/trackRoutes')); // pixel/redirection tracking emails
 
 // Rate-limit cible sur les routes d'authentification sensibles (10 tentatives / 15 min / IP).
 // Applique uniquement sur les POST concernes, pas en global.

@@ -6,8 +6,16 @@ const leadController = require('../controllers/leadController');
 const leadModel = require('../models/leadModel');
 const emailService = require('../services/emailService');
 const coldEmailService = require('../services/coldEmailService');
+const emailTracking = require('../services/emailTracking');
 const { problemesLisibles } = require('../utils/crawlAngles');
 const { statusForRelation, relationForStatus } = require('../utils/leadStatusSync');
+
+// Date du jour + N jours au format YYYY-MM-DD (pour la relance automatique).
+function inDays(n) {
+  const d = new Date();
+  d.setDate(d.getDate() + n);
+  return d.toISOString().slice(0, 10);
+}
 
 // Appliquer le middleware d'authentification à toutes les routes
 router.use(authMiddleware);
@@ -62,7 +70,13 @@ router.post('/:id/send-email', async (req, res) => {
       + `<div style="white-space:pre-wrap;">${esc(body)}</div>`
       + (sig ? `<div style="margin-top:18px;">${sig}</div>` : '')
       + `</div>`;
-    await emailService.sendEmail({ to, subject, html, text: body });
+    // Tracking ouvertures/clics : pixel + réécriture des liens.
+    const token = await emailTracking.createTracking(db, { contact_id: id, to_email: to, subject });
+    await emailService.sendEmail({ to, subject, html: emailTracking.wrapHtml(html, token), text: body });
+    // Relance AUTOMATIQUE : si aucune date de relance n'est saisie, on programme J+3
+    // (canal email) pour ne jamais oublier de relancer un prospect.
+    const followupDate = next_followup_date || inDays(3);
+    const followupChan = next_followup_date ? followupChannel : 'email';
     // Log automatique COMPLET dans Suivi (destinataire + sujet + corps intégral)
     // afin de pouvoir relire exactement ce qui a été envoyé avant de relancer.
     try {
@@ -71,7 +85,7 @@ router.post('/:id/send-email', async (req, res) => {
       await db.pool.query(
         `INSERT INTO interactions (contact_type, contact_id, type, date, notes, next_followup_date, next_followup_channel, followup_done)
          VALUES ('lead', $1, 'email', NOW(), $2, $3, $4, FALSE)`,
-        [id, notes, next_followup_date || null, followupChannel]
+        [id, notes, followupDate, followupChan]
       );
       // Première prise de contact : fait passer le lead "Nouveau" -> "Contacté"
       // sur les DEUX machines à états (Kanban `status` + Suivi `relation_status`),

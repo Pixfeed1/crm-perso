@@ -1224,6 +1224,27 @@ async function ensureInteractionsColumns(client) {
   // Lien vers le résultat de crawl d'origine -> permet de retrouver les données d'audit
   // riches (plateforme, SSL, mentions légales, SPF…) pour la rédaction d'email par Claude.
   await client.query('ALTER TABLE leads ADD COLUMN IF NOT EXISTS crawl_result_id INTEGER;');
+
+  // Tracking d'ouvertures/clics des emails de prospection (pixel + redirection).
+  // Une ligne par email envoyé ; alimentée à l'envoi, incrémentée par /api/track.
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS email_tracking (
+      id SERIAL PRIMARY KEY,
+      token VARCHAR(64) UNIQUE NOT NULL,
+      contact_type VARCHAR(10) DEFAULT 'lead',
+      contact_id INTEGER,
+      to_email TEXT,
+      subject TEXT,
+      sent_at TIMESTAMPTZ DEFAULT NOW(),
+      open_count INTEGER DEFAULT 0,
+      first_open_at TIMESTAMPTZ,
+      last_open_at TIMESTAMPTZ,
+      click_count INTEGER DEFAULT 0,
+      last_click_at TIMESTAMPTZ,
+      last_click_url TEXT
+    );
+  `);
+  await client.query('CREATE INDEX IF NOT EXISTS idx_email_tracking_contact ON email_tracking(contact_type, contact_id);');
   // Plateforme (techno du site) sur les contacts, pour le filtre plateforme du cockpit Suivi.
   await client.query('ALTER TABLE leads ADD COLUMN IF NOT EXISTS platform VARCHAR(50);');
   await client.query('ALTER TABLE crm_clients ADD COLUMN IF NOT EXISTS platform VARCHAR(50);');

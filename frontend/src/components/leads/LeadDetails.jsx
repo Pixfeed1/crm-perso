@@ -383,6 +383,34 @@ const LeadDetails = ({ lead, autoCompose = false, onUpdate, onDelete, onAddConta
             </div>
           )}
 
+          {/* Emails envoyés + tracking ouvertures/clics (qui est chaud ?) */}
+          {lead.emails && lead.emails.length > 0 && (
+            <div>
+              <h3 className="text-base sm:text-lg font-medium text-text-primary mb-3 flex items-center gap-2">
+                <FiEye className="text-base sm:text-lg" />
+                Emails envoyés
+              </h3>
+              <div className="space-y-2">
+                {lead.emails.map((e) => (
+                  <div key={e.id} className="bg-surface-muted/50 rounded-lg p-3 text-sm">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-text-primary truncate">{e.subject || '(sans objet)'}</span>
+                      {e.open_count > 0 ? (
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-warning-bg text-warning-text flex-shrink-0"
+                          title={e.last_open_at ? `Dernière ouverture : ${formatDate(e.last_open_at)}` : ''}>
+                          🔥 Ouvert ×{e.open_count}{e.click_count > 0 ? ' · cliqué' : ''}
+                        </span>
+                      ) : (
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-neutral-bg text-neutral-text flex-shrink-0">Pas encore ouvert</span>
+                      )}
+                    </div>
+                    <div className="text-xs text-text-muted mt-0.5">Envoyé le {formatDate(e.sent_at)}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div>
             <h3 className="text-base sm:text-lg font-medium text-text-primary mb-3 sm:mb-4 flex items-center gap-2">
               <FiFileText className="text-base sm:text-lg" />

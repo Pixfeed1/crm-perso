@@ -8,7 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   FiBell, FiAlertTriangle, FiStar, FiMessageCircle, FiSlash, FiSearch,
-  FiPhone, FiMail, FiFileText, FiCheck, FiRotateCcw, FiClock, FiMoon
+  FiPhone, FiMail, FiFileText, FiCheck, FiRotateCcw, FiClock, FiMoon, FiTrendingUp
 } from 'react-icons/fi';
 import { interactionsAPI } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
@@ -46,6 +46,7 @@ const lastContactLabel = (r) => {
 const initials = (name) => (name || '?').trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
 
 const COUNTERS = [
+  { key: 'ouverts', label: 'Chauds (ont ouvert)', icon: FiTrendingUp },
   { key: 'relance_today', label: 'À relancer aujourd\'hui', icon: FiBell },
   { key: 'overdue', label: 'En retard', icon: FiAlertTriangle },
   { key: 'dormants', label: 'Dormants (90j+)', icon: FiMoon },
@@ -55,6 +56,7 @@ const COUNTERS = [
 ];
 
 const TABS = [
+  { key: 'ouverts', label: 'Chauds' },
   { key: 'relance_today', label: 'À relancer' },
   { key: 'overdue', label: 'En retard' },
   { key: 'dormants', label: 'Dormants' },
@@ -80,6 +82,7 @@ const matchesFilter = (r, filter) => {
     case 'relance_today': return active && r.next_followup && dayOf(r.next_followup).getTime() === today.getTime();
     case 'overdue': return active && r.next_followup && dayOf(r.next_followup) < today;
     case 'dormants': return isDormant(r, today);
+    case 'ouverts': return active && (r.email_opens > 0 || r.email_clicks > 0);
     case 'nouveaux': return r.relation_status === 'nouveau';
     case 'en_discussion': return r.relation_status === 'en_discussion';
     case 'devis_envoye': return r.relation_status === 'devis_envoye';
@@ -171,7 +174,10 @@ const SuiviCockpit = () => {
     }
   };
 
-  const goToContact = (r) => navigate(`/portefeuille?tab=${r.contact_type === 'lead' ? 'prospects' : 'clients'}`);
+  // Deep-link direct vers la fiche du prospect (au lieu de la liste). Clients -> onglet clients.
+  const goToContact = (r) => navigate(
+    r.contact_type === 'lead' ? `/leads?lead=${r.contact_id}` : '/portefeuille?tab=clients'
+  );
 
   const stats = data.stats || {};
 
@@ -252,6 +258,12 @@ const SuiviCockpit = () => {
                         <span className={`text-sm font-medium text-text-primary truncate ${isPB ? 'line-through' : ''}`}>{r.contact_name || 'Contact'}</span>
                         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${sm.cls}`}>{sm.label}</span>
                         <span className="text-xs text-text-muted">{r.contact_type === 'lead' ? 'Prospect' : 'Client'}</span>
+                        {r.email_opens > 0 && (
+                          <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-warning-bg text-warning-text"
+                            title={`Email ouvert ${r.email_opens} fois${r.email_clicks > 0 ? `, ${r.email_clicks} clic(s)` : ''}`}>
+                            🔥 Ouvert{r.email_opens > 1 ? ` ×${r.email_opens}` : ''}{r.email_clicks > 0 ? ' · cliqué' : ''}
+                          </span>
+                        )}
                       </div>
                       <div className="text-xs text-text-muted mt-0.5 truncate">
                         {[r.site, r.platform].filter(Boolean).join(' · ')}{(r.site || r.platform) ? ' — ' : ''}{lastContactLabel(r)}

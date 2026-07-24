@@ -53,17 +53,28 @@ const getLeadById = (db, id) => {
 
         db.all('SELECT * FROM projects WHERE lead_id = $1 ORDER BY name', [id], (projectErr, projects) => {
           lead.projects = projectErr ? [] : (projects || []);
-          // Données d'audit du crawl d'origine (checklist SSL/mentions/SPF… sur la fiche).
-          if (!lead.crawl_result_id) { resolve(lead); return; }
-          db.get(
-            `SELECT platform, platform_version, ssl_ok, ssl_expire_jours, mobile_ok, meta_desc,
-                    h1_present, mentions_legales, rgpd_confidentialite, cookie_banner, analytics,
-                    spf, dmarc, serveur_php, copyright_annee
-             FROM crawl_results WHERE id = $1`,
-            [lead.crawl_result_id],
-            (auditErr, audit) => {
-              lead.crawl_audit = auditErr ? null : (audit || null);
-              resolve(lead);
+          // Emails envoyés + tracking (ouvertures/clics) pour la vue prospection.
+          db.all(
+            `SELECT id, subject, to_email, sent_at, open_count, first_open_at, last_open_at,
+                    click_count, last_click_at
+             FROM email_tracking WHERE contact_type = 'lead' AND contact_id = $1
+             ORDER BY sent_at DESC`,
+            [id],
+            (emailErr, emails) => {
+              lead.emails = emailErr ? [] : (emails || []);
+              // Données d'audit du crawl d'origine (checklist SSL/mentions/SPF… sur la fiche).
+              if (!lead.crawl_result_id) { resolve(lead); return; }
+              db.get(
+                `SELECT platform, platform_version, ssl_ok, ssl_expire_jours, mobile_ok, meta_desc,
+                        h1_present, mentions_legales, rgpd_confidentialite, cookie_banner, analytics,
+                        spf, dmarc, serveur_php, copyright_annee
+                 FROM crawl_results WHERE id = $1`,
+                [lead.crawl_result_id],
+                (auditErr, audit) => {
+                  lead.crawl_audit = auditErr ? null : (audit || null);
+                  resolve(lead);
+                }
+              );
             }
           );
         });
