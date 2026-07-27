@@ -187,7 +187,8 @@ async function ingestCsv(db, jobId, csvPath) {
   const moi = idx('mobile_ok'), mdi = idx('meta_desc'), h1i = idx('h1_present'),
     mli = idx('mentions_legales'), rgi = idx('rgpd_confidentialite'), cbi = idx('cookie_banner'),
     ani = idx('analytics'), poi = idx('poids_ko'), coi = idx('copyright_annee'),
-    spi = idx('serveur_php'), sfi = idx('spf'), dmi = idx('dmarc'), sei = idx('ssl_expire_jours');
+    spi = idx('serveur_php'), sfi = idx('spf'), dmi = idx('dmarc'), sei = idx('ssl_expire_jours'),
+    sti = idx('site_type'), eci = idx('ecommerce_actif');
   const cell = (row, i) => (i >= 0 ? ((row[i] || '').trim() || null) : null);
   const boolCell = (row, i) => { const v = cell(row, i); return v == null ? null : /^(oui|true|1|yes)$/i.test(v); };
   // Entier ou null (jamais NaN) — pour poids_ko / copyright_annee / ssl_expire_jours.
@@ -226,9 +227,10 @@ async function ingestCsv(db, jobId, csvPath) {
          (job_id, domain, platform, signals, http_status, final_url, title, error, is_nocode,
           email, phone, facebook_url, instagram_url, platform_version, ssl_ok, protected, lang, parked,
           mobile_ok, meta_desc, h1_present, mentions_legales, rgpd_confidentialite, cookie_banner,
-          analytics, poids_ko, copyright_annee, serveur_php, spf, dmarc, ssl_expire_jours)
+          analytics, poids_ko, copyright_annee, serveur_php, spf, dmarc, ssl_expire_jours,
+          site_type, ecommerce_actif)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18,
-               $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31)`,
+               $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33)`,
       [
         jobId, domain, platform, signals,
         Number.isNaN(httpRaw) ? null : httpRaw,
@@ -241,7 +243,8 @@ async function ingestCsv(db, jobId, csvPath) {
         boolCell(row, moi), boolCell(row, mdi), boolCell(row, h1i), boolCell(row, mli),
         boolCell(row, rgi), boolCell(row, cbi), boolCell(row, ani),
         intCell(row, poi), intCell(row, coi), cell(row, spi),
-        boolCell(row, sfi), boolCell(row, dmi), intCell(row, sei)
+        boolCell(row, sfi), boolCell(row, dmi), intCell(row, sei),
+        cell(row, sti), boolCell(row, eci)
       ]
     );
   }

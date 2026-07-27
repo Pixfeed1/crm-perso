@@ -19,7 +19,8 @@ Colonnes CSV enrichies (ingérées par le CRM) :
   email, phone, facebook_url, instagram_url, ssl_ok, protected, lang, parked,
   + audit gratuit (0 token IA) : mobile_ok, meta_desc, h1_present,
   mentions_legales, rgpd_confidentialite, cookie_banner, analytics, poids_ko,
-  copyright_annee, serveur_php, spf, dmarc, ssl_expire_jours, error
+  copyright_annee, serveur_php, spf, dmarc, ssl_expire_jours,
+  + pré-tri prospect : site_type (asso/agence/commerce/autre), ecommerce_actif, error
 """
 
 import argparse
@@ -277,6 +278,67 @@ def analyze_site(html: str, headers: dict) -> dict:
 
 
 # --------------------------------------------------------------------------- #
+#  QUALIFICATION PROSPECT (pré-tri) — asso / agence / e-commerce réel
+#  « Avoir un défaut technique » != « être un bon prospect ». On repère les
+#  structures hors cible (sans budget commercial) pour les écarter du tri.
+# --------------------------------------------------------------------------- #
+
+# Association / structure sans budget commercial (mots-clés dans le HTML).
+_ASSO_MARKERS = [
+    "association", "asso loi 1901", "loi 1901", "à but non lucratif", "but non lucratif",
+    "non-profit", "nonprofit", "refuge", "sanctuary", "sanctuaire", "fondation", "foundation",
+    "bénévol", "benevol", "adhérent", "adherent", "cotisation", "mairie", "commune de",
+    "collège", "college ", "lycée", "paroisse", "église", "eglise", "diocèse",
+    "club sportif", "association sportive", "amicale", "faites un don", "faire un don",
+]
+# Bouton/lien « don » = signal quasi infaillible d'asso (href don/donate, ou libellé).
+_DON_RE = re.compile(
+    r'(faire un don|faites un don|soutenez[- ]nous|>\s*don\s*<|donate|donation|helloasso\.com|'
+    r'href=["\'][^"\']*(donate|/don\b|/dons\b|faire-un-don))',
+    re.IGNORECASE,
+)
+# Agence web / studio = concurrent, pas un client.
+_AGENCE_MARKERS = [
+    "agence web", "agence digitale", "agence de communication", "création de sites",
+    "creation de sites", "création de site internet", "web agency", "studio digital",
+    "studio web", "nos réalisations", "nos realisations", "développeur web freelance",
+    "webmaster freelance", "référencement seo", "agence seo",
+]
+# E-commerce RÉEL : prix affichés (€) + panier/ajout au panier.
+_PRIX_RE = re.compile(r"\d[\d\s.,]*\s?(?:€|eur\b)|(?:€|eur)\s?\d", re.IGNORECASE)
+_PANIER_MARKERS = ["ajouter au panier", "add to cart", "add-to-cart", "/panier", "/cart",
+                   "mon panier", "voir le panier", "ajouter au devis", "in den warenkorb"]
+
+
+def classify_site(html: str, domain: str) -> dict:
+    """Renvoie {site_type: asso|agence|commerce|autre, ecommerce_actif: oui|non}.
+    Prudent : en cas de doute -> 'autre' (le pré-tri gardera le site)."""
+    low = html.lower()
+    d = (domain or "").lower()
+    out = {"site_type": "autre", "ecommerce_actif": "non"}
+
+    # E-commerce réel : au moins un prix ET un signal de panier (vraie boutique qui vend).
+    if _PRIX_RE.search(html) and any(m in low for m in _PANIER_MARKERS):
+        out["ecommerce_actif"] = "oui"
+
+    # Association / public / sans budget (le don prime, très fiable).
+    if _DON_RE.search(html) or d.endswith(".org") or ".asso.fr" in d \
+            or any(m in low for m in _ASSO_MARKERS):
+        out["site_type"] = "asso"
+        return out
+
+    # Agence web (concurrent).
+    if any(m in low for m in _AGENCE_MARKERS):
+        out["site_type"] = "agence"
+        return out
+
+    # Commerce si vraie activité e-commerce détectée.
+    if out["ecommerce_actif"] == "oui":
+        out["site_type"] = "commerce"
+    return out
+
+
+# --------------------------------------------------------------------------- #
 #  ÉTAPE 2 : DÉTECTION EN DIRECT (async)
 # --------------------------------------------------------------------------- #
 
@@ -293,6 +355,8 @@ CSV_FIELDS = [
     "mobile_ok", "meta_desc", "h1_present", "mentions_legales", "rgpd_confidentialite",
     "cookie_banner", "analytics", "poids_ko", "copyright_annee", "serveur_php",
     "spf", "dmarc", "ssl_expire_jours",
+    # --- pré-tri prospect ---
+    "site_type", "ecommerce_actif",
     "error",
 ]
 
@@ -409,6 +473,7 @@ async def detect_one(domain: str, sem, timeout: float) -> dict:
                             contacts["email"] = await find_email_on_contact(client, str(r.url), domain)
                     # Audit gratuit (HTML/entêtes) + DNS (SPF/DMARC) + expiration TLS.
                     site = analyze_site(html, dict(r.headers))
+                    site.update(classify_site(html, domain))  # pré-tri : asso/agence/commerce
                     bare = _bare_domain(domain)
                     final_https = str(r.url).lower().startswith("https")
                     dns = await check_dns(bare, timeout)

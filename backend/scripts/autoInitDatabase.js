@@ -139,6 +139,9 @@ const DATABASE_SCHEMA = {
       spf: 'BOOLEAN',                  // enregistrement SPF ? non = emails partent en spam
       dmarc: 'BOOLEAN',                // enregistrement DMARC ? non = domaine usurpable
       ssl_expire_jours: 'INTEGER',     // jours avant expiration du certificat TLS (< 30 = urgent)
+      // Pré-tri prospect (qualification, pas juste défauts techniques).
+      site_type: 'TEXT',              // asso | agence | commerce | autre
+      ecommerce_actif: 'BOOLEAN',     // prix affichés + panier = vraie boutique qui vend (budget)
       added_as_prospect: 'BOOLEAN DEFAULT FALSE',
       is_nocode: 'BOOLEAN DEFAULT FALSE' // site no-code/SaaS fermé -> masqué par défaut
     },

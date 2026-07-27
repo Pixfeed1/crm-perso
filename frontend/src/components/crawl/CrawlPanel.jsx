@@ -77,6 +77,32 @@ const auditFlags = (r) => {
   return f;
 };
 
+// ─── PRÉ-TRI PROSPECT ─────────────────────────────────────────────────────────
+// « Avoir un défaut technique » ≠ « être un bon prospect ». On écarte les structures
+// hors cible (asso/agence/no-code/anglophone/hors-techno). Règle d'or : EN CAS DE
+// DOUTE, ON GARDE (langue non déterminée / signal ambigu -> reste dans « Prospects »).
+const ASSO_RE = /(association|loi 1901|but non lucratif|non[- ]?profit|refuge|sanctuary|sanctuaire|fondation|foundation|b[ée]n[ée]vol|paroisse|[ée]glise|dioc[èe]se|\bmairie\b|commune de|coll[èe]ge|lyc[ée]e|club sportif|amicale|faire un don|faites un don|helloasso)/i;
+const AGENCE_RE = /(agence web|agence digitale|agence de communication|cr[ée]ation de sites?|web agency|studio (web|digital)|nos r[ée]alisations|webmaster freelance|d[ée]veloppeur web freelance|agence seo)/i;
+
+// Renvoie une RAISON d'écartement (string) ou null si le site est un prospect plausible.
+const disqualifyReason = (r) => {
+  if (r.parked) return 'parké / vide';
+  if (r.is_nocode) return 'no-code (fermé)';
+  if (r.lang && r.lang !== 'fr') return `hors FR (${r.lang})`;   // langue connue ET ≠ fr
+  const p = r.platform || '';
+  if (p === 'Magento') return 'Magento (grosse structure)';
+  if (p === 'Shopify') return 'Shopify (hors techno)';
+  if (r.site_type === 'asso') return 'association / sans budget'; // niveau 2 (crawler)
+  if (r.site_type === 'agence') return 'agence (concurrent)';
+  // Repli mots-clés sur les crawls déjà faits (sans site_type) : titre + domaine.
+  const dom = r.domain || '';
+  if (/\.org(\/|$|\b)/i.test(dom) || /\.asso\.fr/i.test(dom)) return 'association / sans budget';
+  const hay = `${r.title || ''} ${dom}`;
+  if (ASSO_RE.test(hay)) return 'association / sans budget';
+  if (AGENCE_RE.test(hay)) return 'agence (concurrent)';
+  return null; // doute -> prospect
+};
+
 // Score de priorité (0-100) : croise les signaux d'un prospect chaud.
 const prospectScore = (r) => {
   let s = 0;
@@ -85,6 +111,7 @@ const prospectScore = (r) => {
   if (r.ssl_ok === false) s += 20;                        // SSL cassé = angle de vente
   if (isObsolete(r.platform, r.platform_version)) s += 20; // version obsolète = angle sécurité
   if (['WooCommerce', 'PrestaShop'].includes(r.platform)) s += 10; // e-commerce = budget
+  if (r.ecommerce_actif) s += 15;                         // vraie boutique qui vend (prix+panier) = budget
   if (r.gerant) s += 5;                                   // dirigeant connu (SIRENE)
   // Chaque problème d'audit détecté = angle d'approche -> monte la priorité.
   for (const flag of auditFlags(r)) s += flag.poids;
@@ -102,9 +129,9 @@ const CrawlPanel = () => {
   const [results, setResults] = useState([]);
   const [selected, setSelected] = useState(new Set());
   const [platformFilter, setPlatformFilter] = useState('all');
-  const [showNocode, setShowNocode] = useState(false); // masquer les sites no-code par défaut
   const [enrichFilter, setEnrichFilter] = useState('all'); // 'all'|'email'|'ssl_ko'|'obsolete'|'social'
-  const [hideParked, setHideParked] = useState(true); // masquer les domaines parkés par défaut
+  // Pré-tri : 'prospects' (défaut) = vrais prospects ; 'ecartes' = écartés auto ; 'tous'.
+  const [qualView, setQualView] = useState('prospects');
   const [starting, setStarting] = useState(false);
   const [adding, setAdding] = useState(false);
   const [pbTarget, setPbTarget] = useState(null); // { ids: [...] } pour "Pas de business"
@@ -286,9 +313,14 @@ const CrawlPanel = () => {
     }
   };
 
-  // Sites no-code/SaaS fermés masqués par défaut (filtrables via le bouton dédié).
-  const nocodeCount = results.filter((r) => r.is_nocode).length;
-  const baseResults = showNocode ? results : results.filter((r) => !r.is_nocode);
+  // Pré-tri : « prospects plausibles » vs « écartés auto » (asso/agence/no-code/parké/hors-FR/hors-techno).
+  const prospectsCount = results.filter((r) => !disqualifyReason(r)).length;
+  const ecartesCount = results.length - prospectsCount;
+  const baseResults = qualView === 'tous'
+    ? results
+    : qualView === 'ecartes'
+      ? results.filter((r) => disqualifyReason(r))
+      : results.filter((r) => !disqualifyReason(r));
   const platforms = Array.from(new Set(baseResults.map((r) => r.platform || 'Inconnu')));
 
   // Filtre d'enrichissement (a un email / SSL invalide / version obsolète / a un réseau).
@@ -303,7 +335,6 @@ const CrawlPanel = () => {
     }
   };
   let visible = baseResults
-    .filter((r) => hideParked ? !r.parked : true)
     .filter((r) => platformFilter === 'all' ? true : (r.platform || 'Inconnu') === platformFilter)
     .filter(passEnrich);
   // Tri par score de priorité décroissant (les prospects chauds en haut).
@@ -449,6 +480,23 @@ const CrawlPanel = () => {
       {/* Résultats */}
       {job && job.statut === 'done' && (
         <div>
+          {/* Pré-tri prospect : sépare les vrais prospects des écartés auto (asso, agence, no-code…) */}
+          <div className="flex flex-wrap items-center gap-2 mb-3">
+            {[
+              { k: 'prospects', l: `🎯 Prospects (${prospectsCount})` },
+              { k: 'ecartes', l: `🗑 Écartés auto (${ecartesCount})` },
+              { k: 'tous', l: `Tous (${results.length})` }
+            ].map((v) => (
+              <button key={v.k}
+                onClick={() => { setQualView(v.k); setPlatformFilter('all'); }}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${qualView === v.k ? 'bg-accent text-white' : 'bg-surface-strong text-text-secondary hover:bg-border-strong'}`}>
+                {v.l}
+              </button>
+            ))}
+            {qualView === 'ecartes' && (
+              <span className="text-xs text-text-muted">Écartés = probablement hors cible (vérifiable). Rien n'est supprimé.</span>
+            )}
+          </div>
           <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
             <div className="flex flex-wrap gap-2">
               <button
@@ -466,15 +514,6 @@ const CrawlPanel = () => {
                   {p}
                 </button>
               ))}
-              {nocodeCount > 0 && (
-                <button
-                  onClick={() => { setShowNocode((v) => !v); setPlatformFilter('all'); }}
-                  className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${showNocode ? 'bg-accent text-white' : 'bg-surface-strong text-text-muted hover:bg-border-strong'}`}
-                  title="Sites no-code/SaaS fermés (Wix, Squarespace, Webador…) — sans intérêt"
-                >
-                  {showNocode ? 'Masquer no-code' : `No-code exclus (${nocodeCount})`}
-                </button>
-              )}
               {/* Filtres d'enrichissement : cibler les prospects chauds */}
               {[
                 { k: 'email', l: '📧 Avec email' },
@@ -491,13 +530,6 @@ const CrawlPanel = () => {
                   {f.l}
                 </button>
               ))}
-              <button
-                onClick={() => setHideParked((v) => !v)}
-                className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${!hideParked ? 'bg-accent text-white' : 'bg-surface-strong text-text-muted hover:bg-border-strong'}`}
-                title="Domaines parkés / en vente / vides"
-              >
-                {hideParked ? 'Parkés masqués' : 'Parkés affichés'}
-              </button>
             </div>
             <div className="flex flex-wrap gap-2">
               <button onClick={handleExport} className="px-3 py-2 bg-surface-strong hover:bg-border-strong text-text-primary rounded-lg text-sm flex items-center gap-1">
@@ -581,7 +613,19 @@ const CrawlPanel = () => {
                               {r.raison_sociale}{r.raison_sociale && r.gerant ? ' · ' : ''}{r.gerant && `👤 ${r.gerant}`}
                             </div>
                           )}
-                          {r.parked && (
+                          {/* Raison d'écartement (pré-tri) — visible hors vue "Prospects" */}
+                          {qualView !== 'prospects' && disqualifyReason(r) && (
+                            <span className="ml-1 text-xs px-1.5 py-0.5 rounded-full bg-danger-bg text-danger-text" title="Écarté du pré-tri : probablement hors cible">
+                              🗑 {disqualifyReason(r)}
+                            </span>
+                          )}
+                          {/* Vraie boutique qui vend (prix + panier détectés) = signal de budget */}
+                          {r.ecommerce_actif && (
+                            <span className="ml-1 text-xs px-1.5 py-0.5 rounded-full bg-success-bg text-success-text" title="Prix affichés + panier détectés : boutique active">
+                              🛒 boutique active
+                            </span>
+                          )}
+                          {r.parked && qualView === 'prospects' && (
                             <span className="ml-1 text-xs px-1.5 py-0.5 rounded-full bg-neutral-bg text-neutral-text">parké</span>
                           )}
                         </td>
