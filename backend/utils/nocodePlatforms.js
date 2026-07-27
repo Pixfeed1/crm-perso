@@ -18,7 +18,9 @@ const NOCODE_PLATFORMS = [
   { label: 'Site123', patterns: ['site123'] },
   { label: 'Strikingly', patterns: ['strikingly'] },
   { label: 'Google Sites', patterns: ['sites.google.com'] },
-  { label: 'Webflow', patterns: ['webflow.io', 'webflow.com'] }
+  { label: 'Webflow', patterns: ['webflow.io', 'webflow.com', 'website-files.com'] },
+  { label: 'Systeme.io', patterns: ['systeme.io', 'systemeio'] },
+  { label: 'GoDaddy Website Builder', patterns: ['godaddy website builder', 'wsimg.com'] }
 ];
 
 // Détecte si un résultat de crawl est une plateforme no-code.

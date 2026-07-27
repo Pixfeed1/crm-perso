@@ -73,6 +73,27 @@ HEADER_SIGNATURES = {
 
 PRIORITY = ["WooCommerce", "PrestaShop", "Shopify", "WordPress"]
 
+# Constructeurs no-code / SaaS fermés : le marqueur n'est que dans le CORPS HTML
+# (« créé avec Webador », CDN Wix…), jamais dans les entêtes ni le titre. Le crawler
+# est le SEUL à voir le HTML complet, donc c'est ici qu'on doit les repérer, sinon ils
+# ressortent en « Inconnu » et passent le filtre. Détectés en PRIORITÉ.
+NOCODE_HTML_SIGNATURES = {
+    "Webador": ["webador", "cdn.webador", "made with webador", "créé avec webador",
+                "site créé sur webador", "créé sur webador"],
+    "Wix": ["wixstatic", "parastorage", "wix-warmup", "static.wixstatic", "wixsite.com",
+            "_wixcss", "wix.com"],
+    "Squarespace": ["squarespace", "sqsp.net", "static1.squarespace"],
+    "Jimdo": ["jimdo", "jimstatic"],
+    "Weebly": ["weebly", "editmysite.com"],
+    "e-monsite": ["e-monsite", "emonsite"],
+    "SiteW": ["sitew.com", "sitew.fr"],
+    "Site123": ["site123"],
+    "Strikingly": ["strikingly"],
+    "Webflow": ["webflow.io", "assets.website-files.com", "assets-global.website-files.com"],
+    "Systeme.io": ["systeme.io", "systemeio"],
+    "GoDaddy Website Builder": ["img1.wsimg.com", "websitebuilder"],
+}
+
 _TITLE_RE = re.compile(r"<title[^>]*>(.*?)</title>", re.IGNORECASE | re.DOTALL)
 # <meta name="generator" content="WooCommerce 7.9.0"> / "PrestaShop 1.6.1.24" / "WordPress 6.5"
 _GENERATOR_RE = re.compile(
@@ -135,6 +156,12 @@ def detect_lang(html: str) -> str:
 def detect_platform(html: str, headers: dict) -> tuple[str, list[str]]:
     text = html.lower()
     hdr = {str(k).lower(): str(v).lower() for k, v in headers.items()}
+    # No-code EN PRIORITÉ : marqueur dans le corps HTML uniquement. Si détecté, on renvoie
+    # le nom du constructeur dans `platform` -> l'ingestion le classe is_nocode et l'écarte.
+    for label, toks in NOCODE_HTML_SIGNATURES.items():
+        m = next((t for t in toks if t in text), None)
+        if m:
+            return label, [f"nocode:{m}"]
     matched = {p: [] for p in PRIORITY}
     for platform, sigs in HTML_SIGNATURES.items():
         for s in sigs:

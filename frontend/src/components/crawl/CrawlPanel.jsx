@@ -84,10 +84,15 @@ const auditFlags = (r) => {
 const ASSO_RE = /(association|loi 1901|but non lucratif|non[- ]?profit|refuge|sanctuary|sanctuaire|fondation|foundation|b[ée]n[ée]vol|paroisse|[ée]glise|dioc[èe]se|\bmairie\b|commune de|coll[èe]ge|lyc[ée]e|club sportif|amicale|faire un don|faites un don|helloasso)/i;
 const AGENCE_RE = /(agence web|agence digitale|agence de communication|cr[ée]ation de sites?|web agency|studio (web|digital)|nos r[ée]alisations|webmaster freelance|d[ée]veloppeur web freelance|agence seo)/i;
 
+// Noms de plateformes no-code/SaaS fermés (le crawler les remonte dans `platform`).
+const NOCODE_NAMES = ['Wix', 'Squarespace', 'Webador', 'Jimdo', 'Weebly', 'e-monsite',
+  'SiteW', 'Site123', 'Strikingly', 'Webflow', 'Google Sites', 'Systeme.io', 'GoDaddy Website Builder'];
+
 // Renvoie une RAISON d'écartement (string) ou null si le site est un prospect plausible.
 const disqualifyReason = (r) => {
   if (r.parked) return 'parké / vide';
   if (r.is_nocode) return 'no-code (fermé)';
+  if (NOCODE_NAMES.includes(r.platform)) return `no-code (${r.platform})`; // filet si is_nocode manqué
   if (r.lang && r.lang !== 'fr') return `hors FR (${r.lang})`;   // langue connue ET ≠ fr
   const p = r.platform || '';
   if (p === 'Magento') return 'Magento (grosse structure)';
