@@ -25,17 +25,33 @@ function senderIdentity(overrides = {}) {
   };
 }
 
-// Consigne de ton. 'humain' par défaut (le seul demandé). Extensible plus tard.
+// Consigne de ton. 'humain' par défaut. Tous les tons restent HUMBLES : on écrit à
+// quelqu'un qui n'a rien demandé.
 const TONS = {
   humain:
-    "Ton HUMAIN, simple et honnête, comme un artisan qui a vraiment regardé le site. " +
-    "Chaleureux mais sobre. Surtout PAS « gros gratteur » commercial.",
+    "Ton humain, simple et modeste, comme quelqu'un qui a vu le site un peu par hasard " +
+    "et se permet un mot amical. Chaleureux, jamais commercial ni « gratteur ».",
   direct:
-    "Ton direct et factuel, va droit au but sur le problème principal, sans détour, " +
-    "mais toujours poli et jamais agressif.",
+    "Ton sobre et factuel, tu vas à l'essentiel sans tourner autour, mais avec délicatesse, " +
+    "sans jamais donner de leçon ni presser.",
   doux:
-    "Ton doux et consultatif, approche conseil sans aucune pression, très rassurant."
+    "Ton très doux et prudent, tu prends des pincettes, aucune pression, tu proposes " +
+    "simplement ton regard extérieur."
 };
+
+// Filet de sécurité : supprime les tirets (signature typique d'un texte IA) même si le
+// modèle en glisse malgré la consigne. Tirets cadratin/demi -> virgule ; puces -> rien.
+function stripDashes(text) {
+  return String(text || '')
+    .replace(/\s*[—–]\s*/g, ', ')     // — ou – (incise/parenthèse IA) -> virgule
+    .replace(/^[ \t]*[-*•]\s+/gm, '')  // puces en début de ligne -> supprimées
+    .replace(/ +-\s+/g, ', ')          // " - " connecteur -> virgule
+    .replace(/ ,/g, ',')               // nettoyage espace avant virgule
+    .replace(/,\s*,/g, ',')            // virgules doublées
+    .replace(/,\s*\./g, '.')           // ", ." -> "."
+    .replace(/[ \t]{2,}/g, ' ')        // espaces multiples
+    .trim();
+}
 
 // Formule de politesse de fin adaptée au moment de la journée (heure Europe/Paris).
 // L'email est généré au moment où l'on clique, donc au plus près de l'envoi.
@@ -62,30 +78,42 @@ function buildSystemPrompt(ton) {
   return [
     "Tu es un professionnel du web (freelance) qui écrit un PREMIER email de contact",
     "à un commerçant/artisan dont tu viens de regarder le site.",
-    "Objectif : engager une conversation, PAS vendre agressivement.",
+    "Objectif : engager une conversation, PAS vendre.",
     consigneTon,
     "",
-    "STYLE (très important) :",
+    "POSTURE (crucial — la personne n'a RIEN demandé, tu la déranges) :",
+    "- Reste HUMBLE et léger. Tu n'es pas un expert qui fait la leçon : tu signales gentiment,",
+    "  comme un service rendu. Le prospect ne doit jamais se sentir jugé ni pris de haut.",
+    "- Formule avec précaution : « j'ai remarqué que… », « il se peut que… », « si je ne dis",
+    "  pas de bêtise… ». JAMAIS un diagnostic autoritaire, une injonction ou un ton alarmiste.",
+    "- Ne présume de rien : « vous l'avez peut-être déjà prévu ». Laisse-lui la main.",
+    "- Dédramatise (« rien de grave », « ce sont des détails qui passent vite quand on a une",
+    "  activité à faire tourner »).",
+    "- Propose ton aide UNE seule fois, en douceur (« si jamais ça vous intéresse, je peux",
+    "  y jeter un œil »). Pas de relance, pas d'insistance, pas d'auto-promotion appuyée.",
+    "",
+    "STYLE :",
     "- Écris comme un VRAI humain qui a pris deux minutes pour regarder le site.",
-    "- Le texte doit COULER naturellement. N'enchaîne SURTOUT PAS les points avec",
-    "  « D'abord… Ensuite… » ni une liste mécanique : intègre-les dans des phrases fluides.",
-    "- Commence par « Bonjour, » puis une phrase d'accroche naturelle (ex. « je suis tombé",
-    "  sur votre site … et j'ai jeté un œil »). Varie les formulations, ne sois pas robotique.",
+    "- Le texte doit COULER naturellement. N'enchaîne pas « D'abord… Ensuite… » de façon",
+    "  mécanique : intègre les points dans des phrases fluides et courtes.",
+    "- Commence par « Bonjour, » puis une accroche naturelle et modeste.",
+    "- INTERDICTION ABSOLUE DE TIRETS : aucun tiret cadratin (—), demi-cadratin (–), ni tiret",
+    "  « - » utilisé comme ponctuation, incise ou puce. C'est LE signe d'un texte écrit par une",
+    "  IA. Utilise UNIQUEMENT des virgules, des points ou des parenthèses. Zéro tiret.",
     "",
     "RÈGLES STRICTES :",
     "- N'invente AUCUN fait. Utilise UNIQUEMENT les problèmes fournis dans les données.",
     "- Mentionne AU MAXIMUM 2 problèmes, les plus parlants pour un non-technicien,",
-    "  expliqués en langage clair (le bénéfice, pas le jargon).",
-    "- Interdits : superlatifs marketing (« boostez », « explosez vos ventes »,",
-    "  « offre exceptionnelle »), fausse urgence, flatterie fausse, jargon technique lourd,",
-    "  emojis à outrance (0 ou 1 maximum).",
-    "- Longueur du corps : 90 à 150 mots. Phrases courtes.",
-    "- Avant-dernière ligne : UNE question ouverte simple (proposer un échange, pas un rdv forcé).",
+    "  expliqués en langage clair et avec ménagement (le bénéfice, pas le jargon).",
+    "- Interdits : superlatifs marketing (« boostez », « explosez vos ventes »), fausse urgence,",
+    "  flatterie fausse, jargon technique lourd, emojis (0).",
+    "- Longueur du corps : 90 à 140 mots. Phrases courtes.",
+    "- Termine le corps par UNE question ouverte discrète (savoir si c'est un sujet pour lui,",
+    "  ou s'il y avait déjà pensé), sans jamais forcer un rendez-vous.",
     "- DERNIÈRE ligne = formule de politesse : utilise EXACTEMENT la formule de fin fournie",
     "  dans les données (ex. « Belle matinée »), suivie d'une virgule.",
-    "- NE SIGNE PAS. N'ajoute NI nom, NI « PixFeed », NI bloc de coordonnées après la formule :",
-    "  la signature est ajoutée AUTOMATIQUEMENT par le CRM après ton texte. Le body doit se",
-    "  TERMINER sur la formule de politesse (rien après).",
+    "- NE SIGNE PAS. N'ajoute NI nom, NI « PixFeed », NI coordonnées après la formule :",
+    "  la signature est ajoutée AUTOMATIQUEMENT par le CRM. Le body TERMINE sur la formule.",
     "- Écris en français.",
     "",
     "Réponds UNIQUEMENT avec un objet JSON valide, sans texte autour, de la forme :",
@@ -181,13 +209,14 @@ async function draftColdEmail(prospect, options = {}) {
 
   if (parsed && parsed.body) {
     return {
-      subject: String(parsed.subject || '').trim() || 'Un mot à propos de votre site',
-      body: String(parsed.body).trim(),
+      // stripDashes : filet anti-tirets (le tell de l'IA) en plus de la consigne du prompt.
+      subject: stripDashes(String(parsed.subject || '').trim()) || 'Un mot à propos de votre site',
+      body: stripDashes(String(parsed.body).trim()),
       model: LLM_MODEL
     };
   }
-  // Repli : si le JSON n'a pas été respecté, on renvoie le texte brut comme corps.
-  return { subject: 'Un mot à propos de votre site', body: text || '(réponse vide)', model: LLM_MODEL };
+  // Repli : si le JSON n'a pas été respecté, on renvoie le texte brut (nettoyé) comme corps.
+  return { subject: 'Un mot à propos de votre site', body: stripDashes(text) || '(réponse vide)', model: LLM_MODEL };
 }
 
 module.exports = { draftColdEmail, senderIdentity };
