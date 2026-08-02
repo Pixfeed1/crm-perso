@@ -186,9 +186,18 @@ async function discoverByKeyword({ niche, hubs = '', site_cible = '' }) {
 // ─── Scoring : Open PageRank + CrUX ──────────────────────────────────────────
 
 // Open PageRank (Keywords Everywhere) : 100 domaines/requête, 30k/mois gratuits.
-// Le endpoint historique reste servi ; surcharge possible via OPR_API_URL.
+// Nouvelle API (2026) : POST /api/v1/domains/bulk + Bearer. Surcharge via OPR_API_URL.
 const OPR_URL = process.env.OPR_API_URL
-  || 'https://openpagerank.keywordseverywhere.com/api/v1.0/getPageRank';
+  || 'https://openpagerank.keywordseverywhere.com/api/v1/domains/bulk';
+
+// Extrait un score 0-10 quel que soit le nom de champ retourné (API en évolution).
+function oprScore(row) {
+  for (const k of ['page_rank_decimal', 'page_rank', 'opr', 'score', 'current']) {
+    const v = parseFloat(row && row[k]);
+    if (!Number.isNaN(v)) return v;
+  }
+  return null;
+}
 
 async function fetchOpenPageRank(domains) {
   const key = process.env.OPR_API_KEY;
@@ -196,16 +205,22 @@ async function fetchOpenPageRank(domains) {
   const out = {};
   for (let i = 0; i < domains.length; i += 100) {
     const batch = domains.slice(i, i + 100);
-    const qs = batch.map((d) => `domains[]=${encodeURIComponent(d)}`).join('&');
     try {
-      const res = await fetch(`${OPR_URL}?${qs}`, {
-        headers: { 'API-OPR': key, 'Authorization': `Bearer ${key}` }
+      const res = await fetch(OPR_URL, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ domains: batch })
       });
       if (!res.ok) { console.error('[SEO Backlinks] OPR HTTP', res.status); continue; }
       const data = await res.json();
-      for (const row of (data.response || [])) {
-        const v = parseFloat(row.page_rank_decimal);
-        if (row.domain && !Number.isNaN(v)) out[row.domain.toLowerCase()] = v;
+      // Tolérant sur l'enveloppe : response / results / domains / data, objet ou tableau.
+      const rows = data.response || data.results || data.domains || data.data || [];
+      const list = Array.isArray(rows) ? rows
+        : Object.entries(rows).map(([domain, v]) => (typeof v === 'object' ? { domain, ...v } : { domain, page_rank: v }));
+      for (const row of list) {
+        const v = oprScore(row);
+        const dom = (row.domain || row.name || '').toLowerCase();
+        if (dom && v != null) out[dom] = v;
       }
     } catch (e) {
       console.error('[SEO Backlinks] OPR:', e.message);
