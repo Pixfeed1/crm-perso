@@ -200,9 +200,11 @@ async function discoverByKeyword({ niche, hubs = '', site_cible = '' }) {
 const OPR_URL = process.env.OPR_API_URL
   || 'https://openpagerank.keywordseverywhere.com/v1/domains/bulk';
 
-// Extrait un score 0-10 quel que soit le nom de champ retourné (API en évolution).
+// Extrait un score 0-10 quel que soit le nom de champ retourné.
+// Format réel vérifié (curl de Marc, 2026) : { domain, found, open_page_rank, rank,
+// referring_domains, history: [...] } sous un tableau au niveau racine.
 function oprScore(row) {
-  for (const k of ['page_rank_decimal', 'page_rank', 'opr', 'score', 'current']) {
+  for (const k of ['open_page_rank', 'page_rank_decimal', 'page_rank', 'opr', 'score', 'current']) {
     const v = parseFloat(row && row[k]);
     if (!Number.isNaN(v)) return v;
   }
@@ -219,12 +221,14 @@ async function fetchOpenPageRank(domains) {
       const res = await fetch(OPR_URL, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ domains: batch })
+        // include_history:false — on ne veut que le score actuel (réponse ~100x plus légère).
+        body: JSON.stringify({ domains: batch, include_history: false })
       });
       if (!res.ok) { console.error('[SEO Backlinks] OPR HTTP', res.status); continue; }
       const data = await res.json();
-      // Tolérant sur l'enveloppe : response / results / domains / data, objet ou tableau.
-      const rows = data.response || data.results || data.domains || data.data || [];
+      // Tolérant sur l'enveloppe : clés connues, sinon premier tableau trouvé dans l'objet.
+      const rows = data.response || data.results || data.domains || data.data
+        || (Array.isArray(data) ? data : Object.values(data).find(Array.isArray)) || [];
       const list = Array.isArray(rows) ? rows
         : Object.entries(rows).map(([domain, v]) => (typeof v === 'object' ? { domain, ...v } : { domain, page_rank: v }));
       for (const row of list) {
