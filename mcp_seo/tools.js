@@ -456,3 +456,54 @@ export async function searchPages(pool, siteId, q, limit = 20) {
   );
   return rows;
 }
+
+// ---- Backlinks (module campagnes de netlinking, LECTURE SEULE) ----
+
+// list_link_campaigns : les niches/campagnes backlinks + compteurs.
+export async function listLinkCampaigns(pool) {
+  const { rows } = await pool.query(
+    `SELECT n.id, n.name, n.site_cible, n.hubs, n.statut, n.discovery_phase, n.discovery_message,
+            n.created_at,
+            COUNT(t.id)::int AS nb_cibles,
+            COUNT(t.id) FILTER (WHERE t.statut = 'contacte')::int AS contactees,
+            COUNT(t.id) FILTER (WHERE t.statut = 'lien_obtenu')::int AS liens_obtenus
+     FROM seo_niches n LEFT JOIN seo_link_targets t ON t.niche_id = n.id
+     GROUP BY n.id ORDER BY n.created_at DESC`
+  );
+  return rows;
+}
+
+// get_link_targets : cibles d'une campagne (score, autorité, trafic réel, statut).
+export async function getLinkTargets(pool, nicheId, statut = null, limit = 50) {
+  const params = [nicheId];
+  let where = 'niche_id = $1';
+  if (statut) { params.push(statut); where += ` AND statut = $${params.length}`; }
+  params.push(Math.min(Math.max(parseInt(limit, 10) || 50, 1), 200));
+  const { rows } = await pool.query(
+    `SELECT domain, title, via, lang, alive, contact_email,
+            opr::float AS open_pagerank, crux AS trafic_reel_crux,
+            referring_edges, score, statut, raison_ecarte, notes, last_checked_at
+     FROM seo_link_targets WHERE ${where}
+     ORDER BY score DESC NULLS LAST, referring_edges DESC NULLS LAST
+     LIMIT $${params.length}`,
+    params
+  );
+  return rows;
+}
+
+// get_link_outreach_status : emails de demande de lien envoyés + tracking + relances dues.
+export async function getLinkOutreachStatus(pool, nicheId) {
+  const { rows } = await pool.query(
+    `SELECT t.domain, o.subject, o.sent_at, o.followup_date, o.followup_done, o.reponse,
+            et.open_count, et.click_count, et.last_open_at
+     FROM seo_link_outreach o
+     JOIN seo_link_targets t ON t.id = o.target_id
+     LEFT JOIN email_tracking et ON et.token = o.tracking_token
+     WHERE t.niche_id = $1
+     ORDER BY o.sent_at DESC LIMIT 100`,
+    [nicheId]
+  );
+  const relances_dues = rows.filter((r) => !r.followup_done && r.followup_date
+    && new Date(r.followup_date) <= new Date()).length;
+  return { relances_dues, envois: rows };
+}

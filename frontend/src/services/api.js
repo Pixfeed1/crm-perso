@@ -562,6 +562,24 @@ export const revenuesAPI = {
 };
 
 // ===== SEO (lecture seule : données produites par le worker Python seo_worker) =====
+// Module Backlinks (suite SEO) — pipeline séparé du CRM client, envoi via Gmail perso.
+export const seoBacklinksAPI = {
+  status: () => apiRequest('/seo/backlinks/status'),
+  listNiches: () => apiRequest('/seo/backlinks/niches'),
+  createNiche: (data) => apiRequest('/seo/backlinks/niches', 'POST', data),
+  deleteNiche: (id) => apiRequest(`/seo/backlinks/niches/${id}`, 'DELETE'),
+  discover: (id, mode) => apiRequest(`/seo/backlinks/niches/${id}/discover`, 'POST', { mode }),
+  verify: (id) => apiRequest(`/seo/backlinks/niches/${id}/verify`, 'POST'),
+  score: (id) => apiRequest(`/seo/backlinks/niches/${id}/score`, 'POST'),
+  listTargets: (id, params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return apiRequest(`/seo/backlinks/niches/${id}/targets${qs ? `?${qs}` : ''}`);
+  },
+  updateTarget: (id, data) => apiRequest(`/seo/backlinks/targets/${id}`, 'PATCH', data),
+  draftEmail: (id, opts = {}) => apiRequest(`/seo/backlinks/targets/${id}/draft-email`, 'POST', opts),
+  sendEmail: (id, data) => apiRequest(`/seo/backlinks/targets/${id}/send-email`, 'POST', data)
+};
+
 export const seoAPI = {
   getSites: () => apiRequest('/seo/sites'),
   getOverview: (siteId) => apiRequest(`/seo/overview?site_id=${siteId}`),

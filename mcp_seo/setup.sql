@@ -23,6 +23,11 @@ GRANT SELECT ON
   seo_similar_pages
 TO mcp_seo_ro;
 
+-- Module Backlinks (campagnes de netlinking) + tracking d'ouvertures des emails.
+-- À exécuter avec l'utilisateur applicatif APRÈS le premier démarrage du backend
+-- (les tables sont créées par autoInitDatabase) :
+--   GRANT SELECT ON seo_niches, seo_link_targets, seo_link_outreach, email_tracking TO mcp_seo_ro;
+
 -- Aucun autre droit : ce rôle ne voit RIEN d'autre (ni écriture, ni autres tables).
 -- Vérification rapide après coup :
 --   SET ROLE mcp_seo_ro;

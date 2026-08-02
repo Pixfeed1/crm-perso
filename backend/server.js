@@ -129,6 +129,7 @@ app.use('/api/events', require('./routes/eventsRoutes'));
 app.use('/api/goals', require('./routes/goalsRoutes'));
 app.use('/api/objectif', require('./routes/objectifRoutes'));
 app.use('/api/veille', require('./routes/veilleRoutes'));
+app.use('/api/seo/backlinks', require('./routes/seoBacklinksRoutes')); // AVANT /api/seo (préfixe plus long)
 app.use('/api/seo', require('./routes/seoRoutes'));
 app.use('/api/revenues', require('./routes/revenuesRoutes'));
 app.use('/api/reminders', require('./routes/reminderRoutes'));

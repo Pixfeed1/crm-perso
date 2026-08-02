@@ -101,6 +101,67 @@ const DATABASE_SCHEMA = {
     ]
   },
 
+  // ─── Module Backlinks (suite SEO) — PIPELINE SÉPARÉ de la prospection client ───
+  // Aucune référence à leads/interactions : le canal SEO (envoyé depuis Gmail) ne se
+  // mélange jamais avec le pipeline commercial PixFeed.
+  seo_niches: {
+    columns: {
+      id: 'SERIAL PRIMARY KEY',
+      name: 'TEXT NOT NULL',            // niche saisie en texte (ex: "DAZ Studio")
+      site_cible: 'TEXT',               // le site à faire linker
+      hubs: 'TEXT',                     // domaines hubs de la niche (séparés par virgules)
+      seeds: 'TEXT',                    // seeds boule de neige (défaut = hubs)
+      statut: "VARCHAR(20) DEFAULT 'nouvelle'", // nouvelle | decouverte | prete | archivee
+      discovery_phase: 'VARCHAR(30)',   // snowball_running | graph_running | done | error
+      discovery_message: 'TEXT',
+      created_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'
+    }
+  },
+
+  seo_link_targets: {
+    columns: {
+      id: 'SERIAL PRIMARY KEY',
+      niche_id: 'INTEGER REFERENCES seo_niches(id) ON DELETE CASCADE',
+      domain: 'TEXT NOT NULL',
+      via: 'VARCHAR(20)',               // graph | snowball | both | manuel
+      detail: 'TEXT',                   // hubs touchés / profondeur
+      lang: 'VARCHAR(5)',               // vérif live (cc_prospector detect)
+      alive: 'BOOLEAN',                 // répond encore ? (re-vérif avant envoi)
+      contact_email: 'TEXT',
+      title: 'TEXT',
+      opr: 'NUMERIC(4,1)',              // Open PageRank (0-10)
+      crux: 'BOOLEAN',                  // présent dans CrUX = trafic réel mesuré par Google
+      referring_edges: 'INTEGER',       // nb de liens vers les hubs (graphe)
+      score: 'INTEGER',                 // score composite 0-100
+      statut: "VARCHAR(20) DEFAULT 'nouveau'", // nouveau | a_contacter | contacte | lien_obtenu | refus | ecarte
+      raison_ecarte: 'TEXT',
+      notes: 'TEXT',
+      last_checked_at: 'TIMESTAMP',
+      created_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'
+    },
+    indexes: [
+      'CREATE INDEX IF NOT EXISTS idx_seo_link_targets_niche ON seo_link_targets(niche_id)',
+      'CREATE UNIQUE INDEX IF NOT EXISTS idx_seo_link_targets_uniq ON seo_link_targets(niche_id, domain)'
+    ]
+  },
+
+  seo_link_outreach: {
+    columns: {
+      id: 'SERIAL PRIMARY KEY',
+      target_id: 'INTEGER REFERENCES seo_link_targets(id) ON DELETE CASCADE',
+      subject: 'TEXT',
+      body: 'TEXT',
+      sent_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP',
+      tracking_token: 'VARCHAR(64)',    // lien vers email_tracking (ouvertures/clics)
+      followup_date: 'DATE',            // relance (J+7 : le netlinking répond lentement)
+      followup_done: 'BOOLEAN DEFAULT FALSE',
+      reponse: 'VARCHAR(20)'            // null | positif | negatif | payant
+    },
+    indexes: [
+      'CREATE INDEX IF NOT EXISTS idx_seo_link_outreach_target ON seo_link_outreach(target_id)'
+    ]
+  },
+
   // Table crawl_results (sites détectés par un crawl)
   crawl_results: {
     columns: {

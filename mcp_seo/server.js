@@ -165,6 +165,27 @@ function buildServer() {
     async ({ site_id, url }) => ok(await tools.getPageLinks(pool, site_id, url))
   );
 
+  server.tool(
+    'list_link_campaigns',
+    "Campagnes de backlinks (netlinking) : niches avec leurs compteurs (cibles découvertes, contactées, liens obtenus) et l'état de la découverte. À appeler EN PREMIER pour obtenir l'id de campagne.",
+    {},
+    async () => ok(await tools.listLinkCampaigns(pool))
+  );
+
+  server.tool(
+    'get_link_targets',
+    "Cibles backlinks d'une campagne : domaine, titre, autorité (Open PageRank 0-10), trafic réel (présence CrUX), pertinence (liens vers les hubs), score composite 0-100, statut (nouveau/a_contacter/contacte/lien_obtenu/refus/ecarte) et email de contact. Triées par score.",
+    { campaign_id: z.number().int(), statut: z.string().optional(), limit: z.number().int().optional() },
+    async ({ campaign_id, statut, limit }) => ok(await tools.getLinkTargets(pool, campaign_id, statut ?? null, limit ?? 50))
+  );
+
+  server.tool(
+    'get_link_outreach_status',
+    "État de l'outreach d'une campagne backlinks : emails de demande de lien envoyés (depuis le Gmail perso), ouvertures/clics trackés, réponses, et nombre de relances dues.",
+    { campaign_id: z.number().int() },
+    async ({ campaign_id }) => ok(await tools.getLinkOutreachStatus(pool, campaign_id))
+  );
+
   return server;
 }
 

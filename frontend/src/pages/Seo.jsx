@@ -16,6 +16,7 @@ import { useToast } from '../hooks/useToast';
 import { decodeHtml } from '../utils/formatters';
 import SeoGraph from '../components/seo/SeoGraph';
 import PositionsTab from '../components/seo/PositionsTab';
+import BacklinksTab from '../components/seo/BacklinksTab';
 
 const HEALTH_META = {
   orpheline: { cls: 'bg-danger-bg text-danger-text', label: 'Orpheline' },
@@ -483,7 +484,8 @@ const Seo = () => {
                 { k: 'ctr', l: `CTR à optimiser${ctrAnomalies.length ? ` (${ctrAnomalies.length})` : ''}` },
                 { k: 'opportunites', l: `Opportunités${opportunites.length ? ` (${opportunites.length})` : ''}` },
                 { k: 'audit', l: `Audit technique${audit && audit.score != null ? ` (${audit.score}/100)` : ''}` },
-                { k: 'positions', l: 'Suivi de positions' }
+                { k: 'positions', l: 'Suivi de positions' },
+                { k: 'backlinks', l: '🔗 Backlinks' }
               ].map((t) => (
                 <button key={t.k} onClick={() => setTab(t.k)}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === t.k ? 'bg-accent text-white' : 'bg-surface-strong text-text-secondary hover:bg-border-strong'}`}>
@@ -935,6 +937,9 @@ const Seo = () => {
                   </>
                 )}
               </div>
+            ) : tab === 'backlinks' ? (
+              /* Campagnes backlinks (niches, découverte, scoring, outreach Gmail) */
+              <BacklinksTab />
             ) : (
               /* Suivi de positions (rank tracker) — composant dédié */
               <PositionsTab siteId={siteId} gscConnected={gscConnected} />
