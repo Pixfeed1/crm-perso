@@ -43,6 +43,8 @@ UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
 
 # Domaines "plateforme" jamais pertinents comme cibles de backlinks (bruit).
+# Inclut les outils/CMS souvent linkés en footer (crédits de thème : woocommerce,
+# elementor…) qui remontent sinon via la boule de neige.
 JUNK_DOMAINS = {
     "google.com", "youtube.com", "facebook.com", "instagram.com", "twitter.com",
     "x.com", "linkedin.com", "pinterest.com", "tiktok.com", "wikipedia.org",
@@ -51,6 +53,12 @@ JUNK_DOMAINS = {
     "discord.gg", "twitch.tv", "vimeo.com", "flickr.com", "paypal.com",
     "patreon.com", "github.com", "gravatar.com", "cloudflare.com", "archive.org",
     "bit.ly", "goo.gl", "t.co", "fonts.googleapis.com", "youtu.be", "deviantart.com",
+    # Outils / CMS / footers de thèmes
+    "woocommerce.com", "elementor.com", "shopify.com", "wix.com", "squarespace.com",
+    "jimdo.com", "godaddy.com", "ovh.com", "ovhcloud.com", "automattic.com",
+    "jetpack.com", "akismet.com", "w3.org", "mozilla.org", "adobe.com",
+    "creativecommons.org", "unsplash.com", "pixabay.com", "freepik.com",
+    "fontawesome.com", "wp.com", "addtoany.com", "sharethis.com",
 }
 
 

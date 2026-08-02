@@ -194,15 +194,21 @@ function runVerify(db, nicheId, domains) {
           if (!dom) continue;
           const alive = !!(rows[i][hi] && parseInt(rows[i][hi], 10) < 500);
           const siteType = si >= 0 ? (rows[i][si] || '').trim() : '';
+          const lang = (rows[i][li] || '').trim();
+          // Auto-écartement : agence (concurrent) OU langue détectée non-FR (les campagnes
+          // backlinks sont francophones par définition). Règle d'or conservée : langue
+          // inconnue ('') -> on GARDE. On ne touche qu'aux cibles encore 'nouveau'.
+          const ecarteRaison = siteType === 'agence' ? 'agence (concurrent)'
+            : (lang && lang !== 'fr') ? `hors FR (${lang})` : null;
           await db.pool.query(
             `UPDATE seo_link_targets SET
                lang = NULLIF($2, ''), alive = $3, contact_email = COALESCE(NULLIF($4, ''), contact_email),
                title = COALESCE(NULLIF($5, ''), title), last_checked_at = NOW(),
-               statut = CASE WHEN $6 = 'agence' AND statut = 'nouveau' THEN 'ecarte' ELSE statut END,
-               raison_ecarte = CASE WHEN $6 = 'agence' THEN 'agence (concurrent)' ELSE raison_ecarte END
+               statut = CASE WHEN $6::text IS NOT NULL AND statut = 'nouveau' THEN 'ecarte' ELSE statut END,
+               raison_ecarte = COALESCE($6, raison_ecarte)
              WHERE niche_id = $1 AND domain = $7`,
-            [nicheId, (rows[i][li] || '').trim(), alive, (rows[i][ei] || '').trim(),
-             (rows[i][ti] || '').trim(), siteType, dom]
+            [nicheId, lang, alive, (rows[i][ei] || '').trim(),
+             (rows[i][ti] || '').trim(), ecarteRaison, dom]
           ).catch(() => {});
         }
         // Recalcule les scores après vérif.
