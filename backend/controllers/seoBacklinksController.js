@@ -86,6 +86,47 @@ async function ingestTargets(db, nicheId, csvPath) {
   return added;
 }
 
+// Insertion/upsert d'une liste de domaines découverts (partagé mot-clé/manuel).
+async function ingestDomains(db, nicheId, domains, via, detail) {
+  let added = 0;
+  for (const raw of domains) {
+    const domain = String(raw || '').toLowerCase().trim();
+    if (!domain || !domain.includes('.')) continue;
+    const r = await db.pool.query(
+      `INSERT INTO seo_link_targets (niche_id, domain, via, detail)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (niche_id, domain) DO UPDATE SET
+         via = CASE WHEN seo_link_targets.via IS DISTINCT FROM EXCLUDED.via THEN 'both' ELSE seo_link_targets.via END
+       RETURNING (xmax = 0) AS inserted`,
+      [nicheId, domain, via, detail]
+    ).catch(() => null);
+    if (r && r.rows[0] && r.rows[0].inserted) added++;
+  }
+  return added;
+}
+
+// Découverte par MOT-CLÉ : Claude + recherche web (budget plafonné en dur à 25
+// recherches ≈ 0,40 $ pire cas). Pas de process externe : appel API en arrière-plan.
+function runKeywordDiscovery(db, niche) {
+  (async () => {
+    try {
+      const { domains, searches_used } = await seoOutreach.discoverByKeyword({
+        niche: niche.name, hubs: niche.hubs || '', site_cible: niche.site_cible || ''
+      });
+      const added = await ingestDomains(db, niche.id, domains, 'keyword', 'recherche mot-clé (Claude)');
+      await setPhase(db, niche.id, 'done',
+        `mot-clé : ${added} nouvelle(s) cible(s) sur ${domains.length} trouvée(s)` +
+        (searches_used ? ` (${searches_used} recherches)` : ''));
+      await db.pool.query("UPDATE seo_niches SET statut = 'decouverte' WHERE id = $1 AND statut = 'nouvelle'", [niche.id]).catch(() => {});
+    } catch (e) {
+      console.error('[SEO Backlinks] keyword discovery:', e.message);
+      await setPhase(db, niche.id, 'error', `Recherche mot-clé : ${e.message}`);
+    } finally {
+      runningNicheId = null;
+    }
+  })();
+}
+
 // Lance un process de découverte en arrière-plan et ingère son CSV à la fin.
 function runDiscovery(db, niche, mode) {
   const jobDir = path.join(os.tmpdir(), `linkgraph-${niche.id}-${mode}`);
@@ -234,10 +275,10 @@ const ctrl = {
     }
   },
 
-  // POST /api/seo/backlinks/niches/:id/discover { mode: 'snowball' | 'graph' }
+  // POST /api/seo/backlinks/niches/:id/discover { mode: 'snowball' | 'graph' | 'keyword' }
   discover: async (req, res) => {
     const db = req.app.locals.db;
-    const mode = req.body?.mode === 'graph' ? 'graph' : 'snowball';
+    const mode = ['graph', 'keyword'].includes(req.body?.mode) ? req.body.mode : 'snowball';
     if (runningNicheId) return res.status(409).json({ message: 'Une découverte est déjà en cours' });
     try {
       const { rows } = await db.pool.query('SELECT * FROM seo_niches WHERE id = $1', [req.params.id]);
@@ -249,11 +290,18 @@ const ctrl = {
             `linkgraph.py fetch --release cc-main-2026-apr-may-jun --dir ${LINKGRAPH_DATA_DIR}`
         });
       }
+      if (mode === 'keyword' && !process.env.ANTHROPIC_API_KEY) {
+        return res.status(400).json({ message: 'Clé Anthropic non configurée (ANTHROPIC_API_KEY).' });
+      }
       runningNicheId = niche.id; // verrou posé AVANT tout autre await (pas de course)
-      await setPhase(db, niche.id, `${mode}_running`, mode === 'graph'
-        ? 'Scan du graphe Common Crawl (peut durer des heures)…'
-        : 'Boule de neige en cours (quelques minutes)…');
-      runDiscovery(db, niche, mode);
+      const phaseMsg = {
+        graph: 'Scan du graphe Common Crawl (peut durer des heures)…',
+        snowball: 'Boule de neige en cours (quelques minutes)…',
+        keyword: 'Claude cherche sur le web (max 25 recherches ≈ 0,40 $)…'
+      };
+      await setPhase(db, niche.id, `${mode}_running`, phaseMsg[mode]);
+      if (mode === 'keyword') runKeywordDiscovery(db, niche);
+      else runDiscovery(db, niche, mode);
       res.status(202).json({ started: true, mode });
     } catch (e) {
       runningNicheId = null;
@@ -424,6 +472,7 @@ const ctrl = {
       gmail: seoOutreach.isGmailConfigured(),
       opr: !!process.env.OPR_API_KEY,
       crux: !!process.env.CRUX_API_KEY,
+      anthropic: !!process.env.ANTHROPIC_API_KEY,
       graph_ready: fs.existsSync(path.join(LINKGRAPH_DATA_DIR, 'manifest.json')),
       running_niche_id: runningNicheId
     });

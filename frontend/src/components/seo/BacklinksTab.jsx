@@ -8,7 +8,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   FiLink, FiPlus, FiTrash2, FiPlay, FiRefreshCw, FiX, FiLoader, FiCpu,
-  FiSend, FiCheckCircle, FiSlash, FiExternalLink, FiZap, FiEye
+  FiSend, FiCheckCircle, FiSlash, FiExternalLink, FiZap, FiEye, FiSearch
 } from 'react-icons/fi';
 import { seoBacklinksAPI } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
@@ -261,6 +261,11 @@ const BacklinksTab = () => {
               {activeNiche.discovery_message && <p className="text-xs text-text-muted">{activeNiche.discovery_message}</p>}
             </div>
             <div className="flex gap-2 flex-wrap">
+              <button onClick={() => runAction('discover', 'keyword')} disabled={!!busy || (status && (status.running_niche_id || !status.anthropic))}
+                className="px-3 py-1.5 rounded-lg bg-surface-strong hover:bg-border-strong text-text-primary text-sm flex items-center gap-1.5 disabled:opacity-50"
+                title="Claude cherche sur le web les sites FR de la niche — plafonné à 25 recherches (~0,40 $ max)">
+                {busy === 'discover' ? <Spinner /> : <FiSearch size={14} />} Recherche mot-clé
+              </button>
               <button onClick={() => runAction('discover', 'snowball')} disabled={!!busy || (status && status.running_niche_id)}
                 className="px-3 py-1.5 rounded-lg bg-surface-strong hover:bg-border-strong text-text-primary text-sm flex items-center gap-1.5 disabled:opacity-50"
                 title="Rapide (minutes) : suit les liens depuis les seeds">

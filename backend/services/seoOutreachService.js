@@ -131,6 +131,58 @@ async function draftLinkEmail(p) {
   return { subject: `À propos de ${p.target_domain}`, body: stripDashes(text) || '(réponse vide)' };
 }
 
+// ─── Découverte par mot-clé (Claude + recherche web, budget PLAFONNÉ) ────────
+// Claude fait de vraies recherches web (variantes du mot-clé de la niche) et
+// renvoie les domaines francophones pertinents. Le budget n'est PAS laissé à
+// Claude : max_uses est un plafond DUR côté API (25 recherches ≈ 0,25 $ + tokens
+// Haiku ≈ 0,15 $ -> ~0,40 $ pire cas par découverte).
+const KEYWORD_MAX_SEARCHES = 25;
+
+async function discoverByKeyword({ niche, hubs = '', site_cible = '' }) {
+  const key = process.env.ANTHROPIC_API_KEY;
+  if (!key) throw new Error('ANTHROPIC_API_KEY manquante dans .env');
+
+  const exclusions = [hubs, site_cible].filter(Boolean).join(', ');
+  const prompt = [
+    `Trouve des SITES WEB FRANCOPHONES qui parlent de la niche suivante : « ${niche} ».`,
+    "Cherche large avec des variantes (tutoriel, blog, forum, avis, galerie, communauté,",
+    "débutant…) en français. On veut des sites de la COMMUNAUTÉ : blogs perso, forums,",
+    "sites de passionnés, magazines spécialisés.",
+    "EXCLUS : les grandes plateformes (YouTube, Facebook, Reddit, Wikipedia, marketplaces),",
+    exclusions ? `les sites suivants (déjà connus) : ${exclusions},` : null,
+    "et les sites manifestement anglophones.",
+    "",
+    "À LA FIN, réponds avec UNIQUEMENT un objet JSON (aucun texte autour) :",
+    '{"domains": ["exemple.fr", "autre-site.com"]}',
+    "Uniquement des noms de domaine nus (sans https:// ni chemin), dédupliqués."
+  ].filter(Boolean).join("\n");
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
+    body: JSON.stringify({
+      model: LLM_MODEL,
+      max_tokens: 3000,
+      tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: KEYWORD_MAX_SEARCHES }],
+      messages: [{ role: 'user', content: prompt }]
+    })
+  });
+  if (!res.ok) {
+    const detail = await res.text().catch(() => '');
+    throw new Error(`Anthropic ${res.status} : ${detail.slice(0, 300)}`);
+  }
+  const data = await res.json();
+  const text = (data.content || []).filter((c) => c.type === 'text').map((c) => c.text || '').join('\n');
+  const parsed = parseJsonLoose(text);
+  const domains = Array.isArray(parsed?.domains) ? parsed.domains : [];
+  // Nettoyage : domaine nu, minuscule, avec un point, sans chemin.
+  const clean = [...new Set(domains
+    .map((d) => String(d).toLowerCase().trim().replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0])
+    .filter((d) => d.includes('.') && d.length < 100))];
+  const searches = (data.usage && data.usage.server_tool_use && data.usage.server_tool_use.web_search_requests) || null;
+  return { domains: clean, searches_used: searches };
+}
+
 // ─── Scoring : Open PageRank + CrUX ──────────────────────────────────────────
 
 // Open PageRank (Keywords Everywhere) : 100 domaines/requête, 30k/mois gratuits.
@@ -196,6 +248,6 @@ function computeScore(t) {
 
 module.exports = {
   isGmailConfigured, sendViaGmail,
-  draftLinkEmail,
+  draftLinkEmail, discoverByKeyword,
   fetchOpenPageRank, checkCrux, computeScore
 };
