@@ -195,9 +195,10 @@ async function discoverByKeyword({ niche, hubs = '', site_cible = '' }) {
 // ─── Scoring : Open PageRank + CrUX ──────────────────────────────────────────
 
 // Open PageRank (Keywords Everywhere) : 100 domaines/requête, 30k/mois gratuits.
-// Nouvelle API (2026) : POST /api/v1/domains/bulk + Bearer. Surcharge via OPR_API_URL.
+// Nouvelle API (2026) : POST /v1/domains/bulk + Bearer (SANS /api — vérifié : /api/v1
+// renvoie leur page 404). Surcharge via OPR_API_URL si le endpoint bouge encore.
 const OPR_URL = process.env.OPR_API_URL
-  || 'https://openpagerank.keywordseverywhere.com/api/v1/domains/bulk';
+  || 'https://openpagerank.keywordseverywhere.com/v1/domains/bulk';
 
 // Extrait un score 0-10 quel que soit le nom de champ retourné (API en évolution).
 function oprScore(row) {
