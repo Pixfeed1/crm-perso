@@ -175,10 +175,19 @@ async function discoverByKeyword({ niche, hubs = '', site_cible = '' }) {
   const text = (data.content || []).filter((c) => c.type === 'text').map((c) => c.text || '').join('\n');
   const parsed = parseJsonLoose(text);
   const domains = Array.isArray(parsed?.domains) ? parsed.domains : [];
-  // Nettoyage : domaine nu, minuscule, avec un point, sans chemin.
+  // Plateformes jamais pertinentes comme cibles (match exact ou sous-domaine de google/
+  // facebook…). ATTENTION : on ne bloque PAS *.wordpress.com / *.blogspot.com — ce sont
+  // de vrais blogs de niche (le blog DAZ de Marc en est la preuve).
+  const JUNK = new Set(['google.com', 'sites.google.com', 'youtube.com', 'facebook.com',
+    'instagram.com', 'twitter.com', 'x.com', 'linkedin.com', 'pinterest.com',
+    'wikipedia.org', 'reddit.com', 'amazon.com', 'amazon.fr', 'tumblr.com',
+    'wordpress.org', 'discord.com', 'twitch.tv', 'deviantart.com', 'patreon.com']);
+  const isJunk = (d) => JUNK.has(d) || d.endsWith('.google.com') || d.endsWith('.facebook.com')
+    || d.endsWith('.wikipedia.org') || d.endsWith('.amazon.com') || d.endsWith('.amazon.fr');
+  // Nettoyage : domaine nu, minuscule, avec un point, sans chemin, hors plateformes.
   const clean = [...new Set(domains
     .map((d) => String(d).toLowerCase().trim().replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0])
-    .filter((d) => d.includes('.') && d.length < 100))];
+    .filter((d) => d.includes('.') && d.length < 100 && !isJunk(d)))];
   const searches = (data.usage && data.usage.server_tool_use && data.usage.server_tool_use.web_search_requests) || null;
   return { domains: clean, searches_used: searches };
 }

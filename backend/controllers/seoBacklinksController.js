@@ -128,14 +128,15 @@ function runKeywordDiscovery(db, niche) {
 }
 
 // Lance un process de découverte en arrière-plan et ingère son CSV à la fin.
-function runDiscovery(db, niche, mode) {
+// seedsOverride : seeds explicites (mode « étendre » : les cibles FR déjà découvertes).
+function runDiscovery(db, niche, mode, seedsOverride = null) {
   const jobDir = path.join(os.tmpdir(), `linkgraph-${niche.id}-${mode}`);
   fs.mkdirSync(jobDir, { recursive: true });
   const outCsv = path.join(jobDir, 'out.csv');
 
   let args;
   if (mode === 'snowball') {
-    const seeds = (niche.seeds || niche.hubs || '').trim();
+    const seeds = (seedsOverride || niche.seeds || niche.hubs || '').trim();
     args = [LINKGRAPH_SCRIPT, 'snowball', '--seeds', seeds, '--depth', '2', '--output', outCsv];
   } else {
     args = [LINKGRAPH_SCRIPT, 'linkers', '--dir', LINKGRAPH_DATA_DIR, '--hubs', niche.hubs || '', '--output', outCsv];
@@ -275,10 +276,12 @@ const ctrl = {
     }
   },
 
-  // POST /api/seo/backlinks/niches/:id/discover { mode: 'snowball' | 'graph' | 'keyword' }
+  // POST /api/seo/backlinks/niches/:id/discover { mode: 'snowball' | 'graph' | 'keyword' | 'expand' }
+  // 'expand' : re-boule-de-neige AUTOMATIQUE depuis les cibles FRANCOPHONES déjà découvertes
+  // (déplie la niche de proche en proche depuis les sites locaux, sans ressaisie).
   discover: async (req, res) => {
     const db = req.app.locals.db;
-    const mode = ['graph', 'keyword'].includes(req.body?.mode) ? req.body.mode : 'snowball';
+    const mode = ['graph', 'keyword', 'expand'].includes(req.body?.mode) ? req.body.mode : 'snowball';
     if (runningNicheId) return res.status(409).json({ message: 'Une découverte est déjà en cours' });
     try {
       const { rows } = await db.pool.query('SELECT * FROM seo_niches WHERE id = $1', [req.params.id]);
@@ -293,15 +296,30 @@ const ctrl = {
       if (mode === 'keyword' && !process.env.ANTHROPIC_API_KEY) {
         return res.status(400).json({ message: 'Clé Anthropic non configurée (ANTHROPIC_API_KEY).' });
       }
+      // Mode étendre : seeds = les meilleures cibles FR vérifiées de la niche.
+      let seedsOverride = null;
+      if (mode === 'expand') {
+        const fr = await db.pool.query(
+          `SELECT domain FROM seo_link_targets
+           WHERE niche_id = $1 AND lang = 'fr' AND statut <> 'ecarte' AND (alive IS DISTINCT FROM FALSE)
+           ORDER BY score DESC NULLS LAST LIMIT 15`,
+          [niche.id]
+        );
+        if (fr.rows.length === 0) {
+          return res.status(400).json({ message: 'Aucune cible francophone vérifiée — lance d\'abord une découverte puis la Vérif live.' });
+        }
+        seedsOverride = fr.rows.map((r) => r.domain).join(',');
+      }
       runningNicheId = niche.id; // verrou posé AVANT tout autre await (pas de course)
       const phaseMsg = {
         graph: 'Scan du graphe Common Crawl (peut durer des heures)…',
         snowball: 'Boule de neige en cours (quelques minutes)…',
-        keyword: 'Claude cherche sur le web (max 25 recherches ≈ 0,40 $)…'
+        keyword: 'Claude cherche sur le web (max 25 recherches ≈ 0,40 $)…',
+        expand: `Extension depuis ${seedsOverride ? seedsOverride.split(',').length : 0} cibles FR découvertes…`
       };
       await setPhase(db, niche.id, `${mode}_running`, phaseMsg[mode]);
       if (mode === 'keyword') runKeywordDiscovery(db, niche);
-      else runDiscovery(db, niche, mode);
+      else runDiscovery(db, niche, mode === 'expand' ? 'snowball' : mode, seedsOverride);
       res.status(202).json({ started: true, mode });
     } catch (e) {
       runningNicheId = null;

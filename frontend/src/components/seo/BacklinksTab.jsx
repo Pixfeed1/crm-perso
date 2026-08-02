@@ -271,6 +271,11 @@ const BacklinksTab = () => {
                 title="Rapide (minutes) : suit les liens depuis les seeds">
                 {busy === 'discover' ? <Spinner /> : <FiPlay size={14} />} Boule de neige
               </button>
+              <button onClick={() => runAction('discover', 'expand')} disabled={!!busy || (status && status.running_niche_id)}
+                className="px-3 py-1.5 rounded-lg bg-surface-strong hover:bg-border-strong text-text-primary text-sm flex items-center gap-1.5 disabled:opacity-50"
+                title="Déplie la niche de proche en proche : reprend automatiquement tes cibles FRANCOPHONES découvertes comme seeds et relance la boule de neige depuis elles (nécessite une Vérif live préalable)">
+                {busy === 'discover' ? <Spinner /> : <span>🌱</span>} Étendre (FR)
+              </button>
               <button onClick={() => runAction('discover', 'graph')} disabled={!!busy || (status && (status.running_niche_id || !status.graph_ready))}
                 className="px-3 py-1.5 rounded-lg bg-surface-strong hover:bg-border-strong text-text-primary text-sm flex items-center gap-1.5 disabled:opacity-50"
                 title="Exhaustif (heures) : scanne le graphe Common Crawl téléchargé">
