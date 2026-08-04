@@ -5,7 +5,7 @@
 // Position = SUM(impr*pos)/SUM(impr) (même formule que le cache Opportunités). Fenêtre 28j
 // par défaut (= cache) ; sélecteur 7/28/90j. Courbes recharts, axe Y inversé (position 1 en haut).
 // Charte : tokens de thème, react-icons, framer-motion, aucune couleur en dur.
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   FiSearch, FiStar, FiTrendingUp, FiTrendingDown, FiMinus, FiExternalLink, FiFileText, FiTarget
 } from 'react-icons/fi';
@@ -70,6 +70,25 @@ const PositionsTab = ({ siteId, gscConnected }) => {
   const [loading, setLoading] = useState(false);
 
   const trackedSet = new Map(tracked.map((t) => [t.keyword, t.id]));
+
+  // Tri du tableau « Par mot-clé » (clic sur l'entête). Défaut : impressions décroissantes.
+  const [kwSort, setKwSort] = useState({ field: 'impressions', dir: 'desc' });
+  const sortKw = (field) => setKwSort((s) => s.field === field
+    ? { field, dir: s.dir === 'asc' ? 'desc' : 'asc' }
+    : { field, dir: field === 'query' ? 'asc' : 'desc' });
+  const sortedKeywords = useMemo(() => {
+    const arr = [...keywords];
+    const { field, dir } = kwSort;
+    const mul = dir === 'asc' ? 1 : -1;
+    arr.sort((a, b) => {
+      if (field === 'query') return mul * String(a.query || '').localeCompare(String(b.query || ''), 'fr');
+      const av = a[field], bv = b[field];
+      const an = (av === null || av === undefined) ? (dir === 'asc' ? Infinity : -Infinity) : av;
+      const bn = (bv === null || bv === undefined) ? (dir === 'asc' ? Infinity : -Infinity) : bv;
+      return mul * (an - bn);
+    });
+    return arr;
+  }, [keywords, kwSort]);
 
   // Synthèse + watchlist : toujours chargées (cartes en tête).
   useEffect(() => {
@@ -226,18 +245,29 @@ const PositionsTab = ({ siteId, gscConnected }) => {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-text-muted text-xs text-left border-b border-border">
-                    <th className="py-2 pr-2"></th>
-                    <th className="py-2 pr-2">Mot-clé</th>
-                    <th className="py-2 px-2 text-right">Position</th>
-                    <th className="py-2 px-2 text-right">Évolution</th>
-                    <th className="py-2 px-2 text-right">Impr.</th>
-                    <th className="py-2 px-2 text-right">Clics</th>
-                    <th className="py-2 px-2 text-right">CTR</th>
-                    <th className="py-2 pl-2">Page</th>
+                    {(() => {
+                      const arrow = (f) => kwSort.field === f ? (kwSort.dir === 'asc' ? ' ↑' : ' ↓') : '';
+                      const Th = ({ f, label, right }) => (
+                        <th onClick={() => sortKw(f)}
+                          className={`py-2 px-2 cursor-pointer select-none hover:text-text-primary ${right ? 'text-right' : ''}`}>
+                          {label}{arrow(f)}
+                        </th>
+                      );
+                      return (<>
+                        <th className="py-2 pr-2"></th>
+                        <Th f="query" label="Mot-clé" />
+                        <Th f="position" label="Position" right />
+                        <Th f="delta" label="Évolution" right />
+                        <Th f="impressions" label="Impr." right />
+                        <Th f="clicks" label="Clics" right />
+                        <Th f="ctr" label="CTR" right />
+                        <th className="py-2 pl-2">Page</th>
+                      </>);
+                    })()}
                   </tr>
                 </thead>
                 <tbody>
-                  {keywords.map((k) => (
+                  {sortedKeywords.map((k) => (
                     <tr key={k.query} className="border-b border-border/50 hover:bg-surface-strong/30">
                       <td className="py-2 pr-2">
                         <button onClick={() => toggleTrack(k.query)} title={trackedSet.has(k.query) ? 'Retirer du suivi' : 'Suivre'}
