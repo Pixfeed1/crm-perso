@@ -4,6 +4,15 @@ MULTI-SITE : ajouter un site = ajouter une entrée ici (le worker upsert seo_sit
 Aucune reconfiguration Google nécessaire : une seule connexion sert tous les sites (étape 2).
 """
 
+import os
+
+# Filtre géographique / appareil des positions Search Console — pour que la position
+# affichée colle au SERP RÉEL (et pas à une moyenne mondiale tous appareils).
+#   GSC_COUNTRY : code pays ISO-3166 alpha-3 minuscule (ex 'fra'). Vide = monde entier.
+#   GSC_DEVICE  : 'desktop' | 'mobile' | 'tablet'. Vide = tous appareils confondus.
+GSC_COUNTRY = os.getenv("GSC_COUNTRY", "fra").strip().lower()
+GSC_DEVICE = os.getenv("GSC_DEVICE", "").strip().lower()
+
 # Sites suivis. gsc_property servira à l'étape 2 (Search Console).
 SITES = [
     {

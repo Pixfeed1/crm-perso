@@ -87,6 +87,14 @@ def search_analytics(creds, gsc_property, start_date, end_date):
     """
     svc = _service(creds, "webmasters", "v3")
     out = []
+    # Filtres pays/appareil (config) -> positions calées sur le SERP réel, pas une
+    # moyenne mondiale. Vide = pas de filtre (comportement d'origine).
+    filters = []
+    if config.GSC_COUNTRY:
+        filters.append({"dimension": "country", "operator": "equals", "expression": config.GSC_COUNTRY})
+    if config.GSC_DEVICE:
+        filters.append({"dimension": "device", "operator": "equals", "expression": config.GSC_DEVICE})
+
     start_row = 0
     while True:
         body = {
@@ -96,6 +104,8 @@ def search_analytics(creds, gsc_property, start_date, end_date):
             "rowLimit": config.GSC_ROW_LIMIT,
             "startRow": start_row,
         }
+        if filters:
+            body["dimensionFilterGroups"] = [{"filters": filters}]
         resp = _execute_with_retry(
             svc.searchanalytics().query(siteUrl=gsc_property, body=body)
         )
