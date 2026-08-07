@@ -25,7 +25,7 @@ async function cancelAutoRelances(db, leadId) {
 const VALID_TYPES = ['email', 'appel', 'sms', 'note', 'rdv'];
 const VALID_CONTACT_TYPES = ['lead', 'client'];
 const VALID_REACHED = ['joint', 'pas_reponse', 'message'];
-const VALID_STATUS = ['nouveau', 'a_contacter', 'en_discussion', 'devis_envoye', 'gagne', 'perdu', 'pas_business'];
+const VALID_STATUS = ['nouveau', 'a_contacter', 'contacte', 'en_discussion', 'devis_envoye', 'gagne', 'perdu', 'pas_business'];
 const VALID_CHANNELS = ['appel', 'email', 'sms', 'autre'];
 
 const interactionController = {
@@ -342,6 +342,7 @@ const interactionController = {
         relance_today: rows.filter((r) => active(r) && r.next_followup && dayOf(r.next_followup).getTime() === today.getTime()).length,
         overdue: rows.filter((r) => active(r) && r.next_followup && dayOf(r.next_followup) < today).length,
         nouveaux: rows.filter((r) => r.relation_status === 'nouveau').length,
+        contacte: rows.filter((r) => r.relation_status === 'contacte').length,
         en_discussion: rows.filter((r) => r.relation_status === 'en_discussion').length,
         sans_reponse: rows.filter((r) => active(r) && r.relation_status !== 'gagne' && r.relation_status !== 'perdu' && r.last_reached === 'pas_reponse').length,
         // Dormants : contacts DÉJÀ contactés (y compris clients gagnés — les 20% de réponse !)

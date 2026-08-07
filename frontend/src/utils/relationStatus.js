@@ -5,6 +5,7 @@
 export const RELATION_STATUSES = [
   { key: 'nouveau', label: 'Nouveau', cls: 'bg-neutral-bg text-neutral-text' },
   { key: 'a_contacter', label: 'À contacter', cls: 'bg-info-bg text-info-text' },
+  { key: 'contacte', label: 'Contacté', cls: 'bg-info-bg text-info-text' },
   { key: 'en_discussion', label: 'En discussion', cls: 'bg-warning-bg text-warning-text' },
   { key: 'devis_envoye', label: 'Devis envoyé', cls: 'bg-info-bg text-info-text' },
   { key: 'gagne', label: 'Gagné', cls: 'bg-success-bg text-success-text' },

@@ -11,7 +11,8 @@
 const RELATION_TO_STATUS = {
   nouveau: 'nouveau',
   a_contacter: 'nouveau',      // qualifié « à contacter » mais pas encore joint
-  en_discussion: 'contacte',
+  contacte: 'contacte',        // email parti, en attente de réponse
+  en_discussion: 'contacte',   // le prospect a répondu (le Kanban reste plus grossier)
   devis_envoye: 'négociation',
   gagne: 'client',
   perdu: 'perdu',

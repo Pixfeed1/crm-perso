@@ -63,6 +63,7 @@ const TABS = [
   { key: 'overdue', label: 'En retard' },
   { key: 'dormants', label: 'Dormants' },
   { key: 'nouveaux', label: 'Nouveaux' },
+  { key: 'contacte', label: 'Contactés' },
   { key: 'en_discussion', label: 'En discussion' },
   { key: 'devis_envoye', label: 'Devis envoyé' },
   { key: 'gagne_perdu', label: 'Gagné/Perdu' },
@@ -86,6 +87,7 @@ const matchesFilter = (r, filter) => {
     case 'dormants': return isDormant(r, today);
     case 'ouverts': return active && (r.email_opens > 0 || r.email_clicks > 0);
     case 'nouveaux': return r.relation_status === 'nouveau';
+    case 'contacte': return r.relation_status === 'contacte';
     case 'en_discussion': return r.relation_status === 'en_discussion';
     case 'devis_envoye': return r.relation_status === 'devis_envoye';
     case 'gagne_perdu': return r.relation_status === 'gagne' || r.relation_status === 'perdu';

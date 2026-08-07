@@ -177,13 +177,15 @@ router.post('/:id/send-email', async (req, res) => {
       );
       // Première prise de contact : fait passer le lead "Nouveau" -> "Contacté"
       // sur les DEUX machines à états (Kanban `status` + Suivi `relation_status`),
-      // sans écraser un statut déjà avancé manuellement.
+      // sans écraser un statut déjà avancé manuellement. « Contacté » = email parti,
+      // en attente de réponse : ce n'est PAS encore une discussion (celle-ci n'arrive
+      // que lorsque le prospect répond, via le bouton « A répondu »).
       await db.pool.query(
         "UPDATE leads SET status = 'contacte', updated_at = NOW() WHERE id = $1 AND (status IS NULL OR status = 'nouveau')",
         [id]
       );
       await db.pool.query(
-        "UPDATE leads SET relation_status = 'en_discussion' WHERE id = $1 AND (relation_status IS NULL OR relation_status = 'nouveau')",
+        "UPDATE leads SET relation_status = 'contacte' WHERE id = $1 AND (relation_status IS NULL OR relation_status IN ('nouveau', 'a_contacter'))",
         [id]
       );
     } catch (logErr) {
