@@ -60,10 +60,12 @@
   --text-muted: 120 119 116;     /* gris secondaire #787774 */
   --border: 237 237 236;         /* bordures gris clair #ededec */
   --border-strong: 220 219 216;
-  --accent: 109 90 230;          /* #6d5ae6 */
-  --accent-hover: 91 73 214;     /* #5b49d6 */
+  /* Accent facon Notion : un bleu sobre, pas le violet de la marque. Le violet
+     sature fonctionne sur fond sombre ; sur un canevas blanc il jure. */
+  --accent: 35 131 226;          /* #2383e2 bleu Notion */
+  --accent-hover: 26 115 202;    /* #1a73ca */
   --accent-text: 255 255 255;
-  --accent-ring: rgba(109, 90, 230, 0.30);
+  --accent-ring: rgba(35, 131, 226, 0.30);
 
   --success-bg: 234 250 243;  --success-text: 15 110 86;    /* #eafaf3 / #0f6e56 */
   --danger-bg: 252 236 235;   --danger-text: 163 45 45;     /* #fceceb / #a32d2d */
@@ -244,22 +246,22 @@ div select {
 /* ------------------------------------------------------------------ */
 [data-theme="clair"] .text-indigo-300,
 [data-theme="clair"] .hover\:text-indigo-300:hover,
-[data-theme="clair"] .group:hover .group-hover\:text-indigo-300 { color: #4338ca; }
+[data-theme="clair"] .group:hover .group-hover\:text-indigo-300 { color: #2383e2; }
 [data-theme="clair"] .text-indigo-400,
 [data-theme="clair"] .hover\:text-indigo-400:hover,
-[data-theme="clair"] .group:hover .group-hover\:text-indigo-400 { color: #4f46e5; }
+[data-theme="clair"] .group:hover .group-hover\:text-indigo-400 { color: #2383e2; }
 [data-theme="clair"] .text-purple-300,
 [data-theme="clair"] .hover\:text-purple-300:hover,
-[data-theme="clair"] .group:hover .group-hover\:text-purple-300 { color: #7e22ce; }
+[data-theme="clair"] .group:hover .group-hover\:text-purple-300 { color: #2383e2; }
 [data-theme="clair"] .text-purple-400,
 [data-theme="clair"] .hover\:text-purple-400:hover,
-[data-theme="clair"] .group:hover .group-hover\:text-purple-400 { color: #9333ea; }
+[data-theme="clair"] .group:hover .group-hover\:text-purple-400 { color: #2383e2; }
 [data-theme="clair"] .text-violet-300,
 [data-theme="clair"] .hover\:text-violet-300:hover,
-[data-theme="clair"] .group:hover .group-hover\:text-violet-300 { color: #6d28d9; }
+[data-theme="clair"] .group:hover .group-hover\:text-violet-300 { color: #2383e2; }
 [data-theme="clair"] .text-violet-400,
 [data-theme="clair"] .hover\:text-violet-400:hover,
-[data-theme="clair"] .group:hover .group-hover\:text-violet-400 { color: #7c3aed; }
+[data-theme="clair"] .group:hover .group-hover\:text-violet-400 { color: #2383e2; }
 [data-theme="clair"] .text-blue-300,
 [data-theme="clair"] .hover\:text-blue-300:hover,
 [data-theme="clair"] .group:hover .group-hover\:text-blue-300 { color: #1d4ed8; }
@@ -344,3 +346,53 @@ div select {
 [data-theme="clair"] .text-orange-400,
 [data-theme="clair"] .hover\:text-orange-400:hover,
 [data-theme="clair"] .group:hover .group-hover\:text-orange-400 { color: #ea580c; }
+
+/* ------------------------------------------------------------------ */
+/*  MODE CLAIR : identite visuelle facon Notion (violet -> bleu sobre)  */
+/*  Le violet sature de la marque fonctionne sur fond sombre. Sur un    */
+/*  canevas blanc il jure. Notion : aplats bleus discrets, titres       */
+/*  quasi-noirs, aucun degrade. Le theme sombre n'est PAS touche.       */
+/* ------------------------------------------------------------------ */
+
+/* Titres en degrade -> texte plein, sobre (les degrades de texte ne sont
+   pas dans l'esprit Notion et deviennent illisibles sur blanc). */
+[data-theme="clair"] .bg-clip-text.text-transparent {
+  background-image: none !important;
+  -webkit-text-fill-color: rgb(var(--text-primary));
+  color: rgb(var(--text-primary));
+}
+
+/* Boutons pleins violets/indigo codes en dur -> bleu Notion. */
+[data-theme="clair"] .bg-indigo-500,
+[data-theme="clair"] .bg-indigo-600,
+[data-theme="clair"] .bg-indigo-700,
+[data-theme="clair"] .bg-purple-500,
+[data-theme="clair"] .bg-purple-600,
+[data-theme="clair"] .bg-purple-700,
+[data-theme="clair"] .bg-violet-500,
+[data-theme="clair"] .bg-violet-600,
+[data-theme="clair"] .bg-violet-700 { background-color: #2383e2; }
+
+[data-theme="clair"] .hover\:bg-indigo-600:hover,
+[data-theme="clair"] .hover\:bg-indigo-700:hover,
+[data-theme="clair"] .hover\:bg-purple-600:hover,
+[data-theme="clair"] .hover\:bg-purple-700:hover,
+[data-theme="clair"] .hover\:bg-violet-600:hover,
+[data-theme="clair"] .hover\:bg-violet-700:hover { background-color: #1a73ca; }
+
+/* Degrades violets (boutons, pastilles) -> aplat bleu. Les titres en
+   degrade sont exclus : ils sont traites juste au-dessus. */
+[data-theme="clair"] [class*="from-indigo"]:not(.bg-clip-text),
+[data-theme="clair"] [class*="from-purple"]:not(.bg-clip-text),
+[data-theme="clair"] [class*="from-violet"]:not(.bg-clip-text) {
+  background-image: none;
+  background-color: #2383e2;
+}
+
+/* Bordures et anneaux de focus violets -> bleu Notion. */
+[data-theme="clair"] .border-indigo-500,
+[data-theme="clair"] .border-indigo-600,
+[data-theme="clair"] .border-purple-500,
+[data-theme="clair"] .border-purple-600,
+[data-theme="clair"] .focus\:border-indigo-500:focus,
+[data-theme="clair"] .focus\:border-purple-500:focus { border-color: #2383e2; }
