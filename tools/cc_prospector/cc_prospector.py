@@ -415,25 +415,34 @@ def _bare_domain(domain: str) -> str:
     return d[4:] if d.startswith("www.") else d
 
 
-async def check_dns(bare_domain: str, timeout: float) -> dict:
+async def check_dns(bare_domain: str, timeout: float, client=None) -> dict:
     """SPF / DMARC via DNS-over-HTTPS (dns.google) — pas de résolveur DNS local requis.
-    'oui'/'non' si la requête aboutit, '' (inconnu) si le lookup échoue."""
+    'oui'/'non' si la requête aboutit, '' (inconnu) si le lookup échoue.
+    `client` : client httpx partagé (réutilise la connexion à dns.google sur tout le run)."""
     out = {"spf": "", "dmarc": ""}
     if not bare_domain:
         return out
+    owned = client is None
+    if owned:
+        client = httpx.AsyncClient(timeout=min(timeout, 6.0), follow_redirects=True,
+                                   headers={"accept": "application/dns-json"})
     try:
-        async with httpx.AsyncClient(timeout=min(timeout, 6.0), follow_redirects=True,
-                                     headers={"accept": "application/dns-json"}) as c:
-            r = await c.get("https://dns.google/resolve",
-                            params={"name": bare_domain, "type": "TXT"})
-            txts = " ".join(a.get("data", "") for a in r.json().get("Answer", [])).lower()
-            out["spf"] = "oui" if "v=spf1" in txts else "non"
-            r2 = await c.get("https://dns.google/resolve",
-                             params={"name": f"_dmarc.{bare_domain}", "type": "TXT"})
-            t2 = " ".join(a.get("data", "") for a in r2.json().get("Answer", [])).lower()
-            out["dmarc"] = "oui" if "v=dmarc1" in t2 else "non"
-    except Exception:
-        pass  # lookup indisponible -> inconnu
+        # Les deux lookups sont indépendants : en parallèle.
+        r, r2 = await asyncio.gather(
+            client.get("https://dns.google/resolve",
+                       params={"name": bare_domain, "type": "TXT"}),
+            client.get("https://dns.google/resolve",
+                       params={"name": f"_dmarc.{bare_domain}", "type": "TXT"}),
+        )
+        txts = " ".join(a.get("data", "") for a in r.json().get("Answer", [])).lower()
+        out["spf"] = "oui" if "v=spf1" in txts else "non"
+        t2 = " ".join(a.get("data", "") for a in r2.json().get("Answer", [])).lower()
+        out["dmarc"] = "oui" if "v=dmarc1" in t2 else "non"
+    except (httpx.HTTPError, ValueError, KeyError, TypeError):
+        pass  # lookup indisponible / réponse illisible -> inconnu
+    finally:
+        if owned:
+            await client.aclose()
     return out
 
 
@@ -487,12 +496,63 @@ def candidate_urls(domain: str) -> list[str]:
     return [f"https://{bare}", f"https://www.{bare}", f"http://{bare}"]
 
 
-async def _fetch(client, url, verify):
-    """Un GET. verify=True d'abord (pour capter ssl_ok), sinon retombe sur verify=False."""
-    return await client.get(url)
+# Plafond de lecture d'une page : une home fait 50 à 500 Ko ; au-delà de 3 Mo c'est
+# un fichier aberrant qui monopoliserait un slot de concurrence pour rien.
+MAX_HTML_BYTES = 3 * 1024 * 1024
+
+# Erreurs réseau TRANSITOIRES : ça vaut le coup de retenter (un site lent une fois
+# n'est pas un site mort — sans retry on perd le prospect définitivement).
+TRANSIENT_ERRORS = (
+    httpx.ConnectTimeout, httpx.ReadTimeout, httpx.WriteTimeout, httpx.PoolTimeout,
+    httpx.ConnectError, httpx.ReadError, httpx.RemoteProtocolError,
+)
 
 
-async def detect_one(domain: str, sem, timeout: float) -> dict:
+def _is_tls_error(exc: Exception) -> bool:
+    """httpx enveloppe les erreurs TLS dans ConnectError : on regarde aussi la cause."""
+    cause = getattr(exc, "__cause__", None)
+    blob = f"{type(exc).__name__} {exc} {type(cause).__name__} {cause}".lower()
+    return "ssl" in blob or "certificate" in blob or "tlsv1" in blob
+
+
+async def _get_capped(client, url: str):
+    """GET avec plafond de lecture. Retourne (response, html)."""
+    async with client.stream("GET", url) as r:
+        chunks, total = [], 0
+        async for chunk in r.aiter_bytes():
+            chunks.append(chunk)
+            total += len(chunk)
+            if total >= MAX_HTML_BYTES:
+                break
+        body = b"".join(chunks)
+    try:
+        html = body.decode(r.encoding or "utf-8", "replace")
+    except (LookupError, UnicodeDecodeError):
+        html = body.decode("utf-8", "replace")
+    return r, html
+
+
+async def _fetch_with_retry(client, url: str, retries: int):
+    """GET plafonné + retry court sur erreur transitoire.
+    Retourne (response|None, html, erreur, erreur_tls).
+    N'attrape QUE les erreurs réseau : un bug de code remonte au lieu d'être
+    maquillé en « site injoignable »."""
+    last_err, tls = "", False
+    for attempt in range(retries + 1):
+        try:
+            r, html = await _get_capped(client, url)
+            return r, html, "", False
+        except httpx.HTTPError as e:
+            last_err = f"{type(e).__name__}: {str(e)[:80]}"
+            tls = _is_tls_error(e)
+            # Inutile de retenter à l'identique une erreur TLS ou non transitoire.
+            if tls or not isinstance(e, TRANSIENT_ERRORS) or attempt == retries:
+                break
+            await asyncio.sleep(0.5 * (attempt + 1))
+    return None, "", last_err, tls
+
+
+async def detect_one(domain: str, sem, timeout: float, clients: dict, retries: int = 1) -> dict:
     result = {k: "" for k in CSV_FIELDS}
     result["domain"] = domain
     result["platform"] = "Inconnu"
@@ -503,57 +563,57 @@ async def detect_one(domain: str, sem, timeout: float) -> dict:
             # 1) Essai avec vérification TLS stricte -> ssl_ok = oui/non (signal de vente).
             #    2) Si l'erreur est TLS, on refait sans vérif pour ne pas perdre le prospect.
             for verify in (True, False):
-                try:
-                    async with httpx.AsyncClient(
-                        headers={"User-Agent": UA}, follow_redirects=True,
-                        timeout=timeout, verify=verify,
-                    ) as client:
-                        r = await client.get(url)
-                        html = r.text or ""
-                        platform, signals = detect_platform(html, dict(r.headers))
-                        title = extract_title(html)
-                        protected = is_antibot_title(title)
-                        contacts = extract_contacts(html, domain)
-                        # Email de secours : si la home n'en donne pas, on tente les pages contact.
-                        if not contacts["email"] and not protected:
-                            contacts["email"] = await find_email_on_contact(client, str(r.url), domain)
-                    # Audit gratuit (HTML/entêtes) + DNS (SPF/DMARC) + expiration TLS.
-                    site = analyze_site(html, dict(r.headers))
-                    site.update(classify_site(html, domain))  # pré-tri : asso/agence/commerce
-                    bare = _bare_domain(domain)
-                    final_https = str(r.url).lower().startswith("https")
-                    dns = await check_dns(bare, timeout)
-                    ssl_days = await ssl_expiry_days(r.url.host or bare, timeout) if final_https else ""
-                    result.update(
-                        platform=platform,
-                        platform_version=extract_version(html, platform),
-                        signals=" | ".join(signals),
-                        http_status=str(r.status_code),
-                        final_url=str(r.url),
-                        title="" if protected else title,
-                        ssl_ok=("oui" if (is_https and verify) else ("non" if is_https else "")),
-                        protected=("oui" if protected else "non"),
-                        lang=detect_lang(html),
-                        parked=("oui" if is_parked(html, title) else "non"),
-                        ssl_expire_jours=ssl_days,
-                        error="",
-                        **contacts,
-                        **site,
-                        **dns,
-                    )
-                    return result
-                except (httpx.ConnectError, httpx.ConnectTimeout, Exception) as e:
-                    name = type(e).__name__
-                    last_err = f"{name}: {str(e)[:80]}"
-                    is_tls = "ssl" in name.lower() or "certificate" in str(e).lower()
-                    if verify and is_tls and is_https:
+                client = clients[verify]
+                r, html, err, tls = await _fetch_with_retry(client, url, retries)
+                if r is None:
+                    last_err = err or last_err
+                    if verify and tls and is_https:
                         continue  # on retente le MÊME url sans vérif TLS
-                    break  # autre erreur -> on passe à l'URL candidate suivante
+                    break         # autre erreur -> URL candidate suivante
+
+                platform, signals = detect_platform(html, dict(r.headers))
+                title = extract_title(html)
+                protected = is_antibot_title(title)
+                contacts = extract_contacts(html, domain)
+                # Email de secours : si la home n'en donne pas, on tente les pages contact.
+                if not contacts["email"] and not protected:
+                    contacts["email"] = await find_email_on_contact(client, str(r.url), domain)
+                # Audit gratuit (HTML/entêtes) + DNS (SPF/DMARC) + expiration TLS.
+                site = analyze_site(html, dict(r.headers))
+                site.update(classify_site(html, domain))  # pré-tri : asso/agence/commerce
+                bare = _bare_domain(domain)
+                final_https = str(r.url).lower().startswith("https")
+                # DNS et handshake TLS sont indépendants -> en parallèle (2 attentes -> 1).
+                if final_https:
+                    dns, ssl_days = await asyncio.gather(
+                        check_dns(bare, timeout, clients.get("dns")),
+                        ssl_expiry_days(r.url.host or bare, timeout),
+                    )
+                else:
+                    dns, ssl_days = await check_dns(bare, timeout, clients.get("dns")), ""
+                result.update(
+                    platform=platform,
+                    platform_version=extract_version(html, platform),
+                    signals=" | ".join(signals),
+                    http_status=str(r.status_code),
+                    final_url=str(r.url),
+                    title="" if protected else title,
+                    ssl_ok=("oui" if (is_https and verify) else ("non" if is_https else "")),
+                    protected=("oui" if protected else "non"),
+                    lang=detect_lang(html),
+                    parked=("oui" if is_parked(html, title) else "non"),
+                    ssl_expire_jours=ssl_days,
+                    error="",
+                    **contacts,
+                    **site,
+                    **dns,
+                )
+                return result
         result["error"] = last_err or "no response"
         return result
 
 
-async def run_detect(domains, output, concurrency, timeout):
+async def run_detect(domains, output, concurrency, timeout, retries=1):
     sem = asyncio.Semaphore(concurrency)
     total = len(domains)
     done = 0
@@ -561,33 +621,47 @@ async def run_detect(domains, output, concurrency, timeout):
     enriched = {"email": 0, "phone": 0, "social": 0}
     audit = {"mentions_ko": 0, "mobile_ko": 0, "spf_ko": 0, "ssl_bientot": 0}
 
+    # Clients HTTP créés UNE FOIS pour tout le run (au lieu d'un par tentative) :
+    # le pool de connexions et les contextes TLS sont réutilisés. Deux clients car
+    # `verify` se fixe à la construction : strict d'abord, permissif en repli.
+    limits = httpx.Limits(max_connections=max(concurrency * 2, 10),
+                          max_keepalive_connections=max(concurrency, 5))
+    common = dict(headers={"User-Agent": UA}, follow_redirects=True,
+                  timeout=timeout, limits=limits)
+
     with open(output, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=CSV_FIELDS)
         writer.writeheader()
-        tasks = [detect_one(d, sem, timeout) for d in domains]
-        for coro in asyncio.as_completed(tasks):
-            res = await coro
-            writer.writerow(res)
-            f.flush()
-            done += 1
-            counts[res["platform"]] = counts.get(res["platform"], 0) + 1
-            if res["email"]:
-                enriched["email"] += 1
-            if res["phone"]:
-                enriched["phone"] += 1
-            if res["facebook_url"] or res["instagram_url"]:
-                enriched["social"] += 1
-            if res.get("mentions_legales") == "non":
-                audit["mentions_ko"] += 1
-            if res.get("mobile_ok") == "non":
-                audit["mobile_ko"] += 1
-            if res.get("spf") == "non":
-                audit["spf_ko"] += 1
-            sd = res.get("ssl_expire_jours")
-            if sd not in (None, "") and sd.lstrip("-").isdigit() and int(sd) < 30:
-                audit["ssl_bientot"] += 1
-            if done % 25 == 0 or done == total:
-                print(f"  ... {done}/{total} traités", file=sys.stderr)
+        async with httpx.AsyncClient(verify=True, **common) as c_strict, \
+                httpx.AsyncClient(verify=False, **common) as c_loose, \
+                httpx.AsyncClient(timeout=min(timeout, 6.0), follow_redirects=True,
+                                  headers={"accept": "application/dns-json"},
+                                  limits=limits) as c_dns:
+            clients = {True: c_strict, False: c_loose, "dns": c_dns}
+            tasks = [detect_one(d, sem, timeout, clients, retries) for d in domains]
+            for coro in asyncio.as_completed(tasks):
+                res = await coro
+                writer.writerow(res)
+                f.flush()
+                done += 1
+                counts[res["platform"]] = counts.get(res["platform"], 0) + 1
+                if res["email"]:
+                    enriched["email"] += 1
+                if res["phone"]:
+                    enriched["phone"] += 1
+                if res["facebook_url"] or res["instagram_url"]:
+                    enriched["social"] += 1
+                if res.get("mentions_legales") == "non":
+                    audit["mentions_ko"] += 1
+                if res.get("mobile_ok") == "non":
+                    audit["mobile_ko"] += 1
+                if res.get("spf") == "non":
+                    audit["spf_ko"] += 1
+                sd = res.get("ssl_expire_jours")
+                if sd not in (None, "") and sd.lstrip("-").isdigit() and int(sd) < 30:
+                    audit["ssl_bientot"] += 1
+                if done % 25 == 0 or done == total:
+                    print(f"  ... {done}/{total} traités", file=sys.stderr)
 
     print(f"\nTerminé : {total} domaines -> {output}")
     print("Répartition plateforme :")
@@ -745,6 +819,8 @@ def main():
     det.add_argument("--output", default="prospects.csv")
     det.add_argument("--concurrency", type=int, default=10)
     det.add_argument("--timeout", type=float, default=10.0)
+    det.add_argument("--retries", type=int, default=1,
+                     help="Tentatives supplémentaires sur erreur réseau transitoire")
 
     r = sub.add_parser("run", help="discover puis detect")
     r.add_argument("--crawl", required=True)
@@ -755,6 +831,8 @@ def main():
     r.add_argument("--exclude", default="")
     r.add_argument("--concurrency", type=int, default=10)
     r.add_argument("--timeout", type=float, default=10.0)
+    r.add_argument("--retries", type=int, default=1,
+                   help="Tentatives supplémentaires sur erreur réseau transitoire")
     r.add_argument("--parquet", default="")
 
     args = parser.parse_args()
@@ -766,14 +844,14 @@ def main():
         if not domains:
             sys.exit("Aucun domaine à traiter.")
         print(f"Détection sur {len(domains)} domaines (concurrence {args.concurrency})...")
-        asyncio.run(run_detect(domains, args.output, args.concurrency, args.timeout))
+        asyncio.run(run_detect(domains, args.output, args.concurrency, args.timeout, args.retries))
     elif args.command == "run":
         discover(args.crawl, args.tld, args.mode, args.max_domains, "domains.txt", args.parquet, args.exclude)
         domains = load_domains("domains.txt")
         if not domains:
             sys.exit("Aucun domaine trouvé.")
         print(f"\nDétection sur {len(domains)} domaines...")
-        asyncio.run(run_detect(domains, args.output, args.concurrency, args.timeout))
+        asyncio.run(run_detect(domains, args.output, args.concurrency, args.timeout, args.retries))
 
 
 if __name__ == "__main__":
