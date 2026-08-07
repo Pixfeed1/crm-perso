@@ -119,7 +119,7 @@ const CompanyAutocomplete = ({
     <div className="relative" ref={dropdownRef}>
       {/* Input avec icône de recherche */}
       <div className="relative">
-        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted">
           {isLoading ? (
             <div className="animate-spin rounded-full h-4 w-4 border-2 border-indigo-500 border-t-transparent"></div>
           ) : (
@@ -139,9 +139,9 @@ const CompanyAutocomplete = ({
             }
           }}
           placeholder={placeholder}
-          className={`w-full pl-10 pr-4 py-2 bg-gray-900/50 border ${
-            error ? 'border-red-500' : 'border-gray-700'
-          } rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 transition-colors`}
+          className={`w-full pl-10 pr-4 py-2 bg-surface-muted/50 border ${
+            error ? 'border-red-500' : 'border-border'
+          } rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:border-indigo-500 transition-colors`}
         />
       </div>
 
@@ -158,17 +158,17 @@ const CompanyAutocomplete = ({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.2 }}
-            className="absolute z-50 w-full mt-2 bg-gray-800 border border-gray-700 rounded-lg shadow-xl max-h-80 overflow-y-auto"
+            className="absolute z-50 w-full mt-2 bg-surface border border-border rounded-lg shadow-xl max-h-80 overflow-y-auto"
           >
             {suggestions.map((company, index) => (
               <motion.div
                 key={company.siren}
                 onClick={() => handleSelectCompany(company)}
                 onMouseEnter={() => setSelectedIndex(index)}
-                className={`p-4 cursor-pointer transition-colors border-b border-gray-700/50 last:border-b-0 ${
+                className={`p-4 cursor-pointer transition-colors border-b border-border/50 last:border-b-0 ${
                   selectedIndex === index
                     ? 'bg-indigo-600/20 border-l-4 border-l-indigo-500'
-                    : 'hover:bg-gray-700/50'
+                    : 'hover:bg-surface-strong/50'
                 }`}
                 whileHover={{ x: 4 }}
               >
@@ -180,7 +180,7 @@ const CompanyAutocomplete = ({
                   <div className="flex-1 min-w-0">
                     {/* Nom de l'entreprise */}
                     <div className="flex items-center gap-2 mb-1">
-                      <h4 className="font-semibold text-white truncate">
+                      <h4 className="font-semibold text-text-primary truncate">
                         {company.name}
                       </h4>
                       {selectedIndex === index && (
@@ -210,7 +210,7 @@ const CompanyAutocomplete = ({
                     </div>
 
                     {/* SIREN */}
-                    <div className="text-xs text-gray-500 mt-1">
+                    <div className="text-xs text-text-muted mt-1">
                       SIREN: {company.siren}
                     </div>
                   </div>
@@ -226,12 +226,12 @@ const CompanyAutocomplete = ({
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="absolute z-50 w-full mt-2 bg-gray-800 border border-gray-700 rounded-lg p-4 text-center"
+          className="absolute z-50 w-full mt-2 bg-surface border border-border rounded-lg p-4 text-center"
         >
-          <p className="text-gray-400 text-sm">
+          <p className="text-text-muted text-sm">
             Aucune entreprise trouvée pour "{value}"
           </p>
-          <p className="text-gray-500 text-xs mt-1">
+          <p className="text-text-muted text-xs mt-1">
             Vérifiez l'orthographe ou essayez une recherche plus générale
           </p>
         </motion.div>

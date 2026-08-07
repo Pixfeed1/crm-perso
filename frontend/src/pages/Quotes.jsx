@@ -235,7 +235,7 @@ const Quotes = () => {
             placeholder="Rechercher par numéro ou client..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="px-4 py-2 bg-surface/50 border border-border rounded-lg text-text-primary placeholder-gray-400 focus:outline-none focus:border-indigo-500"
+            className="px-4 py-2 bg-surface/50 border border-border rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:border-indigo-500"
           />
 
           <select
@@ -276,7 +276,7 @@ const Quotes = () => {
                     <th className="px-4 py-3">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-700/50">
+                <tbody className="divide-y divide-border/50">
                   {filteredQuotes.map((quote) => (
                     <motion.tr
                       key={quote.id}
@@ -450,18 +450,18 @@ const Quotes = () => {
                 {/* Informations client et date */}
                 <div className="grid grid-cols-2 gap-8 mb-12">
                   <div>
-                    <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">Client</h3>
+                    <h3 className="text-sm font-semibold text-text-muted uppercase mb-2">Client</h3>
                     <p className="text-lg font-semibold text-gray-900">{selectedQuote.client_name}</p>
                     {selectedQuote.client_email && (
                       <p className="text-sm text-gray-600">{selectedQuote.client_email}</p>
                     )}
                   </div>
                   <div className="text-right">
-                    <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">Date d'émission</h3>
+                    <h3 className="text-sm font-semibold text-text-muted uppercase mb-2">Date d'émission</h3>
                     <p className="text-lg font-semibold text-gray-900">{formatDate(selectedQuote.issue_date)}</p>
                     {selectedQuote.valid_until && (
                       <>
-                        <h3 className="text-sm font-semibold text-gray-500 uppercase mt-4 mb-2">Valable jusqu'au</h3>
+                        <h3 className="text-sm font-semibold text-text-muted uppercase mt-4 mb-2">Valable jusqu'au</h3>
                         <p className="text-lg font-semibold text-gray-900">{formatDate(selectedQuote.valid_until)}</p>
                       </>
                     )}
@@ -527,7 +527,7 @@ const Quotes = () => {
 
                 {/* Pied de page */}
                 <div className="mt-8 pt-6 border-t border-gray-200 text-center">
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-text-muted">
                     Votre Entreprise - SIRET: 123 456 789 00012 - TVA: FR12 123456789
                   </p>
                 </div>

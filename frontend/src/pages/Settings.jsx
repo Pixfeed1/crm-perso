@@ -442,7 +442,7 @@ const Settings = () => {
                   className="w-full px-4 py-2 bg-surface-muted/50 border border-border rounded-lg text-text-primary focus:outline-none focus:border-indigo-500"
                   placeholder="https://..."
                 />
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-text-muted mt-1">
                   URL de votre logo (utilisé dans les PDF)
                 </p>
               </div>
@@ -677,7 +677,7 @@ const Settings = () => {
                 {theme === 'clair' && <FiCheckCircle className="ml-auto text-indigo-400" />}
               </button>
             </div>
-            <p className="text-gray-500 text-xs mt-4">Le thème clair est en cours de finalisation : certaines zones resteront sombres pour l'instant.</p>
+            <p className="text-text-muted text-xs mt-4">Le thème clair est en cours de finalisation : certaines zones resteront sombres pour l'instant.</p>
           </div>
         )}
       </motion.div>

@@ -186,7 +186,7 @@ const ClientForm = ({ client = {}, onSave, onCancel }) => {
               onChange={handleInputChange}
               className={`w-full px-4 py-2 bg-surface-muted/50 border ${
                 errors.name ? 'border-red-500' : 'border-border'
-              } rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-indigo-500`}
+              } rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:border-indigo-500`}
               placeholder="Jean Dupont"
             />
             {errors.name && <p className="mt-1 text-red-400 text-sm">{errors.name}</p>}
@@ -234,7 +234,7 @@ const ClientForm = ({ client = {}, onSave, onCancel }) => {
               onChange={handleInputChange}
               className={`w-full px-4 py-2 bg-surface-muted/50 border ${
                 errors.email ? 'border-red-500' : 'border-border'
-              } rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-indigo-500`}
+              } rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:border-indigo-500`}
               placeholder="email@exemple.com"
             />
             {errors.email && <p className="mt-1 text-red-400 text-sm">{errors.email}</p>}
@@ -247,7 +247,7 @@ const ClientForm = ({ client = {}, onSave, onCancel }) => {
               name="phone"
               value={formData.phone}
               onChange={handleInputChange}
-              className="w-full px-4 py-2 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+              className="w-full px-4 py-2 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:border-indigo-500"
               placeholder="+33 6 12 34 56 78"
             />
           </div>
@@ -280,7 +280,7 @@ const ClientForm = ({ client = {}, onSave, onCancel }) => {
               name="website"
               value={formData.website}
               onChange={handleInputChange}
-              className="w-full px-4 py-2 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+              className="w-full px-4 py-2 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:border-indigo-500"
               placeholder="www.exemple.com"
             />
           </div>
@@ -339,7 +339,7 @@ const ClientForm = ({ client = {}, onSave, onCancel }) => {
               name="lifetime_value"
               value={formData.lifetime_value}
               onChange={handleInputChange}
-              className="w-full px-4 py-2 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+              className="w-full px-4 py-2 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:border-indigo-500"
               placeholder="0"
               min="0"
               step="100"
@@ -369,7 +369,7 @@ const ClientForm = ({ client = {}, onSave, onCancel }) => {
               name="tags"
               value={formData.tags}
               onChange={handleInputChange}
-              className="w-full px-4 py-2 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+              className="w-full px-4 py-2 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:border-indigo-500"
               placeholder="VIP, Premium, Important"
             />
           </div>
@@ -391,7 +391,7 @@ const ClientForm = ({ client = {}, onSave, onCancel }) => {
             value={formData.notes}
             onChange={handleInputChange}
             rows={4}
-            className="w-full px-4 py-2 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-indigo-500 resize-none"
+            className="w-full px-4 py-2 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:border-indigo-500 resize-none"
             placeholder="Notes supplémentaires sur le client..."
           />
         </div>

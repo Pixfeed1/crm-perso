@@ -75,7 +75,7 @@ const RevenueFilter = ({ filters, setFilters, projects, onSort, sortField, sortD
               placeholder="Rechercher un revenu..."
               value={filters.search}
               onChange={(e) => handleFilterChange('search', e.target.value)}
-              className="w-full bg-surface/50 text-text-primary border border-border rounded-lg px-4 py-2 pl-10 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="w-full bg-surface/50 text-text-primary border border-border rounded-lg px-4 py-2 pl-10 placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               style={searchInputStyle}
             />
           <span
@@ -192,7 +192,7 @@ const RevenueFilter = ({ filters, setFilters, projects, onSort, sortField, sortD
                       id="minAmount"
                       value={filters.minAmount}
                       onChange={(e) => handleFilterChange('minAmount', e.target.value)}
-                      className="w-full bg-surface/50 text-text-primary border border-border rounded-lg px-4 py-2 pl-8 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      className="w-full bg-surface/50 text-text-primary border border-border rounded-lg px-4 py-2 pl-8 placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                       placeholder="Min"
                       min="0"
                     />
@@ -212,7 +212,7 @@ const RevenueFilter = ({ filters, setFilters, projects, onSort, sortField, sortD
                       id="maxAmount"
                       value={filters.maxAmount}
                       onChange={(e) => handleFilterChange('maxAmount', e.target.value)}
-                      className="w-full bg-surface/50 text-text-primary border border-border rounded-lg px-4 py-2 pl-8 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      className="w-full bg-surface/50 text-text-primary border border-border rounded-lg px-4 py-2 pl-8 placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                       placeholder="Max"
                       min="0"
                     />

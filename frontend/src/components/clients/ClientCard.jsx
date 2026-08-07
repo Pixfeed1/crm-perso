@@ -96,13 +96,13 @@ const ClientCard = ({ client, isSelected, onClick, onMaintenanceClick }) => {
         <div className="space-y-2 mb-4">
           {client.email && (
             <div className="flex items-center gap-2 text-xs text-text-muted">
-              <FiMail className="text-gray-500 flex-shrink-0" />
+              <FiMail className="text-text-muted flex-shrink-0" />
               <span className="truncate">{client.email}</span>
             </div>
           )}
           {client.phone && (
             <div className="flex items-center gap-2 text-xs text-text-muted">
-              <FiPhone className="text-gray-500 flex-shrink-0" />
+              <FiPhone className="text-text-muted flex-shrink-0" />
               <span className="truncate">{client.phone}</span>
             </div>
           )}
@@ -112,17 +112,17 @@ const ClientCard = ({ client, isSelected, onClick, onMaintenanceClick }) => {
         <div className="flex justify-between items-center pt-4 border-t border-border/50 mt-auto">
           {client.lifetime_value > 0 ? (
             <div>
-              <div className="text-xs text-gray-500 mb-0.5">Valeur</div>
+              <div className="text-xs text-text-muted mb-0.5">Valeur</div>
               <div className="text-base font-bold text-green-400">
                 {formatValue(client.lifetime_value)}
               </div>
             </div>
           ) : (
-            <div className="text-xs text-gray-500">Nouveau client</div>
+            <div className="text-xs text-text-muted">Nouveau client</div>
           )}
 
           <div className="text-right">
-            <div className="text-xs text-gray-500 mb-0.5">Client depuis</div>
+            <div className="text-xs text-text-muted mb-0.5">Client depuis</div>
             <div className="text-xs font-medium text-text-secondary">
               {client.contract_start_date ? formatDate(client.contract_start_date) : formatDate(client.created_at)}
             </div>

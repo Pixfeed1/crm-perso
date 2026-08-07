@@ -389,7 +389,7 @@ const Dashboard = () => {
               <h1 className="text-2xl md:text-3xl font-light text-text-primary">
                 Bonjour Marc
               </h1>
-              <p className="text-gray-500 text-sm mt-1">
+              <p className="text-text-muted text-sm mt-1">
                 {new Date().toLocaleDateString('fr-FR', { 
                   weekday: 'long', 
                   day: 'numeric',
@@ -596,7 +596,7 @@ const Dashboard = () => {
                     {formatNumber(dashboardData.leads.total)}
                   </p>
                   <p className="text-xs sm:text-sm text-text-muted">Total Leads</p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-text-muted">
                     +{dashboardData.leads.newThisMonth} ce mois
                   </p>
                 </div>
@@ -631,7 +631,7 @@ const Dashboard = () => {
                     {formatNumber(dashboardData.projects.active)}
                   </p>
                   <p className="text-sm text-text-muted">Projets Actifs</p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-text-muted">
                     {dashboardData.projects.completed} terminés
                   </p>
                 </div>
@@ -671,7 +671,7 @@ const Dashboard = () => {
                     {formatAmount(dashboardData.revenues.thisMonth)}
                   </p>
                   <p className="text-sm text-text-muted">Revenus du mois</p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-text-muted">
                     Objectif: {formatAmount(dashboardData.revenues.monthlyTarget || 8000)}
                   </p>
                 </div>
@@ -706,7 +706,7 @@ const Dashboard = () => {
                     {formatNumber(dashboardData.activities.completed)}
                   </p>
                   <p className="text-sm text-text-muted">Tâches complétées</p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-text-muted">
                     Cette semaine
                   </p>
                 </div>
@@ -831,7 +831,7 @@ const Dashboard = () => {
               <div className="flex items-center justify-between mb-8">
                 <div>
                   <h2 className="text-lg font-medium text-text-primary mb-1">Performance Financière</h2>
-                  <p className="text-sm text-gray-500">Évolution sur 6 mois</p>
+                  <p className="text-sm text-text-muted">Évolution sur 6 mois</p>
                 </div>
                 <button className="p-2 text-text-muted hover:text-text-primary transition-colors">
                   <FiMoreHorizontal className="w-5 h-5" />
@@ -849,19 +849,19 @@ const Dashboard = () => {
                           dashboardData.revenueChart.length
                         )}
                       </p>
-                      <p className="text-xs text-gray-500">Moyenne mensuelle</p>
+                      <p className="text-xs text-text-muted">Moyenne mensuelle</p>
                     </div>
                     <div className="text-center">
                       <p className="text-2xl font-light text-text-primary mb-1">
                         {formatAmount(Math.max(...dashboardData.revenueChart.map(i => i.amount)))}
                       </p>
-                      <p className="text-xs text-gray-500">Meilleur mois</p>
+                      <p className="text-xs text-text-muted">Meilleur mois</p>
                     </div>
                     <div className="text-center">
                       <p className="text-2xl font-light text-text-primary mb-1">
                         {formatAmount(dashboardData.revenueChart.reduce((sum, item) => sum + item.amount, 0))}
                       </p>
-                      <p className="text-xs text-gray-500">Total période</p>
+                      <p className="text-xs text-text-muted">Total période</p>
                     </div>
                   </div>
 
@@ -907,7 +907,7 @@ const Dashboard = () => {
                 </div>
               ) : (
                 <div className="h-48 flex items-center justify-center">
-                  <p className="text-gray-500">Aucune donnée disponible</p>
+                  <p className="text-text-muted">Aucune donnée disponible</p>
                 </div>
               )}
             </motion.section>
@@ -974,7 +974,7 @@ const Dashboard = () => {
                       transition={{ duration: 1, delay: 0.6 }}
                     />
                   </div>
-                  <p className="text-xs text-gray-500 mt-2">
+                  <p className="text-xs text-text-muted mt-2">
                     {formatAmount(dashboardData.revenues.thisMonth)} sur {formatAmount(dashboardData.revenues.monthlyTarget || 8000)}
                   </p>
                 </div>
@@ -993,7 +993,7 @@ const Dashboard = () => {
 
                       // Déterminer la performance avec classes complètes
                       let dotClass = 'w-3 h-3 rounded-full bg-gray-500';
-                      let textClass = 'text-sm font-medium text-gray-500';
+                      let textClass = 'text-sm font-medium text-text-muted';
                       let label = 'Aucune donnée';
 
                       if (avgPercent > 0) {
@@ -1075,14 +1075,14 @@ const Dashboard = () => {
                         <p className="text-sm text-text-primary group-hover:text-indigo-300 transition-colors">
                           {activity.title}
                         </p>
-                        <p className="text-xs text-gray-500 mt-1">{activity.time}</p>
+                        <p className="text-xs text-text-muted mt-1">{activity.time}</p>
                       </div>
                     </motion.div>
                   ))
                 ) : (
                   <div className="text-center py-8">
                     <FiActivity className="w-8 h-8 text-gray-600 mx-auto mb-3" />
-                    <p className="text-sm text-gray-500">Aucune activité</p>
+                    <p className="text-sm text-text-muted">Aucune activité</p>
                   </div>
                 )}
               </div>
@@ -1097,7 +1097,7 @@ const Dashboard = () => {
             >
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-lg font-medium text-text-primary">Projets actifs</h2>
-                <span className="text-sm text-gray-500">
+                <span className="text-sm text-text-muted">
                   {dashboardData.projects.active} en cours
                 </span>
               </div>
@@ -1117,7 +1117,7 @@ const Dashboard = () => {
                           <h4 className="text-sm font-medium text-text-primary group-hover:text-indigo-300 transition-colors">
                             {project.name}
                           </h4>
-                          <p className="text-xs text-gray-500 mt-0.5">
+                          <p className="text-xs text-text-muted mt-0.5">
                             {project.client || 'Client'}
                           </p>
                         </div>
@@ -1136,7 +1136,7 @@ const Dashboard = () => {
                       {/* Progress bar simple */}
                       <div className="space-y-1.5">
                         <div className="flex justify-between text-xs">
-                          <span className="text-gray-500">Progression</span>
+                          <span className="text-text-muted">Progression</span>
                           <span className="text-text-muted">{project.progress || 45}%</span>
                         </div>
                         <div className="h-1 bg-surface-strong rounded-full overflow-hidden">
@@ -1150,7 +1150,7 @@ const Dashboard = () => {
                       </div>
                       
                       {/* Timeline simple */}
-                      <div className="flex items-center gap-4 mt-3 text-xs text-gray-500">
+                      <div className="flex items-center gap-4 mt-3 text-xs text-text-muted">
                         <span className="flex items-center gap-1">
                           <FiClock className="w-3 h-3" />
                           {new Date(project.start_date).toLocaleDateString('fr-FR', { 
@@ -1171,7 +1171,7 @@ const Dashboard = () => {
                 ) : (
                   <div className="text-center py-8">
                     <FiCalendarIcon className="w-8 h-8 text-gray-600 mx-auto mb-3" />
-                    <p className="text-sm text-gray-500 mb-3">Aucun projet actif</p>
+                    <p className="text-sm text-text-muted mb-3">Aucun projet actif</p>
                     <button className="px-4 py-2 bg-accent/20 text-indigo-400 rounded-lg hover:bg-accent/30 transition-colors text-sm">
                       Créer un projet
                     </button>
@@ -1196,7 +1196,7 @@ const Dashboard = () => {
                   </div>
                   <div>
                     <h2 className="text-lg font-medium text-text-primary">Demandes d'avis</h2>
-                    <p className="text-sm text-gray-500">Performance des demandes d'avis clients</p>
+                    <p className="text-sm text-text-muted">Performance des demandes d'avis clients</p>
                   </div>
                 </div>
                 <button
@@ -1217,7 +1217,7 @@ const Dashboard = () => {
                   <p className="text-2xl font-light text-text-primary mb-1">
                     {reviewStats.total || 0}
                   </p>
-                  <p className="text-xs text-gray-500">demandes</p>
+                  <p className="text-xs text-text-muted">demandes</p>
                 </div>
 
                 {/* Envoyées */}
@@ -1229,7 +1229,7 @@ const Dashboard = () => {
                   <p className="text-2xl font-light text-text-primary mb-1">
                     {reviewStats.sent || 0}
                   </p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-text-muted">
                     {reviewStats.total > 0
                       ? Math.round((reviewStats.sent / reviewStats.total) * 100)
                       : 0}%
@@ -1245,7 +1245,7 @@ const Dashboard = () => {
                   <p className="text-2xl font-light text-text-primary mb-1">
                     {reviewStats.clicked || 0}
                   </p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-text-muted">
                     {reviewStats.sent > 0
                       ? Math.round((reviewStats.clicked / reviewStats.sent) * 100)
                       : 0}% taux
@@ -1261,7 +1261,7 @@ const Dashboard = () => {
                   <p className="text-2xl font-light text-text-primary mb-1">
                     {reviewStats.reviewed || 0}
                   </p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-text-muted">
                     {reviewStats.sent > 0
                       ? Math.round((reviewStats.reviewed / reviewStats.sent) * 100)
                       : 0}% conversion
@@ -1337,7 +1337,7 @@ const Dashboard = () => {
                     value={quickEmailData.to}
                     onChange={(value) => setQuickEmailData({ ...quickEmailData, to: value })}
                     placeholder="Tapez un nom ou email..."
-                    className="w-full px-4 py-3 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    className="w-full px-4 py-3 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                   />
                 </div>
 
@@ -1351,7 +1351,7 @@ const Dashboard = () => {
                     value={quickEmailData.subject}
                     onChange={(e) => setQuickEmailData({ ...quickEmailData, subject: e.target.value })}
                     placeholder="Objet de votre email"
-                    className="w-full px-4 py-3 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    className="w-full px-4 py-3 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                   />
                 </div>
 
@@ -1468,7 +1468,7 @@ const Dashboard = () => {
                             <FiFile className="text-blue-400 flex-shrink-0" />
                             <div className="min-w-0 flex-1">
                               <div className="text-text-primary text-sm truncate">{file.name}</div>
-                              <div className="text-xs text-gray-500">{formatFileSize(file.size)}</div>
+                              <div className="text-xs text-text-muted">{formatFileSize(file.size)}</div>
                             </div>
                           </div>
                           <button
@@ -1483,7 +1483,7 @@ const Dashboard = () => {
                       ))}
 
                       {/* Indicateur taille totale */}
-                      <div className="text-xs text-gray-500 flex items-center justify-between px-2">
+                      <div className="text-xs text-text-muted flex items-center justify-between px-2">
                         <span>
                           {attachments.length} fichier{attachments.length > 1 ? 's' : ''}
                         </span>

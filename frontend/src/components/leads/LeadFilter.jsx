@@ -87,7 +87,7 @@ const LeadFilter = ({ filters, setFilters, onSort, sortField, sortDirection, isK
               placeholder="Rechercher un lead..."
               value={filters.search}
               onChange={(e) => handleFilterChange('search', e.target.value)}
-              className="w-full bg-surface-muted/50 border border-border rounded-lg px-4 py-2 pl-10 text-text-primary placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="w-full bg-surface-muted/50 border border-border rounded-lg px-4 py-2 pl-10 text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
             />
             <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-text-muted">
               <FiSearch />
@@ -242,7 +242,7 @@ const LeadFilter = ({ filters, setFilters, onSort, sortField, sortDirection, isK
                       className="w-full bg-surface-muted/50 border border-border rounded-lg px-3 py-2 text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
                       placeholder="Du"
                     />
-                    <span className="text-xs text-gray-500 mt-1 block">Du</span>
+                    <span className="text-xs text-text-muted mt-1 block">Du</span>
                   </div>
                   <div>
                     <input
@@ -252,7 +252,7 @@ const LeadFilter = ({ filters, setFilters, onSort, sortField, sortDirection, isK
                       className="w-full bg-surface-muted/50 border border-border rounded-lg px-3 py-2 text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
                       placeholder="Au"
                     />
-                    <span className="text-xs text-gray-500 mt-1 block">Au</span>
+                    <span className="text-xs text-text-muted mt-1 block">Au</span>
                   </div>
                 </div>
               </div>

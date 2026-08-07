@@ -168,7 +168,7 @@ const RevenueForm = ({ revenue = {}, onSave, onCancel, projects }) => {
             onChange={handleInputChange}
             className={`w-full bg-surface/50 text-text-primary border ${
               errors.description ? 'border-rose-500' : 'border-border'
-            } rounded-lg px-4 py-2 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
+            } rounded-lg px-4 py-2 placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
             placeholder="Ex: Acompte projet site web"
           />
           {errors.description && (

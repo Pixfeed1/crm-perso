@@ -159,7 +159,7 @@ const GoalDetails = ({
               <span className="mr-1">{categoryInfo.icon}</span>
               <span className="capitalize">{categoryInfo.label}</span>
             </span>
-            <span className="text-gray-500">•</span>
+            <span className="text-text-muted">•</span>
             <span className={periodInfo.color}>
               {periodInfo.label}
             </span>
@@ -235,7 +235,7 @@ const GoalDetails = ({
             <div className="text-sm text-text-muted">Valeur actuelle</div>
             <div className="text-xl font-bold text-text-primary">{goal.current_value}{goal.category === 'revenue' ? ' €' : ''}</div>
           </div>
-          <div className="text-2xl text-gray-500">/</div>
+          <div className="text-2xl text-text-muted">/</div>
           <div>
             <div className="text-sm text-text-muted">Objectif</div>
             <div className="text-xl font-bold text-text-primary">{goal.target_value}{goal.category === 'revenue' ? ' €' : ''}</div>

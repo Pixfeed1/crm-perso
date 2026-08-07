@@ -326,7 +326,7 @@ const Treasury = () => {
                     <th className="px-4 py-3">Montant dû</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-700/50">
+                <tbody className="divide-y divide-border/50">
                   {overdueInvoices.map((invoice) => {
                     const dueDate = new Date(invoice.due_date);
                     const today = new Date();

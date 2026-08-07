@@ -110,7 +110,7 @@ const RevenueList = ({ revenues, selectedRevenue, onSelectRevenue }) => {
   // Activer le scroll vertical pour pouvoir défiler dans la liste
   return (
     <div className="flex-1 overflow-y-auto">
-      <table className="min-w-full divide-y divide-gray-700">
+      <table className="min-w-full divide-y divide-border">
         <thead className="sticky top-0 bg-surface/80 backdrop-blur-sm z-10">
           <tr>
             <th 
@@ -157,7 +157,7 @@ const RevenueList = ({ revenues, selectedRevenue, onSelectRevenue }) => {
             </th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-700">
+        <tbody className="divide-y divide-border">
           {sortedRevenues.map((revenue) => {
             const isSelected = selectedRevenue && selectedRevenue.id === revenue.id;
             const statusStyle = statusConfig[revenue.status] || {
@@ -190,7 +190,7 @@ const RevenueList = ({ revenues, selectedRevenue, onSelectRevenue }) => {
                   {revenue.project_name ? (
                     <span className="text-sm text-teal-300">{revenue.project_name}</span>
                   ) : (
-                    <span className="text-sm text-gray-500">-</span>
+                    <span className="text-sm text-text-muted">-</span>
                   )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">

@@ -189,7 +189,7 @@ const ReminderSettings = () => {
               onChange={(e) => setConfig(prev => ({ ...prev, reminder_1_days: parseInt(e.target.value) }))}
               className="w-full bg-surface-muted/50 border border-border rounded-lg px-4 py-2 text-text-primary focus:outline-none focus:ring-2 focus:ring-purple-500"
             />
-            <p className="mt-1 text-xs text-gray-500">
+            <p className="mt-1 text-xs text-text-muted">
               Rappel cordial après {config.reminder_1_days} jours de retard
             </p>
           </div>
@@ -206,7 +206,7 @@ const ReminderSettings = () => {
               onChange={(e) => setConfig(prev => ({ ...prev, reminder_2_days: parseInt(e.target.value) }))}
               className="w-full bg-surface-muted/50 border border-border rounded-lg px-4 py-2 text-text-primary focus:outline-none focus:ring-2 focus:ring-purple-500"
             />
-            <p className="mt-1 text-xs text-gray-500">
+            <p className="mt-1 text-xs text-text-muted">
               Rappel ferme après {config.reminder_2_days} jours de retard
             </p>
           </div>
@@ -223,7 +223,7 @@ const ReminderSettings = () => {
               onChange={(e) => setConfig(prev => ({ ...prev, reminder_3_days: parseInt(e.target.value) }))}
               className="w-full bg-surface-muted/50 border border-border rounded-lg px-4 py-2 text-text-primary focus:outline-none focus:ring-2 focus:ring-purple-500"
             />
-            <p className="mt-1 text-xs text-gray-500">
+            <p className="mt-1 text-xs text-text-muted">
               Dernier rappel après {config.reminder_3_days} jours de retard
             </p>
           </div>

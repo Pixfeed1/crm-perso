@@ -37,7 +37,7 @@ const LeadTable = ({ leads, selectedLead, onSelectLead }) => {
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-700">
+          <tbody className="divide-y divide-border">
             {leads.map((lead, index) => (
               <motion.tr
                 key={lead.id}

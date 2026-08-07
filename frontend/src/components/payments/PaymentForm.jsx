@@ -178,7 +178,7 @@ const PaymentForm = ({ invoice, payment = null, onSuccess, onCancel }) => {
               step="0.01"
               min="0.01"
               max={maxAmount}
-              className={`w-full bg-surface-muted/50 border ${errors.amount ? 'border-rose-500' : 'border-border'} rounded-lg px-4 py-2 pl-10 text-text-primary placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
+              className={`w-full bg-surface-muted/50 border ${errors.amount ? 'border-rose-500' : 'border-border'} rounded-lg px-4 py-2 pl-10 text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
               placeholder="0.00"
             />
           </div>
@@ -271,7 +271,7 @@ const PaymentForm = ({ invoice, payment = null, onSuccess, onCancel }) => {
             name="reference"
             value={formData.reference}
             onChange={handleChange}
-            className="w-full bg-surface-muted/50 border border-border rounded-lg px-4 py-2 text-text-primary placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            className="w-full bg-surface-muted/50 border border-border rounded-lg px-4 py-2 text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             placeholder="Ex: CHQ-2024-001, VIREMENT-12345"
           />
           <p className="mt-1 text-xs text-text-muted">
@@ -312,7 +312,7 @@ const PaymentForm = ({ invoice, payment = null, onSuccess, onCancel }) => {
               value={formData.notes}
               onChange={handleChange}
               rows="3"
-              className="w-full bg-surface-muted/50 border border-border rounded-lg px-4 py-2 pl-10 text-text-primary placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="w-full bg-surface-muted/50 border border-border rounded-lg px-4 py-2 pl-10 text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               placeholder="Informations complémentaires..."
             />
           </div>

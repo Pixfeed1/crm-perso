@@ -203,7 +203,7 @@ const ActivityFilter = ({
                 placeholder="Rechercher une activité..."
                 value={filters.search}
                 onChange={(e) => handleFilterChange('search', e.target.value)}
-                className="w-full bg-surface/50 text-text-primary border border-border rounded-lg px-4 py-2 pl-10 pr-8 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="w-full bg-surface/50 text-text-primary border border-border rounded-lg px-4 py-2 pl-10 pr-8 placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               />
               <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-text-muted">
                 <FiSearch />

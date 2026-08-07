@@ -520,7 +520,7 @@ const SubscriptionsTab = () => {
                     value={form.label}
                     onChange={(e) => setForm({ ...form, label: e.target.value })}
                     placeholder="Ex. Hébergement Premium"
-                    className="w-full px-3 py-2 bg-surface/60 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                    className="w-full px-3 py-2 bg-surface/60 border border-border rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:border-indigo-500"
                     required
                   />
                 </div>
@@ -542,7 +542,7 @@ const SubscriptionsTab = () => {
                     onChange={(e) => setForm({ ...form, amount_eur: e.target.value })}
                     placeholder="0.00"
                     disabled={editBillingActive}
-                    className="w-full px-3 py-2 bg-surface/60 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full px-3 py-2 bg-surface/60 border border-border rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:border-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
                     required={!editBillingActive}
                   />
                 </div>
@@ -587,41 +587,41 @@ const SubscriptionsTab = () => {
                       onChange={(e) => setForm({ ...form, cond_intro: e.target.value })}
                       rows={2}
                       placeholder="Texte d'introduction du document de conditions..."
-                      className="w-full px-3 py-2 bg-surface/60 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-indigo-500 resize-y"
+                      className="w-full px-3 py-2 bg-surface/60 border border-border rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:border-indigo-500 resize-y"
                     />
                   </div>
 
                   <div className="mb-3">
-                    <label className="block text-sm text-text-secondary mb-1">Inclus <span className="text-gray-500">(une ligne par élément)</span></label>
+                    <label className="block text-sm text-text-secondary mb-1">Inclus <span className="text-text-muted">(une ligne par élément)</span></label>
                     <textarea
                       value={form.cond_included}
                       onChange={(e) => setForm({ ...form, cond_included: e.target.value })}
                       rows={3}
                       placeholder={"Hébergement et nom de domaine\nSupport par email\n..."}
-                      className="w-full px-3 py-2 bg-surface/60 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-indigo-500 resize-y"
+                      className="w-full px-3 py-2 bg-surface/60 border border-border rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:border-indigo-500 resize-y"
                     />
                   </div>
 
                   <div className="mb-3">
-                    <label className="block text-sm text-text-secondary mb-1">Exclus <span className="text-gray-500">(une ligne par élément)</span></label>
+                    <label className="block text-sm text-text-secondary mb-1">Exclus <span className="text-text-muted">(une ligne par élément)</span></label>
                     <textarea
                       value={form.cond_excluded}
                       onChange={(e) => setForm({ ...form, cond_excluded: e.target.value })}
                       rows={3}
                       placeholder={"Développements spécifiques\nRefonte graphique\n..."}
-                      className="w-full px-3 py-2 bg-surface/60 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-indigo-500 resize-y"
+                      className="w-full px-3 py-2 bg-surface/60 border border-border rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:border-indigo-500 resize-y"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm text-text-secondary mb-1">Modalités <span className="text-gray-500">(« Clé : valeur » par ligne)</span></label>
+                    <label className="block text-sm text-text-secondary mb-1">Modalités <span className="text-text-muted">(« Clé : valeur » par ligne)</span></label>
                     <textarea
                       value={form.cond_modalites}
                       onChange={(e) => { setForm({ ...form, cond_modalites: e.target.value }); setModalitesTouched(true); }}
                       rows={5}
-                      className="w-full px-3 py-2 bg-surface/60 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-indigo-500 resize-y"
+                      className="w-full px-3 py-2 bg-surface/60 border border-border rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:border-indigo-500 resize-y"
                     />
-                    <p className="text-xs text-gray-500 mt-1">Pré-rempli selon la périodicité (engagement, facturation, résiliation, responsabilité).</p>
+                    <p className="text-xs text-text-muted mt-1">Pré-rempli selon la périodicité (engagement, facturation, résiliation, responsabilité).</p>
                   </div>
                 </div>
                 </div>

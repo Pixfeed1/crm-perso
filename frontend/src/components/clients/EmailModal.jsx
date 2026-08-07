@@ -202,7 +202,7 @@ const EmailModal = ({ isOpen, onClose, client }) => {
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
                 placeholder="Objet de votre email"
-                className="w-full px-4 py-3 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                className="w-full px-4 py-3 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               />
             </div>
 
@@ -216,9 +216,9 @@ const EmailModal = ({ isOpen, onClose, client }) => {
                 onChange={(e) => setMessage(e.target.value)}
                 placeholder="Écrivez votre message ici..."
                 rows={12}
-                className="w-full px-4 py-3 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
+                className="w-full px-4 py-3 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
               />
-              <div className="mt-2 text-xs text-gray-500">
+              <div className="mt-2 text-xs text-text-muted">
                 {message.length} caractères
               </div>
             </div>
@@ -259,7 +259,7 @@ const EmailModal = ({ isOpen, onClose, client }) => {
                         <FiFile className="text-blue-400 flex-shrink-0" />
                         <div className="min-w-0 flex-1">
                           <div className="text-text-primary text-sm truncate">{file.name}</div>
-                          <div className="text-xs text-gray-500">{formatFileSize(file.size)}</div>
+                          <div className="text-xs text-text-muted">{formatFileSize(file.size)}</div>
                         </div>
                       </div>
                       <button
@@ -274,7 +274,7 @@ const EmailModal = ({ isOpen, onClose, client }) => {
                   ))}
 
                   {/* Indicateur taille totale */}
-                  <div className="text-xs text-gray-500 flex items-center justify-between px-2">
+                  <div className="text-xs text-text-muted flex items-center justify-between px-2">
                     <span>
                       {attachments.length} fichier{attachments.length > 1 ? 's' : ''}
                     </span>

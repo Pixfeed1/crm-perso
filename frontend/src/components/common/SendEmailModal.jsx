@@ -120,7 +120,7 @@ const SendEmailModal = ({
           exit={{ opacity: 0, scale: 0.9, y: 20 }}
           transition={{ type: 'spring', duration: 0.3 }}
           className="
-            bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900
+            panel-bg
             border border-indigo-500/30
             rounded-2xl shadow-2xl
             max-w-lg w-full
@@ -129,7 +129,7 @@ const SendEmailModal = ({
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="p-6 pb-4 border-b border-gray-700/50">
+          <div className="p-6 pb-4 border-b border-border/50">
             <div className="flex items-start gap-4">
               {/* Icône */}
               <div className="bg-indigo-500/20 text-indigo-400 p-3 rounded-xl flex-shrink-0">
@@ -138,10 +138,10 @@ const SendEmailModal = ({
 
               {/* Contenu */}
               <div className="flex-1 min-w-0">
-                <h3 className="text-xl font-bold text-white mb-1">
+                <h3 className="text-xl font-bold text-text-primary mb-1">
                   Envoyer le {docLabel}
                 </h3>
-                <p className="text-gray-400 text-sm">
+                <p className="text-text-muted text-sm">
                   {documentNumber} - {clientName}
                 </p>
               </div>
@@ -151,7 +151,7 @@ const SendEmailModal = ({
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
                 onClick={onClose}
-                className="text-gray-400 hover:text-white transition-colors flex-shrink-0"
+                className="text-text-muted hover:text-text-primary transition-colors flex-shrink-0"
                 disabled={isLoading}
               >
                 <FiX className="text-xl" />
@@ -163,7 +163,7 @@ const SendEmailModal = ({
           <div className="p-6 space-y-4">
             {/* Email destinataire */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-text-secondary mb-2">
                 Adresse email du destinataire *
               </label>
               <input
@@ -174,14 +174,14 @@ const SendEmailModal = ({
                   setError('');
                 }}
                 placeholder="client@exemple.com"
-                className="w-full px-4 py-2.5 bg-gray-800/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 transition-colors"
+                className="w-full px-4 py-2.5 bg-surface/50 border border-border rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:border-indigo-500 transition-colors"
                 disabled={isLoading}
               />
             </div>
 
             {/* Message personnalisé */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-text-secondary mb-2">
                 Message personnalisé (optionnel)
               </label>
               <textarea
@@ -189,22 +189,22 @@ const SendEmailModal = ({
                 onChange={(e) => setCustomMessage(e.target.value)}
                 placeholder={`Ajoutez un message personnel qui sera inclus dans l'email...`}
                 rows="4"
-                className="w-full px-4 py-2.5 bg-gray-800/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 transition-colors resize-none"
+                className="w-full px-4 py-2.5 bg-surface/50 border border-border rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:border-indigo-500 transition-colors resize-none"
                 disabled={isLoading}
               />
             </div>
 
             {/* Option copie */}
-            <div className="flex items-center gap-3 p-3 bg-gray-800/30 rounded-lg border border-gray-700/50">
+            <div className="flex items-center gap-3 p-3 bg-surface/30 rounded-lg border border-border/50">
               <input
                 type="checkbox"
                 id="ccToSelf"
                 checked={ccToSelf}
                 onChange={(e) => setCcToSelf(e.target.checked)}
-                className="w-4 h-4 text-indigo-600 bg-gray-800 border-gray-600 rounded focus:ring-indigo-500 focus:ring-2"
+                className="w-4 h-4 text-indigo-600 bg-surface border-border-strong rounded focus:ring-indigo-500 focus:ring-2"
                 disabled={isLoading}
               />
-              <label htmlFor="ccToSelf" className="text-sm text-gray-300 cursor-pointer">
+              <label htmlFor="ccToSelf" className="text-sm text-text-secondary cursor-pointer">
                 M'envoyer une copie de l'email
               </label>
             </div>
@@ -212,16 +212,16 @@ const SendEmailModal = ({
             {/* Option programmation */}
             {allowScheduling && onSchedule && (
               <div className="space-y-3">
-                <div className="flex items-center gap-3 p-3 bg-gray-800/30 rounded-lg border border-gray-700/50">
+                <div className="flex items-center gap-3 p-3 bg-surface/30 rounded-lg border border-border/50">
                   <input
                     type="checkbox"
                     id="scheduleEmail"
                     checked={isScheduled}
                     onChange={(e) => setIsScheduled(e.target.checked)}
-                    className="w-4 h-4 text-indigo-600 bg-gray-800 border-gray-600 rounded focus:ring-indigo-500 focus:ring-2"
+                    className="w-4 h-4 text-indigo-600 bg-surface border-border-strong rounded focus:ring-indigo-500 focus:ring-2"
                     disabled={isLoading}
                   />
-                  <label htmlFor="scheduleEmail" className="text-sm text-gray-300 cursor-pointer flex items-center gap-2">
+                  <label htmlFor="scheduleEmail" className="text-sm text-text-secondary cursor-pointer flex items-center gap-2">
                     <FiClock className="text-indigo-400" />
                     Programmer l'envoi pour plus tard
                   </label>
@@ -246,7 +246,7 @@ const SendEmailModal = ({
                             value={scheduledDate}
                             onChange={(e) => setScheduledDate(e.target.value)}
                             min={new Date().toISOString().split('T')[0]}
-                            className="w-full px-3 py-2 bg-gray-800/50 border border-indigo-500/30 rounded-lg text-white text-sm focus:outline-none focus:border-indigo-500 transition-colors"
+                            className="w-full px-3 py-2 bg-surface/50 border border-indigo-500/30 rounded-lg text-text-primary text-sm focus:outline-none focus:border-indigo-500 transition-colors"
                             disabled={isLoading}
                           />
                         </div>
@@ -258,7 +258,7 @@ const SendEmailModal = ({
                             type="time"
                             value={scheduledTime}
                             onChange={(e) => setScheduledTime(e.target.value)}
-                            className="w-full px-3 py-2 bg-gray-800/50 border border-indigo-500/30 rounded-lg text-white text-sm focus:outline-none focus:border-indigo-500 transition-colors"
+                            className="w-full px-3 py-2 bg-surface/50 border border-indigo-500/30 rounded-lg text-text-primary text-sm focus:outline-none focus:border-indigo-500 transition-colors"
                             disabled={isLoading}
                           />
                         </div>
@@ -293,13 +293,13 @@ const SendEmailModal = ({
           </div>
 
           {/* Footer avec boutons */}
-          <div className="px-6 py-4 bg-black/20 border-t border-gray-700/50 flex gap-3">
+          <div className="px-6 py-4 bg-black/20 border-t border-border/50 flex gap-3">
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={onClose}
               disabled={isLoading}
-              className="flex-1 px-4 py-2.5 border-2 border-gray-600 text-gray-300 hover:bg-gray-700/30 hover:border-gray-500 rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-4 py-2.5 border-2 border-border-strong text-text-secondary hover:bg-surface-strong/30 hover:border-gray-500 rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Annuler
             </motion.button>

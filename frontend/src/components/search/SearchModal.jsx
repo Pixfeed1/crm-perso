@@ -214,7 +214,7 @@ const SearchModal = ({ onClose }) => {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Rechercher dans clients, leads, projets, objectifs..."
-              className="flex-1 bg-transparent text-text-primary text-lg placeholder-gray-400 focus:outline-none"
+              className="flex-1 bg-transparent text-text-primary text-lg placeholder-text-muted focus:outline-none"
             />
             {isLoading && (
               <motion.div

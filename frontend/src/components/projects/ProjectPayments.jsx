@@ -381,7 +381,7 @@ const ProjectPayments = ({ project }) => {
                   </div>
 
                   {payment.reference && (
-                    <div className="text-xs text-gray-500 mt-0.5">
+                    <div className="text-xs text-text-muted mt-0.5">
                       Réf: {payment.reference}
                     </div>
                   )}

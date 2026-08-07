@@ -251,7 +251,7 @@ const Maintenance = () => {
                 <button
                   onClick={() => setViewMode('cards')}
                   className={`p-2 rounded transition-colors ${
-                    viewMode === 'cards' ? 'bg-accent text-white' : 'text-text-muted hover:text-white'
+                    viewMode === 'cards' ? 'bg-accent text-white' : 'text-text-muted hover:text-text-primary'
                   }`}
                 >
                   <FiGrid />
@@ -259,7 +259,7 @@ const Maintenance = () => {
                 <button
                   onClick={() => setViewMode('list')}
                   className={`p-2 rounded transition-colors ${
-                    viewMode === 'list' ? 'bg-accent text-white' : 'text-text-muted hover:text-white'
+                    viewMode === 'list' ? 'bg-accent text-white' : 'text-text-muted hover:text-text-primary'
                   }`}
                 >
                   <FiList />
@@ -312,7 +312,7 @@ const Maintenance = () => {
                   placeholder="Rechercher un site..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-surface-muted/50 border border-border rounded-lg px-4 py-2 pl-10 text-text-primary placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full bg-surface-muted/50 border border-border rounded-lg px-4 py-2 pl-10 text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
                 <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-text-muted" />
                 {searchQuery && (

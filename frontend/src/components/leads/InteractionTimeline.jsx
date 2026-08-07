@@ -72,7 +72,7 @@ const InteractionTimeline = ({ interactions = [], contacts = [], onUpdateInterac
   if (interactions.length === 0) {
     return (
       <div className="bg-surface-muted/30 rounded-lg p-4 sm:p-6 text-center">
-        <div className="text-3xl sm:text-4xl mb-3 text-gray-500">
+        <div className="text-3xl sm:text-4xl mb-3 text-text-muted">
           <FiClock />
         </div>
         <h4 className="text-base sm:text-lg font-medium text-text-secondary mb-2">Aucune interaction</h4>
@@ -117,7 +117,7 @@ const InteractionTimeline = ({ interactions = [], contacts = [], onUpdateInterac
                         <span className={`text-xs sm:text-sm font-medium ${config.color}`}>
                           {config.label}
                         </span>
-                        <span className="text-xs text-gray-500">•</span>
+                        <span className="text-xs text-text-muted">•</span>
                         <span className="text-xs text-text-muted flex items-center gap-1">
                           <FiClock className="text-xs" />
                           {formatDate(interaction.date)}

@@ -276,7 +276,7 @@ const Invoices = () => {
             placeholder="Rechercher..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="px-4 py-2 bg-surface/50 border border-border rounded-lg text-text-primary placeholder-gray-400 focus:outline-none focus:border-indigo-500"
+            className="px-4 py-2 bg-surface/50 border border-border rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:border-indigo-500"
           />
           <select
             value={statusFilter}
@@ -312,7 +312,7 @@ const Invoices = () => {
                     <th className="px-4 py-3">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-700/50">
+                <tbody className="divide-y divide-border/50">
                   {filteredInvoices.map((invoice) => (
                     <motion.tr
                       key={invoice.id}

@@ -157,7 +157,7 @@ const LeadForm = ({ lead = {}, onSave, onCancel }) => {
               onChange={handleInputChange}
               className={`w-full bg-surface/50 border ${
                 errors.name ? 'border-rose-500' : 'border-border'
-              } rounded-lg px-3 py-2 sm:px-4 sm:py-2 text-text-primary placeholder-gray-400 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent`}
+              } rounded-lg px-3 py-2 sm:px-4 sm:py-2 text-text-primary placeholder-text-muted text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent`}
               placeholder="John Doe"
             />
             {errors.name && (
@@ -294,7 +294,7 @@ const LeadForm = ({ lead = {}, onSave, onCancel }) => {
             value={formData.notes}
             onChange={handleInputChange}
             rows={4}
-            className="w-full bg-surface/50 border border-border rounded-lg px-3 py-2 sm:px-4 sm:py-2 text-text-primary placeholder-gray-400 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+            className="w-full bg-surface/50 border border-border rounded-lg px-3 py-2 sm:px-4 sm:py-2 text-text-primary placeholder-text-muted text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
             placeholder="Informations supplémentaires sur ce lead..."
           />
         </div>

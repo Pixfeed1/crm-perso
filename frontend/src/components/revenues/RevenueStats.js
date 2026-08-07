@@ -50,15 +50,15 @@ const RevenueStats = ({ stats }) => {
       {statItems.map((item, index) => (
         <motion.div
           key={index}
-          className={`bg-gray-800/30 backdrop-blur-sm rounded-xl p-4 border-l-4 border-${item.color.split(' ')[1]}`}
+          className={`bg-surface/30 backdrop-blur-sm rounded-xl p-4 border-l-4 border-${item.color.split(' ')[1]}`}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: item.delay }}
         >
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-sm text-gray-400">{item.label}</p>
-              <h3 className="text-2xl font-bold text-white mt-1">{item.value}</h3>
+              <p className="text-sm text-text-muted">{item.label}</p>
+              <h3 className="text-2xl font-bold text-text-primary mt-1">{item.value}</h3>
             </div>
             <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${item.color} flex items-center justify-center text-xl shadow-lg`}>
               {item.icon}

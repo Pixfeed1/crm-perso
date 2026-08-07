@@ -138,7 +138,7 @@ const ResetPassword = () => {
       {/* Contenu principal - responsive */}
       <div className="w-full max-w-sm sm:max-w-md relative z-10">
         <motion.div
-          className="bg-gray-800/70 backdrop-blur-md rounded-2xl border border-white/10 p-6 sm:p-8 md:p-10 shadow-2xl relative overflow-hidden"
+          className="bg-surface/70 backdrop-blur-md rounded-2xl border border-white/10 p-6 sm:p-8 md:p-10 shadow-2xl relative overflow-hidden"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
@@ -157,7 +157,7 @@ const ResetPassword = () => {
               MCRM
             </motion.h1>
             <motion.p
-              className="text-gray-400 text-sm sm:text-base"
+              className="text-text-muted text-sm sm:text-base"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.4, duration: 0.5 }}
@@ -170,7 +170,7 @@ const ResetPassword = () => {
             <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
               {/* Champ Nouveau mot de passe */}
               <div>
-                <label htmlFor="password" className="block text-gray-400 text-sm mb-2">
+                <label htmlFor="password" className="block text-text-muted text-sm mb-2">
                   Nouveau mot de passe
                 </label>
                 <input
@@ -180,7 +180,7 @@ const ResetPassword = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Minimum 6 caractères"
-                  className="w-full px-3 py-2.5 sm:px-4 sm:py-3 rounded-lg bg-gray-900/70 border border-white/10 text-gray-100 text-sm sm:text-base focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-600/30 transition-all"
+                  className="w-full px-3 py-2.5 sm:px-4 sm:py-3 rounded-lg bg-surface-muted/70 border border-white/10 text-gray-100 text-sm sm:text-base focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-600/30 transition-all"
                   required
                   autoComplete="new-password"
                 />
@@ -188,7 +188,7 @@ const ResetPassword = () => {
 
               {/* Champ Confirmer le mot de passe */}
               <div>
-                <label htmlFor="confirmPassword" className="block text-gray-400 text-sm mb-2">
+                <label htmlFor="confirmPassword" className="block text-text-muted text-sm mb-2">
                   Confirmer le mot de passe
                 </label>
                 <input
@@ -198,7 +198,7 @@ const ResetPassword = () => {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Retapez votre mot de passe"
-                  className="w-full px-3 py-2.5 sm:px-4 sm:py-3 rounded-lg bg-gray-900/70 border border-white/10 text-gray-100 text-sm sm:text-base focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-600/30 transition-all"
+                  className="w-full px-3 py-2.5 sm:px-4 sm:py-3 rounded-lg bg-surface-muted/70 border border-white/10 text-gray-100 text-sm sm:text-base focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-600/30 transition-all"
                   required
                   autoComplete="new-password"
                 />
@@ -260,7 +260,7 @@ const ResetPassword = () => {
               <h3 className="text-xl sm:text-2xl font-semibold text-green-400 mb-3 sm:mb-4">
                 Mot de passe réinitialisé !
               </h3>
-              <p className="text-gray-400 text-sm sm:text-base mb-6 sm:mb-8">
+              <p className="text-text-muted text-sm sm:text-base mb-6 sm:mb-8">
                 Votre mot de passe a été modifié avec succès.
                 <br className="hidden sm:block" />
                 <span className="block mt-1 sm:inline sm:mt-0"> Redirection vers la page de connexion...</span>

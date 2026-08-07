@@ -183,7 +183,7 @@ const MaintenanceForm = ({ contract = {}, onSave, onCancel }) => {
                 onChange={handleInputChange}
                 className={`w-full min-w-0 h-11 box-border px-4 bg-surface-muted/50 border ${
                   errors.site_name ? 'border-rose-500' : 'border-border'
-                } rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-indigo-500`}
+                } rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:border-indigo-500`}
                 placeholder="Nom du site / projet"
               />
               {errors.site_name && <p className="mt-1 text-rose-400 text-sm">{errors.site_name}</p>}
@@ -217,7 +217,7 @@ const MaintenanceForm = ({ contract = {}, onSave, onCancel }) => {
                   name="monthly_amount"
                   value={formData.monthly_amount}
                   onChange={handleInputChange}
-                  className="w-full min-w-0 h-11 box-border px-4 pl-8 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                  className="w-full min-w-0 h-11 box-border px-4 pl-8 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:border-indigo-500"
                   placeholder="0"
                   min="0"
                   step="0.01"
@@ -284,7 +284,7 @@ const MaintenanceForm = ({ contract = {}, onSave, onCancel }) => {
                 onChange={handleInputChange}
                 min="1"
                 max="28"
-                className="w-full min-w-0 h-11 box-border px-4 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                className="w-full min-w-0 h-11 box-border px-4 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:border-indigo-500"
                 placeholder="1"
               />
             </div>
@@ -303,7 +303,7 @@ const MaintenanceForm = ({ contract = {}, onSave, onCancel }) => {
                 name="site_url"
                 value={formData.site_url}
                 onChange={handleInputChange}
-                className="w-full min-w-0 h-11 box-border px-4 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                className="w-full min-w-0 h-11 box-border px-4 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:border-indigo-500"
                 placeholder="https://monsite.com"
               />
             </div>
@@ -316,7 +316,7 @@ const MaintenanceForm = ({ contract = {}, onSave, onCancel }) => {
                 name="admin_url"
                 value={formData.admin_url}
                 onChange={handleInputChange}
-                className="w-full min-w-0 h-11 box-border px-4 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                className="w-full min-w-0 h-11 box-border px-4 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:border-indigo-500"
                 placeholder="https://monsite.com/admin"
               />
             </div>
@@ -329,7 +329,7 @@ const MaintenanceForm = ({ contract = {}, onSave, onCancel }) => {
                 name="wordpress_version"
                 value={formData.wordpress_version}
                 onChange={handleInputChange}
-                className="w-full min-w-0 h-11 box-border px-4 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                className="w-full min-w-0 h-11 box-border px-4 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:border-indigo-500"
                 placeholder="6.4.2"
               />
             </div>
@@ -342,7 +342,7 @@ const MaintenanceForm = ({ contract = {}, onSave, onCancel }) => {
                 name="php_version"
                 value={formData.php_version}
                 onChange={handleInputChange}
-                className="w-full min-w-0 h-11 box-border px-4 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                className="w-full min-w-0 h-11 box-border px-4 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:border-indigo-500"
                 placeholder="8.2"
               />
             </div>
@@ -355,7 +355,7 @@ const MaintenanceForm = ({ contract = {}, onSave, onCancel }) => {
                 name="hosting_provider"
                 value={formData.hosting_provider}
                 onChange={handleInputChange}
-                className="w-full min-w-0 h-11 box-border px-4 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                className="w-full min-w-0 h-11 box-border px-4 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:border-indigo-500"
                 placeholder="OVH, o2switch..."
               />
             </div>
@@ -368,7 +368,7 @@ const MaintenanceForm = ({ contract = {}, onSave, onCancel }) => {
                 name="plugins_count"
                 value={formData.plugins_count}
                 onChange={handleInputChange}
-                className="w-full min-w-0 h-11 box-border px-4 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                className="w-full min-w-0 h-11 box-border px-4 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:border-indigo-500"
                 placeholder="0"
                 min="0"
               />
@@ -378,7 +378,7 @@ const MaintenanceForm = ({ contract = {}, onSave, onCancel }) => {
 
         {/* Section : Métriques (mises à jour automatiquement) */}
         <div className="space-y-4">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3 pb-2 border-b border-border/60">Métriques (mises à jour automatiquement)</h3>
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-text-muted mb-3 pb-2 border-b border-border/60">Métriques (mises à jour automatiquement)</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* PageSpeed Mobile */}
             <div className="min-w-0">
@@ -388,7 +388,7 @@ const MaintenanceForm = ({ contract = {}, onSave, onCancel }) => {
                 name="pagespeed_mobile"
                 value={formData.pagespeed_mobile}
                 onChange={handleInputChange}
-                className="w-full min-w-0 h-11 box-border px-4 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                className="w-full min-w-0 h-11 box-border px-4 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:border-indigo-500"
                 placeholder="0-100"
                 min="0"
                 max="100"
@@ -403,7 +403,7 @@ const MaintenanceForm = ({ contract = {}, onSave, onCancel }) => {
                 name="pagespeed_desktop"
                 value={formData.pagespeed_desktop}
                 onChange={handleInputChange}
-                className="w-full min-w-0 h-11 box-border px-4 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-indigo-500"
+                className="w-full min-w-0 h-11 box-border px-4 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:border-indigo-500"
                 placeholder="0-100"
                 min="0"
                 max="100"
@@ -420,7 +420,7 @@ const MaintenanceForm = ({ contract = {}, onSave, onCancel }) => {
             value={formData.notes}
             onChange={handleInputChange}
             rows={3}
-            className="w-full px-4 py-2 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-indigo-500 resize-none"
+            className="w-full px-4 py-2 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:border-indigo-500 resize-none"
             placeholder="Notes internes sur ce contrat..."
           />
         </div>

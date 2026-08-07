@@ -92,7 +92,7 @@ const FollowupsPanel = () => {
                       <FiUser size={12} className="text-text-muted" />
                       {it.contact_name || 'Contact'}
                     </span>
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs text-text-muted">
                       {it.contact_type === 'lead' ? 'Lead' : 'Client'}
                     </span>
                   </div>

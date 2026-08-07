@@ -58,7 +58,7 @@ const InterventionList = ({ interventions = [], stats, onToggleStatus, onEdit, o
   if (interventions.length === 0) {
     return (
       <div className="bg-surface-muted/30 rounded-lg p-6 text-center">
-        <div className="text-4xl mb-3 text-gray-500"><FiTool /></div>
+        <div className="text-4xl mb-3 text-text-muted"><FiTool /></div>
         <h4 className="text-lg font-medium text-text-secondary mb-2">Aucune intervention</h4>
         <p className="text-text-muted text-sm">
           Ajoutez des interventions pour suivre les actions réalisées sur ce projet.
@@ -139,7 +139,7 @@ const InterventionList = ({ interventions = [], stats, onToggleStatus, onEdit, o
                       )}
 
                       {/* Métadonnées */}
-                      <div className="flex flex-wrap gap-4 text-xs text-gray-500">
+                      <div className="flex flex-wrap gap-4 text-xs text-text-muted">
                         {intervention.scheduled_date && (
                           <span className="flex items-center gap-1">
                             <FiCalendar className="text-gray-600" />
@@ -153,7 +153,7 @@ const InterventionList = ({ interventions = [], stats, onToggleStatus, onEdit, o
                           </span>
                         )}
                         {intervention.technician && (
-                          <span className="text-gray-500">Par: {intervention.technician}</span>
+                          <span className="text-text-muted">Par: {intervention.technician}</span>
                         )}
                         {intervention.priority !== 'normal' && (
                           <span className={priorityInfo.color}>

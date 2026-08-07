@@ -273,7 +273,7 @@ const MaintenanceReportForm = ({ contract, onClose, onSuccess }) => {
             </button>
           </div>
           {recommendations.length === 0 && (
-            <p className="text-xs text-gray-500">Aucune recommandation. Cliquez sur « Ajouter » pour en créer une.</p>
+            <p className="text-xs text-text-muted">Aucune recommandation. Cliquez sur « Ajouter » pour en créer une.</p>
           )}
           <div className="space-y-2">
             {recommendations.map((reco, index) => (
@@ -349,7 +349,7 @@ const MaintenanceReportForm = ({ contract, onClose, onSuccess }) => {
             rows={7}
             className={inputCls}
           />
-          <p className="text-xs text-gray-500 mt-1">
+          <p className="text-xs text-text-muted mt-1">
             Corps de l'email envoyé au client. Le PDF du rapport est joint et la signature ajoutée automatiquement.
           </p>
         </div>

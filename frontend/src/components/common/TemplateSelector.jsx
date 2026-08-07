@@ -98,14 +98,14 @@ const TemplateSelector = ({
 
             {/* Modal */}
             <motion.div
-              className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[95%] max-w-4xl max-h-[90vh] bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 border border-purple-500/30 rounded-xl shadow-2xl z-50 flex flex-col overflow-hidden"
+              className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[95%] max-w-4xl max-h-[90vh] panel-bg border border-purple-500/30 rounded-xl shadow-2xl z-50 flex flex-col overflow-hidden"
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
             >
               {/* Header */}
-              <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-700">
-                <h3 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
+              <div className="flex items-center justify-between p-4 sm:p-6 border-b border-border">
+                <h3 className="text-lg sm:text-xl font-bold text-text-primary flex items-center gap-2">
                   <FiFile className="text-indigo-400" />
                   Sélectionner un template
                 </h3>
@@ -115,11 +115,11 @@ const TemplateSelector = ({
                     setSelectedTemplate(null);
                     setPreviewMode(false);
                   }}
-                  className="p-2 hover:bg-gray-700/50 rounded-lg transition-colors"
+                  className="p-2 hover:bg-surface-strong/50 rounded-lg transition-colors"
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
                 >
-                  <FiX className="text-xl text-gray-400" />
+                  <FiX className="text-xl text-text-muted" />
                 </motion.button>
               </div>
 
@@ -129,7 +129,7 @@ const TemplateSelector = ({
                 {!previewMode && (
                   <div className="flex-1 overflow-y-auto p-4 sm:p-6">
                     {templates.length === 0 ? (
-                      <div className="text-center py-12 text-gray-400">
+                      <div className="text-center py-12 text-text-muted">
                         Aucun template disponible pour cette catégorie
                       </div>
                     ) : (
@@ -138,17 +138,17 @@ const TemplateSelector = ({
                           <motion.button
                             key={template.id}
                             onClick={() => handleSelectTemplate(template)}
-                            className="p-4 bg-gray-800/50 hover:bg-indigo-600/20 border border-gray-700 hover:border-indigo-500/50 rounded-lg text-left transition-all group"
+                            className="p-4 bg-surface/50 hover:bg-indigo-600/20 border border-border hover:border-indigo-500/50 rounded-lg text-left transition-all group"
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
                           >
                             <div className="flex items-start gap-3">
                               <FiFile className="text-indigo-400 text-xl mt-0.5 flex-shrink-0" />
                               <div className="flex-1 min-w-0">
-                                <h4 className="font-semibold text-white text-sm sm:text-base group-hover:text-indigo-300 transition-colors">
+                                <h4 className="font-semibold text-text-primary text-sm sm:text-base group-hover:text-indigo-300 transition-colors">
                                   {template.name}
                                 </h4>
-                                <p className="text-xs text-gray-400 mt-1 line-clamp-2">
+                                <p className="text-xs text-text-muted mt-1 line-clamp-2">
                                   {template.content.substring(0, 80)}...
                                 </p>
                               </div>
@@ -166,10 +166,10 @@ const TemplateSelector = ({
                     {/* Titre et actions */}
                     <div className="flex items-start justify-between mb-4">
                       <div>
-                        <h4 className="text-lg font-semibold text-white">
+                        <h4 className="text-lg font-semibold text-text-primary">
                           {selectedTemplate.name}
                         </h4>
-                        <p className="text-sm text-gray-400 mt-1">
+                        <p className="text-sm text-text-muted mt-1">
                           Prévisualisation du template
                         </p>
                       </div>
@@ -178,17 +178,17 @@ const TemplateSelector = ({
                           setPreviewMode(false);
                           setSelectedTemplate(null);
                         }}
-                        className="p-2 hover:bg-gray-700/50 rounded-lg transition-colors flex-shrink-0"
+                        className="p-2 hover:bg-surface-strong/50 rounded-lg transition-colors flex-shrink-0"
                         whileHover={{ scale: 1.1 }}
                         whileTap={{ scale: 0.9 }}
                       >
-                        <FiX className="text-gray-400" />
+                        <FiX className="text-text-muted" />
                       </motion.button>
                     </div>
 
                     {/* Contenu du template */}
-                    <div className="flex-1 bg-gray-800/50 border border-gray-700 rounded-lg p-4 mb-4 overflow-y-auto">
-                      <pre className="text-sm text-gray-300 whitespace-pre-wrap font-mono">
+                    <div className="flex-1 bg-surface/50 border border-border rounded-lg p-4 mb-4 overflow-y-auto">
+                      <pre className="text-sm text-text-secondary whitespace-pre-wrap font-mono">
                         {fillTemplate(selectedTemplate.content, variables)}
                       </pre>
                     </div>
@@ -219,7 +219,7 @@ const TemplateSelector = ({
 
                       <motion.button
                         onClick={handleCopyTemplate}
-                        className="px-4 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition-colors"
+                        className="px-4 py-3 bg-surface-strong hover:bg-gray-600 text-text-primary rounded-lg font-medium transition-colors"
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         title="Copier dans le presse-papiers"
@@ -229,7 +229,7 @@ const TemplateSelector = ({
                     </div>
 
                     {currentValue && (
-                      <p className="text-xs text-gray-400 mt-2 text-center flex items-center justify-center gap-1">
+                      <p className="text-xs text-text-muted mt-2 text-center flex items-center justify-center gap-1">
                         <FiInfo className="flex-shrink-0" />
                         Vous pouvez remplacer le contenu actuel ou l'ajouter à la fin
                       </p>

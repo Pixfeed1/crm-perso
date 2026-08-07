@@ -191,7 +191,7 @@ const InteractionForm = ({ interaction = {}, contacts = [], onSave, onCancel }) 
             onChange={handleInputChange}
             className={`w-full bg-surface/50 border ${
               errors.description ? 'border-rose-500' : 'border-border'
-            } rounded-lg px-3 py-2 text-text-primary placeholder-gray-400 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent`}
+            } rounded-lg px-3 py-2 text-text-primary placeholder-text-muted text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent`}
             placeholder="Ex: Appel pour discuter du projet"
           />
           {errors.description && (
@@ -224,7 +224,7 @@ const InteractionForm = ({ interaction = {}, contacts = [], onSave, onCancel }) 
             value={formData.notes}
             onChange={handleInputChange}
             rows={3}
-            className="w-full bg-surface/50 border border-border rounded-lg px-3 py-2 text-text-primary placeholder-gray-400 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+            className="w-full bg-surface/50 border border-border rounded-lg px-3 py-2 text-text-primary placeholder-text-muted text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
             placeholder="Points discutés, actions à prendre, etc."
           />
         </div>

@@ -108,9 +108,9 @@ const ActivityCalendar = ({ activities, startDate, endDate, onSelectActivity, on
       </div>
       
       {/* Grille du calendrier */}
-      <div className="divide-y divide-gray-700/50">
+      <div className="divide-y divide-border/50">
         {weeksInRange.map((week, weekIndex) => (
-          <div key={weekIndex} className="grid grid-cols-7 divide-x divide-gray-700/50">
+          <div key={weekIndex} className="grid grid-cols-7 divide-x divide-border/50">
             {week.map((day, dayIndex) => (
               <div 
                 key={dayIndex} 

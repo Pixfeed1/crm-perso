@@ -210,7 +210,7 @@ const MaintenanceReports = ({ project }) => {
         </div>
       ) : reports.length === 0 ? (
         <div className="bg-surface-muted/30 rounded-lg p-6 text-center">
-          <div className="text-4xl mb-3 text-gray-500"><FiFileText /></div>
+          <div className="text-4xl mb-3 text-text-muted"><FiFileText /></div>
           <h4 className="text-lg font-medium text-text-secondary mb-2">Aucun rapport</h4>
           <p className="text-text-muted text-sm">
             Générez un rapport pour l'envoyer au client.
@@ -243,11 +243,11 @@ const MaintenanceReports = ({ project }) => {
 
                     <div className="flex gap-4 text-sm text-text-muted">
                       <span className="flex items-center gap-1">
-                        <FiCalendar className="text-gray-500" />
+                        <FiCalendar className="text-text-muted" />
                         {data.summary?.interventions_count || 0} intervention{(data.summary?.interventions_count || 0) > 1 ? 's' : ''}
                       </span>
                       <span className="flex items-center gap-1">
-                        <FiClock className="text-gray-500" />
+                        <FiClock className="text-text-muted" />
                         {Math.round((data.summary?.total_duration_minutes || 0) / 60 * 10) / 10}h
                       </span>
                       {report.sent_at && (

@@ -8,7 +8,7 @@ const Stepper = ({ steps, currentStep, onStepClick }) => {
     <div className="w-full py-6">
       <div className="flex items-center justify-between relative">
         {/* Ligne de progression */}
-        <div className="absolute top-5 left-0 w-full h-0.5 bg-gray-700 -z-10">
+        <div className="absolute top-5 left-0 w-full h-0.5 bg-surface-strong -z-10">
           <motion.div
             className="h-full bg-gradient-to-r from-indigo-500 to-purple-500"
             initial={{ width: '0%' }}
@@ -39,7 +39,7 @@ const Stepper = ({ steps, currentStep, onStepClick }) => {
                     ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white'
                     : isCurrent
                     ? 'bg-indigo-600 text-white ring-4 ring-indigo-500/30'
-                    : 'bg-gray-700 text-gray-400'}
+                    : 'bg-surface-strong text-text-muted'}
                   ${isClickable ? 'cursor-pointer hover:scale-110' : 'cursor-not-allowed opacity-50'}
                 `}
                 whileHover={isClickable ? { scale: 1.1 } : {}}
@@ -54,7 +54,7 @@ const Stepper = ({ steps, currentStep, onStepClick }) => {
 
               <span className={`
                 mt-2 text-xs font-medium text-center
-                ${isCurrent ? 'text-indigo-300' : isCompleted ? 'text-gray-300' : 'text-gray-500'}
+                ${isCurrent ? 'text-indigo-300' : isCompleted ? 'text-text-secondary' : 'text-text-muted'}
               `}>
                 {step.label}
               </span>

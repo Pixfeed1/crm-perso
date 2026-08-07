@@ -58,13 +58,13 @@ const SignaturePad = ({ onSave, onCancel, quoteId, autoCreateInvoice = false }) 
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full">
+      <div className="bg-surface rounded-lg shadow-xl max-w-2xl w-full">
         {/* Header */}
-        <div className="flex justify-between items-center p-6 border-b border-gray-700">
-          <h3 className="text-xl font-bold text-white">Signature électronique</h3>
+        <div className="flex justify-between items-center p-6 border-b border-border">
+          <h3 className="text-xl font-bold text-text-primary">Signature électronique</h3>
           <button
             onClick={onCancel}
-            className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-colors"
+            className="p-2 text-text-muted hover:text-text-primary hover:bg-surface-strong rounded-lg transition-colors"
             disabled={signing}
           >
             <FiX className="w-5 h-5" />
@@ -75,7 +75,7 @@ const SignaturePad = ({ onSave, onCancel, quoteId, autoCreateInvoice = false }) 
         <div className="p-6 space-y-6">
           {/* Nom du signataire */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-text-secondary mb-2">
               Nom du signataire <span className="text-red-500">*</span>
             </label>
             <input
@@ -84,16 +84,16 @@ const SignaturePad = ({ onSave, onCancel, quoteId, autoCreateInvoice = false }) 
               onChange={(e) => setSignerName(e.target.value)}
               placeholder="Votre nom complet"
               disabled={signing}
-              className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-indigo-500"
+              className="w-full px-4 py-2 bg-surface-strong border border-border-strong rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:border-indigo-500"
             />
           </div>
 
           {/* Canvas de signature */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-text-secondary mb-2">
               Signature <span className="text-red-500">*</span>
             </label>
-            <div className="border-2 border-gray-600 rounded-lg bg-white relative">
+            <div className="border-2 border-border-strong rounded-lg bg-white relative">
               <SignatureCanvas
                 ref={sigCanvas}
                 canvasProps={{
@@ -114,7 +114,7 @@ const SignaturePad = ({ onSave, onCancel, quoteId, autoCreateInvoice = false }) 
                 </button>
               </div>
             </div>
-            <p className="text-xs text-gray-400 mt-1">
+            <p className="text-xs text-text-muted mt-1">
               Dessinez votre signature avec la souris ou le doigt
             </p>
           </div>
@@ -138,11 +138,11 @@ const SignaturePad = ({ onSave, onCancel, quoteId, autoCreateInvoice = false }) 
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-3 p-6 border-t border-gray-700">
+        <div className="flex justify-end gap-3 p-6 border-t border-border">
           <button
             onClick={onCancel}
             disabled={signing}
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors disabled:opacity-50"
+            className="px-4 py-2 bg-surface-strong hover:bg-gray-600 text-text-primary rounded-lg transition-colors disabled:opacity-50"
           >
             Annuler
           </button>

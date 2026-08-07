@@ -175,7 +175,7 @@ const QuickQuoteModal = ({ isOpen, onClose, client }) => {
                     placeholder="Description"
                     value={item.description}
                     onChange={(e) => handleUpdateItem(index, 'description', e.target.value)}
-                    className="flex-1 px-3 py-2 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                    className="flex-1 px-3 py-2 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
                   />
                   <input
                     type="number"
@@ -253,7 +253,7 @@ const QuickQuoteModal = ({ isOpen, onClose, client }) => {
                 onChange={(e) => setNotes(e.target.value)}
                 rows={3}
                 placeholder="Conditions particulières, modalités de paiement..."
-                className="w-full px-3 py-2 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
+                className="w-full px-3 py-2 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
               />
             </div>
 

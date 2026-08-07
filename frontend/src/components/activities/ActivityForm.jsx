@@ -106,7 +106,7 @@ const ActivityForm = ({ activity = {}, onSave, onCancel, projects, defaultDate }
             onChange={handleInputChange}
             className={`w-full bg-surface/50 text-text-primary border ${
               errors.description ? 'border-rose-500' : 'border-border'
-            } rounded-lg px-2 sm:px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 placeholder-gray-400`}
+            } rounded-lg px-2 sm:px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 placeholder-text-muted`}
             placeholder="Ex: Développement de la page d'accueil"
           />
           {errors.description && (
@@ -245,7 +245,7 @@ const ActivityForm = ({ activity = {}, onSave, onCancel, projects, defaultDate }
               name="lead_name"
               value={formData.lead_name}
               onChange={handleInputChange}
-              className="w-full bg-surface/50 text-text-primary border border-border rounded-lg px-2 sm:px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 placeholder-gray-400 text-sm"
+              className="w-full bg-surface/50 text-text-primary border border-border rounded-lg px-2 sm:px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 placeholder-text-muted text-sm"
               placeholder="Nom du lead"
             />
           )}

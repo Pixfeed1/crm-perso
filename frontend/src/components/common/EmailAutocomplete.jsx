@@ -262,7 +262,7 @@ const EmailAutocomplete = ({
       case 'client': return 'text-green-400 bg-green-500/20';
       case 'lead': return 'text-blue-400 bg-blue-500/20';
       case 'contact': return 'text-purple-400 bg-purple-500/20';
-      default: return 'text-gray-400 bg-gray-500/20';
+      default: return 'text-text-muted bg-gray-500/20';
     }
   };
 
@@ -279,7 +279,7 @@ const EmailAutocomplete = ({
         onKeyDown={handleKeyDown}
         onFocus={handleFocus}
         placeholder={placeholder}
-        className={className || "w-full px-4 py-2.5 bg-gray-800/50 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"}
+        className={className || "w-full px-4 py-2.5 bg-surface/50 border border-border rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:border-indigo-500"}
         autoComplete="off"
       />
 
@@ -294,10 +294,10 @@ const EmailAutocomplete = ({
       {showSuggestions && displayList.length > 0 && (
         <div
           ref={suggestionsRef}
-          className="absolute z-50 w-full mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-xl max-h-64 overflow-y-auto"
+          className="absolute z-50 w-full mt-1 bg-surface border border-border rounded-lg shadow-xl max-h-64 overflow-y-auto"
         >
           {suggestions.length === 0 && recentContacts.length > 0 && (
-            <div className="px-4 py-2 text-xs text-gray-500 border-b border-gray-700">
+            <div className="px-4 py-2 text-xs text-text-muted border-b border-border">
               Contacts récents
             </div>
           )}
@@ -308,27 +308,27 @@ const EmailAutocomplete = ({
                 key={suggestion.id}
                 type="button"
                 onClick={() => handleSelectSuggestion(suggestion)}
-                className={`w-full px-4 py-3 flex items-start gap-3 hover:bg-gray-700/50 transition-colors text-left ${
-                  index === selectedIndex ? 'bg-gray-700/50' : ''
-                } ${index > 0 || suggestions.length === 0 ? 'border-t border-gray-700/50' : ''}`}
+                className={`w-full px-4 py-3 flex items-start gap-3 hover:bg-surface-strong/50 transition-colors text-left ${
+                  index === selectedIndex ? 'bg-surface-strong/50' : ''
+                } ${index > 0 || suggestions.length === 0 ? 'border-t border-border/50' : ''}`}
               >
                 <div className={`p-2 rounded-lg ${getTypeColor(suggestion.type)}`}>
                   <Icon className="w-4 h-4" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="text-white font-medium truncate">
+                    <span className="text-text-primary font-medium truncate">
                       {suggestion.name}
                     </span>
                     <span className={`text-xs px-1.5 py-0.5 rounded ${getTypeColor(suggestion.type)}`}>
                       {getTypeLabel(suggestion.type)}
                     </span>
                   </div>
-                  <div className="text-sm text-gray-400 truncate">
+                  <div className="text-sm text-text-muted truncate">
                     {suggestion.email}
                   </div>
                   {suggestion.company && (
-                    <div className="text-xs text-gray-500 truncate">
+                    <div className="text-xs text-text-muted truncate">
                       {suggestion.company}
                       {suggestion.position && ` • ${suggestion.position}`}
                     </div>

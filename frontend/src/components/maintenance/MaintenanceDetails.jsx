@@ -295,7 +295,7 @@ const MaintenanceDetails = ({ contract, onDelete, onRefresh, onEdit, onGenerateR
         <div className="space-y-2">
           {contract.site_url && (
             <div className="flex items-center gap-2 text-text-secondary">
-              <FiGlobe className="text-gray-500" size={14} />
+              <FiGlobe className="text-text-muted" size={14} />
               <a href={contract.site_url} target="_blank" rel="noopener noreferrer" className="hover:text-indigo-400">
                 {contract.site_url}
               </a>
@@ -530,7 +530,7 @@ const MaintenanceDetails = ({ contract, onDelete, onRefresh, onEdit, onGenerateR
           </div>
         ) : (
           <div className="bg-surface-muted/30 rounded-lg p-6 text-center">
-            <div className="text-3xl mb-2 text-gray-500"><FiFileText /></div>
+            <div className="text-3xl mb-2 text-text-muted"><FiFileText /></div>
             <p className="text-text-muted text-sm">Aucun rapport généré</p>
           </div>
         )}

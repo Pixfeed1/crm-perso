@@ -142,7 +142,7 @@ const GoalList = ({
   if (goals.length === 0) {
     return (
       <div className="bg-surface/30 rounded-xl p-8 text-center">
-        <FiTarget className="mx-auto text-5xl text-gray-500 mb-4" />
+        <FiTarget className="mx-auto text-5xl text-text-muted mb-4" />
         <h4 className="text-lg font-medium text-text-primary mb-2">Aucun objectif</h4>
         <p className="text-text-muted text-sm">
           Créez votre premier objectif pour commencer à suivre votre progression.
@@ -408,7 +408,7 @@ const GoalList = ({
                     )}
 
                     {!goal.description && (!goal.milestones || goal.milestones.length === 0) && (
-                      <p className="text-sm text-gray-500 text-center py-2">
+                      <p className="text-sm text-text-muted text-center py-2">
                         Aucun détail supplémentaire
                       </p>
                     )}

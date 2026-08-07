@@ -66,7 +66,7 @@ const GoalFilter = ({ filters, setFilters, onSort, sortField, sortDirection }) =
               placeholder="Rechercher un objectif..."
               value={filters.search}
               onChange={(e) => handleFilterChange('search', e.target.value)}
-              className="w-full bg-surface/50 text-text-primary border border-border rounded-lg px-4 py-2 pl-10 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent relative z-10"
+              className="w-full bg-surface/50 text-text-primary border border-border rounded-lg px-4 py-2 pl-10 placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent relative z-10"
             />
             <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-text-muted z-[15]">
               <FiSearch />

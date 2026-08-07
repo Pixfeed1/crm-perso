@@ -160,7 +160,7 @@ const ClientDetails = ({ client, onUpdate, onDelete, onClose }) => {
             <TypeIcon className="text-indigo-400" />
           </div>
           <div>
-            <div className="text-xs text-gray-500 mb-1">Type</div>
+            <div className="text-xs text-text-muted mb-1">Type</div>
             <div className="text-text-primary">{typeInfo.label}</div>
           </div>
         </div>
@@ -172,7 +172,7 @@ const ClientDetails = ({ client, onUpdate, onDelete, onClose }) => {
               <FiMail className="text-blue-400" />
             </div>
             <div className="min-w-0">
-              <div className="text-xs text-gray-500 mb-1">Email</div>
+              <div className="text-xs text-text-muted mb-1">Email</div>
               <a href={`mailto:${client.email}`} className="text-blue-400 hover:underline break-all">
                 {client.email}
               </a>
@@ -187,7 +187,7 @@ const ClientDetails = ({ client, onUpdate, onDelete, onClose }) => {
               <FiPhone className="text-green-400" />
             </div>
             <div>
-              <div className="text-xs text-gray-500 mb-1">Téléphone</div>
+              <div className="text-xs text-text-muted mb-1">Téléphone</div>
               <a href={`tel:${client.phone}`} className="text-text-primary">
                 {client.phone}
               </a>
@@ -202,7 +202,7 @@ const ClientDetails = ({ client, onUpdate, onDelete, onClose }) => {
               <FiMapPin className="text-red-400" />
             </div>
             <div className="min-w-0">
-              <div className="text-xs text-gray-500 mb-1">Adresse</div>
+              <div className="text-xs text-text-muted mb-1">Adresse</div>
               <div className="text-text-primary break-words">{client.address}</div>
             </div>
           </div>
@@ -215,7 +215,7 @@ const ClientDetails = ({ client, onUpdate, onDelete, onClose }) => {
               <FiGlobe className="text-purple-400" />
             </div>
             <div className="min-w-0">
-              <div className="text-xs text-gray-500 mb-1">Site web</div>
+              <div className="text-xs text-text-muted mb-1">Site web</div>
               <a
                 href={client.website.startsWith('http') ? client.website : `https://${client.website}`}
                 target="_blank"
@@ -235,7 +235,7 @@ const ClientDetails = ({ client, onUpdate, onDelete, onClose }) => {
               <FiBriefcase className="text-yellow-400" />
             </div>
             <div>
-              <div className="text-xs text-gray-500 mb-1">Industrie</div>
+              <div className="text-xs text-text-muted mb-1">Industrie</div>
               <div className="text-text-primary">{client.industry}</div>
             </div>
           </div>

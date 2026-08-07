@@ -633,11 +633,11 @@ const Reports = () => {
                   </div>
                   <div className="grid grid-cols-2 gap-3 text-sm">
                     <div>
-                      <span className="text-gray-500">Total: </span>
+                      <span className="text-text-muted">Total: </span>
                       <span className="text-text-secondary font-medium">{source.total}</span>
                     </div>
                     <div>
-                      <span className="text-gray-500">Convertis: </span>
+                      <span className="text-text-muted">Convertis: </span>
                       <span className="text-emerald-400 font-medium">{source.converted}</span>
                     </div>
                   </div>
@@ -645,7 +645,7 @@ const Reports = () => {
               ))}
 
               {reportData.sourcePerformance.length === 0 && (
-                <div className="text-center py-8 text-gray-500">
+                <div className="text-center py-8 text-text-muted">
                   Aucune donnée de source disponible
                 </div>
               )}
@@ -700,7 +700,7 @@ const Reports = () => {
                 })}
               </div>
             ) : (
-              <div className="text-center py-12 text-gray-500">
+              <div className="text-center py-12 text-text-muted">
                 <FiBarChart2 className="text-5xl mx-auto mb-4 text-gray-600" />
                 <p>Aucune donnée de revenus disponible</p>
               </div>

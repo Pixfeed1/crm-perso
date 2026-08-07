@@ -87,7 +87,7 @@ const ContactForm = ({ contact = {}, onSave, onCancel }) => {
               onChange={handleInputChange}
               className={`w-full bg-surface/50 border ${
                 errors.name ? 'border-rose-500' : 'border-border'
-              } rounded-lg px-4 py-2 text-text-primary placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent`}
+              } rounded-lg px-4 py-2 text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent`}
               placeholder="John Doe"
             />
             {errors.name && (
@@ -112,7 +112,7 @@ const ContactForm = ({ contact = {}, onSave, onCancel }) => {
               name="position"
               value={formData.position}
               onChange={handleInputChange}
-              className="w-full bg-surface/50 border border-border rounded-lg px-4 py-2 text-text-primary placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="w-full bg-surface/50 border border-border rounded-lg px-4 py-2 text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               placeholder="CTO, Manager, etc."
             />
           </div>
@@ -130,7 +130,7 @@ const ContactForm = ({ contact = {}, onSave, onCancel }) => {
               onChange={handleInputChange}
               className={`w-full bg-surface/50 border ${
                 errors.email ? 'border-rose-500' : 'border-border'
-              } rounded-lg px-4 py-2 text-text-primary placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent`}
+              } rounded-lg px-4 py-2 text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent`}
               placeholder="john@example.com"
             />
             {errors.email && (
@@ -155,7 +155,7 @@ const ContactForm = ({ contact = {}, onSave, onCancel }) => {
               name="phone"
               value={formData.phone}
               onChange={handleInputChange}
-              className="w-full bg-surface/50 border border-border rounded-lg px-4 py-2 text-text-primary placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="w-full bg-surface/50 border border-border rounded-lg px-4 py-2 text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               placeholder="+33 6 12 34 56 78"
             />
           </div>
@@ -172,7 +172,7 @@ const ContactForm = ({ contact = {}, onSave, onCancel }) => {
             value={formData.notes}
             onChange={handleInputChange}
             rows={3}
-            className="w-full bg-surface/50 border border-border rounded-lg px-4 py-2 text-text-primary placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            className="w-full bg-surface/50 border border-border rounded-lg px-4 py-2 text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
             placeholder="Informations supplémentaires sur ce contact..."
           />
         </div>

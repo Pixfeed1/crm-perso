@@ -217,7 +217,7 @@ const GoalForm = ({ goal, onSave, onCancel }) => {
             onChange={handleInputChange}
             className={`w-full bg-surface/50 text-text-primary border ${
               errors.title ? 'border-rose-500' : 'border-border'
-            } rounded-lg px-4 py-2 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent break-words`}
+            } rounded-lg px-4 py-2 placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent break-words`}
             placeholder="Ex: Acquérir 5 nouveaux clients"
           />
           {errors.title && (
@@ -238,7 +238,7 @@ const GoalForm = ({ goal, onSave, onCancel }) => {
             value={formData.description}
             onChange={handleInputChange}
             rows="3"
-            className="w-full bg-surface/50 text-text-primary border border-border rounded-lg px-4 py-2 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            className="w-full bg-surface/50 text-text-primary border border-border rounded-lg px-4 py-2 placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             placeholder="Décrivez votre objectif en quelques mots..."
           />
         </div>
@@ -257,7 +257,7 @@ const GoalForm = ({ goal, onSave, onCancel }) => {
               onChange={handleInputChange}
               className={`w-full bg-surface/50 text-text-primary border ${
                 errors.target_value ? 'border-rose-500' : 'border-border'
-              } rounded-lg px-4 py-2 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
+              } rounded-lg px-4 py-2 placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
               placeholder="Ex: 5000"
               step="0.01"
               min="0"
@@ -293,7 +293,7 @@ const GoalForm = ({ goal, onSave, onCancel }) => {
                 name="current_value"
                 value={formData.current_value}
                 onChange={handleInputChange}
-                className="w-full bg-surface/50 text-text-primary border border-border rounded-lg px-4 py-2 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="w-full bg-surface/50 text-text-primary border border-border rounded-lg px-4 py-2 placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 placeholder="Ex: 0"
                 step="0.01"
                 min="0"

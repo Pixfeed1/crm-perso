@@ -319,7 +319,7 @@ const VideoConferenceSettings = () => {
                             })
                           }
                           placeholder="primary ou votre-email@gmail.com"
-                          className="w-full px-3 py-2 bg-surface-muted/50 border border-border rounded-lg text-text-secondary text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent placeholder-gray-500"
+                          className="w-full px-3 py-2 bg-surface-muted/50 border border-border rounded-lg text-text-secondary text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent placeholder-text-muted"
                         />
                       </div>
                     </div>
@@ -341,7 +341,7 @@ const VideoConferenceSettings = () => {
                             })
                           }
                           placeholder="Votre clé API Zoom"
-                          className="w-full px-3 py-2 bg-surface-muted/50 border border-border rounded-lg text-text-secondary text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent placeholder-gray-500"
+                          className="w-full px-3 py-2 bg-surface-muted/50 border border-border rounded-lg text-text-secondary text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent placeholder-text-muted"
                         />
                       </div>
                       <div>
@@ -358,7 +358,7 @@ const VideoConferenceSettings = () => {
                             })
                           }
                           placeholder="Votre secret API Zoom"
-                          className="w-full px-3 py-2 bg-surface-muted/50 border border-border rounded-lg text-text-secondary text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent placeholder-gray-500"
+                          className="w-full px-3 py-2 bg-surface-muted/50 border border-border rounded-lg text-text-secondary text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent placeholder-text-muted"
                         />
                       </div>
                       <div>
@@ -375,7 +375,7 @@ const VideoConferenceSettings = () => {
                             })
                           }
                           placeholder="me ou votre user ID"
-                          className="w-full px-3 py-2 bg-surface-muted/50 border border-border rounded-lg text-text-secondary text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent placeholder-gray-500"
+                          className="w-full px-3 py-2 bg-surface-muted/50 border border-border rounded-lg text-text-secondary text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent placeholder-text-muted"
                         />
                       </div>
                     </div>
@@ -397,7 +397,7 @@ const VideoConferenceSettings = () => {
                             })
                           }
                           placeholder="Votre Tenant ID Microsoft"
-                          className="w-full px-3 py-2 bg-surface-muted/50 border border-border rounded-lg text-text-secondary text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent placeholder-gray-500"
+                          className="w-full px-3 py-2 bg-surface-muted/50 border border-border rounded-lg text-text-secondary text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent placeholder-text-muted"
                         />
                       </div>
                     </div>

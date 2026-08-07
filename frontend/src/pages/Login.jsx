@@ -119,7 +119,7 @@ const Login = () => {
       {/* Contenu principal - responsive */}
       <div className="w-full max-w-sm sm:max-w-md relative z-10">
         <motion.div
-          className="bg-gray-800/70 backdrop-blur-md rounded-2xl border border-white/10 p-6 sm:p-8 md:p-10 shadow-2xl relative overflow-hidden"
+          className="bg-surface/70 backdrop-blur-md rounded-2xl border border-white/10 p-6 sm:p-8 md:p-10 shadow-2xl relative overflow-hidden"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
@@ -138,7 +138,7 @@ const Login = () => {
               MCRM
             </motion.h1>
             <motion.p
-              className="text-gray-400 text-sm sm:text-base"
+              className="text-text-muted text-sm sm:text-base"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.4, duration: 0.5 }}
@@ -151,7 +151,7 @@ const Login = () => {
           <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
             {/* Champ Identifiant */}
             <div>
-              <label htmlFor="username" className="block text-gray-400 text-sm mb-2">
+              <label htmlFor="username" className="block text-text-muted text-sm mb-2">
                 Identifiant
               </label>
               <input
@@ -160,7 +160,7 @@ const Login = () => {
                 name="username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="w-full px-3 py-2.5 sm:px-4 sm:py-3 rounded-lg bg-gray-900/70 border border-white/10 text-gray-100 text-sm sm:text-base focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-600/30 transition-all"
+                className="w-full px-3 py-2.5 sm:px-4 sm:py-3 rounded-lg bg-surface-muted/70 border border-white/10 text-gray-100 text-sm sm:text-base focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-600/30 transition-all"
                 required
                 autoComplete="username"
               />
@@ -168,7 +168,7 @@ const Login = () => {
 
             {/* Champ Mot de passe */}
             <div>
-              <label htmlFor="password" className="block text-gray-400 text-sm mb-2">
+              <label htmlFor="password" className="block text-text-muted text-sm mb-2">
                 Mot de passe
               </label>
               <input
@@ -177,7 +177,7 @@ const Login = () => {
                 name="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-3 py-2.5 sm:px-4 sm:py-3 rounded-lg bg-gray-900/70 border border-white/10 text-gray-100 text-sm sm:text-base focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-600/30 transition-all"
+                className="w-full px-3 py-2.5 sm:px-4 sm:py-3 rounded-lg bg-surface-muted/70 border border-white/10 text-gray-100 text-sm sm:text-base focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-600/30 transition-all"
                 required
                 autoComplete="current-password"
               />

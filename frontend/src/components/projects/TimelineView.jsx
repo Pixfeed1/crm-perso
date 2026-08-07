@@ -130,7 +130,7 @@ const TimelineView = ({ projects, onProjectClick }) => {
               <div
                 key={index}
                 className={`flex-1 text-center text-xs ${
-                  isToday ? 'text-purple-400 font-bold' : isWeekend ? 'text-gray-500' : 'text-text-muted'
+                  isToday ? 'text-purple-400 font-bold' : isWeekend ? 'text-text-muted' : 'text-text-muted'
                 }`}
               >
                 <div>{day.getDate()}</div>
@@ -175,7 +175,7 @@ const TimelineView = ({ projects, onProjectClick }) => {
                       <div
                         key={index}
                         className={`absolute h-full border-r ${
-                          isWeekend ? 'border-gray-800' : 'border-border/30'
+                          isWeekend ? 'border-border' : 'border-border/30'
                         }`}
                         style={{ left: `${(index / dateRange.days.length) * 100}%` }}
                       />

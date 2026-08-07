@@ -27,7 +27,7 @@ const ClientTable = ({ clients, selectedClient, onSelectClient, onMaintenanceCli
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-700">
+          <tbody className="divide-y divide-border">
             {clients.map((client, index) => (
               <motion.tr
                 key={client.id}

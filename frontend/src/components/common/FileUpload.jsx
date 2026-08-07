@@ -30,7 +30,7 @@ const FileUpload = ({
     if (mimetype.includes('excel') || mimetype.includes('spreadsheet')) return <FiPieChart className="w-5 h-5 text-green-400" />;
     if (mimetype.includes('powerpoint') || mimetype.includes('presentation')) return <FiPieChart className="w-5 h-5 text-orange-400" />;
     if (mimetype.includes('zip')) return <FiPackage className="w-5 h-5 text-yellow-400" />;
-    return <FiPaperclip className="w-5 h-5 text-gray-400" />;
+    return <FiPaperclip className="w-5 h-5 text-text-muted" />;
   };
 
   // Upload de fichiers
@@ -98,7 +98,7 @@ const FileUpload = ({
   return (
     <div className="space-y-4">
       {/* Zone d'upload */}
-      <div className="border-2 border-dashed border-gray-600 rounded-lg p-6 text-center hover:border-indigo-500 transition-colors">
+      <div className="border-2 border-dashed border-border-strong rounded-lg p-6 text-center hover:border-indigo-500 transition-colors">
         <input
           type="file"
           id="file-upload"
@@ -114,18 +114,18 @@ const FileUpload = ({
             uploading || !entityId ? 'opacity-50 cursor-not-allowed' : ''
           }`}
         >
-          <FiUpload className="w-10 h-10 text-gray-400 mb-2" />
-          <p className="text-gray-300 font-medium">
+          <FiUpload className="w-10 h-10 text-text-muted mb-2" />
+          <p className="text-text-secondary font-medium">
             {uploading ? 'Upload en cours...' : 'Cliquez pour sélectionner des fichiers'}
           </p>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-sm text-text-muted mt-1">
             Images, PDF, documents Office (max 10MB par fichier)
           </p>
         </label>
 
         {uploading && uploadProgress > 0 && (
           <div className="mt-4">
-            <div className="w-full bg-gray-700 rounded-full h-2">
+            <div className="w-full bg-surface-strong rounded-full h-2">
               <div
                 className="bg-indigo-600 h-2 rounded-full transition-all duration-300"
                 style={{ width: `${uploadProgress}%` }}
@@ -154,21 +154,21 @@ const FileUpload = ({
       {/* Liste des fichiers */}
       {existingFiles && existingFiles.length > 0 && (
         <div className="space-y-2">
-          <h4 className="text-sm font-medium text-gray-300">
+          <h4 className="text-sm font-medium text-text-secondary">
             Fichiers joints ({existingFiles.length})
           </h4>
           <div className="space-y-2">
             {existingFiles.map((file, index) => (
               <div
                 key={index}
-                className="flex items-center gap-3 p-3 bg-gray-800/30 border border-gray-700 rounded-lg hover:border-gray-600 transition-colors"
+                className="flex items-center gap-3 p-3 bg-surface/30 border border-border rounded-lg hover:border-border-strong transition-colors"
               >
                 <div className="flex-shrink-0">{getFileIcon(file.mimetype)}</div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-white truncate">
+                  <p className="text-sm font-medium text-text-primary truncate">
                     {file.originalName}
                   </p>
-                  <p className="text-xs text-gray-400">
+                  <p className="text-xs text-text-muted">
                     {formatFileSize(file.size)} • {new Date(file.uploadedAt).toLocaleDateString('fr-FR')}
                   </p>
                 </div>
@@ -195,7 +195,7 @@ const FileUpload = ({
       )}
 
       {!entityId && (
-        <p className="text-sm text-gray-500 text-center">
+        <p className="text-sm text-text-muted text-center">
           Enregistrez d'abord le {entityType === 'quote' ? 'devis' : 'la facture'} pour pouvoir ajouter des fichiers
         </p>
       )}

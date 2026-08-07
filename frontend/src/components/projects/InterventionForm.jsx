@@ -114,7 +114,7 @@ const InterventionForm = ({ intervention = {}, onSave, onCancel }) => {
             onChange={handleInputChange}
             className={`w-full bg-surface/50 text-text-primary border ${
               errors.title ? 'border-rose-500' : 'border-border'
-            } rounded-lg px-4 py-2 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
+            } rounded-lg px-4 py-2 placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
             placeholder="Ex: Mise à jour CMS / plugin sécurité"
           />
           {errors.title && (
@@ -169,7 +169,7 @@ const InterventionForm = ({ intervention = {}, onSave, onCancel }) => {
             value={formData.description}
             onChange={handleInputChange}
             rows={2}
-            className="w-full bg-surface/50 text-text-primary border border-border rounded-lg px-4 py-2 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            className="w-full bg-surface/50 text-text-primary border border-border rounded-lg px-4 py-2 placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             placeholder="Détails de l'intervention..."
           />
         </div>
@@ -202,7 +202,7 @@ const InterventionForm = ({ intervention = {}, onSave, onCancel }) => {
               onChange={handleInputChange}
               min="0"
               step="5"
-              className="w-full bg-surface/50 text-text-primary border border-border rounded-lg px-4 py-2 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="w-full bg-surface/50 text-text-primary border border-border rounded-lg px-4 py-2 placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               placeholder="30"
             />
           </div>
@@ -269,7 +269,7 @@ const InterventionForm = ({ intervention = {}, onSave, onCancel }) => {
             name="technician"
             value={formData.technician}
             onChange={handleInputChange}
-            className="w-full bg-surface/50 text-text-primary border border-border rounded-lg px-4 py-2 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            className="w-full bg-surface/50 text-text-primary border border-border rounded-lg px-4 py-2 placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             placeholder="Nom du technicien"
           />
         </div>
@@ -285,7 +285,7 @@ const InterventionForm = ({ intervention = {}, onSave, onCancel }) => {
             value={formData.notes}
             onChange={handleInputChange}
             rows={2}
-            className="w-full bg-surface/50 text-text-primary border border-border rounded-lg px-4 py-2 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            className="w-full bg-surface/50 text-text-primary border border-border rounded-lg px-4 py-2 placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             placeholder="Notes internes (non visibles dans le rapport client)..."
           />
         </div>

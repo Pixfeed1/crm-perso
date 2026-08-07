@@ -117,7 +117,7 @@ const ForgotPassword = () => {
       {/* Contenu principal - responsive */}
       <div className="w-full max-w-sm sm:max-w-md relative z-10">
         <motion.div
-          className="bg-gray-800/70 backdrop-blur-md rounded-2xl border border-white/10 p-6 sm:p-8 md:p-10 shadow-2xl relative overflow-hidden"
+          className="bg-surface/70 backdrop-blur-md rounded-2xl border border-white/10 p-6 sm:p-8 md:p-10 shadow-2xl relative overflow-hidden"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
@@ -136,7 +136,7 @@ const ForgotPassword = () => {
               MCRM
             </motion.h1>
             <motion.p
-              className="text-gray-400 text-sm sm:text-base"
+              className="text-text-muted text-sm sm:text-base"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.4, duration: 0.5 }}
@@ -149,7 +149,7 @@ const ForgotPassword = () => {
             <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
               {/* Champ Email */}
               <div>
-                <label htmlFor="email" className="block text-gray-400 text-sm mb-2">
+                <label htmlFor="email" className="block text-text-muted text-sm mb-2">
                   Adresse email
                 </label>
                 <input
@@ -159,7 +159,7 @@ const ForgotPassword = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="votre@email.com"
-                  className="w-full px-3 py-2.5 sm:px-4 sm:py-3 rounded-lg bg-gray-900/70 border border-white/10 text-gray-100 text-sm sm:text-base focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-600/30 transition-all"
+                  className="w-full px-3 py-2.5 sm:px-4 sm:py-3 rounded-lg bg-surface-muted/70 border border-white/10 text-gray-100 text-sm sm:text-base focus:outline-none focus:border-purple-600 focus:ring-2 focus:ring-purple-600/30 transition-all"
                   required
                   autoComplete="email"
                 />
@@ -171,7 +171,7 @@ const ForgotPassword = () => {
               </div>
 
               {/* Message d'info */}
-              <p className="text-gray-400 text-xs sm:text-sm">
+              <p className="text-text-muted text-xs sm:text-sm">
                 Entrez votre adresse email. Vous recevrez un lien pour réinitialiser votre mot de passe.
               </p>
 
@@ -226,7 +226,7 @@ const ForgotPassword = () => {
               <h3 className="text-xl sm:text-2xl font-semibold text-green-400 mb-3 sm:mb-4">
                 Email envoyé !
               </h3>
-              <p className="text-gray-400 text-sm sm:text-base mb-6 sm:mb-8">
+              <p className="text-text-muted text-sm sm:text-base mb-6 sm:mb-8">
                 Un lien de réinitialisation a été envoyé à <strong className="text-gray-100">{email}</strong>.
                 <br className="hidden sm:block" />
                 <span className="block mt-1 sm:inline sm:mt-0"> Vérifiez votre boîte de réception et suivez les instructions.</span>

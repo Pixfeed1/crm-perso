@@ -99,7 +99,7 @@ const MaintenanceCard = ({ contract, isSelected, onClick }) => {
         {/* Scores PageSpeed */}
         <div className="flex items-center gap-4 mb-4">
           <div className="flex items-center gap-1.5">
-            <FiZap className="text-gray-500" size={14} />
+            <FiZap className="text-text-muted" size={14} />
             <span className={`text-sm font-medium ${getPageSpeedColor(contract.pagespeed_mobile)}`}>
               {contract.pagespeed_mobile || '-'}
             </span>
@@ -118,14 +118,14 @@ const MaintenanceCard = ({ contract, isSelected, onClick }) => {
         {/* Infos de date */}
         <div className="flex justify-between items-center pt-4 border-t border-border/50 mt-auto">
           <div>
-            <div className="text-xs text-gray-500 mb-0.5">Dernier rapport</div>
+            <div className="text-xs text-text-muted mb-0.5">Dernier rapport</div>
             <div className="text-xs font-medium text-text-secondary">
               {contract.last_report_date ? formatDate(contract.last_report_date) : 'Jamais'}
             </div>
           </div>
 
           <div className="text-right">
-            <div className="text-xs text-gray-500 mb-0.5">Prochain</div>
+            <div className="text-xs text-text-muted mb-0.5">Prochain</div>
             <div className={`text-xs font-medium ${isReportDue ? 'text-amber-400' : 'text-text-secondary'}`}>
               {contract.next_report_due ? formatDate(contract.next_report_due) : '-'}
             </div>

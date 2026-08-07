@@ -404,7 +404,7 @@ const InvoiceForm = ({ invoice = null, onSave, onCancel }) => {
               </option>
             ))}
           </select>
-          <p className="text-xs text-gray-500 mt-2">
+          <p className="text-xs text-text-muted mt-2">
             Sélectionnez un devis pour pré-remplir les informations
           </p>
         </div>
@@ -797,7 +797,7 @@ const InvoiceForm = ({ invoice = null, onSave, onCancel }) => {
           min="1"
           className="w-full px-4 py-2 bg-surface/50 border border-border rounded-lg text-text-primary focus:outline-none focus:border-indigo-500"
         />
-        <p className="text-xs text-gray-500 mt-2">
+        <p className="text-xs text-text-muted mt-2">
           Délai standard: 30 jours
         </p>
       </div>
@@ -1098,7 +1098,7 @@ const InvoiceForm = ({ invoice = null, onSave, onCancel }) => {
             >
               <FiUpload className="w-10 h-10 text-text-muted mb-2" />
               <p className="text-text-secondary font-medium">Cliquez pour sélectionner un fichier PDF</p>
-              <p className="text-sm text-gray-500 mt-1">Format accepté : PDF uniquement (max 5MB)</p>
+              <p className="text-sm text-text-muted mt-1">Format accepté : PDF uniquement (max 5MB)</p>
             </label>
 
             {formData.cgv_pdf && (
@@ -1306,7 +1306,7 @@ const InvoiceForm = ({ invoice = null, onSave, onCancel }) => {
           disabled={currentStep === 0}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
             currentStep === 0
-              ? 'bg-surface-strong/50 text-gray-500 cursor-not-allowed'
+              ? 'bg-surface-strong/50 text-text-muted cursor-not-allowed'
               : 'bg-surface-strong hover:bg-border-strong text-text-primary'
           }`}
         >

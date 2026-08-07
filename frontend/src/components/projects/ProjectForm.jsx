@@ -247,7 +247,7 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
             onChange={handleInputChange}
             className={`w-full bg-surface-strong border ${
               errors.name ? 'border-rose-500' : 'border-border-strong'
-            } rounded-lg px-4 py-2 text-text-primary placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
+            } rounded-lg px-4 py-2 text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
             placeholder="Site E-commerce 2025"
           />
           {errors.name && (
@@ -335,7 +335,7 @@ const ProjectForm = ({ project = {}, onSave, onCancel }) => {
             value={formData.description}
             onChange={handleInputChange}
             rows={4}
-            className="w-full bg-surface-strong border border-border-strong rounded-lg px-4 py-2 text-text-primary placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            className="w-full bg-surface-strong border border-border-strong rounded-lg px-4 py-2 text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             placeholder="Description détaillée du projet..."
           />
         </div>

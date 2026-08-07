@@ -141,9 +141,9 @@ const BillingLinkEmailModal = ({
                   onChange={(e) => setMessage(e.target.value)}
                   rows={7}
                   placeholder="Votre message..."
-                  className="w-full px-3 py-2 bg-surface/60 border border-border rounded-lg text-text-primary placeholder-gray-500 focus:outline-none focus:border-indigo-500 resize-y"
+                  className="w-full px-3 py-2 bg-surface/60 border border-border rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:border-indigo-500 resize-y"
                 />
-                <p className="text-xs text-gray-500 mt-1">Le lien de paiement et votre signature sont ajoutés automatiquement.</p>
+                <p className="text-xs text-text-muted mt-1">Le lien de paiement et votre signature sont ajoutés automatiquement.</p>
               </div>
 
               {/* Conditions PDF */}

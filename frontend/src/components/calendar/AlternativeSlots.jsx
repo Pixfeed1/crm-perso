@@ -86,7 +86,7 @@ const AlternativeSlots = ({ slots, onSelectSlot, onClose, isLoading }) => {
               <FiCalendar className="text-2xl text-text-primary" />
               <div>
                 <h2 className="text-2xl font-bold text-text-primary">Créneaux disponibles</h2>
-                <p className="text-sm text-white/80">
+                <p className="text-sm text-text-primary/80">
                   {slots && slots.length > 0 ? `${slots.length} créneau${slots.length > 1 ? 'x' : ''} trouvé${slots.length > 1 ? 's' : ''}` : 'Recherche en cours...'}
                 </p>
               </div>
