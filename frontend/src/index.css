@@ -235,3 +235,112 @@ div select {
   -webkit-text-fill-color: rgb(var(--field-text)) !important;
   caret-color: rgb(var(--field-text)) !important;
 }
+/* ------------------------------------------------------------------ */
+/*  MODE CLAIR : nuances des couleurs vives                              */
+/*  Les nuances 300/400 sont calibrees pour ressortir sur fond SOMBRE.   */
+/*  Sur blanc elles deviennent delavees et illisibles. On garde la       */
+/*  TEINTE (le Dashboard garde ses couleurs) mais on fonce la nuance.    */
+/*  Un seul endroit a ajuster si une couleur ne plait pas.               */
+/* ------------------------------------------------------------------ */
+[data-theme="clair"] .text-indigo-300,
+[data-theme="clair"] .hover\:text-indigo-300:hover,
+[data-theme="clair"] .group:hover .group-hover\:text-indigo-300 { color: #4338ca; }
+[data-theme="clair"] .text-indigo-400,
+[data-theme="clair"] .hover\:text-indigo-400:hover,
+[data-theme="clair"] .group:hover .group-hover\:text-indigo-400 { color: #4f46e5; }
+[data-theme="clair"] .text-purple-300,
+[data-theme="clair"] .hover\:text-purple-300:hover,
+[data-theme="clair"] .group:hover .group-hover\:text-purple-300 { color: #7e22ce; }
+[data-theme="clair"] .text-purple-400,
+[data-theme="clair"] .hover\:text-purple-400:hover,
+[data-theme="clair"] .group:hover .group-hover\:text-purple-400 { color: #9333ea; }
+[data-theme="clair"] .text-violet-300,
+[data-theme="clair"] .hover\:text-violet-300:hover,
+[data-theme="clair"] .group:hover .group-hover\:text-violet-300 { color: #6d28d9; }
+[data-theme="clair"] .text-violet-400,
+[data-theme="clair"] .hover\:text-violet-400:hover,
+[data-theme="clair"] .group:hover .group-hover\:text-violet-400 { color: #7c3aed; }
+[data-theme="clair"] .text-blue-300,
+[data-theme="clair"] .hover\:text-blue-300:hover,
+[data-theme="clair"] .group:hover .group-hover\:text-blue-300 { color: #1d4ed8; }
+[data-theme="clair"] .text-blue-400,
+[data-theme="clair"] .hover\:text-blue-400:hover,
+[data-theme="clair"] .group:hover .group-hover\:text-blue-400 { color: #2563eb; }
+[data-theme="clair"] .text-sky-300,
+[data-theme="clair"] .hover\:text-sky-300:hover,
+[data-theme="clair"] .group:hover .group-hover\:text-sky-300 { color: #0369a1; }
+[data-theme="clair"] .text-sky-400,
+[data-theme="clair"] .hover\:text-sky-400:hover,
+[data-theme="clair"] .group:hover .group-hover\:text-sky-400 { color: #0284c7; }
+[data-theme="clair"] .text-cyan-300,
+[data-theme="clair"] .hover\:text-cyan-300:hover,
+[data-theme="clair"] .group:hover .group-hover\:text-cyan-300 { color: #0e7490; }
+[data-theme="clair"] .text-cyan-400,
+[data-theme="clair"] .hover\:text-cyan-400:hover,
+[data-theme="clair"] .group:hover .group-hover\:text-cyan-400 { color: #0e7490; }
+[data-theme="clair"] .text-teal-300,
+[data-theme="clair"] .hover\:text-teal-300:hover,
+[data-theme="clair"] .group:hover .group-hover\:text-teal-300 { color: #0f766e; }
+[data-theme="clair"] .text-teal-400,
+[data-theme="clair"] .hover\:text-teal-400:hover,
+[data-theme="clair"] .group:hover .group-hover\:text-teal-400 { color: #0f766e; }
+[data-theme="clair"] .text-green-300,
+[data-theme="clair"] .hover\:text-green-300:hover,
+[data-theme="clair"] .group:hover .group-hover\:text-green-300 { color: #15803d; }
+[data-theme="clair"] .text-green-400,
+[data-theme="clair"] .hover\:text-green-400:hover,
+[data-theme="clair"] .group:hover .group-hover\:text-green-400 { color: #15803d; }
+[data-theme="clair"] .text-emerald-300,
+[data-theme="clair"] .hover\:text-emerald-300:hover,
+[data-theme="clair"] .group:hover .group-hover\:text-emerald-300 { color: #047857; }
+[data-theme="clair"] .text-emerald-400,
+[data-theme="clair"] .hover\:text-emerald-400:hover,
+[data-theme="clair"] .group:hover .group-hover\:text-emerald-400 { color: #047857; }
+[data-theme="clair"] .text-lime-300,
+[data-theme="clair"] .hover\:text-lime-300:hover,
+[data-theme="clair"] .group:hover .group-hover\:text-lime-300 { color: #4d7c0f; }
+[data-theme="clair"] .text-lime-400,
+[data-theme="clair"] .hover\:text-lime-400:hover,
+[data-theme="clair"] .group:hover .group-hover\:text-lime-400 { color: #4d7c0f; }
+[data-theme="clair"] .text-red-300,
+[data-theme="clair"] .hover\:text-red-300:hover,
+[data-theme="clair"] .group:hover .group-hover\:text-red-300 { color: #b91c1c; }
+[data-theme="clair"] .text-red-400,
+[data-theme="clair"] .hover\:text-red-400:hover,
+[data-theme="clair"] .group:hover .group-hover\:text-red-400 { color: #dc2626; }
+[data-theme="clair"] .text-rose-300,
+[data-theme="clair"] .hover\:text-rose-300:hover,
+[data-theme="clair"] .group:hover .group-hover\:text-rose-300 { color: #be123c; }
+[data-theme="clair"] .text-rose-400,
+[data-theme="clair"] .hover\:text-rose-400:hover,
+[data-theme="clair"] .group:hover .group-hover\:text-rose-400 { color: #e11d48; }
+[data-theme="clair"] .text-pink-300,
+[data-theme="clair"] .hover\:text-pink-300:hover,
+[data-theme="clair"] .group:hover .group-hover\:text-pink-300 { color: #be185d; }
+[data-theme="clair"] .text-pink-400,
+[data-theme="clair"] .hover\:text-pink-400:hover,
+[data-theme="clair"] .group:hover .group-hover\:text-pink-400 { color: #db2777; }
+[data-theme="clair"] .text-fuchsia-300,
+[data-theme="clair"] .hover\:text-fuchsia-300:hover,
+[data-theme="clair"] .group:hover .group-hover\:text-fuchsia-300 { color: #a21caf; }
+[data-theme="clair"] .text-fuchsia-400,
+[data-theme="clair"] .hover\:text-fuchsia-400:hover,
+[data-theme="clair"] .group:hover .group-hover\:text-fuchsia-400 { color: #c026d3; }
+[data-theme="clair"] .text-amber-300,
+[data-theme="clair"] .hover\:text-amber-300:hover,
+[data-theme="clair"] .group:hover .group-hover\:text-amber-300 { color: #b45309; }
+[data-theme="clair"] .text-amber-400,
+[data-theme="clair"] .hover\:text-amber-400:hover,
+[data-theme="clair"] .group:hover .group-hover\:text-amber-400 { color: #b45309; }
+[data-theme="clair"] .text-yellow-300,
+[data-theme="clair"] .hover\:text-yellow-300:hover,
+[data-theme="clair"] .group:hover .group-hover\:text-yellow-300 { color: #a16207; }
+[data-theme="clair"] .text-yellow-400,
+[data-theme="clair"] .hover\:text-yellow-400:hover,
+[data-theme="clair"] .group:hover .group-hover\:text-yellow-400 { color: #a16207; }
+[data-theme="clair"] .text-orange-300,
+[data-theme="clair"] .hover\:text-orange-300:hover,
+[data-theme="clair"] .group:hover .group-hover\:text-orange-300 { color: #c2410c; }
+[data-theme="clair"] .text-orange-400,
+[data-theme="clair"] .hover\:text-orange-400:hover,
+[data-theme="clair"] .group:hover .group-hover\:text-orange-400 { color: #ea580c; }
