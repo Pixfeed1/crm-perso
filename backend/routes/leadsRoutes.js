@@ -72,6 +72,41 @@ router.get('/email-accounts', (req, res) => {
   res.json({ accounts, default: accounts[0] ? accounts[0].id : 'pro' });
 });
 
+// GET /api/leads/quick-emails — historique des emails rapides (envoyés hors fiche prospect).
+// Ces envois ne créent pas de prospect : sans cet écran, ils étaient introuvables après coup.
+// `envoyes` vient du suivi d'ouverture (contact_id NULL = pas rattaché à un prospect),
+// `programmes` liste ceux qui attendent encore leur heure d'envoi.
+router.get('/quick-emails', async (req, res) => {
+  const db = req.app.locals.db;
+  const limit = Math.min(parseInt(req.query.limit, 10) || 50, 200);
+  try {
+    const envoyes = await db.pool.query(
+      `SELECT id, to_email, subject, sent_at, open_count, first_open_at, last_open_at,
+              click_count, last_click_at, last_click_url
+         FROM email_tracking
+        WHERE contact_id IS NULL
+        ORDER BY sent_at DESC
+        LIMIT $1`,
+      [limit]
+    );
+    let programmes = { rows: [] };
+    try {
+      programmes = await db.pool.query(
+        `SELECT id, to_email, subject, scheduled_at, status, from_account, error_message
+           FROM scheduled_emails
+          WHERE related_id IS NULL AND email_type = 'custom' AND status = 'pending'
+          ORDER BY scheduled_at ASC
+          LIMIT $1`,
+        [limit]
+      );
+    } catch { /* table absente : on renvoie juste l'historique envoyé */ }
+    res.json({ envoyes: envoyes.rows, programmes: programmes.rows });
+  } catch (e) {
+    console.error('[Lead] quick-emails:', e.message);
+    res.status(500).json({ message: "Impossible de charger l'historique des emails rapides" });
+  }
+});
+
 // POST /api/leads/quick-email — envoi RAPIDE à une adresse libre, sans créer de prospect.
 // Choix du compte (pro/Gmail), signature par défaut ajoutée. Options uniformisées avec le
 // reste de l'outil : copie (cc), copie cachée (bcc), pièces jointes, suivi ouverture/clic,
