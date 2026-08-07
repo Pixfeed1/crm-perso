@@ -19,7 +19,9 @@ const PYTHON_BIN = process.env.CC_PROSPECTOR_PYTHON || '/home/jurojinn/tools/cc_
 const SCRIPT = process.env.CC_PROSPECTOR_SCRIPT || '/home/jurojinn/tools/cc_prospector/cc_prospector.py';
 const COMMON_CRAWL_ID = process.env.COMMON_CRAWL_ID || 'CC-MAIN-2026-21';
 
-const VALID_TECHNO = ['ecommerce', 'woocommerce', 'prestashop'];
+// `spip` / `drupal` / `cms` visent les sites institutionnels (mairies, collectivités) :
+// la découverte e-commerce ne les trouvait jamais, faute d'URL de type panier/produit.
+const VALID_TECHNO = ['ecommerce', 'woocommerce', 'prestashop', 'spip', 'drupal', 'cms'];
 
 // Un seul job en cours à la fois (verrou en mémoire процессus).
 let runningJobId = null;

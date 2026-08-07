@@ -330,6 +330,21 @@ def analyze_site(html: str, headers: dict) -> dict:
 # --------------------------------------------------------------------------- #
 
 # Association / structure sans budget commercial (mots-clés dans le HTML).
+# Collectivite territoriale : cible a part entiere (budget d'investissement,
+# marches publics), a ne PAS confondre avec une asso benevole sans moyens.
+_COLLECTIVITE_MARKERS = [
+    "conseil municipal", "conseil départemental", "conseil regional", "conseil régional",
+    "communauté de communes", "communaute de communes", "communauté d'agglomération",
+    "arrêté municipal", "arrete municipal", "délibération", "deliberation",
+    "monsieur le maire", "madame le maire", "le mot du maire", "état civil", "etat civil",
+    "services municipaux", "urbanisme", "cantine scolaire", "bulletin municipal",
+    "préfecture", "prefecture", "intercommunalité", "intercommunalite",
+]
+_COLLECTIVITE_DOMAIN = re.compile(
+    r"(\.gouv\.fr$|^mairie[-.]|[-.]mairie|^ville[-.]|[-.]ville-|^cc[-.]|\.cci\.fr$)",
+    re.IGNORECASE,
+)
+
 _ASSO_MARKERS = [
     "association", "asso loi 1901", "loi 1901", "à but non lucratif", "but non lucratif",
     "non-profit", "nonprofit", "refuge", "sanctuary", "sanctuaire", "fondation", "foundation",
@@ -366,6 +381,13 @@ def classify_site(html: str, domain: str) -> dict:
     # E-commerce réel : au moins un prix ET un signal de panier (vraie boutique qui vend).
     if _PRIX_RE.search(html) and any(m in low for m in _PANIER_MARKERS):
         out["ecommerce_actif"] = "oui"
+
+    # Collectivité (mairie, commune) AVANT le test asso : une commune a un budget
+    # d'investissement et un marche public, contrairement a une asso benevole.
+    # Sans cette distinction elle serait classee « asso / sans budget » et ecartee.
+    if any(m in low for m in _COLLECTIVITE_MARKERS) or _COLLECTIVITE_DOMAIN.search(d):
+        out["site_type"] = "collectivite"
+        return out
 
     # Association / public / sans budget (le don prime, très fiable).
     if _DON_RE.search(html) or d.endswith(".org") or ".asso.fr" in d \
@@ -711,12 +733,25 @@ def build_discover_sql(file_array, tld, mode, max_domains, exclude=None):
            "OR url_query LIKE '%add-to-cart=%'")
     presta = ("url_query LIKE '%id_product=%' OR url_query LIKE '%controller=product%' "
               "OR url_query LIKE '%controller=category%'")
+    # SPIP : le script frontal spip.php, le dossier d'upload /IMG/ et les
+    # parametres id_article / id_rubrique sont propres a SPIP.
+    spip = ("url_path LIKE '%spip.php%' OR url_path LIKE '%/IMG/%' "
+            "OR url_query LIKE '%id_article=%' OR url_query LIKE '%id_rubrique=%'")
+    # Drupal : chemins /node/<id>, arborescence /sites/default/files et /sites/all.
+    drupal = ("url_path LIKE '/node/%' OR url_path LIKE '%/sites/default/files/%' "
+              "OR url_path LIKE '%/sites/all/%' OR url_query LIKE '%q=node/%'")
     if mode == "woocommerce":
         where += ["content_mime_type = 'text/html'", f"({woo})"]
     elif mode == "prestashop":
         where += ["content_mime_type = 'text/html'", f"({presta})"]
     elif mode == "ecommerce":
         where += ["content_mime_type = 'text/html'", f"({woo} OR {presta})"]
+    elif mode == "spip":
+        where += ["content_mime_type = 'text/html'", f"({spip})"]
+    elif mode == "drupal":
+        where += ["content_mime_type = 'text/html'", f"({drupal})"]
+    elif mode == "cms":
+        where += ["content_mime_type = 'text/html'", f"({spip} OR {drupal})"]
     elif mode == "html":
         where.append("content_mime_type = 'text/html'")
     if exclude:
@@ -808,7 +843,7 @@ def main():
     d = sub.add_parser("discover", help="Sortir des domaines depuis Common Crawl")
     d.add_argument("--crawl", required=True, help="ID du crawl (voir index.commoncrawl.org)")
     d.add_argument("--tld", default="fr")
-    d.add_argument("--mode", choices=["ecommerce", "woocommerce", "prestashop", "html"], default="ecommerce")
+    d.add_argument("--mode", choices=["ecommerce", "woocommerce", "prestashop", "spip", "drupal", "cms", "html"], default="ecommerce")
     d.add_argument("--max-domains", type=int, default=0)
     d.add_argument("--output", default="domains.txt")
     d.add_argument("--exclude", default="")
@@ -825,7 +860,7 @@ def main():
     r = sub.add_parser("run", help="discover puis detect")
     r.add_argument("--crawl", required=True)
     r.add_argument("--tld", default="fr")
-    r.add_argument("--mode", choices=["ecommerce", "woocommerce", "prestashop", "html"], default="ecommerce")
+    r.add_argument("--mode", choices=["ecommerce", "woocommerce", "prestashop", "spip", "drupal", "cms", "html"], default="ecommerce")
     r.add_argument("--max-domains", type=int, default=0)
     r.add_argument("--output", default="prospects.csv")
     r.add_argument("--exclude", default="")

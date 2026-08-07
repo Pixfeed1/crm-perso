@@ -13,7 +13,12 @@ import { useToast } from '../../hooks/useToast';
 const TECHNOS = [
   { value: 'ecommerce', label: 'E-commerce' },
   { value: 'woocommerce', label: 'WooCommerce' },
-  { value: 'prestashop', label: 'PrestaShop' }
+  { value: 'prestashop', label: 'PrestaShop' },
+  // Sites institutionnels : la recherche e-commerce ne les trouvait jamais
+  // (aucune URL de panier/produit), d'où l'absence de SPIP/Drupal jusqu'ici.
+  { value: 'spip', label: 'SPIP (institutionnel)' },
+  { value: 'drupal', label: 'Drupal (institutionnel)' },
+  { value: 'cms', label: 'SPIP + Drupal' }
 ];
 const technoLabel = (v) => (TECHNOS.find((t) => t.value === v) || {}).label || v;
 
@@ -82,6 +87,8 @@ const auditFlags = (r) => {
 // hors cible (asso/agence/no-code/anglophone/hors-techno). Règle d'or : EN CAS DE
 // DOUTE, ON GARDE (langue non déterminée / signal ambigu -> reste dans « Prospects »).
 const ASSO_RE = /(association|loi 1901|but non lucratif|non[- ]?profit|refuge|sanctuary|sanctuaire|fondation|foundation|b[ée]n[ée]vol|paroisse|[ée]glise|dioc[èe]se|\bmairie\b|commune de|coll[èe]ge|lyc[ée]e|club sportif|amicale|faire un don|faites un don|helloasso)/i;
+// Collectivité : reconnue AVANT « asso » (une commune a un budget, pas une asso bénévole).
+const COLLECTIVITE_RE = /(\bmairie\b|commune de|conseil municipal|ville de |communaut[ée] de communes|\.gouv\.fr|mairie-|-mairie|ville-)/i;
 const AGENCE_RE = /(agence web|agence digitale|agence de communication|cr[ée]ation de sites?|web agency|studio (web|digital)|nos r[ée]alisations|webmaster freelance|d[ée]veloppeur web freelance|agence seo)/i;
 
 // Noms de plateformes no-code/SaaS fermés (le crawler les remonte dans `platform`).
@@ -97,10 +104,14 @@ const disqualifyReason = (r) => {
   const p = r.platform || '';
   if (p === 'Magento') return 'Magento (grosse structure)';
   if (p === 'Shopify') return 'Shopify (hors techno)';
+  // Collectivité : cible à part entière (budget d'investissement, marché public).
+  // On la laisse passer AVANT tout test « asso », sinon une mairie serait écartée.
+  if (r.site_type === 'collectivite') return null;
   if (r.site_type === 'asso') return 'association / sans budget'; // niveau 2 (crawler)
   if (r.site_type === 'agence') return 'agence (concurrent)';
   // Repli mots-clés sur les crawls déjà faits (sans site_type) : titre + domaine.
   const dom = r.domain || '';
+  if (COLLECTIVITE_RE.test(`${r.title || ''} ${dom}`)) return null;
   if (/\.org(\/|$|\b)/i.test(dom) || /\.asso\.fr/i.test(dom)) return 'association / sans budget';
   const hay = `${r.title || ''} ${dom}`;
   if (ASSO_RE.test(hay)) return 'association / sans budget';
