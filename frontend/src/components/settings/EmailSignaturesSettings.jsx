@@ -1,6 +1,7 @@
 // src/components/settings/EmailSignaturesSettings.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { FiPlus, FiTrash2, FiSave, FiEdit3, FiStar } from 'react-icons/fi';
+import DOMPurify from 'dompurify';
 import { emailSignaturesAPI } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
 
@@ -84,8 +85,17 @@ const EmailSignaturesSettings = () => {
               </div>
               {selected.content ? (
                 <div>
-                  <div className="text-xs text-text-secondary mb-1">Aperçu</div>
-                  <div className="p-3 bg-surface border border-border rounded-lg text-text-primary text-sm" dangerouslySetInnerHTML={{ __html: selected.content }} />
+                  <div className="text-xs text-text-secondary mb-1">
+                    Aperçu <span className="text-text-muted">(tel que le verra le destinataire)</span>
+                  </div>
+                  {/* Feuille BLANCHE volontaire : une signature d'email est écrite pour une
+                      boîte mail (texte sombre sur fond clair). L'afficher avec les couleurs
+                      du thème donnait du texte foncé sur fond foncé en mode sombre. */}
+                  <div
+                    className="p-3 border border-border rounded-lg text-sm overflow-x-auto"
+                    style={{ background: '#ffffff', color: '#374151', colorScheme: 'light' }}
+                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(selected.content) }}
+                  />
                 </div>
               ) : null}
               <label className="flex items-center gap-2 text-sm text-text-secondary">

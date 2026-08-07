@@ -606,9 +606,15 @@ const Settings = () => {
               {formData.email_signature && (
                 <div className="mt-6">
                   <label className="block text-sm font-medium text-text-secondary mb-2">
-                    Prévisualisation
+                    Prévisualisation <span className="text-text-muted font-normal">(tel que le verra le destinataire)</span>
                   </label>
-                  <div className="p-4 bg-surface-muted/50 rounded-lg border border-border overflow-auto">
+                  {/* Feuille BLANCHE volontaire : la signature est écrite pour une boîte mail
+                      (texte sombre sur fond clair). Avec les couleurs du thème, le mode sombre
+                      donnait du texte foncé sur fond foncé, donc un aperçu illisible. */}
+                  <div
+                    className="p-4 rounded-lg border border-border overflow-auto"
+                    style={{ background: '#ffffff', color: '#374151', colorScheme: 'light' }}
+                  >
                     <div
                       style={{ display: 'flow-root' }}
                       dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(formData.email_signature) }}
