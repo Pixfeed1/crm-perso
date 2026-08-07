@@ -9,6 +9,19 @@ const { statusForRelation } = require('../utils/leadStatusSync');
 // L'index (step-1) donne le décalage ; la longueur borne le nombre de relances.
 const RELANCE_OFFSETS = [3, 7];
 
+// Statuts qui STOPPENT la cascade de relance auto : le prospect a répondu / est engagé,
+// ou l'affaire a une issue. On ne relance plus à froid dès qu'on entre dans un de ces états.
+const STOP_CASCADE_STATUSES = ['en_discussion', 'devis_envoye', 'gagne', 'perdu', 'pas_business'];
+
+// Clôt les relances auto en attente d'un lead (quand il répond / est classé).
+async function cancelAutoRelances(db, leadId) {
+  await db.pool.query(
+    `UPDATE interactions SET followup_done = TRUE
+     WHERE contact_type = 'lead' AND contact_id = $1 AND relance_step IS NOT NULL AND followup_done = FALSE`,
+    [leadId]
+  ).catch(() => {});
+}
+
 const VALID_TYPES = ['email', 'appel', 'sms', 'note', 'rdv'];
 const VALID_CONTACT_TYPES = ['lead', 'client'];
 const VALID_REACHED = ['joint', 'pas_reponse', 'message'];
@@ -83,6 +96,8 @@ const interactionController = {
           if (contact_type === 'lead') {
             const kanban = statusForRelation(statusVal);
             if (kanban) await db.pool.query('UPDATE leads SET status = $1 WHERE id = $2', [kanban, contact_id]);
+            // Le prospect a répondu / est engagé -> on arrête la cascade de relance auto.
+            if (STOP_CASCADE_STATUSES.includes(statusVal)) await cancelAutoRelances(db, contact_id);
           }
         } catch (e) {
           console.error('[Interaction] Echec maj relation_status:', e.message);
@@ -118,6 +133,8 @@ const interactionController = {
       if (contact_type === 'lead') {
         const kanban = statusForRelation(relation_status);
         if (kanban) await db.pool.query('UPDATE leads SET status = $1 WHERE id = $2', [kanban, contact_id]).catch(() => {});
+        // Prospect qui répond / est classé -> arrêt de la cascade de relance auto.
+        if (STOP_CASCADE_STATUSES.includes(relation_status)) await cancelAutoRelances(db, contact_id);
       }
       res.json({ success: true, relation_status });
     } catch (error) {
@@ -152,7 +169,7 @@ const interactionController = {
           const cr = await db.pool.query('SELECT relation_status FROM leads WHERE id = $1', [it.contact_id]);
           const rel = cr.rows[0] && cr.rows[0].relation_status;
           // On stoppe si le prospect a une issue (gagné/perdu) ou a été écarté / a répondu.
-          const stopped = ['gagne', 'perdu', 'pas_business'].includes(rel);
+          const stopped = STOP_CASCADE_STATUSES.includes(rel);
           if (!stopped) {
             const nextStep = it.relance_step + 1;                 // 2
             const base = it.date ? new Date(it.date) : new Date(); // date du 1er email
