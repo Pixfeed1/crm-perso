@@ -806,6 +806,7 @@ const DATABASE_SCHEMA = {
       to_email: 'VARCHAR(255) NOT NULL',
       to_name: 'VARCHAR(255)',
       cc_email: 'VARCHAR(255)',
+      bcc_email: 'VARCHAR(255)',
       // Contenu
       subject: 'TEXT NOT NULL',
       body_html: 'TEXT NOT NULL',

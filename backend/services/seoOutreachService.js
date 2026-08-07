@@ -34,11 +34,17 @@ function getGmailTransport() {
   return gmailTransport;
 }
 
-async function sendViaGmail({ to, subject, html, text, headers = null }) {
+async function sendViaGmail({ to, subject, html, text, headers = null, cc = null, bcc = null, attachments = null }) {
   const transporter = getGmailTransport();
+  // cc/bcc acceptent "a@x, b@y" ou un tableau.
+  const asList = (v) => (Array.isArray(v) ? v : String(v || '').split(/[,;]/)).map((s) => String(s).trim()).filter(Boolean);
+  const ccList = asList(cc); const bccList = asList(bcc);
   const info = await transporter.sendMail({
     from: process.env.GMAIL_USER, // l'adresse perso, telle quelle
     to, subject, html, text,
+    ...(ccList.length ? { cc: [...new Set(ccList)].join(', ') } : {}),
+    ...(bccList.length ? { bcc: [...new Set(bccList)].join(', ') } : {}),
+    ...(attachments && attachments.length ? { attachments } : {}),
     ...(headers ? { headers } : {})
   });
   return info;

@@ -9,6 +9,7 @@ import { FiMail, FiSend, FiClock, FiX, FiTrash2, FiCpu, FiLoader } from 'react-i
 import { leadsAPI, scheduledEmailsAPI, emailTemplatesAPI, emailSignaturesAPI } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
 import { CHANNELS } from '../../utils/relationStatus';
+import EmailExtraFields from '../common/EmailExtraFields';
 
 const nowLocalDT = () => {
   const d = new Date();
@@ -73,6 +74,9 @@ const ProspectEmails = ({ lead, autoCompose = false }) => {
   const [draftTon, setDraftTon] = useState('humain');
   const [accounts, setAccounts] = useState([]);   // comptes d'envoi dispo (pro / gmail)
   const [fromAccount, setFromAccount] = useState('pro');
+  const [cc, setCc] = useState('');
+  const [bcc, setBcc] = useState('');
+  const [files, setFiles] = useState([]);
 
   // Nom utilisé pour {prenom} selon le destinataire courant (contact choisi sinon lead).
   const recipientName = (email) => {
@@ -93,7 +97,7 @@ const ProspectEmails = ({ lead, autoCompose = false }) => {
 
   const openModal = async () => {
     setTo(defaultTo); setTemplateId(''); setSubject(''); setBody(''); setMode('now'); setSendAt(nowLocalDT());
-    setRelanceDate(''); setRelanceChannel('appel');
+    setRelanceDate(''); setRelanceChannel('appel'); setCc(''); setBcc(''); setFiles([]);
     setOpen(true);
     try {
       const [t, s, a] = await Promise.all([emailTemplatesAPI.list(), emailSignaturesAPI.list(), leadsAPI.getEmailAccounts().catch(() => null)]);
@@ -163,11 +167,13 @@ const ProspectEmails = ({ lead, autoCompose = false }) => {
       setSending(true);
       const acc = accounts.find((a) => a.id === fromAccount);
       const accLabel = acc ? ` (depuis ${acc.label})` : '';
+      const attachments = files.map(({ filename, content, content_type }) => ({ filename, content, content_type }));
       if (mode === 'now') {
         await leadsAPI.sendEmail(lead.id, {
           to, subject, body, signature: signatureContent(), from_account: fromAccount,
           next_followup_date: relanceDate || null,
-          next_followup_channel: relanceDate ? relanceChannel : null
+          next_followup_channel: relanceDate ? relanceChannel : null,
+          cc: cc.trim() || null, bcc: bcc.trim() || null, attachments
         });
         toast.success(`Email envoyé${accLabel}`);
       } else {
@@ -185,7 +191,10 @@ const ProspectEmails = ({ lead, autoCompose = false }) => {
           email_type: 'prospect',
           related_type: 'lead',
           related_id: lead.id,
-          from_account: fromAccount
+          from_account: fromAccount,
+          cc_email: cc.trim() || null,
+          bcc_email: bcc.trim() || null,
+          attachments
         });
         toast.success(`Email programmé pour le ${formatDT(sendAt)}${accLabel}`);
       }
@@ -325,6 +334,9 @@ const ProspectEmails = ({ lead, autoCompose = false }) => {
                     className="w-full px-3 py-2 bg-surface-muted border border-border rounded-lg text-text-primary focus:outline-none focus:border-accent resize-y" />
                   <p className="text-xs text-text-muted mt-1">La signature par défaut (Paramètres) est ajoutée automatiquement à l'envoi.</p>
                 </div>
+
+                {/* Cc / Cci / pièces jointes — communs à tous les emails de l'outil */}
+                <EmailExtraFields cc={cc} setCc={setCc} bcc={bcc} setBcc={setBcc} files={files} setFiles={setFiles} />
 
                 {/* Choix de l'expéditeur (serveur pro / Gmail) — visible si 2 comptes configurés */}
                 {accounts.length > 1 && (

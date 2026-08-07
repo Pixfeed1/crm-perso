@@ -116,8 +116,9 @@ class ScheduledEmailWorker {
         return;
       }
 
-      // Préparer les pièces jointes
-      const attachments = email.attachments || [];
+      // Préparer les pièces jointes : supporte les fichiers UI (base64 via content)
+      // et les fichiers serveur (path). normalizeAttachments gère les deux.
+      const attachments = emailService.normalizeAttachments(email.attachments || []);
 
       // Tracking ouvertures/clics pour les emails liés à un prospect (lead).
       const trackContactId = email.related_type === 'lead' ? email.related_id : null;
@@ -133,7 +134,8 @@ class ScheduledEmailWorker {
       if (email.from_account === 'gmail' && seoOutreach.isGmailConfigured()) {
         await seoOutreach.sendViaGmail({
           to: email.to_email, subject: email.subject, html: trackedHtml, text: email.body_text || '',
-          headers: rgpdHeaders
+          headers: rgpdHeaders,
+          cc: email.cc_email || null, bcc: email.bcc_email || null, attachments
         });
       } else {
         await emailService.sendEmail({
@@ -141,12 +143,9 @@ class ScheduledEmailWorker {
           subject: email.subject,
           html: trackedHtml,
           text: email.body_text || '',
-          attachments: attachments.map(att => ({
-            filename: att.filename,
-            path: att.path,
-            contentType: att.content_type
-          })),
+          attachments,
           cc: email.cc_email || null,
+          bcc: email.bcc_email || null,
           headers: rgpdHeaders
         });
       }

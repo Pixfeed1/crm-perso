@@ -9,6 +9,7 @@ const coldEmailService = require('../services/coldEmailService');
 const emailTracking = require('../services/emailTracking');
 const seoOutreach = require('../services/seoOutreachService'); // transport Gmail perso (réutilisé)
 const optout = require('../services/optout'); // désinscription RGPD
+const scheduledEmailModel = require('../models/scheduledEmailModel'); // envois différés (programmation)
 
 // Comptes d'envoi configurés : serveur pro (SMTP .env) et/ou Gmail perso.
 function emailAccounts() {
@@ -72,11 +73,15 @@ router.get('/email-accounts', (req, res) => {
 });
 
 // POST /api/leads/quick-email — envoi RAPIDE à une adresse libre, sans créer de prospect.
-// Choix du compte (pro/Gmail), signature par défaut ajoutée. Pas de tracking ni de relance :
-// c'est un envoi ponctuel « je veux aller vite ».
+// Choix du compte (pro/Gmail), signature par défaut ajoutée. Options uniformisées avec le
+// reste de l'outil : copie (cc), copie cachée (bcc), pièces jointes, suivi ouverture/clic,
+// et programmation d'envoi (scheduled_at). « Je veux aller vite » mais avec les mêmes cordes.
 router.post('/quick-email', async (req, res) => {
   const db = req.app.locals.db;
-  const { to, subject, body, from_account = 'pro', signature = null } = req.body || {};
+  const {
+    to, subject, body, from_account = 'pro', signature = null,
+    cc = null, bcc = null, attachments = [], track = true, scheduled_at = null
+  } = req.body || {};
   if (!to || !subject || !body) {
     return res.status(400).json({ message: 'Destinataire, objet et message sont requis' });
   }
@@ -88,8 +93,29 @@ router.post('/quick-email', async (req, res) => {
       + `<div style="white-space:pre-wrap;">${esc(body)}</div>`
       + (sig ? `<div style="margin-top:18px;">${sig}</div>` : '')
       + `</div>`;
-    if (useGmail) await seoOutreach.sendViaGmail({ to, subject, html, text: body });
-    else await emailService.sendEmail({ to, subject, html, text: body });
+    let atts;
+    try { atts = emailService.normalizeAttachments(attachments); }
+    catch (e) { return res.status(400).json({ message: e.message }); }
+
+    // Envoi DIFFÉRÉ : on dépose dans scheduled_emails (le worker enverra à l'heure dite).
+    if (scheduled_at) {
+      if (new Date(scheduled_at) <= new Date()) {
+        return res.status(400).json({ message: 'La date de programmation doit être dans le futur' });
+      }
+      const rec = await scheduledEmailModel.createScheduledEmail(db, {
+        to_email: to, subject, body_html: html, body_text: body,
+        cc_email: cc || null, bcc_email: bcc || null, attachments: atts,
+        scheduled_at, from_account: useGmail ? 'gmail' : 'pro',
+        email_type: 'custom', created_by: req.user?.id || null
+      });
+      return res.json({ success: true, scheduled: true, scheduled_at, id: rec.id });
+    }
+
+    // Envoi IMMÉDIAT (+ suivi ouverture/clic optionnel).
+    const token = track ? await emailTracking.createTracking(db, { to_email: to, subject }) : null;
+    const finalHtml = token ? emailTracking.wrapHtml(html, token) : html;
+    if (useGmail) await seoOutreach.sendViaGmail({ to, subject, html: finalHtml, text: body, cc, bcc, attachments: atts });
+    else await emailService.sendEmail({ to, subject, html: finalHtml, text: body, cc, bcc, attachments: atts });
     res.json({ success: true, from_account: useGmail ? 'gmail' : 'pro', from: useGmail ? process.env.GMAIL_USER : (process.env.EMAIL_FROM || process.env.EMAIL_USER) });
   } catch (error) {
     console.error('[Lead] quick-email:', error.message);
@@ -102,10 +128,13 @@ router.post('/quick-email', async (req, res) => {
 router.post('/:id/send-email', async (req, res) => {
   const db = req.app.locals.db;
   const { id } = req.params;
-  const { to, subject, body, signature = '', next_followup_date = null, next_followup_channel = null, from_account = 'pro' } = req.body || {};
+  const { to, subject, body, signature = '', next_followup_date = null, next_followup_channel = null, from_account = 'pro', cc = null, bcc = null, attachments = [] } = req.body || {};
   if (!to || !subject || !body) {
     return res.status(400).json({ message: 'Destinataire, objet et message sont requis' });
   }
+  let atts;
+  try { atts = emailService.normalizeAttachments(attachments); }
+  catch (e) { return res.status(400).json({ message: e.message }); }
   // Expéditeur : Gmail perso si demandé ET configuré, sinon serveur pro (SMTP).
   const useGmail = from_account === 'gmail' && seoOutreach.isGmailConfigured();
   // RGPD : ne jamais réécrire à une adresse désinscrite.
@@ -128,8 +157,8 @@ router.post('/:id/send-email', async (req, res) => {
     // Tracking ouvertures/clics : pixel + réécriture des liens (identique quel que soit l'expéditeur).
     const token = await emailTracking.createTracking(db, { contact_id: id, to_email: to, subject });
     const trackedHtml = emailTracking.wrapHtml(htmlRgpd, token);
-    if (useGmail) await seoOutreach.sendViaGmail({ to, subject, html: trackedHtml, text: body, headers: unsubHeaders });
-    else await emailService.sendEmail({ to, subject, html: trackedHtml, text: body, headers: unsubHeaders });
+    if (useGmail) await seoOutreach.sendViaGmail({ to, subject, html: trackedHtml, text: body, headers: unsubHeaders, cc, bcc, attachments: atts });
+    else await emailService.sendEmail({ to, subject, html: trackedHtml, text: body, headers: unsubHeaders, cc, bcc, attachments: atts });
     // Relance AUTOMATIQUE : si aucune date de relance n'est saisie, on programme J+3
     // (canal email) pour ne jamais oublier de relancer un prospect. relance_step=1
     // amorce la cascade (J+3 -> J+7) ; une date manuelle reste hors cascade (step NULL).

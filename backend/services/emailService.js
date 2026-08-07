@@ -152,7 +152,7 @@ class EmailService {
       throw new Error('Service email non initialisé. Vérifiez votre configuration .env');
     }
 
-    const { to, subject, html, text, attachments = [], ccToSelf = false, cc = null, from = null, replyTo = null, headers = null } = options;
+    const { to, subject, html, text, attachments = [], ccToSelf = false, cc = null, bcc = null, from = null, replyTo = null, headers = null } = options;
 
     // Validation
     if (!to) {
@@ -195,10 +195,15 @@ class EmailService {
     mailOptions.replyTo = replyTo || process.env.EMAIL_USER;
 
     // CC : soit une adresse explicite (cc), soit une copie à soi-même (ccToSelf), soit les deux.
+    // `cc`/`bcc` acceptent une chaîne "a@x, b@y" ou un tableau d'adresses.
+    const asList = (v) => (Array.isArray(v) ? v : String(v || '').split(/[,;]/)).map((s) => String(s).trim()).filter(Boolean);
     const ccList = [];
-    if (cc) ccList.push(cc);
+    for (const a of asList(cc)) ccList.push(a);
     if (ccToSelf && process.env.EMAIL_USER) ccList.push(process.env.EMAIL_USER);
     if (ccList.length) mailOptions.cc = [...new Set(ccList)].join(', ');
+    // Copie cachée (BCC).
+    const bccList = asList(bcc);
+    if (bccList.length) mailOptions.bcc = [...new Set(bccList)].join(', ');
 
     try {
       const info = await this.transporter.sendMail(mailOptions);
@@ -727,6 +732,34 @@ class EmailService {
   }
 }
 
+/**
+ * Normalise des pièces jointes venues de l'UI (base64) ou d'un chemin serveur
+ * vers le format Nodemailer. Filtre les entrées vides et applique un plafond de
+ * taille total (par défaut 15 Mo) pour éviter les envois monstrueux.
+ * Entrée attendue : [{ filename, content(base64), content_type }] ou [{ filename, path, content_type }].
+ */
+function normalizeAttachments(list, { maxTotalBytes = 15 * 1024 * 1024 } = {}) {
+  if (!Array.isArray(list) || !list.length) return [];
+  const out = [];
+  let total = 0;
+  for (const a of list) {
+    if (!a || !a.filename) continue;
+    const contentType = a.content_type || a.contentType || undefined;
+    if (a.content) {
+      // base64 : on retire un éventuel préfixe data:...;base64,
+      const b64 = String(a.content).replace(/^data:[^;]+;base64,/, '');
+      const bytes = Math.floor((b64.length * 3) / 4);
+      total += bytes;
+      if (total > maxTotalBytes) throw new Error('Pièces jointes trop volumineuses (max 15 Mo au total)');
+      out.push({ filename: a.filename, content: b64, encoding: 'base64', contentType });
+    } else if (a.path) {
+      out.push({ filename: a.filename, path: a.path, contentType });
+    }
+  }
+  return out;
+}
+
 // Export singleton
 const emailService = new EmailService();
+emailService.normalizeAttachments = normalizeAttachments;
 module.exports = emailService;
