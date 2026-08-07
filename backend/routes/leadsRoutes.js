@@ -71,6 +71,32 @@ router.get('/email-accounts', (req, res) => {
   res.json({ accounts, default: accounts[0] ? accounts[0].id : 'pro' });
 });
 
+// POST /api/leads/quick-email — envoi RAPIDE à une adresse libre, sans créer de prospect.
+// Choix du compte (pro/Gmail), signature par défaut ajoutée. Pas de tracking ni de relance :
+// c'est un envoi ponctuel « je veux aller vite ».
+router.post('/quick-email', async (req, res) => {
+  const db = req.app.locals.db;
+  const { to, subject, body, from_account = 'pro', signature = null } = req.body || {};
+  if (!to || !subject || !body) {
+    return res.status(400).json({ message: 'Destinataire, objet et message sont requis' });
+  }
+  const useGmail = from_account === 'gmail' && seoOutreach.isGmailConfigured();
+  try {
+    const sig = signature !== null ? signature : await defaultSignature(db);
+    const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const html = `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.6;color:#374151;">`
+      + `<div style="white-space:pre-wrap;">${esc(body)}</div>`
+      + (sig ? `<div style="margin-top:18px;">${sig}</div>` : '')
+      + `</div>`;
+    if (useGmail) await seoOutreach.sendViaGmail({ to, subject, html, text: body });
+    else await emailService.sendEmail({ to, subject, html, text: body });
+    res.json({ success: true, from_account: useGmail ? 'gmail' : 'pro', from: useGmail ? process.env.GMAIL_USER : (process.env.EMAIL_FROM || process.env.EMAIL_USER) });
+  } catch (error) {
+    console.error('[Lead] quick-email:', error.message);
+    res.status(500).json({ message: error.message || "Erreur lors de l'envoi de l'email" });
+  }
+});
+
 // POST /api/leads/:id/send-email — envoi immédiat depuis une fiche prospect + log Suivi.
 // Réutilise emailService (SMTP .env) ; logge une interaction email (table interactions).
 router.post('/:id/send-email', async (req, res) => {

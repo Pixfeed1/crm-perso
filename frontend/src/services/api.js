@@ -239,6 +239,7 @@ export const leadsAPI = {
   // Envoi immédiat d'un email depuis une fiche prospect (+ log Suivi côté serveur)
   sendEmail: (id, payload) => apiRequest(`/leads/${id}/send-email`, 'POST', payload),
   getEmailAccounts: () => apiRequest('/leads/email-accounts'),
+  quickEmail: (payload) => apiRequest('/leads/quick-email', 'POST', payload),
   // Rédaction d'un email de prospection par Claude (à partir des problèmes détectés).
   draftEmail: (id, opts = {}) => apiRequest(`/leads/${id}/draft-email`, 'POST', opts),
   getById: (id) => {

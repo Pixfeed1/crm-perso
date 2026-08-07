@@ -15,6 +15,7 @@ import { interactionsAPI } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
 import LogExchangeModal from '../common/LogExchangeModal';
 import InteractionHistoryModal from '../common/InteractionHistoryModal';
+import QuickEmail from '../common/QuickEmail';
 import { statusMeta, reachedMeta, channelLabel } from '../../utils/relationStatus';
 import { decodeHtml } from '../../utils/decodeHtml';
 
@@ -215,6 +216,10 @@ const SuiviCockpit = () => {
 
   return (
     <div>
+      {/* Barre d'actions : envoi rapide (email libre, sans prospect) */}
+      <div className="flex justify-end mb-3">
+        <QuickEmail />
+      </div>
       {/* Bandeau de compteurs cliquables */}
       <div className="grid grid-cols-2 lg:grid-cols-6 gap-2 mb-5">
         {COUNTERS.map((c) => {
