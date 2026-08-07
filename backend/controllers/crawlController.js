@@ -15,8 +15,12 @@ const sireneEnrich = require('../services/sireneEnrich');
 const { problemesLisibles } = require('../utils/crawlAngles');
 
 // Constantes faciles à mettre à jour (override possible par variables d'env).
+// L'interpréteur reste hors dépôt : un venv ne se versionne pas (il contient des
+// binaires compilés). Le SCRIPT, lui, est celui du dépôt : un `git pull` suffit
+// donc à mettre le crawler à jour, sans copie manuelle vers un dossier externe.
 const PYTHON_BIN = process.env.CC_PROSPECTOR_PYTHON || '/home/jurojinn/tools/cc_prospector/venv/bin/python';
-const SCRIPT = process.env.CC_PROSPECTOR_SCRIPT || '/home/jurojinn/tools/cc_prospector/cc_prospector.py';
+const SCRIPT = process.env.CC_PROSPECTOR_SCRIPT
+  || path.join(__dirname, '..', '..', 'tools', 'cc_prospector', 'cc_prospector.py');
 const COMMON_CRAWL_ID = process.env.COMMON_CRAWL_ID || 'CC-MAIN-2026-21';
 
 // `spip` / `drupal` / `cms` visent les sites institutionnels (mairies, collectivités) :
