@@ -8,6 +8,7 @@ const emailService = require('../services/emailService');
 const coldEmailService = require('../services/coldEmailService');
 const emailTracking = require('../services/emailTracking');
 const seoOutreach = require('../services/seoOutreachService'); // transport Gmail perso (réutilisé)
+const optout = require('../services/optout'); // désinscription RGPD
 
 // Comptes d'envoi configurés : serveur pro (SMTP .env) et/ou Gmail perso.
 function emailAccounts() {
@@ -81,6 +82,10 @@ router.post('/:id/send-email', async (req, res) => {
   }
   // Expéditeur : Gmail perso si demandé ET configuré, sinon serveur pro (SMTP).
   const useGmail = from_account === 'gmail' && seoOutreach.isGmailConfigured();
+  // RGPD : ne jamais réécrire à une adresse désinscrite.
+  if (await optout.isOptedOut(db, to)) {
+    return res.status(409).json({ message: 'Ce contact s\'est désinscrit — envoi bloqué (RGPD).' });
+  }
   const channels = ['appel', 'email', 'sms', 'autre'];
   const followupChannel = next_followup_date && channels.includes(next_followup_channel) ? next_followup_channel : null;
   try {
@@ -91,11 +96,14 @@ router.post('/:id/send-email', async (req, res) => {
       + `<div style="white-space:pre-wrap;">${esc(body)}</div>`
       + (sig ? `<div style="margin-top:18px;">${sig}</div>` : '')
       + `</div>`;
+    // RGPD : pied de page d'identification + lien de désinscription, et en-tête List-Unsubscribe.
+    const htmlRgpd = html + optout.footerHtml(to);
+    const unsubHeaders = optout.listUnsubHeader(to);
     // Tracking ouvertures/clics : pixel + réécriture des liens (identique quel que soit l'expéditeur).
     const token = await emailTracking.createTracking(db, { contact_id: id, to_email: to, subject });
-    const trackedHtml = emailTracking.wrapHtml(html, token);
-    if (useGmail) await seoOutreach.sendViaGmail({ to, subject, html: trackedHtml, text: body });
-    else await emailService.sendEmail({ to, subject, html: trackedHtml, text: body });
+    const trackedHtml = emailTracking.wrapHtml(htmlRgpd, token);
+    if (useGmail) await seoOutreach.sendViaGmail({ to, subject, html: trackedHtml, text: body, headers: unsubHeaders });
+    else await emailService.sendEmail({ to, subject, html: trackedHtml, text: body, headers: unsubHeaders });
     // Relance AUTOMATIQUE : si aucune date de relance n'est saisie, on programme J+3
     // (canal email) pour ne jamais oublier de relancer un prospect. relance_step=1
     // amorce la cascade (J+3 -> J+7) ; une date manuelle reste hors cascade (step NULL).

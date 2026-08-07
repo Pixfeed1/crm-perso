@@ -1314,6 +1314,15 @@ async function ensureInteractionsColumns(client) {
 
   // Étape de la cascade de relance auto (1 = J+3, 2 = J+7). NULL = relance manuelle (hors cascade).
   await client.query('ALTER TABLE interactions ADD COLUMN IF NOT EXISTS relance_step INTEGER;');
+
+  // Désinscription / opposition RGPD : on ne réécrit jamais à une adresse listée ici.
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS email_optout (
+      email TEXT PRIMARY KEY,
+      source VARCHAR(30) DEFAULT 'lien',
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
   // Plateforme (techno du site) sur les contacts, pour le filtre plateforme du cockpit Suivi.
   await client.query('ALTER TABLE leads ADD COLUMN IF NOT EXISTS platform VARCHAR(50);');
   await client.query('ALTER TABLE crm_clients ADD COLUMN IF NOT EXISTS platform VARCHAR(50);');

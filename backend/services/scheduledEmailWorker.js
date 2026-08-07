@@ -4,6 +4,7 @@ const scheduledEmailModel = require('../models/scheduledEmailModel');
 const emailService = require('./emailService');
 const emailTracking = require('./emailTracking');
 const seoOutreach = require('./seoOutreachService'); // transport Gmail perso (choix d'expéditeur)
+const optout = require('./optout'); // désinscription RGPD (emails de prospection)
 
 /**
  * WORKER POUR L'ENVOI AUTOMATIQUE DES EMAILS PROGRAMMÉS
@@ -103,6 +104,18 @@ class ScheduledEmailWorker {
     try {
       console.log(`📧 Envoi de l'email #${email.id} à ${email.to_email}...`);
 
+      // RGPD : les emails de PROSPECTION portent identification + désinscription, et on
+      // n'écrit jamais à une adresse désinscrite. (Les emails transactionnels client — devis,
+      // factures, abonnement — ne sont PAS concernés.)
+      const isProspect = email.email_type === 'prospect';
+      if (isProspect && await optout.isOptedOut(this.db, email.to_email)) {
+        await scheduledEmailModel.markAsCancelled
+          ? await scheduledEmailModel.markAsCancelled(this.db, email.id).catch(() => {})
+          : await this.db.pool.query("UPDATE scheduled_emails SET status='cancelled', error_message='destinataire désinscrit (RGPD)' WHERE id=$1", [email.id]).catch(() => {});
+        console.log(`⛔ Email #${email.id} annulé : destinataire désinscrit`);
+        return;
+      }
+
       // Préparer les pièces jointes
       const attachments = email.attachments || [];
 
@@ -111,12 +124,16 @@ class ScheduledEmailWorker {
       const token = trackContactId
         ? await emailTracking.createTracking(this.db, { contact_id: trackContactId, to_email: email.to_email, subject: email.subject })
         : null;
+      // Pied de page RGPD + en-tête List-Unsubscribe (prospection uniquement).
+      const rgpdFooter = isProspect ? optout.footerHtml(email.to_email) : '';
+      const rgpdHeaders = isProspect ? optout.listUnsubHeader(email.to_email) : null;
 
       // Expéditeur : Gmail perso si demandé ET configuré, sinon serveur pro (SMTP).
-      const trackedHtml = emailTracking.wrapHtml(email.body_html, token);
+      const trackedHtml = emailTracking.wrapHtml((email.body_html || '') + rgpdFooter, token);
       if (email.from_account === 'gmail' && seoOutreach.isGmailConfigured()) {
         await seoOutreach.sendViaGmail({
-          to: email.to_email, subject: email.subject, html: trackedHtml, text: email.body_text || ''
+          to: email.to_email, subject: email.subject, html: trackedHtml, text: email.body_text || '',
+          headers: rgpdHeaders
         });
       } else {
         await emailService.sendEmail({
@@ -129,7 +146,8 @@ class ScheduledEmailWorker {
             path: att.path,
             contentType: att.content_type
           })),
-          cc: email.cc_email || null
+          cc: email.cc_email || null,
+          headers: rgpdHeaders
         });
       }
 

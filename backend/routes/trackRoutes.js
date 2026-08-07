@@ -8,6 +8,7 @@
 
 const express = require('express');
 const router = express.Router();
+const optout = require('../services/optout');
 
 // GIF transparent 1x1 (43 octets).
 const PIXEL = Buffer.from(
@@ -81,6 +82,28 @@ router.get('/c/:token', async (req, res) => {
 
   if (safe) return res.redirect(302, safe);
   res.status(204).end();
+});
+
+// Désinscription RGPD : /api/track/u?e=<email>&t=<jeton signé> -> ajoute à la blocklist.
+router.get('/u', async (req, res) => {
+  const db = req.app.locals.db;
+  const email = String(req.query.e || '').trim().toLowerCase();
+  const t = req.query.t;
+  const page = (title, msg) => `<!doctype html><html lang="fr"><head><meta charset="utf-8">`
+    + `<meta name="viewport" content="width=device-width,initial-scale=1">`
+    + `<style>body{font-family:Arial,Helvetica,sans-serif;background:#f4f5f8;color:#222;display:flex;min-height:100vh;align-items:center;justify-content:center;margin:0}`
+    + `.c{background:#fff;border-radius:14px;padding:32px 40px;max-width:420px;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.08)}h1{font-size:20px;margin:0 0 10px}p{color:#555;line-height:1.5}</style></head>`
+    + `<body><div class="c"><h1>${title}</h1><p>${msg}</p></div></body></html>`;
+  if (!email || !optout.verify(email, t)) {
+    return res.status(400).send(page('Lien invalide', 'Ce lien de désinscription n\'est pas valide.'));
+  }
+  try {
+    await optout.addOptout(db, email, 'lien');
+  } catch (e) {
+    console.error('[Optout] add:', e.message);
+    return res.status(500).send(page('Erreur', 'Une erreur est survenue, réessayez plus tard.'));
+  }
+  res.send(page('Vous êtes désinscrit', `L'adresse <b>${email}</b> ne recevra plus de messages de notre part. Merci.`));
 });
 
 module.exports = router;

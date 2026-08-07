@@ -152,7 +152,7 @@ class EmailService {
       throw new Error('Service email non initialisé. Vérifiez votre configuration .env');
     }
 
-    const { to, subject, html, text, attachments = [], ccToSelf = false, cc = null, from = null, replyTo = null } = options;
+    const { to, subject, html, text, attachments = [], ccToSelf = false, cc = null, from = null, replyTo = null, headers = null } = options;
 
     // Validation
     if (!to) {
@@ -187,7 +187,8 @@ class EmailService {
       text: text || '',
       attachments,
       headers: {
-        'Content-Language': 'fr'
+        'Content-Language': 'fr',
+        ...(headers || {}) // ex. List-Unsubscribe (désinscription RGPD)
       }
     };
 

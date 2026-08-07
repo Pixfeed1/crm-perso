@@ -1,8 +1,14 @@
 // backend/controllers/authController.js
 const jwt = require('jsonwebtoken');
 const userModel = require('../models/userModel');
+const emailService = require('../services/emailService');
 
 const isDev = process.env.NODE_ENV !== 'production';
+
+// Base publique de l'app pour construire le lien de réinitialisation.
+function appBaseUrl() {
+  return (process.env.APP_BASE_URL || 'https://crm.pixfeed.net').replace(/\/+$/, '');
+}
 
 // Fonction de connexion
 const login = async (req, res) => {
@@ -92,15 +98,29 @@ const forgotPassword = async (req, res) => {
 
     await userModel.saveResetToken(db, user.id, resetToken, resetTokenExpires);
 
-    // En dev, afficher le lien dans la console
-    if (isDev) {
-      const resetLink = `http://localhost:5173/reset-password?token=${resetToken}`;
-      console.log("[AUTH] Lien de reinitialisation:", resetLink);
+    // Lien de réinitialisation ENVOYÉ PAR EMAIL (jamais renvoyé dans la réponse HTTP :
+    // sinon n'importe qui pourrait récupérer le token et prendre le compte).
+    const resetLink = isDev
+      ? `http://localhost:5173/reset-password?token=${resetToken}`
+      : `${appBaseUrl()}/reset-password?token=${resetToken}`;
+    if (isDev) console.log("[AUTH] Lien de reinitialisation (dev):", resetLink);
+    try {
+      await emailService.sendEmail({
+        to: user.email,
+        subject: 'Réinitialisation de votre mot de passe',
+        html: `<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#222;">`
+          + `<p>Vous avez demandé la réinitialisation de votre mot de passe.</p>`
+          + `<p><a href="${resetLink}" style="display:inline-block;padding:10px 18px;background:#2f6bed;color:#fff;border-radius:8px;text-decoration:none;">Réinitialiser mon mot de passe</a></p>`
+          + `<p style="color:#666;font-size:13px;">Ce lien expire dans 1 heure. Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.</p></div>`,
+        text: `Réinitialisation de mot de passe : ${resetLink} (valable 1 heure).`
+      });
+    } catch (mailErr) {
+      // On ne révèle jamais l'échec (anti-énumération) ; on logge juste côté serveur.
+      console.error('[AUTH] Envoi email reset échoué:', mailErr.message);
     }
 
     res.status(200).json({
-      message: 'Si cette adresse email existe, un lien de reinitialisation a ete envoye.',
-      devToken: isDev ? resetToken : undefined
+      message: 'Si cette adresse email existe, un lien de reinitialisation a ete envoye.'
     });
   } catch (error) {
     console.error("[AUTH] Erreur forgot-password:", error.message);

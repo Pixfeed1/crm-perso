@@ -34,11 +34,12 @@ function getGmailTransport() {
   return gmailTransport;
 }
 
-async function sendViaGmail({ to, subject, html, text }) {
+async function sendViaGmail({ to, subject, html, text, headers = null }) {
   const transporter = getGmailTransport();
   const info = await transporter.sendMail({
     from: process.env.GMAIL_USER, // l'adresse perso, telle quelle
-    to, subject, html, text
+    to, subject, html, text,
+    ...(headers ? { headers } : {})
   });
   return info;
 }
