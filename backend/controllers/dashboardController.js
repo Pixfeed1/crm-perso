@@ -5,6 +5,7 @@ const projectModel = require('../models/projectModel');
 const revenueModel = require('../models/revenueModel');
 const activityModel = require('../models/activityModel');
 const goalModel = require('../models/goalModel');
+const goalAutoProgress = require('../utils/goalAutoProgress');
 
 /**
  * Contrôleur pour le tableau de bord
@@ -73,12 +74,16 @@ const dashboardController = {
         lead.created_at && lead.created_at >= startOfMonth
       ).length;
 
-      // Calculer les statistiques des projets
-      dashboardData.projects.active = allProjects.filter(p => p.status === 'in_progress').length;
-      dashboardData.projects.completed = allProjects.filter(p => p.status === 'completed').length;
+      // Statistiques des projets — statuts FRANÇAIS réels ('en-cours' / 'terminé' / 'planifié').
+      dashboardData.projects.active = allProjects.filter(p => p.status === 'en-cours').length;
+      dashboardData.projects.completed = allProjects.filter(p => p.status === 'terminé').length;
       dashboardData.projects.upcoming = allProjects.filter(p =>
-        p.status === 'planned' && p.start_date && p.start_date > now.toISOString().split('T')[0]
+        p.status === 'planifié' && p.start_date && p.start_date > now.toISOString().split('T')[0]
       ).length;
+
+      // Objectifs : renseigner la valeur LIVE des objectifs auto (CA encaissé, prospects
+      // contactés…) avant tout calcul de progression, sinon current_value reste figé à 0.
+      try { await goalAutoProgress.enrichGoalsWithAuto(db.pool, allGoals); } catch (e) { /* best-effort */ }
 
       // Calculer les statistiques des revenus (encaissé du mois courant : status 'paid')
       dashboardData.revenues.thisMonth = revenueStats.total_paid || 0;
@@ -98,26 +103,20 @@ const dashboardController = {
       );
       dashboardData.revenues.projection = totalLastThreeMonths / 3;
 
-      // Récupérer les objectifs pour le mois en cours
-      const revenueGoal = allGoals.find(goal =>
-        goal.category === 'revenue' &&
+      // Objectifs du mois — on accepte les catégories MANUELLES et AUTO (les vraies clés
+      // proposées à l'utilisateur : revenue_cashed / prospects_contacted / projects_signed).
+      const goalInMonth = (cats) => allGoals.find(goal =>
+        cats.includes(goal.category) &&
         goal.start_date <= endOfMonth &&
         goal.end_date >= startOfMonth
       );
+      const revenueGoal = goalInMonth(['revenue', 'revenue_cashed']);
       dashboardData.revenues.monthlyTarget = revenueGoal ? parseFloat(revenueGoal.target_value) : 8000;
 
-      const leadsGoal = allGoals.find(goal =>
-        goal.category === 'leads' &&
-        goal.start_date <= endOfMonth &&
-        goal.end_date >= startOfMonth
-      );
+      const leadsGoal = goalInMonth(['leads', 'prospects_contacted']);
       dashboardData.leads.monthlyTarget = leadsGoal ? parseInt(leadsGoal.target_value) : 10;
 
-      const projectsGoal = allGoals.find(goal =>
-        goal.category === 'projects' &&
-        goal.start_date <= endOfMonth &&
-        goal.end_date >= startOfMonth
-      );
+      const projectsGoal = goalInMonth(['projects', 'projects_signed']);
       dashboardData.projects.monthlyTarget = projectsGoal ? parseInt(projectsGoal.target_value) : 5;
 
       // Calculer les statistiques des activités
@@ -145,7 +144,7 @@ const dashboardController = {
       // Timeline des projets
       dashboardData.projectTimeline = activeProjects
         .filter(p =>
-          (p.status === 'in_progress' || p.status === 'planned') &&
+          (p.status === 'en-cours' || p.status === 'planifié') &&
           p.start_date &&
           p.end_date
         )
