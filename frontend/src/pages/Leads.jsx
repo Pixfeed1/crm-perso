@@ -18,6 +18,7 @@ import ProspectionPanel from '../components/leads/ProspectionPanel';
 import OutreachPanel from '../components/leads/OutreachPanel';
 import EmptyState from '../components/common/EmptyState';
 import ConfirmModal from '../components/common/ConfirmModal';
+import QuickEmail from '../components/common/QuickEmail';
 
 const Leads = () => {
   const { toast } = useToast();
@@ -616,6 +617,7 @@ const Leads = () => {
                 accept=".json"
                 className="hidden"
               />
+              <QuickEmail />
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
