@@ -14,10 +14,12 @@ const TECHNOS = [
   { value: 'ecommerce', label: 'E-commerce' },
   { value: 'woocommerce', label: 'WooCommerce' },
   { value: 'prestashop', label: 'PrestaShop' },
-  // Sites institutionnels : la recherche e-commerce ne les trouvait jamais
-  // (aucune URL de panier/produit), d'où l'absence de SPIP/Drupal jusqu'ici.
-  { value: 'spip', label: 'SPIP (institutionnel)' },
-  { value: 'drupal', label: 'Drupal (institutionnel)' },
+  // CMS hors e-commerce. La recherche e-commerce ne les trouvait jamais (aucune
+  // URL de panier/produit), d'où leur absence jusqu'ici. Ces modes ramènent TOUS
+  // les sites du CMS (assos, médias, PME, collectivités…), sans filtre de secteur :
+  // le tri par type de site se fait ensuite, sur les résultats.
+  { value: 'spip', label: 'SPIP' },
+  { value: 'drupal', label: 'Drupal' },
   { value: 'cms', label: 'SPIP + Drupal' }
 ];
 const technoLabel = (v) => (TECHNOS.find((t) => t.value === v) || {}).label || v;

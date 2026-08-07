@@ -23,7 +23,7 @@ const SCRIPT = process.env.CC_PROSPECTOR_SCRIPT
   || path.join(__dirname, '..', '..', 'tools', 'cc_prospector', 'cc_prospector.py');
 const COMMON_CRAWL_ID = process.env.COMMON_CRAWL_ID || 'CC-MAIN-2026-21';
 
-// `spip` / `drupal` / `cms` visent les sites institutionnels (mairies, collectivités) :
+// `spip` / `drupal` / `cms` cherchent TOUS les sites du CMS concerné (tous secteurs) :
 // la découverte e-commerce ne les trouvait jamais, faute d'URL de type panier/produit.
 const VALID_TECHNO = ['ecommerce', 'woocommerce', 'prestashop', 'spip', 'drupal', 'cms'];
 
