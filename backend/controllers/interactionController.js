@@ -296,9 +296,9 @@ const interactionController = {
     try {
       const { rows } = await db.pool.query(
         `WITH contacts AS (
-           SELECT 'client'::text AS contact_type, id AS contact_id, name AS contact_name, email AS contact_email, phone AS contact_phone, COALESCE(relation_status, 'nouveau') AS relation_status, platform, NULL::text AS site FROM crm_clients
+           SELECT 'client'::text AS contact_type, id AS contact_id, name AS contact_name, email AS contact_email, phone AS contact_phone, COALESCE(relation_status, 'nouveau') AS relation_status, platform, NULL::text AS site, NULL::text AS facebook_url, NULL::text AS instagram_url FROM crm_clients
            UNION ALL
-           SELECT 'lead'::text, id, name, email, phone, COALESCE(relation_status, 'nouveau'), platform, company FROM leads
+           SELECT 'lead'::text, id, name, email, phone, COALESCE(relation_status, 'nouveau'), platform, company, facebook_url, instagram_url FROM leads
          ),
          last_ex AS (
            SELECT DISTINCT ON (contact_type, contact_id)
@@ -322,6 +322,7 @@ const interactionController = {
            GROUP BY contact_id
          )
          SELECT c.contact_type, c.contact_id, c.contact_name, c.contact_email, c.contact_phone, c.relation_status, c.platform, c.site,
+                c.facebook_url, c.instagram_url,
                 n.next_followup, n.next_followup_channel, n.followup_id,
                 l.last_type, l.last_reached, l.last_date, l.last_result,
                 COALESCE(m.opens, 0) AS email_opens, COALESCE(m.clicks, 0) AS email_clicks, m.last_open AS email_last_open

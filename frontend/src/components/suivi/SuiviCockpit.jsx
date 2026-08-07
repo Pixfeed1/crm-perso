@@ -8,7 +8,8 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   FiBell, FiAlertTriangle, FiStar, FiMessageCircle, FiSlash, FiSearch,
-  FiPhone, FiMail, FiFileText, FiCheck, FiRotateCcw, FiClock, FiMoon, FiTrendingUp
+  FiPhone, FiMail, FiFileText, FiCheck, FiRotateCcw, FiClock, FiMoon, FiTrendingUp,
+  FiFacebook, FiInstagram
 } from 'react-icons/fi';
 import { interactionsAPI } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
@@ -173,6 +174,25 @@ const SuiviCockpit = () => {
     }
   };
 
+  // Relance multi-canal : ouvre le profil social + logge la relance + clôt la relance
+  // email en cours (on bascule de canal) + programme un rappel J+4.
+  const relanceSocial = async (r, canal) => {
+    const url = canal === 'facebook' ? r.facebook_url : r.instagram_url;
+    if (url) window.open(url, '_blank', 'noopener');
+    const j4 = new Date(); j4.setDate(j4.getDate() + 4);
+    try {
+      await interactionsAPI.create({
+        contact_type: r.contact_type, contact_id: r.contact_id, type: 'note',
+        notes: `Relance via ${canal === 'facebook' ? 'Facebook' : 'Instagram'}`,
+        result: `outreach:${canal}:sent`,
+        next_followup_date: j4.toISOString().slice(0, 10), next_followup_channel: 'autre'
+      });
+      if (r.followup_id) await interactionsAPI.markFollowupDone(r.followup_id, true);
+      toast.success(`Relance ${canal === 'facebook' ? 'Facebook' : 'Instagram'} enregistrée`);
+      load();
+    } catch (e) { toast.error('Erreur lors de la relance sociale'); }
+  };
+
   const setStatus = async (r, status) => {
     try {
       await interactionsAPI.setContactStatus(r.contact_type, r.contact_id, status);
@@ -300,6 +320,12 @@ const SuiviCockpit = () => {
                         <button onClick={() => openLog(r, 'note')} className="p-2 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-strong" title="Ajouter une note"><FiFileText size={15} /></button>
                         {r.contact_type === 'lead' && r.relation_status !== 'en_discussion' && (
                           <button onClick={() => setStatus(r, 'en_discussion')} className="p-2 rounded-lg text-info-text hover:bg-info-bg" title="Le prospect a répondu (arrête les relances auto)"><FiMessageCircle size={15} /></button>
+                        )}
+                        {r.facebook_url && (
+                          <button onClick={() => relanceSocial(r, 'facebook')} className="p-2 rounded-lg text-text-muted hover:text-info-text hover:bg-info-bg" title="Relancer sur Facebook (ouvre le profil + logue la relance)"><FiFacebook size={15} /></button>
+                        )}
+                        {r.instagram_url && (
+                          <button onClick={() => relanceSocial(r, 'instagram')} className="p-2 rounded-lg text-text-muted hover:text-info-text hover:bg-info-bg" title="Relancer sur Instagram (ouvre le profil + logue la relance)"><FiInstagram size={15} /></button>
                         )}
                         {r.followup_id && (
                           <button onClick={() => markDone(r)} className="p-2 rounded-lg text-success-text hover:bg-success-bg" title="Relance faite"><FiCheck size={15} /></button>
