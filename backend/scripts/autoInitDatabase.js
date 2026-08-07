@@ -812,6 +812,8 @@ const DATABASE_SCHEMA = {
       body_text: 'TEXT',
       // Pièces jointes (JSON array: [{filename, path, content_type}])
       attachments: 'JSONB DEFAULT \'[]\'',
+      // Expéditeur : 'pro' (SMTP serveur) ou 'gmail' (Gmail perso). Défaut pro.
+      from_account: "VARCHAR(10) DEFAULT 'pro'",
       // Programmation
       scheduled_at: 'TIMESTAMP NOT NULL',
       timezone: "VARCHAR(50) DEFAULT 'Europe/Paris'",

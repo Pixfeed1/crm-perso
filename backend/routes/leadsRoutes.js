@@ -7,6 +7,19 @@ const leadModel = require('../models/leadModel');
 const emailService = require('../services/emailService');
 const coldEmailService = require('../services/coldEmailService');
 const emailTracking = require('../services/emailTracking');
+const seoOutreach = require('../services/seoOutreachService'); // transport Gmail perso (réutilisé)
+
+// Comptes d'envoi configurés : serveur pro (SMTP .env) et/ou Gmail perso.
+function emailAccounts() {
+  const accounts = [];
+  if (process.env.EMAIL_HOST && process.env.EMAIL_USER) {
+    accounts.push({ id: 'pro', label: process.env.EMAIL_FROM || process.env.EMAIL_USER });
+  }
+  if (seoOutreach.isGmailConfigured()) {
+    accounts.push({ id: 'gmail', label: process.env.GMAIL_USER });
+  }
+  return accounts;
+}
 const { problemesLisibles } = require('../utils/crawlAngles');
 const { statusForRelation, relationForStatus } = require('../utils/leadStatusSync');
 
@@ -51,15 +64,23 @@ async function problemesDuLead(db, lead) {
   return { row: null, problemes };
 }
 
+// GET /api/leads/email-accounts — comptes d'envoi dispo (pour le sélecteur d'expéditeur).
+router.get('/email-accounts', (req, res) => {
+  const accounts = emailAccounts();
+  res.json({ accounts, default: accounts[0] ? accounts[0].id : 'pro' });
+});
+
 // POST /api/leads/:id/send-email — envoi immédiat depuis une fiche prospect + log Suivi.
 // Réutilise emailService (SMTP .env) ; logge une interaction email (table interactions).
 router.post('/:id/send-email', async (req, res) => {
   const db = req.app.locals.db;
   const { id } = req.params;
-  const { to, subject, body, signature = '', next_followup_date = null, next_followup_channel = null } = req.body || {};
+  const { to, subject, body, signature = '', next_followup_date = null, next_followup_channel = null, from_account = 'pro' } = req.body || {};
   if (!to || !subject || !body) {
     return res.status(400).json({ message: 'Destinataire, objet et message sont requis' });
   }
+  // Expéditeur : Gmail perso si demandé ET configuré, sinon serveur pro (SMTP).
+  const useGmail = from_account === 'gmail' && seoOutreach.isGmailConfigured();
   const channels = ['appel', 'email', 'sms', 'autre'];
   const followupChannel = next_followup_date && channels.includes(next_followup_channel) ? next_followup_channel : null;
   try {
@@ -70,9 +91,11 @@ router.post('/:id/send-email', async (req, res) => {
       + `<div style="white-space:pre-wrap;">${esc(body)}</div>`
       + (sig ? `<div style="margin-top:18px;">${sig}</div>` : '')
       + `</div>`;
-    // Tracking ouvertures/clics : pixel + réécriture des liens.
+    // Tracking ouvertures/clics : pixel + réécriture des liens (identique quel que soit l'expéditeur).
     const token = await emailTracking.createTracking(db, { contact_id: id, to_email: to, subject });
-    await emailService.sendEmail({ to, subject, html: emailTracking.wrapHtml(html, token), text: body });
+    const trackedHtml = emailTracking.wrapHtml(html, token);
+    if (useGmail) await seoOutreach.sendViaGmail({ to, subject, html: trackedHtml, text: body });
+    else await emailService.sendEmail({ to, subject, html: trackedHtml, text: body });
     // Relance AUTOMATIQUE : si aucune date de relance n'est saisie, on programme J+3
     // (canal email) pour ne jamais oublier de relancer un prospect. relance_step=1
     // amorce la cascade (J+3 -> J+7) ; une date manuelle reste hors cascade (step NULL).
@@ -103,7 +126,7 @@ router.post('/:id/send-email', async (req, res) => {
     } catch (logErr) {
       console.error('[Lead] Échec log interaction email:', logErr.message);
     }
-    res.json({ success: true });
+    res.json({ success: true, from_account: useGmail ? 'gmail' : 'pro', from: useGmail ? process.env.GMAIL_USER : (process.env.EMAIL_FROM || process.env.EMAIL_USER) });
   } catch (error) {
     console.error('[Lead] Erreur envoi email:', error);
     res.status(500).json({ message: error.message || "Erreur lors de l'envoi de l'email" });

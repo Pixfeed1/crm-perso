@@ -3,6 +3,7 @@ const cron = require('node-cron');
 const scheduledEmailModel = require('../models/scheduledEmailModel');
 const emailService = require('./emailService');
 const emailTracking = require('./emailTracking');
+const seoOutreach = require('./seoOutreachService'); // transport Gmail perso (choix d'expéditeur)
 
 /**
  * WORKER POUR L'ENVOI AUTOMATIQUE DES EMAILS PROGRAMMÉS
@@ -111,19 +112,26 @@ class ScheduledEmailWorker {
         ? await emailTracking.createTracking(this.db, { contact_id: trackContactId, to_email: email.to_email, subject: email.subject })
         : null;
 
-      // Envoyer l'email
-      await emailService.sendEmail({
-        to: email.to_email,
-        subject: email.subject,
-        html: emailTracking.wrapHtml(email.body_html, token),
-        text: email.body_text || '',
-        attachments: attachments.map(att => ({
-          filename: att.filename,
-          path: att.path,
-          contentType: att.content_type
-        })),
-        cc: email.cc_email || null
-      });
+      // Expéditeur : Gmail perso si demandé ET configuré, sinon serveur pro (SMTP).
+      const trackedHtml = emailTracking.wrapHtml(email.body_html, token);
+      if (email.from_account === 'gmail' && seoOutreach.isGmailConfigured()) {
+        await seoOutreach.sendViaGmail({
+          to: email.to_email, subject: email.subject, html: trackedHtml, text: email.body_text || ''
+        });
+      } else {
+        await emailService.sendEmail({
+          to: email.to_email,
+          subject: email.subject,
+          html: trackedHtml,
+          text: email.body_text || '',
+          attachments: attachments.map(att => ({
+            filename: att.filename,
+            path: att.path,
+            contentType: att.content_type
+          })),
+          cc: email.cc_email || null
+        });
+      }
 
       // Marquer comme envoyé
       await scheduledEmailModel.markAsSent(this.db, email.id);

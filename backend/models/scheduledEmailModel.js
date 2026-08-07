@@ -32,17 +32,19 @@ const createScheduledEmail = async (db, emailData) => {
       related_type = null,
       related_id = null,
       created_by = null,
-      notes = null
+      notes = null,
+      from_account = 'pro'
     } = emailData;
 
     const result = await db.pool.query(
       `INSERT INTO scheduled_emails
        (to_email, to_name, cc_email, subject, body_html, body_text, attachments,
-        scheduled_at, timezone, email_type, related_type, related_id, created_by, notes)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+        scheduled_at, timezone, email_type, related_type, related_id, created_by, notes, from_account)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
        RETURNING *`,
       [to_email, to_name, cc_email, subject, body_html, body_text, JSON.stringify(attachments),
-       scheduled_at, timezone, email_type, related_type, related_id, created_by, notes]
+       scheduled_at, timezone, email_type, related_type, related_id, created_by, notes,
+       from_account === 'gmail' ? 'gmail' : 'pro']
     );
 
     return result.rows[0];

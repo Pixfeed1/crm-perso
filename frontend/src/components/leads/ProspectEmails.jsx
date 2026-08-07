@@ -71,6 +71,8 @@ const ProspectEmails = ({ lead, autoCompose = false }) => {
   const [sending, setSending] = useState(false);
   const [drafting, setDrafting] = useState(false);
   const [draftTon, setDraftTon] = useState('humain');
+  const [accounts, setAccounts] = useState([]);   // comptes d'envoi dispo (pro / gmail)
+  const [fromAccount, setFromAccount] = useState('pro');
 
   // Nom utilisé pour {prenom} selon le destinataire courant (contact choisi sinon lead).
   const recipientName = (email) => {
@@ -94,11 +96,14 @@ const ProspectEmails = ({ lead, autoCompose = false }) => {
     setRelanceDate(''); setRelanceChannel('appel');
     setOpen(true);
     try {
-      const [t, s] = await Promise.all([emailTemplatesAPI.list(), emailSignaturesAPI.list()]);
+      const [t, s, a] = await Promise.all([emailTemplatesAPI.list(), emailSignaturesAPI.list(), leadsAPI.getEmailAccounts().catch(() => null)]);
       setTemplates(t || []);
       setSignatures(s || []);
       const def = (s || []).find((x) => x.is_default) || (s || [])[0];
       setSignatureId(def ? String(def.id) : '');
+      const accs = (a && a.accounts) || [];
+      setAccounts(accs);
+      setFromAccount((a && a.default) || (accs[0] && accs[0].id) || 'pro');
     } catch (error) {
       toast.error('Erreur lors du chargement des modèles');
     }
@@ -156,13 +161,15 @@ const ProspectEmails = ({ lead, autoCompose = false }) => {
     if (!to || !subject || !body) { toast.error('Destinataire, objet et message requis'); return; }
     try {
       setSending(true);
+      const acc = accounts.find((a) => a.id === fromAccount);
+      const accLabel = acc ? ` (depuis ${acc.label})` : '';
       if (mode === 'now') {
         await leadsAPI.sendEmail(lead.id, {
-          to, subject, body, signature: signatureContent(),
+          to, subject, body, signature: signatureContent(), from_account: fromAccount,
           next_followup_date: relanceDate || null,
           next_followup_channel: relanceDate ? relanceChannel : null
         });
-        toast.success('Email envoyé');
+        toast.success(`Email envoyé${accLabel}`);
       } else {
         const bodyHtml = `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.6;color:#374151;">`
           + `<div style="white-space:pre-wrap;">${esc(body)}</div>`
@@ -177,9 +184,10 @@ const ProspectEmails = ({ lead, autoCompose = false }) => {
           scheduled_at: sendAt,
           email_type: 'prospect',
           related_type: 'lead',
-          related_id: lead.id
+          related_id: lead.id,
+          from_account: fromAccount
         });
-        toast.success(`Email programmé pour le ${formatDT(sendAt)}`);
+        toast.success(`Email programmé pour le ${formatDT(sendAt)}${accLabel}`);
       }
       setOpen(false);
       loadScheduled();
@@ -317,6 +325,22 @@ const ProspectEmails = ({ lead, autoCompose = false }) => {
                     className="w-full px-3 py-2 bg-surface-muted border border-border rounded-lg text-text-primary focus:outline-none focus:border-accent resize-y" />
                   <p className="text-xs text-text-muted mt-1">La signature par défaut (Paramètres) est ajoutée automatiquement à l'envoi.</p>
                 </div>
+
+                {/* Choix de l'expéditeur (serveur pro / Gmail) — visible si 2 comptes configurés */}
+                {accounts.length > 1 && (
+                  <div>
+                    <label className="block text-sm text-text-secondary mb-1">Envoyer depuis</label>
+                    <div className="flex gap-1 p-1 bg-surface-muted rounded-lg border border-border">
+                      {accounts.map((a) => (
+                        <button key={a.id} type="button" onClick={() => setFromAccount(a.id)}
+                          className={`flex-1 px-3 py-1.5 rounded-md text-sm truncate transition-colors ${fromAccount === a.id ? 'bg-accent text-white' : 'text-text-secondary hover:bg-surface-strong'}`}
+                          title={a.label}>
+                          {a.id === 'gmail' ? '✉️ ' : '🏢 '}{a.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-sm text-text-secondary mb-2">Envoi</label>
