@@ -62,6 +62,22 @@ HTML_SIGNATURES = {
         "wp-includes",
         'content="wordpress',
     ],
+    # SPIP : CMS très répandu en FR (assos, collectivités, sites institutionnels).
+    "SPIP": [
+        'content="spip',
+        "spip.php",
+        "plugins-dist/",
+        "local/cache-vignettes",
+        "local/cache-gd2",
+    ],
+    # Drupal : CMS d'assos, agences et gros sites vieillissants (bonnes cibles).
+    "Drupal": [
+        "/sites/default/files",
+        "drupal.settings",
+        "data-drupal-",
+        'content="drupal',
+        "/core/misc/drupal.js",
+    ],
 }
 
 HEADER_SIGNATURES = {
@@ -69,9 +85,11 @@ HEADER_SIGNATURES = {
     "PrestaShop": [("set-cookie", "prestashop"), ("powered-by", "prestashop")],
     "Shopify": [("x-shopify-stage", ""), ("x-shopid", ""), ("server", "shopify")],
     "WordPress": [("x-powered-by", "wordpress"), ("link", "/wp-json/")],
+    "SPIP": [("composed-by", "spip"), ("x-spip-cache", "")],
+    "Drupal": [("x-generator", "drupal"), ("x-drupal-cache", ""), ("x-drupal-dynamic-cache", "")],
 }
 
-PRIORITY = ["WooCommerce", "PrestaShop", "Shopify", "WordPress"]
+PRIORITY = ["WooCommerce", "PrestaShop", "Shopify", "WordPress", "SPIP", "Drupal"]
 
 # Constructeurs no-code / SaaS fermés : le marqueur n'est que dans le CORPS HTML
 # (« créé avec Webador », CDN Wix…), jamais dans les entêtes ni le titre. Le crawler
@@ -194,7 +212,8 @@ def extract_version(html: str, platform: str) -> str:
         # Ne garder que si ça correspond à la plateforme détectée (évite un plugin tiers).
         if platform != "Inconnu" and platform.lower() not in content.lower():
             continue
-        ver = re.search(r"\d+(?:\.\d+){1,3}", content)
+        # Version dotée (7.9.0, 6.5) ou majeure seule (Drupal souvent « Drupal 10 »).
+        ver = re.search(r"\d+(?:\.\d+){0,3}", content)
         if ver:
             return f"{content.split()[0]} {ver.group(0)}"[:40]
     return ""
