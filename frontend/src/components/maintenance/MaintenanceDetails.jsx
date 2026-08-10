@@ -27,6 +27,25 @@ const MaintenanceDetails = ({ contract, onDelete, onRefresh, onEdit, onGenerateR
   const [cancelImmediate, setCancelImmediate] = useState(false);
   const [cancelLoading, setCancelLoading] = useState(false);
   const [resumeLoading, setResumeLoading] = useState(false);
+  const [freqSaving, setFreqSaving] = useState(false);
+
+  // Change la périodicité du rapport depuis la fiche, sans passer par le
+  // formulaire complet. « aucun » coupe les rappels : le rapport reste
+  // générable à la demande via le bouton dédié.
+  const handleFrequencyChange = async (value) => {
+    try {
+      setFreqSaving(true);
+      await maintenanceContractsAPI.update(contract.id, { report_frequency: value });
+      toast.success(value === 'aucun'
+        ? 'Rapport en ponctuel : rappels désactivés pour ce client'
+        : `Rapport ${value}`);
+      onRefresh();
+    } catch (error) {
+      toast.error(error.message || 'Erreur lors du changement de périodicité');
+    } finally {
+      setFreqSaving(false);
+    }
+  };
 
   // Configuration des statuts
   const statusConfig = {
@@ -330,6 +349,24 @@ const MaintenanceDetails = ({ contract, onDelete, onRefresh, onEdit, onGenerateR
                 ? 'ponctuel (à la demande)'
                 : (contract.next_report_due ? formatDate(contract.next_report_due) : '-')}
             </span>
+          </div>
+          {/* Périodicité réglable ICI : elle n'existait que dans le formulaire de
+              modification, trop enfouie pour un réglage qu'on change au cas par cas
+              (tous les clients ne veulent pas de rapport). */}
+          <div className="text-text-muted text-sm flex items-center gap-2 flex-wrap">
+            <span>Rapport :</span>
+            <select
+              value={contract.report_frequency || 'mensuel'}
+              disabled={freqSaving}
+              onChange={(e) => handleFrequencyChange(e.target.value)}
+              title="Choisir la périodicité, ou couper les rappels pour ce client"
+              className="px-2 py-1 bg-surface-muted border border-border rounded-lg text-text-primary text-xs focus:outline-none focus:border-accent disabled:opacity-50"
+            >
+              <option value="mensuel">Mensuel</option>
+              <option value="trimestriel">Trimestriel</option>
+              <option value="aucun">Ponctuel (sans rappel)</option>
+            </select>
+            {freqSaving && <span className="text-xs">enregistrement…</span>}
           </div>
         </div>
       </div>
