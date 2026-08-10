@@ -325,8 +325,10 @@ const MaintenanceDetails = ({ contract, onDelete, onRefresh, onEdit, onGenerateR
             Dernier rapport: <span className="text-text-secondary">{contract.last_report_date ? formatDate(contract.last_report_date) : 'Jamais'}</span>
           </div>
           <div className="text-text-muted text-sm">
-            Prochain rapport: <span className={contract.next_report_due && new Date(contract.next_report_due) <= new Date() ? 'text-amber-400' : 'text-text-secondary'}>
-              {contract.next_report_due ? formatDate(contract.next_report_due) : '-'}
+            Prochain rapport: <span className={contract.report_frequency !== 'aucun' && contract.next_report_due && new Date(contract.next_report_due) <= new Date() ? 'text-amber-400' : 'text-text-secondary'}>
+              {contract.report_frequency === 'aucun'
+                ? 'ponctuel (à la demande)'
+                : (contract.next_report_due ? formatDate(contract.next_report_due) : '-')}
             </span>
           </div>
         </div>

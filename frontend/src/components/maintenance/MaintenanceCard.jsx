@@ -29,8 +29,10 @@ const MaintenanceCard = ({ contract, isSelected, onClick }) => {
 
   const statusStyle = statusConfig[contract.status] || statusConfig.active;
 
-  // Vérifier si un rapport est dû
-  const isReportDue = contract.next_report_due && new Date(contract.next_report_due) <= new Date();
+  // Vérifier si un rapport est dû. En mode ponctuel ('aucun'), il n'y a pas
+  // d'échéance à tenir : le rapport se fait à la demande, donc jamais « dû ».
+  const isReportDue = contract.report_frequency !== 'aucun'
+    && contract.next_report_due && new Date(contract.next_report_due) <= new Date();
 
   // Couleur du PageSpeed
   const getPageSpeedColor = (score) => {

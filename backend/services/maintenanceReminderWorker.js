@@ -32,6 +32,8 @@ const getContractsNeedingReport = async (daysAhead = 1) => {
     FROM maintenance_contracts mc
     LEFT JOIN crm_clients c ON mc.client_id = c.id
     WHERE mc.status = 'active'
+      -- 'aucun' = rapport ponctuel, a la demande : aucun rappel automatique.
+      AND COALESCE(mc.report_frequency, 'mensuel') <> 'aucun'
       AND mc.next_report_due <= CURRENT_DATE + INTERVAL '${daysAhead} days'
       AND mc.next_report_due >= CURRENT_DATE
     ORDER BY mc.next_report_due ASC
@@ -62,6 +64,8 @@ const getOverdueContracts = async () => {
     FROM maintenance_contracts mc
     LEFT JOIN crm_clients c ON mc.client_id = c.id
     WHERE mc.status = 'active'
+      -- 'aucun' = rapport ponctuel, a la demande : aucun rappel automatique.
+      AND COALESCE(mc.report_frequency, 'mensuel') <> 'aucun'
       AND mc.next_report_due < CURRENT_DATE
     ORDER BY mc.next_report_due ASC
   `;

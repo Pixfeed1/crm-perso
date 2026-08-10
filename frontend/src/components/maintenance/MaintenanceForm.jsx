@@ -268,7 +268,9 @@ const MaintenanceForm = ({ contract = {}, onSave, onCancel }) => {
                 >
                   <option value="mensuel">Mensuel</option>
                   <option value="trimestriel">Trimestriel</option>
-                  <option value="aucun">Aucun</option>
+                  {/* « Ponctuel » : aucun rappel ni echeance, mais le rapport
+                      reste generable a la demande depuis la fiche du contrat. */}
+                  <option value="aucun">Ponctuel (à la demande, sans rappel)</option>
                 </select>
                 <FiChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
               </div>

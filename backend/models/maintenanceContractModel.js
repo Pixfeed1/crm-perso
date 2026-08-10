@@ -30,7 +30,12 @@ const getStats = async (db) => {
       COUNT(*) as total_contracts,
       COUNT(*) FILTER (WHERE status = 'active') as active_contracts,
       COUNT(*) FILTER (WHERE status = 'paused') as paused_contracts,
-      COUNT(*) FILTER (WHERE next_report_due <= CURRENT_DATE) as reports_due,
+      -- Les contrats en rapport ponctuel ('aucun') ne sont jamais « en retard » :
+      -- leur rapport se fait a la demande, il n'y a pas d'echeance a tenir.
+      COUNT(*) FILTER (
+        WHERE next_report_due <= CURRENT_DATE
+          AND COALESCE(report_frequency, 'mensuel') <> 'aucun'
+      ) as reports_due,
       -- Revenus = uniquement les contrats réellement prélevés via Stripe (billing_status='active'),
       -- et non les contrats simplement créés/actifs mais sans prélèvement en cours.
       COALESCE(SUM(monthly_amount) FILTER (WHERE billing_status = 'active'), 0) as monthly_revenue,
@@ -166,7 +171,10 @@ const updateContract = async (db, id, contractData) => {
       last_backup_date = COALESCE($14, last_backup_date),
       last_update_date = COALESCE($15, last_update_date),
       last_report_date = COALESCE($16, last_report_date),
-      next_report_due = COALESCE($17, next_report_due),
+      -- Passage en rapport ponctuel ('aucun') : on efface l'echeance restante,
+      -- sinon une date orpheline continuerait d'afficher « rapport en retard ».
+      next_report_due = CASE WHEN $21 = 'aucun' THEN NULL
+                             ELSE COALESCE($17, next_report_due) END,
       plugins_count = COALESCE($18, plugins_count),
       notes = COALESCE($19, notes),
       plan = COALESCE($20, plan),
