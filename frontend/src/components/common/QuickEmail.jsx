@@ -5,20 +5,17 @@
 // (serveur pro / Gmail), signature par défaut ajoutée. Options uniformisées avec
 // le reste de l'outil : copie (Cc), copie cachée (Cci), pièces jointes,
 // suivi ouverture/clic, et programmation d'envoi.
+//
+// Le bouton « Historique » ouvre l'historique GLOBAL de l'outil : la liste locale
+// précédente ne montrait pas les envois différés une fois partis, et ne permettait
+// pas de relire le message.
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiSend, FiX, FiZap, FiClock, FiEye, FiMousePointer } from 'react-icons/fi';
+import { FiSend, FiX, FiZap, FiClock, FiArchive } from 'react-icons/fi';
 import { leadsAPI } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
 import EmailExtraFields from './EmailExtraFields';
-
-const formatDT = (s) => {
-  if (!s) return '';
-  const d = new Date(s);
-  return isNaN(d) ? '' : d.toLocaleDateString('fr-FR', {
-    day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit',
-  });
-};
+import EmailHistory from './EmailHistory';
 
 const QuickEmail = ({ className = '' }) => {
   const { toast } = useToast();
@@ -33,34 +30,14 @@ const QuickEmail = ({ className = '' }) => {
   const [accounts, setAccounts] = useState([]);
   const [fromAccount, setFromAccount] = useState('pro');
   const [sending, setSending] = useState(false);
-  // Programmation
   const [isScheduled, setIsScheduled] = useState(false);
   const [schedDate, setSchedDate] = useState('');
   const [schedTime, setSchedTime] = useState('09:00');
-  // Onglet « Historique » : ces envois ne créant pas de prospect, c'est le seul
-  // endroit où les retrouver ensuite (destinataire, objet, date, ouvertures).
-  const [tab, setTab] = useState('write'); // 'write' | 'history'
-  const [history, setHistory] = useState({ envoyes: [], programmes: [] });
-  const [loadingHistory, setLoadingHistory] = useState(false);
-
-  const loadHistory = async () => {
-    setLoadingHistory(true);
-    try {
-      const d = await leadsAPI.getQuickEmails();
-      setHistory({ envoyes: (d && d.envoyes) || [], programmes: (d && d.programmes) || [] });
-    } catch {
-      toast.error("Impossible de charger l'historique");
-    } finally { setLoadingHistory(false); }
-  };
-
-  const openTab = (t) => {
-    setTab(t);
-    if (t === 'history') loadHistory();
-  };
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   const openModal = async () => {
     setTo(''); setSubject(''); setBody(''); setCc(''); setBcc(''); setFiles([]);
-    setTrack(true); setIsScheduled(false); setTab('write'); setOpen(true);
+    setTrack(true); setIsScheduled(false); setOpen(true);
     const t = new Date(); t.setDate(t.getDate() + 1);
     setSchedDate(t.toISOString().split('T')[0]); setSchedTime('09:00');
     try {
@@ -87,8 +64,7 @@ const QuickEmail = ({ className = '' }) => {
         cc: cc.trim() || null, bcc: bcc.trim() || null, attachments, track, scheduled_at,
       });
       const acc = accounts.find((x) => x.id === fromAccount);
-      if (r && r.scheduled) toast.success(`Email programmé${acc ? ` (depuis ${acc.label})` : ''}`);
-      else toast.success(`Email envoyé${acc ? ` (depuis ${acc.label})` : ''}`);
+      toast.success(`${r && r.scheduled ? 'Email programmé' : 'Email envoyé'}${acc ? ` (depuis ${acc.label})` : ''}`);
       setOpen(false);
     } catch (e) {
       toast.error(e.message || "Erreur lors de l'envoi");
@@ -97,11 +73,20 @@ const QuickEmail = ({ className = '' }) => {
 
   return (
     <>
-      <button onClick={openModal}
-        className={`px-3 py-2 rounded-lg text-sm flex items-center gap-2 bg-accent hover:bg-accent-hover text-white transition-colors ${className}`}
-        title="Envoyer un email rapide à n'importe quelle adresse (sans créer de prospect)">
-        <FiZap size={15} /> Email rapide
-      </button>
+      <div className={`flex items-center gap-2 ${className}`}>
+        <button onClick={openModal}
+          className="px-3 py-2 rounded-lg text-sm flex items-center gap-2 bg-accent hover:bg-accent-hover text-white transition-colors"
+          title="Envoyer un email rapide à n'importe quelle adresse (sans créer de prospect)">
+          <FiZap size={15} /> Email rapide
+        </button>
+        <button onClick={() => setHistoryOpen(true)}
+          className="px-3 py-2 rounded-lg text-sm flex items-center gap-2 border border-border text-text-secondary hover:bg-surface-strong transition-colors"
+          title="Retrouver et relire tous les emails envoyés depuis l'outil">
+          <FiArchive size={15} /> Historique
+        </button>
+      </div>
+
+      <EmailHistory open={historyOpen} onClose={() => setHistoryOpen(false)} />
 
       <AnimatePresence>
         {open && (
@@ -115,78 +100,6 @@ const QuickEmail = ({ className = '' }) => {
                 <button onClick={() => setOpen(false)} className="text-text-muted hover:text-text-primary"><FiX size={20} /></button>
               </div>
 
-              {/* Onglets : rédiger / retrouver les envois passés */}
-              <div className="flex gap-1 px-6 pt-4">
-                {[['write', 'Rédiger'], ['history', 'Historique']].map(([k, label]) => (
-                  <button key={k} type="button" onClick={() => openTab(k)}
-                    className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${tab === k ? 'bg-accent text-white' : 'text-text-secondary hover:bg-surface-strong'}`}>
-                    {label}
-                  </button>
-                ))}
-              </div>
-
-              {tab === 'history' ? (
-                <div className="p-6 space-y-4">
-                  {loadingHistory ? (
-                    <p className="text-sm text-text-muted">Chargement…</p>
-                  ) : (
-                    <>
-                      {history.programmes.length > 0 && (
-                        <div>
-                          <div className="text-xs text-text-secondary mb-2">Programmés</div>
-                          <ul className="space-y-1">
-                            {history.programmes.map((e) => (
-                              <li key={`p${e.id}`} className="px-3 py-2 bg-surface-muted border border-border rounded-lg">
-                                <div className="flex justify-between gap-2">
-                                  <span className="text-sm text-text-primary truncate">{e.subject}</span>
-                                  <span className="text-xs text-warning-text flex-shrink-0 flex items-center gap-1">
-                                    <FiClock size={12} /> {formatDT(e.scheduled_at)}
-                                  </span>
-                                </div>
-                                <div className="text-xs text-text-muted truncate">{e.to_email}</div>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                      <div>
-                        <div className="text-xs text-text-secondary mb-2">Envoyés</div>
-                        {history.envoyes.length === 0 ? (
-                          <p className="text-sm text-text-muted">Aucun email rapide envoyé pour le moment.</p>
-                        ) : (
-                          <ul className="space-y-1">
-                            {history.envoyes.map((e) => (
-                              <li key={e.id} className="px-3 py-2 bg-surface-muted border border-border rounded-lg">
-                                <div className="flex justify-between gap-2 items-start">
-                                  <span className="text-sm text-text-primary truncate">{e.subject}</span>
-                                  <span className="text-xs text-text-muted flex-shrink-0">{formatDT(e.sent_at)}</span>
-                                </div>
-                                <div className="flex justify-between gap-2 items-center">
-                                  <span className="text-xs text-text-muted truncate">{e.to_email}</span>
-                                  <span className="flex gap-2 flex-shrink-0">
-                                    {e.open_count > 0 && (
-                                      <span className="text-xs text-success-text flex items-center gap-1"
-                                        title={`Ouvert ${e.open_count} fois — ${formatDT(e.first_open_at)}`}>
-                                        <FiEye size={12} /> {e.open_count}
-                                      </span>
-                                    )}
-                                    {e.click_count > 0 && (
-                                      <span className="text-xs text-info-text flex items-center gap-1" title="Clics sur les liens">
-                                        <FiMousePointer size={12} /> {e.click_count}
-                                      </span>
-                                    )}
-                                    {!e.open_count && <span className="text-xs text-text-muted">non ouvert</span>}
-                                  </span>
-                                </div>
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </div>
-                    </>
-                  )}
-                </div>
-              ) : (
               <div className="p-6 space-y-4">
                 <div>
                   <label className="block text-sm text-text-secondary mb-1">Destinataire</label>
@@ -220,14 +133,12 @@ const QuickEmail = ({ className = '' }) => {
                 {/* Cc / Cci / pièces jointes — communs à tous les emails de l'outil */}
                 <EmailExtraFields cc={cc} setCc={setCc} bcc={bcc} setBcc={setBcc} files={files} setFiles={setFiles} />
 
-                {/* Suivi ouverture/clic */}
                 <label className="flex items-center gap-2 text-sm text-text-secondary cursor-pointer">
                   <input type="checkbox" checked={track} onChange={(e) => setTrack(e.target.checked)}
                     className="w-4 h-4 rounded border-border" />
                   Suivre l'ouverture et les clics
                 </label>
 
-                {/* Programmer l'envoi */}
                 <div className="space-y-2">
                   <label className="flex items-center gap-2 text-sm text-text-secondary cursor-pointer">
                     <input type="checkbox" checked={isScheduled} onChange={(e) => setIsScheduled(e.target.checked)}
@@ -245,16 +156,14 @@ const QuickEmail = ({ className = '' }) => {
                   )}
                 </div>
               </div>
-              )}
-              {tab === 'write' && (
-                <div className="flex gap-3 px-6 py-4 border-t border-border sticky bottom-0 panel-bg">
-                  <button onClick={() => setOpen(false)} className="flex-1 px-4 py-2.5 border-2 border-border text-text-primary hover:bg-surface-strong rounded-lg font-medium">Annuler</button>
-                  <button onClick={send} disabled={sending || !to.trim()}
-                    className="flex-1 px-4 py-2.5 bg-accent hover:bg-accent-hover text-white rounded-lg font-medium disabled:opacity-50 flex items-center justify-center gap-2">
-                    {isScheduled ? <FiClock size={16} /> : <FiSend size={16} />} {sending ? 'Envoi…' : (isScheduled ? 'Programmer' : 'Envoyer')}
-                  </button>
-                </div>
-              )}
+
+              <div className="flex gap-3 px-6 py-4 border-t border-border sticky bottom-0 panel-bg">
+                <button onClick={() => setOpen(false)} className="flex-1 px-4 py-2.5 border-2 border-border text-text-primary hover:bg-surface-strong rounded-lg font-medium">Annuler</button>
+                <button onClick={send} disabled={sending || !to.trim()}
+                  className="flex-1 px-4 py-2.5 bg-accent hover:bg-accent-hover text-white rounded-lg font-medium disabled:opacity-50 flex items-center justify-center gap-2">
+                  {isScheduled ? <FiClock size={16} /> : <FiSend size={16} />} {sending ? 'Envoi…' : (isScheduled ? 'Programmer' : 'Envoyer')}
+                </button>
+              </div>
             </motion.div>
           </motion.div>
         )}

@@ -1313,6 +1313,35 @@ async function ensureInteractionsColumns(client) {
   `);
   await client.query('CREATE INDEX IF NOT EXISTS idx_email_tracking_contact ON email_tracking(contact_type, contact_id);');
 
+  // Journal CENTRAL des emails sortants. email_tracking ne couvrait que la
+  // prospection, et les envois differes non rattaches a un prospect
+  // n'apparaissaient nulle part une fois partis. Ici, une ligne par envoi,
+  // quelle qu'en soit l'origine, avec le corps pour pouvoir relire le message.
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS email_log (
+      id SERIAL PRIMARY KEY,
+      to_email TEXT,
+      cc_email TEXT,
+      bcc_email TEXT,
+      subject TEXT,
+      body_html TEXT,
+      source VARCHAR(40) DEFAULT 'autre',
+      from_account VARCHAR(10) DEFAULT 'pro',
+      from_email TEXT,
+      related_type VARCHAR(20),
+      related_id INTEGER,
+      tracking_token VARCHAR(64),
+      attachments_count INTEGER DEFAULT 0,
+      status VARCHAR(10) DEFAULT 'sent',
+      error_message TEXT,
+      sent_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+  await client.query('CREATE INDEX IF NOT EXISTS idx_email_log_sent_at ON email_log(sent_at DESC);');
+  await client.query('CREATE INDEX IF NOT EXISTS idx_email_log_source ON email_log(source);');
+  await client.query('CREATE INDEX IF NOT EXISTS idx_email_log_related ON email_log(related_type, related_id);');
+  await client.query('CREATE INDEX IF NOT EXISTS idx_email_log_token ON email_log(tracking_token);');
+
   // Étape de la cascade de relance auto (1 = J+3, 2 = J+7). NULL = relance manuelle (hors cascade).
   await client.query('ALTER TABLE interactions ADD COLUMN IF NOT EXISTS relance_step INTEGER;');
 

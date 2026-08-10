@@ -149,8 +149,9 @@ router.post('/quick-email', async (req, res) => {
     // Envoi IMMÉDIAT (+ suivi ouverture/clic optionnel).
     const token = track ? await emailTracking.createTracking(db, { to_email: to, subject }) : null;
     const finalHtml = token ? emailTracking.wrapHtml(html, token) : html;
-    if (useGmail) await seoOutreach.sendViaGmail({ to, subject, html: finalHtml, text: body, cc, bcc, attachments: atts });
-    else await emailService.sendEmail({ to, subject, html: finalHtml, text: body, cc, bcc, attachments: atts });
+    const meta = { source: 'quick', tracking_token: token };
+    if (useGmail) await seoOutreach.sendViaGmail({ to, subject, html: finalHtml, text: body, cc, bcc, attachments: atts, ...meta });
+    else await emailService.sendEmail({ to, subject, html: finalHtml, text: body, cc, bcc, attachments: atts, ...meta });
     res.json({ success: true, from_account: useGmail ? 'gmail' : 'pro', from: useGmail ? process.env.GMAIL_USER : (process.env.EMAIL_FROM || process.env.EMAIL_USER) });
   } catch (error) {
     console.error('[Lead] quick-email:', error.message);
@@ -192,8 +193,9 @@ router.post('/:id/send-email', async (req, res) => {
     // Tracking ouvertures/clics : pixel + réécriture des liens (identique quel que soit l'expéditeur).
     const token = await emailTracking.createTracking(db, { contact_id: id, to_email: to, subject });
     const trackedHtml = emailTracking.wrapHtml(htmlRgpd, token);
-    if (useGmail) await seoOutreach.sendViaGmail({ to, subject, html: trackedHtml, text: body, headers: unsubHeaders, cc, bcc, attachments: atts });
-    else await emailService.sendEmail({ to, subject, html: trackedHtml, text: body, headers: unsubHeaders, cc, bcc, attachments: atts });
+    const meta = { source: 'prospect', related_type: 'lead', related_id: Number(id) || null, tracking_token: token };
+    if (useGmail) await seoOutreach.sendViaGmail({ to, subject, html: trackedHtml, text: body, headers: unsubHeaders, cc, bcc, attachments: atts, ...meta });
+    else await emailService.sendEmail({ to, subject, html: trackedHtml, text: body, headers: unsubHeaders, cc, bcc, attachments: atts, ...meta });
     // Relance AUTOMATIQUE : si aucune date de relance n'est saisie, on programme J+3
     // (canal email) pour ne jamais oublier de relancer un prospect. relance_step=1
     // amorce la cascade (J+3 -> J+7) ; une date manuelle reste hors cascade (step NULL).

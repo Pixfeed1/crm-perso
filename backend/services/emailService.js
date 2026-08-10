@@ -1,5 +1,6 @@
 // backend/services/emailService.js
 const nodemailer = require('nodemailer');
+const emailLog = require('./emailLog'); // journal central des envois
 
 /**
  * Service d'envoi d'emails avec Nodemailer
@@ -207,6 +208,16 @@ class EmailService {
 
     try {
       const info = await this.transporter.sendMail(mailOptions);
+      // Journal central (best-effort) : permet de relire n'importe quel envoi
+      // depuis l'historique global, quelle qu'en soit l'origine.
+      emailLog.record({
+        to, cc: mailOptions.cc, bcc: mailOptions.bcc, subject, html: finalHtml,
+        source: options.source || 'autre', from_account: 'pro',
+        from_email: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+        related_type: options.related_type, related_id: options.related_id,
+        tracking_token: options.tracking_token,
+        attachments_count: (attachments || []).length, status: 'sent'
+      });
       console.log(`✅ Email envoyé avec succès à ${to}`);
       console.log(`   Message ID: ${info.messageId}`);
 
@@ -217,6 +228,16 @@ class EmailService {
         sentAt: new Date()
       };
     } catch (error) {
+      // On journalise aussi les ECHECS : sans cela, un envoi rate ne laisse
+      // aucune trace consultable et l'on croit que le mail est parti.
+      emailLog.record({
+        to, cc: mailOptions.cc, bcc: mailOptions.bcc, subject, html: finalHtml,
+        source: options.source || 'autre', from_account: 'pro',
+        from_email: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+        related_type: options.related_type, related_id: options.related_id,
+        attachments_count: (attachments || []).length,
+        status: 'failed', error_message: error.message
+      });
       console.error(`❌ Erreur lors de l'envoi de l'email à ${to}:`, error.message);
       throw error;
     }

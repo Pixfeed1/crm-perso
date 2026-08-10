@@ -1,12 +1,12 @@
 // src/components/common/EmailExtraFields.jsx
 //
 // Champs COMMUNS à tous les envois d'email de l'outil (uniformisation) :
-//   - Copie (CC) et Copie cachée (CCi), masqués par défaut, révélés au clic.
+//   - Copie (Cc) et Copie cachée (Cci), visibles d'emblée.
 //   - Pièces jointes (PJ) : sélection multiple, conversion base64, plafond 15 Mo.
 // Composant contrôlé : le parent détient l'état (cc, bcc, files) et le transmet.
 // `files` est un tableau [{ filename, content(base64 sans préfixe), content_type, size }].
 import React, { useRef, useState } from 'react';
-import { FiPaperclip, FiX, FiPlus } from 'react-icons/fi';
+import { FiPaperclip, FiX } from 'react-icons/fi';
 
 const MAX_TOTAL = 15 * 1024 * 1024; // 15 Mo au total
 
@@ -28,8 +28,9 @@ const readAsBase64 = (file) => new Promise((resolve, reject) => {
 
 const EmailExtraFields = ({ cc, setCc, bcc, setBcc, files, setFiles }) => {
   const inputRef = useRef(null);
-  // CC/CCi masqués tant qu'ils sont vides et non ouverts manuellement.
-  const [showCc, setShowCc] = useState(!!(cc || bcc));
+  // Cc/Cci VISIBLES par défaut : repliés derrière un lien discret, ils passaient
+  // inaperçus et donnaient l'impression que la fonction n'existait pas.
+  const [showCc] = useState(true);
   const [err, setErr] = useState('');
 
   const onPick = async (e) => {
@@ -55,12 +56,6 @@ const EmailExtraFields = ({ cc, setCc, bcc, setBcc, files, setFiles }) => {
 
   return (
     <div className="space-y-3">
-      {!showCc && (
-        <button type="button" onClick={() => setShowCc(true)}
-          className="text-xs text-accent hover:underline flex items-center gap-1">
-          <FiPlus size={12} /> Ajouter une copie (Cc / Cci)
-        </button>
-      )}
       {showCc && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>

@@ -120,11 +120,13 @@ class ScheduledEmailWorker {
       // et les fichiers serveur (path). normalizeAttachments gère les deux.
       const attachments = emailService.normalizeAttachments(email.attachments || []);
 
-      // Tracking ouvertures/clics pour les emails liés à un prospect (lead).
+      // Suivi d'ouvertures/clics pour TOUT envoi differe. Auparavant il etait
+      // reserve aux emails rattaches a un prospect : un envoi rapide programme
+      // partait donc sans aucune trace et devenait introuvable une fois envoye.
       const trackContactId = email.related_type === 'lead' ? email.related_id : null;
-      const token = trackContactId
-        ? await emailTracking.createTracking(this.db, { contact_id: trackContactId, to_email: email.to_email, subject: email.subject })
-        : null;
+      const token = await emailTracking.createTracking(this.db, {
+        contact_id: trackContactId, to_email: email.to_email, subject: email.subject
+      });
       // Pied de page RGPD + en-tête List-Unsubscribe (prospection uniquement).
       const rgpdFooter = isProspect ? optout.footerHtml(email.to_email) : '';
       const rgpdHeaders = isProspect ? optout.listUnsubHeader(email.to_email) : null;
@@ -135,7 +137,9 @@ class ScheduledEmailWorker {
         await seoOutreach.sendViaGmail({
           to: email.to_email, subject: email.subject, html: trackedHtml, text: email.body_text || '',
           headers: rgpdHeaders,
-          cc: email.cc_email || null, bcc: email.bcc_email || null, attachments
+          cc: email.cc_email || null, bcc: email.bcc_email || null, attachments,
+          source: isProspect ? 'prospect' : 'quick',
+          related_type: email.related_type, related_id: email.related_id, tracking_token: token
         });
       } else {
         await emailService.sendEmail({
@@ -146,7 +150,9 @@ class ScheduledEmailWorker {
           attachments,
           cc: email.cc_email || null,
           bcc: email.bcc_email || null,
-          headers: rgpdHeaders
+          headers: rgpdHeaders,
+          source: isProspect ? 'prospect' : 'quick',
+          related_type: email.related_type, related_id: email.related_id, tracking_token: token
         });
       }
 

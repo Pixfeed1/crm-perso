@@ -231,6 +231,18 @@ export const projectsAPI = {
 };
 
 // ===== LEADS =====
+// Historique GLOBAL des emails sortants (toutes origines confondues).
+export const emailHistoryAPI = {
+  list: (params = {}) => {
+    const q = new URLSearchParams(
+      Object.entries(params).filter(([, v]) => v !== '' && v != null)
+    ).toString();
+    return apiRequest(`/emails${q ? `?${q}` : ''}`);
+  },
+  stats: () => apiRequest('/emails/stats'),
+  getById: (id) => apiRequest(`/emails/${id}`),
+};
+
 export const leadsAPI = {
   getAll: () => {
     console.log('Appel API: récupération de tous les leads');

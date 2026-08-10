@@ -86,6 +86,10 @@ if (!process.env.DB_USER || !process.env.DB_PASSWORD || !process.env.DB_HOST || 
 // Rendre la base de données accessible aux routes
 app.locals.db = db;
 
+// Journal central des emails : les services d'envoi n'ont pas accès à app.locals,
+// on leur injecte la connexion ici pour qu'ils puissent enregistrer chaque envoi.
+require('./services/emailLog').init(db.pool);
+
 // Définir le port
 const PORT = process.env.PORT || 5000;
 
@@ -121,6 +125,7 @@ app.post('/api/auth/forgot-password', authLimiter);
 
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/activities', require('./routes/activitiesRoutes'));
+app.use('/api/emails', require('./routes/emailHistoryRoutes')); // historique global des envois
 app.use('/api/leads', require('./routes/leadsRoutes'));
 app.use('/api/leads', require('./routes/leadInteractionRoutes'));
 app.use('/api/clients', require('./routes/clientsRoutes'));

@@ -9,6 +9,7 @@
 // Limite Gmail perso : 500 destinataires/24h — le netlinking en envoie 10-30/jour max.
 
 const nodemailer = require('nodemailer');
+const emailLog = require('./emailLog'); // journal central des envois
 
 const LLM_MODEL = 'claude-haiku-4-5-20251001';
 
@@ -34,20 +35,39 @@ function getGmailTransport() {
   return gmailTransport;
 }
 
-async function sendViaGmail({ to, subject, html, text, headers = null, cc = null, bcc = null, attachments = null }) {
+async function sendViaGmail({ to, subject, html, text, headers = null, cc = null, bcc = null,
+                             attachments = null, source = null, related_type = null,
+                             related_id = null, tracking_token = null }) {
   const transporter = getGmailTransport();
   // cc/bcc acceptent "a@x, b@y" ou un tableau.
   const asList = (v) => (Array.isArray(v) ? v : String(v || '').split(/[,;]/)).map((s) => String(s).trim()).filter(Boolean);
   const ccList = asList(cc); const bccList = asList(bcc);
-  const info = await transporter.sendMail({
+  const payload = {
     from: process.env.GMAIL_USER, // l'adresse perso, telle quelle
     to, subject, html, text,
     ...(ccList.length ? { cc: [...new Set(ccList)].join(', ') } : {}),
     ...(bccList.length ? { bcc: [...new Set(bccList)].join(', ') } : {}),
     ...(attachments && attachments.length ? { attachments } : {}),
     ...(headers ? { headers } : {})
-  });
-  return info;
+  };
+  try {
+    const info = await transporter.sendMail(payload);
+    emailLog.record({
+      to, cc: payload.cc, bcc: payload.bcc, subject, html,
+      source: source || 'autre', from_account: 'gmail', from_email: process.env.GMAIL_USER,
+      related_type, related_id, tracking_token,
+      attachments_count: (attachments || []).length, status: 'sent'
+    });
+    return info;
+  } catch (e) {
+    emailLog.record({
+      to, cc: payload.cc, bcc: payload.bcc, subject, html,
+      source: source || 'autre', from_account: 'gmail', from_email: process.env.GMAIL_USER,
+      related_type, related_id, attachments_count: (attachments || []).length,
+      status: 'failed', error_message: e.message
+    });
+    throw e;
+  }
 }
 
 // ─── Rédaction « demande de lien » (Claude Haiku, ~0,003 $) ──────────────────
