@@ -120,7 +120,7 @@ const Settings = () => {
       <p style="margin: 0 0 10px 0; font-size: 13px; color: #6b7280;"><a href="https://pixfeed.net" style="color: #6366f1; text-decoration: none; font-weight: 500;">pixfeed.net</a></p>
       <p style="margin: 0;">
         <a href="https://www.linkedin.com/company/pixfeed/" style="display: inline; text-decoration: none; margin-right: 8px;"><img src="https://pixfeed.net/wp-content/uploads/2026/01/linkedinmail.png" alt="LinkedIn" width="20" height="20" style="display: inline; vertical-align: middle;"></a>
-        <a href="https://www.facebook.com/Pixfeed" style="display: inline; text-decoration: none;"><img src="https://pixfeed.net/wp-content/uploads/2026/01/fasebookmail.png" alt="Facebook" width="20" height="20" style="display: inline; vertical-align: middle;"></a>
+        <a href="https://www.facebook.com/Pixfeed" style="display: inline; text-decoration: none; margin-right: 8px;"><img src="https://pixfeed.net/wp-content/uploads/2026/01/fasebookmail.png" alt="Facebook" width="20" height="20" style="display: inline; vertical-align: middle;"></a><a href="https://www.instagram.com/pixfeed05/" style="display: inline; text-decoration: none;"><img src="https://pixfeed.net/wp-content/uploads/2026/01/instagrammail.png" alt="Instagram" width="20" height="20" style="display: inline; vertical-align: middle;"></a>
       </p>
     </td>
   </tr>
@@ -148,7 +148,7 @@ const Settings = () => {
       <p style="margin: 0 0 10px 0; font-size: 13px;"><a href="https://pixfeed.net" style="color: #6366f1; text-decoration: none; font-weight: 500;">pixfeed.net</a></p>
       <p style="margin: 0;">
         <a href="https://www.linkedin.com/company/pixfeed/" style="display: inline; text-decoration: none; margin-right: 6px;"><img src="https://pixfeed.net/wp-content/uploads/2026/01/linkedinmail.png" alt="LinkedIn" width="18" height="18" style="display: inline; vertical-align: middle;"></a>
-        <a href="https://www.facebook.com/Pixfeed" style="display: inline; text-decoration: none;"><img src="https://pixfeed.net/wp-content/uploads/2026/01/fasebookmail.png" alt="Facebook" width="18" height="18" style="display: inline; vertical-align: middle;"></a>
+        <a href="https://www.facebook.com/Pixfeed" style="display: inline; text-decoration: none; margin-right: 6px;"><img src="https://pixfeed.net/wp-content/uploads/2026/01/fasebookmail.png" alt="Facebook" width="18" height="18" style="display: inline; vertical-align: middle;"></a><a href="https://www.instagram.com/pixfeed05/" style="display: inline; text-decoration: none;"><img src="https://pixfeed.net/wp-content/uploads/2026/01/instagrammail.png" alt="Instagram" width="18" height="18" style="display: inline; vertical-align: middle;"></a>
       </p>
       <p style="margin: 10px 0 0 0; font-size: 10px; color: #9ca3af; font-style: italic;">L'humain au cœur de nos solutions</p>
     </td>
@@ -177,7 +177,7 @@ const Settings = () => {
       <p style="margin: 10px 0 0 0; font-size: 11px; color: #9ca3af; font-style: italic;">L'humain au cœur de nos solutions</p>
       <p style="margin: 10px 0 0 0;">
         <a href="https://www.linkedin.com/company/pixfeed/" style="display: inline; text-decoration: none; margin: 0 4px;"><img src="https://pixfeed.net/wp-content/uploads/2026/01/linkedinmail.png" alt="LinkedIn" width="18" height="18" style="display: inline; vertical-align: middle;"></a>
-        <a href="https://www.facebook.com/Pixfeed" style="display: inline; text-decoration: none; margin: 0 4px;"><img src="https://pixfeed.net/wp-content/uploads/2026/01/fasebookmail.png" alt="Facebook" width="18" height="18" style="display: inline; vertical-align: middle;"></a>
+        <a href="https://www.facebook.com/Pixfeed" style="display: inline; text-decoration: none; margin: 0 4px;"><img src="https://pixfeed.net/wp-content/uploads/2026/01/fasebookmail.png" alt="Facebook" width="18" height="18" style="display: inline; vertical-align: middle;"></a><a href="https://www.instagram.com/pixfeed05/" style="display: inline; text-decoration: none; margin: 0 4px;"><img src="https://pixfeed.net/wp-content/uploads/2026/01/instagrammail.png" alt="Instagram" width="18" height="18" style="display: inline; vertical-align: middle;"></a>
       </p>
     </td>
   </tr>
