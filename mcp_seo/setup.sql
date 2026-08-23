@@ -22,7 +22,9 @@ GRANT SELECT ON
   seo_tracked_keywords,
   seo_similar_pages,
   gsc_index_status,
-  gsc_index_history
+  gsc_index_history,
+  seo_sitemap_urls,
+  seo_redirects
 TO mcp_seo_ro;
 
 -- Module Backlinks (campagnes de netlinking) + tracking d'ouvertures des emails.
@@ -34,7 +36,7 @@ TO mcp_seo_ro;
 -- sur une installation DÉJÀ en service, le GRANT ci-dessus a déjà été joué sans elles.
 -- Rejouer alors cette ligne une fois, sinon les rapports d'indexation renvoient
 -- « permission denied » :
---   GRANT SELECT ON gsc_index_status, gsc_index_history TO mcp_seo_ro;
+--   GRANT SELECT ON gsc_index_status, gsc_index_history, seo_sitemap_urls, seo_redirects TO mcp_seo_ro;
 
 -- Aucun autre droit : ce rôle ne voit RIEN d'autre (ni écriture, ni autres tables).
 -- Vérification rapide après coup :

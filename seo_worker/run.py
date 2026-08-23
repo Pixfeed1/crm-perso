@@ -103,7 +103,25 @@ def audit_postprocess(conn, site_id, home_url, edges, base):
                     dq.append(v)
 
     # 2) Sitemap (1 fetch + sous-sitemaps plafonnés/polis).
-    sitemap_urls, sitemap_url = wp.fetch_sitemap(base)
+    #    On garde le DÉTAIL par URL (sous-sitemap d'origine + lastmod) : seul le nombre
+    #    était conservé jusqu'ici, ce qui obligeait à un curl manuel pour savoir si une
+    #    URL précise figure au sitemap.
+    sitemap_detail, sitemap_url = wp.fetch_sitemap_detailed(base)
+    sitemap_urls = set(sitemap_detail.keys())
+    if sitemap_urls:
+        # Remplacement intégral : une URL retirée du sitemap doit disparaître d'ici,
+        # sinon les écarts calculés plus bas resteraient faux indéfiniment.
+        cur.execute("DELETE FROM seo_sitemap_urls WHERE site_id = %s", (site_id,))
+        for u, d in sitemap_detail.items():
+            cur.execute(
+                """INSERT INTO seo_sitemap_urls (site_id, url, sitemap_file, lastmod, seen_at)
+                   VALUES (%s,%s,%s,%s,NOW())
+                   ON CONFLICT (site_id, url) DO UPDATE
+                     SET sitemap_file = EXCLUDED.sitemap_file, lastmod = EXCLUDED.lastmod,
+                         seen_at = NOW()""",
+                (site_id, u, d.get("sitemap_file"), d.get("lastmod")),
+            )
+        conn.commit()
 
     # 3) Profondeur + présence sitemap mergées dans l'audit de CHAQUE page.
     cur.execute("SELECT url FROM seo_pages WHERE site_id = %s", (site_id,))
@@ -276,6 +294,23 @@ def crawl_site(conn, site, full=False, no_resume=False, job_id=None):
                         ad["fetch_error"] = fetch_meta.get("error")
                         ad["audited"] = True
                         audit_data = ad
+                        # Redirections : on ne stocke que les URLs qui en subissent une.
+                        # Une 301 vers l'ACCUEIL est signalée à part : Google la traite
+                        # comme une soft 404 (le contenu attendu n'existe plus).
+                        if fetch_meta.get("hops"):
+                            final_u = wp.normalize_url(fetch_meta.get("final_url") or "")
+                            cur.execute(
+                                """INSERT INTO seo_redirects
+                                     (site_id, from_url, final_url, final_status, hops, chain, to_home, updated_at)
+                                   VALUES (%s,%s,%s,%s,%s,%s,%s,NOW())
+                                   ON CONFLICT (site_id, from_url) DO UPDATE
+                                     SET final_url = EXCLUDED.final_url, final_status = EXCLUDED.final_status,
+                                         hops = EXCLUDED.hops, chain = EXCLUDED.chain,
+                                         to_home = EXCLUDED.to_home, updated_at = NOW()""",
+                                (site_id, url, final_u, fetch_meta.get("status"),
+                                 fetch_meta.get("hops"), json.dumps(fetch_meta.get("chain") or []),
+                                 bool(final_u and home_url and final_u == home_url)),
+                            )
                     except Exception as ae:
                         audit_data = {"audited": False}
                         print(f"[AUDIT] extraction {url}: {ae}")

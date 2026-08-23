@@ -148,6 +148,32 @@ function buildServer() {
     async ({ site_id, days, limit }) => ok(await tools.getIndexationChanges(pool, site_id, days ?? 30, limit ?? 200))
   );
 
+  // ---- Sitemap, redirections, cannibalisation editoriale ----
+  server.tool(
+    'check_sitemap',
+    "Dit si une URL précise figure au sitemap, dans quel sous-sitemap, et avec quel lastmod. Évite le curl manuel.",
+    { site_id: z.number().int(), url: z.string() },
+    async ({ site_id, url }) => ok(await tools.checkSitemap(pool, site_id, url))
+  );
+  server.tool(
+    'get_sitemap_gaps',
+    "Écarts entre le sitemap et la réalité : pages publiées ABSENTES du sitemap (hors noindex — Google risque de les manquer), et URLs déclarées au sitemap JAMAIS vues au crawl (URL fantôme ou page orpheline).",
+    { site_id: z.number().int(), limit: z.number().int().optional() },
+    async ({ site_id, limit }) => ok(await tools.getSitemapGaps(pool, site_id, limit ?? 200))
+  );
+  server.tool(
+    'get_redirects',
+    "Chaînes de redirection du site. Signale en priorité les 301 vers l'ACCUEIL — Google les traite comme des soft 404, le contenu attendu ayant disparu — puis les chaînes de plus d'un saut, qui diluent le signal.",
+    { site_id: z.number().int(), limit: z.number().int().optional() },
+    async ({ site_id, limit }) => ok(await tools.getRedirects(pool, site_id, limit ?? 200))
+  );
+  server.tool(
+    'get_focus_keyword_conflicts',
+    "Contenus qui visent le MÊME focus keyword Yoast. Complète get_cannibalisation : celui-ci part des requêtes GSC et ne voit que ce qui a déjà des impressions, alors qu'ici on part de l'intention éditoriale, ce qui détecte le conflit avant qu'il ne coûte des positions.",
+    { site_id: z.number().int() },
+    async ({ site_id }) => ok(await tools.getFocusKeywordConflicts(pool, site_id))
+  );
+
   server.tool(
     'get_ctr_anomalies',
     "Pages bien positionnées mais peu cliquées (CTR très sous la moyenne attendue pour leur position) : title/meta description à réécrire. Triées par clics potentiels récupérables, avec les défauts on-page connus (meta absente/courte/longue, title long).",

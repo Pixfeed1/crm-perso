@@ -615,3 +615,105 @@ export async function getIndexationChanges(pool, siteId, days = 30, limit = 200)
   const perdues = rows.filter((r) => r.old_verdict === 'PASS' && r.new_verdict !== 'PASS').length;
   return { fenetre_jours: days, indexations_gagnees: gagnees, indexations_perdues: perdues, changements: rows };
 }
+
+// ---- Sitemap exploitable (module 3) --------------------------------------------
+// seo_audit ne gardait que le NOMBRE d'URLs : savoir si une URL precise y figurait
+// imposait un curl manuel.
+
+export async function checkSitemap(pool, siteId, url) {
+  const { rows } = await pool.query(
+    `SELECT url, sitemap_file, lastmod, seen_at FROM seo_sitemap_urls
+      WHERE site_id = $1 AND rtrim(url,'/') = rtrim($2,'/') LIMIT 1`,
+    [siteId, url]
+  );
+  if (!rows[0]) {
+    const { rows: any } = await pool.query(
+      'SELECT COUNT(*)::int AS n FROM seo_sitemap_urls WHERE site_id = $1', [siteId]
+    );
+    return {
+      in_sitemap: false, url,
+      // Sans cette nuance, « absente » serait indiscernable de « sitemap jamais lu ».
+      note: any[0].n === 0 ? "Aucun sitemap enregistré pour ce site : relancer un crawl." : null,
+    };
+  }
+  return { in_sitemap: true, ...rows[0] };
+}
+
+// Les deux ecarts qui comptent : publie mais absent du sitemap (Google peut le manquer),
+// et declare au sitemap mais jamais vu au crawl (URL fantome ou page orpheline).
+export async function getSitemapGaps(pool, siteId, limit = 200) {
+  const { rows: absentes } = await pool.query(
+    `SELECT p.url, p.title, p.type, p.value_score
+       FROM seo_pages p
+      WHERE p.site_id = $1
+        AND NOT EXISTS (SELECT 1 FROM seo_sitemap_urls s
+                         WHERE s.site_id = p.site_id AND rtrim(s.url,'/') = rtrim(p.url,'/'))
+        -- Une page en noindex n'a rien a faire au sitemap : ce n'est pas un ecart.
+        AND COALESCE((p.seo_meta->>'noindex')::boolean, false) = false
+      ORDER BY p.value_score DESC NULLS LAST, p.url LIMIT $2`,
+    [siteId, limit]
+  );
+  const { rows: fantomes } = await pool.query(
+    `SELECT s.url, s.sitemap_file, s.lastmod
+       FROM seo_sitemap_urls s
+      WHERE s.site_id = $1
+        AND NOT EXISTS (SELECT 1 FROM seo_pages p
+                         WHERE p.site_id = s.site_id AND rtrim(p.url,'/') = rtrim(s.url,'/'))
+      ORDER BY s.url LIMIT $2`,
+    [siteId, limit]
+  );
+  const { rows: tot } = await pool.query(
+    'SELECT COUNT(*)::int AS n FROM seo_sitemap_urls WHERE site_id = $1', [siteId]
+  );
+  return {
+    urls_au_sitemap: tot[0].n,
+    publiees_absentes_du_sitemap: absentes.length,
+    au_sitemap_jamais_crawlees: fantomes.length,
+    absentes, fantomes,
+  };
+}
+
+// ---- Redirections (module 4) ----------------------------------------------------
+// Une 301 vers l'accueil est traitee par Google comme une soft 404 : la redirection
+// parait propre, mais le contenu attendu a disparu.
+export async function getRedirects(pool, siteId, limit = 200) {
+  const { rows } = await pool.query(
+    `SELECT from_url, final_url, final_status, hops, chain, to_home, updated_at
+       FROM seo_redirects WHERE site_id = $1
+      ORDER BY to_home DESC, hops DESC, from_url LIMIT $2`,
+    [siteId, limit]
+  );
+  return {
+    total: rows.length,
+    vers_accueil: rows.filter((r) => r.to_home).length,
+    chaines_multiples: rows.filter((r) => (r.hops || 0) > 1).length,
+    redirections: rows,
+  };
+}
+
+// ---- Cannibalisation par focus keyword (module 5) --------------------------------
+// get_cannibalisation part des requetes GSC : il ne voit donc que ce qui a deja des
+// impressions. Ici on part de l'INTENTION editoriale (le focus keyword Yoast), ce qui
+// detecte le conflit AVANT qu'il ne coute des positions.
+export async function getFocusKeywordConflicts(pool, siteId) {
+  const { rows } = await pool.query(
+    `WITH cibles AS (
+       SELECT lower(btrim(focus_keyword)) AS kw, url, title, type, value_score
+         FROM seo_pages
+        WHERE site_id = $1 AND focus_keyword IS NOT NULL AND btrim(focus_keyword) <> ''
+     )
+     SELECT kw, COUNT(*)::int AS pages_count,
+            json_agg(json_build_object('url', url, 'title', title, 'type', type,
+                                       'value_score', value_score) ORDER BY value_score DESC NULLS LAST) AS pages
+       FROM cibles GROUP BY kw HAVING COUNT(*) > 1
+      ORDER BY COUNT(*) DESC, kw`,
+    [siteId]
+  );
+  return {
+    conflits: rows.length,
+    note: rows.length === 0
+      ? "Aucun doublon de focus keyword. Si la liste paraît vide à tort, vérifier que le snippet register_rest_field est bien posé dans functions.php."
+      : "Deux contenus visant la même expression se font concurrence : choisir une page cible et réorienter l'autre.",
+    details: rows,
+  };
+}

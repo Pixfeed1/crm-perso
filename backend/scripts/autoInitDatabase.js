@@ -1881,6 +1881,39 @@ async function ensureSeoTables(client) {
   await client.query('CREATE INDEX IF NOT EXISTS idx_gsc_hist_site ON gsc_index_history(site_id, changed_at DESC);');
   await client.query('CREATE INDEX IF NOT EXISTS idx_gsc_hist_url ON gsc_index_history(site_id, url);');
 
+  // URLs declarees au sitemap, avec leur origine et leur lastmod. seo_audit n'en gardait
+  // que le NOMBRE : impossible de savoir si une URL precise y figure sans un curl manuel.
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS seo_sitemap_urls (
+      id           SERIAL PRIMARY KEY,
+      site_id      INTEGER NOT NULL REFERENCES seo_sites(id) ON DELETE CASCADE,
+      url          TEXT NOT NULL,
+      sitemap_file TEXT,          -- sous-sitemap d'origine (utile quand il y en a plusieurs)
+      lastmod      TEXT,          -- brut : format libre selon les generateurs
+      seen_at      TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+  await client.query('CREATE UNIQUE INDEX IF NOT EXISTS uq_seo_sitemap_urls ON seo_sitemap_urls(site_id, url);');
+  await client.query('CREATE INDEX IF NOT EXISTS idx_seo_sitemap_site ON seo_sitemap_urls(site_id);');
+
+  // Chaines de redirection. Google traite une 301 vers l'accueil comme une soft 404 :
+  // la page semble redirigee proprement, mais le contenu attendu a disparu.
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS seo_redirects (
+      id            SERIAL PRIMARY KEY,
+      site_id       INTEGER NOT NULL REFERENCES seo_sites(id) ON DELETE CASCADE,
+      from_url      TEXT NOT NULL,
+      final_url     TEXT,
+      final_status  INTEGER,
+      hops          INTEGER DEFAULT 0,
+      chain         JSONB DEFAULT '[]'::jsonb,   -- [{url, status}, ...]
+      to_home       BOOLEAN DEFAULT false,       -- aboutit a la racine = soft 404 probable
+      updated_at    TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+  await client.query('CREATE UNIQUE INDEX IF NOT EXISTS uq_seo_redirects ON seo_redirects(site_id, from_url);');
+  await client.query('CREATE INDEX IF NOT EXISTS idx_seo_redirects_home ON seo_redirects(site_id, to_home);');
+
   // Watchlist de mots-clés suivis (rank tracker) : config UTILISATEUR -> Node PEUT y écrire
   // (exception, comme seo_jobs). Les DONNÉES GSC restent écrites par le worker uniquement.
   await client.query(`

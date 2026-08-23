@@ -228,6 +228,10 @@ def fetch_html(url):
         meta["status"] = r.status_code
         meta["final_url"] = r.url
         meta["redirect_chain"] = [h.url for h in r.history]  # max MAX_REDIRECTS sauts
+        # Chaîne détaillée : le CODE de chaque saut distingue une 301 (permanente,
+        # transmet le signal) d'une 302 (temporaire, ne le transmet pas).
+        meta["chain"] = [{"url": h.url, "status": h.status_code} for h in r.history]
+        meta["hops"] = len(r.history)
         if r.ok and "text/html" in r.headers.get("Content-Type", ""):
             return r.text, meta
         if not r.ok:
@@ -356,11 +360,24 @@ def extract_onpage(html_doc, page_url):
     return a
 
 
-def fetch_sitemap(base):
-    """Ensemble des URLs (normalisées) du sitemap. Essaie sitemap_index.xml puis sitemap.xml,
-    suit les sous-sitemaps (plafonné + politesse). Tolérant -> (set(urls), sitemap_url|None)."""
+# Bloc <url> d'un sitemap : on le lit ENTIER pour rattacher chaque <lastmod> à son
+# <loc>. Deux regex séparées ne le permettraient pas, le lastmod étant facultatif :
+# le moindre trou décalerait toutes les correspondances.
+_SM_ENTRY_RE = re.compile(r"<url\b[^>]*>(.*?)</url>", re.I | re.S)
+_SM_LOC_RE = re.compile(r"<loc>\s*([^<\s]+)\s*</loc>", re.I)
+_SM_LASTMOD_RE = re.compile(r"<lastmod>\s*([^<\s]+)\s*</lastmod>", re.I)
+
+
+def fetch_sitemap_detailed(base):
+    """Sitemap avec le DÉTAIL par URL, pas seulement la liste.
+
+    Renvoie ({url: {"sitemap_file": ..., "lastmod": ...}}, url_du_sitemap|None).
+    Le fichier d'origine sert à retrouver où une URL est déclarée quand il y a plusieurs
+    sous-sitemaps ; le lastmod permet de repérer les écarts avec la vraie date de
+    modification (un sitemap qui annonce du frais sur du contenu qui n'a pas bougé).
+    """
     seen = set()
-    page_urls = set()
+    detail = {}
 
     def grab(sm_url, depth=0):
         if sm_url in seen or depth > 3:
@@ -374,22 +391,39 @@ def fetch_sitemap(base):
         except Exception as e:
             print(f"[wp] fetch_sitemap {sm_url}: {e}")
             return
-        locs = re.findall(r"<loc>\s*([^<\s]+)\s*</loc>", txt, re.I)
         if "<sitemapindex" in txt.lower():
-            for child in locs[:50]:
+            for child in _SM_LOC_RE.findall(txt)[:50]:
                 time.sleep(config.POLITENESS_DELAY)  # politesse sur les sous-sitemaps
                 grab(child.strip(), depth + 1)
-        else:
-            for u in locs:
+            return
+        for bloc in _SM_ENTRY_RE.findall(txt):
+            m = _SM_LOC_RE.search(bloc)
+            if not m:
+                continue
+            n = normalize_url(m.group(1).strip())
+            if not n:
+                continue
+            lm = _SM_LASTMOD_RE.search(bloc)
+            detail[n] = {"sitemap_file": sm_url, "lastmod": lm.group(1).strip() if lm else None}
+        # Repli : sitemap sans balises <url> (format inhabituel) -> on prend les <loc> bruts.
+        if not detail:
+            for u in _SM_LOC_RE.findall(txt):
                 n = normalize_url(u.strip())
                 if n:
-                    page_urls.add(n)
+                    detail[n] = {"sitemap_file": sm_url, "lastmod": None}
 
     for cand in (f"{base}/sitemap_index.xml", f"{base}/sitemap.xml"):
         grab(cand)
-        if page_urls:
-            return page_urls, cand
-    return page_urls, None
+        if detail:
+            return detail, cand
+    return detail, None
+
+
+def fetch_sitemap(base):
+    """Ensemble des URLs (normalisées) du sitemap -> (set(urls), sitemap_url|None).
+    Conservé pour les appelants existants ; s'appuie sur fetch_sitemap_detailed."""
+    detail, sm_url = fetch_sitemap_detailed(base)
+    return set(detail.keys()), sm_url
 
 
 def head_status(url):
