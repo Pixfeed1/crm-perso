@@ -191,7 +191,7 @@ technique). Colle ceci dans le `functions.php` du thème, **puis relance un craw
 ```php
 add_action('rest_api_init', function () {
   // Ajoute ici tout nouveau type de contenu.
-  $types = ['post','page','glossaire','guide','anime','film','logiciel','serie','acteur'];
+  $types = ['post','page','glossaire','guide','anime','film','logiciel','serie','acteur','jeu'];
   // champ REST => post meta Yoast ('' = champ natif WordPress, traité plus bas)
   $champs = [
     'focus_keyword'   => '_yoast_wpseo_focuskw',
