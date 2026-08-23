@@ -245,7 +245,8 @@ def crawl_site(conn, site, full=False, no_resume=False, job_id=None):
                     html, fetch_meta = wp.fetch_html(url)
                     if html:
                         parsed += 1
-                        meta = wp.extract_seo_meta(html, item.get("_yoast"))
+                        # Les champs lus via l'API REST font autorité sur le <head> rendu.
+                        meta = wp.extract_seo_meta(html, item.get("_yoast"), rest=item)
                         cur.execute(
                             "UPDATE seo_pages SET seo_meta = %s, last_crawl = NOW(), updated_at = NOW() "
                             "WHERE site_id = %s AND url = %s",

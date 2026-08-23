@@ -153,6 +153,15 @@ def _normalize_item(it, rest_base):
     # Absent si le snippet n'est pas posé -> chaîne vide, la vue 3 reste juste vide (ne casse rien).
     fkw = it.get("focus_keyword")
     fkw = fkw.strip() if isinstance(fkw, str) else ""
+
+    def _txt(key):
+        """Champ REST exposé via register_rest_field ; '' si le snippet n'est pas posé."""
+        v = it.get(key)
+        return v.strip() if isinstance(v, str) else ""
+
+    # Valeurs SEO lues à la SOURCE (base WordPress) plutôt qu'aspirées dans le HTML :
+    # le HTML rendu mélange le contenu et le gabarit (menu, en-tête, pied de page),
+    # ce qui polluait l'extrait et faussait les compteurs.
     return {
         "wp_id": it.get("id"),
         "url": url,
@@ -162,6 +171,11 @@ def _normalize_item(it, rest_base):
         "tags": tags,
         "modified_at": it.get("modified_gmt") or it.get("modified"),
         "focus_keyword": fkw,
+        "meta_description": _txt("meta_description"),
+        "excerpt_raw": _strip_html(_txt("excerpt_raw")),
+        "seo_title": _txt("seo_title"),
+        # Yoast stocke '1' quand la case noindex est cochée ; absent/'' sinon.
+        "robots_noindex": str(it.get("robots_noindex") or "").strip() in ("1", "true", "noindex"),
         "_yoast": it.get("yoast_head_json") if isinstance(it.get("yoast_head_json"), dict) else None,
     }
 
@@ -234,6 +248,37 @@ def fetch_html(url):
     return None, meta
 
 
+# Éléments de gabarit, communs à toutes les pages : ils n'appartiennent pas au contenu.
+_CHROME_SELECTORS = [
+    "nav", "header", "footer", "aside",
+    "[role=navigation]", "[role=banner]", "[role=contentinfo]", "[role=complementary]",
+    ".menu", ".navigation", ".site-header", ".site-footer", ".sidebar", ".widget-area",
+    "#comments", ".comments-area", ".breadcrumb", ".breadcrumbs", ".skip-link",
+]
+
+
+def _main_content(soup):
+    """Isole le contenu réel de la page, sans le gabarit.
+
+    On privilégie le conteneur sémantique (<main>, <article>, [role=main]) : c'est le
+    plus fiable. À défaut, on retire du document les éléments de gabarit connus.
+    Repli volontaire sur le document entier si rien ne correspond : mieux vaut un extrait
+    imparfait qu'un extrait vide.
+    """
+    try:
+        for sel in ("main", "article", "[role=main]", ".entry-content", ".post-content"):
+            node = soup.select_one(sel)
+            # Un conteneur quasi vide (gabarit sans contenu) ne vaut pas mieux que rien.
+            if node and len(node.get_text(" ", strip=True)) > 120:
+                return node
+        for sel in _CHROME_SELECTORS:
+            for node in soup.select(sel):
+                node.decompose()
+        return soup.body or soup
+    except Exception:
+        return soup
+
+
 def extract_onpage(html_doc, page_url):
     """Audit technique on-page à partir du HTML DÉJÀ crawlé. AUCUNE requête réseau.
     Tolérant : toute erreur -> dict partiel marqué _partial (ne casse jamais le crawl)."""
@@ -293,10 +338,14 @@ def extract_onpage(html_doc, page_url):
                         mixed.append(v.strip())
         a["mixed_content"] = list(dict.fromkeys(mixed))[:50]
 
-        # Nombre de mots du texte visible (on retire scripts/styles en dernier).
+        # Texte visible : on retire d'abord le code, PUIS le gabarit (menu, en-tête,
+        # pied de page, barres latérales). Sans cette seconde étape, get_text() sur tout
+        # le document ramenait le menu de navigation dans l'extrait et gonflait le
+        # nombre de mots — identique sur chaque page, donc inexploitable.
         for tag in soup(["script", "style", "noscript"]):
             tag.decompose()
-        text = soup.get_text(" ", strip=True)
+        content = _main_content(soup)
+        text = content.get_text(" ", strip=True)
         a["word_count"] = len(text.split()) if text else 0
         # Extrait de contenu (pour le maillage sémantique via le serveur MCP) : ~2000 premiers
         # caractères du texte visible, déjà en main -> aucune requête en plus.
@@ -385,8 +434,15 @@ def extract_links(html, page_url, domain):
     return out
 
 
-def extract_seo_meta(html, yoast=None):
-    """Métadonnées SEO depuis le <head> (tous plugins) + bonus yoast_head_json."""
+def extract_seo_meta(html, yoast=None, rest=None):
+    """Métadonnées SEO depuis le <head> (tous plugins) + bonus yoast_head_json.
+
+    `rest` : valeurs lues à la source via l'API REST (register_rest_field). Elles font
+    AUTORITÉ quand elles existent : le <head> peut être réécrit par un cache, un CDN ou
+    un autre plugin, alors que la base WordPress dit ce que l'auteur a réellement saisi.
+    Une meta description vide en base est une vraie information (champ non rempli), à ne
+    pas confondre avec une balise absente du HTML pour une raison technique.
+    """
     meta = {}
     try:
         soup = BeautifulSoup(html, "lxml")
@@ -419,4 +475,18 @@ def extract_seo_meta(html, yoast=None):
             if idx:
                 meta.setdefault("noindex", idx == "noindex")
         meta["source_plugin"] = "yoast"
+
+    # La source REST prime sur tout ce qui précède (voir docstring).
+    if isinstance(rest, dict):
+        if rest.get("seo_title"):
+            meta["title"] = rest["seo_title"]
+        # `meta_description_present` distingue « champ vide en base » (vrai manque, à
+        # corriger) de « inconnu » (snippet REST non posé) : sans ça, le compteur
+        # meta_description_absente melangeait les deux.
+        if "meta_description" in rest:
+            meta["description"] = rest["meta_description"] or meta.get("description", "")
+            meta["meta_description_present"] = bool(rest["meta_description"])
+        if rest.get("robots_noindex"):
+            meta["noindex"] = True
+        meta["source"] = "rest"
     return meta

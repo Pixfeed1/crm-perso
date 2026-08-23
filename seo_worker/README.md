@@ -180,21 +180,51 @@ clics, impressions, position). Aucune nouvelle collecte ; position = `SUM(impr*p
 - Watchlist `seo_tracked_keywords` : **Node peut écrire** (config utilisateur, exception comme
   `seo_jobs`). Les données GSC restent écrites par le worker uniquement.
 
-### Vue « Yoast vs réel » — snippet REQUIS (à coller AVANT un crawl)
-Le focus keyword Yoast (`_yoast_wpseo_focuskw`) n'est pas exposé par l'API REST. Colle ceci
-dans le `functions.php` du thème, **puis relance un crawl** (sinon `focus_keyword` reste vide
-partout et la vue 3 est vide — les vues 1 et 2 marchent quand même) :
+### Champs SEO à la source — snippet REQUIS (à coller AVANT un crawl)
+
+Yoast stocke ses réglages en post meta, que l'API REST n'expose pas par défaut. Sans ce
+snippet, le worker doit deviner ces valeurs en aspirant le HTML rendu — ce qui mélange le
+contenu et le gabarit du thème, fausse les compteurs et ne permet pas de distinguer
+« champ vide en base » (vrai manque à corriger) de « balise absente du HTML » (cause
+technique). Colle ceci dans le `functions.php` du thème, **puis relance un crawl** :
+
 ```php
 add_action('rest_api_init', function () {
-  foreach (['post','page','glossaire','guide','anime','film','logiciel','serie','acteur'] as $pt) {
-    register_rest_field($pt, 'focus_keyword', [
-      'get_callback' => function ($obj) { return get_post_meta($obj['id'], '_yoast_wpseo_focuskw', true); },
+  // Ajoute ici tout nouveau type de contenu.
+  $types = ['post','page','glossaire','guide','anime','film','logiciel','serie','acteur'];
+  // champ REST => post meta Yoast ('' = champ natif WordPress, traité plus bas)
+  $champs = [
+    'focus_keyword'   => '_yoast_wpseo_focuskw',
+    'meta_description'=> '_yoast_wpseo_metadesc',
+    'seo_title'       => '_yoast_wpseo_title',
+    'robots_noindex'  => '_yoast_wpseo_meta-robots-noindex',
+  ];
+  foreach ($types as $pt) {
+    foreach ($champs as $champ => $meta_key) {
+      register_rest_field($pt, $champ, [
+        'get_callback' => function ($obj) use ($meta_key) {
+          return get_post_meta($obj['id'], $meta_key, true);
+        },
+        'schema' => ['type' => 'string'],
+      ]);
+    }
+    // Extrait BRUT : `excerpt.rendered` passe par les filtres du thème et peut être
+    // tronqué ou enrichi ; on veut la valeur telle que saisie.
+    register_rest_field($pt, 'excerpt_raw', [
+      'get_callback' => function ($obj) {
+        $p = get_post($obj['id']);
+        return $p ? $p->post_excerpt : '';
+      },
       'schema' => ['type' => 'string'],
     ]);
   }
 });
 ```
-Le worker lit alors `focus_keyword` au crawl et le stocke dans `seo_pages.focus_keyword`.
+
+Le worker lit alors ces champs au crawl : `focus_keyword` alimente `seo_pages.focus_keyword`,
+les autres alimentent `seo_pages.seo_meta` et **priment sur le HTML**. Le snippet reste
+optionnel au sens strict : sans lui, le worker retombe sur la lecture du `<head>` et rien ne
+casse, mais les compteurs `meta_description_absente` et `title_trop_long` restent approximatifs.
 
 ## Étapes suivantes
 - Étape 3 (suite) : content decay (besoin de plusieurs mois de `seo_metrics_monthly`),
