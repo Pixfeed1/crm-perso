@@ -1836,6 +1836,51 @@ async function ensureSeoTables(client) {
   `);
   await client.query('CREATE UNIQUE INDEX IF NOT EXISTS uq_seo_audit_site ON seo_audit(site_id);');
 
+  // Verdict d'indexation Google, page par page (API URL Inspection).
+  // Une ligne par URL : c'est l'ETAT COURANT, mis a jour a chaque inspection.
+  // Le quota est de 2 000 appels/jour/propriete, une URL par appel : on ne peut donc
+  // pas tout reinspecter chaque nuit, d'ou checked_at qui pilote la rotation.
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS gsc_index_status (
+      id               SERIAL PRIMARY KEY,
+      site_id          INTEGER NOT NULL REFERENCES seo_sites(id) ON DELETE CASCADE,
+      url              TEXT NOT NULL,
+      verdict          TEXT,           -- PASS / NEUTRAL / FAIL / VERDICT_UNSPECIFIED
+      coverage_state   TEXT,           -- « Explorée, actuellement non indexée », « Introuvable (404) »…
+      robots_txt_state TEXT,           -- blocage robots.txt
+      indexing_state   TEXT,           -- noindex
+      page_fetch_state TEXT,           -- erreurs serveur et 404
+      last_crawl_time  TIMESTAMPTZ,    -- pages que Google a cessé d'explorer
+      google_canonical TEXT,
+      user_canonical   TEXT,
+      referring_urls   JSONB DEFAULT '[]'::jsonb,  -- d'où Google a découvert l'URL
+      raw              JSONB,          -- réponse complète, pour exploiter de nouveaux champs sans recrawl
+      checked_at       TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+  await client.query('CREATE UNIQUE INDEX IF NOT EXISTS uq_gsc_index_status ON gsc_index_status(site_id, url);');
+  await client.query('CREATE INDEX IF NOT EXISTS idx_gsc_index_checked ON gsc_index_status(site_id, checked_at);');
+  await client.query('CREATE INDEX IF NOT EXISTS idx_gsc_index_verdict ON gsc_index_status(site_id, verdict);');
+  await client.query('CREATE INDEX IF NOT EXISTS idx_gsc_index_coverage ON gsc_index_status(site_id, coverage_state);');
+
+  // HISTORIQUE des changements de verdict : sans lui, on ne saurait pas qu'une page est
+  // passee d'indexee a desindexee (l'etat courant est ecrase a chaque inspection).
+  // C'est ce qui permet de mesurer l'effet d'une refonte editoriale.
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS gsc_index_history (
+      id             SERIAL PRIMARY KEY,
+      site_id        INTEGER NOT NULL REFERENCES seo_sites(id) ON DELETE CASCADE,
+      url            TEXT NOT NULL,
+      old_verdict    TEXT,
+      new_verdict    TEXT,
+      old_coverage   TEXT,
+      new_coverage   TEXT,
+      changed_at     TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+  await client.query('CREATE INDEX IF NOT EXISTS idx_gsc_hist_site ON gsc_index_history(site_id, changed_at DESC);');
+  await client.query('CREATE INDEX IF NOT EXISTS idx_gsc_hist_url ON gsc_index_history(site_id, url);');
+
   // Watchlist de mots-clés suivis (rank tracker) : config UTILISATEUR -> Node PEUT y écrire
   // (exception, comme seo_jobs). Les DONNÉES GSC restent écrites par le worker uniquement.
   await client.query(`

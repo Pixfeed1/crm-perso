@@ -507,3 +507,111 @@ export async function getLinkOutreachStatus(pool, nicheId) {
     && new Date(r.followup_date) <= new Date()).length;
   return { relances_dues, envois: rows };
 }
+
+// ---- Indexation Google (API URL Inspection) ------------------------------------
+// Le verdict réel de Google, page par page, alimenté par le worker (gsc_index_status).
+// Complète les compteurs déduits, qui ne distinguaient pas « non indexée » de
+// « jamais explorée » ni ne voyaient les 404 connues de Google seul.
+
+// Répartition par état de couverture + verdicts, pour savoir où se situe le problème.
+export async function getIndexationSummary(pool, siteId) {
+  const { rows } = await pool.query(
+    `SELECT coverage_state, verdict, COUNT(*)::int AS n
+       FROM gsc_index_status
+      WHERE site_id = $1
+      GROUP BY coverage_state, verdict
+      ORDER BY n DESC`,
+    [siteId]
+  );
+  const { rows: tot } = await pool.query(
+    `SELECT COUNT(*)::int AS inspectees,
+            COUNT(*) FILTER (WHERE verdict = 'PASS')::int AS indexees,
+            COUNT(*) FILTER (WHERE verdict = 'FAIL')::int AS en_echec,
+            COUNT(*) FILTER (WHERE verdict = 'NEUTRAL')::int AS neutres,
+            MIN(checked_at) AS plus_ancienne, MAX(checked_at) AS plus_recente
+       FROM gsc_index_status WHERE site_id = $1`,
+    [siteId]
+  );
+  const { rows: restant } = await pool.query(
+    `SELECT COUNT(*)::int AS n FROM seo_pages p
+      WHERE p.site_id = $1
+        AND NOT EXISTS (SELECT 1 FROM gsc_index_status s WHERE s.site_id = p.site_id AND s.url = p.url)`,
+    [siteId]
+  );
+  return {
+    ...(tot[0] || {}),
+    jamais_inspectees: restant[0] ? restant[0].n : 0,
+    par_etat: rows,
+    note: "L'inspection reflète l'index Google au moment de l'appel, avec un décalage possible de quelques jours.",
+  };
+}
+
+// Les 404 vues par Google, AVEC leur origine : referring_urls dit quelle page contient
+// le lien cassé. C'est l'information qui manquait pour pouvoir corriger.
+export async function getGoogle404s(pool, siteId, limit = 100) {
+  const { rows } = await pool.query(
+    `SELECT s.url, s.coverage_state, s.page_fetch_state, s.last_crawl_time,
+            s.referring_urls, s.checked_at,
+            EXISTS (SELECT 1 FROM seo_pages p WHERE p.site_id = s.site_id
+                      AND rtrim(p.url,'/') = rtrim(s.url,'/')) AS encore_au_crawl
+       FROM gsc_index_status s
+      WHERE s.site_id = $1
+        AND (s.page_fetch_state ILIKE '%NOT_FOUND%' OR s.coverage_state ILIKE '%404%'
+             OR s.coverage_state ILIKE '%introuvable%')
+      ORDER BY jsonb_array_length(COALESCE(s.referring_urls,'[]'::jsonb)) DESC, s.checked_at DESC
+      LIMIT $2`,
+    [siteId, limit]
+  );
+  return {
+    total: rows.length,
+    // Une 404 encore liée depuis le site est prioritaire : le lien cassé est chez toi.
+    a_corriger_en_priorite: rows.filter((r) => (r.referring_urls || []).length > 0).length,
+    pages: rows,
+  };
+}
+
+// Google a choisi une autre canonique que celle déclarée : signe de contenu dupliqué.
+export async function getCanonicalMismatches(pool, siteId, limit = 100) {
+  const { rows } = await pool.query(
+    `SELECT url, google_canonical, user_canonical, coverage_state, verdict, checked_at
+       FROM gsc_index_status
+      WHERE site_id = $1
+        AND google_canonical IS NOT NULL AND user_canonical IS NOT NULL
+        AND rtrim(google_canonical,'/') <> rtrim(user_canonical,'/')
+      ORDER BY checked_at DESC LIMIT $2`,
+    [siteId, limit]
+  );
+  return { total: rows.length, pages: rows };
+}
+
+// Pages que Google n'a plus explorées depuis longtemps : il s'en désintéresse.
+export async function getStaleCrawls(pool, siteId, days = 90, limit = 100) {
+  const { rows } = await pool.query(
+    `SELECT s.url, s.last_crawl_time, s.verdict, s.coverage_state,
+            EXTRACT(DAY FROM NOW() - s.last_crawl_time)::int AS jours_sans_crawl,
+            p.title, p.value_score
+       FROM gsc_index_status s
+       LEFT JOIN seo_pages p ON p.site_id = s.site_id AND rtrim(p.url,'/') = rtrim(s.url,'/')
+      WHERE s.site_id = $1 AND s.last_crawl_time IS NOT NULL
+        AND s.last_crawl_time < NOW() - ($2::int || ' days')::interval
+      ORDER BY s.last_crawl_time ASC LIMIT $3`,
+    [siteId, days, limit]
+  );
+  return { seuil_jours: days, total: rows.length, pages: rows };
+}
+
+// Historique des bascules indexée <-> non indexée : mesure l'effet des refontes.
+export async function getIndexationChanges(pool, siteId, days = 30, limit = 200) {
+  const { rows } = await pool.query(
+    `SELECT h.url, h.old_verdict, h.new_verdict, h.old_coverage, h.new_coverage,
+            h.changed_at, p.title
+       FROM gsc_index_history h
+       LEFT JOIN seo_pages p ON p.site_id = h.site_id AND rtrim(p.url,'/') = rtrim(h.url,'/')
+      WHERE h.site_id = $1 AND h.changed_at > NOW() - ($2::int || ' days')::interval
+      ORDER BY h.changed_at DESC LIMIT $3`,
+    [siteId, days, limit]
+  );
+  const gagnees = rows.filter((r) => r.new_verdict === 'PASS' && r.old_verdict !== 'PASS').length;
+  const perdues = rows.filter((r) => r.old_verdict === 'PASS' && r.new_verdict !== 'PASS').length;
+  return { fenetre_jours: days, indexations_gagnees: gagnees, indexations_perdues: perdues, changements: rows };
+}

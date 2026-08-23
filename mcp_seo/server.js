@@ -116,6 +116,38 @@ function buildServer() {
     async ({ site_id, days, min_impressions }) => ok(await tools.getCannibalisation(pool, site_id, days ?? 28, min_impressions ?? 10))
   );
 
+  // ---- Indexation Google (URL Inspection) ----
+  server.tool(
+    'get_indexation_summary',
+    "Verdict d'indexation Google du site : combien de pages indexées, en échec, neutres, et la répartition par état de couverture (« Explorée, actuellement non indexée », « Introuvable (404) »…). Indique aussi combien de pages n'ont jamais été inspectées. Source : API URL Inspection, décalage possible de quelques jours.",
+    { site_id: z.number().int() },
+    async ({ site_id }) => ok(await tools.getIndexationSummary(pool, site_id))
+  );
+  server.tool(
+    'get_google_404s',
+    "Les 404 vues par Google, AVEC leur origine (referring_urls = les pages qui pointent vers l'URL cassée, donc l'article à corriger). Ces URLs ne sont ni dans le sitemap ni dans le crawl : ce sont d'anciennes adresses mémorisées par Google ou des liens internes cassés. `encore_au_crawl` dit si l'URL existe encore côté site.",
+    { site_id: z.number().int(), limit: z.number().int().optional() },
+    async ({ site_id, limit }) => ok(await tools.getGoogle404s(pool, site_id, limit ?? 100))
+  );
+  server.tool(
+    'get_canonical_mismatches',
+    "Pages où Google a retenu une canonique DIFFÉRENTE de celle déclarée : signe de contenu dupliqué ou de pages trop proches. Google affiche alors l'autre page à la place de celle visée.",
+    { site_id: z.number().int(), limit: z.number().int().optional() },
+    async ({ site_id, limit }) => ok(await tools.getCanonicalMismatches(pool, site_id, limit ?? 100))
+  );
+  server.tool(
+    'get_stale_crawls',
+    "Pages que Google n'a plus explorées depuis N jours (90 par défaut) : il s'en désintéresse. Croisé avec le value_score pour repérer les pages importantes abandonnées.",
+    { site_id: z.number().int(), days: z.number().int().optional(), limit: z.number().int().optional() },
+    async ({ site_id, days, limit }) => ok(await tools.getStaleCrawls(pool, site_id, days ?? 90, limit ?? 100))
+  );
+  server.tool(
+    'get_indexation_changes',
+    "Historique des bascules d'indexation sur N jours : pages devenues indexées, pages désindexées. C'est ce qui permet de mesurer l'effet réel d'une refonte éditoriale ou d'une correction technique.",
+    { site_id: z.number().int(), days: z.number().int().optional(), limit: z.number().int().optional() },
+    async ({ site_id, days, limit }) => ok(await tools.getIndexationChanges(pool, site_id, days ?? 30, limit ?? 200))
+  );
+
   server.tool(
     'get_ctr_anomalies',
     "Pages bien positionnées mais peu cliquées (CTR très sous la moyenne attendue pour leur position) : title/meta description à réécrire. Triées par clics potentiels récupérables, avec les défauts on-page connus (meta absente/courte/longue, title long).",

@@ -27,6 +27,7 @@ import config
 import wp
 import pagerank as pr_mod
 import gsc
+import indexation
 from db import connect
 
 
@@ -667,6 +668,19 @@ def gsc_sync_site(conn, site, job_id=None):
         conn.commit()
 
         quota_note = " (quota inspection épuisé — reste à inspecter au prochain run)" if quota_hit else ""
+        # 5) Verdict d'indexation page par page (URL Inspection), stocké et historisé.
+        #    Placé APRÈS l'analytics : la priorisation s'appuie sur les impressions qui
+        #    viennent d'être synchronisées. Ne fait jamais échouer la synchro : c'est un
+        #    enrichissement, pas une dépendance.
+        if not quota_hit:
+            try:
+                stats = indexation.run_inspection(conn, creds, site_id, gsc_property)
+                if stats.get("quota_atteint"):
+                    quota_hit = True
+            except Exception as e:
+                conn.rollback()
+                print(f"[Index] {domain} : inspection non effectuée ({str(e)[:200]})")
+
         print(f"  OK GSC {domain} : daily+={inserted} inspections={done} pages_maj={updated}{quota_note}")
         # Remonte un message clair dans le job (affiché dans l'UI) si le quota a été touché :
         # la synchro a bien tourné (analytics + snapshot + value_score), seules des inspections

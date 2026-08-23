@@ -20,13 +20,21 @@ GRANT SELECT ON
   seo_onpage_issues,
   seo_audit,
   seo_tracked_keywords,
-  seo_similar_pages
+  seo_similar_pages,
+  gsc_index_status,
+  gsc_index_history
 TO mcp_seo_ro;
 
 -- Module Backlinks (campagnes de netlinking) + tracking d'ouvertures des emails.
 -- À exécuter avec l'utilisateur applicatif APRÈS le premier démarrage du backend
 -- (les tables sont créées par autoInitDatabase) :
 --   GRANT SELECT ON seo_niches, seo_link_targets, seo_link_outreach, email_tracking TO mcp_seo_ro;
+--
+-- Indexation Google (URL Inspection). Ces tables sont créées par autoInitDatabase :
+-- sur une installation DÉJÀ en service, le GRANT ci-dessus a déjà été joué sans elles.
+-- Rejouer alors cette ligne une fois, sinon les rapports d'indexation renvoient
+-- « permission denied » :
+--   GRANT SELECT ON gsc_index_status, gsc_index_history TO mcp_seo_ro;
 
 -- Aucun autre droit : ce rôle ne voit RIEN d'autre (ni écriture, ni autres tables).
 -- Vérification rapide après coup :
