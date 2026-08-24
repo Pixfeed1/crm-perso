@@ -13,6 +13,7 @@
 # et on priorise : toutes les pages n'ont pas le même intérêt à être réinspectées.
 
 import json
+from urllib.parse import urlparse
 
 import config
 import gsc
@@ -47,6 +48,7 @@ def select_urls_to_inspect(conn, site_id, limit):
              GROUP BY page_url
         )
         SELECT p.url,
+               p.seo_meta->>'canonical' AS canonical,
                CASE
                  WHEN COALESCE(i.impr, 0) = 0                                    THEN 1
                  WHEN p.wp_modified_at > NOW() - INTERVAL '7 days'                THEN 2
@@ -67,7 +69,40 @@ def select_urls_to_inspect(conn, site_id, limit):
     """
     with conn.cursor() as cur:
         cur.execute(sql, {"site": site_id, "ttl": ttl, "lim": limit})
-        return [(r[0], r[1]) for r in cur.fetchall()]
+        return [(r[0], r[1], r[2]) for r in cur.fetchall()]
+
+
+def inspection_url(url, canonical=None):
+    """Forme de l'URL à ENVOYER à Google, qui n'est pas celle qu'on stocke.
+
+    seo_pages.url est canonicalisé sans slash final (normalize_url, pour dédoublonner
+    le graphe de liens). Or WordPress sert ses permaliens AVEC le slash, et Google ne
+    connaît que cette forme : envoyer la version sans slash fait répondre
+    « URL is unknown to Google » sur des pages pourtant indexées.
+
+    Ordre de préférence :
+      1. la canonique déclarée par la page elle-même (fait autorité, forme exacte servie) ;
+      2. sinon l'URL stockée avec un slash final ajouté, sauf si le dernier segment
+         ressemble à un fichier (.xml, .pdf…), qui ne prend jamais de slash.
+    """
+    if canonical:
+        c = canonical.strip()
+        if c.startswith("http"):
+            return c
+    if not url:
+        return url
+    if url.endswith("/"):
+        return url
+    p = urlparse(url)
+    chemin = p.path or ""
+    # Accueil (aucun chemin) : Google la connaît comme « https://site/ », avec le slash.
+    # Sans ce cas, le nom de domaine serait pris pour un fichier à cause de son point.
+    if chemin in ("", "/"):
+        return f"{p.scheme}://{p.netloc}/"
+    dernier = chemin.rsplit("/", 1)[-1]
+    if "." in dernier:            # fichier (.xml, .pdf…) : jamais de slash final
+        return url
+    return url + "/"
 
 
 def _parse(raw):
@@ -140,6 +175,29 @@ def _save(conn, site_id, url, data, raw):
         return changed and row is not None
 
 
+def purge_unknown(conn, site_id):
+    """Supprime les verdicts « inconnu de Google », puis renvoie le nombre effacé.
+
+    Utile après une correction de la forme d'URL envoyée : ces lignes ne décrivent pas
+    l'état réel des pages, seulement le fait qu'on avait interrogé la mauvaise adresse.
+    Les effacer les rend à nouveau éligibles (checked_at NULL = priorité maximale) sans
+    attendre l'expiration du TTL.
+    """
+    with conn.cursor() as cur:
+        cur.execute(
+            """DELETE FROM gsc_index_status
+                WHERE site_id = %s
+                  AND (coverage_state ILIKE '%%unknown to Google%%'
+                       OR coverage_state ILIKE '%%inconnue de Google%%')""",
+            (site_id,),
+        )
+        n = cur.rowcount
+    conn.commit()
+    if n:
+        print(f"[Index] {n} verdict(s) « inconnu de Google » purgé(s) : ils seront réinspectés")
+    return n
+
+
 def run_inspection(conn, creds, site_id, gsc_property, cap=None):
     """Inspecte un lot d'URLs pour un site. Renvoie un résumé chiffré.
 
@@ -147,6 +205,10 @@ def run_inspection(conn, creds, site_id, gsc_property, cap=None):
     rotation reprendra où elle en est au prochain passage (checked_at fait foi).
     """
     cap = cap or _cap()
+    # Un verdict « inconnu de Google » ne dit rien de la page : il signale seulement que
+    # l'adresse interrogée ne correspondait à rien chez Google. On les purge avant de
+    # sélectionner, pour qu'ils soient repris avec la bonne forme d'URL.
+    purge_unknown(conn, site_id)
     cibles = select_urls_to_inspect(conn, site_id, cap)
     if not cibles:
         print(f"[Index] site {site_id} : rien à inspecter (tout est à jour)")
@@ -156,9 +218,12 @@ def run_inspection(conn, creds, site_id, gsc_property, cap=None):
     inspectees = changements = erreurs = 0
     quota = False
 
-    for url, priorite in cibles:
+    for url, canonical, priorite in cibles:
+        # On INSPECTE la forme que Google connaît, mais on STOCKE l'URL canonicalisée
+        # du CRM : les rapports peuvent ainsi se joindre à seo_pages sans conversion.
+        cible = inspection_url(url, canonical)
         try:
-            _cov, raw = gsc.inspect_url(creds, gsc_property, url)
+            _cov, raw = gsc.inspect_url(creds, gsc_property, cible)
         except gsc.QuotaExceeded:
             # Le quota se réinitialise chaque jour : inutile d'insister maintenant.
             print(f"[Index] quota Google atteint après {inspectees} inspection(s), arrêt propre")
