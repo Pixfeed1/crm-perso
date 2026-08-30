@@ -11,9 +11,15 @@
 # Le script ne redémarre QUE ce qui a changé : reconstruire le front pour un
 # correctif Python coûterait plusieurs minutes pour rien.
 #
-# Usage :
-#   sudo ./deploy.sh              # branche courante
-#   sudo ./deploy.sh --force-all  # tout reconstruire, sans tenir compte du diff
+# Usage (SANS sudo, en tant que jurojinn) :
+#   ./deploy.sh              # branche courante
+#   ./deploy.sh --force-all  # tout reconstruire, sans tenir compte du diff
+#
+# Ne PAS lancer en root : le git pull creerait des fichiers appartenant a root
+# dans le depot, et les pull suivants echoueraient sur des erreurs de permission.
+# Le redemarrage des services n'exige pas root : quand polkit refuse
+# `systemctl restart`, on retombe sur un kill du processus principal, que systemd
+# relance aussitot (Restart=always).
 #
 set -uo pipefail
 
@@ -22,6 +28,14 @@ cd "$RACINE"
 
 FORCE=0
 [[ "${1:-}" == "--force-all" ]] && FORCE=1
+
+# Lance en root, le git pull laisserait des fichiers root dans le depot et
+# bloquerait les mises a jour suivantes faites par jurojinn.
+if [[ "${EUID:-$(id -u)}" -eq 0 ]]; then
+  printf '\033[31m%s\033[0m\n' "N'execute pas ce script en root : le git pull creerait des fichiers root dans le depot."
+  printf '%s\n' "Relance-le en tant que jurojinn, sans sudo :  ./deploy.sh"
+  exit 1
+fi
 
 vert()  { printf '\033[32m%s\033[0m\n' "$*"; }
 rouge() { printf '\033[31m%s\033[0m\n' "$*"; }
