@@ -64,6 +64,10 @@ USER_AGENT = "PixFeedSEO/1.0 (+https://crm.pixfeed.net)"
 HTTP_TIMEOUT = 20
 MAX_REDIRECTS = 5            # limite de redirections (évite les boucles "Exceeded 30 redirects")
 COMMIT_BATCH = 25           # commit tous les N pages traitées (persistance + reprise)
+# Reparse force d'une page non revue depuis N jours, meme si WordPress la dit
+# inchangee : un reglage Yoast (description, canonique, gabarit de titre) ne
+# modifie pas post_modified, donc la page resterait figee indefiniment.
+RECRAWL_META_DAYS = 30
 POLITENESS_DELAY = 0.5      # pause (s) entre deux fetch de pages (ne pas marteler les sites)
 POLL_INTERVAL = 10          # mode --serve : intervalle (s) de vérification de la file de jobs
 

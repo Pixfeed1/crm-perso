@@ -2,6 +2,7 @@
 const clientModel = require('../models/clientModel');
 const multer = require('multer');
 const emailService = require('../services/emailService');
+const emailLog = require('../services/emailLog'); // journal central des envois
 
 // Configuration multer pour les pièces jointes email
 const storage = multer.memoryStorage();
@@ -423,6 +424,14 @@ const clientController = {
       };
 
       await transporter.sendMail(mailOptions);
+      // Journal central : cet envoi a son PROPRE transport (config SMTP lue en base),
+      // il ne passe donc pas par emailService où la journalisation est posée. Sans cet
+      // appel, les emails partis d'ici n'apparaissaient nulle part dans l'historique.
+      emailLog.record({
+        to, subject, html: htmlContent, source: 'client', from_account: 'pro',
+        from_email: smtpConfig.from_email,
+        attachments_count: (attachments || []).length, status: 'sent',
+      });
 
       res.json({
         success: true,

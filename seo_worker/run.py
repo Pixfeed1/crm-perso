@@ -198,8 +198,18 @@ def crawl_site(conn, site, full=False, no_resume=False, job_id=None):
     mode = "full" if full else (f"reprise (> wp_id {resume_from})" if resume_from is not None else "incrémental")
     try:
         # État existant (pour l'incrémental).
-        cur.execute("SELECT url, wp_modified_at, last_crawl FROM seo_pages WHERE site_id = %s", (site_id,))
-        existing = {r[0]: {"modified": r[1], "last_crawl": r[2]} for r in cur.fetchall()}
+        cur.execute(
+            "SELECT url, wp_modified_at, last_crawl, seo_meta FROM seo_pages WHERE site_id = %s",
+            (site_id,),
+        )
+        existing = {
+            r[0]: {
+                "modified": r[1], "last_crawl": r[2],
+                # Sert à rattraper les pages dont les métadonnées manquent : voir needs_parse.
+                "has_desc": bool((r[3] or {}).get("description")),
+            }
+            for r in cur.fetchall()
+        }
 
         # DELETE global des liens : UNIQUEMENT en --full (reconstruction complète, sans reprise).
         if full:
@@ -252,12 +262,31 @@ def crawl_site(conn, site, full=False, no_resume=False, job_id=None):
                 )
 
                 prev = existing.get(url)
+                # `seo_meta` (title, description, canonical, robots) n'est ecrit QUE si la
+                # page est reparsee. Or `focus_keyword` et les autres champs de la liste REST
+                # sont, eux, rafraichis a chaque passage. Cette asymetrie faisait qu'une
+                # meta description ajoutee dans Yoast n'apparaissait jamais : ecrire
+                # _yoast_wpseo_metadesc ne modifie pas post_modified, donc la page etait
+                # sautee et gardait son ancienne valeur indefiniment.
+                #
+                # Deux rattrapages, en plus de la detection par date :
+                #   - metadonnees absentes -> on reparse (cas d'une description ajoutee)
+                #   - page jamais revue depuis N jours -> rotation, pour finir par capter
+                #     les changements invisibles cote WordPress (gabarit Yoast, canonique...)
+                trop_ancien = (
+                    prev is not None and prev["last_crawl"] is not None
+                    and (datetime.now(timezone.utc) - prev["last_crawl"].replace(
+                        tzinfo=prev["last_crawl"].tzinfo or timezone.utc)).days
+                        > config.RECRAWL_META_DAYS
+                )
                 needs_parse = (
                     full
                     or prev is None
                     or prev["last_crawl"] is None
                     or (mod and prev["modified"] and mod > prev["modified"])
                     or (mod and prev["modified"] is None)
+                    or not prev["has_desc"]
+                    or trop_ancien
                 )
                 if needs_parse:
                     time.sleep(config.POLITENESS_DELAY)  # politesse : ne pas marteler le site
