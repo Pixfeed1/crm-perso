@@ -169,7 +169,7 @@ const Layout = ({ children }) => {
 
       {/* Bouton Paramètres en haut à droite */}
       <motion.button
-        className="fixed top-4 right-20 z-50 w-12 h-12 sm:w-14 sm:h-14 bg-surface-strong rounded-full flex items-center justify-center shadow-xl hover:bg-border-strong transition-all"
+        className="crm-header-orb fixed top-4 right-20 z-50 w-12 h-12 sm:w-14 sm:h-14 bg-surface-strong rounded-full flex items-center justify-center shadow-xl hover:bg-border-strong transition-all"
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.95 }}
         onClick={() => navigate('/settings')}
@@ -180,7 +180,7 @@ const Layout = ({ children }) => {
 
       {/* Badge de notifications en haut à droite - Position fixe pour visibilité constante */}
       <motion.button
-        className="fixed top-4 right-4 z-50 w-12 h-12 sm:w-14 sm:h-14 bg-indigo-600 rounded-full flex items-center justify-center shadow-xl hover:bg-indigo-700 transition-all"
+        className="crm-header-orb fixed top-4 right-4 z-50 w-12 h-12 sm:w-14 sm:h-14 bg-indigo-600 rounded-full flex items-center justify-center shadow-xl hover:bg-indigo-700 transition-all"
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.95 }}
         onClick={() => setRemindersOpen(true)}

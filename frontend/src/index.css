@@ -396,3 +396,23 @@ div select {
 [data-theme="clair"] .border-purple-600,
 [data-theme="clair"] .focus\:border-indigo-500:focus,
 [data-theme="clair"] .focus\:border-purple-500:focus { border-color: #2383e2; }
+
+/* ------------------------------------------------------------------ */
+/*  MODE CLAIR : icones d'en-tete (engrenage, cloche)                    */
+/*  Une pastille pleine et coloree flottant sur un fond blanc est un    */
+/*  reflexe de theme sombre (l'orbe qui brille sur fond noir). Notion   */
+/*  affiche ces controles en icone grise discrete, sans fond ni ombre,  */
+/*  avec un simple grise au survol. Le bouton "+" du menu flottant      */
+/*  n'est PAS concerne : action principale, il reste l'accent unique.   */
+/*  !important : ces boutons portent encore bg-indigo-600 / shadow-xl,  */
+/*  eux-memes re-mappes plus haut ; on tranche sans dependre de l'ordre.*/
+/* ------------------------------------------------------------------ */
+[data-theme="clair"] .crm-header-orb {
+  background-color: transparent !important;
+  box-shadow: none !important;
+  color: rgb(var(--text-muted));
+}
+[data-theme="clair"] .crm-header-orb:hover {
+  background-color: rgb(var(--surface-strong)) !important;
+  color: rgb(var(--text-secondary));
+}
