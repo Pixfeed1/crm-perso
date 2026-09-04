@@ -1,5 +1,5 @@
 // src/components/calendar/EventForm.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
@@ -132,8 +132,10 @@ const EventForm = ({ event = {}, selectedDate, onSave, onCancel }) => {
     }));
   };
 
-  // Vérifier les conflits
-  const checkConflicts = async () => {
+  // Vérifier les conflits. En useCallback avec les champs qu'il lit réellement :
+  // sans cela l'effet ci-dessous exécutait une version figée de la fonction, qui
+  // pouvait envoyer un ancien titre ou un ancien lieu au contrôle de conflit.
+  const checkConflicts = useCallback(async () => {
     if (!formData.start_date || !formData.end_date) {
       return;
     }
@@ -166,17 +168,16 @@ const EventForm = ({ event = {}, selectedDate, onSave, onCancel }) => {
     } finally {
       setIsCheckingConflicts(false);
     }
-  };
+  }, [formData.start_date, formData.end_date, formData.title, formData.location, event.id]);
 
-  // Vérifier les conflits quand les dates changent
+  // Vérifier les conflits quand les données pertinentes changent (debounce 1 s).
   useEffect(() => {
-    // Debounce pour éviter trop de requêtes
     const timeoutId = setTimeout(() => {
       checkConflicts();
     }, 1000);
 
     return () => clearTimeout(timeoutId);
-  }, [formData.start_date, formData.end_date, formData.location]);
+  }, [checkConflicts]);
 
   // Gérer la sélection d'un créneau alternatif
   const handleSelectAlternativeSlot = (slot) => {

@@ -1,5 +1,5 @@
 // src/App.jsx
-import React, { useEffect } from 'react';
+import React, { useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ToastProvider } from './contexts/ToastContext';
@@ -14,18 +14,23 @@ import ResetPassword from './pages/ResetPassword';
 import Layout from './components/Layout';
 
 // Pages
-import Dashboard from './pages/Dashboard';
-import Portefeuille from './pages/Portefeuille';
-import Calendar from './pages/Calendar';
-import Revenues from './pages/Revenues';
-import Activities from './pages/Activities';
-import Goals from './pages/Goals';
-import Seo from './pages/Seo';
-import Reports from './pages/Reports';
-import Quotes from './pages/Quotes';
-import Invoices from './pages/Invoices';
-import Settings from './pages/Settings';
-import Maintenance from './pages/Maintenance';
+// Chargées à la demande : chaque page devient un fichier séparé, téléchargé au premier
+// accès. Sans cela, le bundle unique (~690 ko) était chargé en entier dès l'écran de
+// connexion, alors qu'un utilisateur n'ouvre qu'une poignée de pages par session.
+// Login et les pages de mot de passe restent chargées d'emblée : ce sont les premières
+// à s'afficher, un aller-retour de plus y serait perçu.
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Portefeuille = lazy(() => import('./pages/Portefeuille'));
+const Calendar = lazy(() => import('./pages/Calendar'));
+const Revenues = lazy(() => import('./pages/Revenues'));
+const Activities = lazy(() => import('./pages/Activities'));
+const Goals = lazy(() => import('./pages/Goals'));
+const Seo = lazy(() => import('./pages/Seo'));
+const Reports = lazy(() => import('./pages/Reports'));
+const Quotes = lazy(() => import('./pages/Quotes'));
+const Invoices = lazy(() => import('./pages/Invoices'));
+const Settings = lazy(() => import('./pages/Settings'));
+const Maintenance = lazy(() => import('./pages/Maintenance'));
 
 // Composant ProtectedRoute pour protéger les routes
 const ProtectedRoute = ({ children }) => {
@@ -79,12 +84,23 @@ const RedirectToInvoicesTab = ({ tab }) => {
   return <Navigate to={`/invoices?${params.toString()}`} replace />;
 };
 
+// Indicateur affiché le temps de télécharger le fichier d'une page (React.lazy).
+// Même apparence que l'attente d'authentification, pour ne pas faire clignoter
+// deux écrans de chargement différents.
+const PageLoader = () => (
+  <div className="flex items-center justify-center h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900">
+    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
+    <p className="ml-2 text-white">Chargement…</p>
+  </div>
+);
+
 const App = () => {
   return (
     <ThemeProvider>
     <AuthProvider>
       <ToastProvider>
         <Router>
+          <Suspense fallback={<PageLoader />}>
           <Routes>
             {/* Routes d'authentification non protégées */}
             <Route path="/login" element={<Login />} />
@@ -221,6 +237,7 @@ const App = () => {
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
+          </Suspense>
       </Router>
       </ToastProvider>
     </AuthProvider>

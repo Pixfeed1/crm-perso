@@ -37,9 +37,43 @@ app.use((req, res, next) => {
   next();
 });
 
-// Securite des en-tetes HTTP. CSP desactivee pour l'instant (une CSP stricte
-// casserait le SPA React) : a regler plus tard, separement.
-app.use(helmet({ contentSecurityPolicy: false }));
+// Securite des en-tetes HTTP, dont la Content-Security-Policy.
+// Chaque directive est le resultat d'un inventaire du front (aucune source ajoutee
+// « au cas ou » : une CSP trop large ne protege de rien, une CSP trop etroite casse
+// l'application en silence) :
+//  - script-src 'self' seulement : le build n'a aucun script inline
+//    (INLINE_RUNTIME_CHUNK=false) et aucune librairie n'utilise WebAssembly.
+//  - style-src 'unsafe-inline' : indispensable a React, framer-motion et aux apercus
+//    d'emails (styles en attributs). C'est la seule concession.
+//  - connect-src : l'API est servie par ce meme serveur ('self') ; seule
+//    l'autocompletion d'adresse interroge directement api-adresse.data.gouv.fr.
+//  - img-src : logos et signatures heberges sur pixfeed.net / jurojin.net, apercus
+//    en data:/blob:.
+//  - frame-src : apercus d'emails en <iframe srcDoc> et PDF generes en blob:.
+//  - object-src 'none', base-uri 'self', frame-ancestors 'self' : durcissements
+//    sans effet sur l'application.
+app.use(helmet({
+  contentSecurityPolicy: {
+    useDefaults: false,
+    directives: {
+      'default-src': ["'self'"],
+      'script-src': ["'self'"],
+      'style-src': ["'self'", "'unsafe-inline'"],
+      'img-src': ["'self'", 'data:', 'blob:', 'https://pixfeed.net', 'https://jurojin.net'],
+      'font-src': ["'self'", 'data:'],
+      'connect-src': ["'self'", 'https://api-adresse.data.gouv.fr'],
+      'frame-src': ["'self'", 'blob:', 'data:'],
+      'media-src': ["'self'", 'blob:', 'data:'],
+      'manifest-src': ["'self'"],
+      'worker-src': ["'self'", 'blob:'],
+      'object-src': ["'none'"],
+      'base-uri': ["'self'"],
+      'form-action': ["'self'"],
+      'frame-ancestors': ["'self'"],
+      'upgrade-insecure-requests': []
+    }
+  }
+}));
 
 // Middleware standard
 // CORS : liste blanche explicite via ALLOWED_ORIGINS (origines separees par des

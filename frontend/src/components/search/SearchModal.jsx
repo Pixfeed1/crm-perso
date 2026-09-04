@@ -1,5 +1,5 @@
 // src/components/search/SearchModal.jsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -13,6 +13,60 @@ import {
   FiLoader
 } from 'react-icons/fi';
 import { searchAPI } from '../../services/api';
+
+// Configuration statique des types d'entités : hissée hors du composant. Déclarée à
+// l'intérieur, elle était recréée à chaque rendu, ce qui rendait instable tout ce
+// qui en dépendait (résultats agrégés, gestionnaire clavier).
+const entityConfig = {
+  clients: {
+    icon: <FiUsers />,
+    label: 'Clients',
+    color: 'text-emerald-400',
+    bg: 'bg-emerald-500/20',
+    border: 'border-emerald-500/30',
+    path: '/clients'
+  },
+  leads: {
+    icon: <FiUser />,
+    label: 'Leads',
+    color: 'text-purple-400',
+    bg: 'bg-purple-500/20',
+    border: 'border-purple-500/30',
+    path: '/leads'
+  },
+  projects: {
+    icon: <FiBriefcase />,
+    label: 'Projets',
+    color: 'text-blue-400',
+    bg: 'bg-blue-500/20',
+    border: 'border-blue-500/30',
+    path: '/projects'
+  },
+  goals: {
+    icon: <FiTarget />,
+    label: 'Objectifs',
+    color: 'text-amber-400',
+    bg: 'bg-amber-500/20',
+    border: 'border-amber-500/30',
+    path: '/goals'
+  },
+  activities: {
+    icon: <FiActivity />,
+    label: 'Activités',
+    color: 'text-green-400',
+    bg: 'bg-green-500/20',
+    border: 'border-green-500/30',
+    path: '/activities'
+  },
+  contacts: {
+    icon: <FiUsers />,
+    label: 'Contacts',
+    color: 'text-indigo-400',
+    bg: 'bg-indigo-500/20',
+    border: 'border-indigo-500/30',
+    path: '/leads'
+  }
+};
 
 const SearchModal = ({ onClose }) => {
   const [query, setQuery] = useState('');
@@ -52,59 +106,11 @@ const SearchModal = ({ onClose }) => {
   }, [query]);
 
   // Configuration des icônes et couleurs par type
-  const entityConfig = {
-    clients: {
-      icon: <FiUsers />,
-      label: 'Clients',
-      color: 'text-emerald-400',
-      bg: 'bg-emerald-500/20',
-      border: 'border-emerald-500/30',
-      path: '/clients'
-    },
-    leads: {
-      icon: <FiUser />,
-      label: 'Leads',
-      color: 'text-purple-400',
-      bg: 'bg-purple-500/20',
-      border: 'border-purple-500/30',
-      path: '/leads'
-    },
-    projects: {
-      icon: <FiBriefcase />,
-      label: 'Projets',
-      color: 'text-blue-400',
-      bg: 'bg-blue-500/20',
-      border: 'border-blue-500/30',
-      path: '/projects'
-    },
-    goals: {
-      icon: <FiTarget />,
-      label: 'Objectifs',
-      color: 'text-amber-400',
-      bg: 'bg-amber-500/20',
-      border: 'border-amber-500/30',
-      path: '/goals'
-    },
-    activities: {
-      icon: <FiActivity />,
-      label: 'Activités',
-      color: 'text-green-400',
-      bg: 'bg-green-500/20',
-      border: 'border-green-500/30',
-      path: '/activities'
-    },
-    contacts: {
-      icon: <FiUsers />,
-      label: 'Contacts',
-      color: 'text-indigo-400',
-      bg: 'bg-indigo-500/20',
-      border: 'border-indigo-500/30',
-      path: '/leads'
-    }
-  };
 
   // Obtenir tous les résultats sous forme de liste plate
-  const getAllResults = () => {
+  // Résultats agrégés, mémoïsés sur `results` : un nouveau tableau à chaque rendu
+  // faisait se réabonner le gestionnaire clavier en permanence.
+  const allResults = useMemo(() => {
     if (!results) return [];
     const all = [];
     Object.keys(entityConfig).forEach(type => {
@@ -115,9 +121,24 @@ const SearchModal = ({ onClose }) => {
       }
     });
     return all;
-  };
+  }, [results]);
 
-  const allResults = getAllResults();
+
+  // Sélection d'un résultat. Déclaré AVANT le gestionnaire clavier qui l'utilise,
+  // et stable (useCallback) pour pouvoir figurer honnêtement dans ses dépendances.
+  const handleSelectResult = useCallback((result) => {
+    const config = entityConfig[result.type];
+
+    // Navigation selon le type
+    if (result.type === 'contacts') {
+      // Pour les contacts, aller vers le lead parent
+      navigate(`${config.path}?leadId=${result.item.lead_id}`);
+    } else {
+      navigate(`${config.path}?id=${result.item.id}`);
+    }
+
+    onClose();
+  }, [navigate, onClose]);
 
   // Navigation au clavier
   useEffect(() => {
@@ -138,22 +159,9 @@ const SearchModal = ({ onClose }) => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [allResults, selectedIndex]);
+  }, [allResults, selectedIndex, handleSelectResult, onClose]);
 
-  // Gérer la sélection d'un résultat
-  const handleSelectResult = (result) => {
-    const config = entityConfig[result.type];
 
-    // Navigation selon le type
-    if (result.type === 'contacts') {
-      // Pour les contacts, aller vers le lead parent
-      navigate(`${config.path}?leadId=${result.item.lead_id}`);
-    } else {
-      navigate(`${config.path}?id=${result.item.id}`);
-    }
-
-    onClose();
-  };
 
   // Obtenir le nom affiché pour une entité
   const getDisplayName = (type, item) => {

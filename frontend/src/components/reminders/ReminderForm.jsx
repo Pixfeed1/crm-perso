@@ -3,15 +3,28 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { leadsAPI, projectsAPI, goalsAPI } from '../../services/api';
 
+// Demain 9h, au format attendu par <input type="datetime-local">. Fonction pure,
+// au niveau module pour être disponible dès l'initialisation de l'état.
+const getDefaultDate = () => {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  tomorrow.setHours(9, 0, 0, 0);
+  return tomorrow.toISOString().slice(0, 16);
+};
+
 const ReminderForm = ({ onSave, onCancel }) => {
-  const [formData, setFormData] = useState({
+  // Date par défaut posée DANS l'état initial. L'ancien effet « au montage » lisait
+  // formData sans le déclarer : y ajouter la dépendance aurait fait revenir la date
+  // par défaut dès que l'utilisateur vidait le champ. L'intention (initialiser une
+  // seule fois) s'exprime sans effet du tout.
+  const [formData, setFormData] = useState(() => ({
     entity_type: 'lead',
     entity_id: '',
     title: '',
     description: '',
-    due_date: '',
+    due_date: getDefaultDate(),
     priority: 'medium'
-  });
+  }));
 
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
@@ -111,22 +124,7 @@ const ReminderForm = ({ onSave, onCancel }) => {
   };
 
   // Générer une date par défaut (demain à 9h)
-  const getDefaultDate = () => {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    tomorrow.setHours(9, 0, 0, 0);
-    return tomorrow.toISOString().slice(0, 16);
-  };
 
-  // Initialiser la date si vide
-  useEffect(() => {
-    if (!formData.due_date) {
-      setFormData(prev => ({
-        ...prev,
-        due_date: getDefaultDate()
-      }));
-    }
-  }, []);
 
   // Obtenir le nom de l'entité
   const getEntityName = (entity) => {

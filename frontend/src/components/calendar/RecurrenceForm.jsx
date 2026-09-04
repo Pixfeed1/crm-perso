@@ -1,5 +1,5 @@
 // src/components/calendar/RecurrenceForm.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 
@@ -13,9 +13,15 @@ const RecurrenceForm = ({ recurrenceData = {}, onChange }) => {
     recurrence_count: recurrenceData.recurrence_count || 10
   });
 
-  // Mettre à jour le parent quand les données changent
+  // Mettre à jour le parent quand les données changent.
+  // `onChange` passe par une ref : le parent recrée souvent cette fonction à chaque
+  // rendu, la mettre en dépendance relancerait l'effet en boucle (onChange -> setState
+  // parent -> nouveau onChange -> effet...). La ref garantit d'appeler la version la
+  // plus récente sans redéclencher l'effet, qui ne réagit qu'aux vraies données.
+  const onChangeRef = useRef(onChange);
+  useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
   useEffect(() => {
-    onChange(formData);
+    onChangeRef.current(formData);
   }, [formData]);
 
   const handleChange = (field, value) => {
