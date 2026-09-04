@@ -2133,7 +2133,37 @@ async function ensureSeoTables(client) {
     );
   `);
 
+  // Droits de lecture du connecteur MCP (role mcp_seo_ro, cree par mcp_seo/setup.sql).
+  // Chaque nouvelle table SEO exigeait un GRANT a la main apres le deploiement, oublie une
+  // fois sur deux : le backend, proprietaire des tables, l'accorde lui-meme a chaque
+  // demarrage. Lecture seule, tables SEO uniquement, jamais seo_oauth_tokens (secrets).
+  await grantMcpReadOnly(client);
+
   console.log('  ✓ Tables SEO vérifiées');
+}
+
+const MCP_READONLY_TABLES = [
+  'seo_sites', 'seo_pages', 'seo_links', 'seo_gsc_daily', 'seo_gsc_daily_web', 'seo_gsc_breakdown',
+  'seo_metrics_monthly', 'seo_onpage_issues', 'seo_audit', 'seo_tracked_keywords', 'seo_similar_pages',
+  'gsc_index_status', 'gsc_index_history', 'seo_sitemap_urls', 'seo_redirects', 'seo_pagespeed',
+  'seo_ga_daily', 'seo_ga_channels_daily', 'seo_authority_daily', 'seo_backlinks', 'seo_ref_domains',
+  'seo_niches', 'seo_link_targets', 'seo_link_outreach', 'email_tracking',
+];
+
+async function grantMcpReadOnly(client) {
+  const role = await client.query("SELECT 1 FROM pg_roles WHERE rolname = 'mcp_seo_ro'");
+  if (role.rows.length === 0) return; // connecteur MCP non installe sur cette base
+  let n = 0;
+  for (const t of MCP_READONLY_TABLES) {
+    try {
+      await client.query(`GRANT SELECT ON ${t} TO mcp_seo_ro`);
+      n++;
+    } catch (e) {
+      // Table absente (module non deploye) ou droit deja present : sans consequence.
+      if (e.code !== '42P01') console.error(`[AutoInit] GRANT ${t} -> mcp_seo_ro :`, e.message);
+    }
+  }
+  console.log(`  ✓ Droits de lecture MCP (${n} tables)`);
 }
 
 /**

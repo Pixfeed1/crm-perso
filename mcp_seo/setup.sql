@@ -35,6 +35,11 @@ GRANT SELECT ON
   seo_ref_domains
 TO mcp_seo_ro;
 
+-- DEPUIS SEPTEMBRE 2026 : le backend accorde lui-meme SELECT au role mcp_seo_ro sur toutes
+-- les tables SEO a chaque demarrage (autoInitDatabase.js, grantMcpReadOnly). Les GRANT
+-- manuels ci-dessous ne sont plus necessaires apres un deploiement ; seule la creation du
+-- role (CREATE ROLE ci-dessus) reste a faire une fois, en superuser.
+
 -- Module Backlinks (campagnes de netlinking) + tracking d'ouvertures des emails.
 -- À exécuter avec l'utilisateur applicatif APRÈS le premier démarrage du backend
 -- (les tables sont créées par autoInitDatabase) :
