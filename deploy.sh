@@ -118,6 +118,12 @@ redemarrer() {
   fi
 }
 
+# Tout le deroulement est dans main() : bash analyse une fonction en entier avant
+# de l'executer, si bien que ce fichier est lu jusqu'au bout AVANT le git pull.
+# Sans cela, un pull qui met a jour deploy.sh lui-meme le reecrirait pendant que
+# bash est encore en train de le lire par morceaux : commandes tronquees ou
+# decalees, comportement imprevisible.
+main() {
 titre "1. Récupération du code"
 AVANT="$(git rev-parse HEAD)"
 BRANCHE="$(git rev-parse --abbrev-ref HEAD)"
@@ -218,3 +224,6 @@ else
   printf '   - %s\n' "${ECHECS[@]}"
   exit 1
 fi
+}
+
+main "$@"
