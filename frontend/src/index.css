@@ -416,3 +416,44 @@ div select {
   background-color: rgb(var(--surface-strong)) !important;
   color: rgb(var(--text-secondary));
 }
+
+/* ------------------------------------------------------------------ */
+/*  MODE CLAIR : menu flottant (bouton + et ses 13 entrees)             */
+/*  Meme logique que la cloche et l'engrenage : des disques pleins       */
+/*  colores sur fond blanc detonnent. Le + garde un disque gris tres     */
+/*  leger (pas transparent : c'est le seul point d'entree de la          */
+/*  navigation, il doit rester trouvable). Les entrees deviennent des    */
+/*  pastilles blanches bordees, l'entree active est teintee de l'accent, */
+/*  la deconnexion garde son rouge (couleur semantique, pas decorative). */
+/*  Les etiquettes heritaient d'un texte blanc sur un fond devenu blanc :*/
+/*  illisibles, on les repose en texte sombre sur fond clair borde.      */
+/* ------------------------------------------------------------------ */
+[data-theme="clair"] .crm-fab {
+  background-color: rgb(var(--surface-strong)) !important;
+  border: 1px solid rgb(var(--border-strong));
+  color: rgb(var(--text-secondary));
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+}
+[data-theme="clair"] .crm-fab:hover { background-color: rgb(var(--border-strong)) !important; }
+
+[data-theme="clair"] .crm-menu-orb {
+  background-color: rgb(var(--surface)) !important;
+  border: 1px solid rgb(var(--border-strong));
+  color: rgb(var(--text-secondary)) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+}
+[data-theme="clair"] .crm-menu-orb[data-active="true"] {
+  background-color: rgb(var(--accent) / 0.12) !important;
+  border-color: rgb(var(--accent));
+  color: rgb(var(--accent)) !important;
+}
+[data-theme="clair"] .crm-menu-orb[data-logout="true"] {
+  background-color: rgb(var(--danger-bg)) !important;
+  border-color: rgb(var(--danger-text) / 0.35);
+  color: rgb(var(--danger-text)) !important;
+}
+[data-theme="clair"] .crm-menu-label {
+  background-color: rgb(var(--surface)) !important;
+  color: rgb(var(--text-primary));
+  border: 1px solid rgb(var(--border));
+}

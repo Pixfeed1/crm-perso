@@ -237,7 +237,7 @@ const Layout = ({ children }) => {
         </AnimatePresence>
 
         <motion.div
-          className="relative z-20 flex items-center justify-center shadow-xl bg-indigo-600 rounded-full cursor-pointer"
+          className="crm-fab relative z-20 flex items-center justify-center shadow-xl bg-indigo-600 rounded-full cursor-pointer"
           variants={mainButtonVariants}
           animate={menuOpen ? "menuOpen" : "default"}
           transition={{ duration: 0.3, type: "spring", stiffness: 300 }}
@@ -293,7 +293,9 @@ const Layout = ({ children }) => {
                   return (
                     <motion.div
                       key={item.path}
-                      className={`absolute w-14 h-14 rounded-full flex items-center justify-center cursor-pointer shadow-lg ${buttonStyle}`}
+                      className={`crm-menu-orb absolute w-14 h-14 rounded-full flex items-center justify-center cursor-pointer shadow-lg ${buttonStyle}`}
+                      data-active={activeModule === item.path ? "true" : "false"}
+                      data-logout={isLogoutButton ? "true" : "false"}
                       style={{
                         left: `calc(50% + ${x}px - 28px)`,
                         top: `calc(50% + ${y}px - 28px)`
@@ -304,7 +306,7 @@ const Layout = ({ children }) => {
                     >
                       {item.icon}
                       <motion.span
-                        className="absolute top-full mt-2 whitespace-nowrap text-sm font-medium text-text-primary bg-surface/70 px-2 py-1 rounded-md"
+                        className="crm-menu-label absolute top-full mt-2 whitespace-nowrap text-sm font-medium text-text-primary bg-surface/70 px-2 py-1 rounded-md"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ delay: 0.1 }}
