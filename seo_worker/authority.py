@@ -21,6 +21,7 @@ from urllib.parse import urlparse
 import requests
 
 import config
+import backlinks_verify
 
 UA = {"User-Agent": config.USER_AGENT}
 
@@ -173,7 +174,13 @@ def run(conn, site, job_id=None, cancel_check=None):
             counts = fetch_bing_link_counts(base)
             bing_total = sum(c for _, c in counts)
             linked_pages = sum(1 for _, c in counts if c > 0)
-            targets = [u for u, c in counts if c > 0][: config.BING_TARGETS_PER_RUN]
+            # Rotation : les pages liees jamais interrogees d'abord, puis les plus anciennes,
+            # pour couvrir TOUTES les pages liees au fil des passages (pas seulement le top).
+            linked = [u for u, c in counts if c > 0]
+            cur.execute("SELECT target_url, checked_at FROM seo_backlink_target_checks WHERE site_id = %s", (site_id,))
+            last_check = dict(cur.fetchall())
+            linked.sort(key=lambda u: (last_check.get(u) is not None, last_check.get(u) or date.min))
+            targets = linked[: config.BING_TARGETS_PER_RUN]
             if job_id is not None:
                 cur.execute("UPDATE seo_jobs SET progress_total = %s, progress_current = 0 WHERE id = %s", (len(targets), job_id))
                 conn.commit()
@@ -184,6 +191,12 @@ def run(conn, site, job_id=None, cancel_check=None):
                     notes.append(f"Bing {target}: {e}")
                     continue
                 checked_targets.append(target)
+                cur.execute(
+                    """INSERT INTO seo_backlink_target_checks (site_id, target_url, checked_at, links_found)
+                       VALUES (%s,%s,%s,%s) ON CONFLICT (site_id, target_url) DO UPDATE
+                         SET checked_at = EXCLUDED.checked_at, links_found = EXCLUDED.links_found""",
+                    (site_id, target, today, len(links)),
+                )
                 for src, anchor in links:
                     sd = domain_of(src)
                     if not sd or sd == domain or sd.endswith("." + domain):
@@ -204,12 +217,13 @@ def run(conn, site, job_id=None, cancel_check=None):
                     print("  [ANNULE] pendant l'analyse des liens")
                     return "cancelled"
                 time.sleep(config.BING_DELAY)
-            # Liens non revus sur une cible recontrolee aujourd'hui -> perdus.
+            # Liens que Bing ne liste plus sur une cible recontrolee : pas une preuve de perte
+            # (l'index de Bing bouge). On force leur re-verification a la source, qui tranche.
             if checked_targets:
                 cur.execute(
-                    """UPDATE seo_backlinks SET status = 'lost', lost_at = %s
+                    """UPDATE seo_backlinks SET verified_at = NULL
                         WHERE site_id = %s AND status = 'active' AND target_url = ANY(%s) AND last_seen < %s""",
-                    (today, site_id, checked_targets, today),
+                    (site_id, checked_targets, today),
                 )
                 conn.commit()
         except BingError as e:
@@ -221,7 +235,23 @@ def run(conn, site, job_id=None, cancel_check=None):
     else:
         notes.append("BING_WMT_API_KEY absent : pas de liste de liens entrants")
 
-    # 3) Instantane du jour
+    # 3) Verification a la source (rel, type, presence) + enrichissement des domaines referents
+    try:
+        v, l = backlinks_verify.verify_batch(conn, site_id, domain, config.BACKLINK_VERIFY_PER_RUN, cancel_check=cancel_check)
+        if v:
+            notes_ok = f"{v} liens vérifiés à la source, {l} perdus"
+            print(f"  [Liens] {notes_ok}")
+        if cancel_check and cancel_check():
+            return "cancelled"
+        n_dom = backlinks_verify.enrich_domains(conn, site_id, cancel_check=cancel_check)
+        backlinks_verify.refresh_toxicity(conn, site_id)
+        if n_dom:
+            print(f"  [Liens] {n_dom} domaines référents enrichis (IP, pays, autorité, toxicité)")
+    except Exception as e:
+        conn.rollback()
+        notes.append(f"vérification des liens : {str(e)[:120]}")
+
+    # 4) Instantane du jour
     cur.execute("SELECT COUNT(DISTINCT source_domain) FROM seo_backlinks WHERE site_id = %s AND status = 'active'", (site_id,))
     ref_domains = cur.fetchone()[0] if _bing_key() else None
     cur.execute(

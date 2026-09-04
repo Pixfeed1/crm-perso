@@ -811,7 +811,34 @@ export async function getAuthority(pool, siteId, days = 30, limit = 50) {
   const { rows: cibles } = await pool.query(
     `SELECT target_url AS page, COUNT(*)::int AS liens, COUNT(DISTINCT source_domain)::int AS domaines
        FROM seo_backlinks WHERE site_id = $1 AND status = 'active' GROUP BY target_url ORDER BY 3 DESC, 2 DESC LIMIT 20`, [siteId]);
+  // Constate a la source par le worker : attributs, types, ancres ; enrichi par domaine :
+  // pays, autorite, toxicite maison (criteres listes).
+  const { rows: attrs } = await pool.query(
+    `SELECT COALESCE(rel,'non vérifié') AS rel, COUNT(*)::int AS n FROM seo_backlinks WHERE site_id = $1 AND status = 'active' GROUP BY 1 ORDER BY 2 DESC`, [siteId]);
+  const { rows: types } = await pool.query(
+    `SELECT COALESCE(link_type,'non vérifié') AS type, COUNT(*)::int AS n FROM seo_backlinks WHERE site_id = $1 AND status = 'active' GROUP BY 1 ORDER BY 2 DESC`, [siteId]);
+  const { rows: ancres } = await pool.query(
+    `SELECT anchor AS ancre, COUNT(*)::int AS liens, COUNT(DISTINCT source_domain)::int AS domaines FROM seo_backlinks
+      WHERE site_id = $1 AND status = 'active' AND COALESCE(anchor,'') <> '' GROUP BY anchor ORDER BY 3 DESC, 2 DESC LIMIT 15`, [siteId]);
+  const { rows: pays } = await pool.query(
+    `SELECT COALESCE(r.country,'??') AS pays, COUNT(DISTINCT b.source_domain)::int AS domaines
+       FROM seo_backlinks b LEFT JOIN seo_ref_domains r ON r.site_id = $1 AND r.domain = b.source_domain
+      WHERE b.site_id = $1 AND b.status = 'active' GROUP BY 1 ORDER BY 2 DESC LIMIT 10`, [siteId]);
+  const { rows: tox } = await pool.query(
+    `SELECT r.domain AS domaine, r.toxicity AS toxicite, r.toxicity_reasons AS raisons, r.opr_score::float AS autorite, COUNT(b.id)::int AS liens
+       FROM seo_ref_domains r JOIN seo_backlinks b ON b.site_id = r.site_id AND b.source_domain = r.domain AND b.status = 'active'
+      WHERE r.site_id = $1 AND r.toxicity >= 30 GROUP BY r.domain, r.toxicity, r.toxicity_reasons, r.opr_score ORDER BY r.toxicity DESC, liens DESC LIMIT 30`, [siteId]);
+  const { rows: toxAll } = await pool.query(
+    `SELECT SUM(CASE WHEN r.toxicity >= 60 THEN 1 ELSE 0 END)::int AS toxiques_liens, COUNT(*)::int AS liens
+       FROM seo_backlinks b JOIN seo_ref_domains r ON r.site_id = b.site_id AND r.domain = b.source_domain
+      WHERE b.site_id = $1 AND b.status = 'active'`, [siteId]);
   return {
+    attributs: attrs, types, ancres_principales: ancres, pays_hebergement: pays,
+    toxicite: {
+      score_global_pct: toxAll[0] && toxAll[0].liens ? Math.round(100 * toxAll[0].toxiques_liens / toxAll[0].liens) : null,
+      domaines_douteux_ou_toxiques: tox,
+      methode: 'Indicateur maison 0-100 par domaine : autorité nulle +30, ancre suspecte +30, lien de gabarit répété +15, extension à risque +15, nom généré +10 ; toxique dès 60, douteux dès 30. Score global = part des liens actifs venant de domaines toxiques.',
+    },
     date: cur.date,
     autorite_open_pagerank: cur.opr_score, rang_mondial: cur.opr_rank,
     domaines_referents_opr: cur.opr_referring_domains,
@@ -823,6 +850,6 @@ export async function getAuthority(pool, siteId, days = 30, limit = 50) {
     } : null,
     liens_gagnes: mv[0].gagnes, liens_perdus: mv[0].perdus,
     domaines_referents: domains, pages_les_plus_liees: cibles,
-    note: "Open PageRank (0-10) est un proxy gratuit de l'Authority Score, pas la même formule. Les liens Bing sont ceux que Bing connaît : un sous-ensemble du web réel. Un lien « perdu » n'a pas été revu lors d'un passage qui a recontrôlé sa page cible.",
+    note: "Open PageRank (0-10) est un proxy gratuit de l'Authority Score, pas la même formule. Les liens viennent de Bing (sous-ensemble du web) puis sont VÉRIFIÉS à la source par le worker : rel, type, présence. Un lien « perdu » a disparu de sa page source ou la page a disparu. Le pays est celui de l'hébergement (ccTLD sinon registre de l'IP), pas de l'audience.",
   };
 }

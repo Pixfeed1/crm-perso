@@ -2061,6 +2061,46 @@ async function ensureSeoTables(client) {
   await client.query('CREATE UNIQUE INDEX IF NOT EXISTS uq_seo_backlinks ON seo_backlinks(site_id, source_url, target_url);');
   await client.query('CREATE INDEX IF NOT EXISTS idx_seo_backlinks_site_domain ON seo_backlinks(site_id, source_domain);');
   await client.query('CREATE INDEX IF NOT EXISTS idx_seo_backlinks_site_status ON seo_backlinks(site_id, status, first_seen);');
+  // Verification a la source : le worker lit la page qui nous lie et constate lui-meme
+  // l'attribut rel (follow/nofollow/sponsored/ugc), le type (texte/image), la presence du lien.
+  await client.query("ALTER TABLE seo_backlinks ADD COLUMN IF NOT EXISTS rel TEXT;");            // follow | nofollow | sponsored | ugc
+  await client.query("ALTER TABLE seo_backlinks ADD COLUMN IF NOT EXISTS link_type TEXT;");      // text | image
+  await client.query("ALTER TABLE seo_backlinks ADD COLUMN IF NOT EXISTS http_status INTEGER;");
+  await client.query("ALTER TABLE seo_backlinks ADD COLUMN IF NOT EXISTS verified_at DATE;");
+  await client.query("ALTER TABLE seo_backlinks ADD COLUMN IF NOT EXISTS source_title TEXT;");
+  await client.query("ALTER TABLE seo_backlinks ADD COLUMN IF NOT EXISTS source_lang TEXT;");
+  await client.query("ALTER TABLE seo_backlinks ADD COLUMN IF NOT EXISTS lost_reason TEXT;");    // link_removed | page_gone | not_seen
+  await client.query('CREATE INDEX IF NOT EXISTS idx_seo_backlinks_verify ON seo_backlinks(site_id, status, verified_at);');
+  // Domaines referents enrichis : autorite (Open PageRank), TLD, IP et pays d'hebergement
+  // (registres RDAP), et un indicateur de toxicite MAISON dont les criteres sont listes.
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS seo_ref_domains (
+      id               SERIAL PRIMARY KEY,
+      site_id          INTEGER NOT NULL REFERENCES seo_sites(id) ON DELETE CASCADE,
+      domain           TEXT NOT NULL,
+      tld              TEXT,
+      ip               TEXT,
+      country          TEXT,             -- ISO-3166 alpha-2 : ccTLD, sinon pays d'enregistrement de l'IP
+      opr_score        NUMERIC(4,2),     -- Open PageRank 0..10 (NULL = inconnu)
+      opr_found        BOOLEAN,
+      toxicity         INTEGER,          -- 0..100, indicateur maison
+      toxicity_reasons JSONB NOT NULL DEFAULT '[]'::jsonb,
+      enriched_at      DATE,
+      updated_at       TIMESTAMP DEFAULT NOW()
+    );
+  `);
+  await client.query('CREATE UNIQUE INDEX IF NOT EXISTS uq_seo_ref_domains ON seo_ref_domains(site_id, domain);');
+  // Pages cibles deja interrogees dans Bing (GetUrlLinks) : rotation sur toutes les pages
+  // liees au lieu des seules 40 premieres a chaque passage.
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS seo_backlink_target_checks (
+      site_id     INTEGER NOT NULL REFERENCES seo_sites(id) ON DELETE CASCADE,
+      target_url  TEXT NOT NULL,
+      checked_at  DATE NOT NULL,
+      links_found INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (site_id, target_url)
+    );
+  `);
 
   console.log('  ✓ Tables SEO vérifiées');
 }

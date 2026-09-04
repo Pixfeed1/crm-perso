@@ -114,9 +114,15 @@ SCHEDULE_FULL_WEEKDAY = int(os.getenv("SEO_SCHEDULE_FULL_WEEKDAY", "6"))
 OPR_API_URL = os.getenv("OPR_API_URL", "https://openpagerank.keywordseverywhere.com/v1/domains/bulk")
 BING_WMT_API_BASE = "https://ssl.bing.com/webmaster/api.svc/json"
 BING_LINKCOUNT_PAGES = int(os.getenv("BING_LINKCOUNT_PAGES", "5"))   # pages de GetLinkCounts lues
-BING_TARGETS_PER_RUN = int(os.getenv("BING_TARGETS_PER_RUN", "40"))  # pages cibles detaillees (GetUrlLinks)
-BING_URLLINKS_PAGES = 3                                             # pages de GetUrlLinks par cible
+BING_TARGETS_PER_RUN = int(os.getenv("BING_TARGETS_PER_RUN", "60"))  # pages cibles detaillees par passage (rotation)
+BING_URLLINKS_PAGES = 5                                             # pages de GetUrlLinks par cible
 BING_DELAY = 0.3                                                    # s entre deux appels
+# Verification a la source : le worker lit les pages qui nous lient (rel, type, presence).
+BACKLINK_VERIFY_PER_RUN = int(os.getenv("BACKLINK_VERIFY_PER_RUN", "150"))  # liens verifies par passage
+BACKLINK_VERIFY_TTL_DAYS = 30                                                # re-verifier au plus tous les N jours
+BACKLINK_VERIFY_DELAY = 0.5                                                  # s entre deux pages (politesse)
+REF_DOMAIN_TTL_DAYS = 30                                                     # rafraichir IP / pays / OPR des domaines
+RDAP_URL = "https://rdap.org/ip/{ip}"                                        # registres officiels (pays de l'IP)
 
 # ===== Core Web Vitals / PageSpeed Insights (job 'pagespeed') =====
 # Un appel = 10 a 40 s (Lighthouse tourne chez Google). Le site entier est donc couvert en

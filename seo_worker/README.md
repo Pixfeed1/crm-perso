@@ -267,6 +267,19 @@ Backlinks / Domaines référents du tableau de bord Semrush, avec des sources gr
   MCP ; le site doit être vérifié dans Bing WMT sous ce compte) : liens entrants connus de
   Bing, page par page (GetLinkCounts puis GetUrlLinks sur les `BING_TARGETS_PER_RUN` pages
   les plus liées), avec ancre. Les liens non revus sur une page recontrôlée sont marqués perdus.
+- **Vérification à la source** : le worker lit chaque page qui nous lie (rotation,
+  `BACKLINK_VERIFY_PER_RUN` = 150 par passage, TTL 30 j) et constate lui-même l'attribut
+  `rel` (follow / nofollow / sponsored / ugc), le type (texte / image), l'ancre réelle, le
+  titre et la langue de la page, et si le lien existe encore : un lien absent de sa page
+  (`link_removed`) ou dont la page a disparu (`page_gone`) est marqué perdu. Un lien que Bing
+  ne liste plus n'est pas déclaré perdu : il est simplement re-vérifié à la source.
+- **Domaines référents enrichis** (`seo_ref_domains`) : TLD, IP, pays (ccTLD sinon pays
+  d'enregistrement de l'IP via les registres RDAP, gratuit), autorité Open PageRank en lot,
+  et un **indicateur de toxicité maison** 0..100 dont chaque critère déclenché est listé :
+  autorité nulle +30, ancre suspecte +30, lien de gabarit répété sur des dizaines de pages
+  +15, extension à risque +15, nom de domaine d'apparence générée +10. Toxique dès 60,
+  douteux dès 30. Le score global du site = part des liens actifs venant de domaines toxiques.
+  Le pays est celui de l'**hébergement**, pas de l'audience (un .com chez Cloudflare sort US).
 Un instantané par jour dans `seo_authority_daily` (tendance), le détail dans `seo_backlinks`.
 Planifié chaque nuit après Analytics. Outil MCP : `get_authority`.
 
