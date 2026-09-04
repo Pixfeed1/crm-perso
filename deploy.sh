@@ -102,8 +102,20 @@ fi
 
 touche() { echo "$CHANGES" | grep -q "^$1"; }
 
+# Si package.json ou le lock ont bouge, les node_modules du serveur sont perimes :
+# le build (ou le backend au demarrage) echouerait sur un module introuvable.
+deps() {
+  local dossier="$1"
+  if touche "$dossier/package.json" || touche "$dossier/package-lock.json"; then
+    gris "   dependances modifiees -> npm ci"
+    ( cd "$dossier" && npm ci --no-audit --no-fund ) \
+      || { rouge "   npm ci ECHOUE dans $dossier"; ECHECS+=("$dossier: npm ci en echec"); return 1; }
+  fi
+}
+
 titre "2. Front"
 if touche "frontend/"; then
+  deps frontend
   ( cd frontend && npm run build ) \
     && vert "   build terminé" \
     || { rouge "   build ÉCHOUÉ"; ECHECS+=("frontend: build en échec"); }
@@ -115,6 +127,7 @@ fi
 # dépendent le serveur MCP et le worker.
 titre "3. Backend (crée les tables)"
 if touche "backend/"; then
+  deps backend
   redemarrer crm-pixfeed
 else
   gris "   inchangé"

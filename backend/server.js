@@ -66,8 +66,11 @@ app.use(cookieParser());
 // Route publique serveur-à-serveur, sans authMiddleware.
 app.use('/api/maintenance-billing', require('./routes/maintenanceBillingRoutes'));
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+// Limite relevee : les pieces jointes des emails transitent en base64 dans le JSON
+// (jusqu'a 15 Mo cote client, +33 % d'encodage). Avec la limite par defaut de 100 ko,
+// tout envoi avec une PJ un peu lourde echouait en 413 sans message exploitable.
+app.use(express.json({ limit: '25mb' }));
+app.use(express.urlencoded({ extended: false, limit: '25mb' }));
 app.use(morgan(logFormat, { stream: accessLogStream }));
 app.use(morgan('dev'));
 

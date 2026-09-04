@@ -21,7 +21,6 @@ export const apiRequest = async (endpoint, method = 'GET', data = null) => {
   try {
     // Récupérer le token d'authentification
     const token = getAuthToken();
-    console.log('Token utilisé pour la requête:', token);
     
     // Vérifier si le token est expiré
     if (token && isTokenExpired(token)) {
@@ -40,7 +39,6 @@ export const apiRequest = async (endpoint, method = 'GET', data = null) => {
       },
       credentials: 'include',
     };
-    console.log('En-têtes de la requête:', options.headers);
     
     // Ajouter les données pour les requêtes POST, PUT, etc.
     if (data && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
