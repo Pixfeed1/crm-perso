@@ -46,6 +46,16 @@ const seoPagespeedController = {
         [siteId]
       );
       const site = await db.pool.query('SELECT wp_base_url FROM seo_sites WHERE id = $1', [siteId]);
+      // Couverture de la rotation : pages mesurees au moins une fois / pages mesurables (hors noindex).
+      const cov = await db.pool.query(
+        `SELECT COUNT(*) FILTER (WHERE m.url IS NOT NULL)::int AS mesurees, COUNT(*)::int AS total
+           FROM seo_pages p
+           LEFT JOIN (SELECT DISTINCT url FROM seo_pagespeed WHERE site_id = $1) m ON m.url = p.url
+          WHERE p.site_id = $1 AND COALESCE((p.seo_meta->>'noindex')::boolean, false) = false`,
+        [siteId]
+      );
+      const rotation = Math.max(1, parseInt(process.env.PSI_ROTATION_PAGES, 10) || 30);
+      const restantes = Math.max(0, cov.rows[0].total - cov.rows[0].mesurees);
       const base = ((site.rows[0] || {}).wp_base_url || '').replace(/\/+$/, '');
       const isHome = (u) => /^https?:\/\/[^/]+\/?$/.test(u || '');
 
@@ -98,6 +108,10 @@ const seoPagespeedController = {
         api_key_configured: !!(process.env.PAGESPEED_API_KEY || process.env.CRUX_API_KEY),
         summary: {
           pages_mesurees: pages.length,
+          couverture_mesurees: cov.rows[0].mesurees,
+          couverture_total: cov.rows[0].total,
+          // Nombre de runs encore necessaires pour que chaque page ait ete mesuree une fois.
+          runs_restants: Math.ceil(restantes / rotation),
           home_mobile: home && home.mobile ? home.mobile.perf_score : null,
           home_desktop: home && home.desktop ? home.desktop.perf_score : null,
           moyenne_mobile: mobileScores.length ? Math.round(mobileScores.reduce((a, b) => a + b, 0) / mobileScores.length) : null,

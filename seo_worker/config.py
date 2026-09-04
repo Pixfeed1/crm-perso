@@ -90,11 +90,16 @@ GSC_OAUTH_REDIRECT_PORT = 8765  # port du mini-serveur local pour le consentemen
 GSC_RETENTION_MONTHS = int(os.getenv("GSC_RETENTION_MONTHS", "16"))
 
 # ===== Core Web Vitals / PageSpeed Insights (job 'pagespeed') =====
-# Un appel = 10 a 40 s (Lighthouse tourne chez Google) : on mesure l'accueil + les pages
-# les plus vues, pas tout le site. Cle : PAGESPEED_API_KEY (ou CRUX_API_KEY) dans le
-# .env du backend ; sans cle, le quota anonyme est bas et le run peut s'arreter en 429.
-PSI_PAGES_PER_RUN = int(os.getenv("PSI_PAGES_PER_RUN", "15"))
-PSI_STRATEGIES = ["mobile", "desktop"]   # mobile en premier : c'est l'index de Google
+# Un appel = 10 a 40 s (Lighthouse tourne chez Google). Le site entier est donc couvert en
+# ROTATION, pas en un run geant : a chaque run, l'accueil + PSI_TOP_PAGES pages les plus
+# vues (mobile ET desktop, pour la tendance), plus PSI_ROTATION_PAGES pages jamais
+# mesurees ou les plus anciennes (mobile seul). Avec 10 + 30 : ~50 appels, 15 a 30 min
+# par run, un site de 1 200 pages couvert en ~40 runs (quotidiens : ~6 semaines).
+# Cle : PAGESPEED_API_KEY (ou CRUX_API_KEY) dans le .env du backend (gratuite) ; sans cle,
+# le quota anonyme par IP est tres bas et le run s'arrete en 429.
+PSI_TOP_PAGES = int(os.getenv("PSI_TOP_PAGES", "10"))
+PSI_ROTATION_PAGES = int(os.getenv("PSI_ROTATION_PAGES", "30"))
+PSI_STRATEGIES = ["mobile", "desktop"]   # pages cles ; la rotation reste en mobile (index Google)
 PSI_TIMEOUT = 120                        # s, par appel
 PSI_DELAY = 1.0                          # s entre deux appels (quota par minute)
 PSI_HISTORY_KEEP = 30                    # mesures conservees par (url, strategie)

@@ -241,8 +241,16 @@ désactive la purge.
 
 ## Core Web Vitals / PageSpeed (job `pagespeed`)
 Onglet « Vitesse » de la page SEO, bouton « Mesurer la vitesse », ou `python run.py --pagespeed`.
-Le worker interroge l'API PageSpeed Insights (gratuite) pour l'accueil + les `PSI_PAGES_PER_RUN`
-(15) pages les plus vues, en mobile et desktop, et stocke dans `seo_pagespeed` :
+Le worker interroge l'API PageSpeed Insights (gratuite) en **rotation**, pour couvrir tout le
+site en quelques semaines sans bloquer le worker des heures. À chaque run :
+- l'accueil + les `PSI_TOP_PAGES` (10) pages les plus vues, en mobile **et** desktop : ce sont
+  elles qui portent le terrain et le classement, on suit leur tendance run après run ;
+- un lot de `PSI_ROTATION_PAGES` (30) pages, d'abord celles jamais mesurées puis les plus
+  anciennement mesurées, en mobile seul (l'index de Google ; le desktop doublerait la durée
+  pour un gabarit WordPress identique d'une page à l'autre).
+Soit ~50 appels et 15 à 30 min par run ; un site de 1 200 pages est couvert en ~40 runs.
+L'onglet Vitesse affiche la couverture (pages mesurées / pages du site).
+Chaque mesure est stockée dans `seo_pagespeed` :
 - **terrain** (CrUX, utilisateurs réels, p75 sur 28 j) : LCP / INP / CLS et catégorie
   FAST/AVERAGE/SLOW. C'est ce que Google utilise pour classer. `NULL` = trafic insuffisant
   pour la page (l'origine entière est alors donnée dans `origin_category`).
@@ -255,9 +263,8 @@ affiche le delta avec la mesure précédente.
 **Clé API fortement recommandée** : `PAGESPEED_API_KEY` dans `backend/.env` (clé Google
 Cloud avec l'API « PageSpeed Insights » activée ; `CRUX_API_KEY` est réutilisée à défaut).
 Sans clé, le quota anonyme par IP est très bas : le job peut s'arrêter en 429 dès la
-première page (le job passe alors en échec avec ce message). Un appel dure 10 à 40 s :
-15 pages × 2 stratégies ≈ 10 min. Les données terrain n'évoluent qu'à J+1 : une mesure
-par jour suffit.
+première page (le job passe alors en échec avec ce message). Les données terrain n'évoluent
+qu'à J+1 : une mesure par jour suffit, et fait avancer la rotation.
 
 ## Étapes suivantes
 - Content decay (besoin de plusieurs mois de `seo_metrics_monthly`).

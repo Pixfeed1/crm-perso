@@ -75,16 +75,18 @@ const SpeedTab = ({ siteId, onLaunch, job, jobActive }) => {
   const cards = [
     { label: 'Accueil mobile', value: s.home_mobile, cls: scoreCls(s.home_mobile), suffix: '/100' },
     { label: 'Accueil desktop', value: s.home_desktop, cls: scoreCls(s.home_desktop), suffix: '/100' },
-    { label: 'Moyenne mobile', value: s.moyenne_mobile, cls: scoreCls(s.moyenne_mobile), suffix: '/100' },
+    { label: 'Moyenne mobile', value: s.moyenne_mobile, cls: scoreCls(s.moyenne_mobile), suffix: '/100', hint: s.pages_mesurees ? `${s.pages_mesurees} pages mesurées` : undefined },
     { label: 'CWV terrain « bon »', value: s.cwv_evaluees ? `${s.cwv_bon}/${s.cwv_evaluees}` : '—', hint: 'pages avec assez de trafic réel' },
     { label: 'Site (CrUX)', value: origin ? origin.label : '—', cls: origin ? origin.cls.split(' ')[1] : '' },
+    { label: 'Couverture', value: s.couverture_total ? `${s.couverture_mesurees}/${s.couverture_total}` : '—',
+      hint: s.runs_restants ? `site entier dans ${s.runs_restants} mesure${s.runs_restants > 1 ? 's' : ''}` : (s.couverture_total ? 'site entier mesuré' : undefined) },
     { label: 'Dernière mesure', value: fmtDate(s.derniere_mesure) }
   ];
 
   const launchBtn = (
     <button onClick={() => onLaunch('pagespeed')} disabled={jobActive}
       className="px-3 py-2 rounded-lg bg-accent hover:bg-accent-hover text-white text-sm inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-      title="Mesurer l'accueil et les pages les plus vues, en mobile et desktop">
+      title="Pages les plus vues (mobile et desktop) + un lot de pages en rotation (mobile) : le site entier est couvert en quelques semaines">
       {running
         ? <><motion.span animate={{ rotate: 360 }} transition={{ duration: 0.9, repeat: Infinity, ease: 'linear' }} className="inline-flex"><FiLoader size={15} /></motion.span> Mesure en cours{job.progress_total ? ` ${job.progress_current}/${job.progress_total}` : '…'}</>
         : <><FiZap size={15} /> Mesurer la vitesse</>}
@@ -98,7 +100,7 @@ const SpeedTab = ({ siteId, onLaunch, job, jobActive }) => {
       <div className="text-center py-12 bg-surface/30 rounded-xl border border-border space-y-3">
         <FiZap className="w-10 h-10 mx-auto text-text-muted" />
         <p className="text-text-muted text-sm max-w-lg mx-auto">
-          Aucune mesure pour ce site. La mesure interroge l'API PageSpeed Insights de Google pour l'accueil et les pages les plus vues (mobile et desktop) ; comptez 15 à 40 s par page.
+          Aucune mesure pour ce site. Chaque mesure interroge l'API PageSpeed Insights de Google pour l'accueil et les pages les plus vues (mobile et desktop), plus un lot de pages en rotation (mobile) : le site entier est couvert en quelques semaines. Comptez 15 à 40 s par page, soit 15 à 30 min par mesure.
         </p>
         {data && !data.api_key_configured && (
           <p className="text-xs text-warning-text max-w-lg mx-auto inline-flex items-start gap-1"><FiInfo size={13} className="mt-0.5 flex-shrink-0" /> Aucune clé PAGESPEED_API_KEY dans backend/.env : quota anonyme, la mesure peut s'interrompre. Une clé Google Cloud gratuite lève la limite.</p>
@@ -110,7 +112,7 @@ const SpeedTab = ({ siteId, onLaunch, job, jobActive }) => {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 lg:grid-cols-6 gap-2">
+      <div className="grid grid-cols-2 lg:grid-cols-7 gap-2">
         {cards.map((c) => (
           <div key={c.label} className="bg-surface border border-border rounded-xl p-3">
             <div className="text-text-muted text-xs mb-1">{c.label}</div>

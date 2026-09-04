@@ -30,20 +30,58 @@ def api_key():
     return (os.getenv("PAGESPEED_API_KEY") or os.getenv("CRUX_API_KEY") or "").strip()
 
 
-def select_urls(conn, site_id, home_url, limit):
-    """Accueil d'abord, puis les pages les plus vues (impressions GSC), a defaut les plus
-    fortes en PageRank interne. Le quota et la duree imposent de choisir."""
+def select_urls(conn, site_id, home_url):
+    """Plan de mesure d'un run, en ROTATION : le site entier est couvert en quelques
+    semaines sans jamais bloquer le worker des heures.
+
+    Renvoie une liste de (url, [strategies]) :
+      1. l'accueil + les PSI_TOP_PAGES pages les plus vues (impressions GSC), a CHAQUE run,
+         en mobile ET desktop : ce sont elles qui portent les donnees terrain et le
+         classement, on veut leur tendance jour apres jour ;
+      2. un lot de PSI_ROTATION_PAGES pages : d'abord celles JAMAIS mesurees, puis les plus
+         anciennement mesurees. Mobile seul : c'est l'index de Google, et le desktop
+         doublerait la duree pour un gabarit WordPress identique d'une page a l'autre.
+    Les pages en noindex sont ignorees (elles ne se classent pas)."""
     cur = conn.cursor()
+    top_n = max(0, int(config.PSI_TOP_PAGES))
+    rot_n = max(0, int(config.PSI_ROTATION_PAGES))
     cur.execute(
         """SELECT url FROM seo_pages
             WHERE site_id = %s AND url <> %s
               AND COALESCE((seo_meta->>'noindex')::boolean, false) = false
             ORDER BY COALESCE(gsc_impressions, 0) DESC, COALESCE(internal_pagerank, 0) DESC, url
             LIMIT %s""",
-        (site_id, home_url, max(0, limit - 1)),
+        (site_id, home_url, top_n),
     )
-    urls = [home_url] + [r[0] for r in cur.fetchall()]
-    return urls
+    top = [home_url] + [r[0] for r in cur.fetchall()]
+    plan = [(u, list(config.PSI_STRATEGIES)) for u in top]
+    if rot_n:
+        cur.execute(
+            """SELECT p.url
+                 FROM seo_pages p
+                 LEFT JOIN (SELECT url, MAX(checked_at) AS last_at FROM seo_pagespeed
+                             WHERE site_id = %s GROUP BY url) m ON m.url = p.url
+                WHERE p.site_id = %s AND NOT (p.url = ANY(%s))
+                  AND COALESCE((p.seo_meta->>'noindex')::boolean, false) = false
+                ORDER BY m.last_at ASC NULLS FIRST, COALESCE(p.gsc_impressions, 0) DESC, p.url
+                LIMIT %s""",
+            (site_id, site_id, top, rot_n),
+        )
+        plan += [(r[0], ["mobile"]) for r in cur.fetchall()]
+    return plan
+
+
+def coverage(conn, site_id):
+    """Pages mesurees au moins une fois / pages mesurables (hors noindex)."""
+    cur = conn.cursor()
+    cur.execute(
+        """SELECT COUNT(*) FILTER (WHERE m.url IS NOT NULL), COUNT(*)
+             FROM seo_pages p
+             LEFT JOIN (SELECT DISTINCT url FROM seo_pagespeed WHERE site_id = %s) m ON m.url = p.url
+            WHERE p.site_id = %s AND COALESCE((p.seo_meta->>'noindex')::boolean, false) = false""",
+        (site_id, site_id),
+    )
+    return cur.fetchone()
 
 
 def _num(audits, key):
@@ -169,24 +207,24 @@ def _prune(cur, site_id, keep):
 
 
 def run(conn, site, cancel_check=None, job_id=None):
-    """Job 'pagespeed' : mesure les pages selectionnees en mobile et desktop.
+    """Job 'pagespeed' : pages cles en mobile+desktop, lot de rotation en mobile (voir select_urls).
     Renvoie True / 'cancelled' / False. Chaque mesure est commitee : un arret en cours de
     route conserve ce qui a ete fait."""
     cur = conn.cursor()
     site_id = site["id"]
     home_url = site["wp_base_url"].rstrip("/")
-    urls = select_urls(conn, site_id, home_url, config.PSI_PAGES_PER_RUN)
-    strategies = list(config.PSI_STRATEGIES)
-    total = len(urls) * len(strategies)
+    plan = select_urls(conn, site_id, home_url)
+    total = sum(len(strats) for _, strats in plan)
     if job_id is not None:
         cur.execute("UPDATE seo_jobs SET progress_total = %s, progress_current = 0 WHERE id = %s", (total, job_id))
         conn.commit()
-    print(f"\n=== PageSpeed {site['domain']} : {len(urls)} pages x {strategies} "
-          f"({'cle API' if api_key() else 'SANS cle : quota anonyme'}) ===")
+    n_top = sum(1 for _, st in plan if len(st) > 1)
+    print(f"\n=== PageSpeed {site['domain']} : {n_top} pages cles (mobile+desktop) + {len(plan) - n_top} en rotation (mobile), "
+          f"{total} mesures ({'cle API' if api_key() else 'SANS cle : quota anonyme'}) ===")
 
     done = ok = 0
     quota = False
-    for url in urls:
+    for url, strategies in plan:
         for strategy in strategies:
             row, err, quota_hit = measure(url, strategy)
             if quota_hit:
@@ -219,7 +257,8 @@ def run(conn, site, cancel_check=None, job_id=None):
             (f"Quota PageSpeed atteint apres {done} mesures ({'cle API' if api_key() else 'ajouter PAGESPEED_API_KEY dans backend/.env'}).", job_id),
         )
     conn.commit()
-    print(f"  OK PageSpeed {site['domain']} : {ok}/{done} mesures reussies")
+    covered, total_pages = coverage(conn, site_id)
+    print(f"  OK PageSpeed {site['domain']} : {ok}/{done} mesures reussies — couverture {covered}/{total_pages} pages")
     # Aucune mesure aboutie a cause du quota : echec franc (le message du job dit quoi faire).
     # Un site sans page a mesurer n'est pas un echec.
     if quota and ok == 0:

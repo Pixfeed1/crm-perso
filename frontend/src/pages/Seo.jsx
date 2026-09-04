@@ -280,7 +280,7 @@ const Seo = () => {
     crawl_incremental: { title: 'Lancer le crawl ?', body: 'Un crawl incrémental recrawle uniquement les pages modifiées depuis le dernier passage.' },
     crawl_full: { title: 'Reconstruction complète ?', body: 'Le site entier sera recrawlé et le graphe de liens reconstruit. C’est plus long qu’un crawl incrémental.' },
     gsc_sync: { title: 'Lancer la synchronisation Search Console ?', body: 'Cela inspecte toutes les pages et consomme du quota Google. Une seule par jour suffit.' },
-    pagespeed: { title: 'Mesurer la vitesse ?', body: 'Interroge PageSpeed Insights pour l’accueil et les pages les plus vues, en mobile et desktop (15 à 40 s par page). Les données terrain CrUX n’évoluent qu’à J+1 : une mesure par jour suffit.' }
+    pagespeed: { title: 'Mesurer la vitesse ?', body: 'Interroge PageSpeed Insights pour l’accueil et les pages les plus vues (mobile et desktop), plus un lot de pages en rotation (mobile) : 15 à 30 min, le site entier est couvert en quelques semaines. Une mesure par jour suffit.' }
   }[confirmJob] || {};
 
   const cards = overview ? [
