@@ -44,12 +44,48 @@ titre() { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 
 ECHECS=()
 
-# Redémarre un service. systemctl exige les droits root ; en cas de refus
-# (polkit), on retombe sur un kill du processus principal : les units ont
-# Restart=always, systemd le relance donc immédiatement.
+# Port HTTP du backend, lu dans son .env (defaut 5000 comme server.js).
+PORT_BACKEND="$(grep -E '^PORT=' backend/.env 2>/dev/null | cut -d= -f2- | tr -d '"\r' || true)"
+PORT_BACKEND="${PORT_BACKEND:-5000}"
+
+# Attend qu'un service soit actif. Un service qui vient d'etre tue passe par
+# RestartSec (5 s sur ces units) puis par le demarrage de Node ; le backend
+# execute en plus autoInitDatabase AVANT d'ecouter. Trancher apres 4 s donnait
+# de fausses alertes. On sonde jusqu'a 60 s : `activating` = on patiente,
+# `failed` = arret immediat, sinon on conclut a l'echec en fin de fenetre.
+attendre_actif() {
+  local svc="$1" etat i
+  for i in $(seq 1 30); do
+    etat="$(systemctl is-active "$svc" 2>/dev/null || true)"
+    case "$etat" in
+      active) return 0 ;;
+      failed) return 1 ;;
+    esac
+    sleep 2
+  done
+  return 1
+}
+
+# Le backend : `active` signifie seulement que le processus existe. Express
+# n'ecoute qu'apres l'init de la base, donc on attend une vraie reponse HTTP
+# (n'importe quel code : 200, 301, 404... l'important est qu'il reponde).
+attendre_http() {
+  local port="$1" i code
+  for i in $(seq 1 20); do
+    code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 3 "http://127.0.0.1:${port}/" 2>/dev/null || true)"
+    if [[ "$code" =~ ^[1-5][0-9][0-9]$ ]]; then echo "$code"; return 0; fi
+    sleep 2
+  done
+  return 1
+}
+
+# Redémarre un service. systemctl exige les droits root ; --no-ask-password
+# evite que polkit tente une authentification interactive (et pollue l'ecran).
+# En cas de refus, on retombe sur un kill du processus principal : les units
+# ont Restart=always, systemd le relance donc de lui-meme.
 redemarrer() {
   local svc="$1"
-  if systemctl restart "$svc" 2>/dev/null; then
+  if systemctl --no-ask-password restart "$svc" >/dev/null 2>&1; then
     gris "   systemctl restart $svc"
   else
     local pid
@@ -62,14 +98,23 @@ redemarrer() {
       return 1
     fi
   fi
-  # On laisse le service repartir avant de conclure quoi que ce soit.
-  sleep 4
-  if [[ "$(systemctl is-active "$svc" 2>/dev/null)" == "active" ]]; then
-    vert "   $svc actif"
-  else
-    rouge "   $svc N'EST PAS actif"
+  gris "   attente du redémarrage (jusqu'à 60 s)…"
+  if ! attendre_actif "$svc"; then
+    rouge "   $svc N'EST PAS actif (état : $(systemctl is-active "$svc" 2>/dev/null))"
     ECHECS+=("$svc: inactif après redémarrage")
     return 1
+  fi
+  if [[ "$svc" == "crm-pixfeed" ]]; then
+    local code
+    if code="$(attendre_http "$PORT_BACKEND")"; then
+      vert "   $svc actif et répond en HTTP ($code) sur le port $PORT_BACKEND"
+    else
+      rouge "   $svc est actif mais ne répond pas en HTTP sur le port $PORT_BACKEND"
+      ECHECS+=("$svc: processus actif mais aucune réponse HTTP")
+      return 1
+    fi
+  else
+    vert "   $svc actif"
   fi
 }
 
