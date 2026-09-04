@@ -535,7 +535,8 @@ export async function getIndexationSummary(pool, siteId) {
   const { rows: restant } = await pool.query(
     `SELECT COUNT(*)::int AS n FROM seo_pages p
       WHERE p.site_id = $1
-        AND NOT EXISTS (SELECT 1 FROM gsc_index_status s WHERE s.site_id = p.site_id AND s.url = p.url)`,
+        AND NOT EXISTS (SELECT 1 FROM gsc_index_status s
+                         WHERE s.site_id = p.site_id AND rtrim(s.url,'/') = rtrim(p.url,'/'))`,
     [siteId]
   );
   return {
@@ -715,5 +716,37 @@ export async function getFocusKeywordConflicts(pool, siteId) {
       ? "Aucun doublon de focus keyword. Si la liste paraît vide à tort, vérifier que le snippet register_rest_field est bien posé dans functions.php."
       : "Deux contenus visant la même expression se font concurrence : choisir une page cible et réorienter l'autre.",
     details: rows,
+  };
+}
+
+// ---- Core Web Vitals / PageSpeed (job 'pagespeed' du worker) ----------------------
+// Derniere mesure par (url, strategie). field_* = CrUX, utilisateurs reels (ce que Google
+// classe) ; perf_score et lcp/cls/tbt = labo Lighthouse (diagnostic, reproductible).
+export async function getPageSpeed(pool, siteId, limit = 50) {
+  const { rows } = await pool.query(
+    `WITH latest AS (
+       SELECT DISTINCT ON (url, strategy) url, strategy, perf_score, lcp_ms, cls::float AS cls, tbt_ms,
+              field_lcp_ms, field_inp_ms, field_cls::float AS field_cls, field_category,
+              origin_category, opportunities, error, checked_at
+         FROM seo_pagespeed WHERE site_id = $1
+        ORDER BY url, strategy, checked_at DESC
+     )
+     SELECT l.*, p.title, p.gsc_impressions
+       FROM latest l
+       LEFT JOIN seo_pages p ON p.site_id = $1 AND rtrim(p.url,'/') = rtrim(l.url,'/')
+      ORDER BY COALESCE(p.gsc_impressions,0) DESC, l.url, l.strategy LIMIT $2`,
+    [siteId, limit]
+  );
+  const mobile = rows.filter((r) => r.strategy === 'mobile' && r.perf_score != null);
+  const avg = mobile.length ? Math.round(mobile.reduce((a, r) => a + r.perf_score, 0) / mobile.length) : null;
+  return {
+    pages_mesurees: new Set(rows.map((r) => r.url)).size,
+    score_mobile_moyen: avg,
+    etat_origine_crux: (rows.find((r) => r.origin_category) || {}).origin_category || null,
+    derniere_mesure: rows.reduce((m, r) => (!m || r.checked_at > m ? r.checked_at : m), null),
+    note: rows.length === 0
+      ? "Aucune mesure : lancer « Mesurer la vitesse » dans l'onglet Vitesse de la page SEO (job pagespeed)."
+      : 'field_* = utilisateurs reels CrUX (p75, 28 j), seuils : LCP 2500/4000 ms, INP 200/500 ms, CLS 0.1/0.25. NULL = trafic insuffisant pour la page.',
+    mesures: rows,
   };
 }

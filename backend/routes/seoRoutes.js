@@ -5,10 +5,16 @@ const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middleware/authMiddleware');
 const seoController = require('../controllers/seoController');
+const seoIndexationController = require('../controllers/seoIndexationController');
+const seoPagespeedController = require('../controllers/seoPagespeedController');
 
 router.use(authMiddleware);
 
 router.get('/sites', seoController.getSites);
+// Sites : config utilisateur, pilotee depuis l'UI (le worker lit seo_sites, plus config.py).
+router.post('/sites', seoController.createSite);
+router.put('/sites/:id', seoController.updateSite);
+router.delete('/sites/:id', seoController.deleteSite);
 router.get('/overview', seoController.getOverview);
 router.get('/pages', seoController.getPages);
 router.get('/graph', seoController.getGraph);
@@ -19,6 +25,12 @@ router.get('/cannibalisation', seoController.getCannibalisation);
 router.get('/ctr-anomalies', seoController.getCtrAnomalies);
 router.get('/opportunites', seoController.getOpportunites);
 router.get('/audit', seoController.getAudit);
+// Indexation Google / sitemap / redirections / focus keywords : memes requetes que le MCP.
+router.get('/indexation', seoIndexationController.getReport);
+router.get('/indexation/sitemap-check', seoIndexationController.checkSitemap);
+// Core Web Vitals / PageSpeed (job 'pagespeed' du worker).
+router.get('/pagespeed', seoPagespeedController.getLatest);
+router.get('/pagespeed/history', seoPagespeedController.getHistory);
 // Suivi de positions (rank tracker) — lecture seule sur seo_gsc_daily.
 router.get('/positions/summary', seoController.getPositionsSummary);
 router.get('/positions/keywords', seoController.getPositionsKeywords);

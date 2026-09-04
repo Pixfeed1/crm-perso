@@ -1771,9 +1771,10 @@ async function ensureSeoTables(client) {
 
   // Migration idempotente (bases existantes) : autoriser l'annulation + le job de test.
   // CREATE TABLE IF NOT EXISTS ne met pas à jour une contrainte déjà créée -> on la recrée.
+  // 'pagespeed' : mesure Core Web Vitals / PageSpeed Insights des pages du site.
   await client.query('ALTER TABLE seo_jobs DROP CONSTRAINT IF EXISTS seo_jobs_type_chk;');
   await client.query(
-    "ALTER TABLE seo_jobs ADD CONSTRAINT seo_jobs_type_chk CHECK (job_type IN ('crawl_full','crawl_incremental','gsc_sync','gsc_test'));"
+    "ALTER TABLE seo_jobs ADD CONSTRAINT seo_jobs_type_chk CHECK (job_type IN ('crawl_full','crawl_incremental','gsc_sync','gsc_test','pagespeed'));"
   );
   await client.query('ALTER TABLE seo_jobs DROP CONSTRAINT IF EXISTS seo_jobs_status_chk;');
   await client.query(
@@ -1941,6 +1942,38 @@ async function ensureSeoTables(client) {
   `);
   await client.query('CREATE UNIQUE INDEX IF NOT EXISTS uq_seo_similar_pages ON seo_similar_pages(site_id, url, similar_url);');
   await client.query('CREATE INDEX IF NOT EXISTS idx_seo_similar_pages_site_url ON seo_similar_pages(site_id, url);');
+
+  // Core Web Vitals / PageSpeed Insights, page par page. Une ligne PAR MESURE (historique),
+  // la ligne la plus recente par (url, strategy) est l'etat courant. Ecrite par le worker
+  // (job 'pagespeed'). Les champs field_* viennent de CrUX (utilisateurs reels, 28 jours) :
+  // c'est ce que Google utilise pour le classement ; les autres sont des mesures labo Lighthouse.
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS seo_pagespeed (
+      id              SERIAL PRIMARY KEY,
+      site_id         INTEGER NOT NULL REFERENCES seo_sites(id) ON DELETE CASCADE,
+      url             TEXT NOT NULL,
+      strategy        TEXT NOT NULL,          -- mobile | desktop
+      perf_score      INTEGER,                -- score performance Lighthouse 0..100
+      lcp_ms          INTEGER,                -- labo
+      cls             NUMERIC(6,3),
+      tbt_ms          INTEGER,
+      fcp_ms          INTEGER,
+      si_ms           INTEGER,
+      ttfb_ms         INTEGER,
+      field_lcp_ms    INTEGER,                -- CrUX page (p75, 28 j)
+      field_inp_ms    INTEGER,
+      field_cls       NUMERIC(6,3),
+      field_ttfb_ms   INTEGER,
+      field_category  TEXT,                   -- FAST / AVERAGE / SLOW (page) ; NULL = pas assez de trafic
+      origin_category TEXT,                   -- idem, a l'echelle du site entier
+      opportunities   JSONB NOT NULL DEFAULT '[]'::jsonb,  -- [{id, title, savings_ms}]
+      error           TEXT,
+      checked_at      TIMESTAMPTZ DEFAULT NOW(),
+      CONSTRAINT seo_pagespeed_strategy_chk CHECK (strategy IN ('mobile','desktop')),
+      CONSTRAINT seo_pagespeed_score_chk    CHECK (perf_score IS NULL OR (perf_score >= 0 AND perf_score <= 100))
+    );
+  `);
+  await client.query('CREATE INDEX IF NOT EXISTS idx_seo_pagespeed_lookup ON seo_pagespeed(site_id, url, strategy, checked_at DESC);');
 
   console.log('  ✓ Tables SEO vérifiées');
 }

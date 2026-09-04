@@ -9,7 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   FiShare2, FiRefreshCw, FiTrendingUp, FiAlertTriangle, FiLink, FiArrowRight, FiExternalLink,
   FiPlay, FiLoader, FiCheckCircle, FiXCircle, FiClock, FiStopCircle, FiSlash, FiSearch, FiTarget,
-  FiChevronDown, FiChevronRight, FiInfo, FiAlertOctagon, FiActivity
+  FiChevronDown, FiChevronRight, FiInfo, FiAlertOctagon, FiActivity, FiSettings
 } from 'react-icons/fi';
 import { seoAPI } from '../services/api';
 import { useToast } from '../hooks/useToast';
@@ -17,6 +17,9 @@ import { decodeHtml } from '../utils/formatters';
 import SeoGraph from '../components/seo/SeoGraph';
 import PositionsTab from '../components/seo/PositionsTab';
 import BacklinksTab from '../components/seo/BacklinksTab';
+import IndexationTab from '../components/seo/IndexationTab';
+import SpeedTab from '../components/seo/SpeedTab';
+import SiteManager from '../components/seo/SiteManager';
 
 const HEALTH_META = {
   orpheline: { cls: 'bg-danger-bg text-danger-text', label: 'Orpheline' },
@@ -82,6 +85,7 @@ const Seo = () => {
   const [job, setJob] = useState(null);        // dernier job du site
   const [starting, setStarting] = useState(false);
   const [confirmJob, setConfirmJob] = useState(null); // type de job en attente de confirmation
+  const [showSites, setShowSites] = useState(false);  // modale de gestion des sites
   const jobPollRef = useRef(null);
 
   useEffect(() => {
@@ -90,6 +94,19 @@ const Seo = () => {
       .catch(() => { toast.error('Erreur chargement des sites SEO'); setLoading(false); });
     seoAPI.getGscStatus().then((g) => setGscStatus(g)).catch(() => {});
   }, [toast]);
+
+  // Après ajout / modification / suppression d'un site (modale) : recharge la liste et
+  // garde le site courant s'il existe encore, sinon bascule sur le premier.
+  const reloadSites = useCallback(async () => {
+    try {
+      const list = (await seoAPI.getSites()) || [];
+      setSites(list);
+      if (!list.some((x) => x.id === siteId)) {
+        setSiteId(list.length ? list[0].id : null);
+        if (!list.length) { setOverview(null); setLoading(false); }
+      }
+    } catch (e) { toast.error('Erreur chargement des sites SEO'); }
+  }, [siteId, toast]);
 
   const load = useCallback(async () => {
     if (!siteId) return;
@@ -139,9 +156,10 @@ const Seo = () => {
         setJob(j);
         if (!j || !isActiveStatus(j.status)) {
           stopJobPoll();
-          if (j && j.status === 'done') { toast.success('Crawl terminé'); load(); }
-          if (j && j.status === 'failed') toast.error('Crawl en échec');
-          if (j && j.status === 'cancelled') { toast.info('Crawl annulé'); load(); }
+          const noun = j ? ({ gsc_sync: 'Synchro Search Console', pagespeed: 'Mesure de vitesse' }[j.job_type] || 'Crawl') : 'Crawl';
+          if (j && j.status === 'done') { toast.success(`${noun} terminé${noun.endsWith('e') ? 'e' : ''}`); load(); }
+          if (j && j.status === 'failed') toast.error(`${noun} en échec`);
+          if (j && j.status === 'cancelled') { toast.info(`${noun} annulé${noun.endsWith('e') ? 'e' : ''}`); load(); }
         }
       } catch (e) { stopJobPoll(); }
     }, 5000);
@@ -174,7 +192,7 @@ const Seo = () => {
     try {
       const res = await seoAPI.createJob(siteId, jobType);
       setJob(res.job);
-      const labels = { crawl_full: 'Crawl complet lancé', crawl_incremental: 'Crawl lancé', gsc_sync: 'Synchro Search Console lancée' };
+      const labels = { crawl_full: 'Crawl complet lancé', crawl_incremental: 'Crawl lancé', gsc_sync: 'Synchro Search Console lancée', pagespeed: 'Mesure de vitesse lancée' };
       // already_active : course (double-clic) refusée en base par l'index unique partiel.
       if (res.already_active) toast.info('Une synchronisation est déjà en cours, impossible d’en lancer une seconde.');
       else toast.success(labels[jobType] || 'Tâche lancée');
@@ -239,7 +257,8 @@ const Seo = () => {
 
   const jobActive = job && isActiveStatus(job.status);
   const jobCancellable = job && (job.status === 'pending' || job.status === 'running');
-  const jobNoun = job && job.job_type === 'gsc_sync' ? 'Synchro Search Console' : 'Crawl';
+  const JOB_NOUNS = { gsc_sync: 'Synchro Search Console', pagespeed: 'Mesure de vitesse' };
+  const jobNoun = (job && JOB_NOUNS[job.job_type]) || 'Crawl';
   const gscConnected = gscStatus && gscStatus.connected;
 
   // Contenu d'un bouton de lancement : si CE type de job tourne, on l'indique explicitement
@@ -248,7 +267,7 @@ const Seo = () => {
   const isThisJobRunning = (jobType) => jobActive && job.job_type === jobType;
   const spinner = <motion.span animate={{ rotate: 360 }} transition={{ duration: 0.9, repeat: Infinity, ease: 'linear' }} className="inline-flex"><FiLoader size={15} /></motion.span>;
   const runningLabel = (jobType) => {
-    const noun = jobType === 'gsc_sync' ? 'Synchro' : 'Crawl';
+    const noun = jobType === 'gsc_sync' ? 'Synchro' : jobType === 'pagespeed' ? 'Mesure' : 'Crawl';
     const prog = job && job.progress_total ? ` ${job.progress_current}/${job.progress_total}` : '';
     return `${noun} en cours…${prog}`;
   };
@@ -260,7 +279,8 @@ const Seo = () => {
   const confirmMeta = {
     crawl_incremental: { title: 'Lancer le crawl ?', body: 'Un crawl incrémental recrawle uniquement les pages modifiées depuis le dernier passage.' },
     crawl_full: { title: 'Reconstruction complète ?', body: 'Le site entier sera recrawlé et le graphe de liens reconstruit. C’est plus long qu’un crawl incrémental.' },
-    gsc_sync: { title: 'Lancer la synchronisation Search Console ?', body: 'Cela inspecte toutes les pages et consomme du quota Google. Une seule par jour suffit.' }
+    gsc_sync: { title: 'Lancer la synchronisation Search Console ?', body: 'Cela inspecte toutes les pages et consomme du quota Google. Une seule par jour suffit.' },
+    pagespeed: { title: 'Mesurer la vitesse ?', body: 'Interroge PageSpeed Insights pour l’accueil et les pages les plus vues, en mobile et desktop (15 à 40 s par page). Les données terrain CrUX n’évoluent qu’à J+1 : une mesure par jour suffit.' }
   }[confirmJob] || {};
 
   const cards = overview ? [
@@ -300,6 +320,9 @@ const Seo = () => {
             >
               {sites.map((s) => <option key={s.id} value={s.id}>{s.domain}</option>)}
             </select>
+            <button onClick={() => setShowSites(true)} className="p-2 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-strong" title="Gérer les sites suivis (ajouter, modifier, supprimer)">
+              <FiSettings size={16} />
+            </button>
             <button
               onClick={() => requestLaunch('crawl_incremental')}
               disabled={starting || jobActive}
@@ -459,7 +482,8 @@ const Seo = () => {
         {sites.length === 0 && !loading ? (
           <div className="text-center py-16 bg-surface/30 rounded-xl border border-border">
             <FiShare2 className="w-10 h-10 mx-auto text-text-muted mb-3" />
-            <p className="text-text-muted text-sm">Aucun site SEO. Le worker <code className="text-text-primary">seo_worker</code> les créera à son premier run.</p>
+            <p className="text-text-muted text-sm mb-3">Aucun site SEO suivi.</p>
+            <button onClick={() => setShowSites(true)} className="px-4 py-2 rounded-lg bg-accent hover:bg-accent-hover text-white text-sm inline-flex items-center gap-2"><FiSettings size={15} /> Ajouter un site</button>
           </div>
         ) : (
           <>
@@ -484,6 +508,8 @@ const Seo = () => {
                 { k: 'ctr', l: `CTR à optimiser${ctrAnomalies.length ? ` (${ctrAnomalies.length})` : ''}` },
                 { k: 'opportunites', l: `Opportunités${opportunites.length ? ` (${opportunites.length})` : ''}` },
                 { k: 'audit', l: `Audit technique${audit && audit.score != null ? ` (${audit.score}/100)` : ''}` },
+                { k: 'indexation', l: 'Indexation' },
+                { k: 'vitesse', l: 'Vitesse' },
                 { k: 'positions', l: 'Suivi de positions' },
                 { k: 'backlinks', l: '🔗 Backlinks' }
               ].map((t) => (
@@ -937,6 +963,12 @@ const Seo = () => {
                   </>
                 )}
               </div>
+            ) : tab === 'indexation' ? (
+              /* Indexation Google, sitemap, redirections, focus keywords — actionnable (liens d'édition WP) */
+              <IndexationTab siteId={siteId} gscConnected={gscConnected} />
+            ) : tab === 'vitesse' ? (
+              /* Core Web Vitals / PageSpeed (job 'pagespeed' du worker) */
+              <SpeedTab siteId={siteId} onLaunch={requestLaunch} job={job} jobActive={!!jobActive} />
             ) : tab === 'backlinks' ? (
               /* Campagnes backlinks (niches, découverte, scoring, outreach Gmail) */
               <BacklinksTab />
@@ -947,6 +979,11 @@ const Seo = () => {
           </>
         )}
       </div>
+
+      {/* Gestion des sites suivis (source unique : seo_sites, lue par le worker) */}
+      <AnimatePresence>
+        {showSites && <SiteManager sites={sites} onClose={() => setShowSites(false)} onChange={reloadSites} />}
+      </AnimatePresence>
 
       {/* Modale de confirmation avant lancement (évite les lancements accidentels / quota) */}
       <AnimatePresence>
@@ -963,7 +1000,7 @@ const Seo = () => {
             >
               <div className="flex items-start gap-3 mb-3">
                 <div className="w-10 h-10 rounded-xl bg-accent/15 text-accent flex items-center justify-center flex-shrink-0">
-                  {confirmJob === 'gsc_sync' ? <FiSearch size={18} /> : <FiPlay size={18} />}
+                  {confirmJob === 'gsc_sync' ? <FiSearch size={18} /> : confirmJob === 'pagespeed' ? <FiActivity size={18} /> : <FiPlay size={18} />}
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-text-primary">{confirmMeta.title}</h3>

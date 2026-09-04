@@ -64,8 +64,14 @@ sudo journalctl -u crm-seo-worker -f      # logs
 ```
 
 ### Ajouter un site
-Ajouter une entrée dans `config.py > SITES` (domaine + `wp_base_url` + `gsc_property`).
-Le worker upsert `seo_sites` au démarrage : **aucune** reconfiguration Google nécessaire.
+Depuis l'UI : page SEO, roue crantée à côté du sélecteur de site (ajouter, modifier,
+supprimer). La table `seo_sites` est la source unique ; le worker la lit au début de chaque
+job, donc **aucun redéploiement** et **aucune** reconfiguration Google (une seule connexion
+Search Console sert tous les sites, via `gsc_property`).
+`config.py > SEED_SITES` ne sert qu'à amorcer une base VIDE (première installation) ; ensuite
+il est ignoré, pour ne jamais écraser ce qui a été réglé dans l'UI.
+Supprimer un site efface toutes ses données (FK `ON DELETE CASCADE`) : l'UI exige la saisie
+du domaine pour confirmer et refuse si un job est en cours.
 
 ## Architecture des liens / PageRank
 - **Incrémental** : pour chaque page modifiée, `DELETE seo_links WHERE site_id=? AND from_url=?`
@@ -226,6 +232,33 @@ les autres alimentent `seo_pages.seo_meta` et **priment sur le HTML**. Le snippe
 optionnel au sens strict : sans lui, le worker retombe sur la lecture du `<head>` et rien ne
 casse, mais les compteurs `meta_description_absente` et `title_trop_long` restent approximatifs.
 
+## Rétention Search Console
+`seo_gsc_daily` (une ligne par jour × page × requête) grossit sans fin. Google lui-même ne
+conserve que 16 mois. Après chaque `gsc_sync`, une fois le snapshot mensuel écrit
+(`seo_metrics_monthly`, par page), le détail plus ancien que `GSC_RETENTION_MONTHS` (16) est
+purgé. La mémoire longue (content decay) reste dans le snapshot. `GSC_RETENTION_MONTHS=0`
+désactive la purge.
+
+## Core Web Vitals / PageSpeed (job `pagespeed`)
+Onglet « Vitesse » de la page SEO, bouton « Mesurer la vitesse », ou `python run.py --pagespeed`.
+Le worker interroge l'API PageSpeed Insights (gratuite) pour l'accueil + les `PSI_PAGES_PER_RUN`
+(15) pages les plus vues, en mobile et desktop, et stocke dans `seo_pagespeed` :
+- **terrain** (CrUX, utilisateurs réels, p75 sur 28 j) : LCP / INP / CLS et catégorie
+  FAST/AVERAGE/SLOW. C'est ce que Google utilise pour classer. `NULL` = trafic insuffisant
+  pour la page (l'origine entière est alors donnée dans `origin_category`).
+- **labo** (Lighthouse) : score 0..100, LCP, CLS, TBT, FCP, Speed Index, TTFB, et les
+  opportunités d'optimisation avec gain estimé. Reproductible : sert à vérifier une
+  correction le jour même.
+Chaque mesure est une ligne (historique, `PSI_HISTORY_KEEP` = 30 par url/stratégie) : l'UI
+affiche le delta avec la mesure précédente.
+
+**Clé API fortement recommandée** : `PAGESPEED_API_KEY` dans `backend/.env` (clé Google
+Cloud avec l'API « PageSpeed Insights » activée ; `CRUX_API_KEY` est réutilisée à défaut).
+Sans clé, le quota anonyme par IP est très bas : le job peut s'arrêter en 429 dès la
+première page (le job passe alors en échec avec ce message). Un appel dure 10 à 40 s :
+15 pages × 2 stratégies ≈ 10 min. Les données terrain n'évoluent qu'à J+1 : une mesure
+par jour suffit.
+
 ## Étapes suivantes
-- Étape 3 (suite) : content decay (besoin de plusieurs mois de `seo_metrics_monthly`),
-  cannibalisation de requêtes, indexation fiabilisée.
+- Content decay (besoin de plusieurs mois de `seo_metrics_monthly`).
+- Google Analytics (trafic réel au-delà du clic Search Console).

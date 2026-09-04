@@ -596,6 +596,20 @@ export const seoBacklinksAPI = {
 
 export const seoAPI = {
   getSites: () => apiRequest('/seo/sites'),
+  // Sites : config utilisateur pilotee depuis l'UI (le worker lit seo_sites).
+  createSite: (data) => apiRequest('/seo/sites', 'POST', data),
+  updateSite: (id, data) => apiRequest(`/seo/sites/${id}`, 'PUT', data),
+  deleteSite: (id) => apiRequest(`/seo/sites/${id}`, 'DELETE'),
+  // Indexation Google / sitemap / redirections / focus keywords (memes requetes que le MCP).
+  getIndexation: (siteId, params = {}) => {
+    const qs = new URLSearchParams({ site_id: siteId, ...params }).toString();
+    return apiRequest(`/seo/indexation?${qs}`);
+  },
+  checkSitemap: (siteId, url) => apiRequest(`/seo/indexation/sitemap-check?site_id=${siteId}&url=${encodeURIComponent(url)}`),
+  // Core Web Vitals / PageSpeed.
+  getPagespeed: (siteId) => apiRequest(`/seo/pagespeed?site_id=${siteId}`),
+  getPagespeedHistory: (siteId, url, strategy = 'mobile') =>
+    apiRequest(`/seo/pagespeed/history?site_id=${siteId}&url=${encodeURIComponent(url)}&strategy=${strategy}`),
   getOverview: (siteId) => apiRequest(`/seo/overview?site_id=${siteId}`),
   getPages: (siteId, params = {}) => {
     const qs = new URLSearchParams({ site_id: siteId, ...params }).toString();

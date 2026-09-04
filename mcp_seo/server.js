@@ -175,6 +175,13 @@ function buildServer() {
   );
 
   server.tool(
+    'get_pagespeed',
+    "Core Web Vitals / PageSpeed des pages mesurées (accueil + pages les plus vues) : score Lighthouse mobile/desktop, LCP/CLS/TBT labo, LCP/INP/CLS terrain CrUX (utilisateurs réels, ce que Google utilise pour classer), opportunités d'optimisation avec gain estimé. Pour prioriser les corrections de vitesse.",
+    { site_id: z.number().int(), limit: z.number().int().optional() },
+    async ({ site_id, limit }) => ok(await tools.getPageSpeed(pool, site_id, limit ?? 50))
+  );
+
+  server.tool(
     'get_ctr_anomalies',
     "Pages bien positionnées mais peu cliquées (CTR très sous la moyenne attendue pour leur position) : title/meta description à réécrire. Triées par clics potentiels récupérables, avec les défauts on-page connus (meta absente/courte/longue, title long).",
     { site_id: z.number().int(), days: z.number().int().optional(), min_impressions: z.number().int().optional() },

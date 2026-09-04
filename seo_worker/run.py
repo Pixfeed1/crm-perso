@@ -28,6 +28,7 @@ import wp
 import pagerank as pr_mod
 import gsc
 import indexation
+import pagespeed
 from db import connect
 
 
@@ -77,6 +78,29 @@ def upsert_site(cur, site):
         (site["domain"], site["wp_base_url"], site["gsc_property"]),
     )
     return cur.fetchone()[0]
+
+
+def load_sites(conn, domain=None):
+    """Sites suivis, lus dans seo_sites (source unique, pilotee par l'UI du CRM).
+    Si la table est vide (premiere installation), elle est amorcee avec config.SEED_SITES ;
+    ensuite l'amorce n'est plus jamais rejouee, pour ne pas ecraser les reglages de l'UI."""
+    cur = conn.cursor()
+    cur.execute("SELECT COUNT(*) FROM seo_sites")
+    if cur.fetchone()[0] == 0 and getattr(config, "SEED_SITES", None):
+        for site in config.SEED_SITES:
+            try:
+                sid = upsert_site(cur, site)
+                conn.commit()
+                print(f"[SEO] Site amorce : {site['domain']} (site_id={sid})")
+            except Exception as e:
+                conn.rollback()
+                print(f"[SEO] Amorce {site.get('domain')} echouee : {e}")
+    cur.execute(
+        "SELECT id, domain, wp_base_url, gsc_property FROM seo_sites"
+        + (" WHERE domain = %s" if domain else "") + " ORDER BY domain",
+        (domain,) if domain else (),
+    )
+    return [{"id": r[0], "domain": r[1], "wp_base_url": r[2], "gsc_property": r[3]} for r in cur.fetchall()]
 
 
 def audit_postprocess(conn, site_id, home_url, edges, base):
@@ -671,6 +695,24 @@ def gsc_sync_site(conn, site, job_id=None):
         )
         conn.commit()
 
+        # ---- 3bis) Retention du detail quotidien ----
+        # seo_gsc_daily grossit sans fin (une ligne par jour x page x requete). Le snapshot
+        # mensuel vient d'etre ecrit pour tous les mois presents : au-dela de
+        # GSC_RETENTION_MONTHS, le detail peut partir, la memoire longue reste dans
+        # seo_metrics_monthly. Purge APRES le snapshot, jamais avant.
+        retention = int(getattr(config, "GSC_RETENTION_MONTHS", 0) or 0)
+        if retention > 0:
+            cur.execute(
+                """DELETE FROM seo_gsc_daily
+                    WHERE site_id = %s
+                      AND date < (date_trunc('month', CURRENT_DATE) - (%s * INTERVAL '1 month'))::date""",
+                (site_id, retention),
+            )
+            purged = cur.rowcount
+            conn.commit()
+            if purged:
+                print(f"  [GSC] retention : {purged} lignes quotidiennes purgees (> {retention} mois, snapshot mensuel conserve)")
+
         # ---- 4) value_score réel + cache 28j + recalcul health (sans recrawl) ----
         win_start = (end_d - timedelta(days=config.GSC_VALUE_WINDOW_DAYS)).isoformat()
         d28_start = (end_d - timedelta(days=28)).isoformat()
@@ -946,18 +988,11 @@ def claim_next_job(conn):
 def serve():
     """Service permanent : traite la file seo_jobs SÉQUENTIELLEMENT (un seul job à la fois)."""
     conn = connect()
-    # Upsert de TOUS les sites configurés dès le démarrage : ils apparaissent dans le
-    # sélecteur de l'UI même sans crawl préalable (sinon : poule/œuf — impossible de
-    # lancer le premier crawl d'un site jamais crawlé).
-    cur0 = conn.cursor()
-    for site in config.SITES:
-        try:
-            sid = upsert_site(cur0, site)
-            conn.commit()
-            print(f"[SEO] Site prêt : {site['domain']} (site_id={sid})")
-        except Exception as e:
-            conn.rollback()
-            print(f"[SEO] Upsert site {site.get('domain')} échoué : {e}")
+    # Les sites vivent dans seo_sites (geres depuis l'UI). Au premier demarrage d'une
+    # installation vide, l'amorce config.SEED_SITES les cree pour qu'ils apparaissent dans
+    # le selecteur (sinon : poule/oeuf — impossible de lancer le premier crawl).
+    for site in load_sites(conn):
+        print(f"[SEO] Site pret : {site['domain']} (site_id={site['id']})")
     print(f"[SEO] Worker en service (poll {config.POLL_INTERVAL}s)")
     try:
         while True:
@@ -979,6 +1014,11 @@ def serve():
                     ok = gsc_test_job(conn, site, job.get("target_url"), job_id=job["id"])
                 elif job["job_type"] == "gsc_sync":
                     ok = gsc_sync_site(conn, site, job_id=job["id"])
+                elif job["job_type"] == "pagespeed":
+                    ok = pagespeed.run(
+                        conn, site, job_id=job["id"],
+                        cancel_check=lambda: cancel_requested(conn.cursor(), job["id"]),
+                    )
                 else:
                     full = job["job_type"] == "crawl_full"
                     ok = crawl_site(conn, site, full=full, job_id=job["id"])
@@ -1015,15 +1055,21 @@ def main():
     ap.add_argument("--gsc-debug", action="store_true", help="investigation URL Inspection (canonical GSC vs cible worker + JSON brut)")
     ap.add_argument("--gsc-test", metavar="URL", help="MODE TEST : inspecte UNE seule URL (1 inspection, rien en base)")
     ap.add_argument("--gsc-inspect", metavar="URL", help="alias de --gsc-test")
+    ap.add_argument("--pagespeed", action="store_true", help="mesure Core Web Vitals / PageSpeed (accueil + pages les plus vues)")
     args = ap.parse_args()
 
     if args.serve:
         serve()
         return
 
-    sites = [s for s in config.SITES if (not args.site or s["domain"] == args.site)]
+    # Sites lus en base (geres dans l'UI) ; --site restreint a un domaine.
+    conn0 = connect()
+    try:
+        sites = load_sites(conn0, args.site)
+    finally:
+        conn0.close()
     if not sites:
-        print(f"Aucun site '{args.site}' dans config.SITES")
+        print(f"Aucun site{f' {args.site!r}' if args.site else ''} dans seo_sites : l'ajouter dans l'UI (page SEO).")
         return
 
     # MODE TEST : inspecte UNE seule URL (1 inspection, AUCUNE écriture, pas de synchro complète).
@@ -1065,6 +1111,8 @@ def main():
             try:
                 if args.gsc_debug:
                     gsc_debug_site(conn, site)
+                elif args.pagespeed:
+                    pagespeed.run(conn, site)
                 elif args.gsc:
                     gsc_sync_site(conn, site)
                 else:

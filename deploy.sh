@@ -177,7 +177,9 @@ fi
 # Le backend en premier : c'est lui qui crée et met à jour les tables, dont
 # dépendent le serveur MCP et le worker.
 titre "3. Backend (crée les tables)"
-if touche "backend/"; then
+# Le backend importe mcp_seo/tools.js (rapports d'indexation partages avec le MCP) :
+# une modification de ce fichier doit aussi le redemarrer.
+if touche "backend/" || touche "mcp_seo/tools.js"; then
   deps backend
   redemarrer crm-pixfeed
 else

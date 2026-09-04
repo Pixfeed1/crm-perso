@@ -1,7 +1,9 @@
 """Configuration du worker SEO.
 
-MULTI-SITE : ajouter un site = ajouter une entrée ici (le worker upsert seo_sites au démarrage).
-Aucune reconfiguration Google nécessaire : une seule connexion sert tous les sites (étape 2).
+MULTI-SITE : les sites suivis sont dans la table seo_sites, geree depuis l'UI du CRM
+(page SEO > roue crantee a cote du selecteur). Le worker la lit au demarrage de chaque
+job. Ajouter un site ne demande plus ni modification de code ni redeploiement.
+Une seule connexion Google sert tous les sites (gsc_property par site).
 """
 
 import os
@@ -13,8 +15,10 @@ import os
 GSC_COUNTRY = os.getenv("GSC_COUNTRY", "fra").strip().lower()
 GSC_DEVICE = os.getenv("GSC_DEVICE", "").strip().lower()
 
-# Sites suivis. gsc_property servira à l'étape 2 (Search Console).
-SITES = [
+# Amorce : inseres UNIQUEMENT si seo_sites est VIDE (premiere installation). Ensuite la
+# table fait foi et cette liste est ignoree, sinon un redemarrage du worker ecraserait
+# les modifications faites dans l'UI.
+SEED_SITES = [
     {
         "domain": "jurojin.net",
         "wp_base_url": "https://jurojin.net",
@@ -80,6 +84,20 @@ GSC_INSPECT_DAILY_CAP = 2000    # plafond URL Inspection / run / propriété (qu
 GSC_INSPECT_TTL_DAYS = 14       # ne pas réinspecter une page vue il y a moins de N jours
 GSC_VALUE_WINDOW_DAYS = 90      # fenêtre d'impressions servant au value_score réel
 GSC_OAUTH_REDIRECT_PORT = 8765  # port du mini-serveur local pour le consentement (gsc_auth.py)
+# Retention du detail quotidien (date x page x requete). Google lui-meme ne garde que
+# 16 mois ; au-dela, le snapshot mensuel (seo_metrics_monthly, par page) prend le relais
+# et le detail est purge apres chaque synchro. 0 = ne jamais purger.
+GSC_RETENTION_MONTHS = int(os.getenv("GSC_RETENTION_MONTHS", "16"))
+
+# ===== Core Web Vitals / PageSpeed Insights (job 'pagespeed') =====
+# Un appel = 10 a 40 s (Lighthouse tourne chez Google) : on mesure l'accueil + les pages
+# les plus vues, pas tout le site. Cle : PAGESPEED_API_KEY (ou CRUX_API_KEY) dans le
+# .env du backend ; sans cle, le quota anonyme est bas et le run peut s'arreter en 429.
+PSI_PAGES_PER_RUN = int(os.getenv("PSI_PAGES_PER_RUN", "15"))
+PSI_STRATEGIES = ["mobile", "desktop"]   # mobile en premier : c'est l'index de Google
+PSI_TIMEOUT = 120                        # s, par appel
+PSI_DELAY = 1.0                          # s entre deux appels (quota par minute)
+PSI_HISTORY_KEEP = 30                    # mesures conservees par (url, strategie)
 
 # ===== Audit technique on-page (extrait du HTML déjà crawlé) =====
 AUDIT_TITLE_MIN = 30          # title trop court en dessous (notice)

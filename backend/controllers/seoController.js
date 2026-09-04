@@ -145,6 +145,24 @@ async function buildLinkSuggestions(db, siteId, page, donorRows, topReservoirs, 
   return suggestions;
 }
 
+// Normalise et valide la saisie d'un site. Le domaine est la cle (UNIQUE) ; l'URL WordPress
+// et la propriete Search Console se deduisent du domaine quand elles sont omises.
+function normalizeSiteInput(body) {
+  let domain = String(body.domain || '').trim().toLowerCase()
+    .replace(/^https?:\/\//, '').replace(/\/.*$/, '').replace(/:\d+$/, '');
+  if (!domain) return { error: 'Domaine requis' };
+  if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/.test(domain)) {
+    return { error: 'Domaine invalide (attendu : exemple.fr)' };
+  }
+  let wp = String(body.wp_base_url || '').trim().replace(/\/+$/, '') || `https://${domain}`;
+  if (!/^https?:\/\/[^\s/]+(\/[^\s]*)?$/.test(wp)) return { error: 'URL WordPress invalide (attendu : https://exemple.fr)' };
+  let gsc = String(body.gsc_property || '').trim() || `sc-domain:${domain}`;
+  if (!/^(sc-domain:[a-z0-9.-]+|https?:\/\/[^\s]+)$/.test(gsc)) {
+    return { error: 'Propriété Search Console invalide (sc-domain:exemple.fr ou https://exemple.fr/)' };
+  }
+  return { domain, wp_base_url: wp, gsc_property: gsc };
+}
+
 const seoController = {
   // GET /api/seo/sites -> liste des sites (sélecteur).
   getSites: async (req, res) => {
@@ -156,6 +174,74 @@ const seoController = {
       res.json(rows);
     } catch (e) {
       console.error('[SEO] getSites:', e.message);
+      res.status(500).json({ message: 'Erreur serveur' });
+    }
+  },
+
+  // ----- Gestion des sites (config UTILISATEUR : Node PEUT ecrire seo_sites, comme la
+  // watchlist et seo_jobs). Avant, ajouter un site = editer config.py du worker + redeployer.
+  // Le worker lit desormais seo_sites au demarrage de chaque job : l'UI suffit.
+  // Les DONNEES (pages, liens, GSC) restent ecrites par le worker uniquement.
+
+  // POST /api/seo/sites { domain, wp_base_url?, gsc_property? }
+  createSite: async (req, res) => {
+    const db = req.app.locals.db;
+    const v = normalizeSiteInput(req.body || {});
+    if (v.error) return res.status(400).json({ message: v.error });
+    try {
+      const r = await db.pool.query(
+        `INSERT INTO seo_sites (domain, wp_base_url, gsc_property) VALUES ($1, $2, $3)
+         RETURNING id, domain, wp_base_url, gsc_property, created_at, updated_at`,
+        [v.domain, v.wp_base_url, v.gsc_property]
+      );
+      res.status(201).json(r.rows[0]);
+    } catch (e) {
+      if (e.code === '23505') return res.status(409).json({ message: 'Ce domaine est déjà suivi' });
+      console.error('[SEO] createSite:', e.message);
+      res.status(500).json({ message: 'Erreur serveur' });
+    }
+  },
+
+  // PUT /api/seo/sites/:id { domain, wp_base_url, gsc_property }
+  updateSite: async (req, res) => {
+    const db = req.app.locals.db;
+    const id = parseInt(req.params.id, 10);
+    if (!id) return res.status(400).json({ message: 'id requis' });
+    const v = normalizeSiteInput(req.body || {});
+    if (v.error) return res.status(400).json({ message: v.error });
+    try {
+      const r = await db.pool.query(
+        `UPDATE seo_sites SET domain = $1, wp_base_url = $2, gsc_property = $3, updated_at = NOW()
+          WHERE id = $4 RETURNING id, domain, wp_base_url, gsc_property, created_at, updated_at`,
+        [v.domain, v.wp_base_url, v.gsc_property, id]
+      );
+      if (r.rows.length === 0) return res.status(404).json({ message: 'Site introuvable' });
+      res.json(r.rows[0]);
+    } catch (e) {
+      if (e.code === '23505') return res.status(409).json({ message: 'Ce domaine est déjà suivi' });
+      console.error('[SEO] updateSite:', e.message);
+      res.status(500).json({ message: 'Erreur serveur' });
+    }
+  },
+
+  // DELETE /api/seo/sites/:id -> supprime le site ET toutes ses donnees (FK ON DELETE
+  // CASCADE : pages, liens, GSC, audits, indexation, PageSpeed). Irreversible, d'ou la
+  // confirmation par saisie du domaine cote UI ; refuse si un job est en cours.
+  deleteSite: async (req, res) => {
+    const db = req.app.locals.db;
+    const id = parseInt(req.params.id, 10);
+    if (!id) return res.status(400).json({ message: 'id requis' });
+    try {
+      const active = await db.pool.query(
+        "SELECT 1 FROM seo_jobs WHERE site_id = $1 AND status IN ('pending','running','cancel_requested') LIMIT 1",
+        [id]
+      );
+      if (active.rows.length) return res.status(409).json({ message: 'Une tâche est en cours sur ce site : attendre sa fin ou l’annuler' });
+      const r = await db.pool.query('DELETE FROM seo_sites WHERE id = $1 RETURNING domain', [id]);
+      if (r.rows.length === 0) return res.status(404).json({ message: 'Site introuvable' });
+      res.json({ deleted: r.rows[0].domain });
+    } catch (e) {
+      console.error('[SEO] deleteSite:', e.message);
       res.status(500).json({ message: 'Erreur serveur' });
     }
   },
@@ -1012,7 +1098,7 @@ const seoController = {
     const jobType = (req.body || {}).job_type;
     const targetUrl = ((req.body || {}).target_url || '').trim();
     if (!siteId) return res.status(400).json({ message: 'site_id requis' });
-    if (!['crawl_full', 'crawl_incremental', 'gsc_sync', 'gsc_test'].includes(jobType)) {
+    if (!['crawl_full', 'crawl_incremental', 'gsc_sync', 'gsc_test', 'pagespeed'].includes(jobType)) {
       return res.status(400).json({ message: 'job_type invalide' });
     }
     // Le mode test exige une URL à inspecter (1 seule inspection, aucune écriture SEO).
