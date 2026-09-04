@@ -44,7 +44,7 @@
 
   /* Champs de formulaire (bloc !important ci-dessous) */
   --field-text: 255 255 255;
-  --field-placeholder: 156 163 175;   /* gray-400 */
+  --field-placeholder: 107 114 128;   /* gray-500 : un exemple d'aide ne doit pas se confondre avec une valeur saisie */
   --field-label: 209 213 219;         /* gray-300 */
   --field-option-bg: 17 24 39;        /* gray-900 */
   --field-autofill-shadow: rgba(17, 24, 39, 0.5);
