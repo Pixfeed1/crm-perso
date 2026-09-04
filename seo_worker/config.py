@@ -107,6 +107,17 @@ SCHEDULE_HOUR = int(os.getenv("SEO_SCHEDULE_HOUR", "4"))
 SCHEDULE_TZ = os.getenv("SEO_SCHEDULE_TZ", "Europe/Paris")
 SCHEDULE_FULL_WEEKDAY = int(os.getenv("SEO_SCHEDULE_FULL_WEEKDAY", "6"))
 
+# ===== Autorite et liens entrants (job 'authority') =====
+# Open PageRank (OPR_API_KEY, deja utilise cote backlinks) : score 0..10, rang, domaines
+# referents du domaine. Bing Webmaster Tools (BING_WMT_API_KEY, le site doit y etre
+# verifie) : liens entrants connus de Bing, page par page. Les deux sont gratuits.
+OPR_API_URL = os.getenv("OPR_API_URL", "https://openpagerank.keywordseverywhere.com/v1/domains/bulk")
+BING_WMT_API_BASE = "https://ssl.bing.com/webmaster/api.svc/json"
+BING_LINKCOUNT_PAGES = int(os.getenv("BING_LINKCOUNT_PAGES", "5"))   # pages de GetLinkCounts lues
+BING_TARGETS_PER_RUN = int(os.getenv("BING_TARGETS_PER_RUN", "40"))  # pages cibles detaillees (GetUrlLinks)
+BING_URLLINKS_PAGES = 3                                             # pages de GetUrlLinks par cible
+BING_DELAY = 0.3                                                    # s entre deux appels
+
 # ===== Core Web Vitals / PageSpeed Insights (job 'pagespeed') =====
 # Un appel = 10 a 40 s (Lighthouse tourne chez Google). Le site entier est donc couvert en
 # ROTATION, pas en un run geant : a chaque run, l'accueil + PSI_TOP_PAGES pages les plus

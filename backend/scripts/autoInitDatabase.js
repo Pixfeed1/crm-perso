@@ -1778,7 +1778,7 @@ async function ensureSeoTables(client) {
   // 'pagespeed' : mesure Core Web Vitals / PageSpeed Insights ; 'ga_sync' : Google Analytics.
   await client.query('ALTER TABLE seo_jobs DROP CONSTRAINT IF EXISTS seo_jobs_type_chk;');
   await client.query(
-    "ALTER TABLE seo_jobs ADD CONSTRAINT seo_jobs_type_chk CHECK (job_type IN ('crawl_full','crawl_incremental','gsc_sync','gsc_test','pagespeed','ga_sync'));"
+    "ALTER TABLE seo_jobs ADD CONSTRAINT seo_jobs_type_chk CHECK (job_type IN ('crawl_full','crawl_incremental','gsc_sync','gsc_test','pagespeed','ga_sync','authority'));"
   );
   await client.query('ALTER TABLE seo_jobs DROP CONSTRAINT IF EXISTS seo_jobs_status_chk;');
   await client.query(
@@ -2020,6 +2020,47 @@ async function ensureSeoTables(client) {
   await client.query('ALTER TABLE seo_pages ADD COLUMN IF NOT EXISTS ga_sessions_28d INTEGER;');
   await client.query('ALTER TABLE seo_pages ADD COLUMN IF NOT EXISTS ga_engagement_28d NUMERIC(5,4);');
   await client.query('ALTER TABLE seo_pages ADD COLUMN IF NOT EXISTS ga_synced_at TIMESTAMP;');
+
+  // Autorite du domaine et liens entrants (job 'authority'), l'equivalent gratuit de
+  // l'Authority Score / Backlinks / Domaines referents de Semrush :
+  //  - Open PageRank : score 0..10, rang mondial, nb de domaines referents (1 appel/jour) ;
+  //  - Bing Webmaster Tools : liens entrants connus de Bing, page par page, avec ancre.
+  // Un instantane par jour pour la tendance.
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS seo_authority_daily (
+      id                     SERIAL PRIMARY KEY,
+      site_id                INTEGER NOT NULL REFERENCES seo_sites(id) ON DELETE CASCADE,
+      date                   DATE NOT NULL,
+      opr_score              NUMERIC(4,2),      -- Open PageRank 0..10
+      opr_rank               BIGINT,            -- rang mondial (plus petit = mieux)
+      opr_referring_domains  INTEGER,           -- domaines referents vus par Open PageRank
+      bing_backlinks         INTEGER,           -- liens entrants comptes par Bing (toutes pages)
+      bing_referring_domains INTEGER,           -- domaines distincts dans seo_backlinks (actifs)
+      bing_linked_pages      INTEGER,           -- pages du site ayant au moins un lien entrant
+      created_at             TIMESTAMP DEFAULT NOW()
+    );
+  `);
+  await client.query('CREATE UNIQUE INDEX IF NOT EXISTS uq_seo_authority_daily ON seo_authority_daily(site_id, date);');
+  // Liens entrants detailles (source -> cible, ancre), avec premiere/derniere observation :
+  // un lien non revu lors d'un passage qui a recontrole sa cible est marque perdu.
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS seo_backlinks (
+      id             SERIAL PRIMARY KEY,
+      site_id        INTEGER NOT NULL REFERENCES seo_sites(id) ON DELETE CASCADE,
+      source_url     TEXT NOT NULL,
+      source_domain  TEXT NOT NULL,
+      target_url     TEXT NOT NULL,
+      anchor         TEXT,
+      first_seen     DATE NOT NULL DEFAULT CURRENT_DATE,
+      last_seen      DATE NOT NULL DEFAULT CURRENT_DATE,
+      status         TEXT NOT NULL DEFAULT 'active',   -- active | lost
+      lost_at        DATE,
+      CONSTRAINT seo_backlinks_status_chk CHECK (status IN ('active','lost'))
+    );
+  `);
+  await client.query('CREATE UNIQUE INDEX IF NOT EXISTS uq_seo_backlinks ON seo_backlinks(site_id, source_url, target_url);');
+  await client.query('CREATE INDEX IF NOT EXISTS idx_seo_backlinks_site_domain ON seo_backlinks(site_id, source_domain);');
+  await client.query('CREATE INDEX IF NOT EXISTS idx_seo_backlinks_site_status ON seo_backlinks(site_id, status, first_seen);');
 
   console.log('  ✓ Tables SEO vérifiées');
 }

@@ -30,6 +30,7 @@ import gsc
 import indexation
 import pagespeed
 import ga
+import authority
 import scheduler
 from db import connect
 
@@ -1004,7 +1005,8 @@ def serve():
         while True:
             # Planification : met en file les jobs du jour (un cran par site), puis la
             # boucle les traite comme n'importe quel job lance depuis l'UI.
-            scheduler.tick(conn, bool(pagespeed.api_key()))
+            scheduler.tick(conn, bool(pagespeed.api_key()),
+                           authority_ready=bool(os.getenv("OPR_API_KEY") or os.getenv("BING_WMT_API_KEY")))
             job = claim_next_job(conn)
             if not job:
                 time.sleep(config.POLL_INTERVAL)
@@ -1025,6 +1027,9 @@ def serve():
                     ok = gsc_sync_site(conn, site, job_id=job["id"])
                 elif job["job_type"] == "ga_sync":
                     ok = ga.sync_site(conn, site, job_id=job["id"])
+                elif job["job_type"] == "authority":
+                    ok = authority.run(conn, site, job_id=job["id"],
+                                       cancel_check=lambda: cancel_requested(conn.cursor(), job["id"]))
                 elif job["job_type"] == "pagespeed":
                     ok = pagespeed.run(
                         conn, site, job_id=job["id"],
@@ -1068,6 +1073,7 @@ def main():
     ap.add_argument("--gsc-inspect", metavar="URL", help="alias de --gsc-test")
     ap.add_argument("--pagespeed", action="store_true", help="mesure Core Web Vitals / PageSpeed (accueil + pages les plus vues)")
     ap.add_argument("--ga", action="store_true", help="synchro Google Analytics 4 (sites ayant une propriete GA4)")
+    ap.add_argument("--authority", action="store_true", help="autorite du domaine (Open PageRank) + liens entrants (Bing WMT)")
     args = ap.parse_args()
 
     if args.serve:
@@ -1127,6 +1133,8 @@ def main():
                     pagespeed.run(conn, site)
                 elif args.ga:
                     ga.sync_site(conn, site)
+                elif args.authority:
+                    authority.run(conn, site)
                 elif args.gsc:
                     gsc_sync_site(conn, site)
                 else:

@@ -782,3 +782,47 @@ export async function getTraffic(pool, siteId, days = 28, limit = 50) {
     note: 'engagement_pct = sessions engagées (> 10 s, conversion ou 2 pages) / sessions. Comparer clics_gsc_28j et organiques : un écart fort signale un problème de suivi ou de canonique.',
   };
 }
+
+// ---- Autorite du domaine + liens entrants (job 'authority') ------------------------
+// Open PageRank = proxy gratuit de l'Authority Score (0..10) ; Bing WMT = liens entrants
+// connus de Bing (sous-ensemble du web, mais reel, avec ancres et pages cibles).
+export async function getAuthority(pool, siteId, days = 30, limit = 50) {
+  const { rows: snap } = await pool.query(
+    `SELECT date, opr_score::float AS opr_score, opr_rank::int AS opr_rank, opr_referring_domains, bing_backlinks, bing_referring_domains, bing_linked_pages
+       FROM seo_authority_daily WHERE site_id = $1 ORDER BY date DESC LIMIT 1`, [siteId]);
+  if (!snap[0]) {
+    return { note: "Aucun instantané d'autorité : lancer « Analyser l'autorité » dans l'onglet Autorité (job authority), ou attendre la nuit. Prérequis : OPR_API_KEY et/ou BING_WMT_API_KEY dans backend/.env." };
+  }
+  const cur = snap[0];
+  const { rows: prev } = await pool.query(
+    `SELECT opr_score::float AS opr_score, opr_referring_domains, bing_referring_domains FROM seo_authority_daily
+      WHERE site_id = $1 AND date <= $2::date - $3::int ORDER BY date DESC LIMIT 1`, [siteId, cur.date, days]);
+  const { rows: domains } = await pool.query(
+    `SELECT source_domain AS domaine, COUNT(*)::int AS liens, COUNT(DISTINCT target_url)::int AS pages_cibles,
+            MIN(first_seen) AS premiere_vue, MAX(last_seen) AS derniere_vue,
+            (ARRAY_AGG(anchor ORDER BY last_seen DESC))[1] AS ancre_exemple,
+            BOOL_AND(status = 'lost') AS perdu
+       FROM seo_backlinks WHERE site_id = $1 GROUP BY source_domain ORDER BY perdu, liens DESC, premiere_vue DESC LIMIT $2`,
+    [siteId, limit]);
+  const { rows: mv } = await pool.query(
+    `SELECT COUNT(*) FILTER (WHERE status = 'active' AND first_seen > $2::date - $3::int)::int AS gagnes,
+            COUNT(*) FILTER (WHERE status = 'lost' AND lost_at > $2::date - $3::int)::int AS perdus
+       FROM seo_backlinks WHERE site_id = $1`, [siteId, cur.date, days]);
+  const { rows: cibles } = await pool.query(
+    `SELECT target_url AS page, COUNT(*)::int AS liens, COUNT(DISTINCT source_domain)::int AS domaines
+       FROM seo_backlinks WHERE site_id = $1 AND status = 'active' GROUP BY target_url ORDER BY 3 DESC, 2 DESC LIMIT 20`, [siteId]);
+  return {
+    date: cur.date,
+    autorite_open_pagerank: cur.opr_score, rang_mondial: cur.opr_rank,
+    domaines_referents_opr: cur.opr_referring_domains,
+    liens_entrants_bing: cur.bing_backlinks, domaines_referents_bing: cur.bing_referring_domains, pages_liees_bing: cur.bing_linked_pages,
+    variation_sur_jours: days,
+    variation: prev[0] ? {
+      opr_score: cur.opr_score != null && prev[0].opr_score != null ? Math.round((cur.opr_score - prev[0].opr_score) * 100) / 100 : null,
+      domaines_referents_opr: cur.opr_referring_domains != null && prev[0].opr_referring_domains != null ? cur.opr_referring_domains - prev[0].opr_referring_domains : null,
+    } : null,
+    liens_gagnes: mv[0].gagnes, liens_perdus: mv[0].perdus,
+    domaines_referents: domains, pages_les_plus_liees: cibles,
+    note: "Open PageRank (0-10) est un proxy gratuit de l'Authority Score, pas la même formule. Les liens Bing sont ceux que Bing connaît : un sous-ensemble du web réel. Un lien « perdu » n'a pas été revu lors d'un passage qui a recontrôlé sa page cible.",
+  };
+}

@@ -8,6 +8,7 @@ const seoController = require('../controllers/seoController');
 const seoIndexationController = require('../controllers/seoIndexationController');
 const seoPagespeedController = require('../controllers/seoPagespeedController');
 const seoAnalyticsController = require('../controllers/seoAnalyticsController');
+const seoAuthorityController = require('../controllers/seoAuthorityController');
 
 router.use(authMiddleware);
 
@@ -35,6 +36,8 @@ router.get('/pagespeed', seoPagespeedController.getLatest);
 router.get('/pagespeed/history', seoPagespeedController.getHistory);
 // Google Analytics 4 (job 'ga_sync' du worker, propriete GA4 par site).
 router.get('/analytics', seoAnalyticsController.getOverview);
+// Autorite du domaine + liens entrants (job 'authority' : Open PageRank + Bing WMT).
+router.get('/authority', seoAuthorityController.getOverview);
 // Suivi de positions (rank tracker) — lecture seule sur seo_gsc_daily.
 router.get('/positions/summary', seoController.getPositionsSummary);
 router.get('/positions/keywords', seoController.getPositionsKeywords);

@@ -258,12 +258,25 @@ en cache 28 j sur `seo_pages` (`ga_sessions_28d`, `ga_engagement_28d`). Backfill
 premier passage, puis la veille chaque nuit (planifié après la synchro Search Console).
 Outil MCP : `get_traffic`.
 
+## Autorité du domaine et liens entrants (job `authority`)
+Onglet « Autorité & liens » de la page SEO : l'équivalent des blocs Authority Score /
+Backlinks / Domaines référents du tableau de bord Semrush, avec des sources gratuites :
+- **Open PageRank** (`OPR_API_KEY`, déjà utilisé par le module Backlinks) : score 0..10
+  (proxy de l'Authority Score, pas la même formule), rang mondial, domaines référents.
+- **Bing Webmaster Tools** (`BING_WMT_API_KEY` dans `backend/.env`, même clé que le serveur
+  MCP ; le site doit être vérifié dans Bing WMT sous ce compte) : liens entrants connus de
+  Bing, page par page (GetLinkCounts puis GetUrlLinks sur les `BING_TARGETS_PER_RUN` pages
+  les plus liées), avec ancre. Les liens non revus sur une page recontrôlée sont marqués perdus.
+Un instantané par jour dans `seo_authority_daily` (tendance), le détail dans `seo_backlinks`.
+Planifié chaque nuit après Analytics. Outil MCP : `get_authority`.
+
 ## Planification nocturne (mode `--serve`)
 Sans elle, rien ne tourne sans un clic. Le worker met donc lui-même en file, chaque jour à
 `SEO_SCHEDULE_HOUR` (4 h, heure `SEO_SCHEDULE_TZ` Europe/Paris), pour chaque site et dans
 l'ordre : crawl incrémental (complet le `SEO_SCHEDULE_FULL_WEEKDAY`, 6 = dimanche, -1 =
 jamais), synchro Search Console (si connectée), synchro Analytics (si le site a une
-propriété GA4 et que le consentement la couvre), mesure de vitesse (si clé PageSpeed).
+propriété GA4 et que le consentement la couvre), analyse d'autorité (si clé Open PageRank
+ou Bing), mesure de vitesse (si clé PageSpeed).
 - Passe par `seo_jobs` comme l'UI (`source = 'schedule'`) : un seul job actif par site,
   annulation possible, progression et erreurs visibles dans l'écran SEO, qui affiche aussi
   la ligne « Automatique chaque nuit à 04h… » et le résultat du dernier passage.

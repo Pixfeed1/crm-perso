@@ -20,6 +20,7 @@ import BacklinksTab from '../components/seo/BacklinksTab';
 import IndexationTab from '../components/seo/IndexationTab';
 import SpeedTab from '../components/seo/SpeedTab';
 import TrafficTab from '../components/seo/TrafficTab';
+import AuthorityTab from '../components/seo/AuthorityTab';
 import SiteManager from '../components/seo/SiteManager';
 
 const HEALTH_META = {
@@ -187,7 +188,7 @@ const Seo = () => {
         setJob(j);
         if (!j || !isActiveStatus(j.status)) {
           stopJobPoll();
-          const noun = j ? ({ gsc_sync: 'Synchro Search Console', pagespeed: 'Mesure de vitesse', ga_sync: 'Synchro Analytics' }[j.job_type] || 'Crawl') : 'Crawl';
+          const noun = j ? ({ gsc_sync: 'Synchro Search Console', pagespeed: 'Mesure de vitesse', ga_sync: 'Synchro Analytics', authority: 'Analyse d’autorité' }[j.job_type] || 'Crawl') : 'Crawl';
           if (j && j.status === 'done') { toast.success(`${noun} terminé${noun.endsWith('e') ? 'e' : ''}`); load(); }
           if (j && j.status === 'failed') toast.error(`${noun} en échec`);
           if (j && j.status === 'cancelled') { toast.info(`${noun} annulé${noun.endsWith('e') ? 'e' : ''}`); load(); }
@@ -223,7 +224,7 @@ const Seo = () => {
     try {
       const res = await seoAPI.createJob(siteId, jobType);
       setJob(res.job);
-      const labels = { crawl_full: 'Crawl complet lancé', crawl_incremental: 'Crawl lancé', gsc_sync: 'Synchro Search Console lancée', pagespeed: 'Mesure de vitesse lancée', ga_sync: 'Synchro Analytics lancée' };
+      const labels = { crawl_full: 'Crawl complet lancé', crawl_incremental: 'Crawl lancé', gsc_sync: 'Synchro Search Console lancée', pagespeed: 'Mesure de vitesse lancée', ga_sync: 'Synchro Analytics lancée', authority: 'Analyse d’autorité lancée' };
       // already_active : course (double-clic) refusée en base par l'index unique partiel.
       if (res.already_active) toast.info('Une synchronisation est déjà en cours, impossible d’en lancer une seconde.');
       else toast.success(labels[jobType] || 'Tâche lancée');
@@ -288,7 +289,7 @@ const Seo = () => {
 
   const jobActive = job && isActiveStatus(job.status);
   const jobCancellable = job && (job.status === 'pending' || job.status === 'running');
-  const JOB_NOUNS = { gsc_sync: 'Synchro Search Console', pagespeed: 'Mesure de vitesse', ga_sync: 'Synchro Analytics' };
+  const JOB_NOUNS = { gsc_sync: 'Synchro Search Console', pagespeed: 'Mesure de vitesse', ga_sync: 'Synchro Analytics', authority: 'Analyse d’autorité' };
   const jobNoun = ((job && JOB_NOUNS[job.job_type]) || 'Crawl') + (job && job.source === 'schedule' ? ' (automatique)' : '');
   const WEEKDAYS = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
   const JOB_SHORT = { crawl_incremental: 'crawl', crawl_full: 'crawl complet', gsc_sync: 'Search Console', pagespeed: 'vitesse' };
@@ -300,7 +301,7 @@ const Seo = () => {
   const isThisJobRunning = (jobType) => jobActive && job.job_type === jobType;
   const spinner = <motion.span animate={{ rotate: 360 }} transition={{ duration: 0.9, repeat: Infinity, ease: 'linear' }} className="inline-flex"><FiLoader size={15} /></motion.span>;
   const runningLabel = (jobType) => {
-    const noun = jobType === 'gsc_sync' || jobType === 'ga_sync' ? 'Synchro' : jobType === 'pagespeed' ? 'Mesure' : 'Crawl';
+    const noun = jobType === 'gsc_sync' || jobType === 'ga_sync' ? 'Synchro' : jobType === 'pagespeed' ? 'Mesure' : jobType === 'authority' ? 'Analyse' : 'Crawl';
     const prog = job && job.progress_total ? ` ${job.progress_current}/${job.progress_total}` : '';
     return `${noun} en cours…${prog}`;
   };
@@ -314,6 +315,7 @@ const Seo = () => {
     crawl_full: { title: 'Reconstruction complète ?', body: 'Le site entier sera recrawlé et le graphe de liens reconstruit. C’est plus long qu’un crawl incrémental.' },
     gsc_sync: { title: 'Lancer la synchronisation Search Console ?', body: 'Cela inspecte toutes les pages et consomme du quota Google. Une seule par jour suffit.' },
     ga_sync: { title: 'Synchroniser Google Analytics ?', body: 'Récupère les sessions, utilisateurs et engagement de la propriété GA4 du site (90 jours la première fois, puis la veille). Rapide et sans quota sensible.' },
+    authority: { title: 'Analyser l’autorité et les liens entrants ?', body: 'Interroge Open PageRank (score d’autorité du domaine) et Bing Webmaster Tools (liens entrants connus de Bing, page par page). Une à deux minutes. Une analyse par jour suffit, la planification nocturne s’en charge.' },
     pagespeed: { title: 'Mesurer la vitesse ?', body: 'Interroge PageSpeed Insights pour l’accueil et les pages les plus vues (mobile et desktop), plus un lot de pages en rotation (mobile) : 15 à 30 min, le site entier est couvert en quelques semaines. Une mesure par jour suffit.' }
   }[confirmJob] || {};
 
@@ -582,6 +584,7 @@ const Seo = () => {
                 { k: 'indexation', l: 'Indexation' },
                 { k: 'vitesse', l: 'Vitesse' },
                 { k: 'trafic', l: 'Trafic' },
+                { k: 'autorite', l: 'Autorité & liens' },
                 { k: 'positions', l: 'Suivi de positions' },
                 { k: 'backlinks', l: '🔗 Backlinks' }
               ].map((t) => (
@@ -1044,6 +1047,9 @@ const Seo = () => {
             ) : tab === 'trafic' ? (
               /* Google Analytics 4 (job 'ga_sync', propriété GA4 par site) */
               <TrafficTab siteId={siteId} gscStatus={gscStatus} onLaunch={requestLaunch} job={job} jobActive={!!jobActive} onOpenSites={() => setShowSites(true)} onConnectGoogle={connectGoogle} />
+            ) : tab === 'autorite' ? (
+              /* Autorité du domaine (Open PageRank) + liens entrants (Bing WMT), job 'authority' */
+              <AuthorityTab siteId={siteId} onLaunch={requestLaunch} job={job} jobActive={!!jobActive} />
             ) : tab === 'backlinks' ? (
               /* Campagnes backlinks (niches, découverte, scoring, outreach Gmail) */
               <BacklinksTab />

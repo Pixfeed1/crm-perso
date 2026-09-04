@@ -54,7 +54,7 @@ def _google(cur):
     return True, config.GA_SCOPE in (r[0] or "")
 
 
-def plan_for(day, gsc_connected, pagespeed_key, ga_ready=False):
+def plan_for(day, gsc_connected, pagespeed_key, ga_ready=False, authority_ready=False):
     """Chaine du jour, dans l'ordre d'execution. Le crawl d'abord : il cree les pages que
     les synchros enrichissent et que la mesure de vitesse selectionne. ga_ready est PAR
     SITE : consentement Analytics accorde ET propriete GA4 renseignee sur le site."""
@@ -65,6 +65,8 @@ def plan_for(day, gsc_connected, pagespeed_key, ga_ready=False):
         steps.append("gsc_sync")
     if ga_ready:
         steps.append("ga_sync")
+    if authority_ready:
+        steps.append("authority")     # rapide (quelques dizaines d'appels), avant la mesure de vitesse
     if pagespeed_key:
         steps.append("pagespeed")
     return steps
@@ -119,7 +121,7 @@ def _enqueue(cur, site_id, job_type, day):
     return cur.fetchone()[0]
 
 
-def tick(conn, pagespeed_key_present):
+def tick(conn, pagespeed_key_present, authority_ready=False):
     """A appeler a chaque tour de la boucle --serve. Ne fait rien avant l'heure prevue,
     puis fait avancer la chaine de chaque site d'un cran a la fois (un job actif max)."""
     global _last_tick
@@ -143,7 +145,9 @@ def tick(conn, pagespeed_key_present):
         for site_id, domain, ga_property in _sites(cur):
             if _site_busy(cur, site_id):
                 continue
-            steps = plan_for(day, gsc, pagespeed_key_present, ga_ready=bool(ga_scope and (ga_property or "").strip()))
+            steps = plan_for(day, gsc, pagespeed_key_present,
+                             ga_ready=bool(ga_scope and (ga_property or "").strip()),
+                             authority_ready=authority_ready)
             for job_type in steps:
                 st = _state(cur, site_id, job_type, day_start_utc)
                 if st == "done":

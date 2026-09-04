@@ -849,7 +849,9 @@ const seoController = {
          SELECT COUNT(*)::int AS total_keywords,
                 COUNT(*) FILTER (WHERE pos <= 3)::int  AS top3,
                 COUNT(*) FILTER (WHERE pos <= 10)::int AS top10,
+                COUNT(*) FILTER (WHERE pos <= 20)::int AS top20,
                 COUNT(*) FILTER (WHERE pos <= 50)::int AS top50,
+                COUNT(*) FILTER (WHERE pos <= 100)::int AS top100,
                 COUNT(*) FILTER (WHERE pos > 3  AND pos <= 10)::int AS b_4_10,
                 COUNT(*) FILTER (WHERE pos > 10 AND pos <= 20)::int AS b_11_20,
                 COUNT(*) FILTER (WHERE pos > 20 AND pos <= 50)::int AS b_21_50,
@@ -865,7 +867,7 @@ const seoController = {
       res.json({
         days,
         total_keywords: r.total_keywords || 0,
-        top3: r.top3 || 0, top10: r.top10 || 0, top50: r.top50 || 0,
+        top3: r.top3 || 0, top10: r.top10 || 0, top20: r.top20 || 0, top50: r.top50 || 0, top100: r.top100 || 0,
         avg_position: r.avg_position,
         impressions, clicks: Number(r.clicks) || 0,
         ctr: impressions > 0 ? (Number(r.clicks) || 0) / impressions : 0,
@@ -1137,7 +1139,7 @@ const seoController = {
     const jobType = (req.body || {}).job_type;
     const targetUrl = ((req.body || {}).target_url || '').trim();
     if (!siteId) return res.status(400).json({ message: 'site_id requis' });
-    if (!['crawl_full', 'crawl_incremental', 'gsc_sync', 'gsc_test', 'pagespeed', 'ga_sync'].includes(jobType)) {
+    if (!['crawl_full', 'crawl_incremental', 'gsc_sync', 'gsc_test', 'pagespeed', 'ga_sync', 'authority'].includes(jobType)) {
       return res.status(400).json({ message: 'job_type invalide' });
     }
     // Le mode test exige une URL à inspecter (1 seule inspection, aucune écriture SEO).

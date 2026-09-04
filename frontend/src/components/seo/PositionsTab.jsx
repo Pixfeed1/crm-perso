@@ -149,7 +149,8 @@ const PositionsTab = ({ siteId, gscConnected }) => {
     { label: 'Mots-clés', value: fmtNum(summary.total_keywords) },
     { label: 'Top 3', value: fmtNum(summary.top3), cls: 'text-success-text' },
     { label: 'Top 10', value: fmtNum(summary.top10), cls: 'text-info-text' },
-    { label: 'Top 50', value: fmtNum(summary.top50) },
+    { label: 'Top 20', value: fmtNum(summary.top20) },
+    { label: 'Top 100', value: fmtNum(summary.top100) },
     { label: 'Position moy.', value: fmtPos(summary.avg_position) },
     { label: 'Impressions', value: fmtNum(summary.impressions) },
     { label: 'Clics', value: fmtNum(summary.clicks) },
@@ -170,7 +171,7 @@ const PositionsTab = ({ siteId, gscConnected }) => {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 gap-2">
+      <div className="grid grid-cols-3 lg:grid-cols-5 xl:grid-cols-9 gap-2">
         {cards.map((c) => (
           <div key={c.label} className="bg-surface border border-border rounded-xl p-3">
             <div className="text-text-muted text-xs mb-1">{c.label}</div>

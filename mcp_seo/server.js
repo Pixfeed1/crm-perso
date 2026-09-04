@@ -189,6 +189,13 @@ function buildServer() {
   );
 
   server.tool(
+    'get_authority',
+    "Autorité du domaine et liens entrants : score Open PageRank (0-10, équivalent gratuit de l'Authority Score), rang mondial, domaines référents, liens entrants connus de Bing (par domaine source, avec ancres et pages cibles), liens gagnés/perdus sur 30 jours, tendance. Pour juger le netlinking et repérer des liens perdus à récupérer.",
+    { site_id: z.number().int(), days: z.number().int().optional(), limit: z.number().int().optional() },
+    async ({ site_id, days, limit }) => ok(await tools.getAuthority(pool, site_id, days ?? 30, limit ?? 50))
+  );
+
+  server.tool(
     'get_ctr_anomalies',
     "Pages bien positionnées mais peu cliquées (CTR très sous la moyenne attendue pour leur position) : title/meta description à réécrire. Triées par clics potentiels récupérables, avec les défauts on-page connus (meta absente/courte/longue, title long).",
     { site_id: z.number().int(), days: z.number().int().optional(), min_impressions: z.number().int().optional() },
