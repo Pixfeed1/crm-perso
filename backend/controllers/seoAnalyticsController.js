@@ -87,7 +87,7 @@ const seoAnalyticsController = {
              FROM seo_ga_daily WHERE site_id = $1 AND date > $2::date - $3::int GROUP BY page_path),
          k AS (
            SELECT rtrim(regexp_replace(page_url, '^https?://[^/]+', ''), '/') AS path, SUM(clicks)::int AS clicks, SUM(impressions)::int AS impressions
-             FROM seo_gsc_daily WHERE site_id = $1 AND date > $2::date - $3::int GROUP BY 1)
+             FROM seo_gsc_daily_web WHERE site_id = $1 AND date > $2::date - $3::int GROUP BY 1)
          SELECT g.*, p.title, p.wp_id, p.url,
                 k.clicks AS gsc_clicks, k.impressions AS gsc_impressions
            FROM g

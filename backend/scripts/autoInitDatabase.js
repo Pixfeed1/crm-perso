@@ -1690,8 +1690,39 @@ async function ensureSeoTables(client) {
       CONSTRAINT seo_gsc_daily_impr_chk   CHECK (impressions >= 0)
     );
   `);
-  await client.query('CREATE UNIQUE INDEX IF NOT EXISTS uq_seo_gsc_daily ON seo_gsc_daily(site_id, date, page_url, query);');
+  // Type de recherche (web, image, video, news, discover...). Une requete Search Analytics
+  // ne porte que sur UN type ; sans cette colonne, un rang de lien bleu et un rang de
+  // vignette dans une grille d'images seraient confondus (cas « position 1,00 sur 23
+  // impressions » d'une page invisible dans la SERP). Les lignes historiques etaient
+  // toutes 'web' (l'ingestion n'envoyait pas de type, donc valeur par defaut de l'API).
+  await client.query("ALTER TABLE seo_gsc_daily ADD COLUMN IF NOT EXISTS search_type TEXT NOT NULL DEFAULT 'web';");
+  await client.query('DROP INDEX IF EXISTS uq_seo_gsc_daily;');
+  await client.query('CREATE UNIQUE INDEX IF NOT EXISTS uq_seo_gsc_daily_type ON seo_gsc_daily(site_id, date, page_url, query, search_type);');
   await client.query('CREATE INDEX        IF NOT EXISTS idx_seo_gsc_daily_site_date ON seo_gsc_daily(site_id, date);');
+  // Vue « web seulement » : tous les rapports (positions, cannibalisation, CTR, opportunites,
+  // value_score) raisonnent sur la recherche web classique. Les autres types sont un filtre
+  // explicite du suivi de positions.
+  await client.query("CREATE OR REPLACE VIEW seo_gsc_daily_web AS SELECT * FROM seo_gsc_daily WHERE search_type = 'web';");
+  // Detail par pays, appareil et apparence dans les resultats (searchAppearance), par page
+  // et par jour, en appels separes (Google n'autorise pas de grouper searchAppearance avec
+  // query/page). Permet d'ecrire « position 1 sur 23 impressions, uniquement en carrousel,
+  // mobile, France ».
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS seo_gsc_breakdown (
+      id          SERIAL PRIMARY KEY,
+      site_id     INTEGER NOT NULL REFERENCES seo_sites(id) ON DELETE CASCADE,
+      date        DATE NOT NULL,
+      page_url    TEXT NOT NULL,
+      dim         TEXT NOT NULL,          -- country | device | appearance
+      value       TEXT NOT NULL,          -- fra, MOBILE, AMP_BLUE_LINK...
+      clicks      INTEGER NOT NULL DEFAULT 0,
+      impressions INTEGER NOT NULL DEFAULT 0,
+      position    NUMERIC(8,2),
+      CONSTRAINT seo_gsc_breakdown_dim_chk CHECK (dim IN ('country','device','appearance'))
+    );
+  `);
+  await client.query('CREATE UNIQUE INDEX IF NOT EXISTS uq_seo_gsc_breakdown ON seo_gsc_breakdown(site_id, date, page_url, dim, value);');
+  await client.query('CREATE INDEX IF NOT EXISTS idx_seo_gsc_breakdown_page ON seo_gsc_breakdown(site_id, page_url, date);');
   await client.query('CREATE INDEX        IF NOT EXISTS idx_seo_gsc_daily_site_pos  ON seo_gsc_daily(site_id, position);');
   // Suivi de positions : lectures par mot-clé (rank tracker) sur la dimension query déjà en base.
   await client.query('CREATE INDEX        IF NOT EXISTS idx_seo_gsc_daily_site_query ON seo_gsc_daily(site_id, query, date);');

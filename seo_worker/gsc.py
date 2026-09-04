@@ -88,28 +88,41 @@ def _service(creds, name, version):
     return build(name, version, credentials=creds, cache_discovery=False)
 
 
-def search_analytics(creds, gsc_property, start_date, end_date):
-    """Itère TOUTES les lignes (date, page, query) entre start_date et end_date (str AAAA-MM-JJ).
+SEARCH_TYPES = ("web", "image", "discover")  # types ingeres ; video/news possibles mais vides ici
 
-    Pagination par startRow (Search Analytics renvoie au plus GSC_ROW_LIMIT lignes/appel).
-    Renvoie une liste de dicts {date, page, query, clicks, impressions, position}.
+
+def search_analytics(creds, gsc_property, start_date, end_date, search_type="web",
+                     dimensions=("date", "page", "query"), extra_filters=None, use_config_filters=True):
+    """Itère TOUTES les lignes de Search Analytics entre start_date et end_date (AAAA-MM-JJ).
+
+    search_type : web (défaut de l'API), image, video, news, googleNews, discover — UN seul
+    type par appel, c'est la règle de l'API. `discover` et `googleNews` n'acceptent pas la
+    dimension query.
+    dimensions  : parmi date, hour, query, page, country, device, searchAppearance.
+    use_config_filters : applique GSC_COUNTRY / GSC_DEVICE (positions calées sur le SERP
+    réel). À couper quand on ventile justement par pays ou par appareil.
+    Renvoie une liste de dicts {keys: [...], clicks, impressions, position} plus, pour la
+    forme historique (date, page, query), les clés date/page/query.
+    Pagination par startRow (au plus GSC_ROW_LIMIT lignes/appel).
     """
     svc = _service(creds, "webmasters", "v3")
+    dims = list(dimensions)
     out = []
-    # Filtres pays/appareil (config) -> positions calées sur le SERP réel, pas une
-    # moyenne mondiale. Vide = pas de filtre (comportement d'origine).
     filters = []
-    if config.GSC_COUNTRY:
-        filters.append({"dimension": "country", "operator": "equals", "expression": config.GSC_COUNTRY})
-    if config.GSC_DEVICE:
-        filters.append({"dimension": "device", "operator": "equals", "expression": config.GSC_DEVICE})
+    if use_config_filters:
+        if config.GSC_COUNTRY and "country" not in dims:
+            filters.append({"dimension": "country", "operator": "equals", "expression": config.GSC_COUNTRY})
+        if config.GSC_DEVICE and "device" not in dims:
+            filters.append({"dimension": "device", "operator": "equals", "expression": config.GSC_DEVICE})
+    filters += list(extra_filters or [])
 
     start_row = 0
     while True:
         body = {
             "startDate": start_date,
             "endDate": end_date,
-            "dimensions": ["date", "page", "query"],
+            "dimensions": dims,
+            "type": search_type,
             "rowLimit": config.GSC_ROW_LIMIT,
             "startRow": start_row,
         }
@@ -121,20 +134,28 @@ def search_analytics(creds, gsc_property, start_date, end_date):
         rows = (resp or {}).get("rows", [])
         for row in rows:
             keys = row.get("keys", [])
-            if len(keys) < 3:
+            if len(keys) < len(dims):
                 continue
-            out.append({
-                "date": keys[0],
-                "page": keys[1],
-                "query": keys[2],
+            rec = {
+                "keys": keys,
                 "clicks": int(row.get("clicks", 0) or 0),
                 "impressions": int(row.get("impressions", 0) or 0),
                 "position": float(row.get("position", 0) or 0),
-            })
+            }
+            for name, val in zip(dims, keys):
+                rec[name] = val
+            out.append(rec)
         if len(rows) < config.GSC_ROW_LIMIT:
             break
         start_row += config.GSC_ROW_LIMIT
     return out
+
+
+def search_appearances(creds, gsc_property, start_date, end_date):
+    """Liste des apparences (searchAppearance) presentes sur la periode. Google impose deux
+    etapes : d'abord searchAppearance SEULE, puis une requete filtree par apparence."""
+    rows = search_analytics(creds, gsc_property, start_date, end_date, "web", dimensions=("searchAppearance",))
+    return [r["keys"][0] for r in rows if r.get("keys")]
 
 
 def inspect_url(creds, gsc_property, page_url):

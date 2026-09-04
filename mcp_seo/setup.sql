@@ -16,6 +16,8 @@ GRANT SELECT ON
   seo_pages,
   seo_links,
   seo_gsc_daily,
+  seo_gsc_daily_web,
+  seo_gsc_breakdown,
   seo_metrics_monthly,
   seo_onpage_issues,
   seo_audit,
@@ -49,6 +51,8 @@ TO mcp_seo_ro;
 --   GRANT SELECT ON seo_ga_daily, seo_ga_channels_daily TO mcp_seo_ro;
 -- Autorite / liens entrants (job authority), idem :
 --   GRANT SELECT ON seo_authority_daily, seo_backlinks, seo_ref_domains TO mcp_seo_ro;
+-- Types de recherche et ventilations (vue web + table de ventilation), idem :
+--   GRANT SELECT ON seo_gsc_daily_web, seo_gsc_breakdown TO mcp_seo_ro;
 
 -- Aucun autre droit : ce rôle ne voit RIEN d'autre (ni écriture, ni autres tables).
 -- Vérification rapide après coup :

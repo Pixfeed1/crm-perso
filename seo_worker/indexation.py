@@ -43,7 +43,7 @@ def select_urls_to_inspect(conn, site_id, limit):
     sql = """
         WITH impressions AS (
             SELECT page_url, SUM(impressions) AS impr
-              FROM seo_gsc_daily
+              FROM seo_gsc_daily_web
              WHERE site_id = %(site)s
              GROUP BY page_url
         )

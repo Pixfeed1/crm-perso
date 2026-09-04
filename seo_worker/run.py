@@ -556,26 +556,79 @@ def gsc_sync_site(conn, site, job_id=None):
             start_d = end_d  # rien de nouveau : on rafraîchit quand même le dernier jour dispo
 
         print(f"\n=== GSC {domain} (site_id={site_id}) — Search Analytics {start_d} -> {end_d} ===")
-        rows = gsc.search_analytics(creds, gsc_property, start_d.isoformat(), end_d.isoformat())
-        print(f"  {len(rows)} lignes (date,page,query)")
+        # Un appel PAR TYPE de recherche : l'API n'accepte qu'un type a la fois, et un rang
+        # dans une grille d'images n'est pas un rang de lien bleu. discover n'accepte pas la
+        # dimension query : ses lignes sont stockees avec query = '' (page seule).
         inserted = 0
-        for row in rows:
-            cur.execute(
-                """INSERT INTO seo_gsc_daily (site_id, date, page_url, query, clicks, impressions, position)
-                   VALUES (%s, %s, %s, %s, %s, %s, %s)
-                   ON CONFLICT (site_id, date, page_url, query) DO UPDATE
-                     SET clicks = EXCLUDED.clicks, impressions = EXCLUDED.impressions,
-                         position = EXCLUDED.position""",
-                (site_id, row["date"], row["page"], row["query"], row["clicks"], row["impressions"], row["position"]),
-            )
-            inserted += 1
-            if inserted % 500 == 0:
-                conn.commit()
-                if cancel_requested(cur, job_id):
+        for search_type in gsc.SEARCH_TYPES:
+            dims = ("date", "page") if search_type in ("discover", "googleNews") else ("date", "page", "query")
+            try:
+                rows = gsc.search_analytics(creds, gsc_property, start_d.isoformat(), end_d.isoformat(),
+                                            search_type=search_type, dimensions=dims)
+            except Exception as e:
+                print(f"  [GSC] type {search_type} : {str(e)[:120]} (ignore)")
+                continue
+            print(f"  {len(rows)} lignes {dims} type={search_type}")
+            for row in rows:
+                cur.execute(
+                    """INSERT INTO seo_gsc_daily (site_id, date, page_url, query, clicks, impressions, position, search_type)
+                       VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                       ON CONFLICT (site_id, date, page_url, query, search_type) DO UPDATE
+                         SET clicks = EXCLUDED.clicks, impressions = EXCLUDED.impressions,
+                             position = EXCLUDED.position""",
+                    (site_id, row["date"], row["page"], row.get("query", ""), row["clicks"], row["impressions"],
+                     row["position"], search_type),
+                )
+                inserted += 1
+                if inserted % 500 == 0:
                     conn.commit()
-                    print("  [ANNULÉ] pendant Search Analytics")
-                    return "cancelled"
+                    if cancel_requested(cur, job_id):
+                        conn.commit()
+                        print("  [ANNULÉ] pendant Search Analytics")
+                        return "cancelled"
         conn.commit()
+
+        # ---- 1bis) Ventilation par pays, appareil, apparence (par page et par jour) ----
+        # Appels separes : Google n'autorise pas de grouper searchAppearance avec page/query,
+        # et les filtres pays/appareil de la config sont coupes quand on ventile par eux.
+        # C'est ce qui permet de lire « position 1 sur 23 impressions : carrousel, mobile, France ».
+        cur.execute("SELECT MAX(date) FROM seo_gsc_breakdown WHERE site_id = %s", (site_id,))
+        bmax = cur.fetchone()[0]
+        bstart = (bmax + timedelta(days=1)) if bmax else (end_d - timedelta(days=min(config.GSC_INITIAL_DAYS, 90)))
+        if bstart > end_d:
+            bstart = end_d
+        breakdown_rows = 0
+
+        def _store_breakdown(dim, rows, value_of):
+            nonlocal breakdown_rows
+            for r in rows:
+                cur.execute(
+                    """INSERT INTO seo_gsc_breakdown (site_id, date, page_url, dim, value, clicks, impressions, position)
+                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
+                       ON CONFLICT (site_id, date, page_url, dim, value) DO UPDATE
+                         SET clicks = EXCLUDED.clicks, impressions = EXCLUDED.impressions, position = EXCLUDED.position""",
+                    (site_id, r["date"], r["page"], dim, value_of(r), r["clicks"], r["impressions"], r["position"]),
+                )
+                breakdown_rows += 1
+            conn.commit()
+
+        for dim, gdim in (("country", "country"), ("device", "device")):
+            try:
+                rows = gsc.search_analytics(creds, gsc_property, bstart.isoformat(), end_d.isoformat(), "web",
+                                            dimensions=("date", "page", gdim), use_config_filters=False)
+                _store_breakdown(dim, rows, lambda r, k=gdim: str(r[k]))
+            except Exception as e:
+                print(f"  [GSC] ventilation {dim} : {str(e)[:120]} (ignore)")
+        try:
+            for appearance in gsc.search_appearances(creds, gsc_property, bstart.isoformat(), end_d.isoformat()):
+                rows = gsc.search_analytics(
+                    creds, gsc_property, bstart.isoformat(), end_d.isoformat(), "web", dimensions=("date", "page"),
+                    extra_filters=[{"dimension": "searchAppearance", "operator": "equals", "expression": appearance}])
+                _store_breakdown("appearance", rows, lambda r, a=appearance: a)
+        except Exception as e:
+            print(f"  [GSC] ventilation apparence : {str(e)[:120]} (ignore)")
+        print(f"  {breakdown_rows} lignes de ventilation (pays / appareil / apparence)")
+
 
         # ---- 2) URL Inspection (priorité : jamais inspectées, puis plus anciennes ; plafond/jour) ----
         cur.execute(
@@ -600,7 +653,7 @@ def gsc_sync_site(conn, site, job_id=None):
         # pas l'URL normalisée (sans slash) -> sinon coverageState = "URL is unknown to Google".
         # 1) URL canonique exacte connue de GSC (Search Analytics) si la page a des impressions.
         cur.execute(
-            "SELECT page_url FROM seo_gsc_daily WHERE site_id = %s GROUP BY page_url", (site_id,)
+            "SELECT page_url FROM seo_gsc_daily_web WHERE site_id = %s GROUP BY page_url", (site_id,)
         )
         gsc_urls = [r[0] for r in cur.fetchall()]
         canon_by_norm = {}
@@ -690,7 +743,7 @@ def gsc_sync_site(conn, site, job_id=None):
                       CASE WHEN SUM(impressions) > 0
                            THEN SUM(impressions * position) / SUM(impressions)
                            ELSE AVG(position) END
-               FROM seo_gsc_daily WHERE site_id = %s
+               FROM seo_gsc_daily_web WHERE site_id = %s
                GROUP BY site_id, month, page_url
                ON CONFLICT (site_id, month, page_url) DO UPDATE
                  SET clicks = EXCLUDED.clicks, impressions = EXCLUDED.impressions,
@@ -713,6 +766,12 @@ def gsc_sync_site(conn, site, job_id=None):
                 (site_id, retention),
             )
             purged = cur.rowcount
+            cur.execute(
+                """DELETE FROM seo_gsc_breakdown
+                    WHERE site_id = %s
+                      AND date < (date_trunc('month', CURRENT_DATE) - (%s * INTERVAL '1 month'))::date""",
+                (site_id, retention),
+            )
             conn.commit()
             if purged:
                 print(f"  [GSC] retention : {purged} lignes quotidiennes purgees (> {retention} mois, snapshot mensuel conserve)")
@@ -722,7 +781,7 @@ def gsc_sync_site(conn, site, job_id=None):
         d28_start = (end_d - timedelta(days=28)).isoformat()
         # Impressions sur la fenêtre value (normalisées par URL).
         cur.execute(
-            "SELECT page_url, SUM(impressions) FROM seo_gsc_daily WHERE site_id = %s AND date >= %s GROUP BY page_url",
+            "SELECT page_url, SUM(impressions) FROM seo_gsc_daily_web WHERE site_id = %s AND date >= %s GROUP BY page_url",
             (site_id, win_start),
         )
         impr_by_url = {}
@@ -733,7 +792,7 @@ def gsc_sync_site(conn, site, job_id=None):
         cur.execute(
             """SELECT page_url, SUM(clicks), SUM(impressions),
                       CASE WHEN SUM(impressions) > 0 THEN SUM(impressions * position) / SUM(impressions) ELSE NULL END
-               FROM seo_gsc_daily WHERE site_id = %s AND date >= %s GROUP BY page_url""",
+               FROM seo_gsc_daily_web WHERE site_id = %s AND date >= %s GROUP BY page_url""",
             (site_id, d28_start),
         )
         cache28 = {}
@@ -893,7 +952,7 @@ def gsc_debug_site(conn, site, n=3):
         return
 
     # Convention de slash + map canonique, identiques à gsc_sync_site.
-    cur.execute("SELECT page_url FROM seo_gsc_daily WHERE site_id = %s GROUP BY page_url", (site_id,))
+    cur.execute("SELECT page_url FROM seo_gsc_daily_web WHERE site_id = %s GROUP BY page_url", (site_id,))
     gsc_urls = [r[0] for r in cur.fetchall()]
     canon_by_norm = {}
     for gurl in gsc_urls:
@@ -915,7 +974,7 @@ def gsc_debug_site(conn, site, n=3):
 
     # n pages à plus fortes impressions (donc forcément indexées par Google).
     cur.execute(
-        """SELECT page_url, SUM(impressions) AS imp FROM seo_gsc_daily
+        """SELECT page_url, SUM(impressions) AS imp FROM seo_gsc_daily_web
            WHERE site_id = %s GROUP BY page_url ORDER BY imp DESC LIMIT %s""",
         (site_id, n),
     )

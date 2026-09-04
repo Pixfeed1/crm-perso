@@ -83,9 +83,9 @@ function buildServer() {
 
   server.tool(
     'get_page_keywords',
-    "Requêtes Google Search Console d'une page : mot-clé, position, impressions, clics, CTR (fenêtre glissante en jours, défaut 28).",
-    { site_id: z.number().int(), url: z.string(), days: z.number().int().optional() },
-    async ({ site_id, url, days }) => ok(await tools.getPageKeywords(pool, site_id, url, days ?? 28))
+    "Requêtes Google Search Console d'une page : mot-clé, position (pondérée), impressions, clics, CTR, plus la dispersion (min, max, écart-type, jours avec impressions) et representative=false quand la position est un rang dans un bloc (écart-type nul et < 100 impressions). search_type : web (défaut), image, discover.",
+    { site_id: z.number().int(), url: z.string(), days: z.number().int().optional(), search_type: z.enum(['web','image','video','news','discover']).optional() },
+    async ({ site_id, url, days, search_type }) => ok(await tools.getPageKeywords(pool, site_id, url, days ?? 28, search_type ?? 'web'))
   );
 
   server.tool(
@@ -193,6 +193,13 @@ function buildServer() {
     "Autorité du domaine et liens entrants : score Open PageRank (0-10, équivalent gratuit de l'Authority Score), rang mondial, domaines référents, liens entrants connus de Bing (par domaine source, avec ancres et pages cibles), liens gagnés/perdus sur 30 jours, tendance. Pour juger le netlinking et repérer des liens perdus à récupérer.",
     { site_id: z.number().int(), days: z.number().int().optional(), limit: z.number().int().optional() },
     async ({ site_id, days, limit }) => ok(await tools.getAuthority(pool, site_id, days ?? 30, limit ?? 50))
+  );
+
+  server.tool(
+    'get_position_context',
+    "D'où vient la position d'une page : impressions par type de recherche (web / image / discover), par pays, appareil et apparence dans les résultats (carrousel, AMP, vidéo…), plus la dispersion de chaque mot-clé (min, max, écart-type, jours). À appeler AVANT d'interpréter une position : écart-type nul + peu d'impressions = rang dans un bloc imbriqué, pas dans la page de résultats.",
+    { site_id: z.number().int(), url: z.string(), days: z.number().int().optional() },
+    async ({ site_id, url, days }) => ok(await tools.getPositionContext(pool, site_id, url, days ?? 28))
   );
 
   server.tool(

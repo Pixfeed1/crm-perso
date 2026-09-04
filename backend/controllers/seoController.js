@@ -25,16 +25,16 @@ async function buildQueryOverlap(db, siteId, targetUrls, donorUrls, days = 28) {
   const overlap = new Map();
   if (!targets.length || !donors.length) return overlap;
   const { rows } = await db.pool.query(
-    `WITH bounds AS (SELECT MAX(date) AS maxd FROM seo_gsc_daily WHERE site_id = $1),
+    `WITH bounds AS (SELECT MAX(date) AS maxd FROM seo_gsc_daily_web WHERE site_id = $1),
      t AS (
        SELECT rtrim(page_url, '/') AS url, query, SUM(impressions) AS impr
-       FROM seo_gsc_daily, bounds
+       FROM seo_gsc_daily_web, bounds
        WHERE site_id = $1 AND date > bounds.maxd - $2::int AND rtrim(page_url, '/') = ANY($3)
        GROUP BY 1, 2
      ),
      d AS (
        SELECT rtrim(page_url, '/') AS url, query, SUM(impressions) AS impr
-       FROM seo_gsc_daily, bounds
+       FROM seo_gsc_daily_web, bounds
        WHERE site_id = $1 AND date > bounds.maxd - $2::int AND rtrim(page_url, '/') = ANY($4)
        GROUP BY 1, 2
      )
@@ -166,6 +166,10 @@ function normalizeSiteInput(body) {
   if (ga && !/^\d{5,16}$/.test(ga)) return { error: 'ID de propriété GA4 invalide (attendu : chiffres uniquement, ex. 123456789)' };
   return { domain, wp_base_url: wp, gsc_property: gsc, ga_property_id: ga || null };
 }
+
+// Type de recherche Search Analytics accepte par les vues de positions (defaut web).
+const SEARCH_TYPES = ['web', 'image', 'video', 'news', 'discover'];
+const searchType = (v) => (SEARCH_TYPES.includes(v) ? v : 'web');
 
 const seoController = {
   // GET /api/seo/sites -> liste des sites (sélecteur).
@@ -483,11 +487,11 @@ const seoController = {
     const minImpr = Math.max(parseInt(req.query.min_impressions, 10) || 10, 1);
     try {
       const { rows } = await db.pool.query(
-        `WITH bounds AS (SELECT MAX(date) AS maxd FROM seo_gsc_daily WHERE site_id = $1),
+        `WITH bounds AS (SELECT MAX(date) AS maxd FROM seo_gsc_daily_web WHERE site_id = $1),
          per AS (
            SELECT query, page_url, SUM(clicks) AS clicks, SUM(impressions) AS impr,
                   CASE WHEN SUM(impressions) > 0 THEN SUM(impressions * position) / SUM(impressions) END AS pos
-           FROM seo_gsc_daily, bounds
+           FROM seo_gsc_daily_web, bounds
            WHERE site_id = $1 AND date > bounds.maxd - $2::int AND date <= bounds.maxd
            GROUP BY query, page_url
          ),
@@ -538,18 +542,18 @@ const seoController = {
     const minImpr = Math.max(parseInt(req.query.min_impressions, 10) || 30, 1);
     try {
       const { rows } = await db.pool.query(
-        `WITH bounds AS (SELECT MAX(date) AS maxd FROM seo_gsc_daily WHERE site_id = $1),
+        `WITH bounds AS (SELECT MAX(date) AS maxd FROM seo_gsc_daily_web WHERE site_id = $1),
          cur AS (
            SELECT query, SUM(clicks) AS clicks, SUM(impressions) AS impr,
                   CASE WHEN SUM(impressions) > 0 THEN SUM(impressions * position) / SUM(impressions) END AS pos
-           FROM seo_gsc_daily, bounds
+           FROM seo_gsc_daily_web, bounds
            WHERE site_id = $1 AND date > bounds.maxd - $2::int AND date <= bounds.maxd
            GROUP BY query
          ),
          bestpage AS (
            SELECT DISTINCT ON (query) query, page_url FROM (
              SELECT query, page_url, SUM(impressions) AS imp
-             FROM seo_gsc_daily, bounds
+             FROM seo_gsc_daily_web, bounds
              WHERE site_id = $1 AND date > bounds.maxd - $2::int AND date <= bounds.maxd
              GROUP BY query, page_url
            ) z ORDER BY query, imp DESC
@@ -830,21 +834,37 @@ const seoController = {
   // Position d'un mot-clé = SUM(impressions*position)/SUM(impressions) (MÊME formule que le
   // cache gsc_position du module Opportunités). Fenêtre glissante `days` (défaut 28, = cache).
 
-  // GET /api/seo/positions/summary?site_id=&days= -> cartes de synthèse + distribution.
+  // ----- Suivi de positions -----
+  // Toutes ces lectures acceptent ?type=web|image|discover (defaut web) : une requete
+  // Search Analytics ne porte que sur UN type, et un rang dans une grille d'images n'est
+  // pas un rang de lien bleu. Elles exposent aussi la DISPERSION de la position sur la
+  // fenetre (min, max, ecart-type, jours avec impressions) : une position 1,00 rigoureusement
+  // plate sur 23 impressions est la signature d'un bloc imbrique (carrousel, images), pas
+  // d'un premier resultat. Regle « non representative » : ecart-type nul ET < 100 impressions.
+  // Toute agregation de positions est PONDEREE par les impressions, jamais une moyenne simple.
+
+  // GET /api/seo/positions/summary?site_id=&days=&type= -> cartes de synthèse + distribution.
   getPositionsSummary: async (req, res) => {
     const db = req.app.locals.db;
     const siteId = parseInt(req.query.site_id, 10);
     if (!siteId) return res.status(400).json({ message: 'site_id requis' });
     const days = Math.min(Math.max(parseInt(req.query.days, 10) || 28, 1), 365);
+    const type = searchType(req.query.type);
     try {
       const { rows } = await db.pool.query(
         `WITH bounds AS (SELECT MAX(date) AS maxd FROM seo_gsc_daily WHERE site_id = $1),
-         cur AS (
-           SELECT query, SUM(clicks) AS clicks, SUM(impressions) AS impr,
+         daily AS (
+           SELECT query, date, SUM(clicks) AS clicks, SUM(impressions) AS impr,
                   CASE WHEN SUM(impressions) > 0 THEN SUM(impressions * position) / SUM(impressions) END AS pos
            FROM seo_gsc_daily, bounds
-           WHERE site_id = $1 AND date > bounds.maxd - $2::int AND date <= bounds.maxd
-           GROUP BY query
+           WHERE site_id = $1 AND search_type = $3 AND date > bounds.maxd - $2::int AND date <= bounds.maxd
+           GROUP BY query, date
+         ),
+         cur AS (
+           SELECT query, SUM(clicks) AS clicks, SUM(impr) AS impr,
+                  CASE WHEN SUM(impr) > 0 THEN SUM(impr * pos) / SUM(impr) END AS pos,
+                  STDDEV_POP(pos) FILTER (WHERE impr > 0) AS sd
+           FROM daily GROUP BY query
          )
          SELECT COUNT(*)::int AS total_keywords,
                 COUNT(*) FILTER (WHERE pos <= 3)::int  AS top3,
@@ -856,18 +876,20 @@ const seoController = {
                 COUNT(*) FILTER (WHERE pos > 10 AND pos <= 20)::int AS b_11_20,
                 COUNT(*) FILTER (WHERE pos > 20 AND pos <= 50)::int AS b_21_50,
                 COUNT(*) FILTER (WHERE pos > 50)::int AS b_50p,
+                COUNT(*) FILTER (WHERE COALESCE(sd, 0) = 0 AND impr < 100)::int AS non_representative,
                 COALESCE(SUM(impr), 0)::int AS impressions,
                 COALESCE(SUM(clicks), 0)::int AS clicks,
                 CASE WHEN SUM(impr) > 0 THEN (SUM(impr * pos) / SUM(impr))::float END AS avg_position
          FROM cur`,
-        [siteId, days]
+        [siteId, days, type]
       );
       const r = rows[0] || {};
       const impressions = Number(r.impressions) || 0;
       res.json({
-        days,
+        days, type,
         total_keywords: r.total_keywords || 0,
         top3: r.top3 || 0, top10: r.top10 || 0, top20: r.top20 || 0, top50: r.top50 || 0, top100: r.top100 || 0,
+        non_representative: r.non_representative || 0,
         avg_position: r.avg_position,
         impressions, clicks: Number(r.clicks) || 0,
         ctr: impressions > 0 ? (Number(r.clicks) || 0) / impressions : 0,
@@ -885,7 +907,7 @@ const seoController = {
     }
   },
 
-  // GET /api/seo/positions/keywords?site_id=&days=&search=&tracked=0|1 -> liste mots-clés + delta.
+  // GET /api/seo/positions/keywords?site_id=&days=&search=&tracked=1&type= -> mots-clés + dispersion.
   getPositionsKeywords: async (req, res) => {
     const db = req.app.locals.db;
     const siteId = parseInt(req.query.site_id, 10);
@@ -893,45 +915,63 @@ const seoController = {
     const days = Math.min(Math.max(parseInt(req.query.days, 10) || 28, 1), 365);
     const search = (req.query.search || '').trim();
     const tracked = req.query.tracked === '1' ? 1 : 0;
+    const type = searchType(req.query.type);
     try {
       const { rows } = await db.pool.query(
         `WITH bounds AS (SELECT MAX(date) AS maxd FROM seo_gsc_daily WHERE site_id = $1),
-         cur AS (
-           SELECT query, SUM(clicks) AS clicks, SUM(impressions) AS impr,
+         daily AS (
+           SELECT query, date, SUM(clicks) AS clicks, SUM(impressions) AS impr,
                   CASE WHEN SUM(impressions) > 0 THEN SUM(impressions * position) / SUM(impressions) END AS pos
            FROM seo_gsc_daily, bounds
-           WHERE site_id = $1 AND date > bounds.maxd - $2::int AND date <= bounds.maxd
-           GROUP BY query
+           WHERE site_id = $1 AND search_type = $5 AND date > bounds.maxd - $2::int AND date <= bounds.maxd
+           GROUP BY query, date
+         ),
+         cur AS (
+           SELECT query, SUM(clicks) AS clicks, SUM(impr) AS impr,
+                  CASE WHEN SUM(impr) > 0 THEN SUM(impr * pos) / SUM(impr) END AS pos,
+                  MIN(pos) FILTER (WHERE impr > 0) AS pos_min, MAX(pos) FILTER (WHERE impr > 0) AS pos_max,
+                  STDDEV_POP(pos) FILTER (WHERE impr > 0) AS sd,
+                  COUNT(*) FILTER (WHERE impr > 0)::int AS days_impr
+           FROM daily GROUP BY query
          ),
          prev AS (
            SELECT query,
                   CASE WHEN SUM(impressions) > 0 THEN SUM(impressions * position) / SUM(impressions) END AS pos
            FROM seo_gsc_daily, bounds
-           WHERE site_id = $1 AND date > bounds.maxd - ($2::int * 2) AND date <= bounds.maxd - $2::int
+           WHERE site_id = $1 AND search_type = $5 AND date > bounds.maxd - ($2::int * 2) AND date <= bounds.maxd - $2::int
            GROUP BY query
          ),
          bestpage AS (
            SELECT DISTINCT ON (query) query, page_url FROM (
              SELECT query, page_url, SUM(impressions) AS imp
              FROM seo_gsc_daily, bounds
-             WHERE site_id = $1 AND date > bounds.maxd - $2::int AND date <= bounds.maxd
+             WHERE site_id = $1 AND search_type = $5 AND date > bounds.maxd - $2::int AND date <= bounds.maxd
              GROUP BY query, page_url
            ) z ORDER BY query, imp DESC
+         ),
+         types AS (
+           SELECT query, ARRAY_AGG(DISTINCT search_type ORDER BY search_type) AS types
+           FROM seo_gsc_daily, bounds
+           WHERE site_id = $1 AND impressions > 0 AND date > bounds.maxd - $2::int AND date <= bounds.maxd
+           GROUP BY query
          )
          SELECT c.query, c.clicks::int AS clicks, c.impr::int AS impressions,
                 c.pos::float AS position, p.pos::float AS prev_position,
                 (p.pos - c.pos)::float AS delta,
+                c.pos_min::float AS pos_min, c.pos_max::float AS pos_max, c.sd::float AS pos_stddev, c.days_impr,
+                NOT (COALESCE(c.sd, 0) = 0 AND c.impr < 100) AS representative,
                 CASE WHEN c.impr > 0 THEN (c.clicks::float / c.impr) ELSE 0 END AS ctr,
-                bp.page_url, (t.keyword IS NOT NULL) AS tracked
+                bp.page_url, (t.keyword IS NOT NULL) AS tracked, ty.types
          FROM cur c
          LEFT JOIN prev p ON p.query = c.query
          LEFT JOIN bestpage bp ON bp.query = c.query
+         LEFT JOIN types ty ON ty.query = c.query
          LEFT JOIN seo_tracked_keywords t ON t.site_id = $1 AND t.keyword = c.query
          WHERE ($3 = '' OR c.query ILIKE '%' || $3 || '%')
            AND ($4 = 0 OR t.keyword IS NOT NULL)
          ORDER BY c.impr DESC
          LIMIT 500`,
-        [siteId, days, search, tracked]
+        [siteId, days, search, tracked, type]
       );
       res.json(rows);
     } catch (e) {
@@ -940,23 +980,24 @@ const seoController = {
     }
   },
 
-  // GET /api/seo/positions/keyword?site_id=&keyword=&days= -> série temporelle d'un mot-clé.
+  // GET /api/seo/positions/keyword?site_id=&keyword=&days=&type= -> série temporelle d'un mot-clé.
   getPositionKeywordSeries: async (req, res) => {
     const db = req.app.locals.db;
     const siteId = parseInt(req.query.site_id, 10);
     const keyword = (req.query.keyword || '').trim();
     if (!siteId || !keyword) return res.status(400).json({ message: 'site_id et keyword requis' });
     const days = Math.min(Math.max(parseInt(req.query.days, 10) || 28, 1), 365);
+    const type = searchType(req.query.type);
     try {
       const { rows } = await db.pool.query(
         `SELECT date,
                 CASE WHEN SUM(impressions) > 0 THEN (SUM(impressions * position) / SUM(impressions))::float END AS position,
                 SUM(impressions)::int AS impressions, SUM(clicks)::int AS clicks
          FROM seo_gsc_daily
-         WHERE site_id = $1 AND query = $2
+         WHERE site_id = $1 AND query = $2 AND search_type = $4
            AND date > (SELECT MAX(date) FROM seo_gsc_daily WHERE site_id = $1) - $3::int
          GROUP BY date ORDER BY date`,
-        [siteId, keyword, days]
+        [siteId, keyword, days, type]
       );
       res.json(rows);
     } catch (e) {
@@ -965,24 +1006,37 @@ const seoController = {
     }
   },
 
-  // GET /api/seo/positions/pages?site_id=&days= -> pages ayant des requêtes (sélecteur vue 2).
+  // GET /api/seo/positions/pages?site_id=&days=&type= -> pages ayant des requêtes (sélecteur vue 2).
   getPositionsPages: async (req, res) => {
     const db = req.app.locals.db;
     const siteId = parseInt(req.query.site_id, 10);
     if (!siteId) return res.status(400).json({ message: 'site_id requis' });
     const days = Math.min(Math.max(parseInt(req.query.days, 10) || 28, 1), 365);
+    const type = searchType(req.query.type);
     try {
       const { rows } = await db.pool.query(
-        `SELECT g.page_url, SUM(g.impressions)::int AS impressions, SUM(g.clicks)::int AS clicks,
-                CASE WHEN SUM(g.impressions) > 0 THEN (SUM(g.impressions * g.position) / SUM(g.impressions))::float END AS position,
-                COUNT(DISTINCT g.query)::int AS keywords, sp.title
-         FROM seo_gsc_daily g
-         LEFT JOIN seo_pages sp ON sp.site_id = $1 AND sp.url = rtrim(g.page_url, '/')
-         WHERE g.site_id = $1
-           AND g.date > (SELECT MAX(date) FROM seo_gsc_daily WHERE site_id = $1) - $2::int
-         GROUP BY g.page_url, sp.title
+        `WITH daily AS (
+           SELECT page_url, date, SUM(impressions) AS impr, SUM(clicks) AS clicks, COUNT(DISTINCT query) AS kw,
+                  CASE WHEN SUM(impressions) > 0 THEN SUM(impressions * position) / SUM(impressions) END AS pos
+           FROM seo_gsc_daily
+           WHERE site_id = $1 AND search_type = $3
+             AND date > (SELECT MAX(date) FROM seo_gsc_daily WHERE site_id = $1) - $2::int
+           GROUP BY page_url, date
+         )
+         SELECT d.page_url, SUM(d.impr)::int AS impressions, SUM(d.clicks)::int AS clicks,
+                CASE WHEN SUM(d.impr) > 0 THEN (SUM(d.impr * d.pos) / SUM(d.impr))::float END AS position,
+                STDDEV_POP(d.pos) FILTER (WHERE d.impr > 0)::float AS pos_stddev,
+                COUNT(*) FILTER (WHERE d.impr > 0)::int AS days_impr,
+                NOT (COALESCE(STDDEV_POP(d.pos) FILTER (WHERE d.impr > 0), 0) = 0 AND SUM(d.impr) < 100) AS representative,
+                (SELECT COUNT(DISTINCT query) FROM seo_gsc_daily g2
+                  WHERE g2.site_id = $1 AND g2.search_type = $3 AND g2.page_url = d.page_url
+                    AND g2.date > (SELECT MAX(date) FROM seo_gsc_daily WHERE site_id = $1) - $2::int)::int AS keywords,
+                sp.title
+         FROM daily d
+         LEFT JOIN seo_pages sp ON sp.site_id = $1 AND sp.url = rtrim(d.page_url, '/')
+         GROUP BY d.page_url, sp.title
          ORDER BY impressions DESC LIMIT 500`,
-        [siteId, days]
+        [siteId, days, type]
       );
       res.json(rows);
     } catch (e) {
@@ -991,47 +1045,76 @@ const seoController = {
     }
   },
 
-  // GET /api/seo/positions/page?site_id=&url=&days= -> mots-clés de la page + série de la page.
+  // GET /api/seo/positions/page?site_id=&url=&days=&type= -> mots-clés (avec dispersion) + série
+  // + contexte : impressions par type de recherche, ventilation pays / appareil / apparence.
   getPositionsPage: async (req, res) => {
     const db = req.app.locals.db;
     const siteId = parseInt(req.query.site_id, 10);
     const pageUrl = (req.query.url || '').trim();
     if (!siteId || !pageUrl) return res.status(400).json({ message: 'site_id et url requis' });
     const days = Math.min(Math.max(parseInt(req.query.days, 10) || 28, 1), 365);
+    const type = searchType(req.query.type);
     try {
       const kw = await db.pool.query(
         `WITH bounds AS (SELECT MAX(date) AS maxd FROM seo_gsc_daily WHERE site_id = $1),
          cur AS (
            SELECT query, SUM(clicks) AS clicks, SUM(impressions) AS impr,
-                  CASE WHEN SUM(impressions) > 0 THEN SUM(impressions * position) / SUM(impressions) END AS pos
+                  CASE WHEN SUM(impressions) > 0 THEN SUM(impressions * position) / SUM(impressions) END AS pos,
+                  MIN(position) FILTER (WHERE impressions > 0) AS pos_min, MAX(position) FILTER (WHERE impressions > 0) AS pos_max,
+                  STDDEV_POP(position) FILTER (WHERE impressions > 0) AS sd,
+                  COUNT(*) FILTER (WHERE impressions > 0)::int AS days_impr
            FROM seo_gsc_daily, bounds
-           WHERE site_id = $1 AND page_url = $2 AND date > bounds.maxd - $3::int AND date <= bounds.maxd
+           WHERE site_id = $1 AND page_url = $2 AND search_type = $4 AND date > bounds.maxd - $3::int AND date <= bounds.maxd
            GROUP BY query
          ),
          prev AS (
            SELECT query, CASE WHEN SUM(impressions) > 0 THEN SUM(impressions * position) / SUM(impressions) END AS pos
            FROM seo_gsc_daily, bounds
-           WHERE site_id = $1 AND page_url = $2 AND date > bounds.maxd - ($3::int * 2) AND date <= bounds.maxd - $3::int
+           WHERE site_id = $1 AND page_url = $2 AND search_type = $4 AND date > bounds.maxd - ($3::int * 2) AND date <= bounds.maxd - $3::int
            GROUP BY query
          )
          SELECT c.query, c.clicks::int AS clicks, c.impr::int AS impressions,
                 c.pos::float AS position, (p.pos - c.pos)::float AS delta,
+                c.pos_min::float AS pos_min, c.pos_max::float AS pos_max, c.sd::float AS pos_stddev, c.days_impr,
+                NOT (COALESCE(c.sd, 0) = 0 AND c.impr < 100) AS representative,
                 CASE WHEN c.impr > 0 THEN (c.clicks::float / c.impr) ELSE 0 END AS ctr
          FROM cur c LEFT JOIN prev p ON p.query = c.query
          ORDER BY c.impr DESC LIMIT 500`,
-        [siteId, pageUrl, days]
+        [siteId, pageUrl, days, type]
       );
       const series = await db.pool.query(
         `SELECT date,
                 CASE WHEN SUM(impressions) > 0 THEN (SUM(impressions * position) / SUM(impressions))::float END AS position,
                 SUM(impressions)::int AS impressions, SUM(clicks)::int AS clicks
          FROM seo_gsc_daily
-         WHERE site_id = $1 AND page_url = $2
+         WHERE site_id = $1 AND page_url = $2 AND search_type = $4
            AND date > (SELECT MAX(date) FROM seo_gsc_daily WHERE site_id = $1) - $3::int
          GROUP BY date ORDER BY date`,
+        [siteId, pageUrl, days, type]
+      );
+      // Contexte : d'ou viennent les impressions ? Par type de recherche (tous types), puis
+      // par pays / appareil / apparence (recherche web, appels separes cote worker).
+      const types = await db.pool.query(
+        `SELECT search_type, SUM(impressions)::int AS impressions, SUM(clicks)::int AS clicks,
+                CASE WHEN SUM(impressions) > 0 THEN (SUM(impressions * position) / SUM(impressions))::float END AS position
+         FROM seo_gsc_daily
+         WHERE site_id = $1 AND page_url = $2
+           AND date > (SELECT MAX(date) FROM seo_gsc_daily WHERE site_id = $1) - $3::int
+         GROUP BY search_type ORDER BY impressions DESC`,
         [siteId, pageUrl, days]
       );
-      res.json({ keywords: kw.rows, series: series.rows });
+      const breakdown = await db.pool.query(
+        `SELECT dim, value, SUM(impressions)::int AS impressions, SUM(clicks)::int AS clicks,
+                CASE WHEN SUM(impressions) > 0 THEN (SUM(impressions * position) / SUM(impressions))::float END AS position
+         FROM seo_gsc_breakdown
+         WHERE site_id = $1 AND rtrim(page_url,'/') = rtrim($2,'/')
+           AND date > (SELECT MAX(date) FROM seo_gsc_daily WHERE site_id = $1) - $3::int
+         GROUP BY dim, value ORDER BY dim, impressions DESC`,
+        [siteId, pageUrl, days]
+      );
+      const by = { country: [], device: [], appearance: [] };
+      for (const r of breakdown.rows) if (by[r.dim]) by[r.dim].push(r);
+      res.json({ type, keywords: kw.rows, series: series.rows, search_types: types.rows, breakdown: by });
     } catch (e) {
       console.error('[SEO] getPositionsPage:', e.message);
       res.status(500).json({ message: 'Erreur serveur' });
@@ -1046,7 +1129,7 @@ const seoController = {
     const days = Math.min(Math.max(parseInt(req.query.days, 10) || 28, 1), 365);
     try {
       const { rows } = await db.pool.query(
-        `WITH bounds AS (SELECT MAX(date) AS maxd FROM seo_gsc_daily WHERE site_id = $1)
+        `WITH bounds AS (SELECT MAX(date) AS maxd FROM seo_gsc_daily_web WHERE site_id = $1)
          SELECT sp.url, sp.title, sp.focus_keyword,
                 fk.pos::float AS focus_position, fk.impr::int AS focus_impressions,
                 best.query AS top_query, best.pos::float AS top_position, best.impr::int AS top_impressions
@@ -1054,7 +1137,7 @@ const seoController = {
          LEFT JOIN LATERAL (
            SELECT CASE WHEN SUM(impressions) > 0 THEN SUM(impressions * position) / SUM(impressions) END AS pos,
                   SUM(impressions) AS impr
-           FROM seo_gsc_daily g, bounds
+           FROM seo_gsc_daily_web g, bounds
            WHERE g.site_id = sp.site_id AND rtrim(g.page_url, '/') = sp.url
              AND lower(g.query) = lower(sp.focus_keyword)
              AND g.date > bounds.maxd - $2::int
@@ -1062,7 +1145,7 @@ const seoController = {
          LEFT JOIN LATERAL (
            SELECT query, SUM(impressions) AS impr,
                   CASE WHEN SUM(impressions) > 0 THEN SUM(impressions * position) / SUM(impressions) END AS pos
-           FROM seo_gsc_daily g, bounds
+           FROM seo_gsc_daily_web g, bounds
            WHERE g.site_id = sp.site_id AND rtrim(g.page_url, '/') = sp.url AND g.date > bounds.maxd - $2::int
            GROUP BY query ORDER BY impr DESC LIMIT 1
          ) best ON true

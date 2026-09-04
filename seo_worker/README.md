@@ -303,6 +303,30 @@ ou Bing), mesure de vitesse (si clé PageSpeed).
 - `SEO_SCHEDULE=0` dans `backend/.env` désactive tout (retour au manuel). Le cron décrit plus
   haut n'est plus nécessaire quand le service tourne.
 
+## Positions : type de recherche, dispersion, contexte
+Une position Search Console n'est lisible qu'avec son contexte. Le cas type : « memoria
+film » en position 1,00 sur 23 impressions et 0 clic, page invisible dans la SERP réelle.
+La donnée est exacte ; c'est un rang **dans un bloc** (carrousel, grille d'images), pas dans
+la page de résultats. Le CRM ne « nettoie » pas ces positions, il les qualifie :
+- **Type de recherche** : un appel Search Analytics par type (`web`, `image`, `discover` ;
+  `discover` n'accepte pas la dimension query, ses lignes ont `query = ''`), colonne
+  `search_type` dans la clé unique de `seo_gsc_daily`. Tous les rapports (positions,
+  cannibalisation, CTR, opportunités, value_score, snapshot mensuel) lisent la vue
+  `seo_gsc_daily_web` ; images et Discover sont un filtre explicite du suivi de positions.
+- **Dispersion** : la série quotidienne est conservée ; les vues calculent min, max,
+  écart-type et jours avec impressions par mot-clé et par page. Règle : écart-type nul **et**
+  moins de 100 impressions sur la fenêtre = position **non représentative**, affichée grisée
+  avec un marqueur et une infobulle.
+- **Pondération** : toute agrégation de positions est `SUM(position*impressions) /
+  SUM(impressions)`, jamais une moyenne simple (vérifié dans le worker, le backend et le MCP).
+- **Ventilation** (`seo_gsc_breakdown`) : par page et par jour, pays, appareil et apparence
+  (`searchAppearance`, en deux étapes comme l'impose l'API : liste des apparences, puis une
+  requête filtrée par apparence). Filtres pays/appareil de la config coupés pour ces appels.
+  La fiche page affiche : type de recherche, appareil, pays, apparence. Outil MCP :
+  `get_position_context` ; `get_page_keywords` porte désormais l'écart-type et le marqueur.
+- Google peut abandonner une partie des lignes quand il groupe par page/requête : les totaux
+  par requête ne recoupent pas toujours le total de la page. Ce n'est pas un bug.
+
 ## Rétention Search Console
 `seo_gsc_daily` (une ligne par jour × page × requête) grossit sans fin. Google lui-même ne
 conserve que 16 mois. Après chaque `gsc_sync`, une fois le snapshot mensuel écrit

@@ -89,16 +89,16 @@ export async function getOpportunities(pool, siteId, minImpr = 20) {
   const overlapMap = new Map();
   if (topUrls.length && donorRows.length) {
     const ov = await pool.query(
-      `WITH bounds AS (SELECT MAX(date) AS maxd FROM seo_gsc_daily WHERE site_id = $1),
+      `WITH bounds AS (SELECT MAX(date) AS maxd FROM seo_gsc_daily_web WHERE site_id = $1),
        t AS (
          SELECT rtrim(page_url, '/') AS url, query, SUM(impressions) AS impr
-         FROM seo_gsc_daily, bounds
+         FROM seo_gsc_daily_web, bounds
          WHERE site_id = $1 AND date > bounds.maxd - 28 AND rtrim(page_url, '/') = ANY($2)
          GROUP BY 1, 2
        ),
        d AS (
          SELECT rtrim(page_url, '/') AS url, query, SUM(impressions) AS impr
-         FROM seo_gsc_daily, bounds
+         FROM seo_gsc_daily_web, bounds
          WHERE site_id = $1 AND date > bounds.maxd - 28 AND rtrim(page_url, '/') = ANY($3)
          GROUP BY 1, 2
        )
@@ -229,20 +229,62 @@ export async function listLinkTargets(pool, siteId, category = null) {
 }
 
 // ---- get_page_keywords : requêtes GSC d'une page (fenêtre glissante) ----
-export async function getPageKeywords(pool, siteId, url, days = 28) {
+export async function getPageKeywords(pool, siteId, url, days = 28, searchType = 'web') {
+  // Dispersion de la position sur la fenetre : une position plate (ecart-type 0) avec peu
+  // d'impressions est un rang DANS un bloc (carrousel, images), pas dans la page de resultats.
   const { rows } = await pool.query(
     `SELECT query,
             SUM(impressions)::int AS impressions, SUM(clicks)::int AS clicks,
-            CASE WHEN SUM(impressions) > 0 THEN (SUM(impressions*position)/SUM(impressions))::float END AS position
+            CASE WHEN SUM(impressions) > 0 THEN (SUM(impressions*position)/SUM(impressions))::float END AS position,
+            MIN(position) FILTER (WHERE impressions > 0)::float AS position_min,
+            MAX(position) FILTER (WHERE impressions > 0)::float AS position_max,
+            STDDEV_POP(position) FILTER (WHERE impressions > 0)::float AS position_stddev,
+            COUNT(*) FILTER (WHERE impressions > 0)::int AS jours_avec_impressions
      FROM seo_gsc_daily
-     WHERE site_id = $1 AND rtrim(page_url,'/') = rtrim($2,'/')
+     WHERE site_id = $1 AND rtrim(page_url,'/') = rtrim($2,'/') AND search_type = $4
        AND date > (SELECT MAX(date) FROM seo_gsc_daily WHERE site_id = $1) - $3::int
-     GROUP BY query ORDER BY impressions DESC LIMIT 100`, [siteId, url, days]
+     GROUP BY query ORDER BY impressions DESC LIMIT 100`, [siteId, url, days, searchType]
   );
   return rows.map((r) => ({
     query: r.query, position: r.position, impressions: r.impressions, clicks: r.clicks,
-    ctr: r.impressions > 0 ? r.clicks / r.impressions : 0
+    ctr: r.impressions > 0 ? r.clicks / r.impressions : 0,
+    position_min: r.position_min, position_max: r.position_max, position_stddev: r.position_stddev,
+    jours_avec_impressions: r.jours_avec_impressions,
+    representative: !((r.position_stddev || 0) === 0 && r.impressions < 100),
+    search_type: searchType,
   }));
+}
+
+// ---- get_position_context : d'ou vient une position ? ----------------------------------
+// Types de recherche (web / image / discover), pays, appareil, apparence dans les resultats
+// (carrousel, AMP, video...). Permet d'ecrire « position 1 sur 23 impressions, uniquement
+// en carrousel, mobile, France » au lieu d'un « position 1 » trompeur.
+export async function getPositionContext(pool, siteId, url, days = 28) {
+  const { rows: types } = await pool.query(
+    `SELECT search_type, SUM(impressions)::int AS impressions, SUM(clicks)::int AS clicks,
+            CASE WHEN SUM(impressions) > 0 THEN (SUM(impressions*position)/SUM(impressions))::float END AS position
+       FROM seo_gsc_daily
+      WHERE site_id = $1 AND rtrim(page_url,'/') = rtrim($2,'/')
+        AND date > (SELECT MAX(date) FROM seo_gsc_daily WHERE site_id = $1) - $3::int
+      GROUP BY search_type ORDER BY impressions DESC`, [siteId, url, days]);
+  const { rows: bd } = await pool.query(
+    `SELECT dim, value, SUM(impressions)::int AS impressions, SUM(clicks)::int AS clicks,
+            CASE WHEN SUM(impressions) > 0 THEN (SUM(impressions*position)/SUM(impressions))::float END AS position
+       FROM seo_gsc_breakdown
+      WHERE site_id = $1 AND rtrim(page_url,'/') = rtrim($2,'/')
+        AND date > (SELECT MAX(date) FROM seo_gsc_daily WHERE site_id = $1) - $3::int
+      GROUP BY dim, value ORDER BY dim, impressions DESC`, [siteId, url, days]);
+  const by = { pays: [], appareil: [], apparence: [] };
+  const map = { country: 'pays', device: 'appareil', appearance: 'apparence' };
+  for (const r of bd) by[map[r.dim]].push({ valeur: r.value, impressions: r.impressions, clics: r.clicks, position: r.position });
+  const keywords = await getPageKeywords(pool, siteId, url, days, 'web');
+  return {
+    fenetre_jours: days,
+    par_type_de_recherche: types,
+    ...by,
+    mots_cles_web: keywords.slice(0, 30),
+    note: "Une position n'a de sens qu'avec son contexte : type de recherche, dispersion (ecart-type nul + peu d'impressions = rang dans un bloc, pas dans la SERP), pays, appareil, apparence. Les ventilations viennent d'appels Search Analytics separes ; Google peut abandonner une partie des lignes quand il groupe par page/requete, les totaux ne se recoupent donc pas toujours.",
+  };
 }
 
 // ---- get_site_overview : vue d'ensemble du site (santé, maillage, GSC 28j) ----
@@ -305,11 +347,11 @@ export async function getAudit(pool, siteId) {
 // (même logique que /api/seo/cannibalisation : Google hésite -> positions/CTR dilués)
 export async function getCannibalisation(pool, siteId, days = 28, minImpr = 10) {
   const { rows } = await pool.query(
-    `WITH bounds AS (SELECT MAX(date) AS maxd FROM seo_gsc_daily WHERE site_id = $1),
+    `WITH bounds AS (SELECT MAX(date) AS maxd FROM seo_gsc_daily_web WHERE site_id = $1),
      per AS (
        SELECT query, page_url, SUM(clicks) AS clicks, SUM(impressions) AS impr,
               CASE WHEN SUM(impressions) > 0 THEN SUM(impressions * position) / SUM(impressions) END AS pos
-       FROM seo_gsc_daily, bounds
+       FROM seo_gsc_daily_web, bounds
        WHERE site_id = $1 AND date > bounds.maxd - $2::int AND date <= bounds.maxd
        GROUP BY query, page_url
      ),
@@ -347,18 +389,18 @@ export async function getCannibalisation(pool, siteId, days = 28, minImpr = 10) 
 // (même logique que /api/seo/ctr-anomalies, trié par clics potentiels récupérables)
 export async function getCtrAnomalies(pool, siteId, days = 28, minImpr = 30) {
   const { rows } = await pool.query(
-    `WITH bounds AS (SELECT MAX(date) AS maxd FROM seo_gsc_daily WHERE site_id = $1),
+    `WITH bounds AS (SELECT MAX(date) AS maxd FROM seo_gsc_daily_web WHERE site_id = $1),
      cur AS (
        SELECT query, SUM(clicks) AS clicks, SUM(impressions) AS impr,
               CASE WHEN SUM(impressions) > 0 THEN SUM(impressions * position) / SUM(impressions) END AS pos
-       FROM seo_gsc_daily, bounds
+       FROM seo_gsc_daily_web, bounds
        WHERE site_id = $1 AND date > bounds.maxd - $2::int AND date <= bounds.maxd
        GROUP BY query
      ),
      bestpage AS (
        SELECT DISTINCT ON (query) query, page_url FROM (
          SELECT query, page_url, SUM(impressions) AS imp
-         FROM seo_gsc_daily, bounds
+         FROM seo_gsc_daily_web, bounds
          WHERE site_id = $1 AND date > bounds.maxd - $2::int AND date <= bounds.maxd
          GROUP BY query, page_url
        ) z ORDER BY query, imp DESC
