@@ -1775,10 +1775,10 @@ async function ensureSeoTables(client) {
 
   // Migration idempotente (bases existantes) : autoriser l'annulation + le job de test.
   // CREATE TABLE IF NOT EXISTS ne met pas à jour une contrainte déjà créée -> on la recrée.
-  // 'pagespeed' : mesure Core Web Vitals / PageSpeed Insights des pages du site.
+  // 'pagespeed' : mesure Core Web Vitals / PageSpeed Insights ; 'ga_sync' : Google Analytics.
   await client.query('ALTER TABLE seo_jobs DROP CONSTRAINT IF EXISTS seo_jobs_type_chk;');
   await client.query(
-    "ALTER TABLE seo_jobs ADD CONSTRAINT seo_jobs_type_chk CHECK (job_type IN ('crawl_full','crawl_incremental','gsc_sync','gsc_test','pagespeed'));"
+    "ALTER TABLE seo_jobs ADD CONSTRAINT seo_jobs_type_chk CHECK (job_type IN ('crawl_full','crawl_incremental','gsc_sync','gsc_test','pagespeed','ga_sync'));"
   );
   await client.query('ALTER TABLE seo_jobs DROP CONSTRAINT IF EXISTS seo_jobs_status_chk;');
   await client.query(
@@ -1978,6 +1978,48 @@ async function ensureSeoTables(client) {
     );
   `);
   await client.query('CREATE INDEX IF NOT EXISTS idx_seo_pagespeed_lookup ON seo_pagespeed(site_id, url, strategy, checked_at DESC);');
+
+  // Google Analytics 4, PAR SITE : l'identifiant numerique de la propriete GA4 est saisi
+  // dans la fiche du site (UI), comme la propriete Search Console. Rien en dur.
+  await client.query('ALTER TABLE seo_sites ADD COLUMN IF NOT EXISTS ga_property_id TEXT;');
+  // Trafic quotidien par page (API GA4 Data, job ga_sync). Search Console ne voit que le
+  // clic depuis Google : ici on a la visite reelle, toutes sources, et l'engagement.
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS seo_ga_daily (
+      id                 SERIAL PRIMARY KEY,
+      site_id            INTEGER NOT NULL REFERENCES seo_sites(id) ON DELETE CASCADE,
+      date               DATE NOT NULL,
+      page_path          TEXT NOT NULL,
+      sessions           INTEGER NOT NULL DEFAULT 0,
+      organic_sessions   INTEGER NOT NULL DEFAULT 0,   -- canal « Organic Search »
+      users              INTEGER NOT NULL DEFAULT 0,
+      pageviews          INTEGER NOT NULL DEFAULT 0,
+      engagement_rate    NUMERIC(5,4),                 -- 0..1
+      engagement_seconds NUMERIC(12,2),                -- duree d'engagement cumulee
+      bounce_rate        NUMERIC(5,4),
+      created_at         TIMESTAMP DEFAULT NOW()
+    );
+  `);
+  await client.query('CREATE UNIQUE INDEX IF NOT EXISTS uq_seo_ga_daily ON seo_ga_daily(site_id, date, page_path);');
+  await client.query('CREATE INDEX IF NOT EXISTS idx_seo_ga_daily_site_date ON seo_ga_daily(site_id, date);');
+  // Sessions par canal d'acquisition et par jour (organique, direct, referral, social...).
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS seo_ga_channels_daily (
+      id               SERIAL PRIMARY KEY,
+      site_id          INTEGER NOT NULL REFERENCES seo_sites(id) ON DELETE CASCADE,
+      date             DATE NOT NULL,
+      channel          TEXT NOT NULL,
+      sessions         INTEGER NOT NULL DEFAULT 0,
+      users            INTEGER NOT NULL DEFAULT 0,
+      engaged_sessions INTEGER NOT NULL DEFAULT 0,
+      created_at       TIMESTAMP DEFAULT NOW()
+    );
+  `);
+  await client.query('CREATE UNIQUE INDEX IF NOT EXISTS uq_seo_ga_channels ON seo_ga_channels_daily(site_id, date, channel);');
+  // Cache 28 j sur la page (comme gsc_clicks) : lecture directe dans les listes, sans agreger.
+  await client.query('ALTER TABLE seo_pages ADD COLUMN IF NOT EXISTS ga_sessions_28d INTEGER;');
+  await client.query('ALTER TABLE seo_pages ADD COLUMN IF NOT EXISTS ga_engagement_28d NUMERIC(5,4);');
+  await client.query('ALTER TABLE seo_pages ADD COLUMN IF NOT EXISTS ga_synced_at TIMESTAMP;');
 
   console.log('  ✓ Tables SEO vérifiées');
 }

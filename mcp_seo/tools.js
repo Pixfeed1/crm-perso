@@ -750,3 +750,35 @@ export async function getPageSpeed(pool, siteId, limit = 50) {
     mesures: rows,
   };
 }
+
+// ---- Google Analytics 4 (job 'ga_sync', propriete GA4 par site) --------------------
+// Sessions reelles toutes sources + engagement, a mettre en regard des clics GSC : une
+// page classee qui ne retient pas (engagement bas) est un probleme de contenu, pas de SEO.
+export async function getTraffic(pool, siteId, days = 28, limit = 50) {
+  const b = await pool.query('SELECT MAX(date) AS maxd, COUNT(*)::int AS n FROM seo_ga_daily WHERE site_id = $1', [siteId]);
+  if (!b.rows[0].n) {
+    return { note: "Aucune donnée Analytics : renseigner la propriété GA4 dans la fiche du site, s'assurer que le consentement Google couvre Analytics (gsc_auth.py), puis lancer une synchro Analytics." };
+  }
+  const maxd = b.rows[0].maxd;
+  const { rows: tot } = await pool.query(
+    `SELECT SUM(sessions)::int AS sessions, SUM(organic_sessions)::int AS sessions_organiques,
+            SUM(users)::int AS utilisateurs, SUM(pageviews)::int AS pages_vues,
+            CASE WHEN SUM(sessions) > 0 THEN ROUND(100 * SUM(COALESCE(engagement_rate,0) * sessions) / SUM(sessions), 1) END::float AS taux_engagement_pct
+       FROM seo_ga_daily WHERE site_id = $1 AND date > $2::date - $3::int`, [siteId, maxd, days]);
+  const { rows: canaux } = await pool.query(
+    `SELECT channel AS canal, SUM(sessions)::int AS sessions, SUM(users)::int AS utilisateurs
+       FROM seo_ga_channels_daily WHERE site_id = $1 AND date > $2::date - $3::int GROUP BY channel ORDER BY 2 DESC`, [siteId, maxd, days]);
+  const { rows: pages } = await pool.query(
+    `SELECT g.page_path AS chemin, p.title AS titre, g.sessions, g.organiques, g.engagement_pct, p.gsc_clicks AS clics_gsc_28j, p.gsc_position::float AS position_gsc_28j
+       FROM (SELECT page_path, SUM(sessions)::int AS sessions, SUM(organic_sessions)::int AS organiques,
+                    CASE WHEN SUM(sessions) > 0 THEN ROUND(100 * SUM(COALESCE(engagement_rate,0) * sessions) / SUM(sessions), 1) END::float AS engagement_pct
+               FROM seo_ga_daily WHERE site_id = $1 AND date > $2::date - $3::int GROUP BY page_path) g
+       LEFT JOIN seo_pages p ON p.site_id = $1 AND rtrim(regexp_replace(p.url, '^https?://[^/]+', ''), '/') = CASE WHEN g.page_path = '/' THEN '' ELSE g.page_path END
+      ORDER BY g.sessions DESC LIMIT $4`, [siteId, maxd, days, limit]);
+  return {
+    fenetre_jours: days, derniere_date: maxd, ...tot[0],
+    part_organique_pct: tot[0].sessions ? Math.round(1000 * tot[0].sessions_organiques / tot[0].sessions) / 10 : null,
+    canaux, pages,
+    note: 'engagement_pct = sessions engagées (> 10 s, conversion ou 2 pages) / sessions. Comparer clics_gsc_28j et organiques : un écart fort signale un problème de suivi ou de canonique.',
+  };
+}

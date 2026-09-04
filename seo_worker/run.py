@@ -29,6 +29,7 @@ import pagerank as pr_mod
 import gsc
 import indexation
 import pagespeed
+import ga
 import scheduler
 from db import connect
 
@@ -97,11 +98,12 @@ def load_sites(conn, domain=None):
                 conn.rollback()
                 print(f"[SEO] Amorce {site.get('domain')} echouee : {e}")
     cur.execute(
-        "SELECT id, domain, wp_base_url, gsc_property FROM seo_sites"
+        "SELECT id, domain, wp_base_url, gsc_property, ga_property_id FROM seo_sites"
         + (" WHERE domain = %s" if domain else "") + " ORDER BY domain",
         (domain,) if domain else (),
     )
-    return [{"id": r[0], "domain": r[1], "wp_base_url": r[2], "gsc_property": r[3]} for r in cur.fetchall()]
+    return [{"id": r[0], "domain": r[1], "wp_base_url": r[2], "gsc_property": r[3], "ga_property_id": r[4]}
+            for r in cur.fetchall()]
 
 
 def audit_postprocess(conn, site_id, home_url, edges, base):
@@ -951,11 +953,11 @@ def gsc_debug_site(conn, site, n=3):
 
 def site_by_id(conn, site_id):
     cur = conn.cursor()
-    cur.execute("SELECT id, domain, wp_base_url, gsc_property FROM seo_sites WHERE id = %s", (site_id,))
+    cur.execute("SELECT id, domain, wp_base_url, gsc_property, ga_property_id FROM seo_sites WHERE id = %s", (site_id,))
     r = cur.fetchone()
     if not r:
         return None
-    return {"id": r[0], "domain": r[1], "wp_base_url": r[2], "gsc_property": r[3]}
+    return {"id": r[0], "domain": r[1], "wp_base_url": r[2], "gsc_property": r[3], "ga_property_id": r[4]}
 
 
 def cancel_requested(cur, job_id):
@@ -1021,6 +1023,8 @@ def serve():
                     ok = gsc_test_job(conn, site, job.get("target_url"), job_id=job["id"])
                 elif job["job_type"] == "gsc_sync":
                     ok = gsc_sync_site(conn, site, job_id=job["id"])
+                elif job["job_type"] == "ga_sync":
+                    ok = ga.sync_site(conn, site, job_id=job["id"])
                 elif job["job_type"] == "pagespeed":
                     ok = pagespeed.run(
                         conn, site, job_id=job["id"],
@@ -1063,6 +1067,7 @@ def main():
     ap.add_argument("--gsc-test", metavar="URL", help="MODE TEST : inspecte UNE seule URL (1 inspection, rien en base)")
     ap.add_argument("--gsc-inspect", metavar="URL", help="alias de --gsc-test")
     ap.add_argument("--pagespeed", action="store_true", help="mesure Core Web Vitals / PageSpeed (accueil + pages les plus vues)")
+    ap.add_argument("--ga", action="store_true", help="synchro Google Analytics 4 (sites ayant une propriete GA4)")
     args = ap.parse_args()
 
     if args.serve:
@@ -1120,6 +1125,8 @@ def main():
                     gsc_debug_site(conn, site)
                 elif args.pagespeed:
                     pagespeed.run(conn, site)
+                elif args.ga:
+                    ga.sync_site(conn, site)
                 elif args.gsc:
                     gsc_sync_site(conn, site)
                 else:

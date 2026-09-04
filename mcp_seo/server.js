@@ -182,6 +182,13 @@ function buildServer() {
   );
 
   server.tool(
+    'get_traffic',
+    "Trafic Google Analytics 4 du site (sessions, utilisateurs, pages vues, taux d'engagement, part organique), par canal d'acquisition et par page, avec les clics et la position Search Console en regard. Pour savoir ce que les visiteurs FONT une fois arrivés : une page classée à faible engagement est un problème de contenu.",
+    { site_id: z.number().int(), days: z.number().int().optional(), limit: z.number().int().optional() },
+    async ({ site_id, days, limit }) => ok(await tools.getTraffic(pool, site_id, days ?? 28, limit ?? 50))
+  );
+
+  server.tool(
     'get_ctr_anomalies',
     "Pages bien positionnées mais peu cliquées (CTR très sous la moyenne attendue pour leur position) : title/meta description à réécrire. Triées par clics potentiels récupérables, avec les défauts on-page connus (meta absente/courte/longue, title long).",
     { site_id: z.number().int(), days: z.number().int().optional(), min_impressions: z.number().int().optional() },

@@ -160,7 +160,11 @@ function normalizeSiteInput(body) {
   if (!/^(sc-domain:[a-z0-9.-]+|https?:\/\/[^\s]+)$/.test(gsc)) {
     return { error: 'Propriété Search Console invalide (sc-domain:exemple.fr ou https://exemple.fr/)' };
   }
-  return { domain, wp_base_url: wp, gsc_property: gsc };
+  // Propriete Google Analytics 4 : identifiant NUMERIQUE (Admin > Parametres de la
+  // propriete > ID). On accepte aussi la forme "properties/123" et on ne garde que les chiffres.
+  let ga = String(body.ga_property_id || '').trim().replace(/^properties\//, '');
+  if (ga && !/^\d{5,16}$/.test(ga)) return { error: 'ID de propriété GA4 invalide (attendu : chiffres uniquement, ex. 123456789)' };
+  return { domain, wp_base_url: wp, gsc_property: gsc, ga_property_id: ga || null };
 }
 
 const seoController = {
@@ -169,7 +173,7 @@ const seoController = {
     const db = req.app.locals.db;
     try {
       const { rows } = await db.pool.query(
-        'SELECT id, domain, wp_base_url, gsc_property, created_at, updated_at FROM seo_sites ORDER BY domain ASC'
+        'SELECT id, domain, wp_base_url, gsc_property, ga_property_id, created_at, updated_at FROM seo_sites ORDER BY domain ASC'
       );
       res.json(rows);
     } catch (e) {
@@ -190,9 +194,9 @@ const seoController = {
     if (v.error) return res.status(400).json({ message: v.error });
     try {
       const r = await db.pool.query(
-        `INSERT INTO seo_sites (domain, wp_base_url, gsc_property) VALUES ($1, $2, $3)
-         RETURNING id, domain, wp_base_url, gsc_property, created_at, updated_at`,
-        [v.domain, v.wp_base_url, v.gsc_property]
+        `INSERT INTO seo_sites (domain, wp_base_url, gsc_property, ga_property_id) VALUES ($1, $2, $3, $4)
+         RETURNING id, domain, wp_base_url, gsc_property, ga_property_id, created_at, updated_at`,
+        [v.domain, v.wp_base_url, v.gsc_property, v.ga_property_id]
       );
       res.status(201).json(r.rows[0]);
     } catch (e) {
@@ -211,9 +215,9 @@ const seoController = {
     if (v.error) return res.status(400).json({ message: v.error });
     try {
       const r = await db.pool.query(
-        `UPDATE seo_sites SET domain = $1, wp_base_url = $2, gsc_property = $3, updated_at = NOW()
-          WHERE id = $4 RETURNING id, domain, wp_base_url, gsc_property, created_at, updated_at`,
-        [v.domain, v.wp_base_url, v.gsc_property, id]
+        `UPDATE seo_sites SET domain = $1, wp_base_url = $2, gsc_property = $3, ga_property_id = $4, updated_at = NOW()
+          WHERE id = $5 RETURNING id, domain, wp_base_url, gsc_property, ga_property_id, created_at, updated_at`,
+        [v.domain, v.wp_base_url, v.gsc_property, v.ga_property_id, id]
       );
       if (r.rows.length === 0) return res.status(404).json({ message: 'Site introuvable' });
       res.json(r.rows[0]);
@@ -434,7 +438,11 @@ const seoController = {
       );
       if (r.rows.length === 0) return res.json({ connected: false });
       const row = r.rows[0];
-      res.json({ connected: true, account_email: row.account_email, scope: row.scope, updated_at: row.updated_at });
+      res.json({
+        connected: true, account_email: row.account_email, scope: row.scope, updated_at: row.updated_at,
+        // Analytics exige un scope de plus : un consentement anterieur ne le couvre pas.
+        analytics: (row.scope || '').includes('analytics.readonly')
+      });
     } catch (e) {
       console.error('[SEO] getGscStatus:', e.message);
       res.status(500).json({ message: 'Erreur serveur' });
@@ -1129,7 +1137,7 @@ const seoController = {
     const jobType = (req.body || {}).job_type;
     const targetUrl = ((req.body || {}).target_url || '').trim();
     if (!siteId) return res.status(400).json({ message: 'site_id requis' });
-    if (!['crawl_full', 'crawl_incremental', 'gsc_sync', 'gsc_test', 'pagespeed'].includes(jobType)) {
+    if (!['crawl_full', 'crawl_incremental', 'gsc_sync', 'gsc_test', 'pagespeed', 'ga_sync'].includes(jobType)) {
       return res.status(400).json({ message: 'job_type invalide' });
     }
     // Le mode test exige une URL à inspecter (1 seule inspection, aucune écriture SEO).

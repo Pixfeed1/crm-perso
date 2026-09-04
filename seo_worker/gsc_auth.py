@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Consentement OAuth Google Search Console — À LANCER UNE SEULE FOIS.
+"""Consentement OAuth Google (Search Console + Analytics) — À LANCER UNE SEULE FOIS.
+
+Depuis l'ajout de Google Analytics, le consentement demande AUSSI le scope
+analytics.readonly. Une connexion faite avant n'en dispose pas : relancer ce script
+(même procédure), le nouveau refresh_token remplace l'ancien. Il faut aussi activer
+« Google Analytics Data API » sur le projet Google Cloud du client_secret.json.
 
 L'app OAuth est de type *Desktop* et publiée en Production -> le refresh_token obtenu
 N'EXPIRE PAS. Une seule connexion sert TOUS les sites (chaque seo_sites.gsc_property mappe
@@ -81,7 +86,7 @@ def store_token(email, refresh_token, client_id, client_secret, scope):
 def run_consent(secret_path, open_browser):
     from google_auth_oauthlib.flow import InstalledAppFlow
 
-    flow = InstalledAppFlow.from_client_secrets_file(secret_path, scopes=config.GSC_SCOPES)
+    flow = InstalledAppFlow.from_client_secrets_file(secret_path, scopes=config.GOOGLE_SCOPES)
     creds = flow.run_local_server(port=config.GSC_OAUTH_REDIRECT_PORT, open_browser=open_browser)
     if not creds.refresh_token:
         sys.exit("Aucun refresh_token renvoyé. Révoque l'accès dans le compte Google puis recommence "
@@ -99,7 +104,7 @@ def main():
     ap.add_argument("--client-secret", default=DEFAULT_SECRET, help="chemin de client_secret.json")
     args = ap.parse_args()
 
-    scope = " ".join(config.GSC_SCOPES)
+    scope = " ".join(config.GOOGLE_SCOPES)
     client_id, client_secret = read_client_secret(args.client_secret)
 
     # Mode écriture seule (serveur2) : pas de flux navigateur.

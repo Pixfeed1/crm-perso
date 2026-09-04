@@ -12,7 +12,7 @@ import { FiX, FiPlus, FiEdit3, FiTrash2, FiCheck, FiGlobe, FiAlertTriangle } fro
 import { seoAPI } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
 
-const EMPTY = { domain: '', wp_base_url: '', gsc_property: '' };
+const EMPTY = { domain: '', wp_base_url: '', gsc_property: '', ga_property_id: '' };
 
 const Field = ({ label, hint, ...props }) => (
   <label className="block">
@@ -42,7 +42,7 @@ const SiteManager = ({ sites, onClose, onChange }) => {
     } catch (e) { toast.error(e.message || 'Ajout impossible'); } finally { setBusy(false); }
   };
 
-  const startEdit = (s) => { setEditing(s.id); setEditForm({ domain: s.domain, wp_base_url: s.wp_base_url || '', gsc_property: s.gsc_property || '' }); };
+  const startEdit = (s) => { setEditing(s.id); setEditForm({ domain: s.domain, wp_base_url: s.wp_base_url || '', gsc_property: s.gsc_property || '', ga_property_id: s.ga_property_id || '' }); };
   const saveEdit = async () => {
     setBusy(true);
     try {
@@ -87,10 +87,11 @@ const SiteManager = ({ sites, onClose, onChange }) => {
             <li key={s.id} className="px-4 py-3">
               {editing === s.id ? (
                 <div className="space-y-2">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <Field label="Domaine" value={editForm.domain} onChange={(e) => setEditForm({ ...editForm, domain: e.target.value })} />
                     <Field label="URL WordPress" value={editForm.wp_base_url} onChange={(e) => setEditForm({ ...editForm, wp_base_url: e.target.value })} />
                     <Field label="Propriété Search Console" value={editForm.gsc_property} onChange={(e) => setEditForm({ ...editForm, gsc_property: e.target.value })} />
+                    <Field label="Propriété Google Analytics 4 (ID)" placeholder="123456789" value={editForm.ga_property_id} onChange={(e) => setEditForm({ ...editForm, ga_property_id: e.target.value })} hint="Analytics > Admin > Paramètres de la propriété > ID de propriété" />
                   </div>
                   <div className="flex gap-2 justify-end">
                     <button onClick={() => setEditing(null)} className="px-3 py-1.5 text-sm border border-border rounded-lg text-text-primary hover:bg-surface-strong">Annuler</button>
@@ -115,7 +116,7 @@ const SiteManager = ({ sites, onClose, onChange }) => {
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
                     <div className="text-sm font-medium text-text-primary">{s.domain}</div>
-                    <div className="text-xs text-text-muted truncate">{s.wp_base_url} · {s.gsc_property}</div>
+                    <div className="text-xs text-text-muted truncate">{s.wp_base_url} · {s.gsc_property}{s.ga_property_id ? ` · GA4 ${s.ga_property_id}` : ' · GA4 non renseignée'}</div>
                   </div>
                   <div className="flex items-center gap-1 flex-shrink-0">
                     <button onClick={() => startEdit(s)} className="p-2 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-strong" title="Modifier"><FiEdit3 size={15} /></button>
@@ -130,10 +131,11 @@ const SiteManager = ({ sites, onClose, onChange }) => {
         {/* Ajout */}
         <div className="bg-surface border border-border rounded-xl p-4 space-y-3">
           <div className="text-sm font-medium text-text-primary inline-flex items-center gap-2"><FiPlus size={14} /> Ajouter un site</div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <Field label="Domaine *" placeholder="exemple.fr" value={form.domain} onChange={(e) => setForm({ ...form, domain: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') create(); }} />
             <Field label="URL WordPress" placeholder={`https://${form.domain || 'exemple.fr'}`} value={form.wp_base_url} onChange={(e) => setForm({ ...form, wp_base_url: e.target.value })} hint="vide = https://domaine" />
             <Field label="Propriété Search Console" placeholder={`sc-domain:${form.domain || 'exemple.fr'}`} value={form.gsc_property} onChange={(e) => setForm({ ...form, gsc_property: e.target.value })} hint="vide = sc-domain:domaine" />
+            <Field label="Propriété Google Analytics 4 (ID)" placeholder="123456789" value={form.ga_property_id} onChange={(e) => setForm({ ...form, ga_property_id: e.target.value })} hint="facultatif · Analytics > Admin > Paramètres de la propriété > ID" />
           </div>
           <div className="flex items-center justify-between gap-2">
             <p className="text-[11px] text-text-muted">Le site doit exposer l'API REST WordPress et le snippet SEO de functions.php (voir seo_worker/README.md). Puis lancer un crawl.</p>

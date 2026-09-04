@@ -232,11 +232,32 @@ les autres alimentent `seo_pages.seo_meta` et **priment sur le HTML**. Le snippe
 optionnel au sens strict : sans lui, le worker retombe sur la lecture du `<head>` et rien ne
 casse, mais les compteurs `meta_description_absente` et `title_trop_long` restent approximatifs.
 
+## Google Analytics 4 (job `ga_sync`)
+Onglet « Trafic » de la page SEO. Propriété GA4 **par site** : son identifiant numérique se
+saisit dans la fiche du site (roue crantée), champ « Propriété Google Analytics 4 (ID) »
+(Analytics > Admin > Paramètres de la propriété > ID de propriété). Un site sans propriété
+est ignoré. Rien en dur.
+
+Prérequis, une fois :
+1. Le consentement Google doit couvrir Analytics. Un consentement fait pour Search Console
+   seul ne suffit pas : relancer `python gsc_auth.py` (même procédure poste + `--store`
+   serveur), le nouveau refresh_token remplace l'ancien et sert aux deux.
+2. Activer « Google Analytics Data API » sur le projet Google Cloud du `client_secret.json`.
+3. Le compte Google utilisé doit avoir accès (lecteur suffit) à la propriété GA4.
+
+Le job récupère par jour et par page : sessions, sessions organiques, utilisateurs, pages
+vues, taux d'engagement, durée d'engagement, rebond (`seo_ga_daily`) ; par jour et par canal
+d'acquisition : sessions, utilisateurs, sessions engagées (`seo_ga_channels_daily`) ; et met
+en cache 28 j sur `seo_pages` (`ga_sessions_28d`, `ga_engagement_28d`). Backfill 90 jours au
+premier passage, puis la veille chaque nuit (planifié après la synchro Search Console).
+Outil MCP : `get_traffic`.
+
 ## Planification nocturne (mode `--serve`)
 Sans elle, rien ne tourne sans un clic. Le worker met donc lui-même en file, chaque jour à
 `SEO_SCHEDULE_HOUR` (4 h, heure `SEO_SCHEDULE_TZ` Europe/Paris), pour chaque site et dans
 l'ordre : crawl incrémental (complet le `SEO_SCHEDULE_FULL_WEEKDAY`, 6 = dimanche, -1 =
-jamais), synchro Search Console (si connectée), mesure de vitesse (si clé PageSpeed).
+jamais), synchro Search Console (si connectée), synchro Analytics (si le site a une
+propriété GA4 et que le consentement la couvre), mesure de vitesse (si clé PageSpeed).
 - Passe par `seo_jobs` comme l'UI (`source = 'schedule'`) : un seul job actif par site,
   annulation possible, progression et erreurs visibles dans l'écran SEO, qui affiche aussi
   la ligne « Automatique chaque nuit à 04h… » et le résultat du dernier passage.
@@ -286,4 +307,4 @@ qu'à J+1 : une mesure par jour suffit, et fait avancer la rotation.
 
 ## Étapes suivantes
 - Content decay (besoin de plusieurs mois de `seo_metrics_monthly`).
-- Google Analytics (trafic réel au-delà du clic Search Console).
+- Alertes (désindexation, chute de score, nouvelles 404) par e-mail.

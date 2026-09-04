@@ -41,23 +41,30 @@ def now_local():
 
 
 def _sites(cur):
-    cur.execute("SELECT id, domain FROM seo_sites ORDER BY id")
+    cur.execute("SELECT id, domain, ga_property_id FROM seo_sites ORDER BY id")
     return cur.fetchall()
 
 
-def _gsc_connected(cur):
-    cur.execute("SELECT 1 FROM seo_oauth_tokens WHERE provider = 'google' LIMIT 1")
-    return cur.fetchone() is not None
+def _google(cur):
+    """(connecte, scope Analytics accorde)."""
+    cur.execute("SELECT scope FROM seo_oauth_tokens WHERE provider = 'google' ORDER BY updated_at DESC LIMIT 1")
+    r = cur.fetchone()
+    if not r:
+        return False, False
+    return True, config.GA_SCOPE in (r[0] or "")
 
 
-def plan_for(day, gsc_connected, pagespeed_key):
+def plan_for(day, gsc_connected, pagespeed_key, ga_ready=False):
     """Chaine du jour, dans l'ordre d'execution. Le crawl d'abord : il cree les pages que
-    la synchro enrichit et que la mesure de vitesse selectionne."""
+    les synchros enrichissent et que la mesure de vitesse selectionne. ga_ready est PAR
+    SITE : consentement Analytics accorde ET propriete GA4 renseignee sur le site."""
     steps = []
     full = config.SCHEDULE_FULL_WEEKDAY >= 0 and day.weekday() == config.SCHEDULE_FULL_WEEKDAY
     steps.append("crawl_full" if full else "crawl_incremental")
     if gsc_connected:
         steps.append("gsc_sync")
+    if ga_ready:
+        steps.append("ga_sync")
     if pagespeed_key:
         steps.append("pagespeed")
     return steps
@@ -132,11 +139,11 @@ def tick(conn, pagespeed_key_present):
 
     cur = conn.cursor()
     try:
-        gsc = _gsc_connected(cur)
-        steps = plan_for(day, gsc, pagespeed_key_present)
-        for site_id, domain in _sites(cur):
+        gsc, ga_scope = _google(cur)
+        for site_id, domain, ga_property in _sites(cur):
             if _site_busy(cur, site_id):
                 continue
+            steps = plan_for(day, gsc, pagespeed_key_present, ga_ready=bool(ga_scope and (ga_property or "").strip()))
             for job_type in steps:
                 st = _state(cur, site_id, job_type, day_start_utc)
                 if st == "done":

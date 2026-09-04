@@ -7,6 +7,7 @@ const authMiddleware = require('../middleware/authMiddleware');
 const seoController = require('../controllers/seoController');
 const seoIndexationController = require('../controllers/seoIndexationController');
 const seoPagespeedController = require('../controllers/seoPagespeedController');
+const seoAnalyticsController = require('../controllers/seoAnalyticsController');
 
 router.use(authMiddleware);
 
@@ -32,6 +33,8 @@ router.get('/indexation/sitemap-check', seoIndexationController.checkSitemap);
 // Core Web Vitals / PageSpeed (job 'pagespeed' du worker).
 router.get('/pagespeed', seoPagespeedController.getLatest);
 router.get('/pagespeed/history', seoPagespeedController.getHistory);
+// Google Analytics 4 (job 'ga_sync' du worker, propriete GA4 par site).
+router.get('/analytics', seoAnalyticsController.getOverview);
 // Suivi de positions (rank tracker) — lecture seule sur seo_gsc_daily.
 router.get('/positions/summary', seoController.getPositionsSummary);
 router.get('/positions/keywords', seoController.getPositionsKeywords);

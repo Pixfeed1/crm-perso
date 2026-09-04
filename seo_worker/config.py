@@ -77,6 +77,12 @@ POLL_INTERVAL = 10          # mode --serve : intervalle (s) de vérification de 
 
 # ===== Étape 2 — Google Search Console =====
 GSC_SCOPES = ["https://www.googleapis.com/auth/webmasters"]
+# Google Analytics 4 (API Data) : meme consentement Google, un scope de plus. Un token
+# obtenu AVANT l'ajout de ce scope ne donne pas acces a Analytics : relancer gsc_auth.py.
+GA_SCOPE = "https://www.googleapis.com/auth/analytics.readonly"
+GOOGLE_SCOPES = GSC_SCOPES + [GA_SCOPE]
+GA_INITIAL_DAYS = 90            # backfill au premier sync (puis incremental quotidien)
+GA_LAG_DAYS = 1                 # GA4 finalise la veille dans la journee : on s'arrete a hier
 GSC_INITIAL_DAYS = 180          # backfill au tout premier sync (puis incrémental quotidien)
 GSC_LAG_DAYS = 3                # latence des données GSC : on s'arrête à aujourd'hui - 3 jours
 GSC_ROW_LIMIT = 25000           # lignes max par page de réponse Search Analytics (pagination)

@@ -606,6 +606,8 @@ export const seoAPI = {
     return apiRequest(`/seo/indexation?${qs}`);
   },
   checkSitemap: (siteId, url) => apiRequest(`/seo/indexation/sitemap-check?site_id=${siteId}&url=${encodeURIComponent(url)}`),
+  // Google Analytics 4 (propriete par site).
+  getAnalytics: (siteId, days = 28) => apiRequest(`/seo/analytics?site_id=${siteId}&days=${days}`),
   // Core Web Vitals / PageSpeed.
   getPagespeed: (siteId) => apiRequest(`/seo/pagespeed?site_id=${siteId}`),
   getPagespeedHistory: (siteId, url, strategy = 'mobile') =>

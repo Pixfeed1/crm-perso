@@ -56,6 +56,12 @@ def load_token_row(conn):
     }
 
 
+def has_analytics_scope(conn):
+    """True si le consentement Google stocke couvre Analytics (sinon : relancer gsc_auth.py)."""
+    row = load_token_row(conn)
+    return bool(row and config.GA_SCOPE in (row.get("scope") or ""))
+
+
 def load_credentials(conn):
     """Construit des Credentials Google rafraîchissables depuis la base. None si absent."""
     if not _GOOGLE_OK:
@@ -69,7 +75,10 @@ def load_credentials(conn):
         token_uri=row["token_uri"] or "https://oauth2.googleapis.com/token",
         client_id=row["client_id"],
         client_secret=row["client_secret"],
-        scopes=config.GSC_SCOPES,
+        # Les scopes REELLEMENT accordes (stockes au consentement) : en demander d'autres
+        # au rafraichissement ferait echouer le token. Analytics n'est donc accessible
+        # que si le consentement a ete (re)fait avec GOOGLE_SCOPES.
+        scopes=(row["scope"] or " ".join(config.GSC_SCOPES)).split(),
     )
     creds.refresh(Request())  # obtient un access_token frais (le refresh_token ne change pas)
     return creds

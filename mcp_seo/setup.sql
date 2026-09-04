@@ -25,7 +25,9 @@ GRANT SELECT ON
   gsc_index_history,
   seo_sitemap_urls,
   seo_redirects,
-  seo_pagespeed
+  seo_pagespeed,
+  seo_ga_daily,
+  seo_ga_channels_daily
 TO mcp_seo_ro;
 
 -- Module Backlinks (campagnes de netlinking) + tracking d'ouvertures des emails.
@@ -40,6 +42,8 @@ TO mcp_seo_ro;
 --   GRANT SELECT ON gsc_index_status, gsc_index_history, seo_sitemap_urls, seo_redirects TO mcp_seo_ro;
 -- Core Web Vitals (job pagespeed), meme cas : table creee par autoInitDatabase apres coup.
 --   GRANT SELECT ON seo_pagespeed TO mcp_seo_ro;
+-- Google Analytics (job ga_sync), idem :
+--   GRANT SELECT ON seo_ga_daily, seo_ga_channels_daily TO mcp_seo_ro;
 
 -- Aucun autre droit : ce rôle ne voit RIEN d'autre (ni écriture, ni autres tables).
 -- Vérification rapide après coup :
