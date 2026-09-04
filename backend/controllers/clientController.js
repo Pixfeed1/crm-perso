@@ -2,7 +2,6 @@
 const clientModel = require('../models/clientModel');
 const multer = require('multer');
 const emailService = require('../services/emailService');
-const emailLog = require('../services/emailLog'); // journal central des envois
 
 // Configuration multer pour les pièces jointes email
 const storage = multer.memoryStorage();
@@ -329,63 +328,16 @@ const clientController = {
         });
       }
 
-      // Charger les paramètres SMTP depuis la base de données OU le .env
-      // Support des deux formats: EMAIL_* et SMTP_*
-      let smtpConfig = {
-        host: process.env.EMAIL_HOST || process.env.SMTP_HOST,
-        port: parseInt(process.env.EMAIL_PORT || process.env.SMTP_PORT) || 587,
-        secure: process.env.EMAIL_USE_SSL === 'true' || process.env.SMTP_SECURE === 'true',
-        user: process.env.EMAIL_USER || process.env.SMTP_USER,
-        pass: process.env.EMAIL_PASSWORD || process.env.SMTP_PASSWORD || process.env.SMTP_PASS,
-        from_email: process.env.EMAIL_USER || process.env.SMTP_FROM || process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER,
-        from_name: process.env.EMAIL_FROM_NAME || process.env.SMTP_FROM_NAME || 'CRM Pixfeed'
-      };
-
-      // Essayer de charger depuis la base de données (priorité)
-      let emailSignature = '';
-      try {
-        const settingsResult = await db.pool.query(
-          'SELECT smtp_host, smtp_port, smtp_secure, smtp_user, smtp_pass, smtp_from_email, smtp_from_name, email_signature FROM company_settings LIMIT 1'
-        );
-        if (settingsResult.rows && settingsResult.rows.length > 0) {
-          const dbSettings = settingsResult.rows[0];
-          // Utiliser les valeurs de la DB si elles existent
-          if (dbSettings.smtp_host) smtpConfig.host = dbSettings.smtp_host;
-          if (dbSettings.smtp_port) smtpConfig.port = dbSettings.smtp_port;
-          if (dbSettings.smtp_secure !== null) smtpConfig.secure = dbSettings.smtp_secure;
-          if (dbSettings.smtp_user) smtpConfig.user = dbSettings.smtp_user;
-          if (dbSettings.smtp_pass) smtpConfig.pass = dbSettings.smtp_pass;
-          if (dbSettings.smtp_from_email) smtpConfig.from_email = dbSettings.smtp_from_email;
-          if (dbSettings.smtp_from_name) smtpConfig.from_name = dbSettings.smtp_from_name;
-          if (dbSettings.email_signature) emailSignature = dbSettings.email_signature;
-        }
-      } catch (dbError) {
-        console.log('Pas de config SMTP en base, utilisation du .env');
-      }
-
-      // Vérifier que la configuration SMTP est complète
-      if (!smtpConfig.host || !smtpConfig.user || !smtpConfig.pass) {
-        return res.status(500).json({
-          message: 'Configuration SMTP incomplète. Configurez SMTP_HOST, SMTP_USER et SMTP_PASS dans le .env ou dans les réglages.'
-        });
-      }
-
-      // Configurer nodemailer
-      const nodemailer = require('nodemailer');
-      const transporter = nodemailer.createTransport({
-        host: smtpConfig.host,
-        port: smtpConfig.port,
-        secure: smtpConfig.secure,
-        auth: {
-          user: smtpConfig.user,
-          pass: smtpConfig.pass
-        }
-      });
-
-      // Construire le HTML de l'email avec signature
-      const signatureHtml = emailSignature ? `
+      // Signature : meme source que tous les autres emails (Parametres).
+      // L'ancien code la lisait directement dans company_settings, aux cotes d'une
+      // config SMTP (smtp_*) qu'aucun ecran ne permet de renseigner et que rien
+      // d'autre ne lisait : ce transport parallele est supprime, l'envoi passe par
+      // emailService comme le reste de l'outil (un seul serveur, une seule config,
+      // journalisation dans l'historique sans appel supplementaire).
+      const signature = await emailService.getSelectedSignature(db);
+      const signatureHtml = signature ? `
         <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
-          ${emailSignature}
+          ${signature}
         </div>
       ` : '';
 
@@ -406,31 +358,24 @@ const clientController = {
 </body>
 </html>`;
 
-      // Préparer les pièces jointes
+      // Pieces jointes recues en multipart (Buffer en memoire) : passees telles quelles.
       const attachments = attachmentFiles.map(file => ({
         filename: file.originalname,
         content: file.buffer,
         contentType: file.mimetype
       }));
 
-      // Envoyer l'email
-      const mailOptions = {
-        from: `"${smtpConfig.from_name}" <${smtpConfig.from_email}>`,
-        to: to,
-        subject: subject,
+      // Nom d'expediteur personnalise conserve s'il est defini, sinon celui
+      // d'emailService, identique aux autres envois.
+      const fromName = process.env.EMAIL_FROM_NAME;
+      await emailService.sendEmail({
+        to,
+        subject,
         text: message.replace(/<[^>]*>/g, ''), // Version texte sans HTML
         html: htmlContent,
-        attachments: attachments
-      };
-
-      await transporter.sendMail(mailOptions);
-      // Journal central : cet envoi a son PROPRE transport (config SMTP lue en base),
-      // il ne passe donc pas par emailService où la journalisation est posée. Sans cet
-      // appel, les emails partis d'ici n'apparaissaient nulle part dans l'historique.
-      emailLog.record({
-        to, subject, html: htmlContent, source: 'client', from_account: 'pro',
-        from_email: smtpConfig.from_email,
-        attachments_count: (attachments || []).length, status: 'sent',
+        attachments,
+        ...(fromName && process.env.EMAIL_USER ? { from: `"${fromName}" <${process.env.EMAIL_USER}>` } : {}),
+        source: 'client'
       });
 
       res.json({

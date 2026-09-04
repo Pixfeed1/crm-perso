@@ -1,4 +1,8 @@
-// Importer le correctif WebAssembly en premier
+// Couper les logs de debogage en production AVANT tout autre import :
+// certains modules loguent des leur chargement.
+import './utils/quietConsole.js';
+
+// Importer le correctif WebAssembly
 import './wasm-fix.js';
 
 // Puis le reste des imports habituels
