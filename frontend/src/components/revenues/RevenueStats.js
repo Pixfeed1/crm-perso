@@ -20,6 +20,7 @@ const RevenueStats = ({ stats }) => {
       value: formatAmount(stats.total),
       icon: <FiDollarSign />,
       color: 'from-emerald-500 to-teal-500',
+      border: 'border-emerald-500',
       delay: 0.1
     },
     {
@@ -27,6 +28,7 @@ const RevenueStats = ({ stats }) => {
       value: formatAmount(stats.average),
       icon: <FiBarChart2 />,
       color: 'from-blue-500 to-indigo-500',
+      border: 'border-blue-500',
       delay: 0.2
     },
     {
@@ -34,6 +36,7 @@ const RevenueStats = ({ stats }) => {
       value: formatAmount(stats.highest),
       icon: <FiAward />,
       color: 'from-purple-500 to-indigo-500',
+      border: 'border-purple-500',
       delay: 0.3
     },
     {
@@ -41,6 +44,7 @@ const RevenueStats = ({ stats }) => {
       value: formatAmount(stats.forecasted),
       icon: <FiTrendingUp />,
       color: 'from-amber-500 to-orange-500',
+      border: 'border-amber-500',
       delay: 0.4
     }
   ];
@@ -50,7 +54,7 @@ const RevenueStats = ({ stats }) => {
       {statItems.map((item, index) => (
         <motion.div
           key={index}
-          className={`bg-surface/30 backdrop-blur-sm rounded-xl p-4 border-l-4 border-${item.color.split(' ')[1]}`}
+          className={`bg-surface/30 backdrop-blur-sm rounded-xl p-4 border-l-4 ${item.border}`}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: item.delay }}

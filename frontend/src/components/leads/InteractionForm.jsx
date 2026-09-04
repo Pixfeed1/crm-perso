@@ -17,12 +17,16 @@ const InteractionForm = ({ interaction = {}, contacts = [], onSave, onCancel }) 
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
 
-  // Configuration des types d'interaction
+  // Configuration des types d'interaction.
+  // Les classes de surlignage sont ecrites EN ENTIER : composees a la volee
+  // (`bg-${color}-600/40`), le compilateur Tailwind ne pouvait pas les voir et ne
+  // les generait pas — le type selectionne n'etait surligne que pour 'purple', dont
+  // les classes existaient par hasard ailleurs dans le code.
   const interactionTypes = [
-    { value: 'call', label: 'Appel téléphonique', icon: <FiPhone />, color: 'blue' },
-    { value: 'email', label: 'Email', icon: <FiMail />, color: 'purple' },
-    { value: 'meeting', label: 'Réunion', icon: <FiUsers />, color: 'emerald' },
-    { value: 'note', label: 'Note', icon: <FiFileText />, color: 'amber' }
+    { value: 'call', label: 'Appel téléphonique', icon: <FiPhone />, selected: 'bg-blue-600/40 border-blue-500' },
+    { value: 'email', label: 'Email', icon: <FiMail />, selected: 'bg-purple-600/40 border-purple-500' },
+    { value: 'meeting', label: 'Réunion', icon: <FiUsers />, selected: 'bg-emerald-600/40 border-emerald-500' },
+    { value: 'note', label: 'Note', icon: <FiFileText />, selected: 'bg-amber-600/40 border-amber-500' }
   ];
 
   // Mise à jour des champs du formulaire
@@ -101,7 +105,7 @@ const InteractionForm = ({ interaction = {}, contacts = [], onSave, onCancel }) 
                 key={type.value}
                 className={`flex items-center px-3 py-2 rounded-lg cursor-pointer transition-colors border ${
                   formData.type === type.value
-                    ? `bg-${type.color}-600/40 border-${type.color}-500`
+                    ? type.selected
                     : 'bg-surface/40 border-border hover:bg-surface-strong/30'
                 }`}
               >
