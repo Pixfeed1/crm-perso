@@ -172,6 +172,9 @@ app.use('/api/goals', require('./routes/goalsRoutes'));
 app.use('/api/objectif', require('./routes/objectifRoutes'));
 app.use('/api/veille', require('./routes/veilleRoutes'));
 app.use('/api/seo/backlinks', require('./routes/seoBacklinksRoutes')); // AVANT /api/seo (préfixe plus long)
+// Connexion Google SEO en un clic : monte AVANT /api/seo (son callback est public,
+// protege par un etat signe ; le routeur SEO exigerait un JWT que Google ne porte pas).
+app.use('/api/seo/google', require('./routes/seoGoogleRoutes'));
 app.use('/api/seo', require('./routes/seoRoutes'));
 app.use('/api/revenues', require('./routes/revenuesRoutes'));
 app.use('/api/reminders', require('./routes/reminderRoutes'));

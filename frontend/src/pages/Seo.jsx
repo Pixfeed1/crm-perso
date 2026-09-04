@@ -87,6 +87,7 @@ const Seo = () => {
   const [starting, setStarting] = useState(false);
   const [confirmJob, setConfirmJob] = useState(null); // type de job en attente de confirmation
   const [showSites, setShowSites] = useState(false);  // modale de gestion des sites
+  const [connectingGoogle, setConnectingGoogle] = useState(false);
   const [schedule, setSchedule] = useState(null);     // planification nocturne du worker
   const jobPollRef = useRef(null);
 
@@ -95,7 +96,29 @@ const Seo = () => {
       .then((s) => { setSites(s || []); if (s && s.length) setSiteId(s[0].id); else setLoading(false); })
       .catch(() => { toast.error('Erreur chargement des sites SEO'); setLoading(false); });
     seoAPI.getGscStatus().then((g) => setGscStatus(g)).catch(() => {});
+    // Retour du consentement Google (callback serveur -> /seo?google=success|error).
+    const q = new URLSearchParams(window.location.search);
+    if (q.get('google')) {
+      if (q.get('google') === 'success') toast.success('Google connecté : Search Console et Analytics');
+      else toast.error(`Connexion Google refusée${q.get('detail') ? ` : ${q.get('detail')}` : ''}`);
+      window.history.replaceState({}, '', window.location.pathname);
+    }
   }, [toast]);
+
+  // Connexion Google en un clic (comme Semrush) : le serveur fournit l'URL de consentement,
+  // Google renvoie le jeton au serveur, qui redirige ici. Sert aussi a AJOUTER Analytics a
+  // une connexion Search Console existante (nouveau consentement, meme table).
+  const connectGoogle = async () => {
+    setConnectingGoogle(true);
+    try {
+      const r = await seoAPI.getGoogleAuthUrl();
+      if (r && r.authUrl) window.location.href = r.authUrl;
+      else throw new Error('URL de connexion indisponible');
+    } catch (e) {
+      toast.error(e.message || 'Connexion Google indisponible');
+      setConnectingGoogle(false);
+    }
+  };
 
   // Après ajout / modification / suppression d'un site (modale) : recharge la liste et
   // garde le site courant s'il existe encore, sinon bascule sur le premier.
@@ -354,7 +377,7 @@ const Seo = () => {
               onClick={() => requestLaunch('gsc_sync')}
               disabled={starting || jobActive || !gscConnected}
               className="px-3 py-2 rounded-lg bg-surface-strong hover:bg-border-strong text-text-primary text-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              title={gscConnected ? 'Synchroniser Google Search Console' : 'Search Console non connecté (lancer gsc_auth.py)'}
+              title={gscConnected ? 'Synchroniser Google Search Console' : 'Search Console non connecté (bouton « Connecter Google » ci-dessous)'}
             >
               {isThisJobRunning('gsc_sync') ? <>{spinner} {runningLabel('gsc_sync')}</> : <><FiSearch size={15} /> Search Console</>}
             </button>
@@ -443,14 +466,23 @@ const Seo = () => {
         {/* État de connexion Google Search Console */}
         {gscStatus && (
           <div className="mb-4">
-            {gscConnected ? (
+            {gscConnected && gscStatus.analytics ? (
               <div className="inline-flex items-center gap-2 text-sm bg-success-bg text-success-text border border-success-text/30 rounded-lg px-3 py-2">
-                <FiSearch size={14} /> Search Console connecté{gscStatus.account_email ? ` · ${gscStatus.account_email}` : ''}
+                <FiSearch size={14} /> Google connecté : Search Console et Analytics{gscStatus.account_email ? ` · ${gscStatus.account_email}` : ''}
+              </div>
+            ) : gscConnected ? (
+              <div className="inline-flex flex-wrap items-center gap-3 text-sm bg-warning-bg text-warning-text border border-warning-text/30 rounded-lg px-3 py-2">
+                <span className="inline-flex items-center gap-2"><FiSearch size={14} /> Search Console connecté{gscStatus.account_email ? ` · ${gscStatus.account_email}` : ''}, Analytics pas encore autorisé.</span>
+                <button onClick={connectGoogle} disabled={connectingGoogle} className="px-3 py-1.5 rounded-lg bg-accent hover:bg-accent-hover text-white text-xs inline-flex items-center gap-1.5 disabled:opacity-50">
+                  {connectingGoogle ? <FiLoader size={13} /> : <FiPlay size={13} />} Ajouter Analytics à la connexion
+                </button>
               </div>
             ) : (
-              <div className="inline-flex items-start gap-2 text-sm bg-warning-bg text-warning-text border border-warning-text/30 rounded-lg px-3 py-2">
-                <FiSearch size={14} className="mt-0.5 flex-shrink-0" />
-                <span>Search Console non connecté. Lancez le consentement une fois&nbsp;: <code className="px-1 rounded bg-surface-strong/60">python gsc_auth.py</code> (voir seo_worker/README.md).</span>
+              <div className="inline-flex flex-wrap items-center gap-3 text-sm bg-warning-bg text-warning-text border border-warning-text/30 rounded-lg px-3 py-2">
+                <span className="inline-flex items-center gap-2"><FiSearch size={14} /> Google non connecté (Search Console et Analytics).</span>
+                <button onClick={connectGoogle} disabled={connectingGoogle} className="px-3 py-1.5 rounded-lg bg-accent hover:bg-accent-hover text-white text-xs inline-flex items-center gap-1.5 disabled:opacity-50">
+                  {connectingGoogle ? <FiLoader size={13} /> : <FiPlay size={13} />} Connecter Google
+                </button>
               </div>
             )}
           </div>
@@ -1011,7 +1043,7 @@ const Seo = () => {
               <SpeedTab siteId={siteId} onLaunch={requestLaunch} job={job} jobActive={!!jobActive} />
             ) : tab === 'trafic' ? (
               /* Google Analytics 4 (job 'ga_sync', propriété GA4 par site) */
-              <TrafficTab siteId={siteId} gscStatus={gscStatus} onLaunch={requestLaunch} job={job} jobActive={!!jobActive} onOpenSites={() => setShowSites(true)} />
+              <TrafficTab siteId={siteId} gscStatus={gscStatus} onLaunch={requestLaunch} job={job} jobActive={!!jobActive} onOpenSites={() => setShowSites(true)} onConnectGoogle={connectGoogle} />
             ) : tab === 'backlinks' ? (
               /* Campagnes backlinks (niches, découverte, scoring, outreach Gmail) */
               <BacklinksTab />

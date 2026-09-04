@@ -239,10 +239,16 @@ saisit dans la fiche du site (roue crantée), champ « Propriété Google Analyt
 est ignoré. Rien en dur.
 
 Prérequis, une fois :
-1. Le consentement Google doit couvrir Analytics. Un consentement fait pour Search Console
-   seul ne suffit pas : relancer `python gsc_auth.py` (même procédure poste + `--store`
-   serveur), le nouveau refresh_token remplace l'ancien et sert aux deux.
-2. Activer « Google Analytics Data API » sur le projet Google Cloud du `client_secret.json`.
+1. Le consentement Google doit couvrir Analytics. Depuis la page SEO, bouton « Connecter
+   Google » (ou « Ajouter Analytics à la connexion » si Search Console est déjà connectée) :
+   la fenêtre Google s'ouvre, on accepte, le serveur reçoit et stocke le jeton dans
+   `seo_oauth_tokens`. Même résultat que `gsc_auth.py`, sans tunnel ni ligne de commande.
+   Côté serveur, il faut `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` (client OAuth
+   « Application Web », déjà utilisé par la synchro agenda) et `FRONTEND_URL` dans
+   `backend/.env`, et dans la console Google l'URI de redirection
+   `<FRONTEND_URL>/api/seo/google/callback` déclarée sur ce client.
+   `gsc_auth.py` reste utilisable en secours (client « Ordinateur de bureau »).
+2. Activer « Google Analytics Data API » sur le projet Google Cloud.
 3. Le compte Google utilisé doit avoir accès (lecteur suffit) à la propriété GA4.
 
 Le job récupère par jour et par page : sessions, sessions organiques, utilisateurs, pages

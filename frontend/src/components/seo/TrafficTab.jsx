@@ -44,7 +44,7 @@ const TOOLTIP_STYLE = {
   borderRadius: 8, color: 'rgb(var(--text-primary))', fontSize: 12
 };
 
-const TrafficTab = ({ siteId, gscStatus, onLaunch, job, jobActive, onOpenSites }) => {
+const TrafficTab = ({ siteId, gscStatus, onLaunch, job, jobActive, onOpenSites, onConnectGoogle }) => {
   const [days, setDays] = useState(28);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -82,9 +82,10 @@ const TrafficTab = ({ siteId, gscStatus, onLaunch, job, jobActive, onOpenSites }
       <div className="text-center py-12 bg-surface/30 rounded-xl border border-border space-y-3">
         <FiBarChart2 className="w-10 h-10 mx-auto text-text-muted" />
         {!analyticsOk ? (
-          <div className="text-sm text-text-muted max-w-xl mx-auto space-y-2">
-            <p>La connexion Google actuelle ne couvre pas Analytics : elle a été accordée pour Search Console seulement.</p>
-            <p>À faire une fois, sur ton poste, dans le dossier du worker : <code className="px-1 rounded bg-surface-strong/60 text-text-primary">python gsc_auth.py</code>, puis la commande <code className="px-1 rounded bg-surface-strong/60 text-text-primary">--store</code> affichée, sur le serveur (même procédure que pour Search Console). Activer aussi « Google Analytics Data API » sur le projet Google Cloud.</p>
+          <div className="text-sm text-text-muted max-w-xl mx-auto space-y-3">
+            <p>{status.google_connected ? 'La connexion Google actuelle ne couvre pas Analytics : elle a été accordée pour Search Console seulement.' : 'Google n’est pas connecté.'} Un clic suffit : la fenêtre Google s’ouvre, tu acceptes, et le jeton revient ici.</p>
+            <button onClick={onConnectGoogle} className="px-4 py-2 rounded-lg bg-accent hover:bg-accent-hover text-white text-sm inline-flex items-center gap-2"><FiBarChart2 size={15} /> {status.google_connected ? 'Ajouter Analytics à la connexion Google' : 'Connecter Google'}</button>
+            <p className="text-xs">Prérequis côté Google Cloud : l’API « Google Analytics Data » activée sur le projet, et le compte choisi doit avoir accès à la propriété GA4.</p>
           </div>
         ) : !status.property_id ? (
           <div className="text-sm text-text-muted max-w-xl mx-auto space-y-3">

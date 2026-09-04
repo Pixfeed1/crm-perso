@@ -620,6 +620,8 @@ export const seoAPI = {
   getGraph: (siteId) => apiRequest(`/seo/graph?site_id=${siteId}`),
   getAffamees: (siteId) => apiRequest(`/seo/affamees?site_id=${siteId}`),
   getGscStatus: () => apiRequest('/seo/gsc/status'),
+  // Connexion Google (Search Console + Analytics) en un clic : URL de consentement a ouvrir.
+  getGoogleAuthUrl: () => apiRequest('/seo/google/auth'),
   getSchedule: (siteId) => apiRequest(`/seo/schedule?site_id=${siteId}`),
   getQuasiVictoires: (siteId) => apiRequest(`/seo/quasi-victoires?site_id=${siteId}`),
   getCannibalisation: (siteId, days = 28) => apiRequest(`/seo/cannibalisation?site_id=${siteId}&days=${days}`),
