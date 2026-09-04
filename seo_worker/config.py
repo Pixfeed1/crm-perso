@@ -89,6 +89,18 @@ GSC_OAUTH_REDIRECT_PORT = 8765  # port du mini-serveur local pour le consentemen
 # et le detail est purge apres chaque synchro. 0 = ne jamais purger.
 GSC_RETENTION_MONTHS = int(os.getenv("GSC_RETENTION_MONTHS", "16"))
 
+# ===== Planification quotidienne (mode --serve) =====
+# Chaque nuit a SCHEDULE_HOUR (heure SCHEDULE_TZ), pour chaque site et dans l'ordre :
+# crawl incremental (complet le SCHEDULE_FULL_WEEKDAY : 0 = lundi ... 6 = dimanche, -1 =
+# jamais), synchro Search Console, mesure de vitesse. Passe par la file seo_jobs comme
+# l'UI. 4 h : Google a publie la journee GSC pendant la nuit, et le quota d'inspection
+# (remis a zero a minuit heure de Californie = 9 h a Paris) reste entier pour les tests
+# manuels de la journee. SEO_SCHEDULE=0 desactive.
+SCHEDULE_ENABLED = os.getenv("SEO_SCHEDULE", "1").strip() not in ("0", "false", "non", "")
+SCHEDULE_HOUR = int(os.getenv("SEO_SCHEDULE_HOUR", "4"))
+SCHEDULE_TZ = os.getenv("SEO_SCHEDULE_TZ", "Europe/Paris")
+SCHEDULE_FULL_WEEKDAY = int(os.getenv("SEO_SCHEDULE_FULL_WEEKDAY", "6"))
+
 # ===== Core Web Vitals / PageSpeed Insights (job 'pagespeed') =====
 # Un appel = 10 a 40 s (Lighthouse tourne chez Google). Le site entier est donc couvert en
 # ROTATION, pas en un run geant : a chaque run, l'accueil + PSI_TOP_PAGES pages les plus

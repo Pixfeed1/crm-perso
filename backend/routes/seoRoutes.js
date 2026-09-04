@@ -20,6 +20,7 @@ router.get('/pages', seoController.getPages);
 router.get('/graph', seoController.getGraph);
 router.get('/affamees', seoController.getAffamees);
 router.get('/gsc/status', seoController.getGscStatus);
+router.get('/schedule', seoController.getSchedule);
 router.get('/quasi-victoires', seoController.getQuasiVictoires);
 router.get('/cannibalisation', seoController.getCannibalisation);
 router.get('/ctr-anomalies', seoController.getCtrAnomalies);

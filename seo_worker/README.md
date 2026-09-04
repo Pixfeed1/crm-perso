@@ -232,6 +232,24 @@ les autres alimentent `seo_pages.seo_meta` et **priment sur le HTML**. Le snippe
 optionnel au sens strict : sans lui, le worker retombe sur la lecture du `<head>` et rien ne
 casse, mais les compteurs `meta_description_absente` et `title_trop_long` restent approximatifs.
 
+## Planification nocturne (mode `--serve`)
+Sans elle, rien ne tourne sans un clic. Le worker met donc lui-même en file, chaque jour à
+`SEO_SCHEDULE_HOUR` (4 h, heure `SEO_SCHEDULE_TZ` Europe/Paris), pour chaque site et dans
+l'ordre : crawl incrémental (complet le `SEO_SCHEDULE_FULL_WEEKDAY`, 6 = dimanche, -1 =
+jamais), synchro Search Console (si connectée), mesure de vitesse (si clé PageSpeed).
+- Passe par `seo_jobs` comme l'UI (`source = 'schedule'`) : un seul job actif par site,
+  annulation possible, progression et erreurs visibles dans l'écran SEO, qui affiche aussi
+  la ligne « Automatique chaque nuit à 04h… » et le résultat du dernier passage.
+- État en base, pas en mémoire : un worker arrêté à 4 h rattrape la chaîne dès son retour,
+  dans la même journée. Un job planifié en échec n'est pas relancé (on passe à l'étape
+  suivante) ; un job lancé à la main et réussi dans les 20 h précédentes vaut pour la
+  journée (quota Google).
+- Pourquoi 4 h : Google publie la journée Search Console pendant la nuit, et le quota
+  d'inspection se remet à zéro à minuit heure de Californie (9 h à Paris), donc la synchro
+  nocturne laisse le quota du jour entier aux tests manuels.
+- `SEO_SCHEDULE=0` dans `backend/.env` désactive tout (retour au manuel). Le cron décrit plus
+  haut n'est plus nécessaire quand le service tourne.
+
 ## Rétention Search Console
 `seo_gsc_daily` (une ligne par jour × page × requête) grossit sans fin. Google lui-même ne
 conserve que 16 mois. Après chaque `gsc_sync`, une fois le snapshot mensuel écrit

@@ -246,6 +246,37 @@ const seoController = {
     }
   },
 
+  // GET /api/seo/schedule?site_id= -> planification nocturne du worker : reglages (memes
+  // variables d'environnement que le worker, .env partage) + derniere chaine planifiee.
+  getSchedule: async (req, res) => {
+    const db = req.app.locals.db;
+    const siteId = parseInt(req.query.site_id, 10);
+    if (!siteId) return res.status(400).json({ message: 'site_id requis' });
+    const enabled = !['0', 'false', 'non', ''].includes(String(process.env.SEO_SCHEDULE ?? '1').trim());
+    const hour = parseInt(process.env.SEO_SCHEDULE_HOUR, 10);
+    const fullWeekday = parseInt(process.env.SEO_SCHEDULE_FULL_WEEKDAY, 10);
+    try {
+      const last = await db.pool.query(
+        `SELECT job_type, status, scheduled_for, created_at, finished_at, error
+           FROM seo_jobs WHERE site_id = $1 AND source = 'schedule'
+          ORDER BY created_at DESC LIMIT 6`,
+        [siteId]
+      );
+      res.json({
+        enabled,
+        hour: Number.isFinite(hour) ? hour : 4,
+        tz: process.env.SEO_SCHEDULE_TZ || 'Europe/Paris',
+        full_weekday: Number.isFinite(fullWeekday) ? fullWeekday : 6,
+        pagespeed: !!(process.env.PAGESPEED_API_KEY || process.env.CRUX_API_KEY),
+        last_day: last.rows[0] ? last.rows[0].scheduled_for : null,
+        last_jobs: last.rows.filter((r) => !last.rows[0] || String(r.scheduled_for) === String(last.rows[0].scheduled_for)).reverse(),
+      });
+    } catch (e) {
+      console.error('[SEO] getSchedule:', e.message);
+      res.status(500).json({ message: 'Erreur serveur' });
+    }
+  },
+
   // GET /api/seo/overview?site_id= -> compteurs santé + volumétrie + dernier crawl.
   getOverview: async (req, res) => {
     const db = req.app.locals.db;

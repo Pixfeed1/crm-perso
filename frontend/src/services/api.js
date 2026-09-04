@@ -618,6 +618,7 @@ export const seoAPI = {
   getGraph: (siteId) => apiRequest(`/seo/graph?site_id=${siteId}`),
   getAffamees: (siteId) => apiRequest(`/seo/affamees?site_id=${siteId}`),
   getGscStatus: () => apiRequest('/seo/gsc/status'),
+  getSchedule: (siteId) => apiRequest(`/seo/schedule?site_id=${siteId}`),
   getQuasiVictoires: (siteId) => apiRequest(`/seo/quasi-victoires?site_id=${siteId}`),
   getCannibalisation: (siteId, days = 28) => apiRequest(`/seo/cannibalisation?site_id=${siteId}&days=${days}`),
   getCtrAnomalies: (siteId, days = 28) => apiRequest(`/seo/ctr-anomalies?site_id=${siteId}&days=${days}`),

@@ -86,6 +86,7 @@ const Seo = () => {
   const [starting, setStarting] = useState(false);
   const [confirmJob, setConfirmJob] = useState(null); // type de job en attente de confirmation
   const [showSites, setShowSites] = useState(false);  // modale de gestion des sites
+  const [schedule, setSchedule] = useState(null);     // planification nocturne du worker
   const jobPollRef = useRef(null);
 
   useEffect(() => {
@@ -137,6 +138,12 @@ const Seo = () => {
   }, [siteId, sort, healthFilter, toast]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Planification nocturne (réglages du worker + dernière chaîne) : rechargée avec le job.
+  useEffect(() => {
+    if (!siteId) return;
+    seoAPI.getSchedule(siteId).then(setSchedule).catch(() => setSchedule(null));
+  }, [siteId, job]);
 
   // Opportunités : chargées à part pour réagir au sélecteur "impressions min" sans tout recharger.
   useEffect(() => {
@@ -258,7 +265,9 @@ const Seo = () => {
   const jobActive = job && isActiveStatus(job.status);
   const jobCancellable = job && (job.status === 'pending' || job.status === 'running');
   const JOB_NOUNS = { gsc_sync: 'Synchro Search Console', pagespeed: 'Mesure de vitesse' };
-  const jobNoun = (job && JOB_NOUNS[job.job_type]) || 'Crawl';
+  const jobNoun = ((job && JOB_NOUNS[job.job_type]) || 'Crawl') + (job && job.source === 'schedule' ? ' (automatique)' : '');
+  const WEEKDAYS = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
+  const JOB_SHORT = { crawl_incremental: 'crawl', crawl_full: 'crawl complet', gsc_sync: 'Search Console', pagespeed: 'vitesse' };
   const gscConnected = gscStatus && gscStatus.connected;
 
   // Contenu d'un bouton de lancement : si CE type de job tourne, on l'indique explicitement
@@ -398,6 +407,34 @@ const Seo = () => {
                 )}
               </div>
             ) : null}
+          </div>
+        )}
+
+        {/* Planification nocturne : ce que le worker fera seul, et ce qu'il a fait la dernière fois */}
+        {schedule && (
+          <div className="mb-4 text-xs text-text-muted flex flex-wrap items-center gap-x-2 gap-y-1">
+            <FiClock size={13} className="flex-shrink-0" />
+            {schedule.enabled ? (
+              <>
+                <span>
+                  Automatique chaque nuit à {String(schedule.hour).padStart(2, '0')}h ({schedule.tz}) : crawl
+                  {schedule.full_weekday >= 0 ? ` (complet le ${WEEKDAYS[schedule.full_weekday]})` : ''}
+                  {gscConnected ? ', Search Console' : ''}{schedule.pagespeed ? ', vitesse' : ''}.
+                </span>
+                {schedule.last_day && (
+                  <span>
+                    Dernier passage {fmtDate(schedule.last_day)} :{' '}
+                    {schedule.last_jobs.map((j) => (
+                      <span key={j.job_type} className={`inline-flex items-center gap-1 mr-1.5 ${j.status === 'done' ? 'text-success-text' : j.status === 'failed' ? 'text-danger-text' : ''}`} title={j.error || j.status}>
+                        {j.status === 'done' ? <FiCheckCircle size={11} /> : j.status === 'failed' ? <FiXCircle size={11} /> : <FiClock size={11} />} {JOB_SHORT[j.job_type] || j.job_type}
+                      </span>
+                    ))}
+                  </span>
+                )}
+              </>
+            ) : (
+              <span>Planification nocturne désactivée (SEO_SCHEDULE=0) : crawls, synchros et mesures sont manuels.</span>
+            )}
           </div>
         )}
 

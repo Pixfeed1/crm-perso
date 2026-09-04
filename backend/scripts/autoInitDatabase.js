@@ -1768,6 +1768,10 @@ async function ensureSeoTables(client) {
   // Mode test GSC : URL à inspecter + résultat brut renvoyés via le job (bases existantes).
   await client.query('ALTER TABLE seo_jobs ADD COLUMN IF NOT EXISTS target_url TEXT;');
   await client.query('ALTER TABLE seo_jobs ADD COLUMN IF NOT EXISTS result JSONB;');
+  // Planification : 'ui' = lance depuis l'ecran, 'schedule' = mis en file par le worker la
+  // nuit ; scheduled_for = jour (heure de Paris) de la chaine planifiee.
+  await client.query("ALTER TABLE seo_jobs ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT 'ui';");
+  await client.query('ALTER TABLE seo_jobs ADD COLUMN IF NOT EXISTS scheduled_for DATE;');
 
   // Migration idempotente (bases existantes) : autoriser l'annulation + le job de test.
   // CREATE TABLE IF NOT EXISTS ne met pas à jour une contrainte déjà créée -> on la recrée.

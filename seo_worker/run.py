@@ -29,6 +29,7 @@ import pagerank as pr_mod
 import gsc
 import indexation
 import pagespeed
+import scheduler
 from db import connect
 
 
@@ -993,9 +994,15 @@ def serve():
     # le selecteur (sinon : poule/oeuf — impossible de lancer le premier crawl).
     for site in load_sites(conn):
         print(f"[SEO] Site pret : {site['domain']} (site_id={site['id']})")
+    if config.SCHEDULE_ENABLED:
+        print(f"[SEO] Planification : chaque jour a {config.SCHEDULE_HOUR:02d}h ({config.SCHEDULE_TZ}), "
+              f"crawl complet le jour {config.SCHEDULE_FULL_WEEKDAY} (0=lundi, -1=jamais)")
     print(f"[SEO] Worker en service (poll {config.POLL_INTERVAL}s)")
     try:
         while True:
+            # Planification : met en file les jobs du jour (un cran par site), puis la
+            # boucle les traite comme n'importe quel job lance depuis l'UI.
+            scheduler.tick(conn, bool(pagespeed.api_key()))
             job = claim_next_job(conn)
             if not job:
                 time.sleep(config.POLL_INTERVAL)
