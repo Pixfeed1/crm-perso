@@ -14,6 +14,7 @@
 # Ecrit seo_ga_daily (date x page), seo_ga_channels_daily (date x canal) et le cache 28 j
 # de seo_pages. Incremental : du lendemain de la derniere date connue jusqu'a hier.
 
+import re
 from datetime import datetime, timezone, timedelta
 from urllib.parse import urlparse
 
@@ -22,6 +23,19 @@ import gsc
 
 PAGE_METRICS = ["sessions", "totalUsers", "screenPageViews", "engagementRate",
                 "userEngagementDuration", "bounceRate"]
+
+# Referrers qui ne sont PAS des pages qui nous lient : moteurs, reseaux sociaux (redirecteurs
+# l.facebook.com, t.co...), webmails, traducteurs, caches. Le reste est un vrai lien entrant
+# qui a envoye au moins un visiteur : la meilleure source automatique et gratuite de backlinks.
+NOT_A_LINK = re.compile(
+    r"(^|\.)(google\.[a-z.]+|googleusercontent\.com|bing\.com|yahoo\.[a-z.]+|duckduckgo\.com|ecosia\.org|qwant\.com|"
+    r"yandex\.[a-z.]+|baidu\.com|startpage\.com|brave\.com|"
+    r"facebook\.com|instagram\.com|linkedin\.com|lnkd\.in|t\.co|twitter\.com|x\.com|tiktok\.com|pinterest\.[a-z.]+|"
+    r"youtube\.com|whatsapp\.com|messenger\.com|snapchat\.com|discord\.com|discordapp\.com|telegram\.org|"
+    r"outlook\.live\.com|outlook\.office\.com|mail\.yahoo\.com|mail\.google\.com|translate\.goog|webcache\.googleusercontent\.com|"
+    r"localhost|127\.0\.0\.1)$",
+    re.I,
+)
 CHANNEL_METRICS = ["sessions", "totalUsers", "engagedSessions"]
 ROW_LIMIT = 100000  # maximum accepte par runReport
 
@@ -187,8 +201,20 @@ def sync_site(conn, site, job_id=None):
         )
     conn.commit()
 
-    # Cache 28 j sur seo_pages : jointure chemin GA <-> URL crawlee.
     base = (site.get("wp_base_url") or f"https://{domain}").rstrip("/")
+
+    # 4) Liens entrants decouverts par le trafic : la page externe exacte d'ou vient chaque
+    #    visiteur (pageReferrer). Automatique et gratuit, la ou l'API Bing repond vide et ou
+    #    Search Console n'a pas d'API. Ne voit que les liens qui envoient du trafic, donc ceux
+    #    qui comptent ; l'export Search Console reste le complement pour les liens dormants.
+    try:
+        found = discover_referrers(conn, creds, prop, site_id, base, domain, rng)
+        print(f"  [GA] {found} liens entrants decouverts via les referrers")
+    except Exception as e:
+        conn.rollback()
+        print(f"  [GA] referrers non exploites : {str(e)[:160]}")
+
+    # Cache 28 j sur seo_pages : jointure chemin GA <-> URL crawlee.
     d28 = (end_d - timedelta(days=28)).isoformat()
     cur.execute(
         """SELECT page_path, SUM(sessions),
@@ -212,3 +238,53 @@ def sync_site(conn, site, job_id=None):
     conn.commit()
     print(f"  OK GA {domain} : {n} lignes page/jour, {len(channels)} lignes canal/jour, {updated} pages mises en cache")
     return True
+
+
+def is_backlink_referrer(ref, own_domain):
+    """True si le referrer est une page externe qui nous lie (ni moteur, ni social, ni interne)."""
+    if not ref or not ref.lower().startswith(("http://", "https://")):
+        return False
+    host = (urlparse(ref).hostname or "").lower()
+    if not host or host == own_domain or host.endswith("." + own_domain):
+        return False
+    if host.startswith("www."):
+        host = host[4:]
+    return not NOT_A_LINK.search(host)
+
+
+def discover_referrers(conn, creds, prop, site_id, base, domain, rng):
+    """Ajoute a seo_backlinks les pages externes ayant envoye des visiteurs (origin ga_referrer).
+    Non verifiees a l'insertion : la verification a la source (job authority) les prend en
+    premier et constate rel, type, ancre, presence."""
+    rows = _run_report(creds, prop, {
+        "dateRanges": rng,
+        "dimensions": [{"name": "pageReferrer"}, {"name": "pagePath"}],
+        "metrics": [{"name": "sessions"}],
+        "limit": ROW_LIMIT,
+    })
+    cur = conn.cursor()
+    n = 0
+    seen = set()
+    for dims, mets in rows:
+        ref, path = dims[0], dims[1]
+        if not is_backlink_referrer(ref, domain):
+            continue
+        src = ref.split("#", 1)[0][:2000]
+        target = (base + normalize_path(path))[:2000] if normalize_path(path) != "/" else base + "/"
+        if (src, target) in seen:
+            continue
+        seen.add((src, target))
+        host = (urlparse(src).hostname or "").lower()
+        host = host[4:] if host.startswith("www.") else host
+        cur.execute(
+            """INSERT INTO seo_backlinks (site_id, source_url, source_domain, target_url, first_seen, last_seen, status, origin, verified_at)
+               VALUES (%s,%s,%s,%s,CURRENT_DATE,CURRENT_DATE,'active','ga_referrer',NULL)
+               ON CONFLICT (site_id, source_url, target_url) DO UPDATE
+                 SET last_seen = GREATEST(seo_backlinks.last_seen, CURRENT_DATE)""",
+            (site_id, src, host, target),
+        )
+        n += 1
+        if n % config.COMMIT_BATCH == 0:
+            conn.commit()
+    conn.commit()
+    return n

@@ -267,6 +267,12 @@ Backlinks / Domaines référents du tableau de bord Semrush, avec des sources gr
   MCP ; le site doit être vérifié dans Bing WMT sous ce compte) : liens entrants connus de
   Bing, page par page (GetLinkCounts puis GetUrlLinks sur les `BING_TARGETS_PER_RUN` pages
   les plus liées), avec ancre. Les liens non revus sur une page recontrôlée sont marqués perdus.
+- **Découverte automatique par le trafic** : à chaque synchro Analytics, les pages externes
+  d'où sont venus des visiteurs (`pageReferrer`) sont ajoutées aux liens entrants (`origin =
+  ga_referrer`), hors moteurs, réseaux sociaux, webmails et pages internes. Gratuit, quotidien,
+  et centré sur les liens qui apportent réellement du trafic. La vérification à la source
+  prend ces liens en premier. Ce que ça ne voit pas : les liens dormants que personne ne
+  clique, d'où l'import Search Console ci-dessous en complément.
 - **Import d'un export de liens** (bouton « Importer un export de liens », onglet Autorité) :
   l'API Bing répond souvent « aucun lien » même pour un site vérifié (constaté sur jurojin.net).
   La source la plus complète reste le rapport Liens de Search Console, sans API mais
