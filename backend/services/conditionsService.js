@@ -110,7 +110,7 @@ async function renderConditionsHtml(type, data = {}) {
       price: escapeHtml(data.price || ''),
       period: escapeHtml(data.period || ''),
       first_billing_html: data.first_billing
-        ? `<p class="doc-meta">Premier prélèvement le <strong>${escapeHtml(data.first_billing)}</strong>, puis à chaque date anniversaire.</p>`
+        ? `<span class="first">Premier prélèvement le <strong>${escapeHtml(data.first_billing)}</strong>, puis à chaque date anniversaire</span>`
         : '',
       date: escapeHtml(data.date || ''),
       client_name: escapeHtml(data.client_name || ''),

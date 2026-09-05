@@ -1,112 +1,113 @@
-<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
 <title>Conditions d’abonnement · Pixfeed</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sora:wght@500;600;700;800&display=swap" rel="stylesheet">
 <style>
-:root{--purple:#8e44ad;--purple-l:#9b59b6;--purple-d:#7d3c98;--purple-dd:#5b2c6f;--gold:#d4a017;--ink:#0f172a;--muted:#64748b;--cream:#f5f0e8;--cream-d:#ebe5d9;--line:#ddd5c8;--success:#27ae60;--error:#e74c3c}
+:root{--purple:#8e44ad;--ink:#0f172a;--text:#334155;--muted:#64748b;--rule:#e2e8f0;--rule-d:#cbd5e1;--green:#1f9d55}
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--cream);color:var(--ink);line-height:1.7;font-size:15px;-webkit-font-smoothing:antialiased;padding:40px 20px}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:#fff;color:var(--ink);font-size:14px;line-height:1.65;-webkit-font-smoothing:antialiased;padding:48px 24px}
 .serif{font-family:'DM Serif Display','Georgia',serif}
-.doc{max-width:840px;margin:0 auto;background:#fff;border:1px solid var(--line);border-radius:20px;overflow:hidden;box-shadow:0 24px 64px rgba(15,23,42,.06)}
+.doc{max-width:800px;margin:0 auto}
 
 /* En-tête */
-.doc-head{padding:42px 48px 34px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(142,68,173,.035),transparent)}
-.doc-head-top{display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-bottom:22px}
-.doc-logo{display:flex;align-items:center;gap:10px}
-.doc-logo img{height:34px;width:auto}
-.doc-logo span{font-family:'Sora',sans-serif;font-weight:700;font-size:18px}
-.doc-badge{display:inline-block;font-size:12px;font-weight:700;color:var(--purple);background:rgba(142,68,173,.08);border:1px solid rgba(142,68,173,.14);padding:6px 14px;border-radius:30px}
-.doc-kicker{font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--purple)}
-.doc-title{font-size:34px;line-height:1.1;margin:13px 0 4px}
-.doc-price{display:inline-flex;align-items:baseline;gap:8px;margin-top:8px}
-.doc-price .amount{font-family:'Sora',sans-serif;font-size:26px;font-weight:800;color:var(--ink)}
-.doc-price .per{font-size:14px;color:var(--muted)}
-.doc-intro{font-size:15px;color:#334155;line-height:1.8;max-width:640px;margin-top:18px}
-.doc-meta{margin-top:14px;font-size:13px;color:var(--muted)}
-.doc-meta strong{color:var(--ink);font-weight:600}
+.top{display:flex;justify-content:space-between;align-items:center;padding-bottom:18px;border-bottom:1px solid var(--rule)}
+.logo{display:flex;align-items:center;gap:10px}.logo img{height:30px}.logo span{font-family:'Sora',sans-serif;font-weight:700;font-size:17px}
+.tag{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:8px}
+.tag::before{content:"";width:7px;height:7px;background:var(--purple)}
+.head{display:grid;grid-template-columns:1fr auto;gap:40px;align-items:end;padding:34px 0 28px;border-bottom:2px solid var(--ink)}
+.kicker{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--purple);margin-bottom:12px}
+.title{font-size:36px;line-height:1.08;margin-bottom:14px}
+.meta{font-size:13px;color:var(--muted)}.meta strong{color:var(--ink);font-weight:600}
+.price{text-align:right}
+.price .amount{font-family:'Sora',sans-serif;font-size:30px;font-weight:800;line-height:1;letter-spacing:-.01em}
+.price .per{display:block;font-size:13px;color:var(--muted);margin-top:6px}
+.price .first{display:block;font-size:12px;color:var(--text);margin-top:12px;padding-top:10px;border-top:1px solid var(--rule)}
+.price .first strong{font-weight:600;color:var(--ink)}
+.intro{padding:24px 0 8px;font-size:14.5px;color:var(--text);max-width:620px}
 
-/* Corps */
-.doc-body{padding:6px 48px 40px}
-.doc-section{padding:32px 0;border-bottom:1px solid var(--line)}
-.doc-section:last-child{border-bottom:none}
-.doc-section h2{font-family:'Sora',sans-serif;font-size:18px;font-weight:700;margin-bottom:6px}
-.doc-section .sub{font-size:13px;color:var(--muted);margin-bottom:20px}
+/* Sections */
+.sec{padding:30px 0;border-bottom:1px solid var(--rule)}
+.sec:last-of-type{border-bottom:none}
+.sec-h{display:flex;align-items:baseline;gap:14px;margin-bottom:18px}
+.sec-h .n{font-family:'Sora',sans-serif;font-size:12px;font-weight:700;color:var(--purple);letter-spacing:.06em}
+.sec-h h2{font-family:'Sora',sans-serif;font-size:13px;font-weight:700;letter-spacing:.14em;text-transform:uppercase}
 
-/* Listes inclus / exclus */
-.feat{list-style:none;display:flex;flex-direction:column;gap:13px}
-.feat li{display:flex;gap:12px;align-items:flex-start;font-size:14px;line-height:1.6}
-.feat li .ic{flex:0 0 22px;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-top:1px}
-.feat li .ic svg{width:13px;height:13px}
-.feat.inc li .ic{background:rgba(39,174,96,.12)}
-.feat.inc li .ic svg{stroke:var(--success)}
-.feat.exc li .ic{background:rgba(100,116,139,.12)}
-.feat.exc li .ic svg{stroke:var(--muted)}
-.feat li .d{color:#475569}
-.feat li .d strong{font-weight:700;color:var(--ink)}
+/* Périmètre : deux colonnes, marqueurs carrés */
+.scope{display:grid;grid-template-columns:1fr 1fr;gap:0 40px}
+.col-h{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink);padding-bottom:8px;border-bottom:1px solid var(--rule-d);margin-bottom:6px;display:flex;justify-content:space-between}
+.col-h span{color:var(--muted);font-weight:600;letter-spacing:.04em;text-transform:none}
+.feat{list-style:none}
+.feat li{display:flex;gap:12px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--rule);font-size:13.5px;line-height:1.55;color:var(--text)}
+.feat li:last-child{border-bottom:none}
+.feat li .ic{flex:0 0 8px;width:8px;height:8px;margin-top:8px}
+.feat li .ic svg{display:none}
+.inc .ic{background:var(--green)}
+.exc .ic{border:1.5px solid var(--rule-d);background:#fff}
+.exc li{color:var(--muted)}
 
-/* Modalités */
-.mod{display:flex;flex-direction:column;gap:16px}
-.mod-row{display:grid;grid-template-columns:180px 1fr;gap:16px;align-items:start}
-.mod-row .k{font-family:'Sora',sans-serif;font-size:13px;font-weight:700;color:var(--ink)}
-.mod-row .v{font-size:14px;color:#475569;line-height:1.7}
-.mod-row .v strong{color:var(--ink);font-weight:600}
-.mod-p{font-size:14px;color:#475569;line-height:1.7}
+/* Modalités : tableau à filets */
+.mod{border-top:1px solid var(--rule-d)}
+.mod-row{display:grid;grid-template-columns:170px 1fr;gap:20px;padding:12px 0;border-bottom:1px solid var(--rule)}
+.mod-row .k{font-family:'Sora',sans-serif;font-size:11.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink);padding-top:2px}
+.mod-row .v{font-size:13.5px;color:var(--text)}
+.mod-p{font-size:13.5px;color:var(--text);padding:12px 0;border-bottom:1px solid var(--rule)}
+
+/* Acceptation */
+.accept p{font-size:13.5px;color:var(--text);max-width:680px}
+.accept a{color:var(--purple);font-weight:600;text-decoration:none;border-bottom:1px solid currentColor}
+.sign{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:26px}
+.sign div{border-top:1px solid var(--ink);padding-top:8px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.sign div strong{display:block;font-size:12.5px;letter-spacing:0;text-transform:none;color:var(--ink);font-weight:600;margin-top:2px}
 
 /* Pied */
-.doc-foot{background:var(--ink);color:rgba(255,255,255,.72);padding:28px 48px;font-size:12px;line-height:1.7}
-.doc-foot strong{color:#fff}
-.doc-foot a{color:#fff;text-decoration:none}
-.doc-foot .legal{margin-top:12px;color:rgba(255,255,255,.45);font-size:11px}
+.foot{margin-top:36px;padding-top:14px;border-top:1px solid var(--rule);font-size:11.5px;color:var(--muted);display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
+.foot a{color:var(--muted);text-decoration:none}
 
-@media(max-width:600px){
-  body{padding:14px 6px}
-  .doc-head,.doc-body,.doc-foot{padding-left:24px;padding-right:24px}
-  .doc-title{font-size:26px}
-  .mod-row{grid-template-columns:1fr;gap:4px}
-}
-@media print{
-  body{background:#fff;padding:0}
-  .doc{border:none;border-radius:0;box-shadow:none;max-width:none}
-  .doc-foot{background:#fff;color:#475569}
-  .doc-foot strong,.doc-foot a{color:var(--ink)}
-}</style></head><body>
+@media(max-width:620px){.head,.scope,.sign{grid-template-columns:1fr}.price{text-align:left}.mod-row{grid-template-columns:1fr;gap:4px}}
+@media print{body{padding:0}.sec,.scope>div{break-inside:avoid}}
+</style></head><body>
 <div class="doc">
-  <header class="doc-head">
-    <div class="doc-head-top">
-      <div class="doc-logo"><img src="https://pixfeed.net/wp-content/uploads/2025/04/logo.png" alt=""><span>Pixfeed</span></div>
-      <span class="doc-badge">Sans engagement</span>
-    </div>
-    <p class="doc-kicker">Conditions d’abonnement</p>
-    <h1 class="serif doc-title">{{label}}</h1>
-    <div class="doc-price"><span class="amount">{{price}}</span><span class="per">{{period}}</span></div>
-    <p class="doc-intro">{{intro}}</p>
-    <p class="doc-meta">Établi pour <strong>{{client_name}}</strong> — {{date}}</p>
-    {{first_billing_html}}
-  </header>
-  <div class="doc-body">
-    <section class="doc-section">
-      <h2>Ce qui est inclus</h2>
-      <p class="sub">Prestations couvertes par votre abonnement.</p>
-      <ul class="feat inc">
-        {{included_html}}
-      </ul>
-    </section>
-    <section class="doc-section">
-      <h2>Ce qui n’est pas inclus</h2>
-      <p class="sub">Ces prestations sortent du cadre de l’abonnement et restent réalisables sur devis.</p>
-      <ul class="feat exc">
-        {{excluded_html}}
-      </ul>
-    </section>
-    <section class="doc-section">
-      <h2>Modalités</h2>
-      <div class="mod">
-        {{modalites_html}}
-      </div>
-    </section>
+  <div class="top">
+    <div class="logo"><img src="https://pixfeed.net/wp-content/uploads/2025/04/logo.png" alt=""><span>Pixfeed</span></div>
+    <div class="tag">Sans engagement</div>
   </div>
-  <footer class="doc-foot">
-    <strong>Pixfeed</strong> · 1 rue des Morillons, 95130 Franconville · <a href="mailto:contact@pixfeed.net">contact@pixfeed.net</a> · 09 54 32 02 85<br>
-    SIRET 852 393 735 00018
+  <header class="head">
+    <div>
+      <p class="kicker">Conditions particulières d’abonnement</p>
+      <h1 class="serif title">{{label}}</h1>
+      <p class="meta">Établi pour <strong>{{client_name}}</strong> · {{date}}</p>
+    </div>
+    <div class="price">
+      <div class="amount">{{price}}</div>
+      <span class="per">{{period}}</span>
+      {{first_billing_html}}
+    </div>
+  </header>
+  <p class="intro">{{intro}}</p>
+
+  <section class="sec">
+    <div class="sec-h"><span class="n">01</span><h2>Périmètre</h2></div>
+    <div class="scope">
+      <div><div class="col-h">Inclus</div><ul class="feat inc">{{included_html}}</ul></div>
+      <div><div class="col-h">Non inclus <span>sur devis</span></div><ul class="feat exc">{{excluded_html}}</ul></div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="sec-h"><span class="n">02</span><h2>Modalités</h2></div>
+    <div class="mod">{{modalites_html}}</div>
+  </section>
+
+  <section class="sec accept">
+    <div class="sec-h"><span class="n">03</span><h2>Acceptation</h2></div>
+    <p>En validant le paiement via le lien sécurisé Stripe, le client accepte les présentes conditions particulières ainsi que les <a href="https://pixfeed.net/conditions-generales-de-vente/">Conditions générales de vente de Pixfeed</a>, qui les complètent. En cas de contradiction, les présentes conditions particulières prévalent pour cet abonnement.</p>
+    <div class="sign">
+      <div>Prestataire<strong>Pixfeed</strong></div>
+      <div>Client<strong>{{client_name}} — acceptation par validation du paiement en ligne</strong></div>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <span>Pixfeed · 1 rue des Morillons, 95130 Franconville · SIRET 852 393 735 00018</span>
+    <span><a href="mailto:contact@pixfeed.net">contact@pixfeed.net</a> · 09 54 32 02 85</span>
   </footer>
-</div>
-</body></html>
+</div></body></html>
