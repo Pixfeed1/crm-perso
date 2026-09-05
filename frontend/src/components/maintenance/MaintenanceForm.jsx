@@ -289,6 +289,10 @@ const MaintenanceForm = ({ contract = {}, onSave, onCancel }) => {
                 className="w-full min-w-0 h-11 box-border px-4 bg-surface-muted/50 border border-border rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:border-indigo-500"
                 placeholder="1"
               />
+              <p className="text-xs text-text-muted mt-1">
+                Jour du mois (1 à 28) où Stripe prélève. À la signature, le client règle la part du mois en cours
+                jusqu'à ce jour, puis le montant complet chaque mois. Si le contrat démarre plus tard, rien n'est dû avant.
+              </p>
             </div>
           </div>
         </div>

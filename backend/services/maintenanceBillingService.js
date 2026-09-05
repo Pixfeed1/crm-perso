@@ -96,13 +96,47 @@ async function createCheckoutByPayToken(db, token) {
  * on prend le mois suivant.
  */
 function nextBillingAnchor(billingDay) {
+  return contractBillingAnchor(billingDay, null).anchor;
+}
+
+/**
+ * Ancre Stripe d'un contrat de maintenance : première occurrence du jour de prélèvement
+ * strictement après aujourd'hui ET après la date de début du contrat (midi UTC pour rester
+ * dans la bonne journée quel que soit le fuseau du serveur).
+ *
+ * - Contrat déjà commencé : proration → le client paie à la signature la part du mois en
+ *   cours jusqu'au jour de prélèvement, puis le montant complet chaque mois à ce jour.
+ * - Contrat à démarrage futur : rien n'est dû avant le début, pas de proration ; première
+ *   facture complète au premier jour de prélèvement suivant le début.
+ *
+ * @returns {{ anchor: number, prorate: boolean }}
+ */
+function contractBillingAnchor(billingDay, startDate) {
   const day = Math.min(Math.max(parseInt(billingDay, 10) || 1, 1), 28);
-  const now = new Date();
-  let anchor = new Date(now.getFullYear(), now.getMonth(), day, 0, 0, 0, 0);
-  if (anchor.getTime() <= now.getTime()) {
-    anchor = new Date(now.getFullYear(), now.getMonth() + 1, day, 0, 0, 0, 0);
+  const pad = (n) => String(n).padStart(2, '0');
+  const toStr = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+  const nowSec = Math.floor(Date.now() / 1000);
+  let startStr = null;
+  if (startDate) {
+    startStr = startDate instanceof Date ? toStr(startDate) : String(startDate).slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(startStr)) startStr = null;
   }
-  return Math.floor(anchor.getTime() / 1000);
+  const startSec = startStr ? Math.floor(Date.parse(`${startStr}T12:00:00Z`) / 1000) : null;
+  const futureStart = startSec !== null && startSec > nowSec + 3600;
+
+  // Point de départ : aujourd'hui, ou la date de début si elle est future.
+  const from = futureStart ? new Date(Date.parse(`${startStr}T12:00:00Z`)) : new Date();
+  let y = from.getUTCFullYear();
+  let m = from.getUTCMonth();
+  let anchor = Math.floor(Date.UTC(y, m, day, 12, 0, 0) / 1000);
+  // Doit être strictement futur, et pas avant le début du contrat.
+  while (anchor <= nowSec + 3600 || (startSec !== null && anchor < startSec)) {
+    m += 1;
+    if (m > 11) { m = 0; y += 1; }
+    anchor = Math.floor(Date.UTC(y, m, day, 12, 0, 0) / 1000);
+  }
+  return { anchor, prorate: !futureStart };
 }
 
 /**
@@ -161,8 +195,9 @@ async function createCheckoutForContract(db, contractId) {
     );
   }
 
-  // 3. Créer la Checkout Session (abonnement SEPA)
+  // 3. Créer la Checkout Session (abonnement SEPA), ancrée sur le jour de prélèvement du contrat
   const frontendUrl = process.env.FRONTEND_URL || 'https://crm.pixfeed.net';
+  const { anchor, prorate } = contractBillingAnchor(contract.billing_day, contract.contract_start_date);
 
   const session = await stripe.checkout.sessions.create({
     mode: 'subscription',
@@ -182,8 +217,10 @@ async function createCheckoutForContract(db, contractId) {
       }
     ],
     subscription_data: {
-      // Pas de billing_cycle_anchor : la facturation démarre immédiatement à la validation
-      // du Checkout, puis se répète chaque mois à cette même date (proration par défaut).
+      // Facturation alignée sur le jour de prélèvement (billing_day). Contrat en cours :
+      // prorata du mois entamé dû à la signature ; contrat futur : rien avant le début.
+      billing_cycle_anchor: anchor,
+      proration_behavior: prorate ? 'create_prorations' : 'none',
       metadata: { maintenance_contract_id: String(contract.id) }
     },
     success_url: 'https://pixfeed.net/merci-maintenance',
@@ -619,6 +656,7 @@ module.exports = {
   ensureSubscriptionPayLink,
   createCheckoutByPayToken,
   nextBillingAnchor,
+  contractBillingAnchor,
   firstBillingAnchor,
   applyStripeEvent,
   cancelSubscriptionForContract,
