@@ -224,9 +224,12 @@ def run(conn, site, cancel_check=None, job_id=None):
 
     done = ok = 0
     quota = False
+    last_err = None
     for url, strategies in plan:
         for strategy in strategies:
             row, err, quota_hit = measure(url, strategy)
+            if err:
+                last_err = err
             if quota_hit:
                 quota = True
                 print(f"  [PSI] quota atteint apres {done} mesures — arret, le reste au prochain run.")
@@ -256,6 +259,11 @@ def run(conn, site, cancel_check=None, job_id=None):
             "UPDATE seo_jobs SET error = %s WHERE id = %s",
             (f"Quota PageSpeed atteint apres {done} mesures ({'cle API' if api_key() else 'ajouter PAGESPEED_API_KEY dans backend/.env'}).", job_id),
         )
+    elif job_id is not None and done > 0 and ok == 0 and last_err:
+        # Toutes les mesures ont echoue pour la meme raison (cle refusee, API non activee...) :
+        # la dire, plutot qu'un « echec » generique.
+        cur.execute("UPDATE seo_jobs SET error = %s WHERE id = %s",
+                    (f"Toutes les mesures ont échoué : {last_err} (vérifier PAGESPEED_API_KEY et l'activation de l'API PageSpeed Insights).", job_id))
     conn.commit()
     covered, total_pages = coverage(conn, site_id)
     print(f"  OK PageSpeed {site['domain']} : {ok}/{done} mesures reussies — couverture {covered}/{total_pages} pages")

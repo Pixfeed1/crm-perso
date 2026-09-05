@@ -1060,6 +1060,19 @@ def serve():
         except Exception:
             pass
     conn = connect()
+    # Un seul worker traite la file : au demarrage, aucune tache ne peut legitimement etre
+    # « en cours ». Celles qui le sont ont ete interrompues par un redemarrage (deploiement,
+    # kill, plantage). Sans ce nettoyage elles restent bloquantes pour toujours : le site
+    # passe pour occupe, la planification le saute, et l'ecran affiche une tache fantome.
+    cur_rec = conn.cursor()
+    cur_rec.execute(
+        """UPDATE seo_jobs SET status = 'failed', finished_at = NOW(),
+                  error = COALESCE(error || ' ; ', '') || 'interrompue par un redémarrage du worker, à relancer'
+            WHERE status IN ('running', 'cancel_requested') RETURNING id, job_type, site_id"""
+    )
+    for jid, jtype, jsite in cur_rec.fetchall():
+        print(f"[SEO] Job #{jid} {jtype} (site {jsite}) était en cours au redémarrage : marqué en échec")
+    conn.commit()
     # Les sites vivent dans seo_sites (geres depuis l'UI). Au premier demarrage d'une
     # installation vide, l'amorce config.SEED_SITES les cree pour qu'ils apparaissent dans
     # le selecteur (sinon : poule/oeuf — impossible de lancer le premier crawl).
