@@ -9,6 +9,58 @@
 
 const clampInt = (v, def, min, max) => Math.min(Math.max(parseInt(v, 10) || def, min), max);
 
+// ---- Import CSV de liens entrants -------------------------------------------------------
+// L'API Bing repond souvent « zero lien » meme pour un site verifie. La source la plus
+// complete et gratuite est le rapport Liens de Search Console, sans API mais exportable :
+// « Liens externes > Derniers liens externes » (une ligne par page qui nous lie). On accepte
+// aussi l'export Bing Webmaster Tools. Le worker verifie ensuite chaque lien a la source
+// (rel, type, ancre, presence), enrichit les domaines et calcule la toxicite : l'import ne
+// fait qu'amorcer. Ecriture Node sur seo_backlinks : exception assumee, comme la watchlist.
+
+// Parseur CSV minimal mais complet : guillemets, guillemets doubles, delimiteur , ; ou tab.
+function parseCsv(text) {
+  const src = text.replace(/^\uFEFF/, '');
+  const firstLine = src.split(/\r?\n/, 1)[0] || '';
+  const delim = [',', ';', '\t'].map((d) => [d, (firstLine.match(new RegExp(d === '\t' ? '\t' : `\\${d}`, 'g')) || []).length])
+    .sort((a, b) => b[1] - a[1])[0][0];
+  const rows = []; let row = []; let cell = ''; let q = false;
+  for (let i = 0; i < src.length; i++) {
+    const c = src[i];
+    if (q) {
+      if (c === '"') { if (src[i + 1] === '"') { cell += '"'; i++; } else q = false; }
+      else cell += c;
+    } else if (c === '"') q = true;
+    else if (c === delim) { row.push(cell); cell = ''; }
+    else if (c === '\n' || c === '\r') {
+      if (c === '\r' && src[i + 1] === '\n') i++;
+      row.push(cell); rows.push(row); row = []; cell = '';
+    } else cell += c;
+  }
+  if (cell !== '' || row.length) { row.push(cell); rows.push(row); }
+  return rows.filter((r) => r.some((v) => v && v.trim() !== ''));
+}
+
+// Sans accents ni ponctuation : « Dernière exploration » -> « derniere exploration ».
+const norm = (h) => (h || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+// En-tetes reconnus (Search Console FR/EN, Bing WMT). Le premier qui matche gagne.
+const COLS = {
+  source: ['page de liaison', 'linking page', 'page source', 'source url', 'url source', 'url de la page d origine', 'lien', 'page', 'url'],
+  target: ['page cible', 'target page', 'target url', 'url cible', 'cible'],
+  anchor: ['texte d ancrage', 'anchor text', 'ancre', 'anchor'],
+  date: ['derniere exploration', 'last crawled', 'date de derniere exploration', 'date', 'first seen', 'premiere vue'],
+  site: ['site', 'sites d origine', 'linking site', 'domaine'],
+};
+const findCol = (headers, names) => { for (const n of names) { const i = headers.indexOf(n); if (i >= 0) return i; } return -1; };
+const isUrl = (v) => /^https?:\/\/\S+/i.test((v || '').trim());
+const hostOf = (u) => { try { const h = new URL(u).hostname.toLowerCase(); return h.startsWith('www.') ? h.slice(4) : h; } catch { return ''; } };
+const parseDate = (v) => {
+  if (!v) return null;
+  const s = String(v).trim();
+  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/); if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/); if (m) return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+  const d = new Date(s); return isNaN(d) ? null : d.toISOString().slice(0, 10);
+};
+
 const seoAuthorityController = {
   // GET /api/seo/authority?site_id=&days=30
   getOverview: async (req, res) => {
@@ -165,6 +217,77 @@ const seoAuthorityController = {
       });
     } catch (e) {
       console.error('[SEO] authority:', e.message);
+      res.status(500).json({ message: 'Erreur serveur' });
+    }
+  },
+
+  // POST /api/seo/authority/import  (multipart : site_id, file=CSV)
+  importBacklinks: async (req, res) => {
+    const db = req.app.locals.db;
+    const siteId = parseInt((req.body || {}).site_id, 10);
+    if (!siteId) return res.status(400).json({ message: 'site_id requis' });
+    if (!req.file || !req.file.buffer) return res.status(400).json({ message: 'Fichier CSV requis' });
+    try {
+      const site = await db.pool.query('SELECT id, domain, wp_base_url FROM seo_sites WHERE id = $1', [siteId]);
+      if (!site.rows[0]) return res.status(404).json({ message: 'Site introuvable' });
+      const domain = site.rows[0].domain;
+      const home = (site.rows[0].wp_base_url || `https://${domain}`).replace(/\/+$/, '') + '/';
+      const origin = /bing/i.test(req.file.originalname || '') ? 'bing_export' : 'gsc_export';
+
+      const rows = parseCsv(req.file.buffer.toString('utf8'));
+      if (rows.length < 2) return res.status(400).json({ message: 'CSV vide ou illisible' });
+      const headers = rows[0].map(norm);
+      const iSrc = findCol(headers, COLS.source), iTgt = findCol(headers, COLS.target);
+      const iAnc = findCol(headers, COLS.anchor), iDate = findCol(headers, COLS.date), iSite = findCol(headers, COLS.site);
+      // Fichier « Sites d'origine des liens principaux » : des domaines sans page -> inutilisable
+      // pour la verification a la source (on ne saurait pas quelle page lire).
+      const sample = rows.slice(1, 6).map((r) => (r[iSrc >= 0 ? iSrc : 0] || '').trim());
+      if (iSrc < 0 || (!sample.some(isUrl) && (iSite >= 0 || sample.every((v) => v && !v.includes('/'))))) {
+        return res.status(400).json({
+          message: "Ce fichier ne contient que des noms de domaine, pas les pages qui vous lient. Dans Search Console : Liens > Liens externes > Exporter > « Derniers liens externes » (ou le détail d'un site : « Pages contenant des liens »).",
+          headers: rows[0],
+        });
+      }
+
+      let inserted = 0, updated = 0, skipped = 0, internal = 0;
+      const seen = new Set();
+      for (const r of rows.slice(1)) {
+        const src = (r[iSrc] || '').trim();
+        if (!isUrl(src)) { skipped++; continue; }
+        const sd = hostOf(src);
+        if (!sd || sd === domain || sd.endsWith('.' + domain)) { internal++; continue; }
+        let tgt = iTgt >= 0 ? (r[iTgt] || '').trim() : '';
+        if (!isUrl(tgt)) tgt = home; // cible inconnue : la verification a la source la retrouvera
+        const key = `${src}|${tgt}`;
+        if (seen.has(key)) continue; seen.add(key);
+        const anchor = iAnc >= 0 ? (r[iAnc] || '').trim().slice(0, 300) : null;
+        const seenAt = iDate >= 0 ? parseDate(r[iDate]) : null;
+        const q = await db.pool.query(
+          `INSERT INTO seo_backlinks (site_id, source_url, source_domain, target_url, anchor, first_seen, last_seen, status, origin, verified_at)
+           VALUES ($1, $2, $3, $4, NULLIF($5,''), COALESCE($6::date, CURRENT_DATE), COALESCE($6::date, CURRENT_DATE), 'active', $7, NULL)
+           ON CONFLICT (site_id, source_url, target_url) DO UPDATE
+             SET last_seen = GREATEST(seo_backlinks.last_seen, EXCLUDED.last_seen),
+                 anchor = COALESCE(seo_backlinks.anchor, EXCLUDED.anchor),
+                 verified_at = NULL
+           RETURNING (xmax = 0) AS inserted`,
+          [siteId, src.slice(0, 2000), sd, tgt.slice(0, 2000), anchor, seenAt, origin]
+        );
+        if (q.rows[0] && q.rows[0].inserted) inserted++; else updated++;
+      }
+      // Lance l'analyse d'autorite tout de suite (verification a la source, enrichissement,
+      // toxicite) si aucun job n'est actif sur le site ; sinon la nuit s'en chargera.
+      let job = null;
+      if (inserted + updated > 0) {
+        try {
+          const j = await db.pool.query(
+            "INSERT INTO seo_jobs (site_id, job_type, status, source) VALUES ($1, 'authority', 'pending', 'ui') RETURNING id", [siteId]);
+          job = j.rows[0].id;
+        } catch (e) { if (e.code !== '23505') throw e; }
+      }
+      res.json({ inserted, updated, skipped, internal, total_rows: rows.length - 1, origin, job_started: job != null,
+        columns: { source: rows[0][iSrc], target: iTgt >= 0 ? rows[0][iTgt] : null, anchor: iAnc >= 0 ? rows[0][iAnc] : null, date: iDate >= 0 ? rows[0][iDate] : null } });
+    } catch (e) {
+      console.error('[SEO] import backlinks:', e.message);
       res.status(500).json({ message: 'Erreur serveur' });
     }
   },

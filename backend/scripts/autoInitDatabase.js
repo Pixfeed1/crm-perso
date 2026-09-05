@@ -2101,6 +2101,9 @@ async function ensureSeoTables(client) {
   await client.query("ALTER TABLE seo_backlinks ADD COLUMN IF NOT EXISTS source_title TEXT;");
   await client.query("ALTER TABLE seo_backlinks ADD COLUMN IF NOT EXISTS source_lang TEXT;");
   await client.query("ALTER TABLE seo_backlinks ADD COLUMN IF NOT EXISTS lost_reason TEXT;");    // link_removed | page_gone | not_seen
+  // D'ou vient le lien : bing (API), gsc_export (CSV Search Console > Liens), bing_export, manual.
+  // L'API Bing repond souvent vide : l'export Search Console est la source la plus complete.
+  await client.query("ALTER TABLE seo_backlinks ADD COLUMN IF NOT EXISTS origin TEXT NOT NULL DEFAULT 'bing';");
   await client.query('CREATE INDEX IF NOT EXISTS idx_seo_backlinks_verify ON seo_backlinks(site_id, status, verified_at);');
   // Domaines referents enrichis : autorite (Open PageRank), TLD, IP et pays d'hebergement
   // (registres RDAP), et un indicateur de toxicite MAISON dont les criteres sont listes.

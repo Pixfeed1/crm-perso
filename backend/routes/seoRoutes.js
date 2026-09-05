@@ -38,6 +38,10 @@ router.get('/pagespeed/history', seoPagespeedController.getHistory);
 router.get('/analytics', seoAnalyticsController.getOverview);
 // Autorite du domaine + liens entrants (job 'authority' : Open PageRank + Bing WMT).
 router.get('/authority', seoAuthorityController.getOverview);
+// Import d'un export CSV de liens (Search Console > Liens, Bing WMT) : fichier en memoire, 5 Mo max.
+const multer = require('multer');
+const csvUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024, files: 1 } });
+router.post('/authority/import', csvUpload.single('file'), seoAuthorityController.importBacklinks);
 // Suivi de positions (rank tracker) — lecture seule sur seo_gsc_daily.
 router.get('/positions/summary', seoController.getPositionsSummary);
 router.get('/positions/keywords', seoController.getPositionsKeywords);

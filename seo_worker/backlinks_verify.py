@@ -178,6 +178,19 @@ def verify_batch(conn, site_id, site_domain, limit, cancel_check=None):
                             WHERE id=%s""",
                         (m["rel"], m["type"], m["anchor"], status, today, title, lang, bid),
                     )
+                    # Cible inconnue a l'import (export Search Console sans page cible) ou forme
+                    # ancienne memorisee par Bing : on retient la page reellement liee.
+                    if not exact:
+                        real = m["href"].split("#", 1)[0]
+                        if real.startswith("//"):
+                            real = "https:" + real
+                        if _norm(real) != _norm(tgt):
+                            cur.execute("SELECT id FROM seo_backlinks WHERE site_id=%s AND source_url=%s AND rtrim(target_url,'/') = rtrim(%s,'/') AND id<>%s",
+                                        (site_id, src, real[:2000], bid))
+                            if cur.fetchone():
+                                cur.execute("DELETE FROM seo_backlinks WHERE id=%s", (bid,))  # doublon : la ligne exacte existe deja
+                            else:
+                                cur.execute("UPDATE seo_backlinks SET target_url=%s WHERE id=%s", (real[:2000], bid))
             verified += 1
         conn.commit()
         if cancel_check and cancel_check():

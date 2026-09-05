@@ -267,6 +267,17 @@ Backlinks / Domaines référents du tableau de bord Semrush, avec des sources gr
   MCP ; le site doit être vérifié dans Bing WMT sous ce compte) : liens entrants connus de
   Bing, page par page (GetLinkCounts puis GetUrlLinks sur les `BING_TARGETS_PER_RUN` pages
   les plus liées), avec ancre. Les liens non revus sur une page recontrôlée sont marqués perdus.
+- **Import d'un export de liens** (bouton « Importer un export de liens », onglet Autorité) :
+  l'API Bing répond souvent « aucun lien » même pour un site vérifié (constaté sur jurojin.net).
+  La source la plus complète reste le rapport Liens de Search Console, sans API mais
+  exportable : Liens › Liens externes › Exporter › « Derniers liens externes » (une page qui
+  nous lie par ligne). L'export Bing WMT est accepté aussi. Colonnes reconnues FR/EN : page
+  de liaison / linking page / source url, page cible (facultative), ancre, date. Le fichier
+  « Sites d'origine des liens principaux » (domaines seuls) est refusé avec explication : sans
+  page source, rien à vérifier. Les liens importés (`origin = gsc_export` / `bing_export`)
+  partent avec `verified_at NULL` : la vérification à la source les traite en premier, et
+  retrouve la page cible réelle quand l'export ne la donnait pas. L'import lance aussitôt une
+  analyse d'autorité si aucun job n'est actif.
 - **Vérification à la source** : le worker lit chaque page qui nous lie (rotation,
   `BACKLINK_VERIFY_PER_RUN` = 150 par passage, TTL 30 j) et constate lui-même l'attribut
   `rel` (follow / nofollow / sponsored / ugc), le type (texte / image), l'ancre réelle, le

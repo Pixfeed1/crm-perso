@@ -113,6 +113,21 @@ export const apiRequest = async (endpoint, method = 'GET', data = null) => {
  * Requête GET authentifiée renvoyant la réponse brute (pour blob/texte :
  * PDF, aperçu HTML). Attache le token comme apiRequest, mais ne fait pas .json().
  */
+// Envoi d'un fichier (multipart) : meme authentification, sans Content-Type impose (le
+// navigateur pose la frontiere multipart lui-meme).
+export const apiUpload = async (endpoint, formData) => {
+  const token = getAuthToken();
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    method: 'POST',
+    headers: { 'Authorization': token ? `Bearer ${token}` : '' },
+    credentials: 'include',
+    body: formData,
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(body.message || `Erreur ${response.status}`);
+  return body;
+};
+
 export const apiRequestRaw = async (endpoint) => {
   const token = getAuthToken();
 
@@ -610,6 +625,8 @@ export const seoAPI = {
   getAnalytics: (siteId, days = 28) => apiRequest(`/seo/analytics?site_id=${siteId}&days=${days}`),
   // Autorite du domaine + liens entrants (Open PageRank + Bing WMT).
   getAuthority: (siteId, days = 30) => apiRequest(`/seo/authority?site_id=${siteId}&days=${days}`),
+  // Import d'un export CSV de liens entrants (Search Console > Liens, ou Bing WMT).
+  importBacklinks: (siteId, file) => { const fd = new FormData(); fd.append('site_id', siteId); fd.append('file', file); return apiUpload('/seo/authority/import', fd); },
   // Core Web Vitals / PageSpeed.
   getPagespeed: (siteId) => apiRequest(`/seo/pagespeed?site_id=${siteId}`),
   getPagespeedHistory: (siteId, url, strategy = 'mobile') =>

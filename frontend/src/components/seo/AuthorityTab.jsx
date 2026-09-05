@@ -8,16 +8,17 @@
 //     ancre et page cible ; liens gagnés / perdus.
 // Données produites par le worker (job 'authority'), un instantané par jour.
 // Charte : tokens de thème, react-icons, recharts, aucune couleur en dur.
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion } from 'framer-motion';
 import {
   FiAward, FiExternalLink, FiEdit3, FiTrendingUp, FiTrendingDown, FiMinus, FiInfo,
-  FiLoader, FiRefreshCw, FiPlusCircle, FiMinusCircle, FiShield, FiChevronDown, FiChevronRight
+  FiLoader, FiRefreshCw, FiPlusCircle, FiMinusCircle, FiShield, FiChevronDown, FiChevronRight, FiUpload
 } from 'react-icons/fi';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine } from 'recharts';
 import { seoAPI } from '../../services/api';
 import { decodeHtml } from '../../utils/formatters';
 import Pager, { usePager } from '../common/Pager';
+import { useToast } from '../../hooks/useToast';
 
 const fmtNum = (n) => (n == null ? '—' : Number(n).toLocaleString('fr-FR'));
 const fmtDate = (s) => { if (!s) return '—'; const d = new Date(s); return isNaN(d) ? '—' : d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }); };
@@ -72,6 +73,37 @@ const AuthorityTab = ({ siteId, onLaunch, job, jobActive }) => {
   const [view, setView] = useState('domains'); // domains | recent | targets
   const [showLost, setShowLost] = useState(true);
   const [openTox, setOpenTox] = useState(null);
+  const { toast } = useToast();
+  const fileRef = useRef(null);
+  const [importing, setImporting] = useState(false);
+
+  // Import d'un export CSV Search Console (Liens > Liens externes > « Derniers liens externes »)
+  // ou Bing WMT : l'API Bing repond souvent vide, l'export Google est la source la plus complete.
+  const onImportFile = async (e) => {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if (!file || !siteId) return;
+    setImporting(true);
+    try {
+      const r = await seoAPI.importBacklinks(siteId, file);
+      toast.success(`${r.inserted} lien${r.inserted > 1 ? 's' : ''} ajouté${r.inserted > 1 ? 's' : ''}, ${r.updated} déjà connu${r.updated > 1 ? 's' : ''}${r.internal ? `, ${r.internal} interne${r.internal > 1 ? 's' : ''} ignoré${r.internal > 1 ? 's' : ''}` : ''}${r.job_started ? ' · vérification à la source lancée' : ''}`);
+      load();
+    } catch (err) {
+      toast.error(err.message || 'Import impossible');
+    } finally {
+      setImporting(false);
+    }
+  };
+  const importBtn = (
+    <>
+      <input ref={fileRef} type="file" accept=".csv,text/csv" className="hidden" onChange={onImportFile} />
+      <button onClick={() => fileRef.current && fileRef.current.click()} disabled={importing}
+        className="px-3 py-2 rounded-lg bg-surface-strong hover:bg-border-strong text-text-primary text-sm inline-flex items-center gap-2 disabled:opacity-50"
+        title="Search Console > Liens > Liens externes > Exporter > « Derniers liens externes » (ou export Bing Webmaster Tools)">
+        {importing ? <FiLoader size={15} className="animate-spin" /> : <FiUpload size={15} />} Importer un export de liens
+      </button>
+    </>
+  );
 
   const load = useCallback(() => {
     if (!siteId) return;
@@ -117,7 +149,8 @@ const AuthorityTab = ({ siteId, onLaunch, job, jobActive }) => {
                 : 'BING_WMT_API_KEY absent de backend/.env : score d’autorité seulement, pas de liste de liens.'}
           </p>
         )}
-        <div>{launchBtn}</div>
+        <div className="flex flex-wrap justify-center gap-2">{importBtn}{launchBtn}</div>
+        <p className="text-xs text-text-muted max-w-xl mx-auto">L’API Bing répond souvent « aucun lien » même pour un site vérifié. La liste la plus complète est celle de Search Console : Liens, Liens externes, Exporter, « Derniers liens externes ». Dépose ce CSV ici : chaque lien est ensuite vérifié à la source (follow/nofollow, ancre, présence), les domaines enrichis et la toxicité calculée.</p>
       </div>
     );
   }
@@ -147,6 +180,7 @@ const AuthorityTab = ({ siteId, onLaunch, job, jobActive }) => {
         </div>
         <div className="flex items-center gap-2">
           <button onClick={load} className="p-2 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-strong" title="Rafraîchir"><FiRefreshCw size={15} /></button>
+          {importBtn}
           {launchBtn}
         </div>
       </div>
@@ -303,7 +337,7 @@ const AuthorityTab = ({ siteId, onLaunch, job, jobActive }) => {
                     <td className="px-4 py-2 text-right text-xs">{x.lost ? <span className="px-1.5 py-0.5 rounded bg-danger-bg text-danger-text">perdu</span> : <span className="px-1.5 py-0.5 rounded bg-success-bg text-success-text">actif</span>}</td>
                   </tr>
                 ))}
-                {!domainsAll.length && <tr><td colSpan={8} className="px-4 py-6 text-center text-text-muted text-sm">Aucun lien entrant connu de Bing pour l’instant.</td></tr>}
+                {!domainsAll.length && <tr><td colSpan={8} className="px-4 py-6 text-center text-text-muted text-sm">Aucun lien entrant pour l’instant. L’API Bing répond souvent vide : importe l’export Search Console (Liens › Liens externes › Exporter › « Derniers liens externes ») avec le bouton ci-dessus.</td></tr>}
               </tbody>
             </table>
           )}
