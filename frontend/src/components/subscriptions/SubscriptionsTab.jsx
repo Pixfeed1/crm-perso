@@ -40,13 +40,14 @@ const buildDefaultModalites = (periodicity, intervalCount, firstBillingDate) => 
   ].join('\n');
 };
 
+// Pastille de statut : mêmes couleurs, bordure et libellés que les cartes de maintenance.
 const billingStatusConfig = {
-  none: { bg: 'bg-gray-500/20', text: 'text-text-secondary', label: 'Pas de paiement' },
-  pending: { bg: 'bg-amber-500/20', text: 'text-amber-300', label: "En attente d'autorisation" },
-  active: { bg: 'bg-green-500/20', text: 'text-green-300', label: 'Actif' },
-  past_due: { bg: 'bg-rose-500/20', text: 'text-rose-300', label: 'Impayé' },
-  canceling: { bg: 'bg-amber-500/20', text: 'text-amber-300', label: 'Résiliation prévue' },
-  canceled: { bg: 'bg-gray-500/20', text: 'text-text-secondary', label: 'Résilié' }
+  none: { bg: 'bg-gray-500/20', text: 'text-text-secondary', border: 'border-gray-500/30', dot: 'bg-gray-400', label: 'Pas de prélèvement' },
+  pending: { bg: 'bg-amber-500/20', text: 'text-amber-300', border: 'border-amber-500/30', dot: 'bg-amber-400', label: "En attente d'autorisation" },
+  active: { bg: 'bg-green-500/20', text: 'text-green-300', border: 'border-green-500/30', dot: 'bg-green-400', label: 'Prélèvement actif' },
+  past_due: { bg: 'bg-rose-500/20', text: 'text-rose-300', border: 'border-rose-500/30', dot: 'bg-rose-400', label: 'Impayé' },
+  canceling: { bg: 'bg-amber-500/20', text: 'text-amber-300', border: 'border-amber-500/30', dot: 'bg-amber-400', label: 'Résiliation prévue' },
+  canceled: { bg: 'bg-gray-500/20', text: 'text-text-secondary', border: 'border-gray-500/30', dot: 'bg-gray-400', label: 'Résilié' }
 };
 
 const formatAmount = (amount) =>
@@ -362,9 +363,10 @@ const SubscriptionsTab = () => {
               >
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex items-center gap-3 flex-wrap">
                       <h3 className="text-text-primary font-semibold">{sub.label}</h3>
-                      <span className={`text-xs px-2.5 py-1 rounded-full ${style.bg} ${style.text} font-medium`}>
+                      <span className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border ${style.bg} ${style.text} ${style.border} font-medium`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${style.dot}`} />
                         {style.label}
                       </span>
                     </div>
