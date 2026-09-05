@@ -14,6 +14,7 @@ const SELECT_WITH_CLIENT = `
          s.stripe_customer_id, s.stripe_subscription_id, s.billing_pay_token,
          s.billing_status, s.billing_cancel_at,
          s.cond_intro, s.cond_included, s.cond_excluded, s.cond_modalites, s.created_at,
+         to_char(s.first_billing_date, 'YYYY-MM-DD') AS first_billing_date,
          s.link_sent_at, s.link_sent_to,
          c.name AS client_name, c.email AS client_email
   FROM subscriptions s
@@ -28,6 +29,27 @@ function periodLabel(interval, intervalCount) {
   const count = Math.max(parseInt(intervalCount, 10) || 1, 1);
   if (count === 1) return interval === 'year' ? '/ an' : '/ mois';
   return interval === 'year' ? `/ tous les ${count} ans` : `/ tous les ${count} mois`;
+}
+
+// Date du premier prélèvement : 'YYYY-MM-DD' ou null. undefined = champ absent (non modifié).
+function parseFirstBillingDate(value) {
+  if (value === undefined) return undefined;
+  if (value === null || value === '') return null;
+  const str = String(value).slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(str) || isNaN(new Date(`${str}T00:00:00Z`).getTime())) {
+    const err = new Error('Date du premier prélèvement invalide (format attendu AAAA-MM-JJ).');
+    err.statusCode = 400;
+    throw err;
+  }
+  return str;
+}
+
+// Libellé lisible du premier prélèvement pour l'email et le PDF de conditions.
+function firstBillingLabel(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(`${dateStr}T00:00:00`);
+  if (isNaN(d.getTime())) return '';
+  return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
 // Convertit les pièces jointes reçues du front (base64) en pièces jointes nodemailer.
@@ -63,12 +85,19 @@ module.exports = {
   createSubscription: async (req, res) => {
     const db = req.app.locals.db;
     const {
-      client_id, label, amount_eur, interval, interval_count,
+      client_id, label, amount_eur, interval, interval_count, first_billing_date,
       cond_intro = null, cond_included = null, cond_excluded = null, cond_modalites = null
     } = req.body || {};
 
     if (!client_id || !label || !amount_eur) {
       return res.status(400).json({ message: 'Client, libellé et montant sont obligatoires.' });
+    }
+
+    let firstBilling = null;
+    try {
+      firstBilling = parseFirstBillingDate(first_billing_date) ?? null;
+    } catch (e) {
+      return res.status(400).json({ message: e.message });
     }
 
     const amount = Number(amount_eur);
@@ -82,9 +111,9 @@ module.exports = {
     try {
       const { rows } = await db.pool.query(
         `INSERT INTO subscriptions (client_id, label, amount_eur, billing_interval, interval_count, billing_status,
-                                    cond_intro, cond_included, cond_excluded, cond_modalites)
-         VALUES ($1, $2, $3, $4, $5, 'none', $6, $7, $8, $9) RETURNING id`,
-        [client_id, label, amount, billingInterval, intervalCount, cond_intro, cond_included, cond_excluded, cond_modalites]
+                                    cond_intro, cond_included, cond_excluded, cond_modalites, first_billing_date)
+         VALUES ($1, $2, $3, $4, $5, 'none', $6, $7, $8, $9, $10) RETURNING id`,
+        [client_id, label, amount, billingInterval, intervalCount, cond_intro, cond_included, cond_excluded, cond_modalites, firstBilling]
       );
       const created = await db.pool.query(`${SELECT_WITH_CLIENT} WHERE s.id = $1`, [rows[0].id]);
       res.status(201).json(created.rows[0]);
@@ -103,12 +132,18 @@ module.exports = {
     const db = req.app.locals.db;
     const { id } = req.params;
     const {
-      client_id, label, amount_eur, interval, interval_count,
+      client_id, label, amount_eur, interval, interval_count, first_billing_date,
       cond_intro, cond_included, cond_excluded, cond_modalites
     } = req.body || {};
 
     if (!client_id || !label) {
       return res.status(400).json({ message: 'Client et libellé sont obligatoires.' });
+    }
+    let firstBilling;
+    try {
+      firstBilling = parseFirstBillingDate(first_billing_date);
+    } catch (e) {
+      return res.status(400).json({ message: e.message });
     }
     try {
       const cur = await db.pool.query('SELECT billing_status FROM subscriptions WHERE id = $1', [id]);
@@ -145,6 +180,11 @@ module.exports = {
           params.push(Math.max(parseInt(interval_count, 10) || 1, 1));
           fields.push(`interval_count = $${params.length}`);
         }
+        // Une fois Stripe actif, la date du premier prélèvement est passée : plus modifiable.
+        if (firstBilling !== undefined) {
+          params.push(firstBilling);
+          fields.push(`first_billing_date = $${params.length}`);
+        }
       }
 
       params.push(id);
@@ -171,6 +211,7 @@ module.exports = {
       const { rows } = await db.pool.query(
         `SELECT s.label, s.amount_eur, s.billing_interval, s.interval_count, s.billing_pay_token,
                 s.cond_intro, s.cond_included, s.cond_excluded, s.cond_modalites,
+                to_char(s.first_billing_date, 'YYYY-MM-DD') AS first_billing_date,
                 c.name AS client_name, c.email AS client_email
          FROM subscriptions s LEFT JOIN crm_clients c ON s.client_id = c.id
          WHERE s.id = $1`,
@@ -186,7 +227,8 @@ module.exports = {
 
       const signature = await emailService.getSelectedSignature(db);
       const email = emailService.buildSubscriptionLinkEmail({
-        clientName: sub.client_name, url, label: sub.label, signature, message
+        clientName: sub.client_name, url, label: sub.label, signature, message,
+        firstBilling: firstBillingLabel(sub.first_billing_date)
       });
 
       let conditionsHtml = null;
@@ -196,6 +238,7 @@ module.exports = {
             label: sub.label,
             price: formatEur(sub.amount_eur),
             period: periodLabel(sub.billing_interval, sub.interval_count),
+            first_billing: firstBillingLabel(sub.first_billing_date),
             date: new Date().toLocaleDateString('fr-FR'),
             client_name: sub.client_name || '',
             intro: sub.cond_intro || '',
@@ -254,6 +297,7 @@ module.exports = {
       const { rows } = await db.pool.query(
         `SELECT s.label, s.amount_eur, s.billing_interval, s.interval_count,
                 s.cond_intro, s.cond_included, s.cond_excluded, s.cond_modalites,
+                to_char(s.first_billing_date, 'YYYY-MM-DD') AS first_billing_date,
                 c.name AS client_name, c.email AS client_email
          FROM subscriptions s LEFT JOIN crm_clients c ON s.client_id = c.id
          WHERE s.id = $1`,
@@ -275,6 +319,7 @@ module.exports = {
             label: sub.label,
             price: formatEur(sub.amount_eur),
             period: periodLabel(sub.billing_interval, sub.interval_count),
+            first_billing: firstBillingLabel(sub.first_billing_date),
             date: new Date().toLocaleDateString('fr-FR'),
             client_name: sub.client_name || '',
             intro: sub.cond_intro || '',
@@ -298,6 +343,7 @@ module.exports = {
         clientName: sub.client_name,
         label: sub.label,
         url,
+        firstBilling: firstBillingLabel(sub.first_billing_date),
         signature,
         message,
         attachments

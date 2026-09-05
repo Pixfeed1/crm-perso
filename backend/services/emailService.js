@@ -664,10 +664,19 @@ class EmailService {
       introText = `Bonjour ${clientName || ''},\n\nVoici le lien pour mettre en place le prélèvement de votre maintenance :`;
     }
 
+    // Premier prélèvement différé : le client signe le mandat maintenant, rien n'est débité avant la date.
+    const firstBillingHtml = firstBilling
+      ? `<p style="margin:0 0 18px 0;color:#6b7280;">Aucun montant n'est prélevé aujourd'hui : le premier prélèvement aura lieu le <strong>${escapeHtml(firstBilling)}</strong>, puis à chaque date anniversaire.</p>`
+      : '';
+    const firstBillingText = firstBilling
+      ? `\n\nAucun montant n'est prélevé aujourd'hui : le premier prélèvement aura lieu le ${firstBilling}, puis à chaque date anniversaire.`
+      : '';
+
     const html = `
       <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.6;color:#374151;">
         ${intro}
         <p style="margin:0 0 18px 0;"><a href="${url}" style="color:#6366f1;font-weight:600;">${url}</a></p>
+        ${firstBillingHtml}
         ${emailSignature}
       </div>
     `;
@@ -688,7 +697,7 @@ class EmailService {
    */
   // Construit le contenu de l'email d'abonnement (sujet + html + texte), SANS l'envoyer.
   // Réutilisé par l'envoi ET par la prévisualisation (mêmes rendus -> aperçu fidèle).
-  buildSubscriptionLinkEmail({ clientName, url, label, signature, message = '' }) {
+  buildSubscriptionLinkEmail({ clientName, url, label, signature, message = '', firstBilling = '' }) {
     const emailSignature = signature || this.getDefaultSignature();
     const escapeHtml = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     const what = label ? `votre abonnement « ${escapeHtml(label)} »` : 'votre abonnement';
@@ -705,10 +714,19 @@ class EmailService {
       introText = `Bonjour ${clientName || ''},\n\nVoici le lien pour mettre en place le paiement de ${label ? `« ${label} »` : 'votre abonnement'} :`;
     }
 
+    // Premier prélèvement différé : le client signe le mandat maintenant, rien n'est débité avant la date.
+    const firstBillingHtml = firstBilling
+      ? `<p style="margin:0 0 18px 0;color:#6b7280;">Aucun montant n'est prélevé aujourd'hui : le premier prélèvement aura lieu le <strong>${escapeHtml(firstBilling)}</strong>, puis à chaque date anniversaire.</p>`
+      : '';
+    const firstBillingText = firstBilling
+      ? `\n\nAucun montant n'est prélevé aujourd'hui : le premier prélèvement aura lieu le ${firstBilling}, puis à chaque date anniversaire.`
+      : '';
+
     const html = `
       <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.6;color:#374151;">
         ${intro}
         <p style="margin:0 0 18px 0;"><a href="${url}" style="color:#6366f1;font-weight:600;">${url}</a></p>
+        ${firstBillingHtml}
         ${emailSignature}
       </div>
     `;
@@ -716,12 +734,12 @@ class EmailService {
     return {
       subject: `Mise en place du paiement de ${label ? `« ${label} »` : 'votre abonnement'}`,
       html,
-      text: `${introText}\n${url}`
+      text: `${introText}\n${url}${firstBillingText}`
     };
   }
 
-  async sendSubscriptionLink({ to, clientName, url, label, signature, message = '', attachments = [] }) {
-    const { subject, html, text } = this.buildSubscriptionLinkEmail({ clientName, url, label, signature, message });
+  async sendSubscriptionLink({ to, clientName, url, label, signature, message = '', attachments = [], firstBilling = '' }) {
+    const { subject, html, text } = this.buildSubscriptionLinkEmail({ clientName, url, label, signature, message, firstBilling });
     return await this.sendEmail({ to, subject, html, text, attachments });
   }
 

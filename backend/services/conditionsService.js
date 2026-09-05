@@ -109,6 +109,9 @@ async function renderConditionsHtml(type, data = {}) {
       label: escapeHtml(data.label || 'Abonnement'),
       price: escapeHtml(data.price || ''),
       period: escapeHtml(data.period || ''),
+      first_billing_html: data.first_billing
+        ? `<p class="doc-meta">Premier prélèvement le <strong>${escapeHtml(data.first_billing)}</strong>, puis à chaque date anniversaire.</p>`
+        : '',
       date: escapeHtml(data.date || ''),
       client_name: escapeHtml(data.client_name || ''),
       intro: escapeHtml(data.intro || "Ce document précise le périmètre de l'abonnement, ce qu'il comprend, ce qu'il ne comprend pas, et les modalités applicables."),

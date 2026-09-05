@@ -7,15 +7,26 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   FiRepeat, FiPlus, FiTrash2, FiSend, FiCopy, FiCheck, FiLink,
-  FiUser, FiX, FiSlash, FiRotateCcw, FiEdit2, FiEye, FiAlertTriangle
+  FiUser, FiX, FiSlash, FiRotateCcw, FiEdit2, FiEye, FiAlertTriangle, FiCalendar
 } from 'react-icons/fi';
 import { subscriptionsAPI, clientsAPI } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
 import BillingLinkEmailModal from '../billing/BillingLinkEmailModal';
 
 // Modalités par défaut, adaptées à la périodicité (même esprit que les docs maintenance).
-const buildDefaultModalites = (periodicity, intervalCount) => {
+const formatFirstBilling = (iso) => {
+  if (!iso) return '';
+  const d = new Date(`${String(iso).slice(0, 10)}T00:00:00`);
+  if (isNaN(d)) return '';
+  return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+};
+
+const buildDefaultModalites = (periodicity, intervalCount, firstBillingDate) => {
   const n = Math.max(parseInt(intervalCount, 10) || 1, 1);
+  const firstLabel = formatFirstBilling(firstBillingDate);
+  const when = firstLabel
+    ? `Premier prélèvement le ${firstLabel}, puis à chaque date anniversaire.`
+    : 'à la date anniversaire de souscription.';
   const periodWord = periodicity === 'year'
     ? 'annuel'
     : periodicity === 'custom'
@@ -23,7 +34,7 @@ const buildDefaultModalites = (periodicity, intervalCount) => {
       : 'mensuel';
   return [
     'Engagement : Sans engagement de durée. Résiliable à tout moment ; la résiliation prend effet à la fin de la période en cours, sans remboursement au prorata.',
-    `Facturation : Prélèvement ${periodWord} automatique par carte via Stripe, à la date anniversaire de souscription. Facture transmise par email.`,
+    `Facturation : Prélèvement ${periodWord} automatique par carte ou SEPA via Stripe${firstLabel ? '. ' : ', '}${when} Facture transmise par email.`,
     'Résiliation : Effective à la fin de la période en cours.',
     'Responsabilité : Pixfeed met en œuvre les moyens nécessaires à la bonne exécution de la prestation, sans garantie de résultat absolu inhérente à la nature du web.'
   ].join('\n');
@@ -67,7 +78,7 @@ const SubscriptionsTab = () => {
   const [editingId, setEditingId] = useState(null);          // null = création ; sinon = id édité
   const [editBillingActive, setEditBillingActive] = useState(false); // verrouille montant/périodicité
   const [form, setForm] = useState({
-    client_id: '', label: '', amount_eur: '', periodicity: 'month', interval_count: 2,
+    client_id: '', label: '', amount_eur: '', periodicity: 'month', interval_count: 2, first_billing_date: '',
     cond_intro: '', cond_included: '', cond_excluded: '', cond_modalites: ''
   });
   const [modalitesTouched, setModalitesTouched] = useState(false);
@@ -84,7 +95,7 @@ const SubscriptionsTab = () => {
     setEditingId(null);
     setEditBillingActive(false);
     setForm({
-      client_id: '', label: '', amount_eur: '', periodicity: 'month', interval_count: 2,
+      client_id: '', label: '', amount_eur: '', periodicity: 'month', interval_count: 2, first_billing_date: '',
       cond_intro: '', cond_included: '', cond_excluded: '',
       cond_modalites: buildDefaultModalites('month', 2)
     });
@@ -104,10 +115,11 @@ const SubscriptionsTab = () => {
       amount_eur: sub.amount_eur ?? '',
       periodicity,
       interval_count: parseInt(sub.interval_count, 10) || 2,
+      first_billing_date: sub.first_billing_date || '',
       cond_intro: sub.cond_intro || '',
       cond_included: sub.cond_included || '',
       cond_excluded: sub.cond_excluded || '',
-      cond_modalites: sub.cond_modalites || buildDefaultModalites(periodicity, sub.interval_count)
+      cond_modalites: sub.cond_modalites || buildDefaultModalites(periodicity, sub.interval_count, sub.first_billing_date)
     });
     setModalitesTouched(true); // ne pas écraser les conditions existantes
     setFormOpen(true);
@@ -131,10 +143,10 @@ const SubscriptionsTab = () => {
   // Régénère les modalités par défaut quand la périodicité change (si non éditées à la main).
   useEffect(() => {
     if (formOpen && !modalitesTouched) {
-      setForm((prev) => ({ ...prev, cond_modalites: buildDefaultModalites(prev.periodicity, prev.interval_count) }));
+      setForm((prev) => ({ ...prev, cond_modalites: buildDefaultModalites(prev.periodicity, prev.interval_count, prev.first_billing_date) }));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form.periodicity, form.interval_count, formOpen]);
+  }, [form.periodicity, form.interval_count, form.first_billing_date, formOpen]);
 
   // Liens de paiement générés (par abonnement) + état copie
   const [payLinks, setPayLinks] = useState({});
@@ -205,6 +217,7 @@ const SubscriptionsTab = () => {
       base.amount_eur = Number(form.amount_eur);
       base.interval = interval;
       base.interval_count = interval_count;
+      base.first_billing_date = form.first_billing_date || null;
     }
     try {
       setSaving(true);
@@ -363,6 +376,12 @@ const SubscriptionsTab = () => {
                       <span className="text-text-primary font-medium">{formatAmount(sub.amount_eur)}</span>
                       {' · '}{periodicityLabel(sub)}
                     </p>
+                    {sub.first_billing_date && sub.billing_status !== 'active' && (
+                      <p className="text-text-muted text-xs mt-1 flex items-center gap-1.5">
+                        <FiCalendar size={11} className="text-text-muted" />
+                        Premier prélèvement le {formatFirstBilling(sub.first_billing_date)}
+                      </p>
+                    )}
                     {sub.link_sent_at && (
                       <p className="text-text-muted text-xs mt-1 flex items-center gap-1.5">
                         <FiSend size={11} className="text-text-muted" />
@@ -575,6 +594,23 @@ const SubscriptionsTab = () => {
                     />
                   </div>
                 )}
+
+                <div>
+                  <label className="block text-sm text-text-secondary mb-1">
+                    Date du premier prélèvement <span className="text-text-muted">(optionnel)</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={form.first_billing_date}
+                    onChange={(e) => setForm({ ...form, first_billing_date: e.target.value })}
+                    disabled={editBillingActive}
+                    className="w-full px-3 py-2 bg-surface/60 border border-border rounded-lg text-text-primary focus:outline-none focus:border-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  />
+                  <p className="text-xs text-text-muted mt-1">
+                    Vide : le client est prélevé dès qu'il valide le lien. Renseignée : il signe le mandat sans rien payer,
+                    le premier prélèvement part à cette date puis à chaque date anniversaire (ex. 1er octobre, puis 1er janvier pour du trimestriel).
+                  </p>
+                </div>
 
                 {/* Conditions (PDF joint à l'envoi du lien) */}
                 <div className="pt-2 border-t border-border/60">

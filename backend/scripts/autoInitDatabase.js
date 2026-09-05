@@ -1260,6 +1260,9 @@ async function ensureSubscriptionColumns(client) {
   await client.query('ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS cond_included TEXT;');
   await client.query('ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS cond_excluded TEXT;');
   await client.query('ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS cond_modalites TEXT;');
+  // Date du premier prélèvement (optionnelle) : le mandat est signé tout de suite, Stripe
+  // ne facture qu'à cette date puis à chaque date anniversaire (billing_cycle_anchor).
+  await client.query('ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS first_billing_date DATE;');
   await client.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_subscriptions_pay_token ON subscriptions(billing_pay_token);');
   console.log('  ✓ Colonnes abonnements vérifiées');
 }

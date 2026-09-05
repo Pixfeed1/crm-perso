@@ -206,6 +206,26 @@ async function createCheckoutForContract(db, contractId) {
 }
 
 /**
+ * Timestamp UNIX (secondes) de la date du premier prélèvement d'un abonnement, ou null
+ * si elle est absente ou déjà passée (Stripe exige une ancre strictement future ; dans ce
+ * cas la facturation démarre immédiatement, comme avant). Minuit Europe/Paris ≈ 00:00 UTC
+ * + décalage : on prend midi UTC pour rester dans la bonne journée quel que soit le fuseau.
+ */
+function firstBillingAnchor(value) {
+  if (!value) return null;
+  // pg renvoie les DATE en objets Date à minuit LOCAL : on relit les composants locaux
+  // (toISOString basculerait au jour précédent dès que le serveur est en UTC+N).
+  const pad = (n) => String(n).padStart(2, '0');
+  const str = value instanceof Date
+    ? `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}`
+    : String(value).slice(0, 10);
+  const ts = Date.parse(`${str}T12:00:00Z`);
+  if (isNaN(ts)) return null;
+  const seconds = Math.floor(ts / 1000);
+  return seconds > Math.floor(Date.now() / 1000) + 3600 ? seconds : null;
+}
+
+/**
  * Crée (ou réutilise) le Customer Stripe d'un abonnement libre, puis une Checkout
  * Session d'abonnement récurrent (price_data EUR dynamique). Passe billing_status='pending'.
  * metadata.subscription_id différencie des contrats de maintenance dans le webhook.
@@ -248,6 +268,7 @@ async function createCheckoutForSubscription(db, subscriptionId) {
 
   const interval = sub.billing_interval === 'year' ? 'year' : 'month';
   const intervalCount = Math.max(parseInt(sub.interval_count, 10) || 1, 1);
+  const billingCycleAnchor = firstBillingAnchor(sub.first_billing_date);
 
   // Customer Stripe (créé ou réutilisé)
   let customerId = sub.stripe_customer_id;
@@ -282,7 +303,12 @@ async function createCheckoutForSubscription(db, subscriptionId) {
       }
     ],
     subscription_data: {
-      metadata: { subscription_id: String(sub.id) }
+      metadata: { subscription_id: String(sub.id) },
+      // Premier prélèvement différé : rien n'est dû à la validation (pas de prorata),
+      // la première facture part à la date choisie puis à chaque date anniversaire.
+      ...(billingCycleAnchor
+        ? { billing_cycle_anchor: billingCycleAnchor, proration_behavior: 'none' }
+        : {})
     },
     success_url: 'https://pixfeed.net/merci-abonnement',
     cancel_url: `${frontendUrl}/invoices`,
@@ -593,6 +619,7 @@ module.exports = {
   ensureSubscriptionPayLink,
   createCheckoutByPayToken,
   nextBillingAnchor,
+  firstBillingAnchor,
   applyStripeEvent,
   cancelSubscriptionForContract,
   resumeSubscriptionForContract,
