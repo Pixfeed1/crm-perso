@@ -69,9 +69,12 @@ attendre_actif() {
 # Le backend : `active` signifie seulement que le processus existe. Express
 # n'ecoute qu'apres l'init de la base, donc on attend une vraie reponse HTTP
 # (n'importe quel code : 200, 301, 404... l'important est qu'il reponde).
+# Jusqu'a 3 min : une migration qui recree un index sur une grosse table (seo_gsc_daily,
+# des centaines de milliers de lignes) peut depasser la minute, surtout si le worker
+# ecrit dedans au meme moment.
 attendre_http() {
   local port="$1" i code
-  for i in $(seq 1 20); do
+  for i in $(seq 1 90); do
     code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 3 "http://127.0.0.1:${port}/" 2>/dev/null || true)"
     if [[ "$code" =~ ^[1-5][0-9][0-9]$ ]]; then echo "$code"; return 0; fi
     sleep 2
@@ -109,7 +112,8 @@ redemarrer() {
     if code="$(attendre_http "$PORT_BACKEND")"; then
       vert "   $svc actif et répond en HTTP ($code) sur le port $PORT_BACKEND"
     else
-      rouge "   $svc est actif mais ne répond pas en HTTP sur le port $PORT_BACKEND"
+      rouge "   $svc est actif mais ne répond pas en HTTP sur le port $PORT_BACKEND après 3 min"
+      rouge "   -> journalctl -u $svc -n 40 --no-pager   (migration longue ou erreur au démarrage)"
       ECHECS+=("$svc: processus actif mais aucune réponse HTTP")
       return 1
     fi
