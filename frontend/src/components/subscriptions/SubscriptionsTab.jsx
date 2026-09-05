@@ -36,7 +36,7 @@ const buildDefaultModalites = (periodicity, intervalCount, firstBillingDate) => 
     'Engagement : Sans engagement de durée. Résiliable à tout moment ; la résiliation prend effet à la fin de la période en cours, sans remboursement au prorata.',
     `Facturation : Prélèvement ${periodWord} automatique par carte ou SEPA via Stripe${firstLabel ? '. ' : ', '}${when} Facture transmise par email.`,
     'Résiliation : Effective à la fin de la période en cours.',
-    'Responsabilité : Pixfeed met en œuvre les moyens nécessaires à la bonne exécution de la prestation, sans garantie de résultat absolu inhérente à la nature du web.'
+    'Responsabilité : Selon les articles 5 et 6 des Conditions générales de vente de Pixfeed (obligation de moyens, responsabilité limitée aux sommes perçues).'
   ].join('\n');
 };
 
