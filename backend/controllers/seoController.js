@@ -270,7 +270,13 @@ const seoController = {
           ORDER BY created_at DESC LIMIT 6`,
         [siteId]
       );
+      // Etapes conditionnelles de la chaine, pour l'afficher telle qu'elle tournera vraiment.
+      const site = await db.pool.query('SELECT ga_property_id FROM seo_sites WHERE id = $1', [siteId]);
+      const tok = await db.pool.query("SELECT scope FROM seo_oauth_tokens WHERE provider = 'google' ORDER BY updated_at DESC LIMIT 1");
+      const analytics = !!(site.rows[0] && site.rows[0].ga_property_id) && tok.rows.length > 0 && (tok.rows[0].scope || '').includes('analytics.readonly');
       res.json({
+        analytics,
+        authority: !!(process.env.OPR_API_KEY || process.env.BING_WMT_API_KEY),
         enabled,
         hour: Number.isFinite(hour) ? hour : 4,
         tz: process.env.SEO_SCHEDULE_TZ || 'Europe/Paris',

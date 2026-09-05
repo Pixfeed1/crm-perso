@@ -293,7 +293,7 @@ const Seo = () => {
   const JOB_NOUNS = { gsc_sync: 'Synchro Search Console', pagespeed: 'Mesure de vitesse', ga_sync: 'Synchro Analytics', authority: 'Analyse d’autorité' };
   const jobNoun = ((job && JOB_NOUNS[job.job_type]) || 'Crawl') + (job && job.source === 'schedule' ? ' (automatique)' : '');
   const WEEKDAYS = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
-  const JOB_SHORT = { crawl_incremental: 'crawl', crawl_full: 'crawl complet', gsc_sync: 'Search Console', pagespeed: 'vitesse' };
+  const JOB_SHORT = { crawl_incremental: 'crawl', crawl_full: 'crawl complet', gsc_sync: 'Search Console', ga_sync: 'Analytics', authority: 'autorité', pagespeed: 'vitesse' };
   const gscConnected = gscStatus && gscStatus.connected;
 
   // Contenu d'un bouton de lancement : si CE type de job tourne, on l'indique explicitement
@@ -454,7 +454,7 @@ const Seo = () => {
                 <span>
                   Automatique chaque nuit à {String(schedule.hour).padStart(2, '0')}h ({schedule.tz}) : crawl
                   {schedule.full_weekday >= 0 ? ` (complet le ${WEEKDAYS[schedule.full_weekday]})` : ''}
-                  {gscConnected ? ', Search Console' : ''}{schedule.pagespeed ? ', vitesse' : ''}.
+                  {gscConnected ? ', Search Console' : ''}{schedule.analytics ? ', Analytics' : ''}{schedule.authority ? ', autorité' : ''}{schedule.pagespeed ? ', vitesse' : ''}.
                 </span>
                 {schedule.last_day && (
                   <span>
