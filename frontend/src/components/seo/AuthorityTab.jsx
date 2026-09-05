@@ -8,7 +8,7 @@
 //     ancre et page cible ; liens gagnés / perdus.
 // Données produites par le worker (job 'authority'), un instantané par jour.
 // Charte : tokens de thème, react-icons, recharts, aucune couleur en dur.
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
   FiAward, FiExternalLink, FiEdit3, FiTrendingUp, FiTrendingDown, FiMinus, FiInfo,
@@ -17,6 +17,7 @@ import {
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine } from 'recharts';
 import { seoAPI } from '../../services/api';
 import { decodeHtml } from '../../utils/formatters';
+import Pager, { usePager } from '../common/Pager';
 
 const fmtNum = (n) => (n == null ? '—' : Number(n).toLocaleString('fr-FR'));
 const fmtDate = (s) => { if (!s) return '—'; const d = new Date(s); return isNaN(d) ? '—' : d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }); };
@@ -81,6 +82,12 @@ const AuthorityTab = ({ siteId, onLaunch, job, jobActive }) => {
   const jobStatus = job && job.job_type === 'authority' ? job.status : null;
   useEffect(() => { if (jobStatus === 'done') load(); }, [jobStatus, load]);
 
+  // Pagination (hooks avant tout return conditionnel).
+  const domainsAll = useMemo(() => ((data && data.domains) || []).filter((x) => showLost || !x.lost), [data, showLost]);
+  const domPager = usePager(domainsAll, 25, `${view}|${days}`);
+  const recentPager = usePager((data && data.recent) || [], 25, `${view}|${days}`);
+  const targetPager = usePager((data && data.targets) || [], 25, view);
+
   const running = jobActive && job && job.job_type === 'authority';
   const status = (data && data.status) || {};
   const launchBtn = (
@@ -126,7 +133,7 @@ const AuthorityTab = ({ siteId, onLaunch, job, jobActive }) => {
     { label: `Gagnés / perdus (${days} j)`, value: <span><span className="text-success-text">+{fmtNum(s.gained)}</span> <span className="text-text-muted">/</span> <span className="text-danger-text">−{fmtNum(s.lost)}</span></span>, hint: `${s.gained_domains} / ${s.lost_domains} domaines` }
   ];
   const series = (data.series || []).map((r) => ({ ...r, day: fmtDay(r.date) }));
-  const domains = (data.domains || []).filter((x) => showLost || !x.lost);
+  const domains = domPager.slice;
 
   return (
     <div className="space-y-4">
@@ -296,13 +303,13 @@ const AuthorityTab = ({ siteId, onLaunch, job, jobActive }) => {
                     <td className="px-4 py-2 text-right text-xs">{x.lost ? <span className="px-1.5 py-0.5 rounded bg-danger-bg text-danger-text">perdu</span> : <span className="px-1.5 py-0.5 rounded bg-success-bg text-success-text">actif</span>}</td>
                   </tr>
                 ))}
-                {!domains.length && <tr><td colSpan={8} className="px-4 py-6 text-center text-text-muted text-sm">Aucun lien entrant connu de Bing pour l’instant.</td></tr>}
+                {!domainsAll.length && <tr><td colSpan={8} className="px-4 py-6 text-center text-text-muted text-sm">Aucun lien entrant connu de Bing pour l’instant.</td></tr>}
               </tbody>
             </table>
           )}
           {view === 'recent' && (
             <ul className="divide-y divide-border/50">
-              {(data.recent || []).map((r) => (
+              {recentPager.slice.map((r) => (
                 <li key={`${r.source_url}|${r.target_url}`} className="px-4 py-2 flex flex-wrap items-center gap-2 text-xs">
                   {r.status === 'lost' ? <FiMinusCircle size={14} className="text-danger-text flex-shrink-0" /> : <FiPlusCircle size={14} className="text-success-text flex-shrink-0" />}
                   <a href={r.source_url} target="_blank" rel="noopener noreferrer" className="text-text-primary hover:text-accent break-all">{r.source_domain}{shortUrl(r.source_url) !== '/' ? shortUrl(r.source_url) : ''}</a>
@@ -324,7 +331,7 @@ const AuthorityTab = ({ siteId, onLaunch, job, jobActive }) => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/50">
-                {(data.targets || []).map((t) => (
+                {targetPager.slice.map((t) => (
                   <tr key={t.target_url} className="hover:bg-surface-strong/30">
                     <td className="px-4 py-2">
                       <div className="flex items-center gap-2 min-w-0">
@@ -341,6 +348,7 @@ const AuthorityTab = ({ siteId, onLaunch, job, jobActive }) => {
             </table>
           )}
         </div>
+        <Pager pager={view === 'domains' ? domPager : view === 'recent' ? recentPager : targetPager} className="border-t border-border px-4" />
       </div>
       <p className="text-xs text-text-muted flex items-start gap-1"><FiInfo size={12} className="mt-0.5 flex-shrink-0" /> Open PageRank (0 à 10, échelle logarithmique) est un équivalent gratuit de l’Authority Score, pas la même formule : comparez-le à vos concurrents sur la même échelle, pas à un chiffre Semrush. Les liens viennent de Bing, un sous-ensemble du web, puis sont vérifiés à la source : attribut rel, type et présence sont constatés sur la page qui vous lie. Un lien « perdu » a disparu de sa page, ou la page a disparu. Le pays est celui de l’hébergement, pas de l’audience.</p>
     </div>

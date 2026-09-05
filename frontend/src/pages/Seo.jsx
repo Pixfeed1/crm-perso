@@ -22,6 +22,7 @@ import SpeedTab from '../components/seo/SpeedTab';
 import TrafficTab from '../components/seo/TrafficTab';
 import AuthorityTab from '../components/seo/AuthorityTab';
 import SiteManager from '../components/seo/SiteManager';
+import Pager, { usePager } from '../components/common/Pager';
 
 const HEALTH_META = {
   orpheline: { cls: 'bg-danger-bg text-danger-text', label: 'Orpheline' },
@@ -318,6 +319,13 @@ const Seo = () => {
     authority: { title: 'Analyser l’autorité et les liens entrants ?', body: 'Interroge Open PageRank (score d’autorité du domaine) et Bing Webmaster Tools (liens entrants connus de Bing, page par page). Une à deux minutes. Une analyse par jour suffit, la planification nocturne s’en charge.' },
     pagespeed: { title: 'Mesurer la vitesse ?', body: 'Interroge PageSpeed Insights pour l’accueil et les pages les plus vues (mobile et desktop), plus un lot de pages en rotation (mobile) : 15 à 30 min, le site entier est couvert en quelques semaines. Une mesure par jour suffit.' }
   }[confirmJob] || {};
+
+  // Pagination des listes longues (jusqu'a 500 lignes chargees).
+  const jusPager = usePager(pages, 25, `${sort}|${healthFilter}|${siteId}`);
+  const orphPager = usePager(orphelines, 25, siteId);
+  const quasiPager = usePager(quasiVictoires, 25, siteId);
+  const affPager = usePager(affamees, 25, siteId);
+  const oppPager = usePager(opportunites, 25, `${oppMinImpr}|${siteId}`);
 
   const cards = overview ? [
     { label: 'Pages', value: overview.total_pages, icon: FiShare2 },
@@ -652,7 +660,7 @@ const Seo = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {pages.map((p) => {
+                        {jusPager.slice.map((p) => {
                           const b = healthBadge(p.health);
                           const ib = indexBadge(p.indexation_status);
                           return (
@@ -676,6 +684,7 @@ const Seo = () => {
                         })}
                       </tbody>
                     </table>
+                    <Pager pager={jusPager} />
                     {pages.length === 0 && <p className="text-text-muted text-sm py-6 text-center">Aucune page (worker pas encore passé).</p>}
                   </div>
                 </div>
@@ -683,12 +692,13 @@ const Seo = () => {
             ) : tab === 'affamees' ? (
               /* Pages affamées */
               <div className="space-y-3">
+                <Pager pager={affPager} />
                 {affamees.length === 0 ? (
                   <div className="text-center py-10 bg-surface/30 rounded-xl border border-border">
                     <FiAlertTriangle className="w-10 h-10 mx-auto text-text-muted mb-3" />
                     <p className="text-text-muted text-sm">Aucune page affamée détectée.</p>
                   </div>
-                ) : affamees.map((p) => (
+                ) : affPager.slice.map((p) => (
                   <motion.div key={p.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
                     className="bg-surface border border-border rounded-xl p-4">
                     <div className="flex items-start justify-between gap-3 flex-wrap">
@@ -740,7 +750,7 @@ const Seo = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {orphelines.map((p) => (
+                        {orphPager.slice.map((p) => (
                           <tr key={p.id} className="border-b border-border/50">
                             <td className="py-2 pr-2 min-w-0">
                               <div className="text-text-primary truncate max-w-xs">{decodeHtml(p.title) || p.url}</div>
@@ -755,6 +765,7 @@ const Seo = () => {
                         ))}
                       </tbody>
                     </table>
+                    <Pager pager={orphPager} />
                   </div>
                 )}
               </div>
@@ -783,7 +794,7 @@ const Seo = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {quasiVictoires.map((p) => {
+                        {quasiPager.slice.map((p) => {
                           const b = healthBadge(p.health);
                           return (
                             <tr key={p.id} className="border-b border-border/50">
@@ -803,6 +814,7 @@ const Seo = () => {
                         })}
                       </tbody>
                     </table>
+                    <Pager pager={quasiPager} />
                   </div>
                 )}
               </div>
@@ -917,6 +929,7 @@ const Seo = () => {
                   </div>
                 </div>
 
+                {gscConnected && <Pager pager={oppPager} />}
                 {!gscConnected ? (
                   <div className="text-center py-10 bg-surface/30 rounded-xl border border-border">
                     <FiTrendingUp className="w-10 h-10 mx-auto text-text-muted mb-3" />
@@ -926,7 +939,7 @@ const Seo = () => {
                   <div className="text-center py-10 bg-surface/30 rounded-xl border border-border">
                     <p className="text-text-muted text-sm">Aucune opportunité au-dessus de {oppMinImpr} impressions/28j. Baissez le seuil pour élargir.</p>
                   </div>
-                ) : opportunites.map((p) => (
+                ) : oppPager.slice.map((p) => (
                   <motion.div key={p.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
                     className="bg-surface border border-border rounded-xl p-4">
                     <div className="flex items-start justify-between gap-3 flex-wrap">

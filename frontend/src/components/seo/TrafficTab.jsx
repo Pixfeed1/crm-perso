@@ -5,7 +5,7 @@
 // en fait. Le rapprochement clics GSC / sessions organiques par page est le signal utile :
 // une page bien classée qui ne retient pas est un problème de contenu, pas de SEO.
 // Charte : tokens de thème, react-icons, recharts (comme PositionsTab), aucune couleur en dur.
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
   FiBarChart2, FiTrendingUp, FiTrendingDown, FiMinus, FiExternalLink, FiEdit3, FiInfo, FiLoader,
@@ -14,6 +14,7 @@ import {
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { seoAPI } from '../../services/api';
 import { decodeHtml } from '../../utils/formatters';
+import Pager, { usePager } from '../common/Pager';
 
 const fmtNum = (n) => (n == null ? '—' : Number(n).toLocaleString('fr-FR'));
 const fmtPct = (n) => (n == null ? '—' : `${Number(n).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %`);
@@ -58,6 +59,14 @@ const TrafficTab = ({ siteId, gscStatus, onLaunch, job, jobActive, onOpenSites, 
   useEffect(() => { load(); }, [load]);
   const jobStatus = job && job.job_type === 'ga_sync' ? job.status : null;
   useEffect(() => { if (jobStatus === 'done') load(); }, [jobStatus, load]);
+
+  // Tri + pagination des pages (hooks avant tout return conditionnel).
+  const sortedPages = useMemo(() => [...((data && data.pages) || [])].sort((a, b) => {
+    if (pageSort === 'engagement') return (a.engagement_rate ?? 101) - (b.engagement_rate ?? 101);
+    if (pageSort === 'gap') return ((b.gsc_clicks || 0) - (b.organic || 0)) - ((a.gsc_clicks || 0) - (a.organic || 0));
+    return (b.sessions || 0) - (a.sessions || 0);
+  }), [data, pageSort]);
+  const pagePager = usePager(sortedPages, 25, `${pageSort}|${days}`);
 
   const running = jobActive && job && job.job_type === 'ga_sync';
   const status = (data && data.status) || {};
@@ -112,11 +121,7 @@ const TrafficTab = ({ siteId, gscStatus, onLaunch, job, jobActive, onOpenSites, 
     { label: 'Engagement moyen', value: fmtDur(s.avg_engagement_s), hint: 'par session' }
   ];
   const series = (data.series || []).map((r) => ({ ...r, day: fmtDay(r.date) }));
-  const pages = [...(data.pages || [])].sort((a, b) => {
-    if (pageSort === 'engagement') return (a.engagement_rate ?? 101) - (b.engagement_rate ?? 101);
-    if (pageSort === 'gap') return ((b.gsc_clicks || 0) - (b.organic || 0)) - ((a.gsc_clicks || 0) - (a.organic || 0));
-    return (b.sessions || 0) - (a.sessions || 0);
-  });
+  const pages = pagePager.slice;
 
   return (
     <div className="space-y-4">
@@ -225,6 +230,7 @@ const TrafficTab = ({ siteId, gscStatus, onLaunch, job, jobActive, onOpenSites, 
               </tbody>
             </table>
           </div>
+          <Pager pager={pagePager} className="border-t border-border px-4" />
         </div>
       </div>
       <p className="text-xs text-text-muted flex items-start gap-1"><FiInfo size={12} className="mt-0.5 flex-shrink-0" /> Organique (GA4) et clics GSC mesurent la même chose de deux côtés : un écart fort et durable sur une page signale un problème de suivi Analytics ou une canonique différente. Engagement : GA4 compte une session engagée au-delà de 10 s, d’une conversion ou de 2 pages vues.</p>

@@ -16,6 +16,7 @@ import {
 } from 'react-icons/fi';
 import { seoAPI } from '../../services/api';
 import { decodeHtml } from '../../utils/formatters';
+import Pager, { usePager } from '../common/Pager';
 
 const fmtDate = (s) => {
   if (!s) return '—';
@@ -66,6 +67,8 @@ const SpeedTab = ({ siteId, onLaunch, job, jobActive }) => {
   // Le job vient de se terminer -> recharge (le parent rafraîchit `job` par polling).
   const jobStatus = job && job.job_type === 'pagespeed' ? job.status : null;
   useEffect(() => { if (jobStatus === 'done') load(); }, [jobStatus, load]);
+
+  const pagePager = usePager((data && data.pages) || [], 25, strategy);
 
   const running = jobActive && job && job.job_type === 'pagespeed';
   const s = (data && data.summary) || {};
@@ -153,7 +156,7 @@ const SpeedTab = ({ siteId, onLaunch, job, jobActive }) => {
               </tr>
             </thead>
             <tbody className="divide-y divide-border/50">
-              {pages.map((p) => {
+              {pagePager.slice.map((p) => {
                 const m = p[strategy];
                 const f = m && m.field;
                 const open = openUrl === p.url;
@@ -224,6 +227,7 @@ const SpeedTab = ({ siteId, onLaunch, job, jobActive }) => {
             </tbody>
           </table>
         </div>
+        <Pager pager={pagePager} className="border-t border-border px-4" />
       </div>
       <p className="text-xs text-text-muted flex items-start gap-1"><FiInfo size={12} className="mt-0.5 flex-shrink-0" /> Seuils Core Web Vitals : LCP ≤ 2,5 s, INP ≤ 200 ms, CLS ≤ 0,10 pour « bon ». Le terrain (CrUX) fait foi pour le classement ; le labo sert à diagnostiquer et à vérifier une correction immédiatement.</p>
     </div>

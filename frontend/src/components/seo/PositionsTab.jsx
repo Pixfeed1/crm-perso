@@ -15,6 +15,7 @@ import {
 import { seoAPI } from '../../services/api';
 import { decodeHtml } from '../../utils/formatters';
 import { useToast } from '../../hooks/useToast';
+import Pager, { usePager } from '../common/Pager';
 
 const fmtNum = (n) => (n == null ? '—' : Number(n).toLocaleString('fr-FR'));
 const fmtPos = (n) => (n == null ? '—' : Number(n).toFixed(1));
@@ -120,6 +121,11 @@ const PositionsTab = ({ siteId, gscConnected }) => {
     });
     return arr;
   }, [keywords, kwSort]);
+  // Pagination cote client : jusqu'a 500 lignes par vue, illisibles d'un bloc.
+  const kwPager = usePager(sortedKeywords, 25, `${type}|${days}|${search}|${trackedOnly}`);
+  const pagesPager = usePager(pages, 25, `${type}|${days}`);
+  const pkwPager = usePager((pageData && pageData.keywords) || [], 25, selPage);
+  const yoastPager = usePager(yoast, 25, days);
 
   // Synthèse + watchlist : toujours chargées (cartes en tête).
   useEffect(() => {
@@ -307,7 +313,7 @@ const PositionsTab = ({ siteId, gscConnected }) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {sortedKeywords.map((k) => (
+                  {kwPager.slice.map((k) => (
                     <tr key={k.query} className="border-b border-border/50 hover:bg-surface-strong/30">
                       <td className="py-2 pr-2">
                         <button onClick={() => toggleTrack(k.query)} title={trackedSet.has(k.query) ? 'Retirer du suivi' : 'Suivre'}
@@ -336,6 +342,7 @@ const PositionsTab = ({ siteId, gscConnected }) => {
                 </tbody>
               </table>
             )}
+            {!loading && <Pager pager={kwPager} />}
             {!loading && keywords.length === 0 && <p className="text-text-muted text-sm py-6 text-center">Aucun mot-clé sur cette période.</p>}
           </div>
         </div>
@@ -349,7 +356,7 @@ const PositionsTab = ({ siteId, gscConnected }) => {
           <div className="bg-surface border border-border rounded-xl divide-y divide-border/50 max-h-80 overflow-y-auto">
             {pages.length === 0 ? (
               <p className="text-text-muted text-sm py-6 text-center">Aucun article positionné sur cette période.</p>
-            ) : pages.map((p) => (
+            ) : pagesPager.slice.map((p) => (
               <button key={p.page_url} onClick={() => openPage(p.page_url)}
                 className={`w-full text-left px-4 py-2.5 flex items-center justify-between gap-3 transition-colors ${selPage === p.page_url ? 'bg-accent/10' : 'hover:bg-surface-strong/40'}`}>
                 <div className="min-w-0">
@@ -364,6 +371,7 @@ const PositionsTab = ({ siteId, gscConnected }) => {
               </button>
             ))}
           </div>
+          <Pager pager={pagesPager} />
 
           {pageData && (
             <>
@@ -428,7 +436,7 @@ const PositionsTab = ({ siteId, gscConnected }) => {
                     </tr>
                   </thead>
                   <tbody>
-                    {pageData.keywords.map((k) => (
+                    {pkwPager.slice.map((k) => (
                       <tr key={k.query} className="border-b border-border/50">
                         <td className={`py-2 pr-2 ${k.representative === false ? 'text-text-muted' : 'text-text-primary'}`}>{k.query}</td>
                         <td className="py-2 px-2 text-right"><Pos k={k} /></td>
@@ -442,6 +450,7 @@ const PositionsTab = ({ siteId, gscConnected }) => {
                     ))}
                   </tbody>
                 </table>
+                <Pager pager={pkwPager} />
               </div>
             </>
           )}
@@ -467,7 +476,7 @@ const PositionsTab = ({ siteId, gscConnected }) => {
                 </tr>
               </thead>
               <tbody>
-                {yoast.map((p) => {
+                {yoastPager.slice.map((p) => {
                   const mismatch = !p.focus_position || (p.top_query && p.top_query.toLowerCase() !== (p.focus_keyword || '').toLowerCase());
                   return (
                     <tr key={p.url} className={`border-b border-border/50 ${mismatch ? 'bg-warning-bg/30' : ''}`}>
@@ -485,6 +494,7 @@ const PositionsTab = ({ siteId, gscConnected }) => {
               </tbody>
             </table>
           )}
+          <Pager pager={yoastPager} />
         </div>
       )}
     </div>
