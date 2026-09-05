@@ -15,6 +15,7 @@ Règles clés :
 - PageRank recalculé sur le GRAPHE ENTIER à chaque run (incrémental compris).
 """
 import argparse
+import sys
 import json
 import math
 import os
@@ -1050,6 +1051,14 @@ def claim_next_job(conn):
 
 def serve():
     """Service permanent : traite la file seo_jobs SÉQUENTIELLEMENT (un seul job à la fois)."""
+    # Sous systemd, stdout n'est pas un terminal : Python le met en tampon et journald recoit
+    # les lignes par paquets, toutes datees de la meme seconde. Chaque ligne doit sortir
+    # immediatement, sinon le journal ne permet pas de voir si le worker avance ou bloque.
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(line_buffering=True)
+        except Exception:
+            pass
     conn = connect()
     # Les sites vivent dans seo_sites (geres depuis l'UI). Au premier demarrage d'une
     # installation vide, l'amorce config.SEED_SITES les cree pour qu'ils apparaissent dans
