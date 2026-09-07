@@ -1,5 +1,8 @@
 // backend/controllers/revenueController.js
 
+// Statuts d'un revenu : encaissé, en attente, planifié (seul 'paid' compte dans le CA réalisé).
+const REVENUE_STATUSES = ['paid', 'pending', 'planned'];
+
 /**
  * Contrôleur pour la gestion des revenus
  */
@@ -90,15 +93,18 @@ const revenueController = {
    */
   createRevenue: (req, res) => {
     const db = req.app.locals.db;
-    const { amount, date, description, project_id, type } = req.body;
+    const { amount, date, description, project_id, type, status } = req.body;
     
     if (!amount || !date || !type) {
       return res.status(400).json({ message: 'Montant, date et type sont requis' });
     }
+    if (status !== undefined && !REVENUE_STATUSES.includes(status)) {
+      return res.status(400).json({ message: 'Statut invalide (paid, pending ou planned)' });
+    }
     
     const query = `
-      INSERT INTO revenues (amount, date, description, project_id, type, created_at)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO revenues (amount, date, description, project_id, type, status, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `;
     
     const now = new Date().toISOString();
@@ -109,6 +115,7 @@ const revenueController = {
       description || null,
       project_id || null,
       type,
+      status || 'pending',
       now
     ], function(err) {
       if (err) {
@@ -143,7 +150,10 @@ const revenueController = {
   updateRevenue: (req, res) => {
     const db = req.app.locals.db;
     const { id } = req.params;
-    const { amount, date, description, project_id, type } = req.body;
+    const { amount, date, description, project_id, type, status } = req.body;
+    if (status !== undefined && !REVENUE_STATUSES.includes(status)) {
+      return res.status(400).json({ message: 'Statut invalide (paid, pending ou planned)' });
+    }
     
     // Vérifier si le revenu existe
     db.get('SELECT * FROM revenues WHERE id = ?', [id], (err, revenue) => {
@@ -183,6 +193,15 @@ const revenueController = {
       if (type !== undefined) {
         updates.push('type = ?');
         params.push(type);
+      }
+      
+      if (status !== undefined) {
+        updates.push('status = ?');
+        params.push(status);
+      }
+      
+      if (updates.length === 0) {
+        return res.status(400).json({ message: 'Aucune modification fournie' });
       }
       
       // Ajouter l'ID pour la clause WHERE

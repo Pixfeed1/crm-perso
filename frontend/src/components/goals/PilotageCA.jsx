@@ -303,6 +303,12 @@ const PonctuelModal = ({ onClose, onSaved }) => {
             <label className="block text-xs text-text-muted mb-1">Date d'encaissement</label>
             <input type="date" value={form.date} onChange={(e) => setForm((p) => ({ ...p, date: e.target.value }))}
               className="w-full bg-surface-muted/50 border border-border rounded-lg px-3 py-2 text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent" />
+            {form.date && !form.date.startsWith(`${ANNEE}-`) && (
+              <p className="text-xs text-amber-400 mt-1.5 flex items-start gap-1.5">
+                <FiAlertTriangle size={12} className="mt-0.5 flex-shrink-0" />
+                <span>Cette date est en {form.date.slice(0, 4)} : le revenu sera enregistré mais n'apparaîtra pas dans le pilotage {ANNEE} (CA de l'année civile).</span>
+              </p>
+            )}
           </div>
           <div>
             <label className="block text-xs text-text-muted mb-1">Libellé</label>
