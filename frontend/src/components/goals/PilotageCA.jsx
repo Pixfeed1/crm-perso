@@ -1,6 +1,6 @@
 // src/components/goals/PilotageCA.jsx
 //
-// Sous-écran "Pilotage CA/MRR 2027" du module Objectifs (V1).
+// Sous-écran "Pilotage CA/MRR" du module Objectifs (année sélectionnable, courante ou suivante).
 // Jauge CA réalisé vs cible, trajectoire (MRR + projection + repère), cartes métriques,
 // bloc fiscal (provisions URSSAF/impôt séparées + net estimé). Paramètres éditables,
 // ponctuel saisissable. Données réelles via /api/objectif. Tokens de thème, react-icons,
@@ -14,7 +14,17 @@ import {
 import { objectifAPI, revenuesAPI } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
 
-const ANNEE = 2027;
+// Années pilotables : de l'année courante à l'année suivante (paramètres par année en base).
+const ANNEE_COURANTE = new Date().getFullYear();
+const ANNEES = [ANNEE_COURANTE, ANNEE_COURANTE + 1];
+const STORAGE_KEY = 'pilotage_annee';
+const anneeInitiale = () => {
+  try {
+    const v = parseInt(localStorage.getItem(STORAGE_KEY), 10);
+    if (ANNEES.includes(v)) return v;
+  } catch (e) { /* stockage indisponible */ }
+  return ANNEE_COURANTE;
+};
 
 const eur = (v) => new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(Math.round(Number(v) || 0));
 const pct = (v) => `${Math.round(Number(v) || 0)} %`;
@@ -25,18 +35,24 @@ const PilotageCA = () => {
   const [loading, setLoading] = useState(true);
   const [paramsOpen, setParamsOpen] = useState(false);
   const [ponctuelOpen, setPonctuelOpen] = useState(false);
+  const [annee, setAnnee] = useState(anneeInitiale);
+
+  const changerAnnee = (a) => {
+    setAnnee(a);
+    try { localStorage.setItem(STORAGE_KEY, String(a)); } catch (e) { /* ignore */ }
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await objectifAPI.getSummary(ANNEE);
+      const res = await objectifAPI.getSummary(annee);
       setData(res);
     } catch (e) {
       toast.error('Erreur lors du chargement du pilotage CA');
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast, annee]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -68,11 +84,25 @@ const PilotageCA = () => {
             <FiTarget size={20} />
           </div>
           <div className="min-w-0">
-            <h2 className="text-lg font-bold text-text-primary">Pilotage CA / MRR {ANNEE}</h2>
+            <h2 className="text-lg font-bold text-text-primary">Pilotage CA / MRR {annee}</h2>
             <p className="text-sm text-text-muted">Données réelles (Stripe + factures encaissées)</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex rounded-lg overflow-hidden border border-border" role="tablist" aria-label="Année pilotée">
+            {ANNEES.map((a) => (
+              <button
+                key={a}
+                onClick={() => changerAnnee(a)}
+                className={`px-3 py-2 text-sm font-medium transition-colors ${
+                  a === annee ? 'bg-accent text-white' : 'bg-surface-strong text-text-secondary hover:bg-border-strong'
+                }`}
+                aria-pressed={a === annee}
+              >
+                {a}
+              </button>
+            ))}
+          </div>
           <button onClick={load} className="p-2 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-strong" title="Rafraîchir"><FiRefreshCw size={16} /></button>
           <button onClick={() => setPonctuelOpen(true)} className="px-3 py-2 rounded-lg bg-surface-strong hover:bg-border-strong text-text-primary text-sm flex items-center gap-2"><FiPlus size={15} /> Revenu ponctuel</button>
           <button onClick={() => setParamsOpen(true)} className="px-3 py-2 rounded-lg bg-surface-strong hover:bg-border-strong text-text-primary text-sm flex items-center gap-2"><FiSettings size={15} /> Paramètres</button>
@@ -83,7 +113,7 @@ const PilotageCA = () => {
       <div className="bg-surface border border-border rounded-xl p-4 sm:p-5">
         <div className="flex items-end justify-between gap-3 flex-wrap mb-3">
           <div>
-            <div className="text-xs text-text-muted mb-1">CA réalisé {ANNEE}</div>
+            <div className="text-xs text-text-muted mb-1">CA réalisé {annee}</div>
             <div className="text-3xl font-bold text-text-primary">{eur(data.ca_realise)}</div>
           </div>
           <div className="text-right">
@@ -116,7 +146,7 @@ const PilotageCA = () => {
             <div className="text-xs text-text-muted mt-1">repère {eur(data.cible_mrr)}/mois</div>
           </div>
           <div className="bg-surface-muted/50 border border-border rounded-lg p-3">
-            <div className="text-xs text-text-muted mb-1">À ce rythme, fin {ANNEE}</div>
+            <div className="text-xs text-text-muted mb-1">À ce rythme, fin {annee}</div>
             <div className="text-xl font-bold text-text-primary">~ {eur(data.ca_projete)}</div>
             <div className="text-xs text-text-muted mt-1">{data.mois_restants} mois restants</div>
           </div>
@@ -188,7 +218,7 @@ const PilotageCA = () => {
       </div>
 
       {paramsOpen && <ParamsModal params={data.params} onClose={() => setParamsOpen(false)} onSaved={() => { setParamsOpen(false); load(); }} />}
-      {ponctuelOpen && <PonctuelModal onClose={() => setPonctuelOpen(false)} onSaved={() => { setPonctuelOpen(false); load(); }} />}
+      {ponctuelOpen && <PonctuelModal annee={annee} onClose={() => setPonctuelOpen(false)} onSaved={() => { setPonctuelOpen(false); load(); }} />}
     </div>
   );
 };
@@ -247,7 +277,7 @@ const ParamsModal = ({ params, onClose, onSaved }) => {
             </div>
           ))}
         </div>
-        <p className="text-xs text-text-muted mt-3">Ordres de grandeur 2026 à valider avec votre comptable.</p>
+        <p className="text-xs text-text-muted mt-3">Ordres de grandeur à valider avec votre comptable. Chaque année a ses propres paramètres.</p>
         <div className="flex justify-end gap-2 mt-4">
           <button onClick={onClose} className="px-4 py-2 rounded-lg text-text-secondary hover:bg-surface-strong text-sm" disabled={saving}>Annuler</button>
           <button onClick={save} disabled={saving} className="px-4 py-2 rounded-lg bg-accent hover:bg-accent-hover text-white text-sm disabled:opacity-50">{saving ? 'Enregistrement…' : 'Enregistrer'}</button>
@@ -258,7 +288,7 @@ const ParamsModal = ({ params, onClose, onSaved }) => {
 };
 
 // --- Modale revenu ponctuel (crée une ligne revenues paid) ---
-const PonctuelModal = ({ onClose, onSaved }) => {
+const PonctuelModal = ({ annee, onClose, onSaved }) => {
   const { toast } = useToast();
   const today = new Date().toISOString().split('T')[0];
   const [form, setForm] = useState({ amount: '', date: today, description: '' });
@@ -303,10 +333,10 @@ const PonctuelModal = ({ onClose, onSaved }) => {
             <label className="block text-xs text-text-muted mb-1">Date d'encaissement</label>
             <input type="date" value={form.date} onChange={(e) => setForm((p) => ({ ...p, date: e.target.value }))}
               className="w-full bg-surface-muted/50 border border-border rounded-lg px-3 py-2 text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent" />
-            {form.date && !form.date.startsWith(`${ANNEE}-`) && (
+            {form.date && !form.date.startsWith(`${annee}-`) && (
               <p className="text-xs text-amber-400 mt-1.5 flex items-start gap-1.5">
                 <FiAlertTriangle size={12} className="mt-0.5 flex-shrink-0" />
-                <span>Cette date est en {form.date.slice(0, 4)} : le revenu sera enregistré mais n'apparaîtra pas dans le pilotage {ANNEE} (CA de l'année civile).</span>
+                <span>Cette date est en {form.date.slice(0, 4)} : le revenu sera enregistré mais n'apparaîtra pas dans le pilotage {annee} (CA de l'année civile).</span>
               </p>
             )}
           </div>

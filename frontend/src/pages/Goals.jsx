@@ -435,7 +435,7 @@ const Goals = () => {
   return (
     <div className="h-full flex flex-col overflow-y-auto p-2 sm:p-4">
       <div className="max-w-5xl mx-auto w-full">
-        {/* Sélecteur de sous-écran : Objectifs (existant) / Pilotage CA 2027 */}
+        {/* Sélecteur de sous-écran : Objectifs (existant) / Pilotage CA */}
         <div className="flex gap-2 mb-4 pt-16 sm:pt-2">
           <button
             onClick={() => setSection('objectifs')}
@@ -451,7 +451,7 @@ const Goals = () => {
               section === 'pilotage' ? 'bg-accent text-white' : 'bg-surface-strong text-text-secondary hover:bg-border-strong'
             }`}
           >
-            Pilotage CA 2027
+            Pilotage CA
           </button>
         </div>
 
