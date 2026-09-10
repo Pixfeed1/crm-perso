@@ -1326,6 +1326,52 @@ async function ensureSubscriptionColumns(client) {
 }
 
 /**
+ * Cohérence des relances (idempotent, à chaque démarrage) : une relance encore « à faire »
+ * n'a plus de sens quand un échange a été loggé depuis sa date, quand une relance plus
+ * récente l'a remplacée, quand le contact est classé (gagné / perdu / pas de business) ou
+ * quand la fiche a été supprimée. Ces cas étaient laissés ouverts et restaient affichés dans
+ * « Relances à faire » du tableau de bord.
+ */
+async function ensureFollowupsCoherence(client) {
+  const closed = [];
+  const run = async (label, sql) => {
+    try {
+      const r = await client.query(sql);
+      if (r.rowCount) closed.push(`${label} : ${r.rowCount}`);
+    } catch (e) {
+      if (e.code !== '42P01' && e.code !== '42703') console.error(`[AutoInit] relances (${label}) :`, e.message);
+    }
+  };
+  // 1. Un échange loggé à la date de la relance ou après.
+  await run('échange depuis', `
+    UPDATE interactions i SET followup_done = TRUE
+    WHERE i.followup_done = FALSE AND i.next_followup_date IS NOT NULL
+      AND EXISTS (SELECT 1 FROM interactions j
+                  WHERE j.contact_type = i.contact_type AND j.contact_id = i.contact_id AND j.id <> i.id
+                    AND j.created_at > i.created_at AND j.date::date >= i.next_followup_date)`);
+  // 2. Une relance manuelle remplacée par une relance programmée plus récemment.
+  await run('remplacée', `
+    UPDATE interactions i SET followup_done = TRUE
+    WHERE i.followup_done = FALSE AND i.next_followup_date IS NOT NULL AND i.relance_step IS NULL
+      AND EXISTS (SELECT 1 FROM interactions j
+                  WHERE j.contact_type = i.contact_type AND j.contact_id = i.contact_id AND j.id <> i.id
+                    AND j.created_at > i.created_at AND j.next_followup_date IS NOT NULL)`);
+  // 3. Contact classé : gagné, perdu, pas de business.
+  await run('contact classé', `
+    UPDATE interactions i SET followup_done = TRUE
+    WHERE i.followup_done = FALSE AND i.next_followup_date IS NOT NULL
+      AND ((i.contact_type = 'lead'   AND EXISTS (SELECT 1 FROM leads l       WHERE l.id = i.contact_id AND l.relation_status IN ('gagne', 'perdu', 'pas_business')))
+        OR (i.contact_type = 'client' AND EXISTS (SELECT 1 FROM crm_clients c WHERE c.id = i.contact_id AND c.relation_status IN ('gagne', 'perdu', 'pas_business'))))`);
+  // 4. Fiche supprimée.
+  await run('fiche supprimée', `
+    UPDATE interactions i SET followup_done = TRUE
+    WHERE i.followup_done = FALSE AND i.next_followup_date IS NOT NULL
+      AND ((i.contact_type = 'lead'   AND NOT EXISTS (SELECT 1 FROM leads l       WHERE l.id = i.contact_id))
+        OR (i.contact_type = 'client' AND NOT EXISTS (SELECT 1 FROM crm_clients c WHERE c.id = i.contact_id)))`);
+  if (closed.length) console.log(`  ✓ Relances fantômes closes (${closed.join(', ')})`);
+}
+
+/**
  * Migration idempotente : table interactions (suivi des prises de contact, leads + clients).
  */
 async function ensureInteractionsColumns(client) {
@@ -2342,6 +2388,7 @@ async function autoInitDatabase(pool) {
 
     // Table interactions (suivi des prises de contact, leads + clients)
     await ensureInteractionsColumns(client);
+    await ensureFollowupsCoherence(client);
 
     await ensureEventRecurrenceColumns(client);
 

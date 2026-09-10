@@ -22,6 +22,33 @@ async function cancelAutoRelances(db, leadId) {
   ).catch(() => {});
 }
 
+// Statuts qui ferment TOUTES les relances en attente (manuelles et auto) : l'affaire a une
+// issue ou le contact est classé. Plus rien à relancer, le tableau de bord ne doit plus le montrer.
+const CLOSE_ALL_STATUSES = ['gagne', 'perdu', 'pas_business'];
+
+async function closeAllFollowups(db, contactType, contactId) {
+  await db.pool.query(
+    `UPDATE interactions SET followup_done = TRUE
+     WHERE contact_type = $1 AND contact_id = $2 AND followup_done = FALSE AND next_followup_date IS NOT NULL`,
+    [contactType, contactId]
+  ).catch(() => {});
+}
+
+// Un échange loggé vaut relance faite : ferme les relances du contact échues à la date de
+// l'échange. Si l'échange programme lui-même une nouvelle relance, il remplace aussi les
+// relances manuelles encore à venir (une seule relance planifiée par contact). Les relances
+// auto (cascade) futures sont conservées : elles s'arrêtent par le statut, pas par un appel.
+async function closeSupersededFollowups(db, contactType, contactId, interaction) {
+  const when = interaction.date ? new Date(interaction.date) : new Date();
+  await db.pool.query(
+    `UPDATE interactions SET followup_done = TRUE
+     WHERE contact_type = $1 AND contact_id = $2 AND id <> $3
+       AND followup_done = FALSE AND next_followup_date IS NOT NULL
+       AND (next_followup_date <= $4::date OR ($5 AND relance_step IS NULL))`,
+    [contactType, contactId, interaction.id, when.toISOString().slice(0, 10), !!interaction.next_followup_date]
+  ).catch(() => {});
+}
+
 const VALID_TYPES = ['email', 'appel', 'sms', 'note', 'rdv'];
 const VALID_CONTACT_TYPES = ['lead', 'client'];
 const VALID_REACHED = ['joint', 'pas_reponse', 'message'];
@@ -87,6 +114,9 @@ const interactionController = {
         [contact_type, contact_id, type, reachedVal, date || null, notes, result, statusVal, next_followup_date || null, channelVal]
       );
 
+      // L'échange loggé clôt les relances échues (et remplace la relance planifiée s'il en pose une).
+      await closeSupersededFollowups(db, contact_type, contact_id, rows[0]);
+
       // Mise à jour du statut de relation du contact (best-effort).
       if (statusVal) {
         const table = contact_type === 'lead' ? 'leads' : 'crm_clients';
@@ -98,6 +128,14 @@ const interactionController = {
             if (kanban) await db.pool.query('UPDATE leads SET status = $1 WHERE id = $2', [kanban, contact_id]);
             // Le prospect a répondu / est engagé -> on arrête la cascade de relance auto.
             if (STOP_CASCADE_STATUSES.includes(statusVal)) await cancelAutoRelances(db, contact_id);
+          }
+          // Affaire conclue ou contact classé : plus rien à relancer, sauf la relance que
+          // cet échange vient éventuellement de programmer lui-même.
+          if (CLOSE_ALL_STATUSES.includes(statusVal)) {
+            await closeAllFollowups(db, contact_type, contact_id);
+            if (rows[0].next_followup_date) {
+              await db.pool.query('UPDATE interactions SET followup_done = FALSE WHERE id = $1', [rows[0].id]).catch(() => {});
+            }
           }
         } catch (e) {
           console.error('[Interaction] Echec maj relation_status:', e.message);
@@ -136,6 +174,8 @@ const interactionController = {
         // Prospect qui répond / est classé -> arrêt de la cascade de relance auto.
         if (STOP_CASCADE_STATUSES.includes(relation_status)) await cancelAutoRelances(db, contact_id);
       }
+      // Gagné / perdu / pas de business : toutes les relances en attente sont closes.
+      if (CLOSE_ALL_STATUSES.includes(relation_status)) await closeAllFollowups(db, contact_type, contact_id);
       res.json({ success: true, relation_status });
     } catch (error) {
       console.error('[Interaction] Erreur maj statut:', error);
@@ -230,6 +270,10 @@ const interactionController = {
          WHERE i.followup_done = FALSE
            AND i.next_followup_date IS NOT NULL
            AND i.next_followup_date <= CURRENT_DATE
+           -- contact toujours existant (une fiche supprimée ne laisse pas de relance fantôme)
+           AND (cl.id IS NOT NULL OR l.id IS NOT NULL)
+           -- et pas classé « pas de business » (même règle que le cockpit Suivi)
+           AND COALESCE(cl.relation_status, l.relation_status, 'nouveau') <> 'pas_business'
          ORDER BY i.next_followup_date ASC`
       );
       res.json(rows);
