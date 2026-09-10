@@ -284,6 +284,10 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Boucle de retour du ciblage : issues de prospection par plateforme / type / département /
+// secteur / source / angle. AVANT '/:id' pour ne pas être capturé par le paramètre.
+router.get('/targeting-stats', require('../controllers/leadTargetingController').getStats);
+
 // Obtenir un lead spécifique
 router.get('/:id', async (req, res) => {
   const db = req.app.locals.db;

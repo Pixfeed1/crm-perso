@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiUsers, FiPlus, FiDownload, FiUpload, FiGrid, FiList, FiTrello, FiSearch, FiSend } from 'react-icons/fi';
+import { FiUsers, FiPlus, FiDownload, FiUpload, FiGrid, FiList, FiTrello, FiSearch, FiSend, FiTarget } from 'react-icons/fi';
 import { leadsAPI, exportAPI } from '../services/api';
 import { useToast } from '../hooks/useToast';
 import { useConfirm } from '../hooks/useConfirm';
@@ -16,6 +16,7 @@ import LeadFilter from '../components/leads/LeadFilter';
 import KanbanView from '../components/kanban/KanbanView';
 import ProspectionPanel from '../components/leads/ProspectionPanel';
 import OutreachPanel from '../components/leads/OutreachPanel';
+import TargetingStats from '../components/leads/TargetingStats';
 import EmptyState from '../components/common/EmptyState';
 import ConfirmModal from '../components/common/ConfirmModal';
 import QuickEmail from '../components/common/QuickEmail';
@@ -39,7 +40,11 @@ const Leads = () => {
     type: 'all',
     source: 'all',
     dateFrom: '',
-    dateTo: ''
+    dateTo: '',
+    platform: 'all',
+    department: 'all',
+    sector: 'all',
+    minScore: ''
   });
   const [sortField, setSortField] = useState('created_at');
   const [sortDirection, setSortDirection] = useState('desc');
@@ -131,7 +136,14 @@ const Leads = () => {
         (!filters.dateFrom || new Date(lead.created_at) >= new Date(filters.dateFrom)) &&
         (!filters.dateTo || new Date(lead.created_at) <= new Date(filters.dateTo + 'T23:59:59'));
 
-      return searchMatch && statusMatch && typeMatch && sourceMatch && dateMatch;
+      // Filtres de ciblage (colonnes structurées : plateforme, département, secteur, score).
+      const platformMatch = !filters.platform || filters.platform === 'all' || lead.platform === filters.platform;
+      const departmentMatch = !filters.department || filters.department === 'all' || lead.department === filters.department;
+      const sectorMatch = !filters.sector || filters.sector === 'all' || lead.sector === filters.sector;
+      const scoreMatch = !filters.minScore || (Number(lead.score) || 0) >= Number(filters.minScore);
+
+      return searchMatch && statusMatch && typeMatch && sourceMatch && dateMatch
+        && platformMatch && departmentMatch && sectorMatch && scoreMatch;
     });
 
     // Tri des résultats
@@ -151,6 +163,10 @@ const Leads = () => {
         case 'updated_at':
           aValue = new Date(a[sortField]);
           bValue = new Date(b[sortField]);
+          break;
+        case 'score':
+          aValue = Number(a.score) || 0;
+          bValue = Number(b.score) || 0;
           break;
         default:
           return 0;
@@ -607,6 +623,17 @@ const Leads = () => {
                 >
                   <FiSend />
                 </button>
+                <button
+                  onClick={() => setView('ciblage')}
+                  className={`p-2 rounded transition-colors ${
+                    view === 'ciblage'
+                      ? 'bg-emerald-600 text-white'
+                      : 'text-text-muted hover:text-text-primary'
+                  }`}
+                  title="Ciblage : ce qui convertit (par plateforme, type de site, département, secteur, angle)"
+                >
+                  <FiTarget />
+                </button>
               </div>
 
               {/* Input fichier caché pour l'import */}
@@ -674,7 +701,7 @@ const Leads = () => {
 
         {/* Filtres — masques en Prospection/Outreach (ils filtrent la liste de leads,
             pas les resultats de recherche : inutiles et trompeurs sur ces vues) */}
-        {view !== 'prospection' && view !== 'outreach' && (
+        {view !== 'prospection' && view !== 'outreach' && view !== 'ciblage' && (
           <div className="mb-4">
             <LeadFilter
               filters={filters}
@@ -682,6 +709,7 @@ const Leads = () => {
               onSort={handleSort}
               sortField={sortField}
               sortDirection={sortDirection}
+              leads={leads}
             />
           </div>
         )}
@@ -695,6 +723,8 @@ const Leads = () => {
               toast.success('Lead créé avec succès depuis la prospection');
             }}
           />
+        ) : view === 'ciblage' ? (
+          <TargetingStats />
         ) : view === 'outreach' ? (
           <OutreachPanel leads={filteredLeads} />
         ) : view === 'kanban' ? (

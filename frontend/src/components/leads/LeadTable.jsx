@@ -1,7 +1,7 @@
 // src/components/leads/LeadTable.jsx
 import React from 'react';
 import { motion } from 'framer-motion';
-import { FiBriefcase, FiUser, FiMail, FiPhone, FiDollarSign } from 'react-icons/fi';
+import { FiBriefcase, FiUser, FiMail, FiPhone } from 'react-icons/fi';
 
 const LeadTable = ({ leads, selectedLead, onSelectLead }) => {
   const statusConfig = {
@@ -29,8 +29,8 @@ const LeadTable = ({ leads, selectedLead, onSelectLead }) => {
               <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider hidden lg:table-cell">
                 Entreprise
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider hidden xl:table-cell">
-                Budget
+              <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider hidden xl:table-cell" title="Score de priorité (joignable, angles de vente, budget probable), plateforme, département">
+                Ciblage
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider">
                 Statut
@@ -99,16 +99,18 @@ const LeadTable = ({ leads, selectedLead, onSelectLead }) => {
                   )}
                 </td>
 
-                {/* Budget */}
+                {/* Ciblage : score persisté + plateforme + département (colonnes structurées) */}
                 <td className="px-4 py-4 hidden xl:table-cell">
-                  {lead.budget ? (
-                    <div className="flex items-center gap-1 text-sm font-medium text-green-400">
-                      <FiDollarSign className="w-3 h-3" />
-                      {Math.round(lead.budget)}€
-                    </div>
-                  ) : (
-                    <span className="text-sm text-gray-600">-</span>
-                  )}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {Number(lead.score) > 0 && (
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${
+                        lead.score >= 60 ? 'bg-success-bg text-success-text' : lead.score >= 30 ? 'bg-warning-bg text-warning-text' : 'bg-neutral-bg text-neutral-text'
+                      }`} title="Score de priorité 0-100">{lead.score}</span>
+                    )}
+                    {lead.platform && <span className="text-xs text-text-secondary">{lead.platform}</span>}
+                    {lead.department && <span className="text-xs text-text-muted">· {lead.department}</span>}
+                    {!lead.score && !lead.platform && !lead.department && <span className="text-sm text-gray-600">-</span>}
+                  </div>
                 </td>
 
                 {/* Statut */}

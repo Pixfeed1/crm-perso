@@ -44,11 +44,61 @@ function parseCompany(company) {
     naf_label: company.libelle_activite_principale || null,
     dirigeant: dirigeantName(company.dirigeants),
     effectif: trancheEffectif(company.tranche_effectif_salarie),
-    adresse: formatAddress(company.siege)
+    adresse: formatAddress(company.siege),
+    code_postal: company.siege?.code_postal || null,
+    ville: company.siege?.libelle_commune || null
   };
 }
 
+// ─── Correspondance entreprise ↔ site ────────────────────────────────────────
+// L'API renvoie toujours « quelque chose » : prendre le premier résultat sans contrôle
+// associait un mauvais dirigeant à un site. On note chaque candidat contre la racine du
+// domaine et les mots du titre, et on garde le meilleur avec un niveau de confiance.
+const STOP = new Set(['sarl', 'sas', 'sasu', 'eurl', 'sci', 'snc', 'societe', 'société', 'the', 'les', 'des', 'and', 'et', 'du', 'de', 'la', 'le', 'boutique', 'shop', 'site', 'officiel', 'france', 'com', 'fr', 'net', 'org', 'www']);
+const fold = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+const words = (s) => fold(s).split(' ').filter((w) => w.length >= 4 && !STOP.has(w));
+const compact = (s) => fold(s).replace(/ /g, '');
+
+function matchScore(company, { domain = '', title = '' } = {}) {
+  const nom = fold(`${company.nom_complet || ''} ${company.nom_raison_sociale || ''} ${(company.sigle || '')}`);
+  const nomCompact = compact(nom);
+  const root = compact(String(domain || '').toLowerCase().replace(/^www\./, '').split('.')[0]);
+  let score = 0;
+  // Racine du domaine incluse dans le nom (ou l'inverse) : signal fort.
+  if (root && root.length >= 4 && (nomCompact.includes(root) || root.includes(nomCompact) && nomCompact.length >= 4)) score += 60;
+  // Mots significatifs du titre présents dans le nom.
+  const nomWords = new Set(words(nom));
+  const hits = words(title).filter((w) => nomWords.has(w)).length;
+  score += Math.min(40, hits * 20);
+  return score;
+}
+
+/**
+ * Enrichissement avec contrôle de correspondance.
+ * @param {object} p { query, domain?, title? }
+ * @returns {{ found, match: 'sur'|'probable'|'douteux', match_score, ...parseCompany }}
+ */
+async function enrichMatch({ query, domain = '', title = '' }) {
+  const q = (query || '').trim();
+  if (!q) return { found: false };
+  try {
+    const res = await axios.get(API, { params: { q, per_page: 5, page: 1 }, timeout: 8000 });
+    const results = Array.isArray(res.data?.results) ? res.data.results : [];
+    if (results.length === 0) return { found: false };
+    let best = null; let bestScore = -1;
+    for (const c of results) {
+      const sc = matchScore(c, { domain, title });
+      if (sc > bestScore) { best = c; bestScore = sc; }
+    }
+    const match = bestScore >= 60 ? 'sur' : bestScore >= 20 ? 'probable' : 'douteux';
+    return { ...parseCompany(best), match, match_score: bestScore };
+  } catch (e) {
+    return { found: false, error: e.message };
+  }
+}
+
 // query = nom d'entreprise (idéalement le titre de la home) ou racine de domaine.
+// Conservé pour compatibilité : premier résultat, sans contrôle (préférer enrichMatch).
 async function enrich(query) {
   const q = (query || '').trim();
   if (!q) return { found: false };
@@ -61,4 +111,4 @@ async function enrich(query) {
   }
 }
 
-module.exports = { enrich, parseCompany };
+module.exports = { enrich, enrichMatch, parseCompany, matchScore };

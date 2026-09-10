@@ -3,8 +3,14 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiSearch, FiX, FiFilter, FiArrowUp, FiArrowDown } from 'react-icons/fi';
 
-const LeadFilter = ({ filters, setFilters, onSort, sortField, sortDirection, isKanbanView = false }) => {
+const LeadFilter = ({ filters, setFilters, onSort, sortField, sortDirection, isKanbanView = false, leads = [] }) => {
   const [isExpanded, setIsExpanded] = useState(false);
+
+  // Options de ciblage : valeurs réellement présentes dans les prospects (colonnes structurées).
+  const distinct = (key) => [...new Set(leads.map((l) => l[key]).filter((v) => v && String(v).trim()))].sort((a, b) => String(a).localeCompare(String(b), 'fr'));
+  const platformValues = distinct('platform');
+  const departmentValues = distinct('department');
+  const sectorValues = distinct('sector');
 
   // Options de statut (alignées avec LeadForm = valeurs réellement stockées)
   const statusOptions = [
@@ -40,6 +46,7 @@ const LeadFilter = ({ filters, setFilters, onSort, sortField, sortDirection, isK
 
   // Options de tri
   const sortOptions = [
+    { field: 'score', label: 'Score de priorité' },
     { field: 'name', label: 'Nom' },
     { field: 'created_at', label: 'Date de création' },
     { field: 'updated_at', label: 'Dernière modification' },
@@ -63,7 +70,11 @@ const LeadFilter = ({ filters, setFilters, onSort, sortField, sortDirection, isK
       type: 'all',
       source: 'all',
       dateFrom: '',
-      dateTo: ''
+      dateTo: '',
+      platform: 'all',
+      department: 'all',
+      sector: 'all',
+      minScore: ''
     });
   };
 
@@ -73,7 +84,11 @@ const LeadFilter = ({ filters, setFilters, onSort, sortField, sortDirection, isK
     filters.type !== 'all' ||
     filters.source !== 'all' ||
     filters.dateFrom !== '' ||
-    filters.dateTo !== '';
+    filters.dateTo !== '' ||
+    (filters.platform || 'all') !== 'all' ||
+    (filters.department || 'all') !== 'all' ||
+    (filters.sector || 'all') !== 'all' ||
+    (filters.minScore || '') !== '';
 
   return (
     <div className="bg-surface/30 backdrop-blur-sm rounded-xl overflow-hidden">
@@ -228,6 +243,38 @@ const LeadFilter = ({ filters, setFilters, onSort, sortField, sortDirection, isK
                     </option>
                   ))}
                 </select>
+              </div>
+
+              {/* Ciblage : plateforme / département / secteur / score minimum */}
+              <div>
+                <label className="block text-xs text-text-muted mb-2 font-medium">Plateforme</label>
+                <select value={filters.platform || 'all'} onChange={(e) => handleFilterChange('platform', e.target.value)}
+                  className="w-full bg-surface-muted/50 border border-border rounded-lg px-3 py-2 text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer">
+                  <option value="all">Toutes les plateformes</option>
+                  {platformValues.map((v) => <option key={v} value={v}>{v}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-text-muted mb-2 font-medium">Département</label>
+                <select value={filters.department || 'all'} onChange={(e) => handleFilterChange('department', e.target.value)}
+                  className="w-full bg-surface-muted/50 border border-border rounded-lg px-3 py-2 text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer">
+                  <option value="all">Tous les départements</option>
+                  {departmentValues.map((v) => <option key={v} value={v}>{v}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-text-muted mb-2 font-medium">Secteur</label>
+                <select value={filters.sector || 'all'} onChange={(e) => handleFilterChange('sector', e.target.value)}
+                  className="w-full bg-surface-muted/50 border border-border rounded-lg px-3 py-2 text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer">
+                  <option value="all">Tous les secteurs</option>
+                  {sectorValues.map((v) => <option key={v} value={v}>{v}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-text-muted mb-2 font-medium">Score de priorité minimum</label>
+                <input type="number" min="0" max="100" step="5" value={filters.minScore || ''} onChange={(e) => handleFilterChange('minScore', e.target.value)}
+                  placeholder="ex. 50"
+                  className="w-full bg-surface-muted/50 border border-border rounded-lg px-3 py-2 text-text-primary placeholder-text-muted text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
               </div>
 
               {/* Filtres par date */}

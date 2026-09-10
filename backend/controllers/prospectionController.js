@@ -1,4 +1,5 @@
 const poleEmploiService = require('../services/poleEmploiService');
+const { departmentFromPostalCode } = require('../utils/prospectScore');
 const googleJobsService = require('../services/googleJobsService');
 const sireneService = require('../services/sireneService');
 const pappersService = require('../services/pappersService');
@@ -399,9 +400,12 @@ exports.importOpportunityAsLead = async (req, res) => {
     const notes = [opportunity.notes || null, extra.length ? extra.join('\n') : null].filter(Boolean).join('\n');
 
     const ins = await db.pool.query(
-      `INSERT INTO leads (name, company, type, status, relation_status, source, notes, email, phone, created_at, updated_at)
-       VALUES ($1, $2, 'company', 'nouveau', 'nouveau', $3, $4, $5, $6, NOW(), NOW()) RETURNING id`,
-      [companyName, opportunity.company_name || null, opportunity.source || 'Prospection', notes || null, email, opportunity.phone || null]
+      `INSERT INTO leads (name, company, type, status, relation_status, source, notes, email, phone,
+                          website, sector, city, postal_code, department, created_at, updated_at)
+       VALUES ($1, $2, 'company', 'nouveau', 'nouveau', $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW()) RETURNING id`,
+      [companyName, opportunity.company_name || null, opportunity.source || 'Prospection', notes || null, email, opportunity.phone || null,
+       opportunity.website || null, opportunity.sector || null, opportunity.city || null, opportunity.postal_code || null,
+       (opportunity.department && String(opportunity.department).slice(0, 3)) || departmentFromPostalCode(opportunity.postal_code)]
     );
     const leadId = ins.rows[0].id;
 

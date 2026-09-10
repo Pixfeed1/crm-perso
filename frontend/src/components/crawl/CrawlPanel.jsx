@@ -266,6 +266,11 @@ const CrawlPanel = () => {
       setAdding(true);
       const res = await crawlAPI.toProspect(jobId, ids);
       toast.success(`${res.created} prospect${res.created > 1 ? 's' : ''} créé${res.created > 1 ? 's' : ''}`);
+      // Hygiène côté serveur : doublons d'email, agences, domaines parkés, antibot -> non créés, avec la raison.
+      if (res.skipped && res.skipped.length) {
+        const apercu = res.skipped.slice(0, 3).map((x) => `${x.domain} (${x.raison})`).join(', ');
+        toast.info(`${res.skipped.length} ignoré${res.skipped.length > 1 ? 's' : ''} : ${apercu}${res.skipped.length > 3 ? '…' : ''}`);
+      }
       setSelected(new Set());
       poll(jobId);
     } catch (error) {
@@ -320,6 +325,8 @@ const CrawlPanel = () => {
       const leadId = res.lead_ids && res.lead_ids[0];
       if (leadId) {
         navigate(`/leads?lead=${leadId}&compose=claude`);
+      } else if (res.skipped && res.skipped.length) {
+        toast.error(`Non créé : ${res.skipped[0].raison}`);
       } else {
         toast.info('Ce site est déjà un prospect');
         poll(jobId);

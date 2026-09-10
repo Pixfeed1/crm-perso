@@ -262,7 +262,17 @@ const DATABASE_SCHEMA = {
       site_type: 'TEXT',              // asso | agence | commerce | autre
       ecommerce_actif: 'BOOLEAN',     // prix affichés + panier = vraie boutique qui vend (budget)
       added_as_prospect: 'BOOLEAN DEFAULT FALSE',
-      is_nocode: 'BOOLEAN DEFAULT FALSE' // site no-code/SaaS fermé -> masqué par défaut
+      is_nocode: 'BOOLEAN DEFAULT FALSE', // site no-code/SaaS fermé -> masqué par défaut
+      // Enrichissement SIRENE complet (avant : seuls raison sociale / dirigeant / SIREN gardés).
+      naf: 'VARCHAR(6)',
+      naf_label: 'TEXT',
+      effectif: 'VARCHAR(20)',        // tranche INSEE décodée (ex '3-5')
+      adresse: 'TEXT',
+      code_postal: 'VARCHAR(10)',
+      ville: 'TEXT',
+      sirene_match: 'VARCHAR(10)',    // sur | probable | douteux : confiance de l'association site <-> entreprise
+      // Score de priorité PERSISTÉ (backend/utils/prospectScore.js), calculé à l'ingestion et à l'enrichissement.
+      score: 'INTEGER'
     },
     indexes: [
       'CREATE INDEX IF NOT EXISTS idx_crawl_results_job ON crawl_results(job_id)'
@@ -1469,6 +1479,67 @@ async function ensureInteractionsColumns(client) {
 }
 
 /**
+ * Colonnes de CIBLAGE sur leads (idempotent). Avant, ville / CP / département / secteur /
+ * site étaient rangés en texte libre dans les notes par les trois chemins de création
+ * (crawl, import CSV, opportunités) : impossible de filtrer ou d'agréger. On crée les
+ * colonnes, puis on les rétro-remplit une fois depuis les notes et depuis crawl_results.
+ */
+async function ensureLeadTargetingColumns(client) {
+  console.log('\n🔧 Vérification colonnes de ciblage des prospects...');
+  for (const [col, def] of [
+    ['city', 'TEXT'], ['postal_code', 'VARCHAR(10)'], ['department', 'VARCHAR(3)'],
+    ['sector', 'TEXT'], ['naf', 'VARCHAR(6)'], ['effectif', 'VARCHAR(20)'],
+    ['website', 'TEXT'], ['siren', 'VARCHAR(9)'], ['site_type', 'VARCHAR(20)'],
+    ['angles', 'TEXT'], // clés d'angles d'approche détectés, séparées par « | »
+    ['score', 'INTEGER DEFAULT 0']
+  ]) {
+    await client.query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS ${col} ${def};`);
+  }
+  await client.query('CREATE INDEX IF NOT EXISTS idx_leads_department ON leads(department);');
+  await client.query('CREATE INDEX IF NOT EXISTS idx_leads_platform ON leads(platform);');
+
+  // Rétro-remplissage depuis les notes (formats « Ville: X », « Ville : X », « CP: 75001 »,
+  // « 75001 Paris », « Département : 75 », « Secteur : X », « Site : X », « URL : X »,
+  // « Raison sociale : X (SIREN 123456789) »). Ne touche que les colonnes encore vides.
+  const rx = (label) => `'(?:^|\\n)\\s*${label}\\s*:\\s*([^\\n]+)'`;
+  const fill = async (col, label, transform = 'trim(substring(notes from %R))') => {
+    const expr = transform.replace('%R', rx(label));
+    await client.query(`UPDATE leads SET ${col} = ${expr} WHERE ${col} IS NULL AND notes ~ ${rx(label)}`).catch(() => {});
+  };
+  await fill('platform', 'Plateforme'); // même règle que ensureInteractionsColumns, rejouée ici pour les tests isolés
+  await fill('city', 'Ville');
+  await fill('postal_code', 'CP');
+  await fill('department', 'D[ée]partement', "left(trim(substring(notes from %R)), 3)");
+  await fill('sector', 'Secteur');
+  await fill('website', 'Site');
+  await fill('website', 'URL');
+  await client.query(`UPDATE leads SET siren = substring(notes from 'SIREN\\s*(\\d{9})') WHERE siren IS NULL AND notes ~ 'SIREN\\s*\\d{9}'`).catch(() => {});
+  // « 75001 Paris » seul sur une ligne (import d'opportunités).
+  await client.query(`UPDATE leads SET postal_code = substring(notes from '(?:^|\\n)\\s*(\\d{5})\\s+[A-Za-zÀ-ÿ]'),
+                                         city = COALESCE(city, trim(substring(notes from '(?:^|\\n)\\s*\\d{5}\\s+([^\\n]+)')))
+                      WHERE postal_code IS NULL AND notes ~ '(?:^|\\n)\\s*\\d{5}\\s+[A-Za-zÀ-ÿ]'`).catch(() => {});
+  // Département déduit du code postal (Corse et DOM inclus).
+  await client.query(`UPDATE leads SET department = CASE
+        WHEN postal_code ~ '^9[78]\\d{3}$' THEN left(postal_code, 3)
+        WHEN postal_code ~ '^20\\d{3}$' THEN CASE WHEN postal_code::int < 20200 THEN '2A' ELSE '2B' END
+        WHEN postal_code ~ '^\\d{5}$' THEN left(postal_code, 2) END
+      WHERE department IS NULL AND postal_code ~ '^\\d{5}$'`).catch(() => {});
+  // Depuis le résultat de crawl lié : site, type, plateforme, SIRENE.
+  await client.query(`UPDATE leads l SET
+        website  = COALESCE(l.website, c.final_url),
+        site_type = COALESCE(l.site_type, c.site_type),
+        platform = COALESCE(l.platform, c.platform),
+        siren    = COALESCE(l.siren, c.siren),
+        sector   = COALESCE(l.sector, c.naf_label),
+        naf      = COALESCE(l.naf, c.naf),
+        effectif = COALESCE(l.effectif, c.effectif),
+        city     = COALESCE(l.city, c.ville),
+        postal_code = COALESCE(l.postal_code, c.code_postal)
+      FROM crawl_results c WHERE c.id = l.crawl_result_id`).catch(() => {});
+  console.log('  ✓ Colonnes de ciblage vérifiées');
+}
+
+/**
  * Migration idempotente : colonnes de récurrence de la table events.
  * La table events de base (pgMigrations) ne contient AUCUNE colonne de récurrence,
  * donc createRecurringEvent échouait silencieusement (aucun événement récurrent créé,
@@ -2389,6 +2460,7 @@ async function autoInitDatabase(pool) {
     // Table interactions (suivi des prises de contact, leads + clients)
     await ensureInteractionsColumns(client);
     await ensureFollowupsCoherence(client);
+    await ensureLeadTargetingColumns(client);
 
     await ensureEventRecurrenceColumns(client);
 

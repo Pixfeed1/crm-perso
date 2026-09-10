@@ -261,6 +261,8 @@ export const leadsAPI = {
     console.log('Appel API: récupération de tous les leads');
     return apiRequest('/leads');
   },
+  // Ce qui convertit : issues de prospection agrégées par critère de ciblage.
+  targetingStats: (by = 'platform') => apiRequest(`/leads/targeting-stats?by=${encodeURIComponent(by)}`),
   // Envoi immédiat d'un email depuis une fiche prospect (+ log Suivi côté serveur)
   sendEmail: (id, payload) => apiRequest(`/leads/${id}/send-email`, 'POST', payload),
   getEmailAccounts: () => apiRequest('/leads/email-accounts'),

@@ -13,6 +13,7 @@ const { decodeHtml } = require('../utils/decodeHtml');
 const { isAntibotTitle } = require('../utils/antibotTitle');
 const sireneEnrich = require('../services/sireneEnrich');
 const { problemesLisibles } = require('../utils/crawlAngles');
+const { prospectScore, auditFlags, promotionBlocker, departmentFromPostalCode } = require('../utils/prospectScore');
 
 // Constantes faciles à mettre à jour (override possible par variables d'env).
 // L'interpréteur reste hors dépôt : un venv ne se versionne pas (il contient des
@@ -254,6 +255,19 @@ async function ingestCsv(db, jobId, csvPath) {
       ]
     );
   }
+  await rescoreJob(db, jobId);
+}
+
+// Score de priorité persisté sur chaque résultat du job (recalculé après ingestion et
+// après enrichissement SIRENE : le dirigeant connu compte dans le score).
+async function rescoreJob(db, jobId, ids = null) {
+  const { rows } = await db.pool.query(
+    `SELECT * FROM crawl_results WHERE job_id = $1 ${ids ? 'AND id = ANY($2::int[])' : ''}`,
+    ids ? [jobId, ids] : [jobId]
+  );
+  for (const r of rows) {
+    await db.pool.query('UPDATE crawl_results SET score = $1 WHERE id = $2', [prospectScore(r), r.id]).catch(() => {});
+  }
 }
 
 const crawlController = {
@@ -419,8 +433,17 @@ const crawlController = {
       let created = 0;
       let lastError = null;
       const leadIds = []; // IDs des leads créés (pour le raccourci « Prospecter » -> fiche)
+      const skipped = []; // { domain, raison } : doublons et bloquants (agence, parké, antibot)
       const anneeCourante = new Date().getFullYear();
       for (const r of rows) {
+        // Hygiène AVANT création : pas de concurrent, de domaine parké, de no-code ni de site
+        // à l'audit faussé ; pas de doublon par email (un même contact deux fois = spam).
+        const blocker = promotionBlocker(r);
+        if (blocker) { skipped.push({ domain: r.domain, raison: blocker }); continue; }
+        if (r.email) {
+          const dup = await db.pool.query('SELECT id FROM leads WHERE LOWER(email) = LOWER($1) LIMIT 1', [r.email]).catch(() => ({ rows: [] }));
+          if (dup.rows.length) { skipped.push({ domain: r.domain, raison: `email déjà présent (prospect #${dup.rows[0].id})` }); continue; }
+        }
         // Angles d'approche détectés gratuitement (audit) -> arguments concrets pour l'email.
         const angles = [
           r.mentions_legales === false ? '• Pas de mentions légales (obligation légale LCEN)' : null,
@@ -451,11 +474,18 @@ const crawlController = {
         try {
           // Colonnes standard + enrichissement cc_prospector (email/tel/réseaux) -> le lead
           // arrive directement exploitable dans l'Outreach multi-canal.
+          // Colonnes structurées (ciblage/segmentation) en plus des notes lisibles.
+          const angleKeys = auditFlags(r).map((f) => f.key).join(' | ') || null;
           const ins = await db.pool.query(
-            `INSERT INTO leads (name, company, type, status, source, notes, email, phone, facebook_url, instagram_url, relation_status, crawl_result_id, created_at, updated_at)
-             VALUES ($1, $2, 'company', 'nouveau', 'Crawl', $3, $4, $5, $6, $7, $8, $9, NOW(), NOW()) RETURNING id`,
+            `INSERT INTO leads (name, company, type, status, source, notes, email, phone, facebook_url, instagram_url, relation_status, crawl_result_id,
+                                platform, website, site_type, siren, sector, naf, effectif, city, postal_code, department, angles, score, created_at, updated_at)
+             VALUES ($1, $2, 'company', 'nouveau', 'Crawl', $3, $4, $5, $6, $7, $8, $9,
+                     $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, NOW(), NOW()) RETURNING id`,
             [(isAntibotTitle(r.title) ? null : decodeHtml(r.title)) || r.domain, r.domain, notes,
-             r.email || null, r.phone || null, r.facebook_url || null, r.instagram_url || null, statusVal, r.id]
+             r.email || null, r.phone || null, r.facebook_url || null, r.instagram_url || null, statusVal, r.id,
+             r.platform || null, r.final_url || `https://${r.domain}`, r.site_type || null, r.siren || null,
+             r.naf_label || null, r.naf || null, r.effectif || null, r.ville || null, r.code_postal || null,
+             departmentFromPostalCode(r.code_postal), angleKeys, r.score != null ? r.score : prospectScore(r)]
           );
           await db.pool.query('UPDATE crawl_results SET added_as_prospect = TRUE WHERE id = $1', [r.id]);
           if (ins.rows[0]) leadIds.push(ins.rows[0].id);
@@ -468,7 +498,7 @@ const crawlController = {
       if (created === 0 && lastError) {
         return res.status(500).json({ message: `Création impossible : ${lastError}` });
       }
-      res.json({ created, lead_ids: leadIds });
+      res.json({ created, lead_ids: leadIds, skipped });
     } catch (error) {
       console.error('[Crawl] Erreur to-prospect:', error);
       res.status(500).json({ message: 'Erreur serveur' });
@@ -489,20 +519,33 @@ crawlController.enrichResults = async (req, res) => {
       'SELECT id, domain, title FROM crawl_results WHERE job_id = $1 AND id = ANY($2::int[])',
       [parseInt(id, 10), ids]
     );
-    let enriched = 0;
+    let enriched = 0; let douteux = 0;
     for (const r of rows) {
       // Requête : le titre de la home (souvent la vraie enseigne), repli sur la racine du domaine.
-      const query = (decodeHtml(r.title) || '').trim() || normalizeDomain(r.domain).split('.')[0];
-      const data = await sireneEnrich.enrich(query);
+      const title = (decodeHtml(r.title) || '').trim();
+      const query = title || normalizeDomain(r.domain).split('.')[0];
+      const data = await sireneEnrich.enrichMatch({ query, domain: r.domain, title });
       if (data.found) {
+        // Douteux : rien de commun entre l'entreprise et le site. On garde la trace (sirene_match)
+        // mais on n'écrit ni dirigeant ni SIREN, pour ne pas envoyer un « Bonjour M. X » faux.
+        const ok = data.match !== 'douteux';
         await db.pool.query(
-          'UPDATE crawl_results SET raison_sociale = $1, gerant = $2, siren = $3 WHERE id = $4',
-          [data.raison_sociale, data.dirigeant, data.siren, r.id]
+          `UPDATE crawl_results SET sirene_match = $1,
+             raison_sociale = CASE WHEN $2 THEN $3 ELSE raison_sociale END,
+             gerant = CASE WHEN $2 THEN $4 ELSE gerant END,
+             siren = CASE WHEN $2 THEN $5 ELSE siren END,
+             naf = CASE WHEN $2 THEN $6 ELSE naf END, naf_label = CASE WHEN $2 THEN $7 ELSE naf_label END,
+             effectif = CASE WHEN $2 THEN $8 ELSE effectif END, adresse = CASE WHEN $2 THEN $9 ELSE adresse END,
+             code_postal = CASE WHEN $2 THEN $10 ELSE code_postal END, ville = CASE WHEN $2 THEN $11 ELSE ville END
+           WHERE id = $12`,
+          [data.match, ok, data.raison_sociale, data.dirigeant, data.siren, data.naf, data.naf_label,
+           data.effectif, data.adresse, data.code_postal, data.ville, r.id]
         );
-        enriched++;
+        if (ok) enriched++; else douteux++;
       }
     }
-    res.json({ enriched, total: rows.length });
+    await rescoreJob(db, parseInt(id, 10), ids);
+    res.json({ enriched, douteux, total: rows.length });
   } catch (e) {
     console.error('[Crawl] enrichResults:', e.message);
     res.status(500).json({ message: 'Erreur serveur' });

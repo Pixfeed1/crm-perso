@@ -385,12 +385,14 @@ class LeadImportService {
 
       const query = `
         INSERT INTO leads (
-          name, company, type, email, phone, status, source, notes, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          name, company, type, email, phone, status, source, notes, created_at, updated_at,
+          city, postal_code, department, sector, website
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
 
       const now = new Date().toISOString();
       const notes = this.buildNotes(data);
+      const { departmentFromPostalCode } = require('../utils/prospectScore');
 
       db.run(
         query,
@@ -404,7 +406,12 @@ class LeadImportService {
           data.source || 'import',
           notes,
           now,
-          now
+          now,
+          data.city || null,
+          data.postal_code || null,
+          (data.department && String(data.department).slice(0, 3)) || departmentFromPostalCode(data.postal_code),
+          data.sector || null,
+          data.website || null
         ],
         function(err) {
           if (err) {
