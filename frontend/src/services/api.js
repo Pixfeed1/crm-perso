@@ -605,6 +605,13 @@ export const seoBacklinksAPI = {
     return apiRequest(`/seo/backlinks/niches/${id}/targets${qs ? `?${qs}` : ''}`);
   },
   updateTarget: (id, data) => apiRequest(`/seo/backlinks/targets/${id}`, 'PATCH', data),
+  getTarget: (id) => apiRequest(`/seo/backlinks/targets/${id}`),
+  relCheckTarget: (id) => apiRequest(`/seo/backlinks/targets/${id}/rel-check`, 'POST'),
+  relCheckNiche: (id, opts = {}) => apiRequest(`/seo/backlinks/niches/${id}/rel-check`, 'POST', opts),
+  detectCompetitors: (id) => apiRequest(`/seo/backlinks/niches/${id}/competitors`, 'POST'),
+  addSpot: (id, data) => apiRequest(`/seo/backlinks/targets/${id}/spots`, 'POST', data),
+  deleteSpot: (spotId) => apiRequest(`/seo/backlinks/spots/${spotId}`, 'DELETE'),
+  platformRules: () => apiRequest('/seo/backlinks/platform-rules'),
   draftEmail: (id, opts = {}) => apiRequest(`/seo/backlinks/targets/${id}/draft-email`, 'POST', opts),
   sendEmail: (id, data) => apiRequest(`/seo/backlinks/targets/${id}/send-email`, 'POST', data)
 };

@@ -10,6 +10,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const seoOutreach = require('../services/seoOutreachService');
+const linkSpots = require('../services/linkSpotService');
 const emailTracking = require('../services/emailTracking');
 
 const PYTHON_BIN = process.env.CC_PROSPECTOR_PYTHON || '/home/jurojinn/tools/cc_prospector/venv/bin/python';
@@ -45,9 +46,86 @@ function parseCsv(content) {
 
 async function setPhase(db, nicheId, phase, message = null) {
   await db.pool.query(
-    'UPDATE seo_niches SET discovery_phase = $1, discovery_message = $2 WHERE id = $3',
+    `UPDATE seo_niches SET discovery_phase = $1, discovery_message = $2,
+       discovery_done_at = CASE WHEN $1 = 'done' THEN NOW() ELSE discovery_done_at END
+     WHERE id = $3`,
     [phase, message, nicheId]
   ).catch(() => {});
+}
+
+// Recalcule score + nombre de critères mesurés d'une cible (source de vérité unique).
+async function saveScore(db, t) {
+  await db.pool.query('UPDATE seo_link_targets SET score = $1, score_criteres = $2 WHERE id = $3',
+    [seoOutreach.computeScore(t), seoOutreach.scoreDetail(t).criteres, t.id]).catch(() => {});
+}
+
+// ─── Concurrents ─────────────────────────────────────────────────────────────
+// Un site qui se positionne sur les requêtes où TON site a déjà des impressions publie
+// les mêmes contenus : concurrent, pas cible. Source : requêtes GSC du site cible
+// (seo_sites.domain = niche.site_cible) sur 90 jours, croisées avec les requêtes qui ont
+// fait ressortir chaque domaine à la découverte mot-clé. Second signal : titre d'agence.
+const normQuery = (q) => String(q || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+const AGENCY_TITLE = /\b(agence|agency|consultant|freelance|expert(e)?s?)\b.*\b(seo|web|digital|r[ée]f[ée]rencement|webmarketing|prestashop|woocommerce|shopify)\b|\b(seo|r[ée]f[ée]rencement)\b.*\b(agence|consultant|freelance)\b/i;
+
+async function flagCompetitors(db, niche) {
+  const site = String(niche.site_cible || '').toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0];
+  let gscQueries = [];
+  if (site) {
+    const { rows } = await db.pool.query(
+      `SELECT lower(g.query) AS query, SUM(g.impressions)::int AS impressions
+       FROM seo_gsc_daily_web g JOIN seo_sites s ON s.id = g.site_id
+       WHERE (lower(s.domain) = $1 OR lower(s.domain) = 'www.' || $1) AND g.date >= CURRENT_DATE - 90
+       GROUP BY lower(g.query) HAVING SUM(g.impressions) >= 20`,
+      [site]
+    ).catch(() => ({ rows: [] }));
+    gscQueries = rows.map((r) => ({ q: r.query, n: normQuery(r.query), impressions: r.impressions }));
+  }
+  const { rows: targets } = await db.pool.query(
+    `SELECT id, domain, title, found_queries, concurrent, concurrent_probable FROM seo_link_targets WHERE niche_id = $1`, [niche.id]);
+  let flagged = 0;
+  for (const t of targets) {
+    if (t.concurrent) continue; // décision humaine déjà prise
+    let motif = null;
+    const found = String(t.found_queries || '').split('|').map((x) => x.trim()).filter(Boolean);
+    for (const fq of found) {
+      const n = normQuery(fq);
+      if (!n) continue;
+      const hit = gscQueries.find((g) => g.n === n || (n.length >= 12 && (g.n.includes(n) || n.includes(g.n))));
+      if (hit) { motif = `se positionne sur « ${fq} », requête où ton site a ${hit.impressions} impressions (90 j)`; break; }
+    }
+    if (!motif && t.title && AGENCY_TITLE.test(t.title)) motif = `titre d'agence ou de consultant : « ${String(t.title).slice(0, 80)} »`;
+    if (motif) {
+      await db.pool.query('UPDATE seo_link_targets SET concurrent_probable = TRUE, concurrent_motif = $2 WHERE id = $1', [t.id, motif]).catch(() => {});
+      flagged++;
+    } else if (t.concurrent_probable) {
+      await db.pool.query('UPDATE seo_link_targets SET concurrent_probable = FALSE, concurrent_motif = NULL WHERE id = $1', [t.id]).catch(() => {});
+    }
+  }
+  return { flagged, gsc_queries: gscQueries.length, site: site || null };
+}
+
+// ─── Vérification du rel (par emplacement) en arrière-plan ───────────────────
+function runRelCheck(db, niche, targets) {
+  (async () => {
+    let done = 0; let ok = 0; let dofollow = 0;
+    try {
+      const rules = await linkSpots.loadRules(db);
+      for (const t of targets) {
+        const r = await linkSpots.autoVerifyTarget(db, t, rules).catch((e) => ({ ok: false, error: e.message }));
+        done++;
+        if (r.ok) ok++;
+        if (done % 5 === 0) await setPhase(db, niche.id, 'rel_running', `Vérification du rel : ${done}/${targets.length} cibles…`);
+      }
+      const { rows } = await db.pool.query(
+        'SELECT COUNT(*)::int AS n FROM seo_link_targets WHERE niche_id = $1 AND dofollow = TRUE', [niche.id]);
+      dofollow = rows[0] ? rows[0].n : 0;
+      await setPhase(db, niche.id, 'done', `Rel vérifié : ${ok}/${targets.length} sites lus, ${dofollow} avec au moins un emplacement dofollow`);
+    } catch (e) {
+      await setPhase(db, niche.id, 'error', `Vérification du rel : ${e.message}`);
+    } finally {
+      runningNicheId = null;
+    }
+  })();
 }
 
 // Ingestion d'un CSV linkgraph (domain, via, detail) dans seo_link_targets.
@@ -87,18 +165,21 @@ async function ingestTargets(db, nicheId, csvPath) {
 }
 
 // Insertion/upsert d'une liste de domaines découverts (partagé mot-clé/manuel).
-async function ingestDomains(db, nicheId, domains, via, detail) {
+// foundQueries : { domaine: [requêtes] } (découverte mot-clé) pour le marquage concurrent.
+async function ingestDomains(db, nicheId, domains, via, detail, foundQueries = {}) {
   let added = 0;
   for (const raw of domains) {
     const domain = String(raw || '').toLowerCase().trim();
     if (!domain || !domain.includes('.')) continue;
+    const fq = (foundQueries[domain] || []).join(' | ') || null;
     const r = await db.pool.query(
-      `INSERT INTO seo_link_targets (niche_id, domain, via, detail)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO seo_link_targets (niche_id, domain, via, detail, found_queries)
+       VALUES ($1, $2, $3, $4, $5)
        ON CONFLICT (niche_id, domain) DO UPDATE SET
-         via = CASE WHEN seo_link_targets.via IS DISTINCT FROM EXCLUDED.via THEN 'both' ELSE seo_link_targets.via END
+         via = CASE WHEN seo_link_targets.via IS DISTINCT FROM EXCLUDED.via THEN 'both' ELSE seo_link_targets.via END,
+         found_queries = COALESCE(seo_link_targets.found_queries, EXCLUDED.found_queries)
        RETURNING (xmax = 0) AS inserted`,
-      [nicheId, domain, via, detail]
+      [nicheId, domain, via, detail, fq]
     ).catch(() => null);
     if (r && r.rows[0] && r.rows[0].inserted) added++;
   }
@@ -110,13 +191,16 @@ async function ingestDomains(db, nicheId, domains, via, detail) {
 function runKeywordDiscovery(db, niche) {
   (async () => {
     try {
-      const { domains, searches_used } = await seoOutreach.discoverByKeyword({
+      const { domains, found_queries, searches_used } = await seoOutreach.discoverByKeyword({
         niche: niche.name, hubs: niche.hubs || '', site_cible: niche.site_cible || ''
       });
-      const added = await ingestDomains(db, niche.id, domains, 'keyword', 'recherche mot-clé (Claude)');
+      const added = await ingestDomains(db, niche.id, domains, 'keyword', 'recherche mot-clé (Claude)', found_queries || {});
+      // La recherche par mot-clé remonte mécaniquement les concurrents : on les marque tout de suite.
+      const comp = await flagCompetitors(db, niche).catch(() => ({ flagged: 0 }));
       await setPhase(db, niche.id, 'done',
         `mot-clé : ${added} nouvelle(s) cible(s) sur ${domains.length} trouvée(s)` +
-        (searches_used ? ` (${searches_used} recherches)` : ''));
+        (searches_used ? ` (${searches_used} recherches)` : '') +
+        (comp.flagged ? `, ${comp.flagged} concurrent(s) probable(s)` : ''));
       await db.pool.query("UPDATE seo_niches SET statut = 'decouverte' WHERE id = $1 AND statut = 'nouvelle'", [niche.id]).catch(() => {});
     } catch (e) {
       console.error('[SEO Backlinks] keyword discovery:', e.message);
@@ -205,18 +289,20 @@ function runVerify(db, nicheId, domains) {
                lang = NULLIF($2, ''), alive = $3, contact_email = COALESCE(NULLIF($4, ''), contact_email),
                title = COALESCE(NULLIF($5, ''), title), last_checked_at = NOW(),
                statut = CASE WHEN $6::text IS NOT NULL AND statut = 'nouveau' THEN 'ecarte' ELSE statut END,
-               raison_ecarte = COALESCE($6, raison_ecarte)
+               raison_ecarte = COALESCE($6, raison_ecarte),
+               concurrent = CASE WHEN $8 THEN TRUE ELSE concurrent END,
+               concurrent_motif = CASE WHEN $8 THEN COALESCE(concurrent_motif, 'agence détectée à la vérification live') ELSE concurrent_motif END,
+               porte_type = CASE WHEN porte_type IS NULL AND NULLIF($4, '') IS NOT NULL THEN 'email' ELSE porte_type END
              WHERE niche_id = $1 AND domain = $7`,
             [nicheId, lang, alive, (rows[i][ei] || '').trim(),
-             (rows[i][ti] || '').trim(), ecarteRaison, dom]
+             (rows[i][ti] || '').trim(), ecarteRaison, dom, siteType === 'agence']
           ).catch(() => {});
         }
-        // Recalcule les scores après vérif.
+        // Recalcule les scores après vérif, puis les concurrents probables (titres d'agence).
         const { rows: targets } = await db.pool.query('SELECT * FROM seo_link_targets WHERE niche_id = $1', [nicheId]);
-        for (const t of targets) {
-          await db.pool.query('UPDATE seo_link_targets SET score = $1 WHERE id = $2',
-            [seoOutreach.computeScore(t), t.id]).catch(() => {});
-        }
+        for (const t of targets) await saveScore(db, t);
+        const { rows: nr } = await db.pool.query('SELECT * FROM seo_niches WHERE id = $1', [nicheId]);
+        if (nr[0]) await flagCompetitors(db, nr[0]).catch(() => {});
         await setPhase(db, nicheId, 'done', `Vérification live : ${rows.length - 1} cibles re-vérifiées`);
       } else {
         await setPhase(db, nicheId, 'error', `Vérif live : échec (code ${code}) ${tail.join('').slice(-300)}`);
@@ -241,11 +327,20 @@ const ctrl = {
     try {
       const { rows } = await db.pool.query(
         `SELECT n.*, COUNT(t.id)::int AS nb_cibles,
-                COUNT(t.id) FILTER (WHERE t.statut = 'lien_obtenu')::int AS liens_obtenus
+                COUNT(t.id) FILTER (WHERE t.statut = 'lien_obtenu')::int AS liens_obtenus,
+                COUNT(t.id) FILTER (WHERE t.statut IN ('contacte', 'lien_obtenu', 'refus'))::int AS contactees,
+                COUNT(t.id) FILTER (WHERE t.dofollow = TRUE)::int AS dofollow_ok,
+                COUNT(t.id) FILTER (WHERE t.concurrent OR t.concurrent_probable)::int AS concurrents,
+                COUNT(t.id) FILTER (WHERE t.rel_verifie_le IS NOT NULL)::int AS rel_verifies,
+                EXTRACT(DAY FROM NOW() - COALESCE(n.discovery_done_at, n.created_at))::int AS jours_depuis_decouverte
          FROM seo_niches n LEFT JOIN seo_link_targets t ON t.niche_id = n.id
          GROUP BY n.id ORDER BY n.created_at DESC`
       );
-      res.json(rows);
+      // « À travailler » : découverte finie, des cibles, personne contacté depuis 7 jours.
+      res.json(rows.map((n) => ({
+        ...n,
+        a_travailler: n.discovery_phase === 'done' && n.nb_cibles > 0 && n.contactees === 0 && n.jours_depuis_decouverte >= 7
+      })));
     } catch (e) {
       console.error('[SEO Backlinks] listNiches:', e.message);
       res.status(500).json({ message: 'Erreur serveur' });
@@ -377,11 +472,14 @@ const ctrl = {
         }
         const updated = { ...t, opr: opr ?? t.opr, crux };
         await db.pool.query(
-          'UPDATE seo_link_targets SET opr = COALESCE($1, opr), crux = COALESCE($2, crux), score = $3 WHERE id = $4',
-          [opr, crux, seoOutreach.computeScore(updated), t.id]
+          'UPDATE seo_link_targets SET opr = COALESCE($1, opr), crux = COALESCE($2, crux), score = $3, score_criteres = $4 WHERE id = $5',
+          [opr, crux, seoOutreach.computeScore(updated), seoOutreach.scoreDetail(updated).criteres, t.id]
         );
       }
-      res.json({ scored: targets.length, opr_found: Object.keys(oprMap).length, crux_checked: cruxChecked });
+      res.json({
+        scored: targets.length, opr_found: Object.keys(oprMap).length, crux_checked: cruxChecked,
+        crux_disponible: !!process.env.CRUX_API_KEY
+      });
     } catch (e) {
       console.error('[SEO Backlinks] score:', e.message);
       res.status(500).json({ message: 'Erreur serveur' });
@@ -391,44 +489,193 @@ const ctrl = {
   // GET /api/seo/backlinks/niches/:id/targets?statut=&q=
   listTargets: async (req, res) => {
     const db = req.app.locals.db;
-    const { statut, q } = req.query;
-    const cond = ['niche_id = $1']; const params = [parseInt(req.params.id, 10)]; let i = 2;
-    if (statut) { cond.push(`statut = $${i++}`); params.push(statut); }
-    else cond.push(`statut <> 'ecarte'`);
-    if (q) { cond.push(`(domain ILIKE $${i} OR title ILIKE $${i})`); params.push(`%${q}%`); i++; }
+    const { statut, q, concurrents } = req.query;
+    const cond = ['t.niche_id = $1']; const params = [parseInt(req.params.id, 10)]; let i = 2;
+    if (statut) { cond.push(`t.statut = $${i++}`); params.push(statut); }
+    else cond.push(`t.statut <> 'ecarte'`);
+    if (q) { cond.push(`(t.domain ILIKE $${i} OR t.title ILIKE $${i})`); params.push(`%${q}%`); i++; }
+    // concurrents=only : uniquement les concurrents ; concurrents=exclude : sans eux ; défaut : tous.
+    if (concurrents === 'only') cond.push('(t.concurrent OR t.concurrent_probable)');
+    else if (concurrents === 'exclude') cond.push('NOT (t.concurrent OR t.concurrent_probable)');
     try {
       const { rows } = await db.pool.query(
-        `SELECT t.*, o.sent_at AS last_sent_at, o.reponse AS last_reponse, et.open_count, et.click_count
+        `SELECT t.*, o.sent_at AS last_sent_at, o.reponse AS last_reponse, et.open_count, et.click_count,
+                (SELECT COUNT(*)::int FROM seo_link_target_spots s WHERE s.target_id = t.id) AS nb_spots,
+                (SELECT COUNT(*)::int FROM seo_link_target_spots s WHERE s.target_id = t.id AND s.dofollow) AS nb_spots_dofollow
          FROM seo_link_targets t
          LEFT JOIN LATERAL (SELECT * FROM seo_link_outreach WHERE target_id = t.id ORDER BY sent_at DESC LIMIT 1) o ON TRUE
          LEFT JOIN email_tracking et ON et.token = o.tracking_token
          WHERE ${cond.join(' AND ')}
-         ORDER BY t.score DESC NULLS LAST, t.referring_edges DESC NULLS LAST, t.domain ASC`,
+         ORDER BY (t.concurrent OR t.concurrent_probable) ASC, t.score DESC NULLS LAST,
+                  t.referring_edges DESC NULLS LAST, t.alive DESC NULLS LAST,
+                  (t.lang = 'fr') DESC NULLS LAST, t.domain ASC`,
         params
       );
-      res.json(rows);
+      res.json(rows.map((t) => ({ ...t, score_detail: seoOutreach.scoreDetail(t) })));
     } catch (e) {
       console.error('[SEO Backlinks] listTargets:', e.message);
       res.status(500).json({ message: 'Erreur serveur' });
     }
   },
 
-  // PATCH /api/seo/backlinks/targets/:id { statut?, notes?, contact_email?, raison_ecarte? }
+  // PATCH /api/seo/backlinks/targets/:id
+  // { statut?, notes?, contact_email?, raison_ecarte?, porte_type?, porte_url?, porte_note?,
+  //   concurrent?, concurrent_motif? } — les champs absents ne sont pas touchés.
   updateTarget: async (req, res) => {
     const db = req.app.locals.db;
     const allowed = ['nouveau', 'a_contacter', 'contacte', 'lien_obtenu', 'refus', 'ecarte'];
-    const { statut, notes, contact_email, raison_ecarte } = req.body || {};
-    if (statut && !allowed.includes(statut)) return res.status(400).json({ message: 'Statut invalide' });
+    const portes = ['email', 'formulaire', 'compte', 'reseau', 'commentaire', 'aucune'];
+    const b = req.body || {};
+    if (b.statut && !allowed.includes(b.statut)) return res.status(400).json({ message: 'Statut invalide' });
+    if (b.porte_type !== undefined && b.porte_type !== null && b.porte_type !== '' && !portes.includes(b.porte_type)) {
+      return res.status(400).json({ message: `Porte invalide (${portes.join(', ')})` });
+    }
+    const sets = []; const params = [];
+    const set = (col, val) => { params.push(val); sets.push(`${col} = $${params.length}`); };
+    if (b.statut) set('statut', b.statut);
+    if (b.notes !== undefined) set('notes', b.notes || null);
+    if (b.contact_email !== undefined) set('contact_email', b.contact_email || null);
+    if (b.raison_ecarte !== undefined) set('raison_ecarte', b.raison_ecarte || null);
+    if (b.porte_type !== undefined) set('porte_type', b.porte_type || null);
+    if (b.porte_url !== undefined) set('porte_url', b.porte_url || null);
+    if (b.porte_note !== undefined) set('porte_note', b.porte_note || null);
+    if (b.concurrent !== undefined) {
+      set('concurrent', !!b.concurrent);
+      // Décision humaine : on efface le « probable » et on garde/pose le motif.
+      set('concurrent_probable', false);
+      set('concurrent_motif', b.concurrent ? (b.concurrent_motif || 'marqué concurrent manuellement') : null);
+    } else if (b.concurrent_motif !== undefined) set('concurrent_motif', b.concurrent_motif || null);
+    if (sets.length === 0) return res.status(400).json({ message: 'Aucune modification fournie' });
+    params.push(req.params.id);
     try {
       const { rows } = await db.pool.query(
-        `UPDATE seo_link_targets SET
-           statut = COALESCE($1, statut), notes = COALESCE($2, notes),
-           contact_email = COALESCE($3, contact_email), raison_ecarte = COALESCE($4, raison_ecarte)
-         WHERE id = $5 RETURNING *`,
-        [statut || null, notes ?? null, contact_email ?? null, raison_ecarte ?? null, req.params.id]
-      );
+        `UPDATE seo_link_targets SET ${sets.join(', ')} WHERE id = $${params.length} RETURNING *`, params);
       if (rows.length === 0) return res.status(404).json({ message: 'Cible introuvable' });
-      res.json(rows[0]);
+      res.json({ ...rows[0], score_detail: seoOutreach.scoreDetail(rows[0]) });
+    } catch (e) {
+      console.error('[SEO Backlinks] updateTarget:', e.message);
+      res.status(500).json({ message: 'Erreur serveur' });
+    }
+  },
+
+  // GET /api/seo/backlinks/targets/:id — fiche complète : cible + emplacements + règle plateforme.
+  getTarget: async (req, res) => {
+    const db = req.app.locals.db;
+    try {
+      const { rows } = await db.pool.query(
+        `SELECT t.*, n.name AS niche_name, n.site_cible FROM seo_link_targets t JOIN seo_niches n ON n.id = t.niche_id WHERE t.id = $1`,
+        [req.params.id]);
+      if (rows.length === 0) return res.status(404).json({ message: 'Cible introuvable' });
+      const t = rows[0];
+      const spots = await db.pool.query(
+        'SELECT * FROM seo_link_target_spots WHERE target_id = $1 ORDER BY dofollow DESC NULLS LAST, emplacement', [t.id]);
+      const rule = t.platform
+        ? (await db.pool.query('SELECT * FROM seo_link_platform_rules WHERE platform = $1', [t.platform])).rows[0] || null
+        : null;
+      res.json({ ...t, score_detail: seoOutreach.scoreDetail(t), spots: spots.rows, platform_rule: rule });
+    } catch (e) {
+      console.error('[SEO Backlinks] getTarget:', e.message);
+      res.status(500).json({ message: 'Erreur serveur' });
+    }
+  },
+
+  // POST /api/seo/backlinks/targets/:id/spots { emplacement, url?, rel, note? } — lecture manuelle du rel.
+  addSpot: async (req, res) => {
+    const db = req.app.locals.db;
+    const { emplacement, url, rel, note } = req.body || {};
+    if (!emplacement || !linkSpots.EMPLACEMENTS.includes(emplacement)) {
+      return res.status(400).json({ message: `Emplacement invalide (${linkSpots.EMPLACEMENTS.join(', ')})` });
+    }
+    try {
+      const t = await db.pool.query('SELECT id FROM seo_link_targets WHERE id = $1', [req.params.id]);
+      if (t.rows.length === 0) return res.status(404).json({ message: 'Cible introuvable' });
+      const spot = await linkSpots.upsertSpot(db, t.rows[0].id, {
+        emplacement, url: (url || '').trim() || null, rel: rel || '', source: 'manuel', note: (note || '').trim() || null
+      });
+      const derived = await linkSpots.recomputeDofollow(db, t.rows[0].id);
+      res.status(201).json({ spot, ...derived });
+    } catch (e) {
+      console.error('[SEO Backlinks] addSpot:', e.message);
+      res.status(500).json({ message: 'Erreur serveur' });
+    }
+  },
+
+  // DELETE /api/seo/backlinks/spots/:id
+  deleteSpot: async (req, res) => {
+    const db = req.app.locals.db;
+    try {
+      const r = await db.pool.query('DELETE FROM seo_link_target_spots WHERE id = $1 RETURNING target_id', [req.params.id]);
+      if (r.rowCount === 0) return res.status(404).json({ message: 'Emplacement introuvable' });
+      const derived = await linkSpots.recomputeDofollow(db, r.rows[0].target_id);
+      res.json({ success: true, ...derived });
+    } catch (e) {
+      res.status(500).json({ message: 'Erreur serveur' });
+    }
+  },
+
+  // POST /api/seo/backlinks/targets/:id/rel-check — vérification automatique d'UNE cible (synchrone).
+  relCheckTarget: async (req, res) => {
+    const db = req.app.locals.db;
+    try {
+      const { rows } = await db.pool.query('SELECT * FROM seo_link_targets WHERE id = $1', [req.params.id]);
+      if (rows.length === 0) return res.status(404).json({ message: 'Cible introuvable' });
+      const r = await linkSpots.autoVerifyTarget(db, rows[0]);
+      const spots = await db.pool.query('SELECT * FROM seo_link_target_spots WHERE target_id = $1 ORDER BY dofollow DESC NULLS LAST, emplacement', [rows[0].id]);
+      const t = await db.pool.query('SELECT dofollow, platform, platform_rule_note, rel_verifie_le FROM seo_link_targets WHERE id = $1', [rows[0].id]);
+      res.json({ ...r, ...t.rows[0], spots: spots.rows });
+    } catch (e) {
+      console.error('[SEO Backlinks] relCheckTarget:', e.message);
+      res.status(500).json({ message: 'Erreur serveur' });
+    }
+  },
+
+  // POST /api/seo/backlinks/niches/:id/rel-check { only_unverified? } — toute la campagne, en arrière-plan.
+  relCheckNiche: async (req, res) => {
+    const db = req.app.locals.db;
+    if (runningNicheId) return res.status(409).json({ message: 'Un job est déjà en cours' });
+    const onlyUnverified = req.body?.only_unverified !== false;
+    try {
+      const nr = await db.pool.query('SELECT * FROM seo_niches WHERE id = $1', [req.params.id]);
+      if (nr.rows.length === 0) return res.status(404).json({ message: 'Niche introuvable' });
+      const { rows } = await db.pool.query(
+        `SELECT * FROM seo_link_targets
+         WHERE niche_id = $1 AND statut <> 'ecarte' AND NOT (concurrent OR concurrent_probable)
+           ${onlyUnverified ? 'AND rel_verifie_le IS NULL' : ''}
+         ORDER BY score DESC NULLS LAST LIMIT 80`,
+        [nr.rows[0].id]
+      );
+      if (rows.length === 0) return res.status(400).json({ message: onlyUnverified ? 'Toutes les cibles ont déjà un rel vérifié' : 'Aucune cible à vérifier' });
+      runningNicheId = nr.rows[0].id;
+      await setPhase(db, nr.rows[0].id, 'rel_running', `Vérification du rel : 0/${rows.length} cibles…`);
+      runRelCheck(db, nr.rows[0], rows);
+      res.status(202).json({ started: true, count: rows.length });
+    } catch (e) {
+      runningNicheId = null;
+      console.error('[SEO Backlinks] relCheckNiche:', e.message);
+      res.status(500).json({ message: 'Erreur serveur' });
+    }
+  },
+
+  // POST /api/seo/backlinks/niches/:id/competitors — recalcule les concurrents probables.
+  detectCompetitors: async (req, res) => {
+    const db = req.app.locals.db;
+    try {
+      const nr = await db.pool.query('SELECT * FROM seo_niches WHERE id = $1', [req.params.id]);
+      if (nr.rows.length === 0) return res.status(404).json({ message: 'Niche introuvable' });
+      const r = await flagCompetitors(db, nr.rows[0]);
+      res.json(r);
+    } catch (e) {
+      console.error('[SEO Backlinks] detectCompetitors:', e.message);
+      res.status(500).json({ message: 'Erreur serveur' });
+    }
+  },
+
+  // GET /api/seo/backlinks/platform-rules
+  listPlatformRules: async (req, res) => {
+    const db = req.app.locals.db;
+    try {
+      const { rows } = await db.pool.query('SELECT * FROM seo_link_platform_rules ORDER BY platform');
+      res.json(rows);
     } catch (e) {
       res.status(500).json({ message: 'Erreur serveur' });
     }

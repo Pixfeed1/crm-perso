@@ -114,6 +114,7 @@ const DATABASE_SCHEMA = {
       statut: "VARCHAR(20) DEFAULT 'nouvelle'", // nouvelle | decouverte | prete | archivee
       discovery_phase: 'VARCHAR(30)',   // snowball_running | graph_running | done | error
       discovery_message: 'TEXT',
+      discovery_done_at: 'TIMESTAMP',   // fin de la dernière découverte (fraîcheur de campagne)
       created_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'
     }
   },
@@ -133,16 +134,73 @@ const DATABASE_SCHEMA = {
       crux: 'BOOLEAN',                  // présent dans CrUX = trafic réel mesuré par Google
       referring_edges: 'INTEGER',       // nb de liens vers les hubs (graphe)
       score: 'INTEGER',                 // score composite 0-100
+      score_criteres: 'SMALLINT',       // nb de critères réellement mesurés (sur 3) : < 3 = score partiel
       statut: "VARCHAR(20) DEFAULT 'nouveau'", // nouveau | a_contacter | contacte | lien_obtenu | refus | ecarte
       raison_ecarte: 'TEXT',
       notes: 'TEXT',
       last_checked_at: 'TIMESTAMP',
+      // Plateforme détectée (forumactif, invision, fluxbb, shaarli, wordpress, phpbb…) et
+      // motif de la règle de rel appliquée automatiquement (seo_link_platform_rules).
+      platform: 'VARCHAR(30)',
+      platform_rule_note: 'TEXT',
+      // Dérivé des emplacements vérifiés (seo_link_target_spots) : TRUE dès qu'un emplacement
+      // laisse passer un lien dofollow, FALSE si tous sont bloqués, NULL = jamais vérifié.
+      dofollow: 'BOOLEAN',
+      rel_verifie_le: 'TIMESTAMP',
+      // Porte d'entrée pour contacter le site (email | formulaire | compte | reseau | commentaire | aucune).
+      porte_type: 'VARCHAR(20)',
+      porte_url: 'TEXT',
+      porte_note: 'TEXT',
+      // Concurrent (publie les mêmes contenus sur les mêmes requêtes) : pas une cible.
+      concurrent: 'BOOLEAN DEFAULT FALSE',
+      concurrent_probable: 'BOOLEAN DEFAULT FALSE',
+      concurrent_motif: 'TEXT',
+      // Requêtes qui ont fait ressortir le domaine (découverte mot-clé), séparées par « | ».
+      found_queries: 'TEXT',
       created_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'
     },
     indexes: [
       'CREATE INDEX IF NOT EXISTS idx_seo_link_targets_niche ON seo_link_targets(niche_id)',
       'CREATE UNIQUE INDEX IF NOT EXISTS idx_seo_link_targets_uniq ON seo_link_targets(niche_id, domain)'
     ]
+  },
+
+  // Emplacements vérifiés d'une cible : le rel varie DANS un même site (corps d'article,
+  // bloc sources, blogroll, commentaires, messages de forum). Une ligne par emplacement lu.
+  seo_link_target_spots: {
+    columns: {
+      id: 'SERIAL PRIMARY KEY',
+      target_id: 'INTEGER REFERENCES seo_link_targets(id) ON DELETE CASCADE',
+      emplacement: 'VARCHAR(30) NOT NULL', // article | sources | blogroll | commentaire | forum_message | partenaires | profil | pied | autre
+      url: 'TEXT',                        // page exacte où la lecture a été faite
+      rel: 'TEXT',                        // valeur lue ('' = aucun attribut rel)
+      dofollow: 'BOOLEAN',                // dérivé du rel (absence de nofollow/ugc/sponsored)
+      source: "VARCHAR(20) DEFAULT 'manuel'", // manuel | auto | regle | mcp
+      liens_vus: 'INTEGER',               // nb de liens externes observés à cet emplacement (auto)
+      note: 'TEXT',
+      verified_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP',
+      created_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'
+    },
+    indexes: [
+      'CREATE INDEX IF NOT EXISTS idx_seo_link_target_spots_target ON seo_link_target_spots(target_id)',
+      "CREATE UNIQUE INDEX IF NOT EXISTS idx_seo_link_target_spots_uniq ON seo_link_target_spots(target_id, emplacement, COALESCE(url, ''))"
+    ]
+  },
+
+  // Règles de rel par plateforme, tranchées une fois pour toutes et appliquées à la
+  // découverte dès que la plateforme est détectée (motif affiché sur la cible).
+  seo_link_platform_rules: {
+    columns: {
+      id: 'SERIAL PRIMARY KEY',
+      platform: 'VARCHAR(30) NOT NULL UNIQUE',
+      label: 'TEXT',
+      emplacement: 'VARCHAR(30)',         // emplacement concerné par la règle
+      rel_defaut: 'TEXT',                 // rel constaté sur cette plateforme ('' = aucun)
+      dofollow: 'BOOLEAN',
+      motif: 'TEXT',
+      actif: 'BOOLEAN DEFAULT TRUE',
+      updated_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'
+    }
   },
 
   seo_link_outreach: {
@@ -2143,6 +2201,7 @@ async function ensureSeoTables(client) {
   // Chaque nouvelle table SEO exigeait un GRANT a la main apres le deploiement, oublie une
   // fois sur deux : le backend, proprietaire des tables, l'accorde lui-meme a chaque
   // demarrage. Lecture seule, tables SEO uniquement, jamais seo_oauth_tokens (secrets).
+  await ensureLinkPlatformRules(client);
   await grantMcpReadOnly(client);
 
   console.log('  ✓ Tables SEO vérifiées');
@@ -2154,6 +2213,16 @@ const MCP_READONLY_TABLES = [
   'gsc_index_status', 'gsc_index_history', 'seo_sitemap_urls', 'seo_redirects', 'seo_pagespeed',
   'seo_ga_daily', 'seo_ga_channels_daily', 'seo_authority_daily', 'seo_backlinks', 'seo_ref_domains',
   'seo_niches', 'seo_link_targets', 'seo_link_outreach', 'email_tracking',
+  'seo_link_target_spots', 'seo_link_platform_rules',
+];
+
+// Seules ECRITURES accordees au connecteur MCP : capitaliser le travail de verification
+// fait par Claude en session (rel par emplacement, porte d'entree, concurrent, notes).
+// Rien d'autre : ni statut d'envoi, ni suppression, ni les autres tables.
+const MCP_WRITE_GRANTS = [
+  'GRANT INSERT, UPDATE ON seo_link_target_spots TO mcp_seo_ro',
+  'GRANT USAGE, SELECT ON SEQUENCE seo_link_target_spots_id_seq TO mcp_seo_ro',
+  'GRANT UPDATE (dofollow, rel_verifie_le, porte_type, porte_url, porte_note, concurrent, concurrent_motif, notes) ON seo_link_targets TO mcp_seo_ro',
 ];
 
 async function grantMcpReadOnly(client) {
@@ -2169,7 +2238,38 @@ async function grantMcpReadOnly(client) {
       if (e.code !== '42P01') console.error(`[AutoInit] GRANT ${t} -> mcp_seo_ro :`, e.message);
     }
   }
-  console.log(`  ✓ Droits de lecture MCP (${n} tables)`);
+  let w = 0;
+  for (const g of MCP_WRITE_GRANTS) {
+    try { await client.query(g); w++; } catch (e) {
+      if (e.code !== '42P01') console.error('[AutoInit] GRANT ecriture MCP :', e.message);
+    }
+  }
+  console.log(`  ✓ Droits MCP (${n} tables en lecture, ${w} droits d'ecriture cibles)`);
+}
+
+// Regles de rel par plateforme (tranchees sur le terrain). ON CONFLICT DO NOTHING :
+// modifiables ensuite en base sans etre ecrasees au redemarrage.
+const LINK_PLATFORM_RULES = [
+  ['forumactif', 'Forumactif / Forumotion', 'forum_message', 'nofollow', false,
+    'Forumactif/Forumotion : nofollow sur tous les liens de messages, y compris les blocs partenaires.'],
+  ['invision', 'Invision Community', 'forum_message', 'external nofollow noopener', false,
+    'Invision Community : external nofollow noopener sur les liens de messages.'],
+  ['fluxbb', 'FluxBB', 'forum_message', 'nofollow', false,
+    'FluxBB : nofollow sur les liens de messages.'],
+  ['shaarli', 'Shaarli', 'article', '', true,
+    'Shaarli : aucun attribut rel sur les liens partages, dofollow par defaut.'],
+  ['wordpress', 'WordPress (commentaires)', 'commentaire', 'ugc external nofollow', false,
+    'Commentaires WordPress : ugc external nofollow. Le corps d\'article depend du site, a verifier.'],
+];
+
+async function ensureLinkPlatformRules(client) {
+  for (const [platform, label, emplacement, rel, dofollow, motif] of LINK_PLATFORM_RULES) {
+    await client.query(
+      `INSERT INTO seo_link_platform_rules (platform, label, emplacement, rel_defaut, dofollow, motif)
+       VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (platform) DO NOTHING`,
+      [platform, label, emplacement, rel, dofollow, motif]
+    ).catch((e) => console.error('[AutoInit] regle plateforme', platform, ':', e.message));
+  }
 }
 
 /**

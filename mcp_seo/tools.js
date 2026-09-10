@@ -501,36 +501,131 @@ export async function searchPages(pool, siteId, q, limit = 20) {
 
 // ---- Backlinks (module campagnes de netlinking, LECTURE SEULE) ----
 
-// list_link_campaigns : les niches/campagnes backlinks + compteurs.
+// list_link_campaigns : les niches/campagnes backlinks + compteurs + fraîcheur.
 export async function listLinkCampaigns(pool) {
   const { rows } = await pool.query(
     `SELECT n.id, n.name, n.site_cible, n.hubs, n.statut, n.discovery_phase, n.discovery_message,
-            n.created_at,
+            n.created_at, n.discovery_done_at,
+            EXTRACT(DAY FROM NOW() - COALESCE(n.discovery_done_at, n.created_at))::int AS jours_depuis_decouverte,
             COUNT(t.id)::int AS nb_cibles,
-            COUNT(t.id) FILTER (WHERE t.statut = 'contacte')::int AS contactees,
-            COUNT(t.id) FILTER (WHERE t.statut = 'lien_obtenu')::int AS liens_obtenus
+            COUNT(t.id) FILTER (WHERE t.statut IN ('contacte', 'lien_obtenu', 'refus'))::int AS contactees,
+            COUNT(t.id) FILTER (WHERE t.statut = 'lien_obtenu')::int AS liens_obtenus,
+            COUNT(t.id) FILTER (WHERE t.rel_verifie_le IS NOT NULL)::int AS rel_verifies,
+            COUNT(t.id) FILTER (WHERE t.dofollow = TRUE)::int AS dofollow_possibles,
+            COUNT(t.id) FILTER (WHERE t.concurrent OR t.concurrent_probable)::int AS concurrents
      FROM seo_niches n LEFT JOIN seo_link_targets t ON t.niche_id = n.id
      GROUP BY n.id ORDER BY n.created_at DESC`
   );
-  return rows;
+  return rows.map((n) => ({
+    ...n,
+    a_travailler: n.discovery_phase === 'done' && n.nb_cibles > 0 && n.contactees === 0 && n.jours_depuis_decouverte >= 7
+  }));
 }
 
-// get_link_targets : cibles d'une campagne (score, autorité, trafic réel, statut).
-export async function getLinkTargets(pool, nicheId, statut = null, limit = 50) {
+// Même règle que le backend (seoOutreachService.scoreDetail) : combien des 3 critères
+// du score composite ont réellement été mesurés. La pertinence (liens vers les hubs)
+// n'existe que pour la découverte par graphe.
+function scoreDetail(t) {
+  const manquants = [];
+  if (t.open_pagerank == null) manquants.push('autorité (Open PageRank)');
+  if (t.trafic_reel_crux == null) manquants.push('trafic réel (CrUX)');
+  const viaGraphe = t.via === 'graph' || t.via === 'both';
+  if (t.referring_edges == null) manquants.push(viaGraphe ? 'pertinence (liens vers les hubs)' : 'pertinence (non mesurable : découverte hors graphe)');
+  const criteres = 3 - manquants.length;
+  return { criteres, partiel: criteres < 3, libelle: criteres === 3 ? 'score complet (3 critères)' : `score partiel : ${criteres} critère(s) sur 3`, manquants };
+}
+
+// get_link_targets : cibles d'une campagne (score + criteres mesures, autorite, trafic reel,
+// rel/dofollow par emplacement, porte d'entree, concurrent, statut).
+export async function getLinkTargets(pool, nicheId, statut = null, limit = 50, inclureConcurrents = false) {
   const params = [nicheId];
-  let where = 'niche_id = $1';
-  if (statut) { params.push(statut); where += ` AND statut = $${params.length}`; }
+  let where = 't.niche_id = $1';
+  if (statut) { params.push(statut); where += ` AND t.statut = $${params.length}`; }
+  if (!inclureConcurrents) where += ' AND NOT (t.concurrent OR t.concurrent_probable)';
   params.push(Math.min(Math.max(parseInt(limit, 10) || 50, 1), 200));
   const { rows } = await pool.query(
-    `SELECT domain, title, via, lang, alive, contact_email,
-            opr::float AS open_pagerank, crux AS trafic_reel_crux,
-            referring_edges, score, statut, raison_ecarte, notes, last_checked_at
-     FROM seo_link_targets WHERE ${where}
-     ORDER BY score DESC NULLS LAST, referring_edges DESC NULLS LAST
+    `SELECT t.id AS target_id, t.domain, t.title, t.via, t.lang, t.alive, t.contact_email,
+            t.opr::float AS open_pagerank, t.crux AS trafic_reel_crux,
+            t.referring_edges, t.score, t.score_criteres, t.statut, t.raison_ecarte, t.notes, t.last_checked_at,
+            t.platform, t.platform_rule_note, t.dofollow, t.rel_verifie_le,
+            t.porte_type, t.porte_url, t.porte_note,
+            t.concurrent, t.concurrent_probable, t.concurrent_motif, t.found_queries,
+            COALESCE((SELECT json_agg(json_build_object('emplacement', s.emplacement, 'rel', s.rel, 'dofollow', s.dofollow, 'url', s.url, 'source', s.source, 'verified_at', s.verified_at) ORDER BY s.dofollow DESC NULLS LAST, s.emplacement)
+                      FROM seo_link_target_spots s WHERE s.target_id = t.id), '[]'::json) AS emplacements
+     FROM seo_link_targets t WHERE ${where}
+     ORDER BY t.score DESC NULLS LAST, t.referring_edges DESC NULLS LAST, t.alive DESC NULLS LAST, (t.lang = 'fr') DESC NULLS LAST, t.domain
      LIMIT $${params.length}`,
     params
   );
+  return rows.map((t) => ({ ...t, score_detail: scoreDetail(t) }));
+}
+
+// list_link_platform_rules : règles de rel par plateforme (tranchées sur le terrain).
+export async function listLinkPlatformRules(pool) {
+  const { rows } = await pool.query(
+    'SELECT platform, label, emplacement, rel_defaut, dofollow, motif, actif FROM seo_link_platform_rules ORDER BY platform');
   return rows;
+}
+
+// Résolution d'une cible par (campagne, domaine) — les outils d'écriture travaillent par domaine.
+async function findTarget(pool, nicheId, domain) {
+  const d = String(domain || '').toLowerCase().trim().replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0];
+  const { rows } = await pool.query(
+    'SELECT id, domain FROM seo_link_targets WHERE niche_id = $1 AND (domain = $2 OR domain = $3) LIMIT 1',
+    [nicheId, d, `www.${d}`]);
+  if (rows.length === 0) throw new Error(`Cible « ${d} » introuvable dans la campagne ${nicheId}`);
+  return rows[0];
+}
+
+const EMPLACEMENTS = ['article', 'sources', 'blogroll', 'commentaire', 'forum_message', 'partenaires', 'profil', 'pied', 'autre'];
+const relIsDofollow = (rel) => !/\b(nofollow|ugc|sponsored)\b/i.test(String(rel || ''));
+const normalizeRel = (rel) => String(rel || '').toLowerCase().trim().split(/\s+/).filter(Boolean).sort().join(' ');
+
+// record_link_rel : ECRITURE. Capitalise une lecture manuelle du rel (par emplacement, avec
+// l'URL exacte). Recalcule dofollow de la cible = au moins un emplacement dofollow.
+export async function recordLinkRel(pool, nicheId, domain, emplacement, rel, url = null, note = null) {
+  if (!EMPLACEMENTS.includes(emplacement)) throw new Error(`Emplacement invalide : ${EMPLACEMENTS.join(', ')}`);
+  const t = await findTarget(pool, nicheId, domain);
+  const relN = normalizeRel(rel);
+  const { rows } = await pool.query(
+    `INSERT INTO seo_link_target_spots (target_id, emplacement, url, rel, dofollow, source, note, verified_at)
+     VALUES ($1, $2, $3, $4, $5, 'mcp', $6, NOW())
+     ON CONFLICT (target_id, emplacement, COALESCE(url, '')) DO UPDATE SET
+       rel = EXCLUDED.rel, dofollow = EXCLUDED.dofollow, source = 'mcp',
+       note = COALESCE(EXCLUDED.note, seo_link_target_spots.note), verified_at = NOW()
+     RETURNING emplacement, url, rel, dofollow, verified_at`,
+    [t.id, emplacement, url || null, relN, relIsDofollow(relN), note || null]);
+  const d = await pool.query(
+    `UPDATE seo_link_targets x SET
+       dofollow = (SELECT CASE WHEN COUNT(*) = 0 THEN NULL ELSE bool_or(s.dofollow) END FROM seo_link_target_spots s WHERE s.target_id = x.id),
+       rel_verifie_le = NOW()
+     WHERE x.id = $1 RETURNING dofollow`, [t.id]);
+  return { domain: t.domain, emplacement: rows[0], dofollow_cible: d.rows[0].dofollow };
+}
+
+// update_link_target : ECRITURE limitee (porte d'entree, concurrent, notes). Rien d'autre.
+export async function updateLinkTarget(pool, nicheId, domain, fields = {}) {
+  const t = await findTarget(pool, nicheId, domain);
+  const portes = ['email', 'formulaire', 'compte', 'reseau', 'commentaire', 'aucune'];
+  const sets = []; const params = [];
+  const set = (col, val) => { params.push(val); sets.push(`${col} = $${params.length}`); };
+  if (fields.porte_type !== undefined) {
+    if (fields.porte_type && !portes.includes(fields.porte_type)) throw new Error(`porte_type invalide : ${portes.join(', ')}`);
+    set('porte_type', fields.porte_type || null);
+  }
+  if (fields.porte_url !== undefined) set('porte_url', fields.porte_url || null);
+  if (fields.porte_note !== undefined) set('porte_note', fields.porte_note || null);
+  if (fields.concurrent !== undefined) {
+    set('concurrent', !!fields.concurrent);
+    set('concurrent_motif', fields.concurrent ? (fields.concurrent_motif || 'marqué concurrent (Claude)') : null);
+  } else if (fields.concurrent_motif !== undefined) set('concurrent_motif', fields.concurrent_motif || null);
+  if (fields.notes !== undefined) set('notes', fields.notes || null);
+  if (sets.length === 0) throw new Error('Aucun champ à modifier');
+  params.push(t.id);
+  const { rows } = await pool.query(
+    `UPDATE seo_link_targets SET ${sets.join(', ')} WHERE id = $${params.length}
+     RETURNING domain, porte_type, porte_url, porte_note, concurrent, concurrent_motif, notes`, params);
+  return rows[0];
 }
 
 // get_link_outreach_status : emails de demande de lien envoyés + tracking + relances dues.

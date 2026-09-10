@@ -260,9 +260,30 @@ function buildServer() {
 
   server.tool(
     'get_link_targets',
-    "Cibles backlinks d'une campagne : domaine, titre, autorité (Open PageRank 0-10), trafic réel (présence CrUX), pertinence (liens vers les hubs), score composite 0-100, statut (nouveau/a_contacter/contacte/lien_obtenu/refus/ecarte) et email de contact. Triées par score.",
-    { campaign_id: z.number().int(), statut: z.string().optional(), limit: z.number().int().optional() },
-    async ({ campaign_id, statut, limit }) => ok(await tools.getLinkTargets(pool, campaign_id, statut ?? null, limit ?? 50))
+    "Cibles backlinks d'une campagne. Par cible : score 0-100 avec score_criteres (nb de critères mesurés sur 3 ; < 3 = score partiel, détail dans score_detail), autorité (Open PageRank), trafic réel (CrUX), pertinence (liens vers les hubs, uniquement découverte par graphe), plateforme détectée et règle de rel appliquée (platform_rule_note), dofollow (TRUE = au moins un emplacement laisse passer un lien dofollow, NULL = jamais vérifié) avec la liste des emplacements vérifiés (article, sources, blogroll, commentaire, forum_message… avec rel et URL de lecture), porte d'entrée (porte_type email/formulaire/compte/reseau/commentaire, porte_url, porte_note), concurrent (décision humaine) / concurrent_probable (détection auto, motif dans concurrent_motif), statut. Les concurrents sont EXCLUS par défaut (inclure_concurrents=true pour les voir). Triées par score.",
+    { campaign_id: z.number().int(), statut: z.string().optional(), limit: z.number().int().optional(), inclure_concurrents: z.boolean().optional() },
+    async ({ campaign_id, statut, limit, inclure_concurrents }) => ok(await tools.getLinkTargets(pool, campaign_id, statut ?? null, limit ?? 50, inclure_concurrents ?? false))
+  );
+
+  server.tool(
+    'list_link_platform_rules',
+    "Règles de rel par plateforme, tranchées sur le terrain et appliquées automatiquement à la vérification (Forumactif/Forumotion, Invision, FluxBB, Shaarli, commentaires WordPress…) : emplacement concerné, rel constaté, dofollow ou non, motif.",
+    {},
+    async () => ok(await tools.listLinkPlatformRules(pool))
+  );
+
+  server.tool(
+    'record_link_rel',
+    "ÉCRITURE. Enregistre une lecture du rel faite dans le DOM d'une cible, PAR EMPLACEMENT (le rel varie dans un même site : corps d'article, bloc sources, blogroll, commentaires, messages de forum). Donne l'URL exacte où la lecture a été faite et le rel tel que lu ('' si aucun attribut). Le dofollow de la cible est recalculé (au moins un emplacement dofollow). À appeler dès qu'une vérification manuelle est faite, pour ne jamais la refaire.",
+    { campaign_id: z.number().int(), domain: z.string(), emplacement: z.enum(['article','sources','blogroll','commentaire','forum_message','partenaires','profil','pied','autre']), rel: z.string(), url: z.string().optional(), note: z.string().optional() },
+    async ({ campaign_id, domain, emplacement, rel, url, note }) => ok(await tools.recordLinkRel(pool, campaign_id, domain, emplacement, rel, url ?? null, note ?? null))
+  );
+
+  server.tool(
+    'update_link_target',
+    "ÉCRITURE limitée. Renseigne sur une cible : la porte d'entrée (porte_type email/formulaire/compte/reseau/commentaire/aucune, porte_url, porte_note = contrainte à connaître : champ obligatoire, reCAPTCHA, limite…), le marquage concurrent (concurrent true/false + concurrent_motif) et les notes. Ne change ni le statut ni les envois.",
+    { campaign_id: z.number().int(), domain: z.string(), porte_type: z.string().optional(), porte_url: z.string().optional(), porte_note: z.string().optional(), concurrent: z.boolean().optional(), concurrent_motif: z.string().optional(), notes: z.string().optional() },
+    async ({ campaign_id, domain, ...fields }) => ok(await tools.updateLinkTarget(pool, campaign_id, domain, fields))
   );
 
   server.tool(

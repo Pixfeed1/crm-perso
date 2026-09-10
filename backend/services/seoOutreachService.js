@@ -180,8 +180,9 @@ async function discoverByKeyword({ niche, hubs = '', site_cible = '' }) {
     "et les sites manifestement anglophones.",
     "",
     "À LA FIN, réponds avec UNIQUEMENT un objet JSON (aucun texte autour) :",
-    '{"domains": ["exemple.fr", "autre-site.com"]}',
-    "Uniquement des noms de domaine nus (sans https:// ni chemin), dédupliqués."
+    '{"sites": [{"domain": "exemple.fr", "query": "la recherche exacte qui l\'a fait ressortir"}, {"domain": "autre-site.com", "query": "..."}]}',
+    "Uniquement des noms de domaine nus (sans https:// ni chemin), dédupliqués, chacun avec",
+    "la requête de recherche (telle que tapée) sur laquelle tu l'as vu se positionner."
   ].filter(Boolean).join("\n");
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -201,7 +202,10 @@ async function discoverByKeyword({ niche, hubs = '', site_cible = '' }) {
   const data = await res.json();
   const text = (data.content || []).filter((c) => c.type === 'text').map((c) => c.text || '').join('\n');
   const parsed = parseJsonLoose(text);
-  const domains = Array.isArray(parsed?.domains) ? parsed.domains : [];
+  // Deux formes acceptées : {sites:[{domain, query}]} (actuelle) ou {domains:[...]} (ancienne).
+  const sites = Array.isArray(parsed?.sites) ? parsed.sites
+    : Array.isArray(parsed?.domains) ? parsed.domains.map((d) => ({ domain: d, query: null })) : [];
+  const domains = sites.map((x) => (x && typeof x === 'object' ? x.domain : x));
   // Plateformes jamais pertinentes comme cibles (match exact ou sous-domaine de google/
   // facebook…). ATTENTION : on ne bloque PAS *.wordpress.com / *.blogspot.com — ce sont
   // de vrais blogs de niche (le blog DAZ de Marc en est la preuve).
@@ -212,11 +216,21 @@ async function discoverByKeyword({ niche, hubs = '', site_cible = '' }) {
   const isJunk = (d) => JUNK.has(d) || d.endsWith('.google.com') || d.endsWith('.facebook.com')
     || d.endsWith('.wikipedia.org') || d.endsWith('.amazon.com') || d.endsWith('.amazon.fr');
   // Nettoyage : domaine nu, minuscule, avec un point, sans chemin, hors plateformes.
-  const clean = [...new Set(domains
-    .map((d) => String(d).toLowerCase().trim().replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0])
+  const normDomain = (d) => String(d || '').toLowerCase().trim().replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0];
+  const queries = {}; // domaine -> requêtes (dédupliquées) qui l'ont fait ressortir
+  for (const x of sites) {
+    const d = normDomain(x && typeof x === 'object' ? x.domain : x);
+    const q = x && typeof x === 'object' && x.query ? String(x.query).trim().slice(0, 120) : null;
+    if (!d) continue;
+    if (!queries[d]) queries[d] = new Set();
+    if (q) queries[d].add(q);
+  }
+  const clean = [...new Set(domains.map(normDomain)
     .filter((d) => d.includes('.') && d.length < 100 && !isJunk(d)))];
   const searches = (data.usage && data.usage.server_tool_use && data.usage.server_tool_use.web_search_requests) || null;
-  return { domains: clean, searches_used: searches };
+  const found_queries = {};
+  for (const d of clean) found_queries[d] = [...(queries[d] || [])];
+  return { domains: clean, found_queries, searches_used: searches };
 }
 
 // ─── Scoring : Open PageRank + CrUX ──────────────────────────────────────────
@@ -292,6 +306,25 @@ async function checkCrux(domain) {
 // Score composite 0-100 : autorité (OPR), trafic réel (CrUX), pertinence (liens vers
 // les hubs), vivant + francophone. Honnête : un proxy, pas une vérité — mais composé
 // de sources RÉELLES (pas d'estimation propriétaire opaque).
+// Combien des 3 critères annoncés (autorité, trafic réel, pertinence) ont VRAIMENT été
+// mesurés. < 3 = score partiel, à afficher tel quel plutôt que de le laisser passer pour
+// un composite. La pertinence (liens vers les hubs) n'existe que pour la découverte par
+// graphe : une cible trouvée par mot-clé ne l'aura jamais.
+function scoreDetail(t) {
+  const manquants = [];
+  if (t.opr == null) manquants.push('autorité (Open PageRank)');
+  if (t.crux == null) manquants.push('trafic réel (CrUX)');
+  const viaGraphe = t.via === 'graph' || t.via === 'both';
+  if (t.referring_edges == null) manquants.push(viaGraphe ? 'pertinence (liens vers les hubs)' : 'pertinence (non mesurable : découverte hors graphe)');
+  const criteres = 3 - manquants.length;
+  return {
+    criteres,
+    partiel: criteres < 3,
+    libelle: criteres === 3 ? 'score complet (3 critères)' : `score partiel : ${criteres} critère${criteres > 1 ? 's' : ''} sur 3`,
+    manquants
+  };
+}
+
 function computeScore(t) {
   let s = 0;
   if (t.opr != null) s += Math.round(Math.min(10, Number(t.opr)) * 6); // 0-60
@@ -305,5 +338,5 @@ function computeScore(t) {
 module.exports = {
   isGmailConfigured, sendViaGmail,
   draftLinkEmail, discoverByKeyword,
-  fetchOpenPageRank, checkCrux, computeScore
+  fetchOpenPageRank, checkCrux, computeScore, scoreDetail
 };

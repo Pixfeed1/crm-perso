@@ -44,6 +44,14 @@ TO mcp_seo_ro;
 -- À exécuter avec l'utilisateur applicatif APRÈS le premier démarrage du backend
 -- (les tables sont créées par autoInitDatabase) :
 --   GRANT SELECT ON seo_niches, seo_link_targets, seo_link_outreach, email_tracking TO mcp_seo_ro;
+--   GRANT SELECT ON seo_link_target_spots, seo_link_platform_rules TO mcp_seo_ro;
+-- Seules ECRITURES du connecteur (capitaliser les vérifications faites par Claude en
+-- session : rel par emplacement, porte d'entrée, concurrent, notes). Accordées
+-- automatiquement par le backend, listées ici pour mémoire :
+--   GRANT INSERT, UPDATE ON seo_link_target_spots TO mcp_seo_ro;
+--   GRANT USAGE, SELECT ON SEQUENCE seo_link_target_spots_id_seq TO mcp_seo_ro;
+--   GRANT UPDATE (dofollow, rel_verifie_le, porte_type, porte_url, porte_note, concurrent, concurrent_motif, notes)
+--     ON seo_link_targets TO mcp_seo_ro;
 --
 -- Indexation Google (URL Inspection). Ces tables sont créées par autoInitDatabase :
 -- sur une installation DÉJÀ en service, le GRANT ci-dessus a déjà été joué sans elles.

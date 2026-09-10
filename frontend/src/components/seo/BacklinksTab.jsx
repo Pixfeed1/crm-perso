@@ -8,10 +8,18 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   FiLink, FiPlus, FiTrash2, FiPlay, FiRefreshCw, FiX, FiLoader, FiCpu,
-  FiSend, FiCheckCircle, FiSlash, FiExternalLink, FiZap, FiEye, FiSearch
+  FiSend, FiCheckCircle, FiSlash, FiExternalLink, FiZap, FiEye, FiSearch,
+  FiShield, FiAlertTriangle, FiInfo, FiCheck, FiClock, FiMail, FiEdit3, FiUserPlus, FiMessageCircle
 } from 'react-icons/fi';
 import { seoBacklinksAPI } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
+import TargetSheet from './TargetSheet';
+
+// Icône de la porte d'entrée (comment on contacte le site).
+const PORTE_ICON = {
+  email: [FiMail, 'Email'], formulaire: [FiEdit3, 'Formulaire de contact'], compte: [FiUserPlus, 'Compte à créer'],
+  reseau: [FiMessageCircle, 'Réseau social'], commentaire: [FiMessageCircle, 'Commentaire'], aucune: [FiSlash, 'Aucune porte trouvée']
+};
 
 const Spinner = ({ size = 15 }) => (
   <motion.span animate={{ rotate: 360 }} transition={{ duration: 0.9, repeat: Infinity, ease: 'linear' }} className="inline-flex">
@@ -38,7 +46,9 @@ const BacklinksTab = () => {
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ name: '', site_cible: '', hubs: '', seeds: '' });
   const [saving, setSaving] = useState(false);
-  const [busy, setBusy] = useState(''); // 'discover' | 'verify' | 'score'
+  const [busy, setBusy] = useState(''); // 'discover' | 'verify' | 'score' | 'rel' | 'competitors'
+  const [sheetId, setSheetId] = useState(null); // fiche cible ouverte
+  const [hideCompetitors, setHideCompetitors] = useState(true);
   const pollRef = useRef(null);
 
   // Modale outreach
@@ -64,14 +74,14 @@ const BacklinksTab = () => {
   const loadTargets = useCallback(async (nicheId) => {
     setLoadingTargets(true);
     try {
-      const t = await seoBacklinksAPI.listTargets(nicheId);
+      const t = await seoBacklinksAPI.listTargets(nicheId, hideCompetitors ? { concurrents: 'exclude' } : {});
       setTargets(Array.isArray(t) ? t : []);
     } catch (e) {
       toast.error('Erreur de chargement des cibles');
     } finally {
       setLoadingTargets(false);
     }
-  }, [toast]);
+  }, [toast, hideCompetitors]);
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => { if (activeNiche) loadTargets(activeNiche.id); }, [activeNiche, loadTargets]);
@@ -121,8 +131,18 @@ const BacklinksTab = () => {
       else if (action === 'verify') await seoBacklinksAPI.verify(activeNiche.id);
       else if (action === 'score') {
         const r = await seoBacklinksAPI.score(activeNiche.id);
-        toast.success(`Scoring : ${r.scored} cibles (OPR ${r.opr_found}, CrUX ${r.crux_checked})`);
+        toast.success(`Scoring : ${r.scored} cibles (OPR ${r.opr_found}, CrUX ${r.crux_checked}${r.crux_disponible === false ? ', clé CrUX absente' : ''})`);
         setBusy(''); loadTargets(activeNiche.id); load();
+        return;
+      } else if (action === 'competitors') {
+        const r = await seoBacklinksAPI.detectCompetitors(activeNiche.id);
+        toast.success(`${r.flagged} concurrent(s) probable(s)${r.gsc_queries ? ` (croisé avec ${r.gsc_queries} requêtes Search Console)` : r.site ? ' (aucune requête Search Console pour ce site)' : ' (site cible non renseigné : titres seulement)'}`);
+        setBusy(''); loadTargets(activeNiche.id); load();
+        return;
+      } else if (action === 'rel') {
+        const r = await seoBacklinksAPI.relCheckNiche(activeNiche.id, { only_unverified: mode !== 'all' });
+        toast.success(`Lecture du rel lancée sur ${r.count} cibles`);
+        startPolling();
         return;
       }
       toast.success(action === 'discover' ? (mode === 'graph' ? 'Scan du graphe lancé (long — batch)' : 'Boule de neige lancée') : 'Vérification live lancée');
@@ -240,8 +260,14 @@ const BacklinksTab = () => {
                   <div className="text-sm font-medium text-text-primary">{n.name}</div>
                   <div className="text-xs text-text-muted">
                     {n.nb_cibles} cible{n.nb_cibles > 1 ? 's' : ''}{n.liens_obtenus > 0 ? ` · 🔗 ${n.liens_obtenus}` : ''}
+                    {n.dofollow_ok > 0 ? ` · ${n.dofollow_ok} dofollow` : ''}
                     {status && status.running_niche_id === n.id && <span className="text-warning-text"> · job en cours…</span>}
                   </div>
+                  {n.a_travailler && (
+                    <div className="text-xs text-warning-text inline-flex items-center gap-1 mt-0.5" title={`Découverte terminée depuis ${n.jours_depuis_decouverte} jours, aucune cible contactée`}>
+                      <FiClock size={11} /> à travailler · {n.jours_depuis_decouverte} j
+                    </div>
+                  )}
                 </div>
                 <button onClick={(e) => { e.stopPropagation(); removeNiche(n); }} className="p-1 rounded text-text-muted hover:text-danger-text" title="Supprimer">
                   <FiTrash2 size={13} />
@@ -291,8 +317,22 @@ const BacklinksTab = () => {
                 title="Open PageRank + CrUX + score composite">
                 {busy === 'score' ? <Spinner /> : <FiCheckCircle size={14} />} Scorer
               </button>
+              <button onClick={() => runAction('rel')} disabled={!!busy || (status && status.running_niche_id)}
+                className="px-3 py-1.5 rounded-lg bg-surface-strong hover:bg-border-strong text-text-primary text-sm flex items-center gap-1.5 disabled:opacity-50"
+                title="Lit le rel des liens externes, emplacement par emplacement (accueil + articles), détecte la plateforme et applique les règles connues. Cibles non encore vérifiées, hors concurrents.">
+                {busy === 'rel' ? <Spinner /> : <FiShield size={14} />} Lire le rel
+              </button>
+              <button onClick={() => runAction('competitors')} disabled={!!busy}
+                className="px-3 py-1.5 rounded-lg bg-surface-strong hover:bg-border-strong text-text-primary text-sm flex items-center gap-1.5 disabled:opacity-50"
+                title="Marque « concurrent probable » les sites qui se positionnent sur des requêtes où ton site a déjà des impressions (Search Console), ou dont le titre est celui d'une agence">
+                {busy === 'competitors' ? <Spinner /> : <FiAlertTriangle size={14} />} Concurrents
+              </button>
             </div>
           </div>
+          <label className="flex items-center gap-2 text-xs text-text-muted mb-2 cursor-pointer select-none">
+            <input type="checkbox" checked={hideCompetitors} onChange={(e) => setHideCompetitors(e.target.checked)} className="accent-accent" />
+            Masquer les concurrents (confirmés et probables){activeNiche.concurrents > 0 ? ` · ${activeNiche.concurrents}` : ''}
+          </label>
 
           {loadingTargets ? (
             <p className="text-text-muted text-sm py-6 text-center">Chargement…</p>
@@ -307,6 +347,8 @@ const BacklinksTab = () => {
                     <th className="px-3 py-2">Score</th>
                     <th className="px-3 py-2">OPR</th>
                     <th className="px-3 py-2">Trafic</th>
+                    <th className="px-3 py-2">Rel</th>
+                    <th className="px-3 py-2">Porte</th>
                     <th className="px-3 py-2">Langue</th>
                     <th className="px-3 py-2">Statut</th>
                     <th className="px-3 py-2 text-right">Actions</th>
@@ -324,13 +366,49 @@ const BacklinksTab = () => {
                           {t.title && <div className="text-xs text-text-muted truncate max-w-xs">{t.title}</div>}
                           {t.via === 'both' && <span className="text-xs px-1.5 py-0.5 rounded-full bg-success-bg text-success-text ml-1" title="Trouvé par les 2 moteurs (graphe + boule de neige)">×2</span>}
                           {(t.open_count > 0) && <span className="text-xs px-1.5 py-0.5 rounded-full bg-warning-bg text-warning-text ml-1" title="Email ouvert"><FiEye size={10} className="inline" /> ouvert{t.click_count > 0 ? ' · cliqué' : ''}</span>}
+                          {(t.concurrent || t.concurrent_probable) && (
+                            <span className="text-xs px-1.5 py-0.5 rounded-full bg-danger-bg text-danger-text ml-1 inline-flex items-center gap-1" title={t.concurrent_motif || ''}>
+                              <FiAlertTriangle size={10} /> {t.concurrent ? 'concurrent' : 'concurrent ?'}
+                            </span>
+                          )}
+                          {t.platform && <span className="text-xs px-1.5 py-0.5 rounded-full bg-info-bg text-info-text ml-1" title={t.platform_rule_note || 'Plateforme détectée'}>{t.platform}</span>}
                         </td>
-                        <td className="px-3 py-2 font-semibold text-text-primary">{t.score ?? '—'}</td>
+                        <td className="px-3 py-2 font-semibold text-text-primary whitespace-nowrap">
+                          {t.score ?? '—'}
+                          {t.score != null && t.score_detail && t.score_detail.partiel && (
+                            <span className="ml-1 text-xs font-normal text-warning-text" title={`${t.score_detail.libelle}. Non mesuré : ${(t.score_detail.manquants || []).join(' ; ')}`}>
+                              {t.score_detail.criteres}/3
+                            </span>
+                          )}
+                        </td>
                         <td className="px-3 py-2 text-text-secondary">{t.opr != null ? Number(t.opr).toFixed(1) : '—'}</td>
                         <td className="px-3 py-2">{t.crux === true ? <span title="Présent dans CrUX : trafic réel mesuré par Google">📈 réel</span> : t.crux === false ? <span className="text-text-muted" title="Absent de CrUX">faible</span> : '—'}</td>
+                        <td className="px-3 py-2 whitespace-nowrap">
+                          {t.dofollow === true ? (
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-success-bg text-success-text font-medium inline-flex items-center gap-1" title={`${t.nb_spots_dofollow}/${t.nb_spots} emplacement(s) dofollow`}><FiCheck size={11} /> dofollow</span>
+                          ) : t.dofollow === false ? (
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-danger-bg text-danger-text font-medium inline-flex items-center gap-1" title={`${t.nb_spots} emplacement(s) lus, tous bloqués`}><FiSlash size={11} /> bloqué</span>
+                          ) : (
+                            <span className="text-xs text-text-muted" title="Rel jamais vérifié">—</span>
+                          )}
+                        </td>
+                        <td className="px-3 py-2">
+                          {t.porte_type && PORTE_ICON[t.porte_type] ? (
+                            (() => { const [Icon, label] = PORTE_ICON[t.porte_type]; return (
+                              t.porte_url
+                                ? <a href={t.porte_url} target="_blank" rel="noopener noreferrer" className="text-text-secondary hover:text-accent inline-flex items-center gap-1 text-xs" title={`${label}${t.porte_note ? ` · ${t.porte_note}` : ''}`}><Icon size={13} /> {label}</a>
+                                : <span className="text-text-secondary inline-flex items-center gap-1 text-xs" title={t.porte_note || ''}><Icon size={13} /> {label}</span>
+                            ); })()
+                          ) : t.contact_email ? (
+                            <span className="text-text-secondary inline-flex items-center gap-1 text-xs" title={t.contact_email}><FiMail size={13} /> email</span>
+                          ) : <span className="text-text-muted text-xs">—</span>}
+                        </td>
                         <td className="px-3 py-2 text-text-secondary">{t.lang || '—'}</td>
                         <td className="px-3 py-2"><span className={`text-xs px-2 py-0.5 rounded-full font-medium ${sb.cls}`}>{sb.label}</span></td>
                         <td className="px-3 py-2 text-right whitespace-nowrap">
+                          <button onClick={() => setSheetId(t.id)} className="p-1.5 rounded-lg text-text-muted hover:text-accent hover:bg-surface-strong" title="Fiche : rel par emplacement, porte d'entrée, concurrent, notes">
+                            <FiInfo size={14} />
+                          </button>
                           {t.statut !== 'lien_obtenu' && (
                             <>
                               <button onClick={() => openOutreach(t)} disabled={status && !status.gmail}
@@ -356,6 +434,13 @@ const BacklinksTab = () => {
           )}
         </div>
       )}
+
+      {/* Fiche cible : rel par emplacement, porte d'entrée, concurrent */}
+      <AnimatePresence>
+        {sheetId && (
+          <TargetSheet targetId={sheetId} onClose={() => setSheetId(null)} onChanged={() => { if (activeNiche) { loadTargets(activeNiche.id); load(); } }} />
+        )}
+      </AnimatePresence>
 
       {/* Modale outreach : rédaction Claude + envoi Gmail */}
       <AnimatePresence>

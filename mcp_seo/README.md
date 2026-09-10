@@ -4,7 +4,7 @@ Expose les données SEO du CRM à Claude (Desktop / Code / scripts MCP) pour fai
 sémantique** dans les conversations, **sans copier-coller**. Service **autonome** (hors process
 CRM), **lecture seule stricte**, limité aux tables SEO.
 
-## Outils MCP (tous LECTURE SEULE)
+## Outils MCP (lecture seule, sauf les deux outils d'écriture ciblés du netlinking)
 | Outil | Arguments | Lit |
 |-------|-----------|-----|
 | `get_opportunities` | `site_id`, `min_impressions?` (défaut 20) | `seo_pages` + `seo_gsc_daily` (potentiel sous-exploité + suggestions de liens) |
@@ -23,12 +23,29 @@ CRM), **lecture seule stricte**, limité aux tables SEO.
 | `get_backlink_counts` | `site_url`, `limit?` | API Bing WMT (nb de backlinks externes par page du site) |
 | `get_page_backlinks` | `site_url`, `url`, `limit?` | API Bing WMT (les URLs sources qui pointent vers une page) |
 
+### Netlinking (campagnes de backlinks)
+| Outil | Arguments | Fait |
+|-------|-----------|------|
+| `list_link_campaigns` | — | campagnes + compteurs (cibles, contactées, liens, rel vérifiés, dofollow possibles, concurrents), `jours_depuis_decouverte`, `a_travailler` |
+| `get_link_targets` | `campaign_id`, `statut?`, `limit?`, `inclure_concurrents?` | cibles : score + `score_criteres` (< 3 = partiel), plateforme + règle appliquée, `dofollow` + emplacements vérifiés (rel, URL), porte d'entrée, concurrent/probable + motif. Concurrents exclus par défaut |
+| `get_link_outreach_status` | `campaign_id` | envois, ouvertures, relances dues |
+| `list_link_platform_rules` | — | règles de rel par plateforme (Forumactif, Invision, FluxBB, Shaarli, commentaires WordPress) |
+| `record_link_rel` **(écriture)** | `campaign_id`, `domain`, `emplacement`, `rel`, `url?`, `note?` | enregistre une lecture du rel par emplacement, recalcule le dofollow de la cible |
+| `update_link_target` **(écriture)** | `campaign_id`, `domain`, `porte_type?`, `porte_url?`, `porte_note?`, `concurrent?`, `concurrent_motif?`, `notes?` | porte d'entrée, marquage concurrent, notes. Ni statut, ni envoi |
+
+Les deux outils d'écriture existent pour capitaliser le travail de vérification fait en
+session (le rel lu dans le DOM, la porte de contact trouvée) au lieu de le refaire à chaque
+campagne. Ils reposent sur des droits PostgreSQL ciblés (INSERT/UPDATE sur la table des
+emplacements, UPDATE sur huit colonnes de `seo_link_targets`), accordés par le backend au
+démarrage. Le reste de la base reste en lecture seule.
+
 Les deux outils Bing nécessitent `BING_WMT_API_KEY` dans le `.env` (clé gratuite :
 bing.com/webmasters → Paramètres → API access). Cache en mémoire 24h — le rôle SQL
 du connecteur reste strictement lecture seule.
 
-Aucun SQL ne vient de Claude : uniquement des **SELECT paramétrés prédéfinis**. Aucun outil
-n'écrit/modifie/supprime. La table `seo_oauth_tokens` (secrets) n'est **jamais** accessible.
+Aucun SQL ne vient de Claude : uniquement des **requêtes paramétrées prédéfinies**. Seuls
+`record_link_rel` et `update_link_target` écrivent, sur un périmètre fixé par les droits
+PostgreSQL (voir ci-dessus). La table `seo_oauth_tokens` (secrets) n'est **jamais** accessible.
 
 ## Sécurité
 - **Bearer statique** (`MCP_SEO_TOKEN`, ≥ 40 car. aléatoires) en variable d'environnement,
@@ -36,7 +53,8 @@ n'écrit/modifie/supprime. La table `seo_oauth_tokens` (secrets) n'est **jamais*
 - **Rate limiting** par IP (`MCP_SEO_RATE_MAX`/min) → **429** au-delà. **Logs** d'accès
   (`access.log` : horodatage, IP, outil, statut).
 - Écoute **127.0.0.1** uniquement ; **TLS** assuré par nginx en façade (jamais de HTTP clair).
-- Connexion base via un **rôle PostgreSQL dédié SELECT-only** (`mcp_seo_ro`, cf. `setup.sql`) :
+- Connexion base via un **rôle PostgreSQL dédié** (`mcp_seo_ro`, cf. `setup.sql`) : SELECT
+  partout, écriture limitée aux emplacements de rel et à huit colonnes de `seo_link_targets` :
   double barrière (app + base). `statement_timeout` 15 s.
 
 ## Installation (serveur2)
