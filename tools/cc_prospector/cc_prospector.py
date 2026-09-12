@@ -146,7 +146,9 @@ _EMAIL_JUNK = re.compile(
     r"nom|name|prenom|user|username|utilisateur|login|id|xxx+|abc)@"
     r"|@(email|e-mail|mail|exemple|example|domaine|domain|site|test|demo|monsite|mysite|company|entreprise|"
     r"xyz|abc|votredomaine|yourdomain)\.[a-z]+$"
-    r"|@example\.|@sentry\.|@wixpress\.|@2x|^(no-?reply|noreply|donotreply|mailer-daemon|postmaster|abuse)@",
+    r"|@example\.|@sentry\.|@wixpress\.|@2x|^(no-?reply|noreply|donotreply|mailer-daemon|postmaster|abuse|license|licence)@"
+    r"|@(prestashop|addons\.prestashop|wordpress|woocommerce|w3|schema|jquery|github|google|googleapis|gstatic|"
+    r"fontawesome|bootstrap|getbootstrap|php|apache|nginx|ovh|1and1|ionos|o2switch|cloudflare|mozilla)\.(com|org|net|fr)$",
     re.IGNORECASE,
 )
 # Téléphone FR : 0X XX XX XX XX (avec séparateurs variés) ou +33.
@@ -424,12 +426,20 @@ _AGENCE_MARKERS = [
 # E-commerce RÉEL : prix affichés (€) + panier/ajout au panier.
 _PRIX_RE = re.compile(r"\d[\d\s.,]*\s?(?:€|eur\b)|(?:€|eur)\s?\d", re.IGNORECASE)
 _PANIER_MARKERS = ["ajouter au panier", "add to cart", "add-to-cart", "/panier", "/cart",
-                   "mon panier", "voir le panier", "ajouter au devis", "in den warenkorb"]
+                   "mon panier", "voir le panier", "ajouter au devis", "in den warenkorb",
+                   # marqueurs techniques des paniers PrestaShop (1.6 / 1.7) et WooCommerce
+                   "blockcart", "ps_shoppingcart", "cart-preview", "add_to_cart", "ajax-cart",
+                   "id_product=", "woocommerce-cart", "wc-cart"]
+# Plateformes de vente : un site qui tourne dessus est un commerce, même si la page
+# d'accueil n'affiche aucun prix (vitrine, prix chargés en JS, catalogue en sous-pages).
+_SHOP_PLATFORMS = {"PrestaShop", "WooCommerce", "Shopify"}
 
 
-def classify_site(html: str, domain: str) -> dict:
+def classify_site(html: str, domain: str, platform: str = "") -> dict:
     """Renvoie {site_type: asso|agence|commerce|autre, ecommerce_actif: oui|non}.
-    Prudent : en cas de doute -> 'autre' (le pré-tri gardera le site)."""
+    Prudent : en cas de doute -> 'autre' (le pré-tri gardera le site). ecommerce_actif
+    = prix affiché ET panier (boutique qui vend visiblement) ; site_type 'commerce' aussi
+    dès que la plateforme est une plateforme de vente."""
     low = html.lower()
     d = (domain or "").lower()
     out = {"site_type": "autre", "ecommerce_actif": "non"}
@@ -456,8 +466,8 @@ def classify_site(html: str, domain: str) -> dict:
         out["site_type"] = "agence"
         return out
 
-    # Commerce si vraie activité e-commerce détectée.
-    if out["ecommerce_actif"] == "oui":
+    # Commerce si vraie activité e-commerce détectée, ou plateforme de vente.
+    if out["ecommerce_actif"] == "oui" or platform in _SHOP_PLATFORMS:
         out["site_type"] = "commerce"
     return out
 
@@ -659,7 +669,7 @@ async def detect_one(domain: str, sem, timeout: float, clients: dict, retries: i
                     contacts["email"] = await find_email_on_contact(client, str(r.url), domain)
                 # Audit gratuit (HTML/entêtes) + DNS (SPF/DMARC) + expiration TLS.
                 site = analyze_site(html, dict(r.headers))
-                site.update(classify_site(html, domain))  # pré-tri : asso/agence/commerce
+                site.update(classify_site(html, domain, platform))  # pré-tri : asso/agence/commerce
                 bare = _bare_domain(domain)
                 final_https = str(r.url).lower().startswith("https")
                 # DNS et handshake TLS sont indépendants -> en parallèle (2 attentes -> 1).
