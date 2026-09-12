@@ -20,7 +20,7 @@ const ANGLE_LABELS = {
   ssl_bientot: 'SSL expire bientôt', ssl_invalide: 'SSL invalide', http_non_securise: 'Servi en HTTP', version_obsolete: 'Version CMS obsolète',
   spf: 'Sans SPF', dmarc: 'Sans DMARC', rgpd: 'Sans politique de confidentialité', cookies: 'Sans bandeau cookies',
   meta_desc: 'SEO : meta description', h1: 'SEO : H1', analytics: "Sans mesure d'audience",
-  serveur_expose: 'Version serveur exposée', copyright_fige: 'Copyright figé'
+  serveur_expose: 'Version serveur exposée', copyright_fige: 'Copyright figé', erreur_serveur: 'Site en erreur (5xx)', titre_defaut: 'Titre par défaut'
 };
 
 const pct = (num, den) => (den > 0 ? Math.round((num / den) * 1000) / 10 : null);

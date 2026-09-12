@@ -68,6 +68,9 @@ HTML_SIGNATURES = {
         "wp-content",
         "wp-includes",
         'content="wordpress',
+        # site en panne : la page d'erreur WordPress ne contient aucun asset, seulement le titre
+        "wordpress &rsaquo; erreur", "wordpress › erreur", "wordpress &rsaquo; error",
+        "error establishing a database connection", "connexion à la base de données",
     ],
     # SPIP : CMS très répandu en FR (assos, collectivités, sites institutionnels).
     "SPIP": [
@@ -709,7 +712,9 @@ async def detect_one(domain: str, sem, timeout: float, clients: dict, retries: i
                     http_status=str(r.status_code),
                     final_url=str(r.url),
                     title="" if protected else title,
-                    ssl_ok=("oui" if (is_https and verify) else ("non" if is_https else "")),
+                    # Les candidats https passent avant http : arriver en http veut dire
+                    # qu'aucun HTTPS ne répond correctement -> certificat « non ».
+                    ssl_ok=("oui" if (is_https and verify) else "non"),
                     https_final=("oui" if final_https else "non"),
                     protected=("oui" if protected else "non"),
                     lang=detect_lang(html),

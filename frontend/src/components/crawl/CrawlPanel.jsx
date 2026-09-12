@@ -82,6 +82,8 @@ const auditFlags = (r) => {
   if (r.h1_present === false) f.push({ key: 'h1', label: 'SEO: H1', title: 'Aucune balise H1 (SEO de base)', poids: 3 });
   if (r.analytics === false) f.push({ key: 'analytics', label: 'sans audience', title: "Aucune mesure d'audience (Analytics/pixel) installée", poids: 3 });
   if (r.serveur_php) f.push({ key: 'php', label: r.serveur_php, title: `Version serveur exposée dans les entêtes : ${r.serveur_php}`, poids: 5 });
+  if (Number(r.http_status) >= 500) f.push({ key: '5xx', label: `site en erreur (${r.http_status})`, title: 'Erreur serveur : les visiteurs voient une page d\'erreur', poids: 15 });
+  if (/^(prestashop|wordpress|woocommerce|accueil|home|bienvenue|welcome|untitled|sans titre|mon site|my site|site en construction|coming soon|index|boutique en ligne|ma boutique|shop)$/i.test(String(r.title || '').trim())) f.push({ key: 'titre', label: 'titre par défaut', title: 'Le titre de la page d\'accueil est celui de l\'installation', poids: 5 });
   return f;
 };
 
@@ -389,8 +391,8 @@ const CrawlPanel = () => {
             <label className="block text-sm text-text-secondary mb-1">Nombre de sites</label>
             <div className="flex items-center gap-3">
               <input
-                type="range" min="5" max="200" step="5"
-                value={Math.min(nbSites || 5, 200)}
+                type="range" min="5" max="500" step="5"
+                value={Math.min(nbSites || 5, 500)}
                 onChange={(e) => setNbSites(parseInt(e.target.value, 10))}
                 disabled={running}
                 className="flex-1 accent-accent disabled:opacity-50"

@@ -17,6 +17,9 @@ const ASSO_RE = /(association|loi 1901|but non lucratif|non[- ]?profit|refuge|sa
 const COLLECTIVITE_RE = /(\bmairie\b|commune de|conseil municipal|ville de |communaut[ée] de communes|\.gouv\.fr|mairie-|-mairie|ville-)/i;
 const AGENCE_RE = /(agence web|agence digitale|agence de communication|cr[ée]ation de sites?|web agency|studio (web|digital)|nos r[ée]alisations|webmaster freelance|d[ée]veloppeur web freelance|agence seo|acheter du seo|r[ée]f[ée]rencement (naturel|internet|google)|netlinking|backlinks|consultant seo)/i;
 
+// Titres d'installation jamais changés (SEO nul, et signe que personne ne suit le site).
+const DEFAULT_TITLE_RE = /^(prestashop|wordpress|woocommerce|accueil|home|bienvenue|welcome|untitled|sans titre|mon site|my site|site en construction|coming soon|index|boutique en ligne|ma boutique|shop)$/i;
+
 // Problèmes d'audit : clé stable (persistée dans leads.angles), libellé court, poids.
 function auditFlags(r) {
   const f = [];
@@ -38,6 +41,10 @@ function auditFlags(r) {
   if (r.h1_present === false) f.push({ key: 'h1', label: 'SEO : H1', poids: 3 });
   if (r.analytics === false) f.push({ key: 'analytics', label: 'sans audience', poids: 3 });
   if (r.serveur_php) f.push({ key: 'serveur_expose', label: `serveur exposé (${r.serveur_php})`, poids: 5 });
+  // Site en panne (erreur serveur 5xx) : le problème le plus visible qui soit.
+  if (Number(r.http_status) >= 500) f.push({ key: 'erreur_serveur', label: `site en erreur (${r.http_status})`, poids: 15 });
+  // Titre jamais personnalisé (« PrestaShop », « WordPress », « Accueil ») : site laissé tel quel.
+  if (DEFAULT_TITLE_RE.test(String(r.title || '').trim())) f.push({ key: 'titre_defaut', label: 'titre par défaut', poids: 5 });
   const annee = new Date().getFullYear();
   if (r.copyright_annee && r.copyright_annee < annee - 1) f.push({ key: 'copyright_fige', label: `copyright ${r.copyright_annee}`, poids: 3 });
   return f;

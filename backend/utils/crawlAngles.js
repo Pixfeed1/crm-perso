@@ -40,6 +40,8 @@ function problemesLisibles(r) {
   if (r.meta_desc === false || r.h1_present === false) out.push("Des éléments SEO de base manquent (description ou titre principal), ce qui limite la visibilité sur Google.");
   if (r.analytics === false) out.push("Aucun outil de mesure d'audience n'est installé : impossible de savoir combien de visiteurs viennent, ni d'où.");
   if (r.serveur_php) out.push(`La version du serveur (${r.serveur_php}) est visible publiquement et n'est plus à jour (surface d'attaque connue).`);
+  if (Number(r.http_status) >= 500) out.push(`Le site renvoie une erreur serveur (${r.http_status}) : les visiteurs tombent sur une page d'erreur au lieu de la boutique.`);
+  if (/^(prestashop|wordpress|woocommerce|accueil|home|bienvenue|welcome|untitled|sans titre|mon site|my site|site en construction|coming soon|index|boutique en ligne|ma boutique|shop)$/i.test(String(r.title || '').trim())) out.push("Le titre de la page d'accueil est resté celui de l'installation (« " + String(r.title).trim() + " ») : invisible sur Google et peu rassurant pour un client.");
   if (r.copyright_annee && r.copyright_annee < annee - 1) out.push(`Le pied de page affiche encore © ${r.copyright_annee}, ce qui donne l'impression d'un site peu suivi.`);
   return out;
 }
