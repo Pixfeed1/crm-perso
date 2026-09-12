@@ -12,6 +12,7 @@ const DIMENSIONS = {
   department: "COALESCE(NULLIF(l.department, ''), 'inconnu')",
   sector: "COALESCE(NULLIF(l.sector, ''), 'inconnu')",
   source: "COALESCE(NULLIF(l.source, ''), 'inconnue')",
+  prestataire: "COALESCE(NULLIF(l.prestataire, ''), 'aucun crédité')",
   angle: null // unnest de leads.angles (clés séparées par « | »)
 };
 

@@ -194,7 +194,7 @@ async function ingestCsv(db, jobId, csvPath) {
     pvi = idx('platform_version'), sli = idx('ssl_ok'), pri = idx('protected'),
     lgi = idx('lang'), pki = idx('parked'), hfi = idx('https_final');
   const nxi = idx('noindex'), rbi = idx('robots_bloque'), cgi = idx('cgv'), rti = idx('retractation'),
-    cmi = idx('contenu_mixte'), m4i = idx('mentions_404');
+    cmi = idx('contenu_mixte'), m4i = idx('mentions_404'), pri2 = idx('prestataire');
   // Colonnes d'audit gratuit (ajoutées ensuite) — idx = -1 -> null (rétro-compatible).
   const moi = idx('mobile_ok'), mdi = idx('meta_desc'), h1i = idx('h1_present'),
     mli = idx('mentions_legales'), rgi = idx('rgpd_confidentialite'), cbi = idx('cookie_banner'),
@@ -244,10 +244,10 @@ async function ingestCsv(db, jobId, csvPath) {
           mobile_ok, meta_desc, h1_present, mentions_legales, rgpd_confidentialite, cookie_banner,
           analytics, poids_ko, copyright_annee, serveur_php, spf, dmarc, ssl_expire_jours,
           site_type, ecommerce_actif, https_final,
-          noindex, robots_bloque, cgv, retractation, contenu_mixte, mentions_404)
+          noindex, robots_bloque, cgv, retractation, contenu_mixte, mentions_404, prestataire)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18,
                $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34,
-               $35, $36, $37, $38, $39, $40)`,
+               $35, $36, $37, $38, $39, $40, $41)`,
       [
         jobId, domain, platform, signals,
         Number.isNaN(httpRaw) ? null : httpRaw,
@@ -264,7 +264,8 @@ async function ingestCsv(db, jobId, csvPath) {
         cell(row, sti), boolCell(row, eci),
         // Ancien CSV sans la colonne : on déduit du schéma de l'URL finale.
         hfi >= 0 ? boolCell(row, hfi) : (finalUrl ? /^https:/i.test(finalUrl) : null),
-        boolCell(row, nxi), boolCell(row, rbi), boolCell(row, cgi), boolCell(row, rti), boolCell(row, cmi), boolCell(row, m4i)
+        boolCell(row, nxi), boolCell(row, rbi), boolCell(row, cgi), boolCell(row, rti), boolCell(row, cmi), boolCell(row, m4i),
+        cell(row, pri2)
       ]
     );
   }
@@ -391,7 +392,7 @@ const crawlController = {
                 COALESCE(https_final, CASE WHEN final_url ILIKE 'https:%' THEN TRUE WHEN final_url ILIKE 'http:%' THEN FALSE END) AS https_final,
                 mobile_ok, mentions_legales, rgpd_confidentialite, spf, dmarc,
                 ssl_expire_jours, serveur_php, copyright_annee, error, protected, site_type, ecommerce_actif,
-                noindex, robots_bloque, cgv, retractation, contenu_mixte, mentions_404
+                noindex, robots_bloque, cgv, retractation, contenu_mixte, mentions_404, prestataire
          FROM crawl_results WHERE job_id = $1
          ORDER BY domain, platform`,
         [id]
@@ -403,7 +404,7 @@ const crawlController = {
         'Certificat SSL', 'Servi en HTTPS', 'Mobile OK', 'Mentions légales', 'Confidentialité', 'SPF', 'DMARC',
         'SSL expire (j)', 'Serveur/PHP', 'Copyright', 'Type de site', 'Boutique active', 'Antibot',
         'Invisible Google (noindex)', 'robots.txt bloque', 'CGV', 'Rétractation', 'Contenu mixte', 'Mentions légales cassées',
-        'Titre', 'Statut HTTP', 'URL finale', 'Erreur'];
+        'Prestataire crédité', 'Titre', 'Statut HTTP', 'URL finale', 'Erreur'];
       const lines = [header.join(',')];
       for (const r of rows) {
         lines.push([r.domain, r.platform, r.platform_version, r.email, r.phone, r.facebook_url, r.instagram_url,
@@ -411,7 +412,7 @@ const crawlController = {
           oui(r.spf), oui(r.dmarc), r.ssl_expire_jours ?? '', r.serveur_php, r.copyright_annee ?? '',
           r.site_type, oui(r.ecommerce_actif), oui(r.protected),
           oui(r.noindex), oui(r.robots_bloque), oui(r.cgv), oui(r.retractation), oui(r.contenu_mixte), oui(r.mentions_404),
-          r.title, r.http_status, r.final_url, r.error].map(csvEscape).join(','));
+          r.prestataire, r.title, r.http_status, r.final_url, r.error].map(csvEscape).join(','));
       }
       const csv = '﻿' + lines.join('\r\n'); // BOM UTF-8
 
@@ -493,6 +494,7 @@ const crawlController = {
           userNote || null,
           r.raison_sociale ? `Raison sociale : ${r.raison_sociale}${r.siren ? ` (SIREN ${r.siren})` : ''}` : null,
           r.gerant ? `Dirigeant : ${r.gerant}` : null,
+          r.prestataire ? `Prestataire crédité sur le site : ${r.prestataire} (site laissé en l'état malgré un prestataire : angle « votre agence ne maintient plus »)` : null,
           r.platform ? `Plateforme : ${r.platform}${r.platform_version ? ` (${r.platform_version})` : ''}` : null,
           angles.length ? `Angles d'approche détectés :\n${angles.join('\n')}` : null,
           r.final_url ? `URL : ${r.final_url}` : null,
@@ -505,14 +507,14 @@ const crawlController = {
           const angleKeys = auditFlags(r).map((f) => f.key).join(' | ') || null;
           const ins = await db.pool.query(
             `INSERT INTO leads (name, company, type, status, source, notes, email, phone, facebook_url, instagram_url, relation_status, crawl_result_id,
-                                platform, website, site_type, siren, sector, naf, effectif, city, postal_code, department, angles, score, created_at, updated_at)
+                                platform, website, site_type, siren, sector, naf, effectif, city, postal_code, department, angles, score, prestataire, created_at, updated_at)
              VALUES ($1, $2, 'company', 'nouveau', 'Crawl', $3, $4, $5, $6, $7, $8, $9,
-                     $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, NOW(), NOW()) RETURNING id`,
+                     $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, NOW(), NOW()) RETURNING id`,
             [(isAntibotTitle(r.title) ? null : decodeHtml(r.title)) || r.domain, r.domain, notes,
              r.email || null, r.phone || null, r.facebook_url || null, r.instagram_url || null, statusVal, r.id,
              r.platform || null, r.final_url || `https://${r.domain}`, r.site_type || null, r.siren || null,
              r.naf_label || null, r.naf || null, r.effectif || null, r.ville || null, r.code_postal || null,
-             departmentFromPostalCode(r.code_postal), angleKeys, r.score != null ? r.score : prospectScore(r)]
+             departmentFromPostalCode(r.code_postal), angleKeys, r.score != null ? r.score : prospectScore(r), r.prestataire || null]
           );
           await db.pool.query('UPDATE crawl_results SET added_as_prospect = TRUE WHERE id = $1', [r.id]);
           if (ins.rows[0]) leadIds.push(ins.rows[0].id);

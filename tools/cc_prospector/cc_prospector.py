@@ -301,6 +301,28 @@ def infer_version(html: str, platform: str) -> str:
     return ""
 
 
+_CREDIT_JUNK = re.compile(
+    r"(prestashop|woocommerce|wordpress|shopify|wix|jimdo|squarespace|webflow|google|facebook|instagram|twitter|"
+    r"youtube|linkedin|pinterest|paypal|stripe|mangopay|payplug|colissimo|chronopost|laposte|mondialrelay|"
+    r"cnil|gouv|creativecommons|w3\.org|jquery|fontawesome|pixfeed)", re.IGNORECASE)
+
+
+def extract_credit(html: str, domain: str) -> str:
+    """Domaine du prestataire crédité en pied de page (« Réalisé par ... »), '' sinon.
+    Ne regarde que le dernier tiers de la page (le pied) pour éviter les faux positifs."""
+    tail = html[-max(len(html) // 3, 20000):] if html else ""
+    bare = re.sub(r"^www\.", "", (domain or "").lower())
+    for m in _CREDIT_RE.finditer(tail):
+        url = m.group(1)
+        host = re.sub(r"^https?://(www\.)?", "", url.lower()).split("/")[0]
+        if not host or "." not in host or host == bare or host.endswith("." + bare) or bare.endswith("." + host):
+            continue
+        if _CREDIT_JUNK.search(host):
+            continue
+        return host[:100]
+    return ""
+
+
 def extract_contacts(html: str, domain: str) -> dict:
     """Email, téléphone, Facebook, Instagram depuis le HTML de la home."""
     out = {"email": "", "phone": "", "facebook_url": "", "instagram_url": ""}
@@ -356,6 +378,12 @@ _CGV_MARKERS = ["conditions générales de vente", "conditions generales de vent
                 "conditions-d-utilisation", "conditions de vente", "conditions-de-vente", ">cgu<", "/cgu",
                 "id_cms=3&"]  # PrestaShop sans réécriture : page CMS 3 = conditions d'utilisation
 _RETRACT_MARKERS = ["rétractation", "retractation", "droit de retour", "satisfait ou remboursé", "satisfait ou rembourse"]
+# Crédit du prestataire en pied de page : « Réalisé par », « Création », « Site by », « Powered by »
+# suivi d'un lien externe. Dit qui a fait le site (et souvent qui ne le maintient plus).
+_CREDIT_RE = re.compile(
+    r'(?:r[ée]alis(?:é|e|ation)|cr[ée]ation|cr[ée][ée]|con[çc]u|d[ée]velopp[ée]|design(?:ed)?|propuls[ée]|powered|site\s+(?:web\s+)?(?:by|par)|agence|webdesign|int[ée]gration)'
+    r'(?:[^<]|<[^a>][^>]*>){0,80}?<a[^>]+href=["\'](https?://[^"\'#?]+)',
+    re.IGNORECASE)
 # Lien vers la page CGV / conditions (la rétractation y est mentionnée, pas sur l'accueil).
 _CGV_LINK_RE = re.compile(
     r'<a[^>]+href=["\']([^"\'#]+)["\'][^>]*>[^<]{0,80}(?:conditions g[ée]n[ée]rales|conditions d[\'’]utilisation|conditions de vente|\bcgv\b|\bcgu\b)',
@@ -560,6 +588,7 @@ CSV_FIELDS = [
     "spf", "dmarc", "ssl_expire_jours",
     # --- arguments forts (chiffre d'affaires, loi, panne) ---
     "noindex", "robots_bloque", "cgv", "retractation", "contenu_mixte", "mentions_404",
+    "prestataire",  # domaine de l'agence créditée en pied de page (« Réalisé par »)
     # --- pré-tri prospect ---
     "site_type", "ecommerce_actif",
     "error",
@@ -809,6 +838,7 @@ async def detect_one(domain: str, sem, timeout: float, clients: dict, retries: i
                 # Audit gratuit (HTML/entêtes) + DNS (SPF/DMARC) + expiration TLS.
                 site = analyze_site(html, dict(r.headers))
                 site.update(classify_site(html, domain, platform))  # pré-tri : asso/agence/commerce
+                site["prestataire"] = "" if protected else extract_credit(html, domain)
                 if r.status_code >= 400 or protected:
                     # Page d'erreur ou page barrée : l'audit porterait sur un contenu qui n'est
                     # pas la boutique. On laisse ces colonnes vides plutôt que d'accuser à tort.

@@ -249,6 +249,7 @@ const DATABASE_SCHEMA = {
       retractation: 'BOOLEAN',   // information sur le droit de rétractation
       contenu_mixte: 'BOOLEAN',  // ressources http:// sur une page https : cadenas cassé
       mentions_404: 'BOOLEAN',   // le lien « mentions légales » mène à une page en erreur
+      prestataire: 'TEXT',       // agence créditée en pied de page (« Réalisé par ») : le prestataire en place
       protected: 'BOOLEAN DEFAULT FALSE', // page derrière anti-bot (Cloudflare) au crawl
       lang: 'VARCHAR(5)',       // langue déclarée du site (ex 'fr')
       parked: 'BOOLEAN DEFAULT FALSE', // domaine parké/en vente/vide -> sans intérêt
@@ -1499,6 +1500,7 @@ async function ensureLeadTargetingColumns(client) {
     ['sector', 'TEXT'], ['naf', 'VARCHAR(6)'], ['effectif', 'VARCHAR(20)'],
     ['website', 'TEXT'], ['siren', 'VARCHAR(9)'], ['site_type', 'VARCHAR(20)'],
     ['angles', 'TEXT'], // clés d'angles d'approche détectés, séparées par « | »
+    ['prestataire', 'TEXT'], // agence créditée sur le site (« Réalisé par ») : prestataire en place
     ['score', 'INTEGER DEFAULT 0']
   ]) {
     await client.query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS ${col} ${def};`);
@@ -1535,6 +1537,7 @@ async function ensureLeadTargetingColumns(client) {
   // Depuis le résultat de crawl lié : site, type, plateforme, SIRENE.
   await client.query(`UPDATE leads l SET
         website  = COALESCE(l.website, c.final_url),
+        prestataire = COALESCE(l.prestataire, c.prestataire),
         site_type = COALESCE(l.site_type, c.site_type),
         platform = COALESCE(l.platform, c.platform),
         siren    = COALESCE(l.siren, c.siren),

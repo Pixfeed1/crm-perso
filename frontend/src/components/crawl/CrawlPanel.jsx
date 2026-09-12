@@ -655,6 +655,11 @@ const CrawlPanel = () => {
                             </div>
                           )}
                           {/* Raison d'écartement (pré-tri) — visible hors vue "Prospects" */}
+                          {r.prestataire && (
+                            <div className="text-xs text-text-muted" title="Agence créditée en pied de page (« Réalisé par »)">
+                              🏷 réalisé par <a href={`https://${r.prestataire}`} target="_blank" rel="noopener noreferrer" className="hover:text-accent">{r.prestataire}</a>
+                            </div>
+                          )}
                           {qualView !== 'prospects' && disqualifyReason(r) && (
                             <span className="ml-1 text-xs px-1.5 py-0.5 rounded-full bg-danger-bg text-danger-text" title="Écarté du pré-tri : probablement hors cible">
                               🗑 {disqualifyReason(r)}

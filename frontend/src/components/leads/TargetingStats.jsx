@@ -13,7 +13,7 @@ import { useToast } from '../../hooks/useToast';
 
 const DIMS = [
   ['platform', 'Plateforme'], ['site_type', 'Type de site'], ['department', 'Département'],
-  ['sector', 'Secteur'], ['source', 'Source'], ['angle', "Angle d'approche"]
+  ['sector', 'Secteur'], ['source', 'Source'], ['prestataire', 'Prestataire en place'], ['angle', "Angle d'approche"]
 ];
 
 const Spinner = ({ size = 15 }) => (
