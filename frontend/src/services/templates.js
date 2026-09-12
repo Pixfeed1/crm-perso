@@ -497,7 +497,7 @@ export const fillTemplate = (content, variables = {}) => {
   return result;
 };
 
-export default {
+const templatesService = {
   templateCategories,
   templates,
   getTemplatesByCategory,
@@ -505,3 +505,5 @@ export default {
   getAllTemplates,
   fillTemplate
 };
+
+export default templatesService;

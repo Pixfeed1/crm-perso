@@ -127,7 +127,7 @@ export const updateUserData = (newData) => {
 };
 
 // Exporter les fonctions principales
-export default {
+const authService = {
   getAuthToken,
   setAuth,
   clearAuth,
@@ -137,3 +137,5 @@ export default {
   hasRole,
   updateUserData
 };
+
+export default authService;
