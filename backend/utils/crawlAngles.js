@@ -31,6 +31,7 @@ function problemesLisibles(r) {
   } else if (r.ssl_ok === false) {
     out.push("Le site n'a pas de certificat de sécurité valide (le cadenas HTTPS), ce qui fait fuir les visiteurs et pénalise le référencement Google.");
   }
+  if (r.https_final === false) out.push("Le site s'affiche en HTTP, sans le cadenas : le navigateur indique « Non sécurisé » aux visiteurs, ce qui fait fuir sur une boutique.");
   if (r.spf === false) out.push("Le domaine n'a pas de configuration SPF : les emails envoyés depuis cette adresse risquent d'atterrir dans les spams des clients.");
   if (r.dmarc === false) out.push("Le domaine n'est pas protégé par DMARC : il peut être usurpé pour envoyer de faux emails en son nom.");
   if (r.rgpd_confidentialite === false) out.push("Il manque une politique de confidentialité, obligatoire avec le RGPD.");

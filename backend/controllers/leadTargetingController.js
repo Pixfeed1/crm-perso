@@ -17,7 +17,7 @@ const DIMENSIONS = {
 
 const ANGLE_LABELS = {
   mentions_legales: 'Sans mentions légales', mobile: 'Non responsive', ssl_expire: 'SSL expiré',
-  ssl_bientot: 'SSL expire bientôt', ssl_invalide: 'SSL invalide', version_obsolete: 'Version CMS obsolète',
+  ssl_bientot: 'SSL expire bientôt', ssl_invalide: 'SSL invalide', http_non_securise: 'Servi en HTTP', version_obsolete: 'Version CMS obsolète',
   spf: 'Sans SPF', dmarc: 'Sans DMARC', rgpd: 'Sans politique de confidentialité', cookies: 'Sans bandeau cookies',
   meta_desc: 'SEO : meta description', h1: 'SEO : H1', analytics: "Sans mesure d'audience",
   serveur_expose: 'Version serveur exposée', copyright_fige: 'Copyright figé'

@@ -189,7 +189,7 @@ async function ingestCsv(db, jobId, csvPath) {
   // Colonnes d'enrichissement (cc_prospector) — absentes des anciens CSV : idx = -1 -> null.
   const emi = idx('email'), phi = idx('phone'), fbi = idx('facebook_url'), igi = idx('instagram_url'),
     pvi = idx('platform_version'), sli = idx('ssl_ok'), pri = idx('protected'),
-    lgi = idx('lang'), pki = idx('parked');
+    lgi = idx('lang'), pki = idx('parked'), hfi = idx('https_final');
   // Colonnes d'audit gratuit (ajoutées ensuite) — idx = -1 -> null (rétro-compatible).
   const moi = idx('mobile_ok'), mdi = idx('meta_desc'), h1i = idx('h1_present'),
     mli = idx('mentions_legales'), rgi = idx('rgpd_confidentialite'), cbi = idx('cookie_banner'),
@@ -235,9 +235,9 @@ async function ingestCsv(db, jobId, csvPath) {
           email, phone, facebook_url, instagram_url, platform_version, ssl_ok, protected, lang, parked,
           mobile_ok, meta_desc, h1_present, mentions_legales, rgpd_confidentialite, cookie_banner,
           analytics, poids_ko, copyright_annee, serveur_php, spf, dmarc, ssl_expire_jours,
-          site_type, ecommerce_actif)
+          site_type, ecommerce_actif, https_final)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18,
-               $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33)`,
+               $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34)`,
       [
         jobId, domain, platform, signals,
         Number.isNaN(httpRaw) ? null : httpRaw,
@@ -251,7 +251,9 @@ async function ingestCsv(db, jobId, csvPath) {
         boolCell(row, rgi), boolCell(row, cbi), boolCell(row, ani),
         intCell(row, poi), intCell(row, coi), cell(row, spi),
         boolCell(row, sfi), boolCell(row, dmi), intCell(row, sei),
-        cell(row, sti), boolCell(row, eci)
+        cell(row, sti), boolCell(row, eci),
+        // Ancien CSV sans la colonne : on déduit du schéma de l'URL finale.
+        hfi >= 0 ? boolCell(row, hfi) : (finalUrl ? /^https:/i.test(finalUrl) : null)
       ]
     );
   }
@@ -375,8 +377,9 @@ const crawlController = {
       const { rows } = await db.pool.query(
         `SELECT DISTINCT ON (domain) domain, platform, platform_version, title, http_status, final_url,
                 email, phone, facebook_url, instagram_url, ssl_ok,
+                COALESCE(https_final, CASE WHEN final_url ILIKE 'https:%' THEN TRUE WHEN final_url ILIKE 'http:%' THEN FALSE END) AS https_final,
                 mobile_ok, mentions_legales, rgpd_confidentialite, spf, dmarc,
-                ssl_expire_jours, serveur_php, copyright_annee
+                ssl_expire_jours, serveur_php, copyright_annee, error, protected, site_type, ecommerce_actif
          FROM crawl_results WHERE job_id = $1
          ORDER BY domain, platform`,
         [id]
@@ -385,14 +388,16 @@ const crawlController = {
 
       const oui = (v) => v === true ? 'oui' : v === false ? 'non' : '';
       const header = ['Domaine', 'Plateforme', 'Version', 'Email', 'Téléphone', 'Facebook', 'Instagram',
-        'SSL', 'Mobile OK', 'Mentions légales', 'Confidentialité', 'SPF', 'DMARC',
-        'SSL expire (j)', 'Serveur/PHP', 'Copyright', 'Titre', 'Statut HTTP', 'URL finale'];
+        'Certificat SSL', 'Servi en HTTPS', 'Mobile OK', 'Mentions légales', 'Confidentialité', 'SPF', 'DMARC',
+        'SSL expire (j)', 'Serveur/PHP', 'Copyright', 'Type de site', 'Boutique active', 'Antibot',
+        'Titre', 'Statut HTTP', 'URL finale', 'Erreur'];
       const lines = [header.join(',')];
       for (const r of rows) {
         lines.push([r.domain, r.platform, r.platform_version, r.email, r.phone, r.facebook_url, r.instagram_url,
-          oui(r.ssl_ok), oui(r.mobile_ok), oui(r.mentions_legales), oui(r.rgpd_confidentialite),
+          oui(r.ssl_ok), oui(r.https_final), oui(r.mobile_ok), oui(r.mentions_legales), oui(r.rgpd_confidentialite),
           oui(r.spf), oui(r.dmarc), r.ssl_expire_jours ?? '', r.serveur_php, r.copyright_annee ?? '',
-          r.title, r.http_status, r.final_url].map(csvEscape).join(','));
+          r.site_type, oui(r.ecommerce_actif), oui(r.protected),
+          r.title, r.http_status, r.final_url, r.error].map(csvEscape).join(','));
       }
       const csv = '﻿' + lines.join('\r\n'); // BOM UTF-8
 
@@ -451,6 +456,7 @@ const crawlController = {
           (r.ssl_expire_jours != null && r.ssl_expire_jours < 30)
             ? `• Certificat SSL expire dans ${r.ssl_expire_jours} j` : null,
           r.ssl_ok === false ? '• Certificat SSL invalide/absent' : null,
+          r.https_final === false ? '• Site servi en HTTP (« Non sécurisé » affiché au visiteur)' : null,
           r.spf === false ? '• Pas de SPF (emails à risque de finir en spam)' : null,
           r.dmarc === false ? '• Pas de DMARC (domaine usurpable)' : null,
           r.rgpd_confidentialite === false ? '• Pas de politique de confidentialité (RGPD)' : null,

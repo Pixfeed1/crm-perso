@@ -27,6 +27,8 @@ function auditFlags(r) {
   } else if (r.ssl_ok === false) {
     f.push({ key: 'ssl_invalide', label: 'SSL invalide', poids: 15 });
   }
+  // Certificat présent mais site servi en HTTP : le visiteur voit « Non sécurisé ».
+  if (r.https_final === false) f.push({ key: 'http_non_securise', label: 'servi en HTTP', poids: 15 });
   if (isObsoleteVersion(r.platform, r.platform_version)) f.push({ key: 'version_obsolete', label: 'version obsolète', poids: 15 });
   if (r.spf === false) f.push({ key: 'spf', label: 'sans SPF', poids: 8 });
   if (r.dmarc === false) f.push({ key: 'dmarc', label: 'sans DMARC', poids: 5 });

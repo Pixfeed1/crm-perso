@@ -73,6 +73,7 @@ const auditFlags = (r) => {
     const urgent = r.ssl_expire_jours < 0;
     f.push({ key: 'sslexp', label: urgent ? 'SSL expiré' : `SSL expire ${r.ssl_expire_jours}j`, title: `Certificat TLS ${urgent ? 'déjà expiré' : `expire dans ${r.ssl_expire_jours} jours`}`, poids: 15 });
   }
+  if (r.https_final === false) f.push({ key: 'http', label: 'servi en HTTP', title: 'Le site s\'affiche en HTTP : « Non sécurisé » dans le navigateur, même si un certificat existe', poids: 15 });
   if (r.spf === false) f.push({ key: 'spf', label: 'sans SPF', title: 'Pas de SPF — les emails du domaine risquent de partir en spam', poids: 8 });
   if (r.dmarc === false) f.push({ key: 'dmarc', label: 'sans DMARC', title: 'Pas de DMARC — domaine usurpable (phishing)', poids: 5 });
   if (r.rgpd_confidentialite === false) f.push({ key: 'rgpd', label: 'sans confidentialité', title: 'Pas de politique de confidentialité (RGPD)', poids: 5 });

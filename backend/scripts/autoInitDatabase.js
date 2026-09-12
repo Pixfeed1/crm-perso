@@ -241,6 +241,7 @@ const DATABASE_SCHEMA = {
       instagram_url: 'TEXT',
       platform_version: 'TEXT', // ex 'PrestaShop 1.6.1.24' -> angle commercial (version obsolète)
       ssl_ok: 'BOOLEAN',        // certificat TLS valide ? (null si http) — un 'non' = prospect chaud
+      https_final: 'BOOLEAN',   // page finale servie en HTTPS ? non = « Non sécurisé » affiché au visiteur
       protected: 'BOOLEAN DEFAULT FALSE', // page derrière anti-bot (Cloudflare) au crawl
       lang: 'VARCHAR(5)',       // langue déclarée du site (ex 'fr')
       parked: 'BOOLEAN DEFAULT FALSE', // domaine parké/en vente/vide -> sans intérêt
@@ -1778,6 +1779,10 @@ async function ensureCrawlNoCodeBackfill(client) {
   } catch (e) {
     console.error('[AutoInit] Backfill no-code crawl:', e.message);
   }
+  // https_final (page finale servie en HTTPS ?) : déduit de l'URL finale pour les crawls
+  // antérieurs à la colonne. Un site en HTTP = « Non sécurisé » affiché au visiteur.
+  await client.query(`UPDATE crawl_results SET https_final = CASE WHEN final_url ILIKE 'https:%' THEN TRUE WHEN final_url ILIKE 'http:%' THEN FALSE END
+                      WHERE https_final IS NULL AND final_url IS NOT NULL`).catch(() => {});
 }
 
 /**

@@ -47,10 +47,17 @@ HTML_SIGNATURES = {
     ],
     "PrestaShop": [
         'content="prestashop"',
-        "var prestashop",
-        "/modules/ps_",
+        "var prestashop",          # 1.7 et 8
+        "/modules/ps_",            # modules natifs 1.7+
         "prestashop-",
         "propulsé par prestashop",
+        # 1.6 (et 1.5) : thème et modules natifs de l'époque, jeton JS, logo d'en-tête.
+        "themes/default-bootstrap",
+        "/modules/blockcart/",
+        "/modules/blockuserinfo/",
+        "/modules/blocknewsletter/",
+        "var static_token",
+        'id="header_logo"',
     ],
     "Shopify": [
         "cdn.shopify.com",
@@ -131,8 +138,17 @@ ANTIBOT_PATTERNS = [
 # --------------------------------------------------------------------------- #
 
 _EMAIL_RE = re.compile(r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}")
-# Emails d'images/hash à ignorer (jamais des contacts réels).
-_EMAIL_JUNK = re.compile(r"\.(png|jpe?g|gif|webp|svg|css|js)$", re.IGNORECASE)
+# Emails d'images/hash à ignorer (jamais des contacts réels), placeholders de formulaires
+# (« votre@email.fr », « exemple@domaine.com »), domaines d'exemple et adresses techniques.
+_EMAIL_JUNK = re.compile(
+    r"\.(png|jpe?g|gif|webp|svg|css|js)$"
+    r"|^(votre|your|vos|ton|mon|my|email|e-mail|mail|adresse|address|exemple|example|sample|test|demo|"
+    r"nom|name|prenom|user|username|utilisateur|login|id|xxx+|abc)@"
+    r"|@(email|e-mail|mail|exemple|example|domaine|domain|site|test|demo|monsite|mysite|company|entreprise|"
+    r"xyz|abc|votredomaine|yourdomain)\.[a-z]+$"
+    r"|@example\.|@sentry\.|@wixpress\.|@2x|^(no-?reply|noreply|donotreply|mailer-daemon|postmaster|abuse)@",
+    re.IGNORECASE,
+)
 # Téléphone FR : 0X XX XX XX XX (avec séparateurs variés) ou +33.
 _PHONE_RE = re.compile(r"(?:(?:\+|00)33\s?|0)[1-9](?:[\s.\-]?\d{2}){4}")
 _FB_RE = re.compile(r"https?://(?:www\.)?facebook\.com/[A-Za-z0-9_.\-/%]+", re.IGNORECASE)
@@ -206,7 +222,10 @@ def extract_title(html: str) -> str:
 
 
 def extract_version(html: str, platform: str) -> str:
-    """Version de la plateforme via <meta generator> (ex: 'PrestaShop 1.6.1.24')."""
+    """Version de la plateforme via <meta generator> (ex: 'PrestaShop 1.6.1.24'),
+    sinon DÉDUITE des marqueurs du HTML (suffixe « (déduit) »). PrestaShop n'émet
+    jamais de generator et WordPress le masque souvent : sans déduction, l'angle
+    « version obsolète » ne se déclenchait jamais sur les boutiques PrestaShop."""
     for m in _GENERATOR_RE.finditer(html):
         content = m.group(1).strip()
         # Ne garder que si ça correspond à la plateforme détectée (évite un plugin tiers).
@@ -216,6 +235,43 @@ def extract_version(html: str, platform: str) -> str:
         ver = re.search(r"\d+(?:\.\d+){0,3}", content)
         if ver:
             return f"{content.split()[0]} {ver.group(0)}"[:40]
+    return infer_version(html, platform)
+
+
+_WP_VER_RE = re.compile(r"wp-includes/[^\"'\s]+\?ver=(\d+\.\d+(?:\.\d+)?)")
+_WC_VER_RE = re.compile(r"plugins/woocommerce/[^\"'\s]+\?ver=(\d+\.\d+(?:\.\d+)?)")
+_JQ_RE = re.compile(r"jquery-(\d+\.\d+(?:\.\d+)?)(?:\.min)?\.js")
+
+
+def _most_common(values: list[str]) -> str:
+    return max(set(values), key=values.count) if values else ""
+
+
+def infer_version(html: str, platform: str) -> str:
+    """Génération de la plateforme déduite des marqueurs (pas de generator)."""
+    low = html.lower()
+    if platform == "PrestaShop":
+        # 1.7 / 8 : objet JS « prestashop », thème classic, modules ps_*.
+        if "var prestashop" in low or "themes/classic" in low or "/modules/ps_" in low:
+            return "PrestaShop 1.7+ (déduit)"
+        # 1.6 : thème default-bootstrap, modules block*, jQuery 1.11.
+        if "themes/default-bootstrap" in low or "/modules/blockcart/" in low or "/modules/blockuserinfo/" in low:
+            jq = _JQ_RE.search(html)
+            if jq and jq.group(1).startswith("1.7"):
+                return "PrestaShop 1.5 (déduit)"  # 1.5 embarquait jQuery 1.7.2
+            return "PrestaShop 1.6 (déduit)"
+        if "var static_token" in low or 'id="header_logo"' in low:
+            return "PrestaShop 1.6 (déduit)"
+        return ""
+    if platform == "WooCommerce":
+        wc = _most_common(_WC_VER_RE.findall(html))
+        if wc:
+            return f"WooCommerce {wc} (déduit)"
+        wp = _most_common(_WP_VER_RE.findall(html))
+        return f"WordPress {wp} (déduit)" if wp else ""
+    if platform == "WordPress":
+        wp = _most_common(_WP_VER_RE.findall(html))
+        return f"WordPress {wp} (déduit)" if wp else ""
     return ""
 
 
@@ -419,6 +475,7 @@ CSV_FIELDS = [
     "domain", "platform", "platform_version", "signals", "http_status",
     "final_url", "title", "email", "phone", "facebook_url", "instagram_url",
     "ssl_ok", "protected", "lang", "parked",
+    "https_final",  # page finale servie en HTTPS ? non = « Non sécurisé » dans le navigateur
     # --- audit gratuit ajouté ---
     "mobile_ok", "meta_desc", "h1_present", "mentions_legales", "rgpd_confidentialite",
     "cookie_banner", "analytics", "poids_ko", "copyright_annee", "serveur_php",
@@ -606,10 +663,13 @@ async def detect_one(domain: str, sem, timeout: float, clients: dict, retries: i
                 bare = _bare_domain(domain)
                 final_https = str(r.url).lower().startswith("https")
                 # DNS et handshake TLS sont indépendants -> en parallèle (2 attentes -> 1).
-                if final_https:
+                # L'expiration TLS est lue dès qu'un certificat a répondu (candidat https),
+                # même si le site redirige ensuite vers http : le certificat existe, il n'est
+                # juste pas imposé (angle « site servi en HTTP »).
+                if final_https or (is_https and verify):
                     dns, ssl_days = await asyncio.gather(
                         check_dns(bare, timeout, clients.get("dns")),
-                        ssl_expiry_days(r.url.host or bare, timeout),
+                        ssl_expiry_days((r.url.host if final_https else None) or bare, timeout),
                     )
                 else:
                     dns, ssl_days = await check_dns(bare, timeout, clients.get("dns")), ""
@@ -621,6 +681,7 @@ async def detect_one(domain: str, sem, timeout: float, clients: dict, retries: i
                     final_url=str(r.url),
                     title="" if protected else title,
                     ssl_ok=("oui" if (is_https and verify) else ("non" if is_https else "")),
+                    https_final=("oui" if final_https else "non"),
                     protected=("oui" if protected else "non"),
                     lang=detect_lang(html),
                     parked=("oui" if is_parked(html, title) else "non"),
