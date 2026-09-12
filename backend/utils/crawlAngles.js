@@ -28,6 +28,7 @@ function problemesLisibles(r) {
   // Les arguments les plus forts d'abord : ce qui coûte des ventes ou expose à une sanction.
   if (r.noindex === true) out.push("La page d'accueil demande à Google de ne PAS l'indexer (balise noindex) : la boutique est invisible dans les résultats de recherche, personne ne peut la trouver.");
   else if (r.robots_bloque === true) out.push("Le fichier robots.txt interdit à Google de parcourir le site : la boutique n'apparaît pas dans les résultats de recherche.");
+  if ([404, 410].includes(Number(r.http_status))) out.push("La page d'accueil renvoie une erreur 404 : le domaine répond mais n'affiche plus de site, les visiteurs et Google tombent dans le vide.");
   if (Number(r.http_status) >= 500) out.push(`Le site renvoie une erreur serveur (${r.http_status}) : les visiteurs tombent sur une page d'erreur au lieu de la boutique.`);
   if (r.cgv === false && shop) out.push("Aucune condition générale de vente n'est proposée, alors qu'elles sont obligatoires pour vendre en ligne (Code de la consommation) : en cas de litige ou de contrôle, la boutique est en faute.");
   if (r.retractation === false && shop) out.push("Le droit de rétractation de 14 jours n'est pas mentionné : c'est une obligation d'information, et son absence prolonge le délai de rétractation à 12 mois.");
@@ -54,7 +55,6 @@ function problemesLisibles(r) {
   const PHP_EOL = { '5.6': '2018', '7.0': '2019', '7.1': '2019', '7.2': '2020', '7.3': '2021', '7.4': '2022', '8.0': '2023', '8.1': '2025' };
   if (eolMatch && (PHP_EOL[eolMatch[1]] || parseFloat(eolMatch[1]) < 5.6)) out.push(`Le site tourne sur PHP ${eolMatch[1]}, qui ne reçoit plus aucun correctif de sécurité depuis ${PHP_EOL[eolMatch[1]] || '2018'} : une faille découverte aujourd'hui ne sera jamais corrigée.`);
   else if (r.serveur_php) out.push(`La version du serveur (${r.serveur_php}) est visible publiquement et n'est plus à jour (surface d'attaque connue).`);
-  if (Number(r.http_status) >= 500) out.push(`Le site renvoie une erreur serveur (${r.http_status}) : les visiteurs tombent sur une page d'erreur au lieu de la boutique.`);
   if (/^(prestashop|wordpress|woocommerce|accueil|home|bienvenue|welcome|untitled|sans titre|mon site|my site|site en construction|coming soon|index|boutique en ligne|ma boutique|shop)$/i.test(String(r.title || '').trim())) out.push("Le titre de la page d'accueil est resté celui de l'installation (« " + String(r.title).trim() + " ») : invisible sur Google et peu rassurant pour un client.");
   if (r.copyright_annee && r.copyright_annee < annee - 1) out.push(`Le pied de page affiche encore © ${r.copyright_annee}, ce qui donne l'impression d'un site peu suivi.`);
   return out;
