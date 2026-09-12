@@ -153,11 +153,24 @@ _EMAIL_JUNK = re.compile(
 )
 # Téléphone FR : 0X XX XX XX XX (avec séparateurs variés) ou +33.
 _PHONE_RE = re.compile(r"(?:(?:\+|00)33\s?|0)[1-9](?:[\s.\-]?\d{2}){4}")
-_FB_RE = re.compile(r"https?://(?:www\.)?facebook\.com/[A-Za-z0-9_.\-/%]+", re.IGNORECASE)
+
+
+def _format_phone(raw: str) -> str:
+    """Normalise un numéro FR capturé (espaces irréguliers, +33) en « 0X XX XX XX XX »."""
+    digits = re.sub(r"\D", "", raw or "")
+    if digits.startswith("0033"):
+        digits = "0" + digits[4:]
+    elif digits.startswith("33") and len(digits) == 11:
+        digits = "0" + digits[2:]
+    if len(digits) != 10 or not digits.startswith("0"):
+        return (raw or "").strip()
+    return " ".join(digits[i:i + 2] for i in range(0, 10, 2))
+_FB_RE = re.compile(r"https?://(?:www\.)?facebook\.com/[A-Za-z0-9_.\-/%]+(?:\?id=\d+)?", re.IGNORECASE)
 _IG_RE = re.compile(r"https?://(?:www\.)?instagram\.com/[A-Za-z0-9_.\-/]+", re.IGNORECASE)
 # Chemins sociaux à ignorer (pages génériques du réseau, pas le profil de la boutique).
 _SOCIAL_JUNK = re.compile(
-    r"/(sharer|share|dialog|plugins|tr\?|intent|home|login|policies|help|about|privacy)",
+    r"/(sharer|share|dialog|plugins|tr(\?|$|/)|intent|home|login|policies|help|about|privacy|hashtag|"
+    r"profile\.php$|groups?$|events?$|marketplace|watch|reel|stories|explore|accounts|p/$)",
     re.IGNORECASE,
 )
 
@@ -292,7 +305,7 @@ def extract_contacts(html: str, domain: str) -> dict:
     phones = _PHONE_RE.findall(html)
     if phones:
         # Normalisation légère : on retire les séparateurs.
-        out["phone"] = re.sub(r"[\s.\-]", " ", phones[0]).strip()[:20]
+        out["phone"] = _format_phone(re.sub(r"[\s.\-]", " ", phones[0]).strip()[:20])
 
     for regex, key in ((_FB_RE, "facebook_url"), (_IG_RE, "instagram_url")):
         for url in regex.findall(html):
@@ -422,6 +435,8 @@ _AGENCE_MARKERS = [
     "creation de sites", "création de site internet", "web agency", "studio digital",
     "studio web", "nos réalisations", "nos realisations", "développeur web freelance",
     "webmaster freelance", "référencement seo", "agence seo",
+    "acheter du seo", "référencement naturel", "referencement naturel", "référencement internet",
+    "referencement internet", "référencement google", "netlinking", "backlinks", "consultant seo",
 ]
 # E-commerce RÉEL : prix affichés (€) + panier/ajout au panier.
 _PRIX_RE = re.compile(r"\d[\d\s.,]*\s?(?:€|eur\b)|(?:€|eur)\s?\d", re.IGNORECASE)
@@ -455,9 +470,12 @@ def classify_site(html: str, domain: str, platform: str = "") -> dict:
         out["site_type"] = "collectivite"
         return out
 
-    # Association / public / sans budget (le don prime, très fiable).
+    # Association / public / sans budget (le don prime, très fiable). Sur une plateforme
+    # de VENTE, seul un signal de don explicite compte : les mots faibles (« association »,
+    # « adhérent », « cotisation ») apparaissent dans le texte de vraies boutiques.
+    shop = platform in _SHOP_PLATFORMS
     if _DON_RE.search(html) or d.endswith(".org") or ".asso.fr" in d \
-            or any(m in low for m in _ASSO_MARKERS):
+            or (not shop and any(m in low for m in _ASSO_MARKERS)):
         out["site_type"] = "asso"
         return out
 
@@ -496,7 +514,8 @@ CSV_FIELDS = [
 ]
 
 # Pages où chercher un email si la home n'en donne pas (obligatoires en FR -> presque toujours là).
-CONTACT_PATHS = ["/contact", "/nous-contacter", "/mentions-legales", "/contact-us"]
+CONTACT_PATHS = ["/contact", "/nous-contacter", "/contactez-nous", "/index.php?controller=contact",
+                 "/mentions-legales", "/content/2-mentions-legales", "/contact-us"]
 
 
 def _bare_domain(domain: str) -> str:

@@ -15,7 +15,7 @@ const NOCODE_NAMES = ['Wix', 'Squarespace', 'Webador', 'Jimdo', 'Weebly', 'e-mon
 
 const ASSO_RE = /(association|loi 1901|but non lucratif|non[- ]?profit|refuge|sanctuary|sanctuaire|fondation|foundation|b[ée]n[ée]vol|paroisse|[ée]glise|dioc[èe]se|\bmairie\b|commune de|coll[èe]ge|lyc[ée]e|club sportif|amicale|faire un don|faites un don|helloasso)/i;
 const COLLECTIVITE_RE = /(\bmairie\b|commune de|conseil municipal|ville de |communaut[ée] de communes|\.gouv\.fr|mairie-|-mairie|ville-)/i;
-const AGENCE_RE = /(agence web|agence digitale|agence de communication|cr[ée]ation de sites?|web agency|studio (web|digital)|nos r[ée]alisations|webmaster freelance|d[ée]veloppeur web freelance|agence seo)/i;
+const AGENCE_RE = /(agence web|agence digitale|agence de communication|cr[ée]ation de sites?|web agency|studio (web|digital)|nos r[ée]alisations|webmaster freelance|d[ée]veloppeur web freelance|agence seo|acheter du seo|r[ée]f[ée]rencement (naturel|internet|google)|netlinking|backlinks|consultant seo)/i;
 
 // Problèmes d'audit : clé stable (persistée dans leads.angles), libellé court, poids.
 function auditFlags(r) {
