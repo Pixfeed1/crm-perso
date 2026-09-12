@@ -155,6 +155,12 @@ _EMAIL_JUNK = re.compile(
     re.IGNORECASE,
 )
 # Téléphone FR : 0X XX XX XX XX (avec séparateurs variés) ou +33.
+# Email d'un autre domaine que le site : adresses techniques ou d'agence (crédit développeur).
+_FOREIGN_EMAIL_JUNK = re.compile(
+    r"^(tech|dev|developer|webmaster|admin|hostmaster|support|sav|hello|bonjour|info|contact)@[^@]*"
+    r"(ecommerce|e-commerce|agence|agency|studio|digital|web|design|dev|host|hosting|cloud|media|seo|presta|shop|solutions?|consult)",
+    re.IGNORECASE,
+)
 _PHONE_RE = re.compile(r"(?:(?:\+|00)33\s?|0)[1-9](?:[\s.\-]?\d{2}){4}")
 
 
@@ -173,7 +179,8 @@ _IG_RE = re.compile(r"https?://(?:www\.)?instagram\.com/[A-Za-z0-9_.\-/]+", re.I
 # Chemins sociaux à ignorer (pages génériques du réseau, pas le profil de la boutique).
 _SOCIAL_JUNK = re.compile(
     r"/(sharer|share|dialog|plugins|tr(\?|$|/)|intent|home|login|policies|help|about|privacy|hashtag|"
-    r"profile\.php$|groups?$|events?$|marketplace|watch|reel|stories|explore|accounts|p/$)",
+    r"profile\.php$|groups?$|events?$|marketplace|watch|reel|stories|explore|accounts|p/$|"
+    r"(prestashop|prestashopfr|woocommerce|wordpress|shopify|wix|jimdo|squarespace|magento)/?$)",
     re.IGNORECASE,
 )
 
@@ -303,7 +310,11 @@ def extract_contacts(html: str, domain: str) -> dict:
     emails = [e for e in emails if not e.lower().startswith(("wordpress@", "no-reply@sentry"))]
     if emails:
         same = [e for e in emails if e.lower().endswith("@" + bare) or bare in e.lower()]
-        out["email"] = (same[0] if same else emails[0]).strip()[:120]
+        # Adresse d'un AUTRE domaine : on écarte celles du prestataire technique (crédit
+        # d'agence dans le code) ; il ne reste que les webmails et adresses pro plausibles.
+        other = [e for e in emails if e not in same and not _FOREIGN_EMAIL_JUNK.search(e)]
+        pick = same[0] if same else (other[0] if other else "")
+        out["email"] = pick.strip()[:120]
 
     phones = _PHONE_RE.findall(html)
     if phones:
@@ -335,11 +346,14 @@ _YEAR_RANGE_RE = re.compile(r"(20\d{2})\s*[-–]\s*(20\d{2})")
 
 # Liens/pages légaux obligatoires en France (présents en pied de page sur ~toutes les home).
 _MENTIONS_MARKERS = ["mentions-legales", "mentions légales", "mentions_legales",
-                     "mentions-légales", "/mentions", "legal-notice"]
+                     "mentions-légales", "/mentions", "legal-notice", "informations légales",
+                     "id_cms=2&"]  # PrestaShop sans réécriture d'URL : page CMS 2 = mentions légales
 # Obligations propres au e-commerce (Code de la consommation) : CGV et droit de rétractation.
 _CGV_MARKERS = ["conditions générales de vente", "conditions generales de vente", "conditions-generales-de-vente",
                 "conditions générales d'utilisation et de vente", ">cgv<", " cgv ", "/cgv", "cgv.", "terms-and-conditions",
-                "conditions-generales", "conditions générales"]
+                "conditions-generales", "conditions générales", "conditions d'utilisation", "conditions d’utilisation",
+                "conditions-d-utilisation", "conditions de vente", "conditions-de-vente", ">cgu<", "/cgu",
+                "id_cms=3&"]  # PrestaShop sans réécriture : page CMS 3 = conditions d'utilisation
 _RETRACT_MARKERS = ["rétractation", "retractation", "droit de retour", "satisfait ou remboursé", "satisfait ou rembourse"]
 # Lien vers les mentions légales (pour vérifier qu'il mène quelque part).
 _MENTIONS_LINK_RE = re.compile(r'<a[^>]+href=["\']([^"\'#]+)["\'][^>]*>[^<]{0,60}mentions?\s+l[ée]gales', re.IGNORECASE)
@@ -368,7 +382,10 @@ _ANALYTICS_MARKERS = ["google-analytics.com", "googletagmanager.com", "gtag/js",
 def analyze_site(html: str, headers: dict) -> dict:
     """Audit gratuit : SEO de base, conformité légale/RGPD, cookies, analytics,
     poids HTML, fraîcheur (année de copyright), fuite de version serveur/PHP."""
-    low = html.lower()
+    import html as _html_mod
+    # Entités décodées (« Mentions l&eacute;gales », « &copy; ») : sinon les marqueurs
+    # accentués ne matchent jamais sur les thèmes qui encodent le texte.
+    low = _html_mod.unescape(html).lower()
     hdr = {str(k).lower(): str(v) for k, v in headers.items()}
     out = {}
 
@@ -405,7 +422,8 @@ def analyze_site(html: str, headers: dict) -> dict:
     years = [int(y) for y in _COPYRIGHT_RE.findall(html)]
     for a, b in _YEAR_RANGE_RE.findall(html):
         years += [int(a), int(b)]
-    years = [y for y in years if 2000 <= y <= 2099]
+    from datetime import date as _date
+    years = [y for y in years if 2000 <= y <= _date.today().year + 1]
     out["copyright_annee"] = str(max(years)) if years else ""
 
     # Fuite de version : PHP (X-Powered-By) sinon serveur (Server) — surface d'attaque connue
