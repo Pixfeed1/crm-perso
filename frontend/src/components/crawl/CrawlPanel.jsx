@@ -53,9 +53,9 @@ const platformBadge = (p) => PLATFORM_BADGE[p] || 'bg-neutral-bg text-neutral-te
 // Version obsolète (plus maintenue = faille de sécurité = argument commercial).
 const isObsolete = (platform, version) => {
   if (!version) return false;
-  const m = version.match(/(\d+)\.(\d+)/);
+  const m = String(version).match(/(\d+)(?:\.(\d+))?/); // majeure seule acceptée (« Drupal 7 »)
   if (!m) return false;
-  const major = parseInt(m[1], 10), minor = parseInt(m[2], 10);
+  const major = parseInt(m[1], 10), minor = parseInt(m[2] || '0', 10);
   const p = (platform || '').toLowerCase();
   if (p.includes('prestashop')) return major < 1 || (major === 1 && minor < 7); // < 1.7 non maintenu
   if (p.includes('woocommerce')) return major < 7;

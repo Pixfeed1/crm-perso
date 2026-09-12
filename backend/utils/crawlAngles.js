@@ -8,9 +8,9 @@
 // Version obsolète (plus maintenue) — même logique que le frontend.
 function isObsoleteVersion(platform, version) {
   if (!version) return false;
-  const m = String(version).match(/(\d+)\.(\d+)/);
+  const m = String(version).match(/(\d+)(?:\.(\d+))?/); // majeure seule acceptée (« Drupal 7 »)
   if (!m) return false;
-  const major = parseInt(m[1], 10), minor = parseInt(m[2], 10);
+  const major = parseInt(m[1], 10), minor = parseInt(m[2] || '0', 10);
   const p = (platform || '').toLowerCase();
   if (p.includes('prestashop')) return major < 1 || (major === 1 && minor < 7);
   if (p.includes('woocommerce')) return major < 7;

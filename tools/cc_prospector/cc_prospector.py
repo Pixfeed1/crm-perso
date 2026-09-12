@@ -179,7 +179,7 @@ _IG_RE = re.compile(r"https?://(?:www\.)?instagram\.com/[A-Za-z0-9_.\-/]+", re.I
 # Chemins sociaux à ignorer (pages génériques du réseau, pas le profil de la boutique).
 _SOCIAL_JUNK = re.compile(
     r"/(sharer|share|dialog|plugins|tr(\?|$|/)|intent|home|login|policies|help|about|privacy|hashtag|"
-    r"profile\.php$|groups?(/|$)|events?(/|$)|/photos?(/|$)|/videos?(/|$)|/posts?(/|$)|/permalink|/story\.php|"
+    r"profile\.php$|groups?(/|$)|events?(/|$)|[^/]+/photos?(/|$)|[^/]+/videos?(/|$)|[^/]+/posts?(/|$)|permalink|story\.php|"
     r"marketplace|watch|reel|stories|explore|accounts|p/$|"
     r"(prestashop|prestashopfr|woocommerce|wordpress|shopify|wix|jimdo|squarespace|magento)/?$)",
     re.IGNORECASE,
