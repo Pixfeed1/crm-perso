@@ -336,6 +336,18 @@ _YEAR_RANGE_RE = re.compile(r"(20\d{2})\s*[-–]\s*(20\d{2})")
 # Liens/pages légaux obligatoires en France (présents en pied de page sur ~toutes les home).
 _MENTIONS_MARKERS = ["mentions-legales", "mentions légales", "mentions_legales",
                      "mentions-légales", "/mentions", "legal-notice"]
+# Obligations propres au e-commerce (Code de la consommation) : CGV et droit de rétractation.
+_CGV_MARKERS = ["conditions générales de vente", "conditions generales de vente", "conditions-generales-de-vente",
+                "conditions générales d'utilisation et de vente", ">cgv<", " cgv ", "/cgv", "cgv.", "terms-and-conditions",
+                "conditions-generales", "conditions générales"]
+_RETRACT_MARKERS = ["rétractation", "retractation", "droit de retour", "satisfait ou remboursé", "satisfait ou rembourse"]
+# Lien vers les mentions légales (pour vérifier qu'il mène quelque part).
+_MENTIONS_LINK_RE = re.compile(r'<a[^>]+href=["\']([^"\'#]+)["\'][^>]*>[^<]{0,60}mentions?\s+l[ée]gales', re.IGNORECASE)
+# noindex : balise meta robots (ou googlebot) contenant noindex.
+_NOINDEX_RE = re.compile(r'<meta[^>]+name=["\'](?:robots|googlebot)["\'][^>]+content=["\'][^"\']*noindex', re.IGNORECASE)
+_NOINDEX_RE2 = re.compile(r'<meta[^>]+content=["\'][^"\']*noindex[^"\']*["\'][^>]+name=["\'](?:robots|googlebot)["\']', re.IGNORECASE)
+# Contenu mixte : ressource active/passive chargée en http:// sur une page https.
+_MIXED_RE = re.compile(r'<(?:script|img|link|iframe|source|video|audio)[^>]+(?:src|href)=["\']http://', re.IGNORECASE)
 _PRIVACY_MARKERS = ["politique-de-confidentialite", "politique de confidentialité",
                     "confidentialité", "confidentialite", "donnees-personnelles",
                     "données personnelles", "privacy-policy", "privacy", "vie-privee",
@@ -370,6 +382,18 @@ def analyze_site(html: str, headers: dict) -> dict:
     out["mentions_legales"] = "oui" if any(m in low for m in _MENTIONS_MARKERS) else "non"
     out["rgpd_confidentialite"] = "oui" if any(m in low for m in _PRIVACY_MARKERS) else "non"
     out["cookie_banner"] = "oui" if any(m in low for m in _COOKIE_MARKERS) else "non"
+
+    # E-commerce : CGV et droit de rétractation (obligatoires pour vendre en ligne).
+    out["cgv"] = "oui" if any(m in low for m in _CGV_MARKERS) else "non"
+    out["retractation"] = "oui" if any(m in low for m in _RETRACT_MARKERS) else "non"
+
+    # Invisible sur Google : noindex (balise ou en-tête X-Robots-Tag). robots.txt vu à part.
+    xrobots = hdr.get("x-robots-tag", "").lower()
+    out["noindex"] = "oui" if (_NOINDEX_RE.search(html) or _NOINDEX_RE2.search(html) or "noindex" in xrobots) else "non"
+
+    # Contenu mixte (calculé ici sur le HTML ; n'a de sens que si la page finale est en https,
+    # le code appelant le remet à « non » sinon).
+    out["contenu_mixte"] = "oui" if _MIXED_RE.search(html) else "non"
 
     # Mesure d'audience
     out["analytics"] = "oui" if any(m in low for m in _ANALYTICS_MARKERS) else "non"
@@ -511,6 +535,8 @@ CSV_FIELDS = [
     "mobile_ok", "meta_desc", "h1_present", "mentions_legales", "rgpd_confidentialite",
     "cookie_banner", "analytics", "poids_ko", "copyright_annee", "serveur_php",
     "spf", "dmarc", "ssl_expire_jours",
+    # --- arguments forts (chiffre d'affaires, loi, panne) ---
+    "noindex", "robots_bloque", "cgv", "retractation", "contenu_mixte", "mentions_404",
     # --- pré-tri prospect ---
     "site_type", "ecommerce_actif",
     "error",
@@ -579,6 +605,51 @@ def _ssl_days_sync(host: str, timeout: float) -> str:
 async def ssl_expiry_days(host: str, timeout: float) -> str:
     try:
         return await asyncio.to_thread(_ssl_days_sync, host, timeout)
+    except Exception:
+        return ""
+
+
+async def check_robots_blocked(client, base_url) -> str:
+    """robots.txt : « Disallow: / » pour tous les robots ou pour Googlebot = boutique
+    volontairement (ou par oubli après migration) invisible sur Google. oui / non / ''."""
+    try:
+        r = await client.get(base_url.rstrip("/") + "/robots.txt")
+        if r.status_code != 200 or not r.text:
+            return "non"
+        blocked = False
+        current = set()
+        last_was_rule = True
+        for raw in r.text.splitlines()[:400]:
+            line = raw.split("#", 1)[0].strip()
+            if not line:
+                continue
+            k, _, v = line.partition(":")
+            k, v = k.strip().lower(), v.strip()
+            if k == "user-agent":
+                current = {v.lower()} if not current or last_was_rule else current | {v.lower()}
+                last_was_rule = False
+                continue
+            last_was_rule = True
+            if k == "disallow" and v == "/" and ({"*", "googlebot"} & current):
+                blocked = True
+        return "oui" if blocked else "non"
+    except Exception:
+        return ""
+
+
+async def check_mentions_link(client, base_url, html) -> str:
+    """Le lien « mentions légales » mène-t-il quelque part ? oui = cassé (4xx/5xx), non = ok,
+    '' = pas de lien à vérifier."""
+    m = _MENTIONS_LINK_RE.search(html)
+    if not m:
+        return ""
+    href = m.group(1).strip()
+    if href.lower().startswith(("mailto:", "javascript:", "tel:")):
+        return ""
+    try:
+        from urllib.parse import urljoin
+        r = await client.get(urljoin(base_url, href))
+        return "oui" if r.status_code >= 400 else "non"
     except Exception:
         return ""
 
@@ -694,6 +765,17 @@ async def detect_one(domain: str, sem, timeout: float, clients: dict, retries: i
                 site.update(classify_site(html, domain, platform))  # pré-tri : asso/agence/commerce
                 bare = _bare_domain(domain)
                 final_https = str(r.url).lower().startswith("https")
+                if not final_https:
+                    site["contenu_mixte"] = "non"  # n'a de sens qu'en https
+                # Deux lectures légères de plus, seulement si le site répond normalement :
+                # robots.txt (boutique bloquée pour Google) et cible du lien mentions légales.
+                if not protected and r.status_code < 400:
+                    site["robots_bloque"], site["mentions_404"] = await asyncio.gather(
+                        check_robots_blocked(client, str(r.url)),
+                        check_mentions_link(client, str(r.url), html),
+                    )
+                else:
+                    site["robots_bloque"], site["mentions_404"] = "", ""
                 # DNS et handshake TLS sont indépendants -> en parallèle (2 attentes -> 1).
                 # L'expiration TLS est lue dès qu'un certificat a répondu (candidat https),
                 # même si le site redirige ensuite vers http : le certificat existe, il n'est

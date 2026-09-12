@@ -20,6 +20,21 @@ const AGENCE_RE = /(agence web|agence digitale|agence de communication|cr[ée]at
 // Titres d'installation jamais changés (SEO nul, et signe que personne ne suit le site).
 const DEFAULT_TITLE_RE = /^(prestashop|wordpress|woocommerce|accueil|home|bienvenue|welcome|untitled|sans titre|mon site|my site|site en construction|coming soon|index|boutique en ligne|ma boutique|shop)$/i;
 
+// Fin du support de sécurité PHP (php.net/supported-versions). Une version passée n'a plus
+// aucun correctif : ce n'est pas un détail technique, c'est un site qu'on ne peut plus réparer.
+const PHP_EOL = { '5.6': '2018-12', '7.0': '2019-01', '7.1': '2019-12', '7.2': '2020-11', '7.3': '2021-12', '7.4': '2022-11', '8.0': '2023-11', '8.1': '2025-12', '8.2': '2026-12', '8.3': '2027-12', '8.4': '2028-12' };
+function phpEol(serveurPhp) {
+  const m = /PHP\s*(\d+\.\d+)/i.exec(String(serveurPhp || ''));
+  if (!m) return null;
+  const branch = m[1];
+  const eol = PHP_EOL[branch] || (parseFloat(branch) < 5.6 ? '2018-12' : null);
+  if (!eol) return null;
+  const now = new Date().toISOString().slice(0, 7);
+  return eol < now ? { branch, eol } : null;
+}
+
+const isShop = (r) => r.site_type === 'commerce' || r.ecommerce_actif === true || ['PrestaShop', 'WooCommerce', 'Shopify'].includes(r.platform);
+
 // Problèmes d'audit : clé stable (persistée dans leads.angles), libellé court, poids.
 function auditFlags(r) {
   const f = [];
@@ -40,7 +55,15 @@ function auditFlags(r) {
   if (r.meta_desc === false) f.push({ key: 'meta_desc', label: 'SEO : meta description', poids: 3 });
   if (r.h1_present === false) f.push({ key: 'h1', label: 'SEO : H1', poids: 3 });
   if (r.analytics === false) f.push({ key: 'analytics', label: 'sans audience', poids: 3 });
-  if (r.serveur_php) f.push({ key: 'serveur_expose', label: `serveur exposé (${r.serveur_php})`, poids: 5 });
+  // Arguments forts : chiffre d'affaires (invisible sur Google), loi (CGV, rétractation), panne.
+  if (r.noindex === true || r.robots_bloque === true) f.push({ key: 'invisible_google', label: 'invisible sur Google', poids: 25 });
+  if (r.cgv === false && isShop(r)) f.push({ key: 'cgv_absente', label: 'sans CGV', poids: 15 });
+  if (r.retractation === false && isShop(r)) f.push({ key: 'retractation_absente', label: 'sans rétractation', poids: 8 });
+  if (r.contenu_mixte === true) f.push({ key: 'contenu_mixte', label: 'contenu mixte', poids: 8 });
+  if (r.mentions_404 === true) f.push({ key: 'mentions_404', label: 'mentions légales cassées', poids: 10 });
+  const eol = phpEol(r.serveur_php);
+  if (eol) f.push({ key: 'php_obsolete', label: `PHP ${eol.branch} sans correctifs depuis ${eol.eol.slice(0, 4)}`, poids: 12 });
+  else if (r.serveur_php) f.push({ key: 'serveur_expose', label: `serveur exposé (${r.serveur_php})`, poids: 5 });
   // Site en panne (erreur serveur 5xx) : le problème le plus visible qui soit.
   if (Number(r.http_status) >= 500) f.push({ key: 'erreur_serveur', label: `site en erreur (${r.http_status})`, poids: 15 });
   // Titre jamais personnalisé (« PrestaShop », « WordPress », « Accueil ») : site laissé tel quel.
@@ -104,4 +127,4 @@ function departmentFromPostalCode(cp) {
   return s.slice(0, 2);
 }
 
-module.exports = { auditFlags, prospectScore, disqualifyReason, promotionBlocker, departmentFromPostalCode, NOCODE_NAMES };
+module.exports = { auditFlags, prospectScore, disqualifyReason, promotionBlocker, departmentFromPostalCode, phpEol, NOCODE_NAMES };

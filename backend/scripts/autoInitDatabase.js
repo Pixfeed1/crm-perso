@@ -242,6 +242,13 @@ const DATABASE_SCHEMA = {
       platform_version: 'TEXT', // ex 'PrestaShop 1.6.1.24' -> angle commercial (version obsolète)
       ssl_ok: 'BOOLEAN',        // certificat TLS valide ? (null si http) — un 'non' = prospect chaud
       https_final: 'BOOLEAN',   // page finale servie en HTTPS ? non = « Non sécurisé » affiché au visiteur
+      // Arguments forts (chiffre d'affaires, loi, panne) : lus sans rien forcer.
+      noindex: 'BOOLEAN',        // balise/en-tête noindex sur l'accueil : invisible sur Google
+      robots_bloque: 'BOOLEAN',  // robots.txt « Disallow: / » pour tous ou Googlebot : idem
+      cgv: 'BOOLEAN',            // conditions générales de vente présentes (obligatoires pour vendre)
+      retractation: 'BOOLEAN',   // information sur le droit de rétractation
+      contenu_mixte: 'BOOLEAN',  // ressources http:// sur une page https : cadenas cassé
+      mentions_404: 'BOOLEAN',   // le lien « mentions légales » mène à une page en erreur
       protected: 'BOOLEAN DEFAULT FALSE', // page derrière anti-bot (Cloudflare) au crawl
       lang: 'VARCHAR(5)',       // langue déclarée du site (ex 'fr')
       parked: 'BOOLEAN DEFAULT FALSE', // domaine parké/en vente/vide -> sans intérêt

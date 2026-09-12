@@ -65,8 +65,18 @@ const isObsolete = (platform, version) => {
 
 // Problèmes détectés gratuitement (audit) = autant d'angles d'approche concrets.
 // Chaque entrée : { key, label court (badge), title (détail au survol), poids (score) }.
+const PHP_EOL = { '5.6': '2018', '7.0': '2019', '7.1': '2019', '7.2': '2020', '7.3': '2021', '7.4': '2022', '8.0': '2023', '8.1': '2025' };
+const isShop = (r) => r.site_type === 'commerce' || r.ecommerce_actif === true || ['PrestaShop', 'WooCommerce', 'Shopify'].includes(r.platform);
 const auditFlags = (r) => {
   const f = [];
+  // Arguments forts d'abord : chiffre d'affaires, loi, panne.
+  if (r.noindex === true || r.robots_bloque === true) f.push({ key: 'invisible', label: 'INVISIBLE SUR GOOGLE', title: r.noindex ? 'Balise noindex sur l\'accueil : Google n\'indexe pas la boutique' : 'robots.txt interdit tout parcours à Google', poids: 25 });
+  if (r.cgv === false && isShop(r)) f.push({ key: 'cgv', label: 'sans CGV', title: 'Aucune condition générale de vente : obligatoire pour vendre en ligne', poids: 15 });
+  if (r.retractation === false && isShop(r)) f.push({ key: 'retract', label: 'sans rétractation', title: 'Droit de rétractation non mentionné (Code de la consommation)', poids: 8 });
+  if (r.contenu_mixte === true) f.push({ key: 'mixte', label: 'contenu mixte', title: 'Ressources http:// sur une page https : cadenas cassé', poids: 8 });
+  if (r.mentions_404 === true) f.push({ key: 'ml404', label: 'mentions légales cassées', title: 'Le lien mentions légales mène à une page en erreur', poids: 10 });
+  const eol = /PHP\s*(\d+\.\d+)/i.exec(String(r.serveur_php || ''));
+  if (eol && (PHP_EOL[eol[1]] || parseFloat(eol[1]) < 5.6)) f.push({ key: 'phpeol', label: `PHP ${eol[1]} sans correctifs`, title: `PHP ${eol[1]} n'a plus de correctifs de sécurité depuis ${PHP_EOL[eol[1]] || '2018'}`, poids: 12 });
   if (r.mentions_legales === false) f.push({ key: 'ml', label: 'sans mentions légales', title: 'Aucune page mentions légales — obligation légale (LCEN)', poids: 15 });
   if (r.mobile_ok === false) f.push({ key: 'mobile', label: 'non responsive', title: "Pas de balise viewport — s'affiche mal sur mobile", poids: 15 });
   if (r.ssl_expire_jours != null && r.ssl_expire_jours < 30) {
@@ -81,7 +91,7 @@ const auditFlags = (r) => {
   if (r.meta_desc === false) f.push({ key: 'meta', label: 'SEO: meta desc', title: 'Meta description manquante (SEO de base)', poids: 3 });
   if (r.h1_present === false) f.push({ key: 'h1', label: 'SEO: H1', title: 'Aucune balise H1 (SEO de base)', poids: 3 });
   if (r.analytics === false) f.push({ key: 'analytics', label: 'sans audience', title: "Aucune mesure d'audience (Analytics/pixel) installée", poids: 3 });
-  if (r.serveur_php) f.push({ key: 'php', label: r.serveur_php, title: `Version serveur exposée dans les entêtes : ${r.serveur_php}`, poids: 5 });
+  if (r.serveur_php && !(eol && (PHP_EOL[eol[1]] || parseFloat(eol[1]) < 5.6))) f.push({ key: 'php', label: r.serveur_php, title: `Version serveur exposée dans les entêtes : ${r.serveur_php}`, poids: 5 });
   if (Number(r.http_status) >= 500) f.push({ key: '5xx', label: `site en erreur (${r.http_status})`, title: 'Erreur serveur : les visiteurs voient une page d\'erreur', poids: 15 });
   if (/^(prestashop|wordpress|woocommerce|accueil|home|bienvenue|welcome|untitled|sans titre|mon site|my site|site en construction|coming soon|index|boutique en ligne|ma boutique|shop)$/i.test(String(r.title || '').trim())) f.push({ key: 'titre', label: 'titre par défaut', title: 'Le titre de la page d\'accueil est celui de l\'installation', poids: 5 });
   return f;
