@@ -179,7 +179,8 @@ _IG_RE = re.compile(r"https?://(?:www\.)?instagram\.com/[A-Za-z0-9_.\-/]+", re.I
 # Chemins sociaux à ignorer (pages génériques du réseau, pas le profil de la boutique).
 _SOCIAL_JUNK = re.compile(
     r"/(sharer|share|dialog|plugins|tr(\?|$|/)|intent|home|login|policies|help|about|privacy|hashtag|"
-    r"profile\.php$|groups?$|events?$|marketplace|watch|reel|stories|explore|accounts|p/$|"
+    r"profile\.php$|groups?(/|$)|events?(/|$)|/photos?(/|$)|/videos?(/|$)|/posts?(/|$)|/permalink|/story\.php|"
+    r"marketplace|watch|reel|stories|explore|accounts|p/$|"
     r"(prestashop|prestashopfr|woocommerce|wordpress|shopify|wix|jimdo|squarespace|magento)/?$)",
     re.IGNORECASE,
 )
@@ -355,6 +356,10 @@ _CGV_MARKERS = ["conditions générales de vente", "conditions generales de vent
                 "conditions-d-utilisation", "conditions de vente", "conditions-de-vente", ">cgu<", "/cgu",
                 "id_cms=3&"]  # PrestaShop sans réécriture : page CMS 3 = conditions d'utilisation
 _RETRACT_MARKERS = ["rétractation", "retractation", "droit de retour", "satisfait ou remboursé", "satisfait ou rembourse"]
+# Lien vers la page CGV / conditions (la rétractation y est mentionnée, pas sur l'accueil).
+_CGV_LINK_RE = re.compile(
+    r'<a[^>]+href=["\']([^"\'#]+)["\'][^>]*>[^<]{0,80}(?:conditions g[ée]n[ée]rales|conditions d[\'’]utilisation|conditions de vente|\bcgv\b|\bcgu\b)',
+    re.IGNORECASE)
 # Lien vers les mentions légales (pour vérifier qu'il mène quelque part).
 _MENTIONS_LINK_RE = re.compile(r'<a[^>]+href=["\']([^"\'#]+)["\'][^>]*>[^<]{0,60}mentions?\s+l[ée]gales', re.IGNORECASE)
 # noindex : balise meta robots (ou googlebot) contenant noindex.
@@ -655,6 +660,27 @@ async def check_robots_blocked(client, base_url) -> str:
         return ""
 
 
+async def check_retractation_on_cgv(client, base_url, html) -> str:
+    """La rétractation se lit dans les CGV, pas sur l'accueil : on suit le lien CGV.
+    oui / non (page CGV lue sans mention) / '' (pas de lien CGV ou lecture impossible)."""
+    m = _CGV_LINK_RE.search(html)
+    if not m:
+        return ""
+    href = m.group(1).strip()
+    if href.lower().startswith(("mailto:", "javascript:", "tel:")):
+        return ""
+    try:
+        from urllib.parse import urljoin
+        import html as _h
+        r = await client.get(urljoin(base_url, href))
+        if r.status_code != 200 or not r.text:
+            return ""
+        low = _h.unescape(r.text).lower()
+        return "oui" if any(mk in low for mk in _RETRACT_MARKERS) else "non"
+    except Exception:
+        return ""
+
+
 async def check_mentions_link(client, base_url, html) -> str:
     """Le lien « mentions légales » mène-t-il quelque part ? oui = cassé (4xx/5xx), non = ok,
     '' = pas de lien à vérifier."""
@@ -773,7 +799,9 @@ async def detect_one(domain: str, sem, timeout: float, clients: dict, retries: i
 
                 platform, signals = detect_platform(html, dict(r.headers))
                 title = extract_title(html)
-                protected = is_antibot_title(title)
+                # Titre d'antibot OU réponse barrée (401/403/429) : la page lue n'est pas la
+                # boutique, l'audit serait faux. Marqué protégé, écarté de la promotion.
+                protected = is_antibot_title(title) or r.status_code in (401, 403, 429)
                 contacts = extract_contacts(html, domain)
                 # Email de secours : si la home n'en donne pas, on tente les pages contact.
                 if not contacts["email"] and not protected:
@@ -788,10 +816,18 @@ async def detect_one(domain: str, sem, timeout: float, clients: dict, retries: i
                 # Deux lectures légères de plus, seulement si le site répond normalement :
                 # robots.txt (boutique bloquée pour Google) et cible du lien mentions légales.
                 if not protected and r.status_code < 400:
-                    site["robots_bloque"], site["mentions_404"] = await asyncio.gather(
+                    site["robots_bloque"], site["mentions_404"], retract_cgv = await asyncio.gather(
                         check_robots_blocked(client, str(r.url)),
                         check_mentions_link(client, str(r.url), html),
+                        check_retractation_on_cgv(client, str(r.url), html) if site.get("retractation") == "non" else asyncio.sleep(0, result=None),
                     )
+                    # Rétractation absente de l'accueil : on ne conclut qu'après lecture des CGV.
+                    # Sans lien CGV, l'absence est acquise ; lecture impossible -> inconnu.
+                    if site.get("retractation") == "non":
+                        if retract_cgv == "oui":
+                            site["retractation"] = "oui"
+                        elif retract_cgv == "" and site.get("cgv") == "oui":
+                            site["retractation"] = ""
                 else:
                     site["robots_bloque"], site["mentions_404"] = "", ""
                 # DNS et handshake TLS sont indépendants -> en parallèle (2 attentes -> 1).

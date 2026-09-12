@@ -60,6 +60,8 @@ const isObsolete = (platform, version) => {
   if (p.includes('prestashop')) return major < 1 || (major === 1 && minor < 7); // < 1.7 non maintenu
   if (p.includes('woocommerce')) return major < 7;
   if (p.includes('wordpress')) return major < 6;
+  if (p.includes('drupal')) return major <= 9;
+  if (p.includes('spip')) return major < 4;
   return false;
 };
 

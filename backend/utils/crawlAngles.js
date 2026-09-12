@@ -15,6 +15,8 @@ function isObsoleteVersion(platform, version) {
   if (p.includes('prestashop')) return major < 1 || (major === 1 && minor < 7);
   if (p.includes('woocommerce')) return major < 7;
   if (p.includes('wordpress')) return major < 6;
+  if (p.includes('drupal')) return major <= 9;   // Drupal 7 (janv. 2025), 8 (2021), 9 (2023) : plus maintenus
+  if (p.includes('spip')) return major < 4;      // SPIP 3.x : fin de maintenance 2023
   return false;
 }
 
@@ -45,7 +47,7 @@ function problemesLisibles(r) {
   if (r.dmarc === false) out.push("Le domaine n'est pas protégé par DMARC : il peut être usurpé pour envoyer de faux emails en son nom.");
   if (r.rgpd_confidentialite === false) out.push("Il manque une politique de confidentialité, obligatoire avec le RGPD.");
   if (r.cookie_banner === false) out.push("Il n'y a pas de bandeau de consentement aux cookies (demandé par la CNIL).");
-  if (isObsoleteVersion(r.platform, r.platform_version)) out.push(`Le site tourne sur une version de ${r.platform} qui n'est plus maintenue : c'est un risque de sécurité et de bugs.`);
+  if (isObsoleteVersion(r.platform, r.platform_version)) out.push(`Le site tourne sur une version de ${r.platform} qui n'est plus maintenue${/drupal/i.test(r.platform || '') && /\b7\b/.test(r.platform_version || '') ? ' (Drupal 7, fin de vie en janvier 2025)' : ''} : c'est un risque de sécurité et de bugs.`);
   if (r.meta_desc === false || r.h1_present === false) out.push("Des éléments SEO de base manquent (description ou titre principal), ce qui limite la visibilité sur Google.");
   if (r.analytics === false) out.push("Aucun outil de mesure d'audience n'est installé : impossible de savoir combien de visiteurs viennent, ni d'où.");
   const eolMatch = /PHP\s*(\d+\.\d+)/i.exec(String(r.serveur_php || ''));
