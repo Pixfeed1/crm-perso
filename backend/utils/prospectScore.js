@@ -66,6 +66,7 @@ function auditFlags(r) {
   else if (r.serveur_php) f.push({ key: 'serveur_expose', label: `serveur exposé (${r.serveur_php})`, poids: 5 });
   // Site en panne (erreur serveur 5xx) : le problème le plus visible qui soit.
   if (Number(r.http_status) >= 500) f.push({ key: 'erreur_serveur', label: `site en erreur (${r.http_status})`, poids: 15 });
+  if ([404, 410].includes(Number(r.http_status))) f.push({ key: 'accueil_404', label: 'accueil introuvable (404)', poids: 15 });
   // Titre jamais personnalisé (« PrestaShop », « WordPress », « Accueil ») : site laissé tel quel.
   if (DEFAULT_TITLE_RE.test(String(r.title || '').trim())) f.push({ key: 'titre_defaut', label: 'titre par défaut', poids: 5 });
   const annee = new Date().getFullYear();

@@ -86,6 +86,9 @@ async function buildExcludeFile(db, filePath) {
   try {
     const cr = await db.pool.query('SELECT DISTINCT domain FROM crawl_results WHERE domain IS NOT NULL');
     cr.rows.forEach((r) => { const d = normalizeDomain(r.domain); if (d) set.add(d); });
+    // Mémoire persistante (survit à la suppression des jobs).
+    const sd = await db.pool.query('SELECT domain FROM crawl_seen_domains').catch(() => ({ rows: [] }));
+    sd.rows.forEach((r) => { const d = normalizeDomain(r.domain); if (d) set.add(d); });
     // Domaines/sites des leads (le crawl stocke le domaine dans company).
     const ld = await db.pool.query("SELECT company FROM leads WHERE company IS NOT NULL AND company <> ''");
     ld.rows.forEach((r) => { const d = normalizeDomain(r.company); if (d && d.includes('.')) set.add(d); });
@@ -208,6 +211,8 @@ async function ingestCsv(db, jobId, csvPath) {
   try {
     const ex = await db.pool.query('SELECT DISTINCT domain FROM crawl_results WHERE domain IS NOT NULL');
     ex.rows.forEach((r) => { const d = normalizeDomain(r.domain); if (d) seen.add(d); });
+    const sd = await db.pool.query('SELECT domain FROM crawl_seen_domains').catch(() => ({ rows: [] }));
+    sd.rows.forEach((r) => { const d = normalizeDomain(r.domain); if (d) seen.add(d); });
   } catch (e) {
     console.error('[Crawl] Erreur préchargement dédoublonnage:', e.message);
   }
@@ -220,6 +225,7 @@ async function ingestCsv(db, jobId, csvPath) {
     const norm = normalizeDomain(domain);
     if (seen.has(norm)) continue; // déjà connu : on ignore silencieusement
     seen.add(norm);
+    await db.pool.query('INSERT INTO crawl_seen_domains (domain) VALUES ($1) ON CONFLICT (domain) DO NOTHING', [norm]).catch(() => {});
     const httpRaw = hi >= 0 ? parseInt(row[hi], 10) : null;
     const platform = pi >= 0 ? (row[pi] || null) : null;
     const signals = si >= 0 ? (row[si] || null) : null;
@@ -467,6 +473,7 @@ const crawlController = {
           r.https_final === false ? '• Site servi en HTTP (« Non sécurisé » affiché au visiteur)' : null,
           (r.noindex === true || r.robots_bloque === true) ? `• INVISIBLE SUR GOOGLE (${r.noindex ? 'balise noindex' : 'robots.txt bloque tout'})` : null,
           (Number(r.http_status) >= 500) ? `• Site en erreur serveur (${r.http_status})` : null,
+          ([404, 410].includes(Number(r.http_status))) ? "• Page d'accueil introuvable (404) : le site répond mais n'affiche rien" : null,
           (r.cgv === false && (r.site_type === 'commerce' || r.ecommerce_actif)) ? '• Pas de conditions générales de vente (obligatoires pour vendre en ligne)' : null,
           (r.retractation === false && (r.site_type === 'commerce' || r.ecommerce_actif)) ? '• Aucune information sur le droit de rétractation (Code de la consommation)' : null,
           r.contenu_mixte === true ? '• Contenu mixte : cadenas cassé, éléments bloqués par le navigateur' : null,
@@ -579,6 +586,8 @@ crawlController.exportExclude = async (req, res) => {
   try {
     const { rows } = await db.pool.query(
       `SELECT domain FROM crawl_results WHERE domain IS NOT NULL
+       UNION
+       SELECT domain FROM crawl_seen_domains
        UNION
        SELECT company FROM leads WHERE company IS NOT NULL AND company <> ''`
     );

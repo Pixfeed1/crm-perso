@@ -1786,6 +1786,20 @@ async function ensureCrawlNoCodeBackfill(client) {
   } catch (e) {
     console.error('[AutoInit] Backfill no-code crawl:', e.message);
   }
+  // Mémoire des domaines déjà vus par le crawl, indépendante des jobs : supprimer un vieux job
+  // effaçait ses résultats et les mêmes sites ressortaient au crawl suivant.
+  await client.query(`CREATE TABLE IF NOT EXISTS crawl_seen_domains (
+    domain TEXT PRIMARY KEY,
+    source VARCHAR(20) DEFAULT 'crawl',
+    first_seen TIMESTAMP DEFAULT NOW()
+  )`);
+  await client.query(`INSERT INTO crawl_seen_domains (domain, source)
+    SELECT DISTINCT lower(regexp_replace(domain, '^www\\.', '')), 'crawl' FROM crawl_results WHERE domain IS NOT NULL AND domain <> ''
+    ON CONFLICT (domain) DO NOTHING`).catch(() => {});
+  await client.query(`INSERT INTO crawl_seen_domains (domain, source)
+    SELECT DISTINCT lower(regexp_replace(company, '^(https?://)?(www\\.)?', '')), 'lead' FROM leads
+    WHERE company IS NOT NULL AND company ~ '^[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$'
+    ON CONFLICT (domain) DO NOTHING`).catch(() => {});
   // https_final (page finale servie en HTTPS ?) : déduit de l'URL finale pour les crawls
   // antérieurs à la colonne. Un site en HTTP = « Non sécurisé » affiché au visiteur.
   await client.query(`UPDATE crawl_results SET https_final = CASE WHEN final_url ILIKE 'https:%' THEN TRUE WHEN final_url ILIKE 'http:%' THEN FALSE END

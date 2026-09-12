@@ -809,6 +809,15 @@ async def detect_one(domain: str, sem, timeout: float, clients: dict, retries: i
                 # Audit gratuit (HTML/entêtes) + DNS (SPF/DMARC) + expiration TLS.
                 site = analyze_site(html, dict(r.headers))
                 site.update(classify_site(html, domain, platform))  # pré-tri : asso/agence/commerce
+                if r.status_code >= 400 or protected:
+                    # Page d'erreur ou page barrée : l'audit porterait sur un contenu qui n'est
+                    # pas la boutique. On laisse ces colonnes vides plutôt que d'accuser à tort.
+                    for k in ("mobile_ok", "meta_desc", "h1_present", "mentions_legales", "rgpd_confidentialite",
+                              "cookie_banner", "analytics", "copyright_annee", "cgv", "retractation", "noindex",
+                              "contenu_mixte", "ecommerce_actif"):
+                        site[k] = ""
+                    if site.get("site_type") in ("asso", "agence"):
+                        site["site_type"] = "autre"
                 bare = _bare_domain(domain)
                 final_https = str(r.url).lower().startswith("https")
                 if not final_https:
