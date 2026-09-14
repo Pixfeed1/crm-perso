@@ -394,7 +394,13 @@ _MENTIONS_LINK_RE = re.compile(r'<a[^>]+href=["\']([^"\'#]+)["\'][^>]*>[^<]{0,60
 _NOINDEX_RE = re.compile(r'<meta[^>]+name=["\'](?:robots|googlebot)["\'][^>]+content=["\'][^"\']*noindex', re.IGNORECASE)
 _NOINDEX_RE2 = re.compile(r'<meta[^>]+content=["\'][^"\']*noindex[^"\']*["\'][^>]+name=["\'](?:robots|googlebot)["\']', re.IGNORECASE)
 # Contenu mixte : ressource active/passive chargée en http:// sur une page https.
-_MIXED_RE = re.compile(r'<(?:script|img|link|iframe|source|video|audio)[^>]+(?:src|href)=["\']http://', re.IGNORECASE)
+# <link> ne compte que s'il charge une ressource (feuille de style, icône, préchargement) :
+# un canonical ou un alternate en http:// n'est pas du contenu mixte.
+_MIXED_RE = re.compile(
+    r'<(?:script|img|iframe|source|video|audio|embed|object)[^>]+src=["\']http://'
+    r'|<link[^>]+rel=["\'][^"\']*(?:stylesheet|icon|preload|prefetch|manifest)[^"\']*["\'][^>]+href=["\']http://'
+    r'|<link[^>]+href=["\']http://[^>]+rel=["\'][^"\']*(?:stylesheet|icon|preload|prefetch|manifest)',
+    re.IGNORECASE)
 _PRIVACY_MARKERS = ["politique-de-confidentialite", "politique de confidentialité",
                     "confidentialité", "confidentialite", "donnees-personnelles",
                     "données personnelles", "privacy-policy", "privacy", "vie-privee",
