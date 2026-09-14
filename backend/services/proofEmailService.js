@@ -31,59 +31,59 @@ const CATALOGUE = {
   accueil_404: (r) => ({
     sujet: `votre page d'accueil renvoie une erreur 404`,
     preuve: `En ouvrant ${site(r)} aujourd'hui, la page d'accueil renvoie une erreur 404 : le domaine répond, mais aucun site ne s'affiche.`,
-    consequence: `Un client qui tape votre adresse ou vous trouve sur Google tombe sur une page vide et repart. Google finit par retirer le site de ses résultats.`
+    consequence: `Je vous le dis parce que c'est le genre de chose qu'on ne voit pas depuis l'intérieur : un client qui tape votre adresse tombe sur une page vide et pense que vous avez fermé, et Google finit par retirer le site de ses résultats.`
   }),
   erreur_serveur: (r) => ({
     sujet: `votre site affiche une erreur ${r.http_status}`,
     preuve: `En ouvrant ${site(r)} aujourd'hui, le serveur renvoie une erreur ${r.http_status} au lieu de la boutique.`,
-    consequence: `Pendant ce temps, chaque visiteur repart sans rien voir, et Google enregistre un site en panne.`
+    consequence: `Peut-être que c'est passager et que vous êtes déjà dessus. Si ce n'est pas le cas, je préférais vous prévenir : pendant ce temps chaque visiteur repart sans rien voir, et Google note un site en panne.`
   }),
   invisible_google: (r) => ({
     sujet: `votre site demande à Google de ne pas l'indexer`,
     preuve: r.noindex
       ? `La page d'accueil de ${site(r)} contient une balise « noindex » : elle demande explicitement à Google de ne pas l'indexer.`
       : `Le fichier robots.txt de ${site(r)} interdit à Google de parcourir le site (Disallow: /).`,
-    consequence: `Concrètement, quelqu'un qui cherche ce que vous vendez ne peut pas tomber sur vous, quel que soit le mot tapé. C'est le réglage d'un site en construction, pas d'une boutique ouverte.`
+    consequence: `C'est un réglage de site en construction qui reste souvent coché après une mise en ligne, et personne ne s'en rend compte. Concrètement, quelqu'un qui cherche ce que vous vendez ne peut pas tomber sur vous, quel que soit le mot tapé.`
   }),
   http_non_securise: (r) => ({
     sujet: `« Non sécurisé » s'affiche sur ${site(r)}`,
     preuve: `${site(r)} s'ouvre en HTTP, sans cadenas : le navigateur affiche « Non sécurisé » à côté de l'adresse, dès la page d'accueil.`,
-    consequence: `Sur une boutique, c'est la première chose qu'un client voit avant de sortir sa carte, et beaucoup s'arrêtent là.`
+    consequence: `Je me mets à la place d'un client qui s'apprête à sortir sa carte : ce petit mot, c'est souvent ce qui le fait hésiter, alors que le reste de votre boutique lui plaisait.`
   }),
   ssl_expire: (r) => ({
     sujet: `le certificat de ${site(r)} a expiré`,
     preuve: `Le certificat de sécurité de ${site(r)} est expiré${r.ssl_expire_jours != null ? ` depuis ${Math.abs(r.ssl_expire_jours)} jour${Math.abs(r.ssl_expire_jours) > 1 ? 's' : ''}` : ''} : les visiteurs voient un avertissement plein écran avant d'atteindre le site.`,
-    consequence: `La plupart cliquent sur « Retour ». Ceux qui passent outre arrivent sur une boutique marquée dangereuse par leur navigateur.`
+    consequence: `La plupart des gens cliquent sur « Retour » devant cet écran, sans même savoir ce que c'est. Ça se corrige en une heure, mais il faut le voir.`
   }),
   ssl_invalide: (r) => ({
     sujet: `avertissement de sécurité sur ${site(r)}`,
     preuve: `En ouvrant ${site(r)} en HTTPS, le navigateur affiche un avertissement de sécurité : le certificat n'est pas valide pour ce domaine.`,
-    consequence: `Un visiteur qui voit cet écran rouge ne va pas plus loin, et encore moins jusqu'au paiement.`
+    consequence: `Devant cet écran rouge, un visiteur ne va pas plus loin, et encore moins jusqu'au paiement. Ça se corrige vite, mais il faut le savoir.`
   }),
   ssl_bientot: (r) => ({
     sujet: `votre certificat expire dans ${r.ssl_expire_jours} jours`,
     preuve: `Le certificat de sécurité de ${site(r)} expire dans ${r.ssl_expire_jours} jour${r.ssl_expire_jours > 1 ? 's' : ''} (visible en cliquant sur le cadenas du navigateur).`,
-    consequence: `Passé cette date, chaque visiteur verra un avertissement de sécurité plein écran avant d'atteindre votre site, souvent sans que vous le sachiez tout de suite.`
+    consequence: `Je vous préviens maintenant parce que passé cette date, chaque visiteur verra un avertissement de sécurité plein écran avant d'atteindre votre site, et on l'apprend en général par un client mécontent.`
   }),
   titre_defaut: (r) => ({
     sujet: `votre site s'appelle « ${String(r.title || '').trim()} » dans Google`,
     preuve: `Le titre de la page d'accueil de ${site(r)}, celui qui s'affiche dans Google et dans l'onglet du navigateur, est « ${String(r.title || '').trim()} » : le titre d'installation, jamais remplacé.`,
-    consequence: `Dans les résultats de recherche, votre boutique apparaît sous ce nom, sans rien qui dise ce que vous vendez ni où. Personne ne clique sur « ${String(r.title || '').trim()} ».`
+    consequence: `Dans les résultats de recherche, votre boutique apparaît donc sous ce nom, sans rien qui dise ce que vous vendez ni où. C'est dommage, parce que le travail derrière mérite mieux qu'un titre d'installation.`
   }),
   mentions_404: (r) => ({
     sujet: `le lien « mentions légales » de ${site(r)} ne mène nulle part`,
     preuve: `Le lien « mentions légales » en pied de page de ${site(r)} mène à une page en erreur : la mention existe dans le menu, la page n'existe plus.`,
-    consequence: `C'est une obligation légale en France, et c'est aussi ce qu'un client méfiant va vérifier avant de commander.`
+    consequence: `Ça arrive souvent après une mise à jour, et ça passe inaperçu. Mais c'est une obligation légale, et c'est aussi ce qu'un client prudent va vérifier avant de commander.`
   }),
   mobile: (r) => ({
     sujet: `${site(r)} sur téléphone`,
     preuve: `Ouvert sur un téléphone, ${site(r)} s'affiche comme sur un écran d'ordinateur, en tout petit, à agrandir au doigt : la page n'a pas de réglage d'affichage mobile.`,
-    consequence: `Plus de la moitié des visites se font sur téléphone. Sur cet écran-là, la plupart des gens ferment avant d'avoir lu.`
+    consequence: `Aujourd'hui plus de la moitié des visites se font sur téléphone. Je me suis dit que vous préféreriez le savoir : sur cet écran-là, beaucoup ferment avant d'avoir lu.`
   }),
   copyright_fige: (r) => ({
     sujet: `© ${r.copyright_annee} en bas de ${site(r)}`,
     preuve: `Le pied de page de ${site(r)} affiche encore « © ${r.copyright_annee} ».`,
-    consequence: `Pour un visiteur, c'est le signe d'un site que personne ne suit, et il se demande si la boutique est encore ouverte.`
+    consequence: `Ce n'est qu'un détail, mais pour quelqu'un qui découvre votre site, c'est le signe d'une boutique que personne ne suit, et il se demande si vous êtes encore ouvert.`
   })
 };
 
@@ -107,6 +107,42 @@ function salutation(r, lead) {
   const sur = r && r.sirene_match && r.sirene_match !== 'douteux';
   const nom = sur && r.gerant ? String(r.gerant).trim() : '';
   return nom ? `Bonjour ${nom},` : 'Bonjour,';
+}
+
+// Nom de la boutique tel qu'elle se présente : début du titre, avant le séparateur.
+function nomBoutique(r) {
+  // Raison sociale sûre d'abord (SIRENE), sinon le segment du titre qui ressemble le plus à un
+  // nom : le plus court (« Gourmands d'Antan » plutôt que « Epicerie fine gourmande en ligne »).
+  if (r.sirene_match && r.sirene_match !== 'douteux' && r.raison_sociale) {
+    const rs = String(r.raison_sociale).trim();
+    if (rs.length <= 40) return rs.replace(/\b(SARL|SAS|SASU|EURL|SA|SCI|EI)\b/gi, '').replace(/\s+/g, ' ').trim();
+  }
+  const segs = String(r.title || '').split(/\s+[-|–—:]\s+/).map((x) => x.trim())
+    .filter((x) => x && x.length <= 40 && !/^(prestashop|wordpress|accueil|home|bienvenue|boutique|shop)$/i.test(x));
+  if (segs.length === 0) return '';
+  segs.sort((a, b) => a.split(/\s+/).length - b.split(/\s+/).length || a.length - b.length);
+  return segs[0];
+}
+
+// Qui écrit, en une phrase, avant de parler du site de l'autre. Sans prénom configuré
+// (OUTREACH_SENDER_NAME), on se présente par le métier.
+function presentation(r) {
+  const prenom = (process.env.OUTREACH_SENDER_NAME || '').trim();
+  const entreprise = (process.env.OUTREACH_SENDER_COMPANY || 'PixFeed').trim();
+  const activite = r.naf_label ? String(r.naf_label).toLowerCase() : '';
+  const ville = r.ville ? String(r.ville).trim() : '';
+  const contexte = activite && ville ? `des ${activite} comme la vôtre, à ${ville}` : ville ? `des commerces comme le vôtre, à ${ville}` : `des commerçants et artisans`;
+  const qui = prenom
+    ? `Je m'appelle ${prenom}, je m'occupe de sites web à mon compte (${entreprise}) pour ${contexte}.`
+    : `Je fais des sites web à mon compte (${entreprise}) pour ${contexte}.`;
+  return qui;
+}
+
+function accroche(r) {
+  const nom = nomBoutique(r);
+  return nom
+    ? `Je suis tombé sur ${nom} en cherchant des boutiques de votre secteur, et j'ai pris le temps de regarder votre site. Une chose m'a sauté aux yeux, que vous n'avez peut-être pas vue de l'intérieur :`
+    : `Je suis tombé sur ${site(r)} en cherchant des boutiques de votre secteur, et j'ai pris le temps de le regarder. Une chose m'a sauté aux yeux, que vous n'avez peut-être pas vue de l'intérieur :`;
 }
 
 /**
@@ -137,13 +173,19 @@ function buildProofEmail(r, lead) {
   const body = [
     salutation(r, lead),
     '',
+    presentation(r),
+    '',
+    accroche(r),
+    '',
     c.preuve,
     '',
     c.consequence,
     contexte ? '' : null,
-    contexte || null,
+    contexte ? `Pour être complet : ${contexte.charAt(0).toLowerCase()}${contexte.slice(1)}` : null,
     '',
-    "J'ai relevé le reste, captures à l'appui. Je vous envoie le document si vous voulez le lire, répondez-moi simplement oui."
+    "Si vous voulez, je vous envoie ce que j'ai noté, avec les captures d'écran, pour que vous puissiez le montrer à qui s'occupe de votre site. Un simple « oui » en réponse suffit, et je ne vous relancerai pas dix fois.",
+    '',
+    'Bonne journée à vous,'
   ].filter((l) => l !== null).join('\n');
   return {
     ok: true,
