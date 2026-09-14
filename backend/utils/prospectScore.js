@@ -128,4 +128,10 @@ function departmentFromPostalCode(cp) {
   return s.slice(0, 2);
 }
 
-module.exports = { auditFlags, prospectScore, disqualifyReason, promotionBlocker, departmentFromPostalCode, phpEol, NOCODE_NAMES };
+// Preuve = vérifiable par le gérant en dix secondes sur son propre site ; indice = vrai mais
+// déduit ou invisible pour lui. Seule une preuve peut ouvrir un email (proofEmailService).
+const PREUVE_KEYS = new Set(['accueil_404', 'erreur_serveur', 'invisible_google', 'http_non_securise', 'ssl_expire',
+  'ssl_invalide', 'ssl_bientot', 'titre_defaut', 'mentions_404', 'mobile', 'copyright_fige']);
+const niveauFlag = (key) => (PREUVE_KEYS.has(key) ? 'preuve' : 'indice');
+
+module.exports = { auditFlags, prospectScore, disqualifyReason, promotionBlocker, departmentFromPostalCode, phpEol, niveauFlag, PREUVE_KEYS, NOCODE_NAMES };

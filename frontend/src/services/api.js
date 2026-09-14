@@ -85,12 +85,14 @@ export const apiRequest = async (endpoint, method = 'GET', data = null) => {
         }
       }
       
-      try {
-        const errorData = JSON.parse(responseText);
-        throw new Error(errorData.message || `Erreur ${response.status}`);
-      } catch (parseError) {
-        throw new Error(`Erreur ${response.status}: ${responseText}`);
-      }
+      // Erreur métier : message lisible + charge utile (ex. 422 « sans preuve » avec ses indices).
+      // L'ancien code levait l'erreur DANS le try : son propre catch la remplaçait par le JSON brut.
+      let errorData = null;
+      try { errorData = JSON.parse(responseText); } catch (parseError) { errorData = null; }
+      const err = new Error((errorData && errorData.message) || `Erreur ${response.status}: ${responseText}`);
+      err.status = response.status;
+      err.data = errorData;
+      throw err;
     }
     
     // Pour les suppressions réussies qui pourraient ne pas renvoyer de contenu

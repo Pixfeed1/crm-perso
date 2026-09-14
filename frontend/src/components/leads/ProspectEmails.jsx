@@ -136,16 +136,27 @@ const ProspectEmails = ({ lead, autoCompose = false }) => {
 
   // Rédaction du corps par Claude à partir des problèmes détectés par l'audit du crawl.
   // Claude ne signe pas : la signature par défaut (Paramètres) est ajoutée à l'envoi.
-  const generateWithClaude = async () => {
+  // Deux modes : « par la preuve » (défaut, assemblé à partir des mesures, une seule
+  // affirmation vérifiable) ou « Claude » (rédaction libre). Sans preuve, le serveur refuse
+  // et explique pourquoi : on n'envoie pas d'email générique.
+  const [sansPreuve, setSansPreuve] = useState(null);
+  const generateWithClaude = async (mode = 'preuve') => {
     if (drafting) return;
     setDrafting(true);
+    setSansPreuve(null);
     try {
-      const res = await leadsAPI.draftEmail(lead.id, { ton: draftTon });
+      const res = await leadsAPI.draftEmail(lead.id, { ton: draftTon, mode });
       if (res.subject) setSubject(res.subject);
       setBody(res.body || '');
-      toast.success('Brouillon rédigé par Claude');
+      toast.success(mode === 'preuve' ? `Email par la preuve (${res.preuve})` : 'Brouillon rédigé par Claude');
     } catch (e) {
-      toast.error(e.message || 'Échec de la rédaction');
+      const data = e && e.data;
+      if (data && data.sans_preuve) {
+        setSansPreuve(data);
+        toast.error('Pas de preuve vérifiable : email non généré');
+      } else {
+        toast.error(e.message || 'Échec de la rédaction');
+      }
     } finally {
       setDrafting(false);
     }
@@ -156,7 +167,7 @@ const ProspectEmails = ({ lead, autoCompose = false }) => {
   useEffect(() => {
     if (autoCompose && !autoFired.current && lead && lead.id) {
       autoFired.current = true;
-      (async () => { await openModal(); generateWithClaude(); })();
+      (async () => { await openModal(); generateWithClaude('preuve'); })();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoCompose, lead]);
@@ -320,16 +331,27 @@ const ProspectEmails = ({ lead, autoCompose = false }) => {
                         <option value="direct">Ton direct</option>
                         <option value="doux">Ton doux</option>
                       </select>
-                      <button type="button" onClick={generateWithClaude} disabled={drafting}
-                        title="Rédiger le message avec Claude à partir des problèmes détectés sur le site"
-                        className="px-2.5 py-1 text-xs rounded-lg bg-accent/15 text-accent hover:bg-accent/25 flex items-center gap-1.5 disabled:opacity-50">
+                      <button type="button" onClick={() => generateWithClaude('preuve')} disabled={drafting}
+                        title="Une seule affirmation, vérifiable par le gérant en dix secondes sur son site, sa conséquence pour son activité, un contexte technique mesuré. Refusé s'il n'y a pas de preuve."
+                        className="px-2.5 py-1 text-xs rounded-lg bg-accent text-white hover:bg-accent-hover flex items-center gap-1.5 disabled:opacity-50">
                         {drafting
                           ? <motion.span animate={{ rotate: 360 }} transition={{ duration: 0.9, repeat: Infinity, ease: 'linear' }} className="inline-flex"><FiLoader size={13} /></motion.span>
                           : <FiCpu size={13} />}
-                        {drafting ? 'Rédaction…' : 'Rédiger avec Claude'}
+                        {drafting ? 'Rédaction…' : 'Email par la preuve'}
+                      </button>
+                      <button type="button" onClick={() => generateWithClaude('claude')} disabled={drafting}
+                        title="Rédaction libre par Claude à partir de tous les problèmes détectés (moins sûr : à relire fait par fait)"
+                        className="px-2.5 py-1 text-xs rounded-lg bg-accent/15 text-accent hover:bg-accent/25 disabled:opacity-50">
+                        Claude libre
                       </button>
                     </div>
                   </div>
+                  {sansPreuve && (
+                    <div className="mb-2 text-xs rounded-lg border border-warning-text/30 bg-warning-bg text-warning-text px-3 py-2">
+                      <div className="font-semibold">Email non généré : {sansPreuve.message}</div>
+                      {sansPreuve.indices && sansPreuve.indices.length > 0 && <div className="mt-1 opacity-80">Indices seulement : {sansPreuve.indices.join(', ')}. Pas de preuve, pas d'email.</div>}
+                    </div>
+                  )}
                   <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={9}
                     className="w-full px-3 py-2 bg-surface-muted border border-border rounded-lg text-text-primary focus:outline-none focus:border-accent resize-y" />
                   <p className="text-xs text-text-muted mt-1">La signature par défaut (Paramètres) est ajoutée automatiquement à l'envoi.</p>

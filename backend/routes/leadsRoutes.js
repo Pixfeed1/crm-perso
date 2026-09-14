@@ -23,6 +23,7 @@ function emailAccounts() {
   return accounts;
 }
 const { problemesLisibles } = require('../utils/crawlAngles');
+const proofEmail = require('../services/proofEmailService');
 const { statusForRelation, relationForStatus } = require('../utils/leadStatusSync');
 
 // Date du jour + N jours au format YYYY-MM-DD (pour la relance automatique).
@@ -235,17 +236,26 @@ router.post('/:id/send-email', async (req, res) => {
   }
 });
 
-// POST /api/leads/:id/draft-email { ton? } — rédige un email de prospection (Claude Haiku)
-// à partir des problèmes détectés par l'audit. Ne fait QUE rédiger (aucun envoi). ~0,003 $.
+// POST /api/leads/:id/draft-email { mode?: 'preuve' | 'claude', ton? }
+// - 'preuve' (défaut) : email assemblé mot pour mot à partir des mesures du crawl : UNE preuve
+//   vérifiable en dix secondes, sa conséquence métier, au plus un contexte technique. Sans
+//   preuve -> 422, rien à envoyer (un email générique grille le prospect).
+// - 'claude' : ancienne rédaction libre par Claude Haiku (~0,003 $), à partir des problèmes.
 router.post('/:id/draft-email', async (req, res) => {
   const db = req.app.locals.db;
   const { id } = req.params;
   const ton = (req.body?.ton || 'humain').toString();
+  const mode = req.body?.mode === 'claude' ? 'claude' : 'preuve';
   try {
     const lr = await db.pool.query('SELECT * FROM leads WHERE id = $1', [id]);
     if (lr.rows.length === 0) return res.status(404).json({ message: 'Prospect introuvable' });
     const lead = lr.rows[0];
     const { row, problemes } = await problemesDuLead(db, lead);
+    if (mode === 'preuve') {
+      const draft = proofEmail.buildProofEmail(row, lead);
+      if (!draft.ok) return res.status(422).json({ message: draft.raison, indices: draft.indices, sans_preuve: true });
+      return res.json({ subject: draft.subject, body: draft.body, preuve: draft.preuve, preuves: draft.preuves, indices: draft.indices, mode: 'preuve', problemes });
+    }
     // Plateforme / dirigeant : depuis le crawl_result si dispo, sinon parsés des notes.
     const platMatch = (lead.notes || '').match(/Plateforme\s*:\s*([^\n(]+)(?:\(([^)]+)\))?/i);
     const prospect = {
