@@ -1071,40 +1071,11 @@ def discover(crawl, tld, mode, max_domains, output, parquet, exclude_file=""):
                     "{'User-Agent': '" + CC_UA + "'})")
     except Exception:
         pass
-    # data.commoncrawl.org limite le débit des lectures anonymes et répond 503 (« Slow Down »)
-    # quand on ouvre 300 fichiers d'un coup. On réessaie avec attente croissante côté DuckDB,
-    # et on limite les lectures simultanées pour rester sous le seuil.
-    for pragma in (
-        "SET http_retries = 8", "SET http_retry_wait_ms = 3000", "SET http_retry_backoff = 2",
-        "SET http_timeout = 180000", "SET http_keep_alive = true", "SET threads = 2",
-    ):
-        try:
-            con.execute(pragma)
-        except Exception:
-            pass
     print("Lecture de l'index en cours...", file=sys.stderr)
-    import time
-    rows = None
-    last_err = None
-    for attempt in range(1, 4):
-        try:
-            rows = con.execute(sql).fetchall()
-            break
-        except Exception as e:
-            last_err = e
-            msg = str(e)
-            if "503" in msg or "429" in msg or "Slow Down" in msg or "timed out" in msg.lower():
-                wait = 60 * attempt
-                print(f"Common Crawl limite le débit (tentative {attempt}/3) : nouvel essai dans {wait} s...", file=sys.stderr)
-                time.sleep(wait)
-                continue
-            break
-    if rows is None:
-        print(f"\nÉchec de la requête : {last_err}", file=sys.stderr)
-        if last_err and ("503" in str(last_err) or "429" in str(last_err)):
-            print("Le serveur de Common Crawl (data.commoncrawl.org) refuse temporairement les lectures "
-                  "(limitation de débit). Ce n'est pas une panne locale : relancer plus tard suffit en général.",
-                  file=sys.stderr)
+    try:
+        rows = con.execute(sql).fetchall()
+    except Exception as e:
+        print(f"\nÉchec de la requête : {e}", file=sys.stderr)
         sys.exit(1)
     domains = sorted({r[0] for r in rows if r[0]})
     Path(output).write_text("\n".join(domains) + "\n", encoding="utf-8")
