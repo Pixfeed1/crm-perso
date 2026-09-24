@@ -51,6 +51,7 @@
     ]
   },
   "devDependencies": {
+    "@babel/core": "^7.29.7",
     "@vitejs/plugin-react": "^6.1.1",
     "eslint": "^8.57.1",
     "eslint-config-react-app": "^7.0.1",
@@ -60,5 +61,8 @@
   "type": "commonjs",
   "engines": {
     "node": "^20.19.0 || >=22.12.0"
+  },
+  "overrides": {
+    "@babel/core": "^7.29.7"
   }
 }
