@@ -157,14 +157,17 @@ fi
 
 touche() { echo "$CHANGES" | grep -q "^$1"; }
 
-# Si package.json ou le lock ont bouge, les node_modules du serveur sont perimes :
-# le build (ou le backend au demarrage) echouerait sur un module introuvable.
+# Si package.json a bouge, les node_modules du serveur sont perimes : le build (ou le backend au
+# demarrage) echouerait sur un module introuvable. Les package-lock.json ne sont PAS versionnes
+# (.gitignore) : le serveur garde le sien, donc `npm ci` (qui exige un lock exactement synchrone
+# avec package.json) echouerait a chaque ajout de dependance. On utilise `npm install`, qui met
+# le lock local a jour et retire les paquets devenus inutiles.
 deps() {
   local dossier="$1"
-  if touche "$dossier/package.json" || touche "$dossier/package-lock.json"; then
-    gris "   dependances modifiees -> npm ci"
-    ( cd "$dossier" && npm ci --no-audit --no-fund ) \
-      || { rouge "   npm ci ECHOUE dans $dossier"; ECHECS+=("$dossier: npm ci en echec"); return 1; }
+  if touche "$dossier/package.json"; then
+    gris "   dependances modifiees -> npm install"
+    ( cd "$dossier" && npm install --no-audit --no-fund ) \
+      || { rouge "   npm install ECHOUE dans $dossier"; ECHECS+=("$dossier: npm install en echec"); return 1; }
   fi
 }
 
