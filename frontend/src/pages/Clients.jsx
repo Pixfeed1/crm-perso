@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiUsers, FiPlus, FiArrowLeft, FiDownload, FiUpload, FiGrid, FiList } from 'react-icons/fi';
+import { FiUsers, FiPlus, FiDownload, FiUpload, FiGrid, FiList } from 'react-icons/fi';
 import { clientsAPI, exportAPI } from '../services/api';
 import { useToast } from '../hooks/useToast';
 import { useConfirm } from '../hooks/useConfirm';
@@ -237,13 +237,7 @@ const Clients = () => {
   };
 
   // Retour à la liste (mobile)
-  const handleBackToList = () => {
-    setShowDetails(false);
-    setSelectedClient(null);
-    setIsAddingClient(false);
-  };
-
-  // Sauvegarde d'un nouveau client
+    // Sauvegarde d'un nouveau client
   const handleSaveClient = async (clientData) => {
     try {
       const newClient = await clientsAPI.create(clientData);

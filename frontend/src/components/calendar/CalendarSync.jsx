@@ -1,7 +1,7 @@
 // src/components/calendar/CalendarSync.jsx
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiRefreshCw, FiX, FiCheck, FiAlertCircle, FiSettings } from 'react-icons/fi';
+import { FiRefreshCw, FiX, FiCheck, FiAlertCircle } from 'react-icons/fi';
 import { FaGoogle } from 'react-icons/fa';
 import { SiMicrosoftoutlook } from 'react-icons/si';
 import { useToast } from '../../hooks/useToast';
@@ -88,7 +88,7 @@ const CalendarSync = ({ isOpen, onClose }) => {
     setSyncing(prev => ({ ...prev, [connectionId]: true }));
 
     try {
-      const response = await axios.post(`/api/calendar-sync/sync/${connectionId}`);
+      await axios.post(`/api/calendar-sync/sync/${connectionId}`);
       toast.success(`Synchronisation ${provider === 'google' ? 'Google Calendar' : 'Outlook'} terminée`);
       loadSyncLogs(connectionId);
       loadConnections();

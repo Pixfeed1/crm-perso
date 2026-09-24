@@ -1,7 +1,7 @@
 // src/components/dashboard/RevenueVisualizer.jsx
 import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { FiDollarSign } from 'react-icons/fi';
 
 const RevenueVisualizer = ({ revenues = [], projects = [], showTitle = true, maxItems = 5 }) => {

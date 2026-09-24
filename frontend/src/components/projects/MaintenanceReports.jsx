@@ -1,7 +1,7 @@
 // src/components/projects/MaintenanceReports.jsx
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiFileText, FiSend, FiEye, FiTrash2, FiPlus, FiCalendar, FiClock, FiCheckCircle, FiAlertCircle } from 'react-icons/fi';
+import { FiFileText, FiSend, FiEye, FiTrash2, FiPlus, FiCalendar, FiClock, FiCheckCircle } from 'react-icons/fi';
 import { maintenanceReportsAPI } from '../../services/api';
 
 const MaintenanceReports = ({ project }) => {

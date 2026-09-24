@@ -1,6 +1,6 @@
 // src/components/common/FileUpload.jsx
 import React, { useState } from 'react';
-import { FiUpload, FiTrash2, FiFile, FiDownload, FiX, FiImage, FiFileText, FiPaperclip, FiPackage, FiPieChart } from 'react-icons/fi';
+import { FiUpload, FiTrash2, FiDownload, FiX, FiImage, FiFileText, FiPaperclip, FiPackage, FiPieChart } from 'react-icons/fi';
 import { uploadAPI } from '../../services/uploadAPI';
 
 const FileUpload = ({

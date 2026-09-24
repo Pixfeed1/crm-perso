@@ -1,7 +1,7 @@
 // src/components/maintenance/MaintenanceCard.jsx
 import React from 'react';
 import { motion } from 'framer-motion';
-import { FiGlobe, FiCalendar, FiZap, FiAlertCircle } from 'react-icons/fi';
+import { FiGlobe, FiZap, FiAlertCircle } from 'react-icons/fi';
 import { formatDate } from '../../utils/formatters';
 
 const MaintenanceCard = ({ contract, isSelected, onClick }) => {

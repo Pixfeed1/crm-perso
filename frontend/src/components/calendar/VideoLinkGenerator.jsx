@@ -7,7 +7,6 @@ const VideoLinkGenerator = ({ value, onChange, eventData }) => {
   const [selectedProvider, setSelectedProvider] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [showProviders, setShowProviders] = useState(false);
-  const [autoGenerate, setAutoGenerate] = useState(false);
 
   useEffect(() => {
     loadProviders();
@@ -30,7 +29,6 @@ const VideoLinkGenerator = ({ value, onChange, eventData }) => {
           setProviders([]);
         }
         setSelectedProvider(data?.default_provider || null);
-        setAutoGenerate(data?.auto_generate || false);
       }
     } catch (error) {
       console.error('Erreur lors du chargement des providers:', error);
@@ -106,9 +104,7 @@ const VideoLinkGenerator = ({ value, onChange, eventData }) => {
     return colorClasses[color] || colorClasses.gray;
   };
 
-  const currentProviderInfo = selectedProvider ? getProviderInfo(selectedProvider) : null;
-
-  return (
+    return (
     <div className="space-y-3">
       {/* Champ de lien manuel */}
       <div>

@@ -2,46 +2,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import {
-  FaUserFriends,
-  FaRocket,
-  FaMoneyBillWave,
-  FaClipboardList,
-  FaBullseye,
-  FaChartLine,
-  FaArrowUp,
-  FaArrowDown,
-  FaClock,
-  FaCheckCircle,
-  FaEllipsisV,
-  FaPlus,
-  FaFilter,
-  FaFileInvoice,
-  FaUser,
-  FaStar
-} from 'react-icons/fa';
-import {
-  FiCalendar as FiCalendarIcon,
-  FiTrendingUp as FiTrendingUpIcon,
-  FiMoreHorizontal,
-  FiActivity,
-  FiTarget,
-  FiClock,
-  FiRefreshCw,
-  FiMail,
-  FiSend,
-  FiX,
-  FiPaperclip,
-  FiTrash2,
-  FiFile
-} from 'react-icons/fi';
-import KPIOrb from '../components/dashboard/KPIOrb';
-import ActivityStream from '../components/dashboard/ActivityStream';
-import GoalProgress from '../components/dashboard/GoalProgress';
+import { FaUserFriends, FaRocket, FaMoneyBillWave, FaClipboardList, FaChartLine, FaCheckCircle, FaPlus, FaFilter, FaFileInvoice, FaUser, FaStar } from 'react-icons/fa';
+import { FiCalendar as FiCalendarIcon, FiTrendingUp as FiTrendingUpIcon, FiMoreHorizontal, FiActivity, FiClock, FiRefreshCw, FiMail, FiSend, FiX, FiPaperclip, FiTrash2, FiFile } from 'react-icons/fi';
 import EmailAutocomplete from '../components/common/EmailAutocomplete';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
-import { dashboardAPI, reviewRequestsAPI, clientsAPI, interactionsAPI, seoAPI } from '../services/api';
+import { dashboardAPI, reviewRequestsAPI, interactionsAPI, seoAPI } from '../services/api';
 import { decodeHtml } from '../utils/decodeHtml';
 import { useToast } from '../hooks/useToast';
 
@@ -60,8 +26,7 @@ const Dashboard = () => {
   });
 
   const [loading, setLoading] = useState(true);
-  const [selectedView, setSelectedView] = useState('overview');
-  const [hoveredCard, setHoveredCard] = useState(null);
+    const [hoveredCard, setHoveredCard] = useState(null);
   const [showNewMenu, setShowNewMenu] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [reviewStats, setReviewStats] = useState(null);

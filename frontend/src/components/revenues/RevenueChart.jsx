@@ -1,6 +1,6 @@
 // src/components/revenues/RevenueChart.jsx
 import React, { useMemo } from 'react';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useChartColors } from '../../utils/chartTheme';
 
 const RevenueChart = ({ revenues, period, currentDate }) => {

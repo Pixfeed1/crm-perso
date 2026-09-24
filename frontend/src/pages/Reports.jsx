@@ -1,19 +1,9 @@
 // src/pages/Reports.jsx - Page Rapports et Analytics
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import {
-  FiDownload,
-  FiTrendingUp,
-  FiUsers,
-  FiDollarSign,
-  FiPieChart,
-  FiBarChart2,
-  FiCalendar,
-  FiFilter,
-  FiInfo
-} from 'react-icons/fi';
-import { FaFileExport, FaChartLine } from 'react-icons/fa';
-import { dashboardAPI, leadsAPI, clientsAPI, revenuesAPI } from '../services/api';
+import { FiDownload, FiTrendingUp, FiUsers, FiDollarSign, FiPieChart, FiBarChart2, FiInfo } from 'react-icons/fi';
+import { FaChartLine } from 'react-icons/fa';
+import { dashboardAPI, leadsAPI, clientsAPI } from '../services/api';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 

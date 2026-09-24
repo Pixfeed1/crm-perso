@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { projectsAPI, exportAPI } from '../services/api';
-import { FiAlertTriangle, FiZap, FiTarget, FiArrowLeft, FiDownload, FiList, FiCalendar, FiPlus } from 'react-icons/fi';
+import { FiAlertTriangle, FiZap, FiDownload, FiList, FiCalendar, FiPlus } from 'react-icons/fi';
 import { useToast } from '../hooks/useToast';
 import { useConfirm } from '../hooks/useConfirm';
 import ConfirmModal from '../components/common/ConfirmModal';
@@ -215,13 +215,7 @@ const Projects = () => {
   };
 
   // Retour à la liste (mobile)
-  const handleBackToList = () => {
-    setShowDetails(false);
-    setSelectedProject(null);
-    setIsAddingProject(false);
-  };
-
-  // Sauvegarde d'un nouveau projet via l'API
+    // Sauvegarde d'un nouveau projet via l'API
   const handleSaveProject = async (projectData) => {
     try {
       // Ajouter une valeur initiale pour la progression

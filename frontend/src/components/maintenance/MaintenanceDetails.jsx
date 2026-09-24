@@ -1,11 +1,7 @@
 // src/components/maintenance/MaintenanceDetails.jsx
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import {
-  FiEdit2, FiTrash2, FiGlobe, FiUser, FiCalendar, FiZap,
-  FiExternalLink, FiFileText, FiPlus, FiSend, FiEye, FiDownload, FiCreditCard, FiCopy,
-  FiXCircle, FiRotateCcw
-} from 'react-icons/fi';
+import { FiEdit2, FiTrash2, FiGlobe, FiUser, FiExternalLink, FiFileText, FiPlus, FiSend, FiEye, FiDownload, FiCreditCard, FiCopy, FiXCircle, FiRotateCcw } from 'react-icons/fi';
 import { formatDate, formatAmount } from '../../utils/formatters';
 import { maintenanceReportsAPI, maintenanceContractsAPI } from '../../services/api';
 import { useToast } from '../../hooks/useToast';

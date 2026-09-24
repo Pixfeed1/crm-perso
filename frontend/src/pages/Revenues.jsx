@@ -309,27 +309,7 @@ const Revenues = () => {
   };
 
   // Mettre à jour un revenu
-  const handleUpdateRevenue = async (id, updatedData) => {
-    try {
-      const updated = await revenuesAPI.update(id, updatedData);
-      
-      const updatedRevenues = revenues.map(r => {
-        if (r.id === id) {
-          return updated;
-        }
-        return r;
-      });
-      
-      setRevenues(updatedRevenues);
-      calculateStats(updatedRevenues);
-      setSelectedRevenue(updated);
-    } catch (error) {
-      console.error('Erreur lors de la mise à jour du revenu:', error);
-      toast.error(`Erreur lors de la mise à jour: ${error.message}`);
-    }
-  };
-
-  // Supprimer un revenu
+    // Supprimer un revenu
   const handleDeleteRevenue = async (id) => {
     try {
       // Trouver le revenu à supprimer

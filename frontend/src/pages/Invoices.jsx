@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiFileText, FiPlus, FiEdit2, FiTrash2, FiDollarSign, FiAlertCircle, FiDownload, FiSend, FiX, FiCreditCard, FiRepeat, FiTrendingUp } from 'react-icons/fi';
+import { FiFileText, FiPlus, FiEdit2, FiTrash2, FiDownload, FiSend, FiX, FiCreditCard, FiRepeat, FiTrendingUp } from 'react-icons/fi';
 import { invoicesAPI } from '../services/quotesAPI';
 import { paymentsAPI, scheduledEmailsAPI } from '../services/api';
 import { useToast } from '../hooks/useToast';

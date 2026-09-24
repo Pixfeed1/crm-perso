@@ -1,7 +1,7 @@
 // src/components/goals/GoalDetails.jsx
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiUsers, FiDollarSign, FiSettings, FiRadio, FiStar, FiCheckCircle, FiClock, FiZap, FiAlertCircle, FiMinusCircle, FiMapPin, FiEdit2, FiTrash2, FiTrendingUp, FiClipboard, FiAward, FiCheck, FiCircle } from 'react-icons/fi';
+import { FiUsers, FiDollarSign, FiSettings, FiRadio, FiStar, FiCheckCircle, FiClock, FiZap, FiAlertCircle, FiMinusCircle, FiEdit2, FiTrash2, FiTrendingUp, FiClipboard, FiAward } from 'react-icons/fi';
 import { useToast } from '../../hooks/useToast';
 
 const GoalDetails = ({

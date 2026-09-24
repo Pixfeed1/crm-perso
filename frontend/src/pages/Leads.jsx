@@ -294,13 +294,7 @@ const Leads = () => {
   };
 
   // Retour à la liste (mobile)
-  const handleBackToList = () => {
-    setShowDetails(false);
-    setSelectedLead(null);
-    setIsAddingLead(false);
-  };
-
-  // Sauvegarde d'un nouveau lead via l'API
+    // Sauvegarde d'un nouveau lead via l'API
   const handleSaveLead = async (leadData) => {
     try {
       // Utiliser l'API pour créer le lead

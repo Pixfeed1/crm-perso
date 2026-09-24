@@ -245,6 +245,8 @@ const EmailAutocomplete = ({
       case 'Escape':
         setShowSuggestions(false);
         break;
+      default:
+        break;
     }
   };
 

@@ -31,4 +31,6 @@ class MockAuthService {
   }
 }
 
-export default new MockAuthService();
+const mockAuthService = new MockAuthService();
+
+export default mockAuthService;

@@ -1,7 +1,7 @@
 // src/components/maintenance/MaintenanceForm.jsx
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FiX, FiGlobe, FiUser, FiChevronDown } from 'react-icons/fi';
+import { FiX, FiChevronDown } from 'react-icons/fi';
 import { clientsAPI } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
 

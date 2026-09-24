@@ -1,7 +1,7 @@
 // src/components/projects/InterventionList.jsx
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiTool, FiClock, FiCheckCircle, FiAlertCircle, FiRefreshCw, FiShield, FiDownload, FiHelpCircle, FiCalendar } from 'react-icons/fi';
+import { FiTool, FiClock, FiCheckCircle, FiRefreshCw, FiShield, FiDownload, FiHelpCircle, FiCalendar } from 'react-icons/fi';
 
 const InterventionList = ({ interventions = [], stats, onToggleStatus, onEdit, onDelete }) => {
   // Configuration des types d'intervention

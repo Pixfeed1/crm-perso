@@ -1,15 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import {
-  FiVideo,
-  FiCheck,
-  FiX,
-  FiSettings,
-  FiExternalLink,
-  FiAlertCircle,
-  FiUsers,
-  FiLink
-} from 'react-icons/fi';
+import { FiVideo, FiCheck, FiAlertCircle, FiUsers, FiLink } from 'react-icons/fi';
 
 const VideoConferenceSettings = () => {
   const [settings, setSettings] = useState(null);
@@ -131,16 +122,7 @@ const VideoConferenceSettings = () => {
     return icons[providerId] || <FiLink />;
   };
 
-  const getProviderColor = (providerId) => {
-    const colors = {
-      google_meet: 'indigo',
-      zoom: 'indigo',
-      teams: 'purple'
-    };
-    return colors[providerId] || 'gray';
-  };
-
-  // Mapping statique pour les classes Tailwind (nécessaire pour le JIT compiler)
+    // Mapping statique pour les classes Tailwind (nécessaire pour le JIT compiler)
   const getProviderClasses = (providerId) => {
     const colorClasses = {
       google_meet: 'border-indigo-500 bg-indigo-900/20',

@@ -103,9 +103,7 @@ const SendEmailModal = ({
   if (!isOpen) return null;
 
   const docLabel = documentType === 'devis' ? 'devis' : 'facture';
-  const docLabelCap = documentType === 'devis' ? 'Devis' : 'Facture';
-
-  return (
+    return (
     <AnimatePresence>
       <motion.div
         initial={{ opacity: 0 }}

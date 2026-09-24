@@ -15,7 +15,6 @@ import ActivityForm from '../components/activities/ActivityForm';
 import ActivityFilter from '../components/activities/ActivityFilter';
 import ActivityCalendar from '../components/activities/ActivityCalendar';
 import FollowupsPanel from '../components/activities/FollowupsPanel';
-import EmptyState from '../components/common/EmptyState';
 import Button from '../components/common/Button';
 
 const Activities = () => {
@@ -226,7 +225,6 @@ const Activities = () => {
     try {
       console.log('Création d\'activité avec:', formData);
       // Retirer le champ lead_name de l'objet à envoyer à l'API
-      const { lead_name, ...dataWithoutLeadName } = formData;
       
       const newActivity = await activitiesAPI.create({
         type: formData.type,
@@ -261,27 +259,7 @@ const Activities = () => {
   };
 
   // Mise à jour
-  const handleUpdateActivity = async (id, updatedData) => {
-    try {
-      console.log('Mise à jour activité ID:', id);
-      // Retirer le champ lead_name de l'objet à envoyer à l'API si présent
-      const { lead_name, ...dataWithoutLeadName } = updatedData;
-      
-      const updated = await activitiesAPI.update(id, dataWithoutLeadName);
-
-      const updatedActivities = activities.map((a) =>
-        a.id === id ? updated : a
-      );
-      setActivities(updatedActivities);
-      calculateStats(updatedActivities);
-      setSelectedActivity(updated);
-    } catch (error) {
-      console.error('Erreur de mise à jour:', error);
-      toast.error('Erreur lors de la mise à jour: ' + error.message);
-    }
-  };
-
-  // Suppression
+    // Suppression
   const handleDeleteActivity = async (id) => {
     try {
       // Trouver l'activité à supprimer

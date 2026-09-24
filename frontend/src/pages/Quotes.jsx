@@ -108,18 +108,7 @@ const Quotes = () => {
   };
 
   // Changer le statut
-  const handleStatusChange = async (id, newStatus) => {
-    try {
-      await quotesAPI.updateStatus(id, newStatus);
-      toast.success('Statut mis à jour');
-      fetchQuotes();
-    } catch (error) {
-      console.error('Erreur lors du changement de statut:', error);
-      toast.error('Erreur lors du changement de statut');
-    }
-  };
-
-  // Badge de statut
+    // Badge de statut
   const getStatusBadge = (status) => {
     const badges = {
       draft: { color: 'bg-gray-500/20 text-text-secondary', icon: FiEdit2, label: 'Brouillon' },

@@ -1,5 +1,5 @@
 // src/components/leads/LeadDetails.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiStar, FiEye, FiCheckCircle, FiMessageCircle, FiAward, FiXCircle, FiHelpCircle, FiClipboard, FiBriefcase, FiUser, FiFileText, FiUsers, FiEdit2, FiTrash2, FiUserCheck } from 'react-icons/fi';
 import { leadsAPI, clientsAPI } from '../../services/api';
@@ -157,7 +157,7 @@ const LeadDetails = ({ lead, autoCompose = false, onUpdate, onDelete, onAddConta
 
     setIsConverting(true);
     try {
-      const result = await clientsAPI.convertFromLead(lead.id, {
+      await clientsAPI.convertFromLead(lead.id, {
         contract_start_date: new Date().toISOString().split('T')[0],
         notes: lead.notes
       });

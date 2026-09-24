@@ -166,14 +166,7 @@ const QuoteForm = ({ quote = null, onSave, onCancel }) => {
     });
   };
 
-  const addDetailLine = () => {
-    setFormData({
-      ...formData,
-      items: [...formData.items, { type: 'detail', description: '', quantity: 0, unit_price: 0 }]
-    });
-  };
-
-  // Insérer une ligne de détail après un produit spécifique
+    // Insérer une ligne de détail après un produit spécifique
   const insertDetailLineAfter = (index) => {
     const newItems = [...formData.items];
     newItems.splice(index + 1, 0, { type: 'detail', description: '', quantity: 0, unit_price: 0 });

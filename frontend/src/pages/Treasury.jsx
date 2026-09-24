@@ -14,7 +14,7 @@ import { paymentsAPI } from '../services/api';
 import { invoicesAPI } from '../services/quotesAPI';
 import { useToast } from '../hooks/useToast';
 import Button from '../components/common/Button';
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useChartColors } from '../utils/chartTheme';
 
 const Treasury = () => {

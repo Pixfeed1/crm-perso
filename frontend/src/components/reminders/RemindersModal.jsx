@@ -1,7 +1,7 @@
 // src/components/reminders/RemindersModal.jsx
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiX, FiClock, FiAlertCircle, FiPlus, FiCheck, FiXCircle } from 'react-icons/fi';
+import { FiX, FiClock, FiAlertCircle, FiPlus } from 'react-icons/fi';
 import { useToast } from '../../hooks/useToast';
 import { remindersAPI } from '../../services/api';
 import ReminderForm from './ReminderForm';

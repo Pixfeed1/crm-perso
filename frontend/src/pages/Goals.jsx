@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { goalsAPI, exportAPI } from '../services/api';
-import { FiTarget, FiZap, FiCheckCircle, FiClock, FiDownload, FiArchive, FiPlus } from 'react-icons/fi';
+import { FiZap, FiCheckCircle, FiClock, FiDownload, FiArchive, FiPlus } from 'react-icons/fi';
 import { useToast } from '../hooks/useToast';
 import { useConfirm } from '../hooks/useConfirm';
 import ConfirmModal from '../components/common/ConfirmModal';
@@ -252,7 +252,7 @@ const Goals = () => {
   // Archiver
   const handleArchive = async (goalId) => {
     try {
-      const archivedGoal = await goalsAPI.archive(goalId);
+      await goalsAPI.archive(goalId);
 
       // Retirer de la liste active
       const remainingGoals = goals.filter(g => g.id !== goalId);
