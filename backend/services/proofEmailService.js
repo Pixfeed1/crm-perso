@@ -155,7 +155,12 @@ function nomBoutique(r) {
   const segs = String(r.title || '').split(/\s+[-|–—:]\s+/).map((x) => x.trim())
     .filter((x) => x && x.length <= 40 && !/^(prestashop|wordpress|accueil|home|bienvenue|boutique|shop)$/i.test(x));
   if (segs.length === 0) return '';
-  segs.sort((a, b) => a.split(/\s+/).length - b.split(/\s+/).length || a.length - b.length);
+  // Le segment qui ressemble au domaine gagne (« Gourmands d'Antan » pour gourmandsdantan.fr),
+  // sinon le plus court en mots, puis en lettres.
+  const compact = (x) => String(x).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
+  const root = compact(site(r).split('.')[0]);
+  const like = (x) => { const c = compact(x); return c.length >= 4 && (root.includes(c) || c.includes(root)) ? 0 : 1; };
+  segs.sort((a, b) => like(a) - like(b) || a.split(/\s+/).length - b.split(/\s+/).length || a.length - b.length);
   return segs[0];
 }
 
