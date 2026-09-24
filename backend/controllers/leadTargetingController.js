@@ -23,7 +23,9 @@ const ANGLE_LABELS = {
   meta_desc: 'SEO : meta description', h1: 'SEO : H1', analytics: "Sans mesure d'audience",
   serveur_expose: 'Version serveur exposée', copyright_fige: 'Copyright figé', erreur_serveur: 'Site en erreur (5xx)', accueil_404: 'Accueil introuvable (404)', titre_defaut: 'Titre par défaut',
   invisible_google: 'Invisible sur Google', cgv_absente: 'Sans CGV', retractation_absente: 'Sans rétractation',
-  contenu_mixte: 'Contenu mixte', mentions_404: 'Mentions légales cassées', php_obsolete: 'PHP sans correctifs'
+  contenu_mixte: 'Contenu mixte', mentions_404: 'Mentions légales cassées', php_obsolete: 'PHP sans correctifs',
+  nom_mal_orthographie: 'Nom mal écrit dans le titre', sitemap_vide: 'Sitemap vide', sitemap_absent: 'Sans sitemap',
+  urls_non_reecrites: 'Adresses non réécrites', meta_desc_absurde: 'Description Google absurde'
 };
 
 const pct = (num, den) => (den > 0 ? Math.round((num / den) * 1000) / 10 : null);

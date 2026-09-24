@@ -250,6 +250,9 @@ const DATABASE_SCHEMA = {
       contenu_mixte: 'BOOLEAN',  // ressources http:// sur une page https : cadenas cassé
       mentions_404: 'BOOLEAN',   // le lien « mentions légales » mène à une page en erreur
       prestataire: 'TEXT',       // agence créditée en pied de page (« Réalisé par ») : le prestataire en place
+      meta_desc_txt: 'TEXT',     // texte de la description Google (preuve « description absurde »)
+      urls_reecrites: 'BOOLEAN', // adresses lisibles ? non = index.php?id_category=... partout (PrestaShop sans réécriture)
+      sitemap: 'VARCHAR(10)',    // ok | vide | absent | erreur
       protected: 'BOOLEAN DEFAULT FALSE', // page derrière anti-bot (Cloudflare) au crawl
       lang: 'VARCHAR(5)',       // langue déclarée du site (ex 'fr')
       parked: 'BOOLEAN DEFAULT FALSE', // domaine parké/en vente/vide -> sans intérêt

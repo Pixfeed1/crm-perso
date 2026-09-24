@@ -13,7 +13,7 @@ const { decodeHtml } = require('../utils/decodeHtml');
 const { isAntibotTitle } = require('../utils/antibotTitle');
 const sireneEnrich = require('../services/sireneEnrich');
 const { problemesLisibles } = require('../utils/crawlAngles');
-const { prospectScore, auditFlags, promotionBlocker, departmentFromPostalCode } = require('../utils/prospectScore');
+const { prospectScore, auditFlags, promotionBlocker, departmentFromPostalCode, descriptionAbsurde, nomMalOrthographie } = require('../utils/prospectScore');
 
 // Constantes faciles à mettre à jour (override possible par variables d'env).
 // L'interpréteur reste hors dépôt : un venv ne se versionne pas (il contient des
@@ -194,7 +194,8 @@ async function ingestCsv(db, jobId, csvPath) {
     pvi = idx('platform_version'), sli = idx('ssl_ok'), pri = idx('protected'),
     lgi = idx('lang'), pki = idx('parked'), hfi = idx('https_final');
   const nxi = idx('noindex'), rbi = idx('robots_bloque'), cgi = idx('cgv'), rti = idx('retractation'),
-    cmi = idx('contenu_mixte'), m4i = idx('mentions_404'), pri2 = idx('prestataire');
+    cmi = idx('contenu_mixte'), m4i = idx('mentions_404'), pri2 = idx('prestataire'),
+    mdt = idx('meta_desc_txt'), uri = idx('urls_reecrites'), smi = idx('sitemap');
   // Colonnes d'audit gratuit (ajoutées ensuite) — idx = -1 -> null (rétro-compatible).
   const moi = idx('mobile_ok'), mdi = idx('meta_desc'), h1i = idx('h1_present'),
     mli = idx('mentions_legales'), rgi = idx('rgpd_confidentialite'), cbi = idx('cookie_banner'),
@@ -244,10 +245,11 @@ async function ingestCsv(db, jobId, csvPath) {
           mobile_ok, meta_desc, h1_present, mentions_legales, rgpd_confidentialite, cookie_banner,
           analytics, poids_ko, copyright_annee, serveur_php, spf, dmarc, ssl_expire_jours,
           site_type, ecommerce_actif, https_final,
-          noindex, robots_bloque, cgv, retractation, contenu_mixte, mentions_404, prestataire)
+          noindex, robots_bloque, cgv, retractation, contenu_mixte, mentions_404, prestataire,
+          meta_desc_txt, urls_reecrites, sitemap)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18,
                $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34,
-               $35, $36, $37, $38, $39, $40, $41)`,
+               $35, $36, $37, $38, $39, $40, $41, $42, $43, $44)`,
       [
         jobId, domain, platform, signals,
         Number.isNaN(httpRaw) ? null : httpRaw,
@@ -265,7 +267,8 @@ async function ingestCsv(db, jobId, csvPath) {
         // Ancien CSV sans la colonne : on déduit du schéma de l'URL finale.
         hfi >= 0 ? boolCell(row, hfi) : (finalUrl ? /^https:/i.test(finalUrl) : null),
         boolCell(row, nxi), boolCell(row, rbi), boolCell(row, cgi), boolCell(row, rti), boolCell(row, cmi), boolCell(row, m4i),
-        cell(row, pri2)
+        cell(row, pri2),
+        cell(row, mdt), boolCell(row, uri), cell(row, smi)
       ]
     );
   }
@@ -392,7 +395,8 @@ const crawlController = {
                 COALESCE(https_final, CASE WHEN final_url ILIKE 'https:%' THEN TRUE WHEN final_url ILIKE 'http:%' THEN FALSE END) AS https_final,
                 mobile_ok, mentions_legales, rgpd_confidentialite, spf, dmarc,
                 ssl_expire_jours, serveur_php, copyright_annee, error, protected, site_type, ecommerce_actif,
-                noindex, robots_bloque, cgv, retractation, contenu_mixte, mentions_404, prestataire
+                noindex, robots_bloque, cgv, retractation, contenu_mixte, mentions_404, prestataire,
+                meta_desc_txt, urls_reecrites, sitemap, raison_sociale
          FROM crawl_results WHERE job_id = $1
          ORDER BY domain, platform`,
         [id]
@@ -404,7 +408,8 @@ const crawlController = {
         'Certificat SSL', 'Servi en HTTPS', 'Mobile OK', 'Mentions légales', 'Confidentialité', 'SPF', 'DMARC',
         'SSL expire (j)', 'Serveur/PHP', 'Copyright', 'Type de site', 'Boutique active', 'Antibot',
         'Invisible Google (noindex)', 'robots.txt bloque', 'CGV', 'Rétractation', 'Contenu mixte', 'Mentions légales cassées',
-        'Prestataire crédité', 'Titre', 'Statut HTTP', 'URL finale', 'Erreur'];
+        'Prestataire crédité', 'Sitemap', 'URLs réécrites', 'Description Google', 'Raison sociale',
+        'Titre', 'Statut HTTP', 'URL finale', 'Erreur'];
       const lines = [header.join(',')];
       for (const r of rows) {
         lines.push([r.domain, r.platform, r.platform_version, r.email, r.phone, r.facebook_url, r.instagram_url,
@@ -412,7 +417,8 @@ const crawlController = {
           oui(r.spf), oui(r.dmarc), r.ssl_expire_jours ?? '', r.serveur_php, r.copyright_annee ?? '',
           r.site_type, oui(r.ecommerce_actif), oui(r.protected),
           oui(r.noindex), oui(r.robots_bloque), oui(r.cgv), oui(r.retractation), oui(r.contenu_mixte), oui(r.mentions_404),
-          r.prestataire, r.title, r.http_status, r.final_url, r.error].map(csvEscape).join(','));
+          r.prestataire, r.sitemap, oui(r.urls_reecrites), r.meta_desc_txt, r.raison_sociale,
+          r.title, r.http_status, r.final_url, r.error].map(csvEscape).join(','));
       }
       const csv = '﻿' + lines.join('\r\n'); // BOM UTF-8
 
@@ -479,6 +485,10 @@ const crawlController = {
           (r.retractation === false && (r.site_type === 'commerce' || r.ecommerce_actif)) ? '• Aucune information sur le droit de rétractation (Code de la consommation)' : null,
           r.contenu_mixte === true ? '• Contenu mixte : cadenas cassé, éléments bloqués par le navigateur' : null,
           r.mentions_404 === true ? '• Le lien « mentions légales » mène à une page en erreur' : null,
+          r.sitemap === 'vide' ? '• Sitemap.xml vide (Google n\'a aucune liste des pages)' : null,
+          r.urls_reecrites === false ? '• Adresses non réécrites (index.php?id_category=…) : aucun mot dans les URL' : null,
+          descriptionAbsurde(r) ? `• Description Google absurde : « ${String(r.meta_desc_txt).slice(0, 80)} »` : null,
+          nomMalOrthographie(r) ? `• Nom de l'entreprise mal écrit dans le titre : « ${nomMalOrthographie(r).titre} » au lieu de « ${nomMalOrthographie(r).attendu} »` : null,
           r.spf === false ? '• Pas de SPF (emails à risque de finir en spam)' : null,
           r.dmarc === false ? '• Pas de DMARC (domaine usurpable)' : null,
           r.rgpd_confidentialite === false ? '• Pas de politique de confidentialité (RGPD)' : null,

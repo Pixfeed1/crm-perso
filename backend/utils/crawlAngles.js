@@ -34,6 +34,12 @@ function problemesLisibles(r) {
   if (r.retractation === false && shop) out.push("Le droit de rétractation de 14 jours n'est pas mentionné : c'est une obligation d'information, et son absence prolonge le délai de rétractation à 12 mois.");
   if (r.contenu_mixte === true) out.push("Des images ou scripts sont chargés en HTTP sur une page HTTPS : le cadenas disparaît et le navigateur bloque une partie de la page.");
   if (r.mentions_404 === true) out.push("Le lien « mentions légales » mène à une page en erreur : la mention existe dans le menu mais pas la page.");
+  const { descriptionAbsurde, nomMalOrthographie } = require('./prospectScore');
+  const nmo = nomMalOrthographie(r);
+  if (nmo) out.push(`Le titre du site, celui qui s'affiche dans Google et dans l'onglet du navigateur, écrit « ${nmo.titre} » alors que l'entreprise s'appelle « ${nmo.attendu} » : le nom est mal orthographié sur toutes les pages.`);
+  if (r.sitemap === 'vide') out.push("Le fichier sitemap.xml existe mais il est vide : Google n'a aucune liste des pages du site, les nouveautés mettent des semaines à être vues.");
+  if (r.urls_reecrites === false) out.push("Les adresses des pages sont du type index.php?id_category=102 : aucun mot dedans, ni le produit ni la ville, donc aucune chance sur les recherches locales.");
+  if (descriptionAbsurde(r)) out.push(`Le texte qui s'affiche sous le nom du site dans Google est « ${String(r.meta_desc_txt).slice(0, 90)} » : ce n'est pas une description, personne ne clique là-dessus.`);
   if (r.mentions_legales === false) out.push("Le site n'a pas de page de mentions légales, alors que c'est une obligation légale en France.");
   if (r.mobile_ok === false) out.push("Le site n'est pas adapté aux mobiles : il s'affiche mal sur téléphone (la majorité des visiteurs aujourd'hui).");
   if (r.ssl_expire_jours != null && r.ssl_expire_jours < 30) {

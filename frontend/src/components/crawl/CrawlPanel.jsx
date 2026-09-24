@@ -77,6 +77,9 @@ const auditFlags = (r) => {
   if (r.retractation === false && isShop(r)) f.push({ key: 'retract', label: 'sans rétractation', title: 'Droit de rétractation non mentionné (Code de la consommation)', poids: 8 });
   if (r.contenu_mixte === true) f.push({ key: 'mixte', label: 'contenu mixte', title: 'Ressources http:// sur une page https : cadenas cassé', poids: 8 });
   if (r.mentions_404 === true) f.push({ key: 'ml404', label: 'mentions légales cassées', title: 'Le lien mentions légales mène à une page en erreur', poids: 10 });
+  if (r.sitemap === 'vide') f.push({ key: 'sitemap', label: 'sitemap vide', title: 'sitemap.xml répond mais ne contient aucune adresse', poids: 12 });
+  if (r.urls_reecrites === false) f.push({ key: 'urls', label: 'adresses non réécrites', title: 'Liens du type index.php?id_category=… : aucun mot dans les URL', poids: 12 });
+  if (r.meta_desc_txt && (r.meta_desc_txt.length < 25 || /\b(fax|siret|tel)\b/i.test(r.meta_desc_txt) || /@/.test(r.meta_desc_txt))) f.push({ key: 'desc', label: 'description Google absurde', title: `« ${r.meta_desc_txt.slice(0, 100)} »`, poids: 10 });
   const eol = /PHP\s*(\d+\.\d+)/i.exec(String(r.serveur_php || ''));
   if (eol && (PHP_EOL[eol[1]] || parseFloat(eol[1]) < 5.6)) f.push({ key: 'phpeol', label: `PHP ${eol[1]} sans correctifs`, title: `PHP ${eol[1]} n'a plus de correctifs de sécurité depuis ${PHP_EOL[eol[1]] || '2018'}`, poids: 12 });
   if (r.mentions_legales === false) f.push({ key: 'ml', label: 'sans mentions légales', title: 'Aucune page mentions légales — obligation légale (LCEN)', poids: 15 });

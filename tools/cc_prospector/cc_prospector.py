@@ -432,6 +432,15 @@ def analyze_site(html: str, headers: dict) -> dict:
     out["mobile_ok"] = "oui" if _VIEWPORT_RE.search(html) else "non"
     md = _META_DESC_RE.search(html)
     out["meta_desc"] = "oui" if (md and md.group(1).strip()) else "non"
+    import html as _hm
+    out["meta_desc_txt"] = re.sub(r"\s+", " ", _hm.unescape(md.group(1))).strip()[:200] if (md and md.group(1).strip()) else ""
+    # URLs réécrites ? PrestaShop sans réécriture expose index.php?id_category=...&controller=
+    # (et id_product=) dans tous ses liens : aucun mot dans les adresses, invisible sur les
+    # recherches locales. On regarde les liens internes de la page.
+    raw_links = re.findall(r'href=["\']([^"\']+)["\']', html)
+    internal = [l for l in raw_links if not l.startswith(("http://", "https://", "//", "mailto:", "tel:", "javascript:", "#"))]
+    ugly = [l for l in internal if re.search(r"index\.php\?(?:id_category|id_product|id_cms|controller)=", l)]
+    out["urls_reecrites"] = "" if len(internal) < 5 else ("non" if len(ugly) >= 3 and len(ugly) * 2 >= len(internal) else "oui")
     out["h1_present"] = "oui" if _H1_RE.search(html) else "non"
 
     # Conformité légale / RGPD (obligations françaises)
@@ -595,6 +604,7 @@ CSV_FIELDS = [
     # --- arguments forts (chiffre d'affaires, loi, panne) ---
     "noindex", "robots_bloque", "cgv", "retractation", "contenu_mixte", "mentions_404",
     "prestataire",  # domaine de l'agence créditée en pied de page (« Réalisé par »)
+    "meta_desc_txt", "urls_reecrites", "sitemap",  # texte de la description Google ; adresses réécrites ? ; sitemap ok|vide|absent|erreur
     # --- pré-tri prospect ---
     "site_type", "ecommerce_actif",
     "error",
@@ -663,6 +673,23 @@ def _ssl_days_sync(host: str, timeout: float) -> str:
 async def ssl_expiry_days(host: str, timeout: float) -> str:
     try:
         return await asyncio.to_thread(_ssl_days_sync, host, timeout)
+    except Exception:
+        return ""
+
+
+async def check_sitemap(client, base_url) -> str:
+    """sitemap.xml : 'ok' (au moins une URL), 'vide' (200 mais aucune <loc>), 'absent' (404),
+    'erreur' (autre), '' si injoignable. Un sitemap vide = Google n'a aucune liste de pages."""
+    try:
+        r = await client.get(base_url.rstrip("/") + "/sitemap.xml")
+        if r.status_code == 404 or r.status_code == 410:
+            return "absent"
+        if r.status_code != 200:
+            return "erreur"
+        body = (r.text or "").strip()
+        if not body or ("<loc>" not in body.lower() and "<sitemap" not in body.lower()):
+            return "vide"
+        return "ok"
     except Exception:
         return ""
 
@@ -850,7 +877,7 @@ async def detect_one(domain: str, sem, timeout: float, clients: dict, retries: i
                     # pas la boutique. On laisse ces colonnes vides plutôt que d'accuser à tort.
                     for k in ("mobile_ok", "meta_desc", "h1_present", "mentions_legales", "rgpd_confidentialite",
                               "cookie_banner", "analytics", "copyright_annee", "cgv", "retractation", "noindex",
-                              "contenu_mixte", "ecommerce_actif"):
+                              "contenu_mixte", "ecommerce_actif", "meta_desc_txt", "urls_reecrites"):
                         site[k] = ""
                     if site.get("site_type") in ("asso", "agence"):
                         site["site_type"] = "autre"
@@ -861,10 +888,11 @@ async def detect_one(domain: str, sem, timeout: float, clients: dict, retries: i
                 # Deux lectures légères de plus, seulement si le site répond normalement :
                 # robots.txt (boutique bloquée pour Google) et cible du lien mentions légales.
                 if not protected and r.status_code < 400:
-                    site["robots_bloque"], site["mentions_404"], retract_cgv = await asyncio.gather(
+                    site["robots_bloque"], site["mentions_404"], retract_cgv, site["sitemap"] = await asyncio.gather(
                         check_robots_blocked(client, str(r.url)),
                         check_mentions_link(client, str(r.url), html),
                         check_retractation_on_cgv(client, str(r.url), html) if site.get("retractation") == "non" else asyncio.sleep(0, result=None),
+                        check_sitemap(client, str(r.url)),
                     )
                     # Rétractation absente de l'accueil : on ne conclut qu'après lecture des CGV.
                     # Sans lien CGV, l'absence est acquise ; lecture impossible -> inconnu.
@@ -874,7 +902,7 @@ async def detect_one(domain: str, sem, timeout: float, clients: dict, retries: i
                         elif retract_cgv == "" and site.get("cgv") == "oui":
                             site["retractation"] = ""
                 else:
-                    site["robots_bloque"], site["mentions_404"] = "", ""
+                    site["robots_bloque"], site["mentions_404"], site["sitemap"] = "", "", ""
                 # DNS et handshake TLS sont indépendants -> en parallèle (2 attentes -> 1).
                 # L'expiration TLS est lue dès qu'un certificat a répondu (candidat https),
                 # même si le site redirige ensuite vers http : le certificat existe, il n'est

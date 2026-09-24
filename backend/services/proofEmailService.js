@@ -14,16 +14,27 @@
 // Aucun appel à un modèle : le texte est assemblé à partir des mesures, mot pour mot.
 // L'humain relit et modifie avant l'envoi ; la signature (Paramètres) est ajoutée à l'envoi.
 
-const { auditFlags, phpEol } = require('../utils/prospectScore');
+const { auditFlags, phpEol, nomMalOrthographie } = require('../utils/prospectScore');
 
 // Ordre de conviction des preuves : ce qui coûte des ventes ou fait honte d'abord.
 const PREUVES_ORDRE = [
-  'accueil_404', 'erreur_serveur', 'invisible_google', 'http_non_securise', 'ssl_expire',
-  'ssl_invalide', 'ssl_bientot', 'titre_defaut', 'mentions_404', 'mobile', 'copyright_fige'
+  'accueil_404', 'erreur_serveur', 'invisible_google', 'nom_mal_orthographie', 'http_non_securise', 'ssl_expire',
+  'ssl_invalide', 'ssl_bientot', 'titre_defaut', 'meta_desc_absurde', 'urls_non_reecrites', 'sitemap_vide',
+  'mentions_404', 'mobile', 'copyright_fige'
 ];
 const PREUVES = new Set(PREUVES_ORDRE);
 
 const site = (r) => (r.domain || '').replace(/^www\./, '');
+
+// « EQUIP'TOUT » -> « Equip'Tout », « MARCHAL BODIN SAS » -> « Marchal Bodin » : une raison
+// sociale en capitales fait administratif dans un email, on la remet en casse de nom.
+function joliNom(raw) {
+  let n = String(raw || '').trim().replace(/\b(SARL|SAS|SASU|EURL|SA|SCI|SNC|EI)\b/g, '').replace(/\s+/g, ' ').trim();
+  if (n && n === n.toUpperCase()) {
+    n = n.toLowerCase().replace(/(^|[\s'’-])([a-zà-ÿ])/g, (m, sep, c) => sep + c.toUpperCase());
+  }
+  return n;
+}
 
 // Catalogue : pour chaque preuve, l'objet, la phrase de preuve (un fait, vérifiable) et la
 // conséquence métier (ce que ça lui coûte, pas ce que c'est techniquement).
@@ -80,6 +91,30 @@ const CATALOGUE = {
     preuve: `Ouvert sur un téléphone, ${site(r)} s'affiche comme sur un écran d'ordinateur, en tout petit, à agrandir au doigt : la page n'a pas de réglage d'affichage mobile.`,
     consequence: `Aujourd'hui plus de la moitié des visites se font sur téléphone. Je me suis dit que vous préféreriez le savoir : sur cet écran-là, beaucoup ferment avant d'avoir lu.`
   }),
+  nom_mal_orthographie: (r) => {
+    const n0 = nomMalOrthographie(r) || { titre: r.title, attendu: r.raison_sociale || site(r) };
+    const n = { ...n0, attendu: joliNom(n0.attendu) };
+    return {
+      sujet: `le nom de votre société est mal orthographié sur votre site`,
+      preuve: `Le titre de vos pages, celui qui s'affiche dans Google et dans l'onglet du navigateur, indique « ${n.titre} ». Votre société s'appelle ${n.attendu}.`,
+      consequence: `Je vous le dis comme je l'aurais voulu pour moi : c'est la première chose qu'un client voit de vous dans Google, et ça donne l'impression d'un site que personne ne relit. Ça se corrige en cinq minutes, mais il faut savoir que c'est là.`
+    };
+  },
+  meta_desc_absurde: (r) => ({
+    sujet: `ce que Google affiche sous ${site(r)}`,
+    preuve: `Dans Google, le texte qui s'affiche sous le nom de votre site est « ${String(r.meta_desc_txt || '').slice(0, 120)} ».`,
+    consequence: `C'est la phrase censée donner envie de cliquer, et là c'est un bout d'adresse ou de fiche technique. Face à un concurrent qui écrit « livraison en 48 h, fabrication française », le vôtre passe derrière sans que personne ne sache pourquoi.`
+  }),
+  urls_non_reecrites: (r) => ({
+    sujet: `les adresses de vos pages`,
+    preuve: `Les adresses de vos pages de catégories sont du type « index.php?id_category=102&controller=category » : aucun mot dedans, ni le produit, ni la ville.`,
+    consequence: `Pour quelqu'un qui cherche ce que vous vendez près de chez lui, Google n'a rien à quoi se raccrocher. C'est un réglage, pas une refonte, mais tant qu'il est comme ça vos pages ne sortent pas sur ces recherches.`
+  }),
+  sitemap_vide: (r) => ({
+    sujet: `votre plan de site est vide`,
+    preuve: `Le fichier sitemap.xml de ${site(r)}, celui que Google lit pour connaître vos pages, répond bien mais il est vide : zéro adresse dedans.`,
+    consequence: `Concrètement, vos nouveautés mettent des semaines à apparaître dans Google, quand elles apparaissent. Ce n'est pas visible depuis l'intérieur, et c'est souvent un réglage oublié.`
+  }),
   copyright_fige: (r) => ({
     sujet: `© ${r.copyright_annee} en bas de ${site(r)}`,
     preuve: `Le pied de page de ${site(r)} affiche encore « © ${r.copyright_annee} ».`,
@@ -115,7 +150,7 @@ function nomBoutique(r) {
   // nom : le plus court (« Gourmands d'Antan » plutôt que « Epicerie fine gourmande en ligne »).
   if (r.sirene_match && r.sirene_match !== 'douteux' && r.raison_sociale) {
     const rs = String(r.raison_sociale).trim();
-    if (rs.length <= 40) return rs.replace(/\b(SARL|SAS|SASU|EURL|SA|SCI|EI)\b/gi, '').replace(/\s+/g, ' ').trim();
+    if (rs.length <= 40) return joliNom(rs);
   }
   const segs = String(r.title || '').split(/\s+[-|–—:]\s+/).map((x) => x.trim())
     .filter((x) => x && x.length <= 40 && !/^(prestashop|wordpress|accueil|home|bienvenue|boutique|shop)$/i.test(x));

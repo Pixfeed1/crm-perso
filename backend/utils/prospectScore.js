@@ -35,6 +35,59 @@ function phpEol(serveurPhp) {
 
 const isShop = (r) => r.site_type === 'commerce' || r.ecommerce_actif === true || ['PrestaShop', 'WooCommerce', 'Shopify'].includes(r.platform);
 
+// ── Description Google absurde : adresse postale, fax, téléphone, email, texte trop court,
+//    copie du titre ou texte d'exemple. C'est ce que le prospect lit sous son nom dans Google.
+function descriptionAbsurde(r) {
+  const d = String(r.meta_desc_txt || '').trim();
+  if (!d) return false;
+  if (d.length < 25) return true;
+  if (/\b(fax|t[ée]l(?:[ée]phone)?\.?|siret|siren|tva intracom)\b/i.test(d)) return true;
+  if (/\b\d{5}\s+[A-ZÀ-Ý][A-Za-zÀ-ÿ' -]{2,}\b/.test(d) && /\b(rue|avenue|av\.|bd|boulevard|route|zi|za|zac|chemin|impasse|place|all[ée]e)\b/i.test(d)) return true;
+  if (/(?:\+33|0)[1-9](?:[\s.-]?\d{2}){4}/.test(d) && d.length < 90) return true;
+  if (/[\w.-]+@[\w.-]+\.[a-z]{2,}/i.test(d)) return true;
+  if (/lorem ipsum|description de (?:votre|la) (?:boutique|site)|default description|mettre ici|ma description/i.test(d)) return true;
+  const t = String(r.title || '').trim().toLowerCase();
+  if (t && d.toLowerCase() === t) return true;
+  return false;
+}
+
+// ── Nom de l'entreprise mal orthographié dans le titre (« Equit Tout » pour Equip'Tout) :
+//    un mot du nom légal (SIRENE sûr) ou de la racine du domaine, absent du titre mais présent
+//    à une ou deux lettres près. Rien n'est jamais déduit sans nom de référence.
+const fold = (x) => String(x || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+const STOP = new Set(['sarl', 'sas', 'sasu', 'eurl', 'sci', 'snc', 'sa', 'ei', 'societe', 'les', 'des', 'and', 'the', 'boutique', 'shop', 'store', 'france', 'com', 'net', 'org', 'www', 'site', 'officiel']);
+function editDistance(a, b) {
+  const m = a.length, n = b.length;
+  if (Math.abs(m - n) > 2) return 3;
+  const dp = Array.from({ length: m + 1 }, (_, i) => [i, ...new Array(n).fill(0)]);
+  for (let j = 1; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++) for (let j = 1; j <= n; j++) {
+    dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+  }
+  return dp[m][n];
+}
+function nomMalOrthographie(r) {
+  const title = fold(r.title);
+  if (!title) return null;
+  const sources = [];
+  if (r.sirene_match && r.sirene_match !== 'douteux' && r.raison_sociale) sources.push(String(r.raison_sociale));
+  const root = String(r.domain || '').toLowerCase().replace(/^www\./, '').split('.')[0];
+  if (root && root.includes('-')) sources.push(root.replace(/-/g, ' '));
+  const titleTokens = title.split(' ').filter((w) => w.length >= 4);
+  for (const src of sources) {
+    const tokens = fold(src).split(' ').filter((w) => w.length >= 5 && !STOP.has(w));
+    for (const tok of tokens) {
+      if (title.includes(tok)) continue;
+      for (const tt of titleTokens) {
+        if (STOP.has(tt)) continue;
+        const d = editDistance(tok, tt);
+        if (d >= 1 && d <= (tok.length >= 8 ? 2 : 1)) return { attendu: src.trim(), titre: String(r.title).trim(), mot_attendu: tok, mot_titre: tt };
+      }
+    }
+  }
+  return null;
+}
+
 // Problèmes d'audit : clé stable (persistée dans leads.angles), libellé court, poids.
 function auditFlags(r) {
   const f = [];
@@ -61,6 +114,12 @@ function auditFlags(r) {
   if (r.retractation === false && isShop(r)) f.push({ key: 'retractation_absente', label: 'sans rétractation', poids: 8 });
   if (r.contenu_mixte === true) f.push({ key: 'contenu_mixte', label: 'contenu mixte', poids: 8 });
   if (r.mentions_404 === true) f.push({ key: 'mentions_404', label: 'mentions légales cassées', poids: 10 });
+  // Preuves visibles dans Google ou dans la barre d'adresse.
+  if (nomMalOrthographie(r)) f.push({ key: 'nom_mal_orthographie', label: 'nom mal écrit dans le titre', poids: 15 });
+  if (r.sitemap === 'vide') f.push({ key: 'sitemap_vide', label: 'sitemap vide', poids: 12 });
+  else if (r.sitemap === 'absent' && isShop(r)) f.push({ key: 'sitemap_absent', label: 'sans sitemap', poids: 4 });
+  if (r.urls_reecrites === false) f.push({ key: 'urls_non_reecrites', label: 'adresses non réécrites', poids: 12 });
+  if (descriptionAbsurde(r)) f.push({ key: 'meta_desc_absurde', label: 'description Google absurde', poids: 10 });
   const eol = phpEol(r.serveur_php);
   if (eol) f.push({ key: 'php_obsolete', label: `PHP ${eol.branch} sans correctifs depuis ${eol.eol.slice(0, 4)}`, poids: 12 });
   else if (r.serveur_php) f.push({ key: 'serveur_expose', label: `serveur exposé (${r.serveur_php})`, poids: 5 });
@@ -131,7 +190,8 @@ function departmentFromPostalCode(cp) {
 // Preuve = vérifiable par le gérant en dix secondes sur son propre site ; indice = vrai mais
 // déduit ou invisible pour lui. Seule une preuve peut ouvrir un email (proofEmailService).
 const PREUVE_KEYS = new Set(['accueil_404', 'erreur_serveur', 'invisible_google', 'http_non_securise', 'ssl_expire',
-  'ssl_invalide', 'ssl_bientot', 'titre_defaut', 'mentions_404', 'mobile', 'copyright_fige']);
+  'ssl_invalide', 'ssl_bientot', 'nom_mal_orthographie', 'titre_defaut', 'meta_desc_absurde', 'urls_non_reecrites',
+  'sitemap_vide', 'mentions_404', 'mobile', 'copyright_fige']);
 const niveauFlag = (key) => (PREUVE_KEYS.has(key) ? 'preuve' : 'indice');
 
-module.exports = { auditFlags, prospectScore, disqualifyReason, promotionBlocker, departmentFromPostalCode, phpEol, niveauFlag, PREUVE_KEYS, NOCODE_NAMES };
+module.exports = { auditFlags, prospectScore, disqualifyReason, promotionBlocker, departmentFromPostalCode, phpEol, niveauFlag, PREUVE_KEYS, NOCODE_NAMES, descriptionAbsurde, nomMalOrthographie };
