@@ -162,10 +162,18 @@ touche() { echo "$CHANGES" | grep -q "^$1"; }
 # (.gitignore) : le serveur garde le sien, donc `npm ci` (qui exige un lock exactement synchrone
 # avec package.json) echouerait a chaque ajout de dependance. On utilise `npm install`, qui met
 # le lock local a jour et retire les paquets devenus inutiles.
+# deps DOSSIER [BINAIRE] : installe aussi quand node_modules manque ou quand le binaire attendu
+# (ex. vite) n'y est pas : une installation ratee lors d'un deploy precedent ne doit pas bloquer
+# tous les suivants.
 deps() {
-  local dossier="$1"
-  if touche "$dossier/package.json"; then
-    gris "   dependances modifiees -> npm install"
+  local dossier="$1" binaire="${2:-}"
+  local raison=""
+  if touche "$dossier/package.json"; then raison="dependances modifiees"
+  elif [[ ! -d "$dossier/node_modules" ]]; then raison="node_modules absent"
+  elif [[ -n "$binaire" && ! -x "$dossier/node_modules/.bin/$binaire" ]]; then raison="$binaire introuvable dans node_modules"
+  fi
+  if [[ -n "$raison" ]]; then
+    gris "   $raison -> npm install"
     ( cd "$dossier" && npm install --no-audit --no-fund ) \
       || { rouge "   npm install ECHOUE dans $dossier"; ECHECS+=("$dossier: npm install en echec"); return 1; }
   fi
@@ -173,7 +181,7 @@ deps() {
 
 titre "2. Front"
 if touche "frontend/"; then
-  deps frontend
+  deps frontend vite
   ( cd frontend && npm run build ) \
     && vert "   build terminé" \
     || { rouge "   build ÉCHOUÉ"; ECHECS+=("frontend: build en échec"); }
