@@ -17,6 +17,25 @@ const ASSO_RE = /(association|loi 1901|but non lucratif|non[- ]?profit|refuge|sa
 const COLLECTIVITE_RE = /(\bmairie\b|commune de|conseil municipal|ville de |communaut[ée] de communes|\.gouv\.fr|mairie-|-mairie|ville-)/i;
 const AGENCE_RE = /(agence web|agence digitale|agence de communication|cr[ée]ation de sites?|web agency|studio (web|digital)|nos r[ée]alisations|webmaster freelance|d[ée]veloppeur web freelance|agence seo|acheter du seo|r[ée]f[ée]rencement (naturel|internet|google)|netlinking|backlinks|consultant seo)/i;
 
+// Grandes entreprises : hors cible d'un indépendant (décision par comité, agence en place, appels
+// d'offres). Deux signaux : la tranche d'effectif SIRENE, et une liste de marques nationales que
+// le crawl ramène parfois parce qu'une de leurs pages ressemble à une fiche produit.
+const GRANDS_EFFECTIFS = new Set(['50-99', '100-199', '200-249', '250-499', '500-999', '1000-1999', '2000-4999', '5000+']);
+const GRANDES_MARQUES = new Set(['free.fr', 'orange.fr', 'sfr.fr', 'bouyguestelecom.fr', 'laposte.fr', 'fnac.com', 'darty.com',
+  'cdiscount.com', 'leclerc', 'e.leclerc', 'carrefour.fr', 'auchan.fr', 'amazon.fr', 'decathlon.fr', 'leroymerlin.fr',
+  'boulanger.com', 'but.fr', 'conforama.fr', 'ikea.com', 'castorama.fr', 'brico-depot.fr', 'intermarche.com',
+  'systeme-u.fr', 'lidl.fr', 'aldi.fr', 'sncf.com', 'sncf-connect.com', 'airfrance.fr', 'edf.fr', 'engie.fr',
+  'total.fr', 'totalenergies.fr', 'renault.fr', 'peugeot.fr', 'citroen.fr', 'bnpparibas', 'societegenerale.fr',
+  'creditagricole.fr', 'caisse-epargne.fr', 'lcl.fr', 'boursorama.com', 'ameli.fr', 'service-public.fr', 'impots.gouv.fr',
+  'leboncoin.fr', 'vinted.fr', 'zalando.fr', 'sephora.fr', 'yves-rocher.fr', 'nocibe.fr', 'marionnaud.fr', 'kiabi.com',
+  'celio.com', 'jules.com', 'camaieu.fr', 'lacoste.com', 'galerieslafayette.com', 'printemps.com', 'bhv.fr']);
+function grandeEntreprise(r) {
+  const d = String(r.domain || '').toLowerCase().replace(/^www\./, '');
+  if (GRANDES_MARQUES.has(d) || [...GRANDES_MARQUES].some((m) => d.endsWith('.' + m))) return 'grande marque nationale';
+  if (r.effectif && GRANDS_EFFECTIFS.has(String(r.effectif))) return `grande entreprise (${r.effectif} salariés)`;
+  return null;
+}
+
 // Titres d'installation jamais changés (SEO nul, et signe que personne ne suit le site).
 const DEFAULT_TITLE_RE = /^(prestashop|wordpress|woocommerce|accueil|home|bienvenue|welcome|untitled|sans titre|mon site|my site|site en construction|coming soon|index|boutique en ligne|ma boutique|shop)$/i;
 
@@ -151,6 +170,8 @@ function prospectScore(r) {
 // Raison d'écartement (string) ou null. Même logique que le panneau Crawl, plus l'antibot.
 function disqualifyReason(r) {
   if (r.parked) return 'parké / vide';
+  const ge = grandeEntreprise(r);
+  if (ge) return ge;
   if (r.is_nocode) return 'no-code (fermé)';
   if (NOCODE_NAMES.includes(r.platform)) return `no-code (${r.platform})`;
   if (r.lang && r.lang !== 'fr') return `hors FR (${r.lang})`;
@@ -173,7 +194,7 @@ function disqualifyReason(r) {
 // un concurrent, un domaine parké, un no-code fermé, ni un site dont l'audit est faux.
 function promotionBlocker(r) {
   const reason = disqualifyReason(r);
-  if (reason && /agence|park|no-code/.test(reason)) return reason;
+  if (reason && /agence|park|no-code|grande/.test(reason)) return reason;
   if (r.protected) return 'antibot (audit non fiable)';
   return null;
 }
@@ -194,4 +215,4 @@ const PREUVE_KEYS = new Set(['accueil_404', 'erreur_serveur', 'invisible_google'
   'sitemap_vide', 'mentions_404', 'mobile', 'copyright_fige']);
 const niveauFlag = (key) => (PREUVE_KEYS.has(key) ? 'preuve' : 'indice');
 
-module.exports = { auditFlags, prospectScore, disqualifyReason, promotionBlocker, departmentFromPostalCode, phpEol, niveauFlag, PREUVE_KEYS, NOCODE_NAMES, descriptionAbsurde, nomMalOrthographie };
+module.exports = { auditFlags, prospectScore, disqualifyReason, promotionBlocker, departmentFromPostalCode, phpEol, niveauFlag, PREUVE_KEYS, NOCODE_NAMES, descriptionAbsurde, nomMalOrthographie, grandeEntreprise };

@@ -265,7 +265,12 @@ def extract_version(html: str, platform: str) -> str:
 
 
 _WP_VER_RE = re.compile(r"wp-includes/[^\"'\s]+\?ver=(\d+\.\d+(?:\.\d+)?)")
-_WC_VER_RE = re.compile(r"plugins/woocommerce/[^\"'\s]+\?ver=(\d+\.\d+(?:\.\d+)?)")
+# WooCommerce : la version est fiable dans « ?ver=…-wc.9.3.1 » (bibliothèques tierces suffixées) et
+# sur ses propres fichiers (woocommerce.css, cart-fragments, add-to-cart, checkout…). Les autres
+# bibliothèques embarquées gardent LEUR version (jquery.blockUI 2.7.0, select2 4.0.3…) : les
+# lire donnait des « WooCommerce 2.7.0 obsolète » faux.
+_WC_SUFFIX_RE = re.compile(r"plugins/woocommerce/[^\"'\s]+\?ver=[^\"'\s]*?-wc\.(\d+\.\d+(?:\.\d+)?)")
+_WC_VER_RE = re.compile(r"plugins/woocommerce/assets/(?:css/woocommerce(?:-smallscreen|-layout)?\.css|js/frontend/(?:woocommerce|cart-fragments|add-to-cart|checkout|single-product|cart|country-select|address-i18n)(?:\.min)?\.js)\?ver=(\d+\.\d+(?:\.\d+)?)")
 _JQ_RE = re.compile(r"jquery-(\d+\.\d+(?:\.\d+)?)(?:\.min)?\.js")
 
 
@@ -290,7 +295,7 @@ def infer_version(html: str, platform: str) -> str:
             return "PrestaShop 1.6 (déduit)"
         return ""
     if platform == "WooCommerce":
-        wc = _most_common(_WC_VER_RE.findall(html))
+        wc = _most_common(_WC_SUFFIX_RE.findall(html)) or _most_common(_WC_VER_RE.findall(html))
         if wc:
             return f"WooCommerce {wc} (déduit)"
         wp = _most_common(_WP_VER_RE.findall(html))

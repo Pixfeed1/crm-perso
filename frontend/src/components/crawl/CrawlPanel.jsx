@@ -117,8 +117,16 @@ const NOCODE_NAMES = ['Wix', 'Squarespace', 'Webador', 'Jimdo', 'Weebly', 'e-mon
   'SiteW', 'Site123', 'Strikingly', 'Webflow', 'Google Sites', 'Systeme.io', 'GoDaddy Website Builder'];
 
 // Renvoie une RAISON d'écartement (string) ou null si le site est un prospect plausible.
+const GRANDES_MARQUES = ['free.fr', 'orange.fr', 'sfr.fr', 'bouyguestelecom.fr', 'laposte.fr', 'fnac.com', 'darty.com', 'cdiscount.com',
+  'carrefour.fr', 'auchan.fr', 'amazon.fr', 'decathlon.fr', 'leroymerlin.fr', 'boulanger.com', 'but.fr', 'conforama.fr', 'ikea.com',
+  'castorama.fr', 'intermarche.com', 'lidl.fr', 'sncf-connect.com', 'airfrance.fr', 'edf.fr', 'engie.fr', 'totalenergies.fr',
+  'leboncoin.fr', 'vinted.fr', 'zalando.fr', 'sephora.fr', 'kiabi.com', 'galerieslafayette.com'];
+const GRANDS_EFFECTIFS = ['50-99', '100-199', '200-249', '250-499', '500-999', '1000-1999', '2000-4999', '5000+'];
 const disqualifyReason = (r) => {
   if (r.parked) return 'parké / vide';
+  const dom0 = (r.domain || '').toLowerCase().replace(/^www\./, '');
+  if (GRANDES_MARQUES.some((m) => dom0 === m || dom0.endsWith('.' + m))) return 'grande marque nationale';
+  if (r.effectif && GRANDS_EFFECTIFS.includes(String(r.effectif))) return `grande entreprise (${r.effectif} salariés)`;
   if (r.is_nocode) return 'no-code (fermé)';
   if (NOCODE_NAMES.includes(r.platform)) return `no-code (${r.platform})`; // filet si is_nocode manqué
   if (r.lang && r.lang !== 'fr') return `hors FR (${r.lang})`;   // langue connue ET ≠ fr
@@ -683,7 +691,7 @@ const CrawlPanel = () => {
                             {r.platform || 'Inconnu'}
                           </span>
                           {r.platform_version && (
-                            <span className="ml-1 text-xs text-text-muted">{r.platform_version.replace(/^\S+\s/, 'v')}</span>
+                            <span className="ml-1 text-xs text-text-muted">{r.platform_version.replace(/^\S+\s/, ' v')}</span>
                           )}
                           {isObsolete(r.platform, r.platform_version) && (
                             <span className="ml-2 text-xs px-1.5 py-0.5 rounded-full bg-warning-bg text-warning-text inline-flex items-center gap-1" title="Version obsolète — plus maintenue (argument sécurité)">
