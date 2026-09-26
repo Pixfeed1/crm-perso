@@ -266,6 +266,7 @@ const DATABASE_SCHEMA = {
       postal_code: 'VARCHAR(10)',
       department: 'VARCHAR(3)',
       company_created_at: 'DATE',
+      nature_juridique: 'VARCHAR(5)',     // code INSEE (92xx association, 9150 copro, 72xx commune)
       match_confidence: 'VARCHAR(10)',    // sur | probable | douteux | aucun
       match_score: 'INTEGER',
       // Site

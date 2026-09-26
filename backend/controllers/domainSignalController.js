@@ -65,6 +65,12 @@ module.exports = {
     } catch (e) { fail(res, e, 'promote'); }
   },
 
+  // POST /api/portefeuille/signaux/requalify -> { requalified } : recalcul score/statut sans réseau
+  requalify: async (req, res) => {
+    const db = req.app.locals.db;
+    try { res.json(await service.requalify(db)); } catch (e) { fail(res, e, 'requalify'); }
+  },
+
   // PATCH /api/portefeuille/signaux/:id { statut: 'rejete', raison? } | { notes }
   update: async (req, res) => {
     const db = req.app.locals.db;

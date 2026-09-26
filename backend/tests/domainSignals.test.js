@@ -25,10 +25,25 @@ test('filtre sur le nom : chiffres, sigles, aléatoire, marques rejetés ; noms 
   assert.equal(S.filterDomain('exemple.com').ok, false);
 });
 
-test('mot de métier reconnu dans la racine', () => {
+test('mot de métier : radicaux au début d\'un mot, mots courts au mot entier', () => {
   assert.equal(S.metierHint('dupont-plomberie'), 'plomb');
   assert.equal(S.metierHint('coiffure-lea'), 'coiff');
+  assert.equal(S.metierHint('anatim-elec'), 'elec');
+  assert.equal(S.metierHint('toiture-protech'), 'toiture');
   assert.equal(S.metierHint('zorglub'), null);
+  // Faux positifs vus sur un vrai fichier AFNIC.
+  for (const r of ['bernaudeau', 'ariane-barot', 'lamotte-brebiere', 'pegase-aeromodels', 'plan-de-prevention', 'modernlov', 'autolosange']) assert.equal(S.metierHint(r), null, r);
+});
+
+test('hors cible : association, syndic de copro, junior-entreprise, commune', () => {
+  assert.match(S.horsCible({ company_name: "ASSOCIATION DE N'DALAO POUR LE DEVELOPPEMENT" }), /association/);
+  assert.match(S.horsCible({ nature_juridique: '9220', company_name: 'X' }), /association/);
+  assert.match(S.horsCible({ company_name: 'SYND COPRO BEAUSEJOUR' }), /copropriété/);
+  assert.match(S.horsCible({ company_name: '"JUNIOR ESIEA" "NEXIEA"' }), /association/);
+  assert.match(S.horsCible({ company_name: 'COMMUNE DE LAMOTTE BREBIERE' }), /collectivité/);
+  assert.equal(S.horsCible({ company_name: 'GBEA' }), null);
+  const q = S.qualify({ registered_at: J(1), website_status: 'parking', match_confidence: 'sur', company_name: 'ASSOCIATION X', company_created_at: J(10) });
+  assert.equal(q.statut, 'rejete');
 });
 
 test('statut du site : sans DNS, parking, vide, redirection, protégé, erreur, actif', () => {
@@ -46,13 +61,18 @@ test('statut du site : sans DNS, parking, vide, redirection, protégé, erreur, 
 
 test('score : entreprise récente identifiée du métier, dans la zone, sans site -> très haut ; inconnue -> bas', () => {
   const chaud = S.intentScore({ match_confidence: 'sur', company_name: 'DUPONT PLOMBERIE', company_created_at: J(12), metier: 'plomb', department: '01', website_status: 'parking' });
-  assert.ok(chaud.score >= 90, String(chaud.score));
+  assert.ok(chaud.score >= 80, String(chaud.score));
   assert.ok(chaud.signaux.some((x) => /12 jours/.test(x)));
   const froid = S.intentScore({ match_confidence: 'aucun', website_status: 'parking' });
   assert.ok(froid.score < 20, String(froid.score));
-  // Vieille entreprise identifiée avec site actif : correct mais pas prioritaire.
-  const tiede = S.intentScore({ match_confidence: 'sur', company_name: 'X', company_created_at: J(3000), website_status: 'actif' });
-  assert.ok(tiede.score >= 30 && tiede.score < 50, String(tiede.score));
+  // Vieille entreprise identifiée, domaine parké dans la zone : pas une création, sous le seuil.
+  const vieille = S.intentScore({ match_confidence: 'sur', company_name: 'GBEA', company_created_at: J(5270), department: '38', website_status: 'parking' });
+  assert.ok(vieille.score < 50, String(vieille.score));
+  // Site en ligne d'une entreprise établie : l'intérêt vient des défauts visibles (preuve).
+  const sansDefaut = S.intentScore({ match_confidence: 'sur', company_name: 'X', company_created_at: J(3000), department: '69', website_status: 'actif', audit: {} });
+  const avecPreuve = S.intentScore({ match_confidence: 'sur', company_name: 'X', company_created_at: J(3000), department: '69', website_status: 'actif', audit: { mentions_legales: false, https_final: false } });
+  assert.ok(sansDefaut.score < 50 && avecPreuve.score >= 50, `${sansDefaut.score} / ${avecPreuve.score}`);
+  assert.ok(avecPreuve.signaux.some((x) => /Défauts visibles/.test(x)));
 });
 
 test('qualification : seuil 50, alias rejeté, sans indice on surveille puis on classe après 90 j', () => {
@@ -61,8 +81,13 @@ test('qualification : seuil 50, alias rejeté, sans indice on surveille puis on 
   const q = S.qualify({ registered_at: J(1), website_status: 'parking', match_confidence: 'aucun' }, now);
   assert.equal(q.statut, 'a_surveiller');
   assert.ok(q.next_check_at && q.next_check_at > now);
+  // Sans indice : deux contrôles seulement (J+30, J+90), pas cinq.
+  assert.equal(Math.round((q.next_check_at - now) / 86400000), 29);
   const fin = S.qualify({ registered_at: J(91), website_status: 'parking', match_confidence: 'aucun' }, now);
   assert.equal(fin.statut, 'rejete');
+  // Site en ligne, entreprise établie, rien à montrer : classé, pas laissé en surveillance.
+  const etabli = S.qualify({ registered_at: J(1), website_status: 'actif', match_confidence: 'sur', company_name: 'ECRAM', company_created_at: J(10131), department: '38', audit: {} }, now);
+  assert.equal(etabli.statut, 'rejete');
   const ok = S.qualify({ registered_at: J(1), website_status: 'parking', match_confidence: 'sur', company_name: 'X', company_created_at: J(10), department: '01' }, now);
   assert.equal(ok.statut, 'qualifie');
   assert.ok(ok.next_check_at, 'un qualifié sans site reste surveillé (le site va apparaître)');

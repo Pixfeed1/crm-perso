@@ -42,6 +42,7 @@ const fmtDate = (s) => { if (!s) return ''; const d = new Date(s); return isNaN(
 const fmtDateTime = (s) => { if (!s) return ''; const d = new Date(s); return isNaN(d) ? '' : d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); };
 const joursDepuis = (s) => { if (!s) return null; const d = new Date(s); return isNaN(d) ? null : Math.round((Date.now() - d.getTime()) / 86400000); };
 const isoDay = (d) => d.toISOString().slice(0, 10);
+const ageLabel = (j) => j <= 7 ? 'cette semaine' : j <= 90 ? `il y a ${j} j` : j <= 730 ? `il y a ${Math.round(j / 30)} mois` : `il y a ${Math.round(j / 365)} ans`;
 const scoreCls = (n) => n >= 70 ? 'bg-success-bg text-success-text' : n >= 50 ? 'bg-info-bg text-info-text' : n >= 30 ? 'bg-warning-bg text-warning-text' : 'bg-neutral-bg text-neutral-text';
 
 const SignauxPanel = () => {
@@ -131,6 +132,15 @@ const SignauxPanel = () => {
     } catch (e) { toast.error(e.message || 'Erreur'); } finally { setWorking(null); }
   };
 
+  const requalify = async () => {
+    try {
+      setWorking('requalify');
+      const res = await signauxAPI.requalify();
+      toast.success(`${res.requalified} signaux recalculés`);
+      loadSignals(vue);
+    } catch (e) { toast.error(e.message || 'Erreur'); } finally { setWorking(null); }
+  };
+
   const restore = async (id) => {
     try { await signauxAPI.update(id, { statut: 'a_surveiller' }); toast.success('Remis en surveillance'); loadSignals(vue); } catch (e) { toast.error(e.message || 'Erreur'); }
   };
@@ -164,6 +174,10 @@ const SignauxPanel = () => {
             </button>
             <button onClick={() => setShowColler((v) => !v)} className="px-3 py-2 bg-surface-strong hover:bg-border-strong text-text-primary rounded-lg text-sm flex items-center gap-1">
               {showColler ? <FiChevronUp size={14} /> : <FiChevronDown size={14} />} Coller la liste à la main
+            </button>
+            <button onClick={requalify} disabled={!!working || running} title="Recalcule score et statut de tous les signaux avec les règles actuelles, sans réseau (quelques secondes)"
+              className="px-3 py-2 bg-surface-strong hover:bg-border-strong text-text-primary rounded-lg text-sm flex items-center gap-1 disabled:opacity-50">
+              <FiRefreshCw size={14} className={working === 'requalify' ? 'animate-spin' : ''} /> Recalculer les scores
             </button>
             {busy && !running && <span className="text-xs text-warning-text flex items-center gap-1"><FiLoader size={12} className="animate-spin" /> Revérification en cours</span>}
           </div>
@@ -286,7 +300,7 @@ const SignauxPanel = () => {
                             <>
                               <div className="text-text-primary">{s.company_name}{s.match_confidence === 'probable' && <span className="text-xs text-text-muted"> (probable)</span>}</div>
                               <div className="text-xs text-text-muted">{[s.city, s.department ? `(${s.department})` : null, s.naf_label].filter(Boolean).join(' ')}</div>
-                              {age != null && <div className={`text-xs ${age <= 90 ? 'text-success-text' : 'text-text-muted'}`}>créée il y a {age} j{s.dirigeant ? ` · ${s.dirigeant}` : ''}</div>}
+                              {age != null && <div className={`text-xs ${age <= 90 ? 'text-success-text' : 'text-text-muted'}`}>créée {ageLabel(age)}{s.dirigeant ? ` · ${s.dirigeant}` : ''}</div>}
                             </>
                           ) : <span className="text-xs text-text-muted">{s.match_confidence === 'douteux' ? 'Correspondance douteuse' : 'Aucune entreprise trouvée'}</span>}
                         </td>

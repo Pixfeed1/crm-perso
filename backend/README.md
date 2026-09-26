@@ -36,14 +36,18 @@ des **signaux**, dans une table tampon (`domain_signals`) :
 3. **analyse du domaine** par `cc_prospector detect` : sans DNS, parking (pages par défaut OVH,
    Ionos, Gandi…), installé mais vide, redirection, site actif ;
 4. **entreprise correspondante** via recherche-entreprises.api.gouv.fr, avec sa **date de création** ;
-5. **score d'intention** (0-100) fondé sur l'âge de l'entreprise, la confiance du match, le métier
-   reconnu dans le nom, le département (`SIGNAL_DEPARTEMENTS`, défaut `01,69,38,71,39,74,73`) et
-   l'absence de site. L'âge du domaine ne compte pas : tout le fichier a moins de sept jours ;
-6. **statut** : `qualifie` (≥ 50), `a_surveiller`, `rejete` (alias, grande entreprise, rien après 90 j).
+5. **score d'intention** (0-100) : âge de l'entreprise (30 si < 90 j, 15 si < 1 an), confiance du
+   match (25 / 12), métier reconnu dans le nom (10), département ciblé (10, `SIGNAL_DEPARTEMENTS`,
+   défaut `01,69,38,71,39,74,73`), absence de site (10) ; pour un site déjà en ligne, ce sont les
+   défauts visibles qui comptent (20 avec preuve). L'âge du domaine ne compte pas : tout le fichier
+   a moins de sept jours ;
+6. **statut** : `qualifie` (≥ 50), `a_surveiller`, `rejete` (alias, grande entreprise, association,
+   syndic de copro, collectivité, site en ligne d'une entreprise établie sans défaut, rien après 90 j).
 
-**Surveillance** : les signaux sans site sont recontrôlés à J+7, 15, 30, 60, 90 (worker 06:15,
-`services/domainSignalWorker.js`), avec nouvelle recherche SIRENE à chaque passage (beaucoup
-réservent le domaine avant l'immatriculation). Quand un site apparaît, la ligne est copiée dans
+**Surveillance** : signaux avec un indice (entreprise ou métier) recontrôlés à J+7, 15, 30, 60, 90 ;
+sans indice, à J+30 et J+90 seulement, et là l'annuaire est interrogé d'abord, le site n'étant
+analysé que si une entreprise est apparue (worker 06:15, `services/domainSignalWorker.js`).
+« Recalculer les scores » re-note tout sans réseau quand les règles changent. Quand un site apparaît, la ligne est copiée dans
 `crawl_results` (job `signaux`) : angles, score et **email par la preuve** s'appliquent alors.
 
 **Promotion** manuelle seulement (bouton). Un signal sans site devient un prospect source `AFNIC`,

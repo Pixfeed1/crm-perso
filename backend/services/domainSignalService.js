@@ -20,7 +20,7 @@ const { departmentFromPostalCode } = require('../utils/prospectScore');
 // {date} = AAAAMMJJ. Surcharge possible par AFNIC_CREA_URL si l'AFNIC déplace le fichier.
 const AFNIC_URL = process.env.AFNIC_CREA_URL || 'https://www.afnic.fr/wp-media/ftp/domaineTLD_Afnic/{date}_CREA_fr.txt';
 const SIRENE_DELAY_MS = parseInt(process.env.SIGNAL_SIRENE_DELAY_MS || '250', 10); // l'API publique tolère ~7 req/s
-const RECHECK_BATCH = parseInt(process.env.SIGNAL_RECHECK_BATCH || '150', 10);
+const RECHECK_BATCH = parseInt(process.env.SIGNAL_RECHECK_BATCH || '800', 10);
 
 let busy = null; // 'import' | 'recheck' | null : un seul traitement lourd à la fois
 
@@ -92,7 +92,8 @@ async function matchCompany(signal) {
     city: data.ville,
     postal_code: data.code_postal,
     department: departmentFromPostalCode(data.code_postal),
-    company_created_at: data.date_creation || null
+    company_created_at: data.date_creation || null,
+    nature_juridique: data.nature_juridique || null
   };
 }
 
@@ -113,10 +114,11 @@ function siteFields(rawRow, domain) {
 }
 
 // Score + statut + prochain contrôle, écrits en base. Renvoie le signal mis à jour.
-async function scoreAndQualify(db, signal, now = new Date()) {
+async function scoreAndQualify(db, signal, now = new Date(), { compteControle = true } = {}) {
   const { score, signaux } = S.intentScore(signal, now);
   const q = S.qualify({ ...signal, intent_score: score }, now);
-  const fields = { intent_score: score, signaux: JSON.stringify(signaux), statut: q.statut, raison_rejet: q.raison_rejet, next_check_at: q.next_check_at, last_checked_at: now, checks: (signal.checks || 0) + 1 };
+  const fields = { intent_score: score, signaux: JSON.stringify(signaux), statut: q.statut, raison_rejet: q.raison_rejet, next_check_at: q.next_check_at };
+  if (compteControle) { fields.last_checked_at = now; fields.checks = (signal.checks || 0) + 1; }
   await updateSignal(db, signal.id, fields);
   return { ...signal, ...fields, signaux };
 }
@@ -213,8 +215,15 @@ async function runImport(db, importId, day, texte) {
 }
 
 // Analyse (site) + entreprise + score pour une liste de signaux (import ou contrôle).
-async function analyzeAndQualify(db, signals, { onProgress, onPhase } = {}) {
-  const byDomain = new Map(signals.map((s) => [s.domain, s]));
+async function analyzeAndQualify(db, signals, { onProgress, onPhase, mode = 'import' } = {}) {
+  // Contrôle à échéance : l'annuaire d'abord (une entreprise est-elle apparue ?), puis le site
+  // seulement pour les domaines qui ont un indice. Sinon 3 000 domaines sans rien sont
+  // re-analysés cinq fois pour rien.
+  if (mode === 'recheck') await matchUnmatched(db, signals);
+  const aAnalyser = mode === 'recheck'
+    ? signals.filter((s) => s.match_confidence === 'sur' || s.match_confidence === 'probable' || s.metier)
+    : signals;
+  const byDomain = new Map(aAnalyser.map((s) => [s.domain, s]));
   let rows = [];
   try {
     // Domaines neufs : la plupart ne répondent pas ou affichent une page d'attente. Plus de
@@ -237,6 +246,20 @@ async function analyzeAndQualify(db, signals, { onProgress, onPhase } = {}) {
   }
 
   if (onPhase) await onPhase('sirene');
+  if (mode !== 'recheck') await matchUnmatched(db, signals);
+
+  if (onPhase) await onPhase('qualification');
+  for (const s of signals) {
+    const q = await scoreAndQualify(db, s, now);
+    // Site en ligne et signal retenu : il rejoint le crawl classique (audit, angles, preuves).
+    if (q.website_status === 'actif' && q.statut !== 'rejete' && !q.crawl_result_id && s.audit && typeof s.audit === 'object') {
+      s.crawl_result_id = await attachCrawlResult(db, q, s.audit).catch((e) => { console.error('[Signaux] crawl_results:', e.message); return null; });
+    }
+  }
+}
+
+// Recherche de l'entreprise pour les signaux pas encore identifiés (un appel par domaine, espacé).
+async function matchUnmatched(db, signals) {
   for (const s of signals) {
     if (s.website_status === 'redirection') continue; // alias : rejeté sans appel réseau
     if (s.match_confidence === 'sur' || s.match_confidence === 'probable') continue; // déjà identifiée
@@ -255,15 +278,23 @@ async function analyzeAndQualify(db, signals, { onProgress, onPhase } = {}) {
     }
     await sleep(SIRENE_DELAY_MS);
   }
+}
 
-  if (onPhase) await onPhase('qualification');
-  for (const s of signals) {
-    const q = await scoreAndQualify(db, s, now);
-    // Site en ligne et signal retenu : il rejoint le crawl classique (audit, angles, preuves).
-    if (q.website_status === 'actif' && q.statut !== 'rejete' && !q.crawl_result_id && s.audit && typeof s.audit === 'object') {
-      s.crawl_result_id = await attachCrawlResult(db, q, s.audit).catch((e) => { console.error('[Signaux] crawl_results:', e.message); return null; });
-    }
+// Recalcul sans réseau (règles de score ou de métier modifiées) : tout ce qui n'est ni promu ni
+// écarté à la main est re-noté et re-classé à partir des données déjà en base.
+async function requalify(db) {
+  const { rows } = await db.pool.query(
+    "SELECT * FROM domain_signals WHERE statut <> 'promu' AND (statut <> 'rejete' OR raison_rejet IS DISTINCT FROM 'écarté à la main')"
+  );
+  const now = new Date();
+  let n = 0;
+  for (const s of rows) {
+    const metier = S.metierHint(s.domain.replace(/\.fr$/, ''));
+    if (metier !== s.metier) { await updateSignal(db, s.id, { metier }); s.metier = metier; }
+    await scoreAndQualify(db, s, now, { compteControle: false });
+    n++;
   }
+  return { requalified: n };
 }
 
 // ─── Surveillance ────────────────────────────────────────────────────────────
@@ -273,7 +304,7 @@ async function recheckSignals(db, ids) {
   if (rows.length === 0) return { checked: 0 };
   busy = 'recheck';
   try {
-    await analyzeAndQualify(db, rows);
+    await analyzeAndQualify(db, rows, { mode: 'recheck' });
   } finally {
     busy = null;
   }
@@ -364,4 +395,4 @@ async function markInterrupted(db) {
   if (r.rowCount) console.log(`[Signaux] ${r.rowCount} import(s) interrompu(s) marqué(s) en erreur`);
 }
 
-module.exports = { markInterrupted, startImport, recheckSignals, recheckDue, promote, reject, matchCompany, siteFields, afnicUrl, knownDomains, isBusy: () => busy };
+module.exports = { markInterrupted, requalify, startImport, recheckSignals, recheckDue, promote, reject, matchCompany, siteFields, afnicUrl, knownDomains, isBusy: () => busy };

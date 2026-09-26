@@ -12,6 +12,7 @@ router.get('/imports', ctrl.imports);
 router.post('/import', ctrl.startImport);
 router.post('/recheck', ctrl.recheck);
 router.post('/promote', ctrl.promote);
+router.post('/requalify', ctrl.requalify);
 router.patch('/:id', ctrl.update);
 
 module.exports = router;

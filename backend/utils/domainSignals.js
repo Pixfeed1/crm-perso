@@ -10,7 +10,7 @@
 //  - qualify        : statut + raison + prochain contrôle.
 // Testé dans tests/domainSignals.test.js.
 
-const { GRANDES_MARQUES } = require('./prospectScore');
+const { GRANDES_MARQUES, auditFlags, PREUVE_KEYS } = require('./prospectScore');
 
 // ─── Lecture du fichier AFNIC ─────────────────────────────────────────────────
 // Format observé : lignes d'en-tête commençant par « # », puis un domaine par ligne ;
@@ -99,10 +99,21 @@ const METIERS = [
   'poele', 'fumist'
 ];
 function metierHint(root) {
-  const r = String(root || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-  for (const m of METIERS) {
-    if (m.startsWith('-') ? r.endsWith(m.slice(1)) || r.includes(m) : m.endsWith('-') ? r.startsWith(m.slice(0, -1)) || r.includes(m) : r.includes(m)) {
-      return m.replace(/-/g, '');
+  const r = String(root || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const tokens = r.split('-').filter(Boolean);
+  for (const raw of METIERS) {
+    const m = raw.replace(/-/g, '');
+    if (m.length >= 6) {
+      // Long : la sous-chaîne suffit (« toiture » dans « toitureprotech »).
+      if (r.includes(m)) return m;
+    } else if (m.length === 5) {
+      // Radical tronqué (« plomb », « coiff », « event ») : début d'un mot, pas un morceau
+      // (« biere » dans « brebiere », « event » dans « prevention »).
+      if (tokens.some((t) => t.startsWith(m))) return m;
+    } else {
+      // Court (« eau », « bar », « mode », « elec », « auto ») : au mot entier, pluriel toléré,
+      // sinon « bernaudeau » devient un métier de l'eau et « barot » un bar.
+      if (tokens.some((t) => t === m || t === m + 's')) return m;
     }
   }
   return null;
@@ -168,15 +179,27 @@ function intentScore(s, now = new Date()) {
   let score = 0;
   const signaux = [];
   const conf = s.match_confidence || 'aucun';
-  if (conf === 'sur') { score += 30; signaux.push(`Entreprise identifiée : ${s.company_name}`); } else if (conf === 'probable') { score += 15; signaux.push(`Entreprise probable : ${s.company_name}`); }
-  if (s.company_created_at && conf !== 'aucun' && conf !== 'douteux') {
-    const age = daysBetween(s.company_created_at, now);
-    if (age != null && age >= 0 && age <= 90) { score += 25; signaux.push(`Société créée il y a ${age} jour${age > 1 ? 's' : ''}`); } else if (age != null && age > 90 && age <= 365) { score += 10; signaux.push(`Société créée il y a ${Math.round(age / 30)} mois`); }
+  if (conf === 'sur') { score += 25; signaux.push(`Entreprise identifiée : ${s.company_name}`); } else if (conf === 'probable') { score += 12; signaux.push(`Entreprise probable : ${s.company_name}`); }
+  const identifiee = conf === 'sur' || conf === 'probable';
+  let age = null;
+  if (s.company_created_at && identifiee) {
+    age = daysBetween(s.company_created_at, now);
+    if (age != null && age < 0) age = 0; // immatriculation datée dans le futur (ça arrive)
+    if (age != null && age <= 90) { score += 30; signaux.push(age <= 7 ? 'Société créée cette semaine' : `Société créée il y a ${age} jour${age > 1 ? 's' : ''}`); } else if (age != null && age <= 365) { score += 15; signaux.push(`Société créée il y a ${Math.max(1, Math.round(age / 30))} mois`); } else if (age != null && age > 3 * 365) { signaux.push(`Entreprise établie (${Math.round(age / 365)} ans)`); }
   }
   if (s.metier) { score += 10; signaux.push(`Activité reconnue dans le nom : ${s.metier}`); }
-  if (s.department && targetDepartments().has(String(s.department))) { score += 15; signaux.push(`Département ciblé : ${s.department}`); }
+  if (s.department && targetDepartments().has(String(s.department))) { score += 10; signaux.push(`Département ciblé : ${s.department}`); }
   const ws = s.website_status || 'inconnu';
-  if (SANS_SITE.has(ws)) { score += 15; signaux.push(ws === 'parking' ? 'Domaine réservé, page de parking' : ws === 'vide' ? 'Installation vide, aucun contenu' : 'Domaine réservé, aucun site'); } else if (ws === 'actif') { score += 5; signaux.push(`Site en ligne${s.platform && s.platform !== 'Inconnu' ? ` (${s.platform})` : ''}`); }
+  if (SANS_SITE.has(ws)) { score += 10; signaux.push(ws === 'parking' ? 'Domaine réservé, page de parking' : ws === 'vide' ? 'Installation vide, aucun contenu' : 'Domaine réservé, aucun site'); } else if (ws === 'actif') {
+    signaux.push(`Site en ligne${s.platform && s.platform !== 'Inconnu' ? ` (${s.platform})` : ''}`);
+    // Site déjà en ligne : l'intérêt vient des défauts visibles (même logique que le crawl).
+    const flags = s.audit && typeof s.audit === 'object' ? auditFlags(s.audit) : [];
+    if (flags.length) {
+      const preuve = flags.some((f) => PREUVE_KEYS.has(f.key));
+      score += preuve ? 20 : 8;
+      signaux.push(`Défauts visibles : ${flags.slice(0, 4).map((f) => f.label).join(', ')}${flags.length > 4 ? '…' : ''}`);
+    }
+  }
   if (s.email) { score += 5; signaux.push('Email de contact trouvé'); }
   if (conf === 'aucun' && !s.metier) score -= 10;
   if (s.site_apparu_le) { score += 10; signaux.push(`Site apparu le ${new Date(s.site_apparu_le).toLocaleDateString('fr-FR')}`); }
@@ -187,14 +210,26 @@ function intentScore(s, now = new Date()) {
 // Échéances depuis la découverte : J+7, 15, 30, 60, 90. Après 90 jours sans site ni
 // entreprise, le signal est classé sans suite.
 const ECHEANCES = [7, 15, 30, 60, 90];
+const ECHEANCES_SANS_INDICE = [30, 90]; // rien à suivre de près : on regarde si une entreprise est apparue
 
-function nextCheckDate(registeredAt, now = new Date()) {
+function nextCheckDate(registeredAt, now = new Date(), echeances = ECHEANCES) {
   const base = registeredAt ? new Date(registeredAt) : now;
   const start = Number.isNaN(base.getTime()) ? now : base;
-  for (const j of ECHEANCES) {
+  for (const j of echeances) {
     const d = new Date(start.getTime() + j * 86400000);
     if (d > now) return d;
   }
+  return null;
+}
+
+// Structures hors cible d'un indépendant : associations, syndicats de copropriété,
+// junior-entreprises. Code de nature juridique (API) d'abord, nom en repli pour les lignes anciennes.
+function horsCible(s) {
+  const nj = String(s.nature_juridique || '');
+  const nom = String(s.company_name || '');
+  if (/^92/.test(nj) || /(\bassociation\b|\bassoc\.|\bamicale\b|junior[- ]?entreprise|^"?junior\b)/i.test(nom)) return 'association / sans budget';
+  if (nj === '9150' || /\bsynd(icat)?\b.*\bcopro/i.test(nom) || /^synd copro/i.test(nom)) return 'syndicat de copropriété';
+  if (/^(72|73)/.test(nj) || /^(commune de|mairie de|communaute de communes|departement d)/i.test(nom.normalize('NFD').replace(/[\u0300-\u036f]/g, ''))) return 'collectivité (marché public)';
   return null;
 }
 
@@ -205,18 +240,26 @@ function nextCheckDate(registeredAt, now = new Date()) {
 function qualify(s, now = new Date()) {
   const ws = s.website_status || 'inconnu';
   const conf = s.match_confidence || 'aucun';
-  const next = nextCheckDate(s.registered_at, now);
   if (ws === 'redirection') return { statut: 'rejete', raison_rejet: 'alias : redirige vers un autre domaine', next_check_at: null };
   if (s.effectif && /^(50-99|100-199|200-249|250-499|500-999|1000-1999|2000-4999|5000\+)$/.test(String(s.effectif))) {
     return { statut: 'rejete', raison_rejet: `grande entreprise (${s.effectif} salariés)`, next_check_at: null };
   }
   const identifiee = conf === 'sur' || conf === 'probable';
+  if (identifiee) {
+    const hc = horsCible(s);
+    if (hc) return { statut: 'rejete', raison_rejet: hc, next_check_at: null };
+  }
   const sansIndice = !identifiee && !s.metier;
+  const next = nextCheckDate(s.registered_at, now, sansIndice ? ECHEANCES_SANS_INDICE : ECHEANCES);
   if (sansIndice && next === null) return { statut: 'rejete', raison_rejet: 'aucune entreprise ni activité reconnue après 90 jours', next_check_at: null };
   if (ws === 'actif' && sansIndice && (s.checks || 0) >= 1) return { statut: 'rejete', raison_rejet: 'site en ligne sans entreprise ni activité reconnue', next_check_at: null };
   const score = s.intent_score != null ? s.intent_score : intentScore(s, now).score;
-  if (score >= 50) return { statut: 'qualifie', raison_rejet: null, next_check_at: SANS_SITE.has(ws) || ws === 'inconnu' || ws === 'erreur' || ws === 'protege' ? next : null };
+  const enAttenteDeSite = SANS_SITE.has(ws) || ws === 'inconnu' || ws === 'erreur' || ws === 'protege';
+  if (score >= 50) return { statut: 'qualifie', raison_rejet: null, next_check_at: enAttenteDeSite ? next : null };
+  // Site déjà en ligne, entreprise identifiée, rien de saillant : il n'y a ni création à proposer
+  // ni défaut à montrer. On classe, plutôt que de laisser traîner en « à surveiller ».
+  if (ws === 'actif' && identifiee) return { statut: 'rejete', raison_rejet: 'site en ligne, entreprise établie, aucun défaut visible', next_check_at: null };
   return { statut: 'a_surveiller', raison_rejet: null, next_check_at: next };
 }
 
-module.exports = { parseAfnicList, filterDomain, metierHint, websiteStatus, intentScore, qualify, nextCheckDate, daysBetween, ECHEANCES, SANS_SITE, targetDepartments };
+module.exports = { parseAfnicList, filterDomain, metierHint, websiteStatus, intentScore, qualify, horsCible, nextCheckDate, daysBetween, ECHEANCES, ECHEANCES_SANS_INDICE, SANS_SITE, targetDepartments };

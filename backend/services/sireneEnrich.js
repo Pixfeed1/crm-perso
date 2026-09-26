@@ -48,7 +48,8 @@ function parseCompany(company) {
     code_postal: company.siege?.code_postal || null,
     ville: company.siege?.libelle_commune || null,
     date_creation: company.date_creation || company.siege?.date_creation || null, // immatriculation (signaux : âge de l'entreprise)
-    etat: company.etat_administratif || null // A (active) | C (cessée)
+    etat: company.etat_administratif || null, // A (active) | C (cessée)
+    nature_juridique: company.nature_juridique || null // 92xx association, 9150 copro, 72xx commune…
   };
 }
 
