@@ -237,4 +237,4 @@ function buildProofEmail(r, lead) {
   };
 }
 
-module.exports = { buildProofEmail, PREUVES_ORDRE, CATALOGUE };
+module.exports = { buildProofEmail, PREUVES_ORDRE, CATALOGUE, presentation, joliNom };

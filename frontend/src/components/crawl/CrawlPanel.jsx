@@ -22,7 +22,7 @@ const TECHNOS = [
   { value: 'drupal', label: 'Drupal' },
   { value: 'cms', label: 'SPIP + Drupal' }
 ];
-const technoLabel = (v) => (TECHNOS.find((t) => t.value === v) || {}).label || v;
+const technoLabel = (v) => v === 'signaux' ? 'Signaux AFNIC (sites apparus)' : ((TECHNOS.find((t) => t.value === v) || {}).label || v);
 
 // Badge de statut de job — tokens sémantiques.
 const STATUT_BADGE = {

@@ -13,6 +13,7 @@ const { autoInitDatabase } = require('./scripts/autoInitDatabase');
 const scheduledEmailWorker = require('./services/scheduledEmailWorker');
 const maintenanceReminderWorker = require('./services/maintenanceReminderWorker');
 const veilleMissionsWorker = require('./services/veilleMissionsWorker');
+const domainSignalWorker = require('./services/domainSignalWorker');
 
 // Charger les variables d'environnement
 dotenv.config();
@@ -196,6 +197,7 @@ app.use('/api/review-requests', require('./routes/reviewRequestRoutes'));
 app.use('/api/interventions', require('./routes/interventionRoutes'));
 app.use('/api/interactions', require('./routes/interactionRoutes'));
 app.use('/api/portefeuille/crawl', require('./routes/crawlRoutes'));
+app.use('/api/portefeuille/signaux', require('./routes/domainSignalRoutes')); // nouveaux domaines .fr (AFNIC)
 app.use('/api/email-templates', require('./routes/emailTemplateRoutes'));
 app.use('/api/email-signatures', require('./routes/emailSignatureRoutes'));
 app.use('/api/maintenance-reports', require('./routes/maintenanceReportRoutes'));
@@ -322,6 +324,10 @@ async function startServer() {
   veilleMissionsWorker.initialize(app.locals.db);
   await veilleMissionsWorker.start().catch((e) => console.error('[Veille] Échec démarrage worker:', e.message));
 
+  // Signaux de domaine : contrôles à échéance des .fr suivis (06:15)
+  domainSignalWorker.initialize(app.locals.db);
+  domainSignalWorker.start();
+
   // Démarrer le serveur HTTP
   const server = app.listen(PORT, () => {
     console.log('===========================================');
@@ -363,6 +369,7 @@ function gracefulShutdown() {
   scheduledEmailWorker.stop();
   maintenanceReminderWorker.stop();
   veilleMissionsWorker.stop();
+  domainSignalWorker.stop();
 
   server.close(() => {
     console.log('Serveur HTTP fermé.');

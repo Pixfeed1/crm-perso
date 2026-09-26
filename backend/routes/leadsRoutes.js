@@ -24,6 +24,7 @@ function emailAccounts() {
 }
 const { problemesLisibles } = require('../utils/crawlAngles');
 const proofEmail = require('../services/proofEmailService');
+const creationEmail = require('../services/creationEmailService');
 const { statusForRelation, relationForStatus } = require('../utils/leadStatusSync');
 
 // Date du jour + N jours au format YYYY-MM-DD (pour la relance automatique).
@@ -252,6 +253,12 @@ router.post('/:id/draft-email', async (req, res) => {
     const lead = lr.rows[0];
     const { row, problemes } = await problemesDuLead(db, lead);
     if (mode === 'preuve') {
+      // Prospect issu d'un signal AFNIC sans site en ligne : rien à prouver, email « création ».
+      if (!row && lead.source === 'AFNIC') {
+        const sig = await db.pool.query('SELECT * FROM domain_signals WHERE prospect_id = $1 ORDER BY id DESC LIMIT 1', [lead.id]).catch(() => ({ rows: [] }));
+        const draft = creationEmail.buildCreationEmail(sig.rows[0] || { domain: lead.company }, lead);
+        return res.json({ subject: draft.subject, body: draft.body, preuve: 'creation_site', preuves: [], indices: [], mode: 'creation', problemes });
+      }
       const draft = proofEmail.buildProofEmail(row, lead);
       if (!draft.ok) return res.status(422).json({ message: draft.raison, indices: draft.indices, sans_preuve: true });
       return res.json({ subject: draft.subject, body: draft.body, preuve: draft.preuve, preuves: draft.preuves, indices: draft.indices, mode: 'preuve', problemes });

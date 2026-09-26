@@ -148,7 +148,7 @@ const ProspectEmails = ({ lead, autoCompose = false }) => {
       const res = await leadsAPI.draftEmail(lead.id, { ton: draftTon, mode });
       if (res.subject) setSubject(res.subject);
       setBody(res.body || '');
-      toast.success(mode === 'preuve' ? `Email par la preuve (${res.preuve})` : 'Brouillon rédigé par Claude');
+      toast.success(res.mode === 'creation' ? 'Email « création de site » (domaine réservé, pas encore de site)' : mode === 'preuve' ? `Email par la preuve (${res.preuve})` : 'Brouillon rédigé par Claude');
     } catch (e) {
       const data = e && e.data;
       if (data && data.sans_preuve) {

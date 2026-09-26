@@ -15,13 +15,10 @@ const sireneEnrich = require('../services/sireneEnrich');
 const { problemesLisibles } = require('../utils/crawlAngles');
 const { prospectScore, auditFlags, promotionBlocker, departmentFromPostalCode, descriptionAbsurde, nomMalOrthographie } = require('../utils/prospectScore');
 
-// Constantes faciles à mettre à jour (override possible par variables d'env).
-// L'interpréteur reste hors dépôt : un venv ne se versionne pas (il contient des
-// binaires compilés). Le SCRIPT, lui, est celui du dépôt : un `git pull` suffit
-// donc à mettre le crawler à jour, sans copie manuelle vers un dossier externe.
-const PYTHON_BIN = process.env.CC_PROSPECTOR_PYTHON || '/home/jurojinn/tools/cc_prospector/venv/bin/python';
-const SCRIPT = process.env.CC_PROSPECTOR_SCRIPT
-  || path.join(__dirname, '..', '..', 'tools', 'cc_prospector', 'cc_prospector.py');
+// L'interpréteur Python et le script sont réglés dans ccProspectorRunner (partagés avec les
+// signaux de domaine) : un `git pull` suffit à mettre le crawler à jour.
+const { PYTHON_BIN, SCRIPT } = require('../services/ccProspectorRunner');
+const { parseCsv, csvEscape, normalizeDomain } = require('../utils/csvParse');
 const COMMON_CRAWL_ID = process.env.COMMON_CRAWL_ID || 'CC-MAIN-2026-21';
 
 // `spip` / `drupal` / `cms` cherchent TOUS les sites du CMS concerné (tous secteurs) :
@@ -31,52 +28,11 @@ const VALID_TECHNO = ['ecommerce', 'woocommerce', 'prestashop', 'spip', 'drupal'
 // Un seul job en cours à la fois (verrou en mémoire процессus).
 let runningJobId = null;
 
-// --- Petit parseur CSV (gère les champs entre guillemets et les virgules internes) ---
-function parseCsv(content) {
-  const rows = [];
-  let field = '';
-  let row = [];
-  let inQuotes = false;
-  for (let i = 0; i < content.length; i++) {
-    const c = content[i];
-    if (inQuotes) {
-      if (c === '"') {
-        if (content[i + 1] === '"') { field += '"'; i++; } else { inQuotes = false; }
-      } else { field += c; }
-    } else if (c === '"') {
-      inQuotes = true;
-    } else if (c === ',') {
-      row.push(field); field = '';
-    } else if (c === '\n' || c === '\r') {
-      if (c === '\r' && content[i + 1] === '\n') i++;
-      row.push(field); field = '';
-      if (row.length > 1 || row[0] !== '') rows.push(row);
-      row = [];
-    } else { field += c; }
-  }
-  if (field !== '' || row.length) { row.push(field); rows.push(row); }
-  return rows;
-}
-
-function csvEscape(value) {
-  const s = value == null ? '' : String(value);
-  return /[",\n;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-}
-
 async function updateJob(db, id, fields) {
   const keys = Object.keys(fields);
   if (!keys.length) return;
   const set = keys.map((k, i) => `${k} = $${i + 1}`).join(', ');
   await db.pool.query(`UPDATE crawl_jobs SET ${set} WHERE id = $${keys.length + 1}`, [...keys.map((k) => fields[k]), id]);
-}
-
-// Normalise un domaine/url pour comparaison (minuscule, sans schéma ni www, sans chemin).
-function normalizeDomain(value) {
-  if (!value) return '';
-  let s = String(value).trim().toLowerCase();
-  s = s.replace(/^https?:\/\//, '').replace(/^www\./, '');
-  s = s.split('/')[0].split('?')[0];
-  return s.trim();
 }
 
 // Construit le fichier d'exclusion (un domaine par ligne) = domaines déjà connus :
@@ -180,32 +136,69 @@ async function runCrawl(db, jobId, techno, nbSites) {
   });
 }
 
-// Ingestion du CSV de l'outil (colonnes : domain, platform, signals, http_status, final_url, title, error)
+// Ligne brute du CSV de l'outil (valeurs « oui »/« non »/texte) -> objet typé aux colonnes
+// de crawl_results. Colonnes absentes des anciens CSV -> null (rétro-compatible).
+function typedResult(o) {
+  const cell = (k) => { const v = o[k]; return v == null ? null : (String(v).trim() || null); };
+  const boolCell = (k) => { const v = cell(k); return v == null ? null : /^(oui|true|1|yes)$/i.test(v); };
+  // Entier ou null (jamais NaN) — pour poids_ko / copyright_annee / ssl_expire_jours.
+  const intCell = (k) => { const v = cell(k); if (v == null) return null; const n = parseInt(v, 10); return Number.isNaN(n) ? null : n; };
+  const domain = cell('domain') || '';
+  const platform = cell('platform');
+  const signals = cell('signals');
+  const finalUrl = cell('final_url');
+  // Le <title> scrapé est encodé en HTML (&#039; &eacute; ...) -> on le décode à l'ingestion.
+  // Et si c'est un titre de page anti-bot (Cloudflare "Just a moment..." etc.), on le jette :
+  // le domaine servira de nom à la promotion en prospect.
+  let title = decodeHtml(cell('title')) || null;
+  if (isAntibotTitle(title)) title = null;
+  // Filtre no-code/SaaS fermé (Wix, Squarespace, Webador...) : marqué -> masqué par défaut.
+  const { isNoCode } = detectNoCode({ platform, signals, final_url: finalUrl, title, domain });
+  return {
+    domain, platform, signals, http_status: intCell('http_status'), final_url: finalUrl, title, error: cell('error'), is_nocode: isNoCode,
+    email: cell('email'), phone: cell('phone'), facebook_url: cell('facebook_url'), instagram_url: cell('instagram_url'),
+    platform_version: cell('platform_version'), ssl_ok: boolCell('ssl_ok'), protected: boolCell('protected') || false,
+    lang: cell('lang'), parked: boolCell('parked') || false,
+    mobile_ok: boolCell('mobile_ok'), meta_desc: boolCell('meta_desc'), h1_present: boolCell('h1_present'),
+    mentions_legales: boolCell('mentions_legales'), rgpd_confidentialite: boolCell('rgpd_confidentialite'),
+    cookie_banner: boolCell('cookie_banner'), analytics: boolCell('analytics'), poids_ko: intCell('poids_ko'),
+    copyright_annee: intCell('copyright_annee'), serveur_php: cell('serveur_php'), spf: boolCell('spf'), dmarc: boolCell('dmarc'),
+    ssl_expire_jours: intCell('ssl_expire_jours'), site_type: cell('site_type'), ecommerce_actif: boolCell('ecommerce_actif'),
+    // Ancien CSV sans la colonne : on déduit du schéma de l'URL finale.
+    https_final: 'https_final' in o ? boolCell('https_final') : (finalUrl ? /^https:/i.test(finalUrl) : null),
+    noindex: boolCell('noindex'), robots_bloque: boolCell('robots_bloque'), cgv: boolCell('cgv'), retractation: boolCell('retractation'),
+    contenu_mixte: boolCell('contenu_mixte'), mentions_404: boolCell('mentions_404'), prestataire: cell('prestataire'),
+    meta_desc_txt: cell('meta_desc_txt'), urls_reecrites: boolCell('urls_reecrites'), sitemap: cell('sitemap')
+  };
+}
+
+const RESULT_COLUMNS = ['domain', 'platform', 'signals', 'http_status', 'final_url', 'title', 'error', 'is_nocode',
+  'email', 'phone', 'facebook_url', 'instagram_url', 'platform_version', 'ssl_ok', 'protected', 'lang', 'parked',
+  'mobile_ok', 'meta_desc', 'h1_present', 'mentions_legales', 'rgpd_confidentialite', 'cookie_banner',
+  'analytics', 'poids_ko', 'copyright_annee', 'serveur_php', 'spf', 'dmarc', 'ssl_expire_jours',
+  'site_type', 'ecommerce_actif', 'https_final',
+  'noindex', 'robots_bloque', 'cgv', 'retractation', 'contenu_mixte', 'mentions_404', 'prestataire',
+  'meta_desc_txt', 'urls_reecrites', 'sitemap'];
+
+// Insère un résultat typé dans crawl_results (+ mémoire crawl_seen_domains). Renvoie l'id.
+async function insertCrawlResult(db, jobId, r) {
+  const norm = normalizeDomain(r.domain);
+  if (norm) await db.pool.query('INSERT INTO crawl_seen_domains (domain) VALUES ($1) ON CONFLICT (domain) DO NOTHING', [norm]).catch(() => {});
+  const cols = ['job_id', ...RESULT_COLUMNS];
+  const vals = [jobId, ...RESULT_COLUMNS.map((c) => (r[c] === undefined ? null : r[c]))];
+  const ins = await db.pool.query(
+    `INSERT INTO crawl_results (${cols.join(', ')}) VALUES (${cols.map((_, i) => `$${i + 1}`).join(', ')}) RETURNING id`,
+    vals
+  );
+  return ins.rows[0].id;
+}
+
+// Ingestion du CSV de l'outil (colonnes : domain, platform, signals, http_status, final_url, title, error, …)
 async function ingestCsv(db, jobId, csvPath) {
   const content = fs.readFileSync(csvPath, 'utf8');
   const rows = parseCsv(content);
   if (rows.length === 0) return;
   const header = rows[0].map((h) => h.trim().toLowerCase());
-  const idx = (name) => header.indexOf(name);
-  const di = idx('domain'), pi = idx('platform'), si = idx('signals'),
-    hi = idx('http_status'), fi = idx('final_url'), ti = idx('title'), ei = idx('error');
-  // Colonnes d'enrichissement (cc_prospector) — absentes des anciens CSV : idx = -1 -> null.
-  const emi = idx('email'), phi = idx('phone'), fbi = idx('facebook_url'), igi = idx('instagram_url'),
-    pvi = idx('platform_version'), sli = idx('ssl_ok'), pri = idx('protected'),
-    lgi = idx('lang'), pki = idx('parked'), hfi = idx('https_final');
-  const nxi = idx('noindex'), rbi = idx('robots_bloque'), cgi = idx('cgv'), rti = idx('retractation'),
-    cmi = idx('contenu_mixte'), m4i = idx('mentions_404'), pri2 = idx('prestataire'),
-    mdt = idx('meta_desc_txt'), uri = idx('urls_reecrites'), smi = idx('sitemap');
-  // Colonnes d'audit gratuit (ajoutées ensuite) — idx = -1 -> null (rétro-compatible).
-  const moi = idx('mobile_ok'), mdi = idx('meta_desc'), h1i = idx('h1_present'),
-    mli = idx('mentions_legales'), rgi = idx('rgpd_confidentialite'), cbi = idx('cookie_banner'),
-    ani = idx('analytics'), poi = idx('poids_ko'), coi = idx('copyright_annee'),
-    spi = idx('serveur_php'), sfi = idx('spf'), dmi = idx('dmarc'), sei = idx('ssl_expire_jours'),
-    sti = idx('site_type'), eci = idx('ecommerce_actif');
-  const cell = (row, i) => (i >= 0 ? ((row[i] || '').trim() || null) : null);
-  const boolCell = (row, i) => { const v = cell(row, i); return v == null ? null : /^(oui|true|1|yes)$/i.test(v); };
-  // Entier ou null (jamais NaN) — pour poids_ko / copyright_annee / ssl_expire_jours.
-  const intCell = (row, i) => { const v = cell(row, i); if (v == null) return null; const n = parseInt(v, 10); return Number.isNaN(n) ? null : n; };
 
   // Dédoublonnage de sécurité : domaines déjà présents en base (tous jobs) + intra-CSV.
   const seen = new Set();
@@ -218,59 +211,16 @@ async function ingestCsv(db, jobId, csvPath) {
     console.error('[Crawl] Erreur préchargement dédoublonnage:', e.message);
   }
 
-  for (let r = 1; r < rows.length; r++) {
-    const row = rows[r];
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
     if (!row || row.length === 0) continue;
-    const domain = di >= 0 ? (row[di] || '').trim() : '';
-    if (!domain) continue;
-    const norm = normalizeDomain(domain);
+    const o = Object.fromEntries(header.map((h, k) => [h, row[k] == null ? '' : row[k]]));
+    const r = typedResult(o);
+    if (!r.domain) continue;
+    const norm = normalizeDomain(r.domain);
     if (seen.has(norm)) continue; // déjà connu : on ignore silencieusement
     seen.add(norm);
-    await db.pool.query('INSERT INTO crawl_seen_domains (domain) VALUES ($1) ON CONFLICT (domain) DO NOTHING', [norm]).catch(() => {});
-    const httpRaw = hi >= 0 ? parseInt(row[hi], 10) : null;
-    const platform = pi >= 0 ? (row[pi] || null) : null;
-    const signals = si >= 0 ? (row[si] || null) : null;
-    const finalUrl = fi >= 0 ? (row[fi] || null) : null;
-    // Le <title> scrapé est encodé en HTML (&#039; &eacute; ...) -> on le décode à l'ingestion.
-    // Et si c'est un titre de page anti-bot (Cloudflare "Just a moment..." etc.), on le jette :
-    // le domaine servira de nom à la promotion en prospect.
-    let title = ti >= 0 ? (decodeHtml(row[ti]) || null) : null;
-    if (isAntibotTitle(title)) title = null;
-    // Filtre no-code/SaaS fermé (Wix, Squarespace, Webador...) : marqué -> masqué par défaut.
-    const { isNoCode } = detectNoCode({ platform, signals, final_url: finalUrl, title, domain });
-    await db.pool.query(
-      `INSERT INTO crawl_results
-         (job_id, domain, platform, signals, http_status, final_url, title, error, is_nocode,
-          email, phone, facebook_url, instagram_url, platform_version, ssl_ok, protected, lang, parked,
-          mobile_ok, meta_desc, h1_present, mentions_legales, rgpd_confidentialite, cookie_banner,
-          analytics, poids_ko, copyright_annee, serveur_php, spf, dmarc, ssl_expire_jours,
-          site_type, ecommerce_actif, https_final,
-          noindex, robots_bloque, cgv, retractation, contenu_mixte, mentions_404, prestataire,
-          meta_desc_txt, urls_reecrites, sitemap)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18,
-               $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34,
-               $35, $36, $37, $38, $39, $40, $41, $42, $43, $44)`,
-      [
-        jobId, domain, platform, signals,
-        Number.isNaN(httpRaw) ? null : httpRaw,
-        finalUrl, title,
-        ei >= 0 ? (row[ei] || null) : null,
-        isNoCode,
-        cell(row, emi), cell(row, phi), cell(row, fbi), cell(row, igi),
-        cell(row, pvi), boolCell(row, sli), boolCell(row, pri) || false,
-        cell(row, lgi), boolCell(row, pki) || false,
-        boolCell(row, moi), boolCell(row, mdi), boolCell(row, h1i), boolCell(row, mli),
-        boolCell(row, rgi), boolCell(row, cbi), boolCell(row, ani),
-        intCell(row, poi), intCell(row, coi), cell(row, spi),
-        boolCell(row, sfi), boolCell(row, dmi), intCell(row, sei),
-        cell(row, sti), boolCell(row, eci),
-        // Ancien CSV sans la colonne : on déduit du schéma de l'URL finale.
-        hfi >= 0 ? boolCell(row, hfi) : (finalUrl ? /^https:/i.test(finalUrl) : null),
-        boolCell(row, nxi), boolCell(row, rbi), boolCell(row, cgi), boolCell(row, rti), boolCell(row, cmi), boolCell(row, m4i),
-        cell(row, pri2),
-        cell(row, mdt), boolCell(row, uri), cell(row, smi)
-      ]
-    );
+    await insertCrawlResult(db, jobId, r);
   }
   await rescoreJob(db, jobId);
 }
@@ -285,6 +235,71 @@ async function rescoreJob(db, jobId, ids = null) {
   for (const r of rows) {
     await db.pool.query('UPDATE crawl_results SET score = $1 WHERE id = $2', [prospectScore(r), r.id]).catch(() => {});
   }
+}
+
+// Crée un prospect (lead standard, statut 'nouveau') à partir d'une ligne crawl_results.
+// Partagé avec les signaux de domaine (source « AFNIC »). Renvoie l'id du lead créé.
+// opts : { statusVal, userNote, source, sourceLine, extraNotes }
+async function createLeadFromResult(db, r, opts = {}) {
+  const anneeCourante = new Date().getFullYear();
+  // Angles d'approche détectés gratuitement (audit) -> arguments concrets pour l'email.
+  const angles = [
+    r.mentions_legales === false ? '• Pas de mentions légales (obligation légale LCEN)' : null,
+    r.mobile_ok === false ? '• Site non responsive (mauvais affichage mobile)' : null,
+    (r.ssl_expire_jours != null && r.ssl_expire_jours < 30)
+      ? `• Certificat SSL expire dans ${r.ssl_expire_jours} j` : null,
+    r.ssl_ok === false ? '• Certificat SSL invalide/absent' : null,
+    r.https_final === false ? '• Site servi en HTTP (« Non sécurisé » affiché au visiteur)' : null,
+    (r.noindex === true || r.robots_bloque === true) ? `• INVISIBLE SUR GOOGLE (${r.noindex ? 'balise noindex' : 'robots.txt bloque tout'})` : null,
+    (Number(r.http_status) >= 500) ? `• Site en erreur serveur (${r.http_status})` : null,
+    ([404, 410].includes(Number(r.http_status))) ? "• Page d'accueil introuvable (404) : le site répond mais n'affiche rien" : null,
+    (r.cgv === false && (r.site_type === 'commerce' || r.ecommerce_actif)) ? '• Pas de conditions générales de vente (obligatoires pour vendre en ligne)' : null,
+    (r.retractation === false && (r.site_type === 'commerce' || r.ecommerce_actif)) ? '• Aucune information sur le droit de rétractation (Code de la consommation)' : null,
+    r.contenu_mixte === true ? '• Contenu mixte : cadenas cassé, éléments bloqués par le navigateur' : null,
+    r.mentions_404 === true ? '• Le lien « mentions légales » mène à une page en erreur' : null,
+    r.sitemap === 'vide' ? '• Sitemap.xml vide (Google n\'a aucune liste des pages)' : null,
+    r.urls_reecrites === false ? '• Adresses non réécrites (index.php?id_category=…) : aucun mot dans les URL' : null,
+    descriptionAbsurde(r) ? `• Description Google absurde : « ${String(r.meta_desc_txt).slice(0, 80)} »` : null,
+    nomMalOrthographie(r) ? `• Nom de l'entreprise mal écrit dans le titre : « ${nomMalOrthographie(r).titre} » au lieu de « ${nomMalOrthographie(r).attendu} »` : null,
+    r.spf === false ? '• Pas de SPF (emails à risque de finir en spam)' : null,
+    r.dmarc === false ? '• Pas de DMARC (domaine usurpable)' : null,
+    r.rgpd_confidentialite === false ? '• Pas de politique de confidentialité (RGPD)' : null,
+    r.cookie_banner === false ? '• Pas de bandeau cookies (CNIL)' : null,
+    r.meta_desc === false ? '• Meta description manquante (SEO)' : null,
+    r.h1_present === false ? '• Pas de balise H1 (SEO)' : null,
+    r.analytics === false ? "• Aucune mesure d'audience installée" : null,
+    r.serveur_php ? `• Version serveur exposée : ${r.serveur_php}` : null,
+    (r.copyright_annee && r.copyright_annee < anneeCourante - 1)
+      ? `• Copyright figé à ${r.copyright_annee} (site qui semble peu maintenu)` : null
+  ].filter(Boolean);
+  const notes = [
+    opts.userNote || null,
+    r.raison_sociale ? `Raison sociale : ${r.raison_sociale}${r.siren ? ` (SIREN ${r.siren})` : ''}` : null,
+    r.gerant ? `Dirigeant : ${r.gerant}` : null,
+    r.prestataire ? `Prestataire crédité sur le site : ${r.prestataire} (site laissé en l'état malgré un prestataire : angle « votre agence ne maintient plus »)` : null,
+    r.platform ? `Plateforme : ${r.platform}${r.platform_version ? ` (${r.platform_version})` : ''}` : null,
+    angles.length ? `Angles d'approche détectés :\n${angles.join('\n')}` : null,
+    r.final_url ? `URL : ${r.final_url}` : null,
+    ...(opts.extraNotes || []),
+    `Source : ${opts.sourceLine || 'Crawl Common Crawl'}`
+  ].filter(Boolean).join('\n');
+  // Colonnes standard + enrichissement cc_prospector (email/tel/réseaux) -> le lead
+  // arrive directement exploitable dans l'Outreach multi-canal.
+  // Colonnes structurées (ciblage/segmentation) en plus des notes lisibles.
+  const angleKeys = auditFlags(r).map((f) => f.key).join(' | ') || null;
+  const ins = await db.pool.query(
+    `INSERT INTO leads (name, company, type, status, source, notes, email, phone, facebook_url, instagram_url, relation_status, crawl_result_id,
+                        platform, website, site_type, siren, sector, naf, effectif, city, postal_code, department, angles, score, prestataire, created_at, updated_at)
+     VALUES ($1, $2, 'company', 'nouveau', $23, $3, $4, $5, $6, $7, $8, $9,
+             $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, NOW(), NOW()) RETURNING id`,
+    [(isAntibotTitle(r.title) ? null : decodeHtml(r.title)) || r.domain, r.domain, notes,
+     r.email || null, r.phone || null, r.facebook_url || null, r.instagram_url || null, opts.statusVal || 'nouveau', r.id,
+     r.platform || null, r.final_url || `https://${r.domain}`, r.site_type || null, r.siren || null,
+     r.naf_label || null, r.naf || null, r.effectif || null, r.ville || null, r.code_postal || null,
+     departmentFromPostalCode(r.code_postal), angleKeys, r.score != null ? r.score : prospectScore(r), r.prestataire || null, opts.source || 'Crawl']
+  );
+  await db.pool.query('UPDATE crawl_results SET added_as_prospect = TRUE WHERE id = $1', [r.id]);
+  return ins.rows[0].id;
 }
 
 const crawlController = {
@@ -460,7 +475,6 @@ const crawlController = {
       let lastError = null;
       const leadIds = []; // IDs des leads créés (pour le raccourci « Prospecter » -> fiche)
       const skipped = []; // { domain, raison } : doublons et bloquants (agence, parké, antibot)
-      const anneeCourante = new Date().getFullYear();
       for (const r of rows) {
         // Hygiène AVANT création : pas de concurrent, de domaine parké, de no-code ni de site
         // à l'audit faussé ; pas de doublon par email (un même contact deux fois = spam).
@@ -470,64 +484,9 @@ const crawlController = {
           const dup = await db.pool.query('SELECT id FROM leads WHERE LOWER(email) = LOWER($1) LIMIT 1', [r.email]).catch(() => ({ rows: [] }));
           if (dup.rows.length) { skipped.push({ domain: r.domain, raison: `email déjà présent (prospect #${dup.rows[0].id})` }); continue; }
         }
-        // Angles d'approche détectés gratuitement (audit) -> arguments concrets pour l'email.
-        const angles = [
-          r.mentions_legales === false ? '• Pas de mentions légales (obligation légale LCEN)' : null,
-          r.mobile_ok === false ? '• Site non responsive (mauvais affichage mobile)' : null,
-          (r.ssl_expire_jours != null && r.ssl_expire_jours < 30)
-            ? `• Certificat SSL expire dans ${r.ssl_expire_jours} j` : null,
-          r.ssl_ok === false ? '• Certificat SSL invalide/absent' : null,
-          r.https_final === false ? '• Site servi en HTTP (« Non sécurisé » affiché au visiteur)' : null,
-          (r.noindex === true || r.robots_bloque === true) ? `• INVISIBLE SUR GOOGLE (${r.noindex ? 'balise noindex' : 'robots.txt bloque tout'})` : null,
-          (Number(r.http_status) >= 500) ? `• Site en erreur serveur (${r.http_status})` : null,
-          ([404, 410].includes(Number(r.http_status))) ? "• Page d'accueil introuvable (404) : le site répond mais n'affiche rien" : null,
-          (r.cgv === false && (r.site_type === 'commerce' || r.ecommerce_actif)) ? '• Pas de conditions générales de vente (obligatoires pour vendre en ligne)' : null,
-          (r.retractation === false && (r.site_type === 'commerce' || r.ecommerce_actif)) ? '• Aucune information sur le droit de rétractation (Code de la consommation)' : null,
-          r.contenu_mixte === true ? '• Contenu mixte : cadenas cassé, éléments bloqués par le navigateur' : null,
-          r.mentions_404 === true ? '• Le lien « mentions légales » mène à une page en erreur' : null,
-          r.sitemap === 'vide' ? '• Sitemap.xml vide (Google n\'a aucune liste des pages)' : null,
-          r.urls_reecrites === false ? '• Adresses non réécrites (index.php?id_category=…) : aucun mot dans les URL' : null,
-          descriptionAbsurde(r) ? `• Description Google absurde : « ${String(r.meta_desc_txt).slice(0, 80)} »` : null,
-          nomMalOrthographie(r) ? `• Nom de l'entreprise mal écrit dans le titre : « ${nomMalOrthographie(r).titre} » au lieu de « ${nomMalOrthographie(r).attendu} »` : null,
-          r.spf === false ? '• Pas de SPF (emails à risque de finir en spam)' : null,
-          r.dmarc === false ? '• Pas de DMARC (domaine usurpable)' : null,
-          r.rgpd_confidentialite === false ? '• Pas de politique de confidentialité (RGPD)' : null,
-          r.cookie_banner === false ? '• Pas de bandeau cookies (CNIL)' : null,
-          r.meta_desc === false ? '• Meta description manquante (SEO)' : null,
-          r.h1_present === false ? '• Pas de balise H1 (SEO)' : null,
-          r.analytics === false ? "• Aucune mesure d'audience installée" : null,
-          r.serveur_php ? `• Version serveur exposée : ${r.serveur_php}` : null,
-          (r.copyright_annee && r.copyright_annee < anneeCourante - 1)
-            ? `• Copyright figé à ${r.copyright_annee} (site qui semble peu maintenu)` : null
-        ].filter(Boolean);
-        const notes = [
-          userNote || null,
-          r.raison_sociale ? `Raison sociale : ${r.raison_sociale}${r.siren ? ` (SIREN ${r.siren})` : ''}` : null,
-          r.gerant ? `Dirigeant : ${r.gerant}` : null,
-          r.prestataire ? `Prestataire crédité sur le site : ${r.prestataire} (site laissé en l'état malgré un prestataire : angle « votre agence ne maintient plus »)` : null,
-          r.platform ? `Plateforme : ${r.platform}${r.platform_version ? ` (${r.platform_version})` : ''}` : null,
-          angles.length ? `Angles d'approche détectés :\n${angles.join('\n')}` : null,
-          r.final_url ? `URL : ${r.final_url}` : null,
-          'Source : Crawl Common Crawl'
-        ].filter(Boolean).join('\n');
         try {
-          // Colonnes standard + enrichissement cc_prospector (email/tel/réseaux) -> le lead
-          // arrive directement exploitable dans l'Outreach multi-canal.
-          // Colonnes structurées (ciblage/segmentation) en plus des notes lisibles.
-          const angleKeys = auditFlags(r).map((f) => f.key).join(' | ') || null;
-          const ins = await db.pool.query(
-            `INSERT INTO leads (name, company, type, status, source, notes, email, phone, facebook_url, instagram_url, relation_status, crawl_result_id,
-                                platform, website, site_type, siren, sector, naf, effectif, city, postal_code, department, angles, score, prestataire, created_at, updated_at)
-             VALUES ($1, $2, 'company', 'nouveau', 'Crawl', $3, $4, $5, $6, $7, $8, $9,
-                     $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, NOW(), NOW()) RETURNING id`,
-            [(isAntibotTitle(r.title) ? null : decodeHtml(r.title)) || r.domain, r.domain, notes,
-             r.email || null, r.phone || null, r.facebook_url || null, r.instagram_url || null, statusVal, r.id,
-             r.platform || null, r.final_url || `https://${r.domain}`, r.site_type || null, r.siren || null,
-             r.naf_label || null, r.naf || null, r.effectif || null, r.ville || null, r.code_postal || null,
-             departmentFromPostalCode(r.code_postal), angleKeys, r.score != null ? r.score : prospectScore(r), r.prestataire || null]
-          );
-          await db.pool.query('UPDATE crawl_results SET added_as_prospect = TRUE WHERE id = $1', [r.id]);
-          if (ins.rows[0]) leadIds.push(ins.rows[0].id);
+          const leadId = await createLeadFromResult(db, r, { statusVal, userNote });
+          leadIds.push(leadId);
           created++;
         } catch (e) {
           lastError = e.message;
@@ -614,5 +573,10 @@ crawlController.exportExclude = async (req, res) => {
     res.status(500).json({ message: 'Erreur serveur' });
   }
 };
+
+crawlController.typedResult = typedResult;
+crawlController.insertCrawlResult = insertCrawlResult;
+crawlController.createLeadFromResult = createLeadFromResult;
+crawlController.rescoreJob = rescoreJob;
 
 module.exports = crawlController;

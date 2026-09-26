@@ -220,6 +220,81 @@ const DATABASE_SCHEMA = {
     ]
   },
 
+  // ── Signaux d'intention (nouveaux domaines .fr AFNIC, plus tard créations SIRENE) ──
+  // Table TAMPON : rien n'entre dans les prospects avant qualification. Un domaine neuf est
+  // filtré, croisé avec SIRENE, analysé (site actif / parking / vide), noté, puis surveillé
+  // à échéances (J+7, 15, 30, 60, 90). La promotion en prospect reste un geste manuel.
+  domain_signal_imports: {
+    columns: {
+      id: 'SERIAL PRIMARY KEY',
+      source: "VARCHAR(20) DEFAULT 'afnic'",
+      jour: 'DATE',                       // jour du fichier AFNIC (domaines créés ce jour-là)
+      statut: "VARCHAR(20) DEFAULT 'running'", // running | done | error
+      phase: 'VARCHAR(30)',               // telechargement | filtrage | analyse | sirene | done
+      nb_lus: 'INTEGER DEFAULT 0',        // lignes du fichier
+      nb_filtres: 'INTEGER DEFAULT 0',    // rejetés sur le nom seul
+      nb_connus: 'INTEGER DEFAULT 0',     // déjà en base (crawl, prospects, signaux)
+      nb_nouveaux: 'INTEGER DEFAULT 0',   // signaux créés
+      nb_qualifies: 'INTEGER DEFAULT 0',
+      progress_done: 'INTEGER DEFAULT 0',
+      progress_total: 'INTEGER DEFAULT 0',
+      message: 'TEXT',
+      created_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP',
+      finished_at: 'TIMESTAMP'
+    }
+  },
+
+  domain_signals: {
+    columns: {
+      id: 'SERIAL PRIMARY KEY',
+      domain: 'TEXT UNIQUE NOT NULL',
+      source: "VARCHAR(20) DEFAULT 'afnic'",
+      import_id: 'INTEGER REFERENCES domain_signal_imports(id) ON DELETE SET NULL',
+      registered_at: 'DATE',              // date de création du domaine (fichier AFNIC)
+      detected_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP',
+      statut: "VARCHAR(20) DEFAULT 'nouveau'", // nouveau | a_surveiller | qualifie | promu | rejete
+      raison_rejet: 'TEXT',
+      metier: 'VARCHAR(40)',              // mot de métier reconnu dans le nom (plomberie, coiffure…)
+      // Entreprise correspondante (recherche-entreprises.api.gouv.fr)
+      company_name: 'TEXT',
+      siren: 'VARCHAR(20)',
+      naf: 'VARCHAR(10)',
+      naf_label: 'TEXT',
+      dirigeant: 'TEXT',
+      effectif: 'VARCHAR(20)',
+      city: 'TEXT',
+      postal_code: 'VARCHAR(10)',
+      department: 'VARCHAR(3)',
+      company_created_at: 'DATE',
+      match_confidence: 'VARCHAR(10)',    // sur | probable | douteux | aucun
+      match_score: 'INTEGER',
+      // Site
+      website_status: "VARCHAR(20) DEFAULT 'inconnu'", // inconnu | sans_dns | injoignable | parking | vide | redirection | protege | erreur | actif
+      platform: 'VARCHAR(30)',
+      title: 'TEXT',
+      http_status: 'INTEGER',
+      final_url: 'TEXT',
+      email: 'TEXT',
+      phone: 'TEXT',
+      audit: 'JSONB',                     // dernière ligne d'analyse (colonnes cc_prospector typées)
+      site_apparu_le: 'DATE',             // bascule parking/vide -> site actif observée à cette date
+      // Qualification
+      intent_score: 'INTEGER DEFAULT 0',
+      signaux: 'JSONB',                   // libellés lisibles des signaux retenus
+      checks: 'INTEGER DEFAULT 0',
+      last_checked_at: 'TIMESTAMP',
+      next_check_at: 'TIMESTAMP',
+      prospect_id: 'INTEGER',             // lead créé à la promotion
+      crawl_result_id: 'INTEGER',         // ligne crawl_results créée quand le site est actif (email par la preuve)
+      notes: 'TEXT',
+      updated_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'
+    },
+    indexes: [
+      'CREATE INDEX IF NOT EXISTS idx_domain_signals_statut ON domain_signals(statut)',
+      'CREATE INDEX IF NOT EXISTS idx_domain_signals_next_check ON domain_signals(next_check_at)'
+    ]
+  },
+
   // Table crawl_results (sites détectés par un crawl)
   crawl_results: {
     columns: {
@@ -2540,4 +2615,4 @@ async function autoInitDatabase(pool) {
   }
 }
 
-module.exports = { autoInitDatabase };
+module.exports = { autoInitDatabase, DATABASE_SCHEMA };

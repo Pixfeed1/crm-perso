@@ -199,6 +199,14 @@ _PARKED_PATTERNS = [
     "parked", "sedoparking", "afternic", "dan.com", "godaddy.com/domains",
     "site en construction", "under construction", "coming soon", "bientôt disponible",
     "default web page", "apache2 ubuntu default", "welcome to nginx", "index of /",
+    # Pages par défaut des hébergeurs français (domaine réservé, site pas encore fait) :
+    # c'est ce qu'affiche un .fr enregistré la veille (signaux AFNIC).
+    "domaine réservé", "nom de domaine réservé", "ce nom de domaine a été réservé",
+    "ce domaine est enregistré", "votre site est en cours de création", "site en cours de création",
+    "n'est pas encore configurée", "pas encore de site", "site web en construction",
+    "page par défaut", "default parking page", "hostinger.com", "plesk default page",
+    "cpanel, inc", "web hosting default", "future home of", "hébergé par ionos",
+    "ionos.fr/domaines", "ovhcloud.com/fr/domains", "gandi.net/fr/domain",
 ]
 
 

@@ -46,7 +46,9 @@ function parseCompany(company) {
     effectif: trancheEffectif(company.tranche_effectif_salarie),
     adresse: formatAddress(company.siege),
     code_postal: company.siege?.code_postal || null,
-    ville: company.siege?.libelle_commune || null
+    ville: company.siege?.libelle_commune || null,
+    date_creation: company.date_creation || company.siege?.date_creation || null, // immatriculation (signaux : âge de l'entreprise)
+    etat: company.etat_administratif || null // A (active) | C (cessée)
   };
 }
 

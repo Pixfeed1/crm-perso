@@ -215,4 +215,4 @@ const PREUVE_KEYS = new Set(['accueil_404', 'erreur_serveur', 'invisible_google'
   'sitemap_vide', 'mentions_404', 'mobile', 'copyright_fige']);
 const niveauFlag = (key) => (PREUVE_KEYS.has(key) ? 'preuve' : 'indice');
 
-module.exports = { auditFlags, prospectScore, disqualifyReason, promotionBlocker, departmentFromPostalCode, phpEol, niveauFlag, PREUVE_KEYS, NOCODE_NAMES, descriptionAbsurde, nomMalOrthographie, grandeEntreprise };
+module.exports = { auditFlags, prospectScore, disqualifyReason, promotionBlocker, departmentFromPostalCode, phpEol, niveauFlag, PREUVE_KEYS, NOCODE_NAMES, descriptionAbsurde, nomMalOrthographie, grandeEntreprise, GRANDES_MARQUES };

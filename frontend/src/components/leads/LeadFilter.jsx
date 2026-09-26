@@ -35,6 +35,7 @@ const LeadFilter = ({ filters, setFilters, onSort, sortField, sortDirection, isK
   const sourceOptions = [
     { value: 'all', label: 'Toutes les sources' },
     { value: 'Crawl', label: 'Crawl' },
+    { value: 'AFNIC', label: 'Signal AFNIC (nouveau .fr)' },
     { value: 'Site Web', label: 'Site Web' },
     { value: 'Référence', label: 'Référence' },
     { value: 'LinkedIn', label: 'LinkedIn' },

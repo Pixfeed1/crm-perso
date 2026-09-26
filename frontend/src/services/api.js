@@ -1334,6 +1334,16 @@ export const crawlAPI = {
   exportCsv: (id) => apiRequestRaw(`/portefeuille/crawl/${id}/export.csv`)
 };
 
+// Signaux d'intention : nouveaux domaines .fr (AFNIC) -> table tampon -> prospects
+export const signauxAPI = {
+  list: (statut) => apiRequest(`/portefeuille/signaux${statut ? `?statut=${encodeURIComponent(statut)}` : ''}`),
+  imports: () => apiRequest('/portefeuille/signaux/imports'),
+  startImport: (payload) => apiRequest('/portefeuille/signaux/import', 'POST', payload),
+  recheck: (ids) => apiRequest('/portefeuille/signaux/recheck', 'POST', { ids }),
+  promote: (ids, extra = {}) => apiRequest('/portefeuille/signaux/promote', 'POST', { ids, ...extra }),
+  update: (id, payload) => apiRequest(`/portefeuille/signaux/${id}`, 'PATCH', payload)
+};
+
 // API pour les emails programmés
 export const scheduledEmailsAPI = {
   // Récupérer tous les emails programmés
