@@ -37,8 +37,13 @@ function runDetect(domains, opts = {}) {
       const prog = line.match(/(\d+)\/(\d+)\s+traités/);
       if (prog && opts.onProgress) opts.onProgress(parseInt(prog[1], 10), parseInt(prog[2], 10));
     };
+    // La progression (« … X/N traités ») sort sur STDERR ; le bilan final sur stdout.
+    let bufErr = '';
     child.stdout.on('data', (d) => { buf += d.toString(); const lines = buf.split('\n'); buf = lines.pop(); lines.forEach(onLine); });
-    child.stderr.on('data', (d) => { d.toString().split('\n').forEach((l) => { if (l.trim()) { tail.push(l); if (tail.length > 8) tail.shift(); } }); });
+    child.stderr.on('data', (d) => {
+      bufErr += d.toString(); const lines = bufErr.split('\n'); bufErr = lines.pop();
+      lines.forEach((l) => { onLine(l); if (l.trim() && !/traités/.test(l)) { tail.push(l); if (tail.length > 8) tail.shift(); } });
+    });
     const cleanup = () => { try { fs.rmSync(dir, { recursive: true, force: true }); } catch { /* ignore */ } };
     child.on('error', (err) => { cleanup(); reject(new Error(`Analyseur introuvable (${PYTHON_BIN}) : ${err.message}`)); });
     child.on('close', (code) => {

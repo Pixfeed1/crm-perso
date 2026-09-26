@@ -9,7 +9,7 @@ const service = require('./domainSignalService');
 let db = null;
 let cronJob = null;
 
-const initialize = (database) => { db = database; };
+const initialize = (database) => { db = database; service.markInterrupted(db).catch(() => {}); };
 
 const tick = async () => {
   if (!db) return;

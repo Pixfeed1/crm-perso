@@ -217,7 +217,9 @@ async function analyzeAndQualify(db, signals, { onProgress, onPhase } = {}) {
   const byDomain = new Map(signals.map((s) => [s.domain, s]));
   let rows = [];
   try {
-    rows = await runDetect([...byDomain.keys()], { onProgress });
+    // Domaines neufs : la plupart ne répondent pas ou affichent une page d'attente. Plus de
+    // connexions en parallèle et un délai plus court qu'au crawl, sinon 3 000 domaines = une heure.
+    rows = await runDetect([...byDomain.keys()], { onProgress, concurrency: parseInt(process.env.SIGNAL_DETECT_CONCURRENCY || '25', 10), timeout: parseInt(process.env.SIGNAL_DETECT_TIMEOUT || '7', 10) });
   } catch (e) {
     // Analyseur indisponible : on qualifie quand même sur l'entreprise, le site reste « inconnu ».
     console.error('[Signaux] Analyse des sites impossible :', e.message);
@@ -281,8 +283,10 @@ async function recheckSignals(db, ids) {
 // Contrôles arrivés à échéance (appelé chaque matin par le worker).
 async function recheckDue(db) {
   const { rows } = await db.pool.query(
-    `SELECT id FROM domain_signals WHERE statut IN ('a_surveiller', 'qualifie') AND next_check_at IS NOT NULL AND next_check_at <= NOW()
-     ORDER BY next_check_at LIMIT $1`, [RECHECK_BATCH]
+    `SELECT id FROM domain_signals
+     WHERE statut = 'nouveau' -- jamais analysés (import interrompu par un redémarrage)
+        OR (statut IN ('a_surveiller', 'qualifie') AND next_check_at IS NOT NULL AND next_check_at <= NOW())
+     ORDER BY next_check_at NULLS FIRST LIMIT $1`, [RECHECK_BATCH]
   );
   if (rows.length === 0) return { checked: 0 };
   return recheckSignals(db, rows.map((r) => r.id));
@@ -352,4 +356,12 @@ async function reject(db, id, raison) {
   await updateSignal(db, id, { statut: 'rejete', raison_rejet: String(raison || 'écarté à la main').slice(0, 200), next_check_at: null });
 }
 
-module.exports = { startImport, recheckSignals, recheckDue, promote, reject, matchCompany, siteFields, afnicUrl, knownDomains, isBusy: () => busy };
+// Au démarrage du serveur : un import laissé « en cours » par un redémarrage ne finira jamais.
+async function markInterrupted(db) {
+  const r = await db.pool.query(
+    "UPDATE domain_signal_imports SET statut = 'error', message = 'Interrompu par un redémarrage du serveur. Les domaines déjà enregistrés seront analysés au prochain contrôle (06:15) ou via « Revérifier ».', finished_at = NOW() WHERE statut = 'running'"
+  ).catch(() => ({ rowCount: 0 }));
+  if (r.rowCount) console.log(`[Signaux] ${r.rowCount} import(s) interrompu(s) marqué(s) en erreur`);
+}
+
+module.exports = { markInterrupted, startImport, recheckSignals, recheckDue, promote, reject, matchCompany, siteFields, afnicUrl, knownDomains, isBusy: () => busy };
