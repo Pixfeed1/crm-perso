@@ -23,6 +23,8 @@ Colonnes CSV enrichies (ingérées par le CRM) :
   + pré-tri prospect : site_type (asso/agence/commerce/autre), ecommerce_actif, error
 """
 
+from __future__ import annotations  # annotations « X | None » acceptées par le Python 3.9 du serveur
+
 import argparse
 import asyncio
 import csv
