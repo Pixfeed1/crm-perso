@@ -19,8 +19,7 @@ const { auditFlags, phpEol, nomMalOrthographie } = require('../utils/prospectSco
 // Ordre de conviction des preuves : ce qui coûte des ventes ou fait honte d'abord.
 const PREUVES_ORDRE = [
   'accueil_404', 'erreur_serveur', 'invisible_google', 'nom_mal_orthographie', 'http_non_securise', 'ssl_expire',
-  'ssl_invalide', 'ssl_bientot', 'titre_defaut', 'meta_desc_absurde', 'urls_non_reecrites', 'sitemap_vide',
-  'mentions_404', 'mobile', 'copyright_fige'
+  'ssl_invalide', 'ssl_bientot', 'titre_defaut', 'mentions_404', 'mobile'
 ];
 const PREUVES = new Set(PREUVES_ORDRE);
 
@@ -38,82 +37,80 @@ function joliNom(raw) {
   return n;
 }
 
-// Catalogue : pour chaque preuve, l'objet, la phrase de preuve (un fait, vérifiable par le
-// gérant), la portée (ce que ça change, sans rien affirmer qu'on ne peut pas démontrer : pas de
-// perte de clients chiffrée, pas de délai Google inventé, pas d'écran rouge si on ne l'a pas vu)
-// et le signal brut (traçabilité : ce que le crawler a mesuré).
-const quand = (r) => (r.analyse_le ? ` (constaté le ${new Date(r.analyse_le).toLocaleDateString('fr-FR')})` : '');
+// Catalogue : pour chaque preuve, l'objet, le constat (un fait, vérifiable par le gérant en
+// ouvrant son site), la portée (ce que ça change, une phrase, rien qu'on ne puisse démontrer)
+// et le signal brut (traçabilité). Pas d'alarme, pas de leçon : un prestataire qui a vu quelque
+// chose et le dit simplement.
+const quand = () => ''; // la date de constat est portée par l'intro du motif (motif()), une seule fois
 const CATALOGUE = {
   accueil_404: (r) => ({
     sujet: `votre page d'accueil renvoie une erreur 404`,
     preuve: `En ouvrant ${site(r)}${quand(r)}, la page d'accueil renvoie une erreur 404 : le domaine répond, mais aucun site ne s'affiche.`,
-    consequence: `Pour quelqu'un qui tape votre adresse, le site paraît fermé. Si c'est volontaire ou déjà en cours de votre côté, ce message est sans objet.`,
+    consequence: `Si c'est volontaire ou déjà en cours de votre côté, ce message est sans objet.`,
     brut: `HTTP ${r.http_status}`
   }),
   erreur_serveur: (r) => ({
     sujet: `votre site affiche une erreur ${r.http_status}`,
     preuve: `En ouvrant ${site(r)}${quand(r)}, le serveur renvoie une erreur ${r.http_status} au lieu de la boutique.`,
-    consequence: `C'est peut-être passager et déjà en cours de votre côté. Si ce n'est pas le cas, je préférais vous le signaler : tant que l'erreur est là, la boutique n'est pas consultable.`,
+    consequence: `C'est peut-être passager et déjà traité ; si ce n'est pas le cas, je préférais vous le signaler.`,
     brut: `HTTP ${r.http_status}`
   }),
   invisible_google: (r) => ({
     sujet: `votre site demande à Google de ne pas l'indexer`,
     preuve: r.noindex
-      ? `La page d'accueil de ${site(r)} contient une balise « noindex »${quand(r)} : elle demande explicitement à Google de ne pas l'indexer.`
-      : `Le fichier robots.txt de ${site(r)} interdit à Google de parcourir le site (Disallow: /)${quand(r)}.`,
-    consequence: `C'est un réglage de site en construction qui reste souvent coché après la mise en ligne. Tant qu'il est là, les pages concernées ne peuvent pas apparaître dans Google, et personne ne s'en rend compte de l'intérieur.`,
+      ? `La page d'accueil de ${site(r)} contient une balise « noindex », qui demande à Google de ne pas l'indexer.`
+      : `Le fichier robots.txt de ${site(r)} interdit à Google de parcourir le site (Disallow: /).`,
+    consequence: `C'est un réglage de mise en construction souvent oublié ; tant qu'il est là, ces pages restent hors de Google.`,
     brut: r.noindex ? 'meta robots noindex sur la page d\'accueil' : 'robots.txt : Disallow: / pour tous les robots ou Googlebot'
   }),
   http_non_securise: (r) => {
-    // Certificat valide mais site qui renvoie vers http : on le dit tel quel, c'est vérifiable
-    // en tapant l'adresse en https.
     const redirige = r.ssl_ok === true && r.final_url && /^http:/i.test(r.final_url);
     const finale = redirige ? String(r.final_url).replace(/\/$/, '') : '';
     return {
       sujet: `« Non sécurisé » s'affiche sur ${site(r)}`,
       preuve: redirige
-        ? `En tapant https://${site(r)}${quand(r)}, on est renvoyé vers ${finale} : le certificat de sécurité existe, mais le site ne l'utilise pas, et le navigateur affiche « Non sécurisé » à côté de l'adresse.`
-        : `${site(r)} s'ouvre en HTTP, sans cadenas${quand(r)} : le navigateur affiche « Non sécurisé » à côté de l'adresse, dès la page d'accueil.`,
+        ? `En tapant https://${site(r)}${quand(r)}, on est renvoyé vers ${finale} : le certificat existe, mais le site ne l'utilise pas, et le navigateur affiche « Non sécurisé » à côté de l'adresse.`
+        : `${site(r)} s'ouvre en HTTP, sans cadenas${quand(r)} : le navigateur affiche « Non sécurisé » à côté de l'adresse.`,
       consequence: redirige
-        ? `Ce n'est pas une faille en soi, mais c'est la mention que tous les navigateurs affichent, et certains clients s'arrêtent dessus avant de commander. Comme le certificat est déjà là, il s'agit d'un réglage de redirection, pas d'une refonte.`
-        : `Ce n'est pas une faille en soi, mais c'est la mention que tous les navigateurs affichent, et certains clients s'arrêtent dessus avant de commander. En général, le certificat existe déjà et il suffit de l'imposer.`,
+        ? `Le certificat étant déjà en place, il s'agit d'un réglage de redirection, pas d'une refonte.`
+        : `Dans la plupart des cas, le certificat existe déjà et il suffit de l'imposer.`,
       brut: redirige ? `https accepté puis redirigé vers ${r.final_url} (servi en HTTP)` : `URL finale ${r.final_url || 'http://' + site(r)} servie en HTTP`
     };
   },
   ssl_expire: (r) => ({
     sujet: `le certificat de ${site(r)} a expiré`,
     preuve: `Le certificat de sécurité de ${site(r)} est expiré${r.ssl_expire_jours != null ? ` depuis ${Math.abs(r.ssl_expire_jours)} jour${Math.abs(r.ssl_expire_jours) > 1 ? 's' : ''}` : ''}${quand(r)} : le navigateur affiche un avertissement avant d'atteindre le site.`,
-    consequence: `Tant qu'il n'est pas renouvelé, cet avertissement s'affiche à chaque visite. Si le renouvellement est déjà programmé, ce message est sans objet ; sinon, c'est une heure de travail.`,
+    consequence: `Si le renouvellement est déjà programmé, ce message est sans objet ; sinon, c'est une intervention courte.`,
     brut: `certificat : ${r.ssl_expire_jours} jour(s) (négatif = expiré)`
   }),
   ssl_invalide: (r) => ({
     sujet: `avertissement de sécurité sur ${site(r)}`,
     preuve: `En ouvrant https://${site(r)}${quand(r)}, le navigateur affiche un avertissement de sécurité : ${r.ssl_erreur ? r.ssl_erreur : 'le certificat n\'est pas valide pour cette adresse'}.`,
-    consequence: `Le site reste accessible, mais tout visiteur qui arrive par cette adresse voit l'avertissement avant la boutique. Souvent, seule l'adresse sans « www » est concernée, et ça se règle côté hébergement.`,
+    consequence: `Souvent, seule l'adresse sans « www » est concernée, et cela se règle côté hébergement.`,
     brut: r.ssl_erreur || 'erreur TLS à la connexion'
   }),
   ssl_bientot: (r) => ({
     sujet: `votre certificat expire dans ${r.ssl_expire_jours} jours`,
-    preuve: `Le certificat de sécurité de ${site(r)} expire dans ${r.ssl_expire_jours} jour${r.ssl_expire_jours > 1 ? 's' : ''}${quand(r)} (visible en cliquant sur le cadenas du navigateur).`,
-    consequence: `Dans la plupart des cas, le renouvellement est automatique et il n'y a rien à faire. Je vous le signale au cas où il ne le serait pas : passé cette date, les navigateurs affichent un avertissement à l'ouverture du site.`,
+    preuve: `Le certificat de sécurité de ${site(r)} expire dans ${r.ssl_expire_jours} jour${r.ssl_expire_jours > 1 ? 's' : ''}${quand(r)}, ce qui se lit en cliquant sur le cadenas du navigateur.`,
+    consequence: `Le renouvellement est le plus souvent automatique ; je vous le signale au cas où il ne le serait pas.`,
     brut: `certificat : ${r.ssl_expire_jours} jour(s) restants`
   }),
   titre_defaut: (r) => ({
     sujet: `votre site s'appelle « ${String(r.title || '').trim()} » dans Google`,
-    preuve: `Le titre de la page d'accueil de ${site(r)}, celui qui s'affiche dans Google et dans l'onglet du navigateur, est « ${String(r.title || '').trim()} »${quand(r)} : le titre d'installation, jamais remplacé.`,
-    consequence: `Dans les résultats de recherche, votre boutique apparaît donc sous ce nom, sans ce que vous vendez ni où. C'est un réglage, pas une refonte.`,
+    preuve: `Le titre de la page d'accueil de ${site(r)}, celui qui s'affiche dans Google et dans l'onglet du navigateur, est encore « ${String(r.title || '').trim()} »${quand(r)}.`,
+    consequence: `Votre boutique apparaît donc sous ce nom dans les résultats, sans ce que vous vendez ; c'est un réglage rapide.`,
     brut: `<title> = « ${String(r.title || '').trim()} »`
   }),
   mentions_404: (r) => ({
     sujet: `le lien « mentions légales » de ${site(r)} ne mène nulle part`,
-    preuve: `Le lien « mentions légales » en pied de page de ${site(r)} mène à une page en erreur${quand(r)} : la mention existe dans le menu, la page n'existe plus.`,
-    consequence: `Ça arrive souvent après une mise à jour. Comme ces mentions sont obligatoires sur un site marchand, c'est à remettre en place, et c'est rapide.`,
+    preuve: `Le lien « mentions légales » en pied de page de ${site(r)} mène à une page en erreur${quand(r)}.`,
+    consequence: `Ces mentions étant obligatoires sur un site marchand, c'est à remettre en place, et c'est rapide.`,
     brut: 'lien mentions légales -> réponse 4xx/5xx'
   }),
   mobile: (r) => ({
     sujet: `${site(r)} sur téléphone`,
-    preuve: `Ouvert sur un téléphone, ${site(r)} s'affiche comme sur un écran d'ordinateur, en petit, à agrandir au doigt${quand(r)} : la page n'a pas de réglage d'affichage mobile.`,
-    consequence: `Une bonne partie des visites se fait aujourd'hui sur téléphone, et sur cet écran-là la lecture demande un effort. Je me suis dit que vous préféreriez le savoir.`,
+    preuve: `Ouvert sur un téléphone${quand(r)}, ${site(r)} s'affiche comme sur un écran d'ordinateur, en petit : la page n'a pas de réglage d'affichage mobile.`,
+    consequence: `Une bonne partie des visites se fait aujourd'hui sur téléphone ; c'est en général un réglage du thème.`,
     brut: 'aucune balise meta viewport sur la page d\'accueil'
   }),
   nom_mal_orthographie: (r) => {
@@ -121,35 +118,11 @@ const CATALOGUE = {
     const n = { ...n0, attendu: joliNom(n0.attendu) };
     return {
       sujet: `le nom de votre société est mal orthographié sur votre site`,
-      preuve: `Le titre de vos pages, celui qui s'affiche dans Google et dans l'onglet du navigateur, indique « ${n.titre} »${quand(r)}. Votre société s'appelle ${n.attendu}.`,
-      consequence: `C'est la première chose qu'un client voit de vous dans Google. Ça se corrige en cinq minutes, mais il faut savoir que c'est là.`,
+      preuve: `Le titre de vos pages, dans Google et dans l'onglet du navigateur, indique « ${n.titre} », alors que votre société s'appelle ${n.attendu}.`,
+      consequence: `C'est la première chose qu'un client voit de vous ; la correction prend quelques minutes.`,
       brut: `titre « ${n.titre} » / nom de référence « ${n0.attendu} »`
     };
-  },
-  meta_desc_absurde: (r) => ({
-    sujet: `ce que Google affiche sous ${site(r)}`,
-    preuve: `Dans Google, le texte qui s'affiche sous le nom de votre site est « ${String(r.meta_desc_txt || '').slice(0, 120)} »${quand(r)}.`,
-    consequence: `C'est la phrase censée dire ce que vous vendez et donner envie de cliquer. Là, c'est un bout d'adresse ou de fiche technique. Ça se change en quelques minutes dans la boutique.`,
-    brut: `meta description : « ${String(r.meta_desc_txt || '').slice(0, 160)} »`
-  }),
-  urls_non_reecrites: (r) => ({
-    sujet: `les adresses de vos pages`,
-    preuve: `Les adresses de vos pages de catégories sont du type « index.php?id_category=102&controller=category »${quand(r)} : aucun mot dedans, ni le produit, ni la ville.`,
-    consequence: `C'est un réglage de la boutique (les « URL simplifiées »), pas une refonte. Avec des adresses lisibles, Google et vos clients voient de quoi parle chaque page avant de l'ouvrir.`,
-    brut: 'liens internes en index.php?id_category= / controller='
-  }),
-  sitemap_vide: (r) => ({
-    sujet: `votre plan de site est vide`,
-    preuve: `Le fichier sitemap.xml de ${site(r)}, la liste de pages que votre boutique fournit à Google, répond bien mais ne contient aucune adresse${quand(r)}.`,
-    consequence: `Google a d'autres moyens de trouver vos pages, ce n'est donc pas bloquant. Mais ce fichier est fait pour lui signaler vos nouveautés, et vide, il ne lui sert à rien. C'est en général un module à réactiver.`,
-    brut: r.sitemap_detail || 'sitemap.xml : 200, aucune balise <loc>'
-  }),
-  copyright_fige: (r) => ({
-    sujet: `© ${r.copyright_annee} en bas de ${site(r)}`,
-    preuve: `Le pied de page de ${site(r)} affiche encore « © ${r.copyright_annee} »${quand(r)}.`,
-    consequence: `Ce n'est qu'un détail, mais il est visible sur chaque page et il date votre site d'une année qui n'est pas la bonne.`,
-    brut: `copyright © ${r.copyright_annee}`
-  })
+  }
 };
 
 // Contexte technique : une phrase, seulement à partir d'une mesure.
@@ -168,6 +141,10 @@ function contexteTechnique(r, flags) {
   if (keys.has('spf') && keys.has('dmarc')) return `Le domaine n'a ni SPF ni DMARC : les emails envoyés depuis votre adresse ont plus de chances de finir en spam.`;
   return '';
 }
+
+// Ce qu'on ne dit JAMAIS à un prospect (familier, culpabilisant, alarmiste ou donneur de leçon).
+// Vérifié par les tests sur tout le catalogue.
+const FORMULES_INTERDITES = /relancerai pas|un simple « ?oui ?»|simple oui|sauté aux yeux|de l'intérieur|personne ne suit|semaines à apparaître|écran rouge|plein écran|encore ouvert|à mon compte|rien de grave|si je ne dis pas de bêtise|vous perdez|perte de clients/i;
 
 // Correspondance SIRENE jugée sûre : seule base pour personnaliser (nom, dirigeant, ville).
 // « probable » ou « douteux » -> aucune personnalisation : un prénom ou une ville faux, et le
@@ -247,24 +224,29 @@ function presentation(r) {
   const prenom = (process.env.OUTREACH_SENDER_NAME || '').trim();
   const entreprise = (process.env.OUTREACH_SENDER_COMPANY || 'PixFeed').trim();
   const ville = villeConfirmee(r);
-  const ou = ville ? `, notamment pour des commerçants et artisans autour de ${ville}` : '';
+  const ou = ville ? `, notamment autour de ${ville}` : '';
   return prenom
     ? `Je m'appelle ${prenom}, développeur web indépendant (${entreprise}), spécialisé dans ${specialite(r)}${ou}.`
     : `Je suis développeur web indépendant (${entreprise}), spécialisé dans ${specialite(r)}${ou}.`;
 }
 
-function accroche(r) {
-  const nom = nomBoutique(r);
-  const p = String(r.platform || '');
-  const quoi = /prestashop|woocommerce/i.test(p) ? `des boutiques ${p} de votre secteur` : 'des sites de votre secteur';
-  const decouverte = nom ? `après avoir découvert ${nom} en parcourant ${quoi}` : `après avoir découvert ${site(r)} en parcourant ${quoi}`;
-  return `Je me permets de vous écrire ${decouverte}. En regardant votre ${typeSite(r)}, j'ai relevé une chose que vous n'avez peut-être pas vue de l'intérieur :`;
+// Motif de contact : factuel, sans formule qui juge ou qui flatte.
+function motif(r, c) {
+  const nom = nomBoutique(r) || site(r);
+  const date = r.analyse_le ? ` le ${new Date(r.analyse_le).toLocaleDateString('fr-FR')}` : '';
+  return `En consultant ${nom}${date}, j'ai relevé un point à vous signaler. ${c.preuve} ${c.consequence}`;
 }
 
-// Fin : une question, une sortie facile, le lien vers l'offre. Pas de pression.
+// Proposition + question + refus discret. Pas de pression, pas de « simple oui ».
 function conclusion(r) {
   const url = (process.env.OUTREACH_OFFER_URL || 'https://pixfeed.net/maintenance/').trim();
-  return `Je souhaitais aussi savoir si quelqu'un assure déjà les mises à jour, les sauvegardes et le suivi technique de votre ${typeSite(r)}. Si c'est le cas, tant mieux, et je ne vous relancerai pas. Sinon, voici ce que je propose : ${url}. Un simple « oui » en réponse suffit pour qu'on en parle.`;
+  return [
+    `Si personne n'assure le suivi technique de votre ${typeSite(r)} (mises à jour, sauvegardes), je peux m'en charger ; mon offre de maintenance est détaillée ici : ${url}`,
+    '',
+    'Est-ce un sujet pour vous en ce moment ?',
+    '',
+    "Si vous ne souhaitez plus être contacté, n'hésitez pas à me le signaler."
+  ].join('\n');
 }
 
 /**
@@ -284,31 +266,27 @@ function buildProofEmail(r, lead) {
     return {
       ok: false,
       raison: indices.length
-        ? `Aucune preuve vérifiable en dix secondes sur ce site. Seulement des indices (${indices.join(', ')}) : un email générique grillerait le prospect.`
-        : 'Aucun défaut visible détecté sur ce site : pas de matière pour un email honnête.',
+        ? `Aucune preuve solide sur ce site, seulement des indices (${indices.join(', ')}). Aucun email généré : on ne contacte pas un prospect sur un détail ou une supposition.`
+        : 'Aucun défaut visible sur ce site. Aucun email généré : rien de vérifié à signaler.',
       indices
     };
   }
   const key = preuvesTrouvees[0];
   const c = CATALOGUE[key](r);
+  // Le contexte technique (PHP déclaré, version CMS déduite) ne va PLUS dans l'email : ce sont
+  // des indices, ils restent dans le bloc de traçabilité pour la relecture.
   const contexte = contexteTechnique(r, flags);
   const body = [
     salutation(r, lead),
     '',
     presentation(r),
     '',
-    accroche(r),
-    '',
-    c.preuve,
-    '',
-    c.consequence,
-    contexte ? '' : null,
-    contexte ? `Pour être complet : ${contexte.charAt(0).toLowerCase()}${contexte.slice(1)}` : null,
+    motif(r, c),
     '',
     conclusion(r),
     '',
     'Bonne journée à vous,'
-  ].filter((l) => l !== null).join('\n');
+  ].join('\n');
   // Traçabilité : ce qui a été mesuré, où, quand, avec quel degré de confiance. Affiché sous
   // l'email pour que la relecture humaine puisse vérifier avant d'envoyer.
   const detail = {
@@ -331,4 +309,4 @@ function buildProofEmail(r, lead) {
   };
 }
 
-module.exports = { buildProofEmail, PREUVES_ORDRE, CATALOGUE, presentation, joliNom, joliVille, nomCourt, salutation };
+module.exports = { buildProofEmail, PREUVES_ORDRE, CATALOGUE, presentation, joliNom, joliVille, nomCourt, salutation, FORMULES_INTERDITES };

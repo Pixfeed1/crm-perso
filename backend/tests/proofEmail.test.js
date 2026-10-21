@@ -11,8 +11,8 @@ test('Equip\'Tout : la preuve retenue est le nom mal orthographié, avec le nom 
   assert.equal(d.preuve, 'nom_mal_orthographie');
   assert.match(d.subject, /mal orthographié/);
   assert.match(d.body, /Bonjour Maxime Lambin,/);
-  assert.match(d.body, /« Equit Tout »\. Votre société s'appelle Equip'Tout\./);
-  assert.match(d.body, /découvert Equip'Tout en parcourant des boutiques PrestaShop/);
+  assert.match(d.body, /« Equit Tout », alors que votre société s'appelle Equip'Tout\./);
+  assert.match(d.body, /En consultant Equip'Tout,/);
   assert.match(d.body, /pixfeed\.net\/maintenance/);
   assert.equal(d.detail.signal, 'nom_mal_orthographie');
   assert.match(d.detail.identite, /SIRENE sûre/);
@@ -33,11 +33,9 @@ test('gérant douteux (SIRENE) : pas de nom dans la salutation ; contexte techni
   const d = buildProofEmail(r, {});
   assert.equal(d.preuve, 'http_non_securise');
   assert.match(d.body, /^Bonjour,\n/);
-  assert.match(d.body, /découvert Gourmands d'Antan en parcourant/);
-  assert.equal((d.body.match(/Pour être complet/g) || []).length, 1);
-  // PHP : une déclaration du serveur, jamais une certitude.
-  assert.match(d.body, /d'après l'entête que renvoie votre serveur, le site tournerait sur PHP 5\.4/);
-  assert.match(d.body, /votre hébergeur pourra confirmer/);
+  assert.match(d.body, /En consultant Gourmands d'Antan,/);
+  // PHP : un indice déclaré par le serveur. Plus dans le corps de l'email, seulement dans la trace.
+  assert.doesNotMatch(d.body, /PHP/);
   assert.match(d.detail.contexte, /PHP déclaré par l'entête/);
 });
 
@@ -81,11 +79,9 @@ test('correspondance SIRENE probable ou douteuse : ni nom, ni ville, ni raison s
 
 test('portées sobres : aucune affirmation sur Google ou les clients qu\'on ne peut pas démontrer', () => {
   const cas = [
-    { domain: 'a.fr', title: 'A', sitemap: 'vide', sitemap_detail: 'https://a.fr/sitemap.xml -> 200 application/xml, 0 <loc>', http_status: 200, analyse_le: '2026-10-20T08:00:00Z' },
-    { domain: 'b.fr', title: 'B', ssl_ok: true, ssl_expire_jours: 12, http_status: 200 },
+    { domain: 'b.fr', title: 'B', ssl_ok: true, ssl_expire_jours: 12, http_status: 200, analyse_le: '2026-10-20T08:00:00Z' },
     { domain: 'c.fr', title: 'C', ssl_ok: false, ssl_erreur: 'certificat valable pour un autre nom', http_status: 200 },
-    { domain: 'd.fr', title: 'D', mobile_ok: false, http_status: 200 },
-    { domain: 'e.fr', title: 'E', copyright_annee: 2019, http_status: 200 }
+    { domain: 'd.fr', title: 'D', mobile_ok: false, http_status: 200 }
   ];
   for (const r of cas) {
     const d = buildProofEmail(r, {});
@@ -93,12 +89,12 @@ test('portées sobres : aucune affirmation sur Google ou les clients qu\'on ne p
     assert.doesNotMatch(d.body, /semaines à apparaître|écran rouge|plein écran|plus de la moitié|ferment avant|encore ouvert|perd(ez|re) des clients/i, r.domain);
     assert.ok(d.detail.brut, r.domain);
   }
-  const sm = buildProofEmail(cas[0], {});
-  assert.match(sm.body, /constaté le 20\/10\/2026/);
-  assert.match(sm.body, /pas bloquant/);
-  assert.equal(sm.detail.brut, cas[0].sitemap_detail);
-  const bientot = buildProofEmail(cas[1], {});
-  assert.match(bientot.body, /renouvellement est automatique/);
-  const inval = buildProofEmail(cas[2], {});
+  const bientot = buildProofEmail(cas[0], {});
+  assert.match(bientot.body, /En consultant b\.fr le 20\/10\/2026/);
+  assert.match(bientot.body, /le plus souvent automatique/);
+  const inval = buildProofEmail(cas[1], {});
   assert.match(inval.body, /certificat valable pour un autre nom/);
+  // Copyright ancien et sitemap vide ne sont plus des motifs d'email.
+  assert.equal(buildProofEmail({ domain: 'e.fr', title: 'E', copyright_annee: 2019, http_status: 200 }, {}).ok, false);
+  assert.equal(buildProofEmail({ domain: 'a.fr', title: 'A', sitemap: 'vide', http_status: 200 }, {}).ok, false);
 });

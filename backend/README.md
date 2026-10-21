@@ -75,9 +75,22 @@ Les emails sont assemblés par le code (`services/proofEmailService.js`), sans m
   puis seulement les https sans vérification. `ssl_ok` vaut « non » uniquement sur une erreur
   TLS réelle (`ssl_erreur` en donne la raison), vide si https n'a échoué que pour une raison
   réseau. `https_final` reste un fait : la page finale est servie en HTTP.
+- **Preuves retenues** (`PREUVE_KEYS`) : constatées, visibles par le gérant, d'impact réel :
+  accueil 404, erreur serveur, noindex / robots, servi en HTTP (y compris « certificat valide mais
+  redirigé vers http »), certificat expiré / invalide / bientôt expiré, nom mal orthographié, titre
+  d'installation, lien mentions légales cassé, pas d'affichage mobile. Copyright ancien, description
+  Google, adresses non réécrites, sitemap vide, PHP, SPF, DMARC : **indices**, jamais le motif d'un
+  email. Sans preuve, le mode refuse de générer.
 - **PHP** : `serveur_php` vient d'une entête (`php_source` = X-Powered-By ou Server). C'est une
-  déclaration ; l'email la rapporte comme telle (« votre serveur annonce… »), jamais comme une
-  faille certaine, et seulement en contexte, jamais comme preuve.
+  déclaration : elle n'apparaît plus dans le corps de l'email, seulement dans le bloc de traçabilité.
+- **Ton et structure** (tous les modes : preuve, Claude libre, création) : présentation courte en
+  « développeur web indépendant (PixFeed), spécialisé dans la maintenance… », motif factuel daté,
+  proposition de maintenance avec lien (`OUTREACH_OFFER_URL`), une question, refus discret
+  (« Si vous ne souhaitez plus être contacté, n'hésitez pas à me le signaler. »). 80 à 120 mots,
+  vouvoiement. Formules interdites vérifiées par test (`FORMULES_INTERDITES`) : « je ne vous
+  relancerai pas », « un simple oui suffit », « sauté aux yeux », « de l'intérieur », « personne ne
+  suit », « à mon compte », etc. Non-régression : `tests/emailsNonRegression.test.js` (AGRIGOM,
+  Atelier du Sucre, Au Pied Relax, faux sitemap vide).
 - **Sitemap** : « vide » seulement sur un vrai document XML de sitemap sans `<loc>` ; une page
   HTML en 200 est un sitemap absent. Les sitemaps déclarés dans robots.txt et les emplacements
   usuels (Yoast, module PrestaShop) sont lus avant de conclure. Aucun délai d'indexation ni perte

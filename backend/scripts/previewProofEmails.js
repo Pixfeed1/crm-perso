@@ -62,7 +62,7 @@ for (const raw of rows) {
   console.log(`-> preuve retenue : ${d.preuve} | brut : ${d.detail.brut} | identité : ${d.detail.identite}`);
   console.log(`\nObjet : ${d.subject}\n`);
   console.log(d.body);
-  console.log('');
+  console.log(`\n[${d.body.split(/\s+/).filter(Boolean).length} mots]`);
 }
 if (n === 0) console.log(only ? `Domaine ${only} absent du fichier.` : 'Aucune ligne.');
 })();

@@ -11,10 +11,10 @@ const { joliNom, nomCourt } = require('./proofEmailService');
 function presentation(s) {
   const prenom = (process.env.OUTREACH_SENDER_NAME || '').trim();
   const entreprise = (process.env.OUTREACH_SENDER_COMPANY || 'PixFeed').trim();
-  const ou = s.city ? `, autour de ${String(s.city).trim()}` : '';
+  const ou = s.city && s.match_confidence === 'sur' ? `, notamment autour de ${String(s.city).trim()}` : '';
   return prenom
-    ? `Je m'appelle ${prenom}, je fais des sites web à mon compte (${entreprise}) pour des artisans, commerçants et petites entreprises${ou}.`
-    : `Je fais des sites web à mon compte (${entreprise}) pour des artisans, commerçants et petites entreprises${ou}.`;
+    ? `Je m'appelle ${prenom}, développeur web indépendant (${entreprise}), spécialisé dans la création et la maintenance technique de sites professionnels${ou}.`
+    : `Je suis développeur web indépendant (${entreprise}), spécialisé dans la création et la maintenance technique de sites professionnels${ou}.`;
 }
 
 function nomEntreprise(signal, lead) {
@@ -58,9 +58,11 @@ function buildCreationEmail(signal, lead) {
     '',
     contexte,
     '',
-    "C'est en général le moment où l'on se demande par où commencer : faire soi-même, prendre un modèle tout fait, ou confier ça à quelqu'un. Je ne sais pas où vous en êtes, et c'est justement ma question.",
+    "Si le site n'est pas encore confié à quelqu'un, je peux vous proposer une première version simple, propre et trouvable sur Google, avec un devis clair.",
     '',
-    "Si un site est déjà prévu avec quelqu'un, tant mieux, et je ne vous relancerai pas. Sinon, je peux vous dire en dix minutes de téléphone ce qu'il faudrait pour une première version simple, propre et trouvable sur Google, et ce que ça coûterait. Un simple « oui » en réponse suffit.",
+    'Avez-vous déjà prévu quelque chose pour ce site ?',
+    '',
+    "Si vous ne souhaitez plus être contacté, n'hésitez pas à me le signaler.",
     '',
     'Bonne journée à vous,'
   ].join('\n');

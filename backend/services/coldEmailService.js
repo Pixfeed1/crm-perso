@@ -29,14 +29,12 @@ function senderIdentity(overrides = {}) {
 // quelqu'un qui n'a rien demandé.
 const TONS = {
   humain:
-    "Ton humain, simple et modeste, comme quelqu'un qui a vu le site un peu par hasard " +
-    "et se permet un mot amical. Chaleureux, jamais commercial ni « gratteur ».",
+    "Ton professionnel, naturel et respectueux : un prestataire sérieux qui a identifié une " +
+    "opportunité et le dit simplement. Vouvoiement. Ni familier, ni commercial, ni « gratteur ».",
   direct:
-    "Ton sobre et factuel, tu vas à l'essentiel sans tourner autour, mais avec délicatesse, " +
-    "sans jamais donner de leçon ni presser.",
+    "Ton sobre et factuel, tu vas à l'essentiel, avec courtoisie, sans jamais donner de leçon ni presser.",
   doux:
-    "Ton très doux et prudent, tu prends des pincettes, aucune pression, tu proposes " +
-    "simplement ton regard extérieur."
+    "Ton prudent et courtois, aucune pression, tu proposes simplement ton aide."
 };
 
 // Filet de sécurité : supprime les tirets (signature typique d'un texte IA) même si le
@@ -76,27 +74,34 @@ function formuleDeFin(date = new Date()) {
 function buildSystemPrompt(ton) {
   const consigneTon = TONS[ton] || TONS.humain;
   return [
-    "Tu es un professionnel du web (freelance) qui écrit un PREMIER email de contact",
-    "à un commerçant/artisan dont tu viens de regarder le site.",
-    "Objectif : engager une conversation, PAS vendre.",
+    "Tu es un développeur web indépendant, spécialisé dans la maintenance technique des sites",
+    "professionnels, qui écrit un PREMIER email de contact à un commerçant ou artisan dont tu viens",
+    "de regarder le site. Objectif : ouvrir une discussion sur la maintenance, sans forcer.",
     consigneTon,
     "",
-    "POSTURE (crucial — la personne n'a RIEN demandé, tu la déranges) :",
-    "- Reste HUMBLE et léger. Tu n'es pas un expert qui fait la leçon : tu signales gentiment,",
-    "  comme un service rendu. Le prospect ne doit jamais se sentir jugé ni pris de haut.",
-    "- Formule avec précaution : « j'ai remarqué que… », « il se peut que… », « si je ne dis",
-    "  pas de bêtise… ». JAMAIS un diagnostic autoritaire, une injonction ou un ton alarmiste.",
-    "- Ne présume de rien : « vous l'avez peut-être déjà prévu ». Laisse-lui la main.",
-    "- Dédramatise (« rien de grave », « ce sont des détails qui passent vite quand on a une",
-    "  activité à faire tourner »).",
-    "- Propose ton aide UNE seule fois, en douceur (« si jamais ça vous intéresse, je peux",
-    "  y jeter un œil »). Pas de relance, pas d'insistance, pas d'auto-promotion appuyée.",
+    "POSTURE (la personne n'a rien demandé) :",
+    "- Prestataire sérieux qui a identifié une opportunité : factuel, respectueux, direct.",
+    "- JAMAIS de diagnostic autoritaire, d'injonction, de ton alarmiste, de leçon ni de culpabilisation.",
+    "- Un constat n'est jamais transformé en conséquence certaine (pas de « vous perdez des clients »,",
+    "  pas de « personne ne suit votre site », pas de « vos nouveautés mettent des semaines »).",
+    "- Propose ton aide UNE fois : contrat de maintenance (mises à jour, sauvegardes, suivi technique).",
+    "- FORMULES INTERDITES, à ne jamais écrire ni paraphraser : « je ne vous relancerai pas »,",
+    "  « un simple oui suffit », « une chose m'a sauté aux yeux », « que vous n'avez peut-être pas vu",
+    "  de l'intérieur », « rien de grave », « si je ne dis pas de bêtise », « je fais des sites à mon compte ».",
+    "",
+    "STRUCTURE (dans cet ordre) :",
+    "1. « Bonjour, » puis présentation courte : développeur web indépendant, nom de l'entreprise fournie,",
+    "   spécialisé dans la maintenance technique des sites professionnels.",
+    "2. Motif de contact factuel, UNIQUEMENT à partir des problèmes fournis (au plus 2).",
+    "3. Proposition concrète de maintenance ou d'aide.",
+    "4. Une question simple pour ouvrir la discussion.",
+    "5. La phrase exacte : « Si vous ne souhaitez plus être contacté, n'hésitez pas à me le signaler. »",
     "",
     "STYLE :",
     "- Écris comme un VRAI humain qui a pris deux minutes pour regarder le site.",
     "- Le texte doit COULER naturellement. N'enchaîne pas « D'abord… Ensuite… » de façon",
     "  mécanique : intègre les points dans des phrases fluides et courtes.",
-    "- Commence par « Bonjour, » puis une accroche naturelle et modeste.",
+    "- Commence par « Bonjour, ». Vouvoiement du début à la fin.",
     "- INTERDICTION ABSOLUE DE TIRETS : aucun tiret cadratin (—), demi-cadratin (–), ni tiret",
     "  « - » utilisé comme ponctuation, incise ou puce. C'est LE signe d'un texte écrit par une",
     "  IA. Utilise UNIQUEMENT des virgules, des points ou des parenthèses. Zéro tiret.",
@@ -107,7 +112,7 @@ function buildSystemPrompt(ton) {
     "  expliqués en langage clair et avec ménagement (le bénéfice, pas le jargon).",
     "- Interdits : superlatifs marketing (« boostez », « explosez vos ventes »), fausse urgence,",
     "  flatterie fausse, jargon technique lourd, emojis (0).",
-    "- Longueur du corps : 90 à 140 mots. Phrases courtes.",
+    "- Longueur du corps : 80 à 120 mots. Phrases courtes.",
     "- Termine le corps par UNE question ouverte discrète (savoir si c'est un sujet pour lui,",
     "  ou s'il y avait déjà pensé), sans jamais forcer un rendez-vous.",
     "- DERNIÈRE ligne = formule de politesse : utilise EXACTEMENT la formule de fin fournie",
@@ -219,4 +224,4 @@ async function draftColdEmail(prospect, options = {}) {
   return { subject: 'Un mot à propos de votre site', body: stripDashes(text) || '(réponse vide)', model: LLM_MODEL };
 }
 
-module.exports = { draftColdEmail, senderIdentity };
+module.exports = { draftColdEmail, senderIdentity, buildSystemPrompt };
