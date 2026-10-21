@@ -162,12 +162,13 @@ const ProspectEmails = ({ lead, autoCompose = false }) => {
     }
   };
 
-  // Deep-link « Prospecter » depuis le Crawl : ouvre la modale + lance Claude, une seule fois.
+  // Deep-link « Prospecter » depuis le Crawl ou les Signaux : ouvre la modale, une seule fois,
+  // SANS générer. C'est Marc qui choisit le bouton (preuve, gratuit ; ou Claude, payant).
   const autoFired = useRef(false);
   useEffect(() => {
     if (autoCompose && !autoFired.current && lead && lead.id) {
       autoFired.current = true;
-      (async () => { await openModal(); generateWithClaude('preuve'); })();
+      openModal();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoCompose, lead]);
