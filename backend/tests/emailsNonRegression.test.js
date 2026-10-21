@@ -19,7 +19,9 @@ test('AGRIGOM : certificat valide mais site renvoyé en http -> preuve exacte, d
   const d = buildProofEmail(r, {});
   assert.equal(d.preuve, 'http_non_securise');
   assert.match(d.body, /^Bonjour Franck Savary,/);
-  assert.match(d.body, /En consultant Agrigom le 21\/10\/2026/);
+  assert.match(d.body, /En consultant Agrigom, j'ai relevé/);
+  assert.doesNotMatch(d.body, /21\/10\/2026/); // la date reste dans la trace, pas dans l'email
+  assert.equal(d.detail.analyse_le, '2026-10-21T14:21:31Z');
   assert.match(d.body, /renvoyé vers http:\/\/www\.agrigom\.fr/);
   assert.doesNotMatch(d.body, /CREVEC|Crevec|PHP/);           // ville non confirmée, PHP hors du corps
   assert.match(d.detail.contexte, /PHP déclaré par l'entête X-Powered-By/); // mais tracé pour la relecture
@@ -31,7 +33,7 @@ test('Atelier du Sucre : deux candidats SIRENE à égalité -> aucune personnali
     http_status: 200, platform: 'PrestaShop', sirene_match: 'probable', raison_sociale: "L'ATELIER SUCRE", gerant: 'X Y', ville: 'MANOSQUE', code_postal: '04100', analyse_le: '2026-10-21T15:03:02Z' };
   const d = buildProofEmail(r, {});
   assert.match(d.body, /^Bonjour,\n/);
-  assert.match(d.body, /En consultant Atelier du sucre le 21\/10\/2026,/);
+  assert.match(d.body, /En consultant Atelier du sucre,/);
   assert.doesNotMatch(d.body, /Manosque|MANOSQUE|X Y|ATELIER SUCRE/);
 });
 
@@ -59,7 +61,7 @@ test('faux sitemap vide : une page HTML en 200 est « absent » côté crawler ;
   assert.ok(vide.indices.includes('sitemap vide'));
 });
 
-test('ton : aucune formule interdite, 80 à 128 mots, structure présentation / motif / proposition / question / refus, sur TOUTES les preuves', () => {
+test('ton : aucune formule interdite, 90 à 150 mots, structure présentation / motif / proposition / question / refus, sur TOUTES les preuves', () => {
   const base = { domain: 'exemple.fr', title: 'Boutique Exemple', http_status: 200, platform: 'PrestaShop', ssl_ok: true, https_final: true, analyse_le: '2026-10-21T10:00:00Z' };
   const cas = {
     accueil_404: { http_status: 404 },
@@ -81,10 +83,11 @@ test('ton : aucune formule interdite, 80 à 128 mots, structure présentation / 
     assert.doesNotMatch(d.body, FORMULES_INTERDITES, key);
     assert.doesNotMatch(d.subject, FORMULES_INTERDITES, key);
     const n = mots(d.body);
-    assert.ok(n >= 80 && n <= 128, `${key} : ${n} mots`);
+    assert.ok(n >= 90 && n <= 150, `${key} : ${n} mots`);
     assert.match(d.body, /développeur web indépendant et je dirige PixFeed, spécialisé dans la maintenance et le dépannage de sites professionnels\./);
     assert.match(d.body, /maintenance/);
-    assert.match(d.body, /Est-ce un sujet pour vous en ce moment \?/);
+    assert.match(d.body, /disposez déjà d'un prestataire pour assurer ce suivi/);
+    assert.doesNotMatch(d.body, /Si personne n'assure|en parcourant|\d{2}\/\d{2}\/\d{4}/);
     assert.match(d.body, /Si vous ne souhaitez plus être contacté, n'hésitez pas à me le signaler\./);
     assert.match(d.body, /Bonne journée à vous,$/);
     assert.doesNotMatch(d.body, /\btu\b|\bton\b|\btes\b/i);
@@ -137,7 +140,9 @@ test('Batterie4moto : mesure HTTPS de l\'ancien crawl non confirmée -> pas d\'a
   assert.ok(d.maintenance && d.maintenance.ok);
   assert.doesNotMatch(d.maintenance.body, /HTTP|cadenas|certificat|imposer|Non sécurisé/);
   assert.match(d.maintenance.body, /développeur web indépendant et je dirige PixFeed/);
-  assert.match(d.maintenance.body, /Un prestataire assure-t-il déjà ce suivi/);
+  assert.match(d.maintenance.body, /J'ai découvert votre boutique Batterie4moto\./);
+  assert.match(d.maintenance.body, /disposez déjà d'un prestataire/);
+  assert.doesNotMatch(d.maintenance.body, /en parcourant|\d{2}\/\d{2}\/\d{4}/);
   assert.doesNotMatch(d.maintenance.body, FORMULES_INTERDITES);
   // Crawl frais : https://www a répondu en strict -> aucune preuve HTTPS, boutique saine.
   const frais = typedResult({ domain: 'batterie4moto.fr', title: 'Batterie4moto', http_status: '200', final_url: 'https://www.batterie4moto.fr/', https_final: 'oui', ssl_ok: 'oui', platform: 'PrestaShop', analyse_le: '2026-10-21T16:00:00+00:00',
@@ -175,5 +180,5 @@ test('Batterie4moto (crawl frais) : certificat d\'hébergeur présenté sur les 
   assert.match(d.body, /ne s'ouvre donc qu'en HTTP, sans cadenas/);
   assert.doesNotMatch(d.body, /imposer|Dans la plupart des cas/);
   assert.match(d.detail.brut, /variantes : https:\/\/batterie4moto\.fr -> erreur: ConnectError: \| https:\/\/www\.batterie4moto\.fr -> TLS/);
-  assert.ok(mots(d.body) <= 140, String(mots(d.body)));
+  assert.ok(mots(d.body) <= 155, String(mots(d.body)));
 });

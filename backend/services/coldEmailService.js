@@ -56,9 +56,8 @@ function buildSystemPrompt(ton) {
     '    telles quelles, sans rien ajouter ni déduire. Si AUCUNE preuve n\'est fournie, écris une observation',
     '    neutre sur la boutique (ce qu\'elle vend, d\'après son nom et sa technologie), SANS mentionner le',
     '    moindre défaut, risque, version, certificat ou réglage.',
-    '  - "question" : UNE question courte et ouverte pour savoir si un prestataire assure déjà le suivi',
-    '    technique, ou si le sujet intéresse.',
     '  - "subject" : un objet d\'email court et factuel, sans point d\'exclamation.',
+    'Le code ajoute ensuite la proposition de maintenance et la question : n\'en écris aucune.',
     TONS[ton] || TONS.humain,
     'Vouvoiement. Français. Aucun tiret (—, –, ou « - » de ponctuation) : virgules et points seulement.',
     'INTERDIT : alarmisme, leçon, culpabilisation, flatterie, superlatifs, emojis, toute conséquence non',
@@ -66,8 +65,8 @@ function buildSystemPrompt(ton) {
     'toute information absente des données (versions, PHP, certificat, Google, référencement).',
     'INTERDIT aussi : « une structure », « à mon compte », « je fais des sites », « sauté aux yeux »,',
     '« de l\'intérieur », « je ne vous relancerai pas », « un simple oui suffit », « rien de grave ».',
-    'Ne te présente pas, ne signe pas, ne salue pas : seulement motif, question, subject.',
-    'Réponds UNIQUEMENT avec un objet JSON valide : {"subject": "...", "motif": "...", "question": "..."}'
+    'Ne te présente pas, ne signe pas, ne salue pas : seulement motif et subject.',
+    'Réponds UNIQUEMENT avec un objet JSON valide : {"subject": "...", "motif": "..."}'
   ].join('\n');
 }
 
@@ -125,7 +124,7 @@ function validerTexte(texte, avecPreuves) {
 }
 
 // Assemblage déterministe : mêmes briques que l'email par la preuve.
-function assembleColdEmail({ row, lead, motif, question }) {
+function assembleColdEmail({ row, lead, motif }) {
   const r = row || { domain: (lead && (lead.company || lead.website)) || '', platform: lead && lead.platform };
   return [
     proof.salutation(r, lead),
@@ -134,9 +133,7 @@ function assembleColdEmail({ row, lead, motif, question }) {
     '',
     stripDashes(motif).trim(),
     '',
-    proof.conclusion(r).split('\n')[0], // proposition + lien
-    '',
-    stripDashes(question).trim() || 'Est-ce un sujet pour vous en ce moment ?',
+    proof.conclusion(r), // proposition, question, lien : mêmes phrases que l'email par la preuve
     '',
     "Si vous ne souhaitez plus être contacté, n'hésitez pas à me le signaler.",
     '',
@@ -182,13 +179,12 @@ async function draftColdEmail(input, options = {}) {
     const parsed = parseJsonLoose(text);
     if (!parsed || !parsed.motif) { dernierRejet = 'réponse illisible'; continue; }
     const motif = stripDashes(parsed.motif);
-    const question = stripDashes(parsed.question || '');
-    dernierRejet = validerTexte(`${motif} ${question}`, preuves.length > 0);
+    dernierRejet = validerTexte(motif, preuves.length > 0);
     if (dernierRejet) continue;
     const subject = stripDashes(String(parsed.subject || '').trim()).replace(/!+/g, '').trim();
     return {
       subject: subject && !proof.FORMULES_INTERDITES.test(subject) ? subject : `Votre ${proof.typeSite(row || {})} ${(row && row.domain) || lead.company || ''}`.trim(),
-      body: assembleColdEmail({ row, lead, motif, question }),
+      body: assembleColdEmail({ row, lead, motif }),
       model: LLM_MODEL,
       preuves_utilisees: preuves
     };

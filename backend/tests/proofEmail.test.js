@@ -33,7 +33,7 @@ test('gérant douteux (SIRENE) : pas de nom dans la salutation ; contexte techni
   const d = buildProofEmail(r, {});
   assert.equal(d.preuve, 'http_non_securise');
   assert.match(d.body, /^Bonjour,\n/);
-  assert.match(d.body, /En consultant Gourmands d'Antan le 21\/10\/2026,/);
+  assert.match(d.body, /En consultant Gourmands d'Antan,/);
   // PHP : un indice déclaré par le serveur. Plus dans le corps de l'email, seulement dans la trace.
   assert.doesNotMatch(d.body, /PHP/);
   assert.match(d.detail.contexte, /PHP déclaré par l'entête/);
@@ -90,7 +90,8 @@ test('portées sobres : aucune affirmation sur Google ou les clients qu\'on ne p
     assert.ok(d.detail.brut, r.domain);
   }
   const expire = buildProofEmail(cas[0], {});
-  assert.match(expire.body, /En consultant b\.fr le 20\/10\/2026/);
+  assert.match(expire.body, /En consultant b\.fr,/);
+  assert.equal(expire.detail.analyse_le, '2026-10-20T08:00:00Z');
   assert.match(expire.body, /expiré depuis 12 jours/);
   assert.match(expire.body, /Si le renouvellement est déjà programmé/);
   const inval = buildProofEmail(cas[1], {});

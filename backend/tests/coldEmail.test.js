@@ -15,16 +15,17 @@ test('la présentation vient du code, jamais du modèle : une paraphrase du mod�
   process.env.OUTREACH_SENDER_NAME = 'Marc'; process.env.OUTREACH_SENDER_COMPANY = 'PixFeed';
   const row = { domain: 'agrigom.fr', title: 'Accueil - AGRIGOM SAS', https_final: false, ssl_ok: true, final_url: 'http://www.agrigom.fr/', http_status: 200, platform: 'PrestaShop' };
   const d = await cold.draftColdEmail({ row, lead: {} }, {
-    callModel: fake([{ subject: 'Votre boutique en ligne', motif: "Je dirige une structure spécialisée. En ouvrant agrigom.fr, on arrive sur la version http du site, sans cadenas.", question: 'Un prestataire assure-t-il déjà le suivi technique de votre boutique ?' }])
+    callModel: fake([{ subject: 'Votre boutique en ligne', motif: "Je dirige une structure spécialisée. En ouvrant agrigom.fr, on arrive sur la version http du site, sans cadenas." }])
   }).catch((e) => e);
   // « une structure » dans le motif -> rejeté au premier essai ; le second (même réponse) aussi -> refus.
   assert.ok(d instanceof Error); assert.equal(d.status, 422); assert.match(d.message, /présentation paraphrasée/);
   const ok = await cold.draftColdEmail({ row, lead: {} }, {
-    callModel: fake([{ subject: 'Votre boutique en ligne', motif: "En ouvrant agrigom.fr, on arrive sur la version http du site, sans cadenas.", question: 'Un prestataire assure-t-il déjà le suivi technique de votre boutique ?' }])
+    callModel: fake([{ subject: 'Votre boutique en ligne', motif: "En ouvrant agrigom.fr, on arrive sur la version http du site, sans cadenas." }])
   });
   assert.match(ok.body, PRESENTATION);
   assert.match(ok.body, /^Bonjour,\n\nJe suis Marc/);
   assert.match(ok.body, /pixfeed\.net\/maintenance/);
+  assert.match(ok.body, /disposez déjà d'un prestataire/);
   assert.match(ok.body, /Si vous ne souhaitez plus être contacté/);
   assert.match(ok.body, /Bonne journée à vous,$/);
   assert.doesNotMatch(ok.body, FORMULES_INTERDITES);
@@ -41,8 +42,8 @@ test('sans preuve : le modèle ne reçoit aucun indice, et tout sujet technique 
     callModel: async () => {
       appels++;
       return JSON.stringify(appels === 1
-        ? { subject: 'Sécurité', motif: 'Votre certificat de sécurité expire dans 21 jours, ce qui affichera une alerte, et votre PHP est obsolète.', question: 'Aviez-vous envisagé une maintenance ?' }
-        : { subject: "Votre boutique Au Terroir d'Anne Flo", motif: "J'ai découvert Au Terroir d'Anne Flo et votre service de commande de produits locaux en ligne.", question: 'Un prestataire assure-t-il déjà le suivi technique de votre boutique ?' });
+        ? { subject: 'Sécurité', motif: 'Votre certificat de sécurité expire dans 21 jours, ce qui affichera une alerte, et votre PHP est obsolète.' }
+        : { subject: "Votre boutique Au Terroir d'Anne Flo", motif: "J'ai découvert Au Terroir d'Anne Flo et votre service de commande de produits locaux en ligne." });
     }
   });
   assert.equal(appels, 2);
@@ -73,8 +74,8 @@ test('validation : dix prospects différents, dix emails corrects dans les deux 
     assert.match(d.body, PRESENTATION, r.domain);
     assert.doesNotMatch(d.body, FORMULES_INTERDITES, r.domain);
     assert.doesNotMatch(d.body, /PHP|structure/, r.domain);
-    assert.ok(mots(d.body) <= 130, `${r.domain} : ${mots(d.body)} mots`);
-    const c = await cold.draftColdEmail({ row: r, lead: {} }, { callModel: fake([{ subject: 'Votre boutique', motif: 'En consultant votre boutique, j\'ai relevé le point suivant, que vous connaissez peut-être déjà.', question: 'Un prestataire assure-t-il déjà le suivi technique de votre boutique ?' }]) });
+    assert.ok(mots(d.body) <= 150, `${r.domain} : ${mots(d.body)} mots`);
+    const c = await cold.draftColdEmail({ row: r, lead: {} }, { callModel: fake([{ subject: 'Votre boutique', motif: 'En consultant votre boutique, j\'ai relevé le point suivant, que vous connaissez peut-être déjà.' }]) });
     assert.match(c.body, PRESENTATION, r.domain);
     assert.doesNotMatch(c.body, FORMULES_INTERDITES, r.domain);
   }

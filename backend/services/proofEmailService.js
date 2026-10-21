@@ -240,19 +240,23 @@ function presentation() {
 // Motif de contact : factuel, sans formule qui juge ou qui flatte.
 function motif(r, c) {
   const nom = nomBoutique(r) || site(r);
-  const date = r.analyse_le ? ` le ${new Date(r.analyse_le).toLocaleDateString('fr-FR')}` : '';
-  return `En consultant ${nom}${date}, j'ai relevé un point à vous signaler. ${c.preuve} ${c.consequence}`;
+  // La date de l'analyse n'intéresse pas le commerçant : elle reste dans la trace (detail).
+  return `En consultant ${nom}, j'ai relevé un point à vous signaler. ${c.preuve} ${c.consequence}`;
 }
 
-// Proposition + question + refus discret. Pas de pression, pas de « simple oui ».
+// Proposition, question, lien : formulation validée (Bijoux Carbassou). Pas de « si personne
+// n'assure », pas de pression. Le refus discret et la fin sont ajoutés par l'assembleur.
 function conclusion(r) {
   const url = (process.env.OUTREACH_OFFER_URL || 'https://pixfeed.net/maintenance/').trim();
+  const p = String((r && r.platform) || '');
+  const techno = /prestashop|woocommerce|wordpress/i.test(p) ? ` ${p}` : '';
+  const type = typeSite(r || {});
   return [
-    `Si personne n'assure le suivi technique de votre ${typeSite(r)} ${String(r.platform || '').match(/prestashop|woocommerce|wordpress/i) ? `${r.platform} ` : ''}(mises à jour, sauvegardes), je peux m'en charger ; mon offre de maintenance est détaillée ici : ${url}`,
+    `J'interviens notamment sur la maintenance des ${type}s${techno} : mises à jour, sauvegardes, sécurité et résolution d'incidents techniques.`,
     '',
-    'Est-ce un sujet pour vous en ce moment ?',
+    `Je souhaitais savoir si vous disposez déjà d'un prestataire pour assurer ce suivi, ou si un accompagnement ponctuel ou régulier pourrait vous être utile.`,
     '',
-    "Si vous ne souhaitez plus être contacté, n'hésitez pas à me le signaler."
+    `Vous pouvez consulter mes prestations ici : ${url}`
   ].join('\n');
 }
 
@@ -267,17 +271,14 @@ function buildMaintenanceEmail(r, lead) {
   const enLigne = Number(r.http_status) >= 200 && Number(r.http_status) < 400 && !r.parked && !r.protected;
   if (!identifiee || !enLigne) return { ok: false, raison: identifiee ? 'site pas en ligne au moment de l\'analyse' : 'technologie non identifiée' };
   const nom = nomBoutique(r) || site(r);
-  const date = r.analyse_le ? ` le ${new Date(r.analyse_le).toLocaleDateString('fr-FR')}` : '';
   const body = [
     salutation(r, lead),
     '',
     presentation(),
     '',
-    `J'ai découvert ${nom}${date}, une ${typeSite(r)} ${p}, en parcourant des ${typeSite(r)}s de votre secteur.`,
+    `J'ai découvert votre ${typeSite(r)} ${nom}.`,
     '',
-    conclusion(r).split('\n')[0],
-    '',
-    `Un prestataire assure-t-il déjà ce suivi pour votre ${typeSite(r)} ?`,
+    conclusion(r),
     '',
     "Si vous ne souhaitez plus être contacté, n'hésitez pas à me le signaler.",
     '',
@@ -332,6 +333,8 @@ function buildProofEmail(r, lead) {
     motif(r, c),
     '',
     conclusion(r),
+    '',
+    "Si vous ne souhaitez plus être contacté, n'hésitez pas à me le signaler.",
     '',
     'Bonne journée à vous,'
   ].join('\n');

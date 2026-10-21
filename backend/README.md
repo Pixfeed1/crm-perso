@@ -91,9 +91,11 @@ Les emails sont assemblés par le code (`services/proofEmailService.js`), sans m
   déclaration : elle n'apparaît plus dans le corps de l'email, seulement dans le bloc de traçabilité.
 - **Ton et structure** (tous les modes : preuve, Claude libre, création, et les modèles du menu
   « Modèle ») : présentation unique « Je suis Marc, développeur web indépendant et je dirige PixFeed,
-  spécialisé dans la maintenance et le dépannage de sites professionnels. », motif factuel daté,
-  proposition de maintenance avec lien (`OUTREACH_OFFER_URL`), une question, refus discret
-  (« Si vous ne souhaitez plus être contacté, n'hésitez pas à me le signaler. »). 80 à 120 mots,
+  spécialisé dans la maintenance et le dépannage de sites professionnels. », motif factuel (la date
+  d'analyse reste dans la trace, pas dans l'email), proposition « J'interviens notamment sur la
+  maintenance des boutiques PrestaShop : mises à jour, sauvegardes, sécurité et résolution
+  d'incidents techniques. », question « Je souhaitais savoir si vous disposez déjà d'un prestataire
+  pour assurer ce suivi… », lien (`OUTREACH_OFFER_URL`), refus discret. 90 à 150 mots,
   vouvoiement. Formules interdites vérifiées par test (`FORMULES_INTERDITES`) : « je ne vous
   relancerai pas », « un simple oui suffit », « sauté aux yeux », « de l'intérieur », « personne ne
   suit », « à mon compte », etc. Non-régression : `tests/emailsNonRegression.test.js` (AGRIGOM,

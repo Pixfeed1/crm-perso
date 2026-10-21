@@ -1300,9 +1300,9 @@ ${PRESENTATION_TEMPLATE}
 
 En consultant {site}, j'ai relevé un point à vous signaler : {constat}.
 
-Si personne n'assure le suivi technique de votre site (mises à jour, sauvegardes, incidents), je peux m'en charger.
+J'interviens notamment sur la maintenance des sites {plateforme} : mises à jour, sauvegardes, sécurité et résolution d'incidents techniques.
 
-Est-ce un sujet pour vous en ce moment ?
+Je souhaitais savoir si vous disposez déjà d'un prestataire pour assurer ce suivi, ou si un accompagnement ponctuel ou régulier pourrait vous être utile.
 
 Si vous ne souhaitez plus être contacté, n'hésitez pas à me le signaler.`],
   ['Relance', 'relance', 'Re: Un point relevé sur {site}',
