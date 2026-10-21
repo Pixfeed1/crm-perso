@@ -5,7 +5,7 @@
 // Réutilise l'envoi email existant (leadsAPI.sendEmail / scheduledEmailsAPI) et le log Suivi.
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiMail, FiSend, FiClock, FiX, FiTrash2, FiCpu, FiLoader } from 'react-icons/fi';
+import { FiMail, FiSend, FiClock, FiX, FiTrash2, FiCpu, FiLoader, FiRefreshCw } from 'react-icons/fi';
 import { leadsAPI, scheduledEmailsAPI, emailTemplatesAPI, emailSignaturesAPI } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
 import { CHANNELS } from '../../utils/relationStatus';
@@ -141,6 +141,24 @@ const ProspectEmails = ({ lead, autoCompose = false }) => {
   // et explique pourquoi : on n'envoie pas d'email générique.
   const [sansPreuve, setSansPreuve] = useState(null);
   const [preuveDetail, setPreuveDetail] = useState(null); // traçabilité : signal brut, URL, date, confiance
+  const [reanalyzing, setReanalyzing] = useState(false);
+  const [reanalyse, setReanalyse] = useState(null); // résumé de la dernière réanalyse (preuves, indices, SIRENE)
+
+  // Relance le crawler sur ce seul domaine : mesures du jour, SIRENE recoupé, score à jour.
+  // Ensuite seulement, « Email par la preuve » repart de données fraîches.
+  const reanalyzeSite = async () => {
+    if (reanalyzing) return;
+    setReanalyzing(true); setReanalyse(null); setPreuveDetail(null);
+    try {
+      const r = await leadsAPI.reanalyze(lead.id);
+      setReanalyse(r);
+      toast.success(r.preuves.length ? `Site réanalysé : ${r.preuves.length} preuve${r.preuves.length > 1 ? 's' : ''} (${r.preuves.join(', ')})` : 'Site réanalysé : aucune preuve, seulement des indices');
+    } catch (e) {
+      toast.error(e.message || 'Réanalyse impossible');
+    } finally {
+      setReanalyzing(false);
+    }
+  };
   const generateWithClaude = async (mode = 'preuve') => {
     if (drafting) return;
     setDrafting(true);
@@ -334,7 +352,12 @@ const ProspectEmails = ({ lead, autoCompose = false }) => {
                         <option value="direct">Ton direct</option>
                         <option value="doux">Ton doux</option>
                       </select>
-                      <button type="button" onClick={() => generateWithClaude('preuve')} disabled={drafting}
+                      <button type="button" onClick={reanalyzeSite} disabled={reanalyzing || drafting}
+                        title="Relance le crawler sur ce domaine (une vingtaine de secondes) : mesures du jour, correspondance SIRENE, score. À faire avant d'écrire à un prospect analysé par l'ancien crawl."
+                        className="px-2.5 py-1 text-xs rounded-lg bg-surface-strong text-text-primary hover:bg-border-strong flex items-center gap-1.5 disabled:opacity-50">
+                        <FiRefreshCw size={13} className={reanalyzing ? 'animate-spin' : ''} /> {reanalyzing ? 'Analyse…' : 'Réanalyser le site'}
+                      </button>
+                      <button type="button" onClick={() => generateWithClaude('preuve')} disabled={drafting || reanalyzing}
                         title="Une seule affirmation, vérifiable par le gérant en dix secondes sur son site, sa conséquence pour son activité, un contexte technique mesuré. Refusé s'il n'y a pas de preuve."
                         className="px-2.5 py-1 text-xs rounded-lg bg-accent text-white hover:bg-accent-hover flex items-center gap-1.5 disabled:opacity-50">
                         {drafting
@@ -353,6 +376,14 @@ const ProspectEmails = ({ lead, autoCompose = false }) => {
                     <div className="mb-2 text-xs rounded-lg border border-warning-text/30 bg-warning-bg text-warning-text px-3 py-2">
                       <div className="font-semibold">Email non généré : {sansPreuve.message}</div>
                       {sansPreuve.indices && sansPreuve.indices.length > 0 && <div className="mt-1 opacity-80">Indices seulement : {sansPreuve.indices.join(', ')}. Pas de preuve, pas d'email.</div>}
+                    </div>
+                  )}
+                  {reanalyse && (
+                    <div className="mb-2 text-xs rounded-lg border border-border bg-surface-muted/60 text-text-secondary px-3 py-2 space-y-0.5">
+                      <div><span className="font-semibold text-text-primary">Réanalysé</span> {reanalyse.analyse_le ? `le ${new Date(reanalyse.analyse_le).toLocaleDateString('fr-FR')}` : ''} · {reanalyse.domain} · HTTP {reanalyse.http_status ?? '?'}</div>
+                      <div>Preuves : {reanalyse.preuves.length ? reanalyse.preuves.join(', ') : 'aucune'} · Indices : {reanalyse.indices.length ? reanalyse.indices.join(', ') : 'aucun'}</div>
+                      {reanalyse.sirene && <div>SIRENE : {reanalyse.sirene.match}{reanalyse.sirene.raison_sociale ? ` · ${reanalyse.sirene.raison_sociale}${reanalyse.sirene.ville ? ` (${reanalyse.sirene.ville})` : ''}` : ''}</div>}
+                      <div className="opacity-80">Clique maintenant sur « Email par la preuve » pour un texte fondé sur ces mesures.</div>
                     </div>
                   )}
                   {preuveDetail && (

@@ -196,6 +196,14 @@ async function insertCrawlResult(db, jobId, r) {
   return ins.rows[0].id;
 }
 
+// Met à jour une ligne existante avec un résultat typé frais (réanalyse depuis la fiche prospect).
+// Les colonnes d'enrichissement SIRENE et added_as_prospect ne sont pas touchées ici.
+async function updateCrawlResult(db, id, r) {
+  const cols = RESULT_COLUMNS.filter((c) => c !== 'domain');
+  const set = cols.map((c, i) => `${c} = $${i + 1}`).join(', ');
+  await db.pool.query(`UPDATE crawl_results SET ${set} WHERE id = $${cols.length + 1}`, [...cols.map((c) => (r[c] === undefined ? null : r[c])), id]);
+}
+
 // Ingestion du CSV de l'outil (colonnes : domain, platform, signals, http_status, final_url, title, error, …)
 async function ingestCsv(db, jobId, csvPath) {
   const content = fs.readFileSync(csvPath, 'utf8');
@@ -580,6 +588,7 @@ crawlController.exportExclude = async (req, res) => {
 
 crawlController.typedResult = typedResult;
 crawlController.insertCrawlResult = insertCrawlResult;
+crawlController.updateCrawlResult = updateCrawlResult;
 crawlController.createLeadFromResult = createLeadFromResult;
 crawlController.rescoreJob = rescoreJob;
 

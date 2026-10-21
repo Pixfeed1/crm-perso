@@ -101,6 +101,12 @@ Les emails sont assemblés par le code (`services/proofEmailService.js`), sans m
 - **Traçabilité** : la réponse de `POST /api/leads/:id/draft-email` porte `detail` (signal brut,
   URL contrôlée, date `analyse_le`, confiance, identité, contexte), affiché sous l'email.
 
+**Réanalyser depuis la fiche** (`POST /api/leads/:id/reanalyze`, bouton « Réanalyser le site » dans la
+fenêtre d'email) : relance le crawler sur le seul domaine du prospect, met à jour sa ligne
+`crawl_results` (ou en crée une dans le job `reanalyse`), refait la correspondance SIRENE avec le
+code postal du site, recalcule score et angles. Notes et interactions ne bougent pas. À faire avant
+d'écrire à un prospect dont les mesures datent de l'ancien crawler.
+
 Prévisualiser sur un CSV du crawler, sans base ni envoi :
 
 ```bash

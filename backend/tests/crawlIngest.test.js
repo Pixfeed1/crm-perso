@@ -88,3 +88,35 @@ test('insertion + prospect depuis un résultat, promotion d\'un signal sans site
     assert.equal((await signalService.promote(db, [sid])).created, 0);
   });
 });
+
+test('réanalyse depuis la fiche : mesures mises à jour, SIRENE recoupé, score et angles reportés sur le prospect', { skip: !hasDb() && 'TEST_DATABASE_URL absent' }, async () => {
+  await withSchema('reanalyse', async ({ pool }) => {
+    const db = { pool };
+    await createFromSchema(pool, 'crawl_jobs');
+    await createFromSchema(pool, 'crawl_results');
+    await pool.query('CREATE TABLE crawl_seen_domains (domain TEXT PRIMARY KEY, source VARCHAR(20), first_seen TIMESTAMP DEFAULT NOW())');
+    await pool.query(`CREATE TABLE leads (id SERIAL PRIMARY KEY, name TEXT, company TEXT, website TEXT, crawl_result_id INTEGER, platform TEXT, angles TEXT, score INTEGER, notes TEXT, updated_at TIMESTAMP)`);
+    const { reanalyzeLead } = require('../services/leadReanalyzeService');
+    // Prospect de l'ancien crawl : noté « servi en HTTP » à tort, sans date d'analyse.
+    const job = await pool.query("INSERT INTO crawl_jobs (techno, nb_sites, statut) VALUES ('prestashop', 1, 'done') RETURNING id");
+    const rid = await crawl.insertCrawlResult(db, job.rows[0].id, crawl.typedResult({ domain: 'agrigom.fr', platform: 'PrestaShop', http_status: '200', final_url: 'http://agrigom.fr/', https_final: 'non', ssl_ok: 'non', title: 'AGRIGOM' }));
+    const lead = await pool.query("INSERT INTO leads (name, company, website, crawl_result_id, notes) VALUES ('AGRIGOM', 'agrigom.fr', 'https://agrigom.fr', $1, 'notes à conserver') RETURNING id", [rid]);
+    const detect = async () => [{ domain: 'agrigom.fr', platform: 'PrestaShop', http_status: '200', final_url: 'https://www.agrigom.fr/', https_final: 'oui', ssl_ok: 'oui', title: 'Accueil - AGRIGOM SAS', mobile_ok: 'non', code_postal_site: '59258', analyse_le: '2026-10-21T15:03:18+00:00' }];
+    const sirene = async ({ code_postal_site }) => ({ found: true, match: code_postal_site === '59258' ? 'sur' : 'probable', match_score: 95, raison_sociale: 'AGRIGOM (AGRIGOM)', dirigeant: 'FRANCK SAVARY', dirigeant_nom: 'SAVARY', dirigeant_prenom: 'FRANCK', code_postal: '59258', ville: 'CREVECOEUR' });
+    const out = await reanalyzeLead(db, lead.rows[0].id, { detect, sirene });
+    assert.equal(out.crawl_result_id, rid);
+    assert.deepEqual(out.preuves, ['non responsive']);
+    assert.equal(out.sirene.match, 'sur');
+    const r = (await pool.query('SELECT * FROM crawl_results WHERE id = $1', [rid])).rows[0];
+    assert.equal(r.https_final, true); assert.equal(r.ssl_ok, true); assert.equal(r.gerant_prenom, 'FRANCK'); assert.ok(r.analyse_le);
+    const l = (await pool.query('SELECT * FROM leads WHERE id = $1', [lead.rows[0].id])).rows[0];
+    assert.match(l.angles, /mobile/); assert.ok(l.score > 0); assert.equal(l.notes, 'notes à conserver');
+    // Prospect sans ligne de crawl : une ligne est créée dans le job « reanalyse » et liée.
+    const l2 = await pool.query("INSERT INTO leads (name, company) VALUES ('X', 'x.fr') RETURNING id");
+    const out2 = await reanalyzeLead(db, l2.rows[0].id, { detect: async () => [{ domain: 'x.fr', http_status: '200', final_url: 'https://x.fr/', https_final: 'oui', ssl_ok: 'oui', title: 'X' }], sirene: async () => ({ found: false }) });
+    assert.ok(out2.crawl_result_id);
+    assert.equal((await pool.query('SELECT crawl_result_id FROM leads WHERE id = $1', [l2.rows[0].id])).rows[0].crawl_result_id, out2.crawl_result_id);
+    assert.equal((await pool.query("SELECT techno FROM crawl_jobs WHERE id = (SELECT job_id FROM crawl_results WHERE id = $1)", [out2.crawl_result_id])).rows[0].techno, 'reanalyse');
+    await assert.rejects(reanalyzeLead(db, 99999, { detect, sirene }), /introuvable/);
+  });
+});

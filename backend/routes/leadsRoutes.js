@@ -237,6 +237,20 @@ router.post('/:id/send-email', async (req, res) => {
   }
 });
 
+// POST /api/leads/:id/reanalyze -> relance le crawler sur le domaine du prospect, met à jour ses
+// mesures (crawl_results), la correspondance SIRENE et le score. À faire avant d'écrire à un
+// prospect analysé par l'ancien crawler. Ne modifie ni les notes, ni l'envoi.
+router.post('/:id/reanalyze', async (req, res) => {
+  const db = req.app.locals.db;
+  try {
+    const out = await require('../services/leadReanalyzeService').reanalyzeLead(db, req.params.id);
+    res.json(out);
+  } catch (e) {
+    console.error('[Lead] reanalyze:', e.message);
+    res.status(e.status || 500).json({ message: e.status ? e.message : `Réanalyse impossible : ${e.message}` });
+  }
+});
+
 // POST /api/leads/:id/draft-email { mode?: 'preuve' | 'claude', ton? }
 // - 'preuve' (défaut) : email assemblé mot pour mot à partir des mesures du crawl : UNE preuve
 //   vérifiable en dix secondes, sa conséquence métier, au plus un contexte technique. Sans

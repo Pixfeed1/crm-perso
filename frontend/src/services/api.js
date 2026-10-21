@@ -273,6 +273,7 @@ export const leadsAPI = {
   getQuickEmails: () => apiRequest('/leads/quick-emails'),
   // Rédaction d'un email de prospection par Claude (à partir des problèmes détectés).
   draftEmail: (id, opts = {}) => apiRequest(`/leads/${id}/draft-email`, 'POST', opts),
+  reanalyze: (id) => apiRequest(`/leads/${id}/reanalyze`, 'POST', {}),
   getById: (id) => {
     console.log(`Appel API: récupération du lead ID ${id}`);
     return apiRequest(`/leads/${id}`);
