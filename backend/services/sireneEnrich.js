@@ -114,18 +114,27 @@ async function enrichMatch({ query, domain = '', title = '', code_postal_site = 
   const q = (query || '').trim();
   if (!q) return { found: false };
   try {
-    // Le titre complet ne donne souvent rien (« Atelier du sucre, la boutique en ligne »,
-    // « AGRIGOM SAS - Matériel agricole ») : on essaie ensuite son premier segment nettoyé, puis
-    // la racine du domaine. Première requête qui répond.
-    const root = String(domain || '').toLowerCase().replace(/^www\./, '').split('.')[0].replace(/-/g, ' ').trim();
-    const segment = q.split(/\s+[-|–—:]\s+/)[0].split(/,\s/)[0].replace(/\b(SARL|SAS|SASU|EURL|SA|SCI|SNC|EI)\b\.?/gi, '').replace(/\s+/g, ' ').trim();
-    const queries = [...new Set([q, segment, root].map((x) => x.trim()).filter((x) => x.length >= 3))];
-    let results = [];
+    // Trois formulations, toutes interrogées, meilleur candidat de l'ensemble : le titre complet
+    // (« Accueil - AGRIGOM SAS »), le segment du titre qui ressemble au domaine, nettoyé
+    // (« AGRIGOM »), et la racine du domaine (« agrigom »). S'arrêter à la première requête qui
+    // répond faisait gagner « ACCUEIL » à Rennes.
+    const rootRaw = String(domain || '').toLowerCase().replace(/^www\./, '').split('.')[0];
+    const root = rootRaw.replace(/-/g, ' ').trim();
+    const generique = /^(accueil|home|bienvenue|welcome|boutique|shop|site officiel|page d'accueil|index)$/i;
+    const segs = q.split(/\s+[-|–—:]\s+/).map((x) => x.split(/,\s/)[0].replace(/\b(SARL|SAS|SASU|EURL|SA|SCI|SNC|EI)\b\.?/gi, '').replace(/\s+/g, ' ').trim())
+      .filter((x) => x.length >= 3 && !generique.test(x));
+    const rc = compact(rootRaw);
+    segs.sort((a, b) => { const ca = compact(a), cb = compact(b); const la = rc && ca.length >= 4 && (rc.includes(ca) || ca.includes(rc)) ? 0 : 1; const lb = rc && cb.length >= 4 && (rc.includes(cb) || cb.includes(rc)) ? 0 : 1; return la - lb || a.length - b.length; });
+    const queries = [...new Set([q, segs[0] || '', root].map((x) => x.trim()).filter((x) => x.length >= 3))];
+    const bySiren = new Map();
     for (const query of queries) {
       const res = await axios.get(API, { params: { q: query, per_page: 5, page: 1 }, timeout: 8000 });
-      results = Array.isArray(res.data?.results) ? res.data.results : [];
-      if (results.length) break;
+      for (const c of (Array.isArray(res.data?.results) ? res.data.results : [])) {
+        const k = c.siren || c.nom_complet;
+        if (!bySiren.has(k)) bySiren.set(k, c);
+      }
     }
+    const results = [...bySiren.values()];
     if (results.length === 0) return { found: false };
     const scored = results.map((c) => ({ c, sc: matchScore(c, { domain, title, code_postal_site }) })).sort((a, b) => b.sc - a.sc);
     const best = scored[0].c; const bestScore = scored[0].sc;
