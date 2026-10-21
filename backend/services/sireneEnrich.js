@@ -114,14 +114,17 @@ async function enrichMatch({ query, domain = '', title = '', code_postal_site = 
   const q = (query || '').trim();
   if (!q) return { found: false };
   try {
-    let res = await axios.get(API, { params: { q, per_page: 5, page: 1 }, timeout: 8000 });
-    let results = Array.isArray(res.data?.results) ? res.data.results : [];
-    // Le titre de la page ne donne rien (« AGRIGOM SAS », « Atelier du sucre, la boutique… ») :
-    // on réessaie avec la racine du domaine, débarrassée des tirets.
+    // Le titre complet ne donne souvent rien (« Atelier du sucre, la boutique en ligne »,
+    // « AGRIGOM SAS - Matériel agricole ») : on essaie ensuite son premier segment nettoyé, puis
+    // la racine du domaine. Première requête qui répond.
     const root = String(domain || '').toLowerCase().replace(/^www\./, '').split('.')[0].replace(/-/g, ' ').trim();
-    if (results.length === 0 && root && root.length >= 3 && root !== q.toLowerCase()) {
-      res = await axios.get(API, { params: { q: root, per_page: 5, page: 1 }, timeout: 8000 });
+    const segment = q.split(/\s+[-|–—:]\s+/)[0].split(/,\s/)[0].replace(/\b(SARL|SAS|SASU|EURL|SA|SCI|SNC|EI)\b\.?/gi, '').replace(/\s+/g, ' ').trim();
+    const queries = [...new Set([q, segment, root].map((x) => x.trim()).filter((x) => x.length >= 3))];
+    let results = [];
+    for (const query of queries) {
+      const res = await axios.get(API, { params: { q: query, per_page: 5, page: 1 }, timeout: 8000 });
       results = Array.isArray(res.data?.results) ? res.data.results : [];
+      if (results.length) break;
     }
     if (results.length === 0) return { found: false };
     const scored = results.map((c) => ({ c, sc: matchScore(c, { domain, title, code_postal_site }) })).sort((a, b) => b.sc - a.sc);

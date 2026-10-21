@@ -30,6 +30,8 @@ const site = (r) => (r.domain || '').replace(/^www\./, '');
 // sociale en capitales fait administratif dans un email, on la remet en casse de nom.
 function joliNom(raw) {
   let n = String(raw || '').trim().replace(/\b(SARL|SAS|SASU|EURL|SA|SCI|SNC|EI)\b/g, '').replace(/\s+/g, ' ').trim();
+  // « AGRIGOM (AGRIGOM) » : l'annuaire répète le sigle entre parenthèses quand il égale le nom.
+  n = n.replace(/\s*\(([^)]+)\)\s*$/, (m, inner) => (inner.trim().toLowerCase() === n.replace(m, '').trim().toLowerCase() ? '' : m)).trim();
   if (n && n === n.toUpperCase()) {
     n = n.toLowerCase().replace(/(^|[\s'’-])([a-zà-ÿ])/g, (m, sep, c) => sep + c.toUpperCase());
   }
@@ -62,12 +64,22 @@ const CATALOGUE = {
     consequence: `C'est un réglage de site en construction qui reste souvent coché après la mise en ligne. Tant qu'il est là, les pages concernées ne peuvent pas apparaître dans Google, et personne ne s'en rend compte de l'intérieur.`,
     brut: r.noindex ? 'meta robots noindex sur la page d\'accueil' : 'robots.txt : Disallow: / pour tous les robots ou Googlebot'
   }),
-  http_non_securise: (r) => ({
-    sujet: `« Non sécurisé » s'affiche sur ${site(r)}`,
-    preuve: `${site(r)} s'ouvre en HTTP, sans cadenas${quand(r)} : le navigateur affiche « Non sécurisé » à côté de l'adresse, dès la page d'accueil.`,
-    consequence: `Ce n'est pas une faille en soi, mais c'est la mention que tous les navigateurs affichent, et certains clients s'arrêtent dessus avant de commander. En général, le certificat existe déjà et il suffit de l'imposer.`,
-    brut: `URL finale ${r.final_url || 'http://' + site(r)} servie en HTTP`
-  }),
+  http_non_securise: (r) => {
+    // Certificat valide mais site qui renvoie vers http : on le dit tel quel, c'est vérifiable
+    // en tapant l'adresse en https.
+    const redirige = r.ssl_ok === true && r.final_url && /^http:/i.test(r.final_url);
+    const finale = redirige ? String(r.final_url).replace(/\/$/, '') : '';
+    return {
+      sujet: `« Non sécurisé » s'affiche sur ${site(r)}`,
+      preuve: redirige
+        ? `En tapant https://${site(r)}${quand(r)}, on est renvoyé vers ${finale} : le certificat de sécurité existe, mais le site ne l'utilise pas, et le navigateur affiche « Non sécurisé » à côté de l'adresse.`
+        : `${site(r)} s'ouvre en HTTP, sans cadenas${quand(r)} : le navigateur affiche « Non sécurisé » à côté de l'adresse, dès la page d'accueil.`,
+      consequence: redirige
+        ? `Ce n'est pas une faille en soi, mais c'est la mention que tous les navigateurs affichent, et certains clients s'arrêtent dessus avant de commander. Comme le certificat est déjà là, il s'agit d'un réglage de redirection, pas d'une refonte.`
+        : `Ce n'est pas une faille en soi, mais c'est la mention que tous les navigateurs affichent, et certains clients s'arrêtent dessus avant de commander. En général, le certificat existe déjà et il suffit de l'imposer.`,
+      brut: redirige ? `https accepté puis redirigé vers ${r.final_url} (servi en HTTP)` : `URL finale ${r.final_url || 'http://' + site(r)} servie en HTTP`
+    };
+  },
   ssl_expire: (r) => ({
     sujet: `le certificat de ${site(r)} a expiré`,
     preuve: `Le certificat de sécurité de ${site(r)} est expiré${r.ssl_expire_jours != null ? ` depuis ${Math.abs(r.ssl_expire_jours)} jour${Math.abs(r.ssl_expire_jours) > 1 ? 's' : ''}` : ''}${quand(r)} : le navigateur affiche un avertissement avant d'atteindre le site.`,
@@ -214,11 +226,27 @@ const typeSite = (r) => {
   return 'site';
 };
 
-// Qui écrit, en une phrase. Ville seulement si la correspondance SIRENE est sûre.
+// « CREVECŒUR-SUR-L'ESCAUT » -> « Crèvecœur-sur-l'Escaut » : casse d'un nom de commune
+// (particules en minuscules). Les accents absents de l'annuaire ne sont pas inventés.
+const PARTICULES = new Set(['sur', 'sous', 'la', 'le', 'les', 'de', 'du', 'des', 'en', 'aux', 'au', 'et', 'lès', 'l', 'd']); // l / d : « l'Escaut », « d'Or »
+function joliVille(raw) {
+  const v = String(raw || '').trim();
+  if (!v || v !== v.toUpperCase()) return v;
+  return v.toLowerCase().replace(/(^|[\s'’-])([a-zà-ÿœ]+)/g, (m, sep, w) => sep + (PARTICULES.has(w) && sep !== '' ? w : w.charAt(0).toUpperCase() + w.slice(1)));
+}
+
+// Qui écrit, en une phrase. Ville seulement si la correspondance SIRENE est sûre ET que le code
+// postal lu sur le site confirme le siège : une ville fausse signe un email automatique.
+function villeConfirmee(r) {
+  if (!matchSur(r) || !r.ville) return '';
+  const cpSite = String(r.code_postal_site || '').trim();
+  const cpSiege = String(r.code_postal || '').trim();
+  return cpSite && cpSiege && cpSite === cpSiege ? joliVille(r.ville) : '';
+}
 function presentation(r) {
   const prenom = (process.env.OUTREACH_SENDER_NAME || '').trim();
   const entreprise = (process.env.OUTREACH_SENDER_COMPANY || 'PixFeed').trim();
-  const ville = matchSur(r) && r.ville ? String(r.ville).trim() : '';
+  const ville = villeConfirmee(r);
   const ou = ville ? `, notamment pour des commerçants et artisans autour de ${ville}` : '';
   return prenom
     ? `Je m'appelle ${prenom}, développeur web indépendant (${entreprise}), spécialisé dans ${specialite(r)}${ou}.`
@@ -289,7 +317,7 @@ function buildProofEmail(r, lead) {
     url_controlee: r.final_url || `https://${site(r)}`,
     analyse_le: r.analyse_le || null,
     confiance: 'constatée par le crawler',
-    identite: matchSur(r) ? `SIRENE sûre : ${r.raison_sociale || ''}${r.ville ? ` (${r.ville})` : ''}` : (r.sirene_match ? `SIRENE ${r.sirene_match} : pas de personnalisation` : 'pas de correspondance SIRENE : pas de personnalisation'),
+    identite: matchSur(r) ? `SIRENE sûre : ${joliNom(r.raison_sociale || '')}${r.ville ? ` (${joliVille(r.ville)}${villeConfirmee(r) ? ', confirmée par le code postal du site' : ', ville non confirmée par le site : non citée'})` : ''}` : (r.sirene_match ? `SIRENE ${r.sirene_match} : pas de personnalisation` : 'pas de correspondance SIRENE : pas de personnalisation'),
     contexte: contexte ? (phpEol(r.serveur_php) ? `PHP déclaré par l'entête ${r.php_source || 'X-Powered-By'} : ${r.serveur_php}` : contexte) : null
   };
   return {
@@ -303,4 +331,4 @@ function buildProofEmail(r, lead) {
   };
 }
 
-module.exports = { buildProofEmail, PREUVES_ORDRE, CATALOGUE, presentation, joliNom, nomCourt, salutation };
+module.exports = { buildProofEmail, PREUVES_ORDRE, CATALOGUE, presentation, joliNom, joliVille, nomCourt, salutation };

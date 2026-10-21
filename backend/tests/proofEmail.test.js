@@ -50,10 +50,23 @@ test('ordre des preuves : la panne passe avant tout le reste', () => {
 test('salutation : premier prénom + nom en casse de nom, jamais l\'état civil complet en capitales', () => {
   assert.equal(nomCourt({ gerant: 'LUDOVIC MARCEL ROBERT AUGUSTE BAUDRY' }), 'Ludovic Baudry');
   assert.equal(nomCourt({ gerant: 'LUDOVIC MARCEL BAUDRY', gerant_nom: 'DE LA CRUZ', gerant_prenom: 'MARCOS' }), 'Marcos De La Cruz');
-  const r = { domain: 'a.fr', title: 'A', https_final: false, http_status: 200, sirene_match: 'sur', gerant: 'LUDOVIC MARCEL ROBERT AUGUSTE BAUDRY', raison_sociale: 'A SARL', ville: 'Oyonnax', platform: 'PrestaShop' };
+  const r = { domain: 'a.fr', title: 'A', https_final: false, http_status: 200, sirene_match: 'sur', gerant: 'LUDOVIC MARCEL ROBERT AUGUSTE BAUDRY', raison_sociale: 'A SARL', ville: 'OYONNAX', code_postal: '01100', code_postal_site: '01100', platform: 'PrestaShop' };
   const d = buildProofEmail(r, {});
   assert.match(d.body, /^Bonjour Ludovic Baudry,/);
   assert.match(d.body, /autour de Oyonnax/);
+  // Ville citée seulement si le code postal lu sur le site confirme le siège.
+  const sansCp = buildProofEmail({ ...r, code_postal_site: null }, {});
+  assert.doesNotMatch(sansCp.body, /Oyonnax/);
+  assert.match(sansCp.detail.identite, /non confirmée/);
+  const { joliVille, joliNom } = require('../services/proofEmailService');
+  assert.equal(joliVille("CREVECŒUR-SUR-L'ESCAUT"), "Crevecœur-sur-l'Escaut");
+  assert.equal(joliVille('BOURG-EN-BRESSE'), 'Bourg-en-Bresse');
+  assert.equal(joliNom('AGRIGOM (AGRIGOM)'), 'Agrigom');
+  assert.equal(joliNom('ALEX ELEC (AKPM)'), 'Alex Elec (Akpm)');
+  // Certificat valide mais site qui renvoie vers http : la preuve le dit tel quel.
+  const redir = buildProofEmail({ domain: 'agrigom.fr', title: 'AGRIGOM', https_final: false, ssl_ok: true, final_url: 'http://www.agrigom.fr/', http_status: 200, platform: 'PrestaShop' }, {});
+  assert.match(redir.body, /En tapant https:\/\/agrigom\.fr.*renvoyé vers http:\/\/www\.agrigom\.fr/);
+  assert.match(redir.body, /réglage de redirection/);
 });
 
 test('correspondance SIRENE probable ou douteuse : ni nom, ni ville, ni raison sociale dans l\'email', () => {

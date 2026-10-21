@@ -1053,7 +1053,9 @@ async def detect_one(domain: str, sem, timeout: float, clients: dict, retries: i
                     # stricte (y compris après redirection depuis http) ; « non » seulement si
                     # une erreur TLS réelle a été constatée ; vide si https n'a échoué que pour
                     # une raison réseau (délai, connexion refusée) : on ne conclut pas.
-                    ssl_ok=("oui" if (final_https and verify) else ("non" if tls_err else "")),
+                    # Un candidat https strict qui répond = certificat accepté, même si le site
+                    # redirige ensuite vers http (cas fréquent : « https://x.fr -> http://www.x.fr »).
+                    ssl_ok=("oui" if (verify and (is_https or final_https)) else ("non" if tls_err else "")),
                     ssl_erreur=(tls_reason(tls_err) if (tls_err and not (final_https and verify)) else ""),
                     https_final=("oui" if final_https else "non"),
                     https_erreur=("" if final_https else https_err[:120]),
