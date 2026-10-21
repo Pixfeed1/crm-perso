@@ -34,6 +34,16 @@ const STATUT_BADGE = {
 };
 const statutBadge = (s) => STATUT_BADGE[s] || STATUT_BADGE.pending;
 
+// État de traitement d'un résultat, calculé côté serveur (fiche, campagnes, interactions).
+const TRAITEMENT_BADGE = {
+  prospect: { cls: 'bg-info-bg text-info-text', label: 'Déjà prospect' },
+  en_campagne: { cls: 'bg-warning-bg text-warning-text', label: 'En campagne' },
+  contacte: { cls: 'bg-neutral-bg text-neutral-text', label: 'Contacté' },
+  repondu: { cls: 'bg-success-bg text-success-text', label: 'A répondu' },
+  gagne: { cls: 'bg-success-bg text-success-text', label: 'Gagné' },
+  pas_business: { cls: 'bg-neutral-bg text-neutral-text', label: 'Pas de business' }
+};
+
 const formatDateTime = (s) => {
   if (!s) return '';
   const d = new Date(s);
@@ -178,6 +188,9 @@ const CrawlPanel = () => {
   const [enrichFilter, setEnrichFilter] = useState('all'); // 'all'|'email'|'ssl_ko'|'obsolete'|'social'
   // Pré-tri : 'prospects' (défaut) = vrais prospects ; 'ecartes' = écartés auto ; 'tous'.
   const [qualView, setQualView] = useState('prospects');
+  // Lignes déjà prises en charge (prospect créé, en campagne, contacté, a répondu, gagné, pas de
+  // business) : masquées par défaut pour y voir clair, jamais supprimées (mémoire de prospection).
+  const [hideTraites, setHideTraites] = useState(true);
   const [starting, setStarting] = useState(false);
   const [adding, setAdding] = useState(false);
   const [pbTarget, setPbTarget] = useState(null); // { ids: [...] } pour "Pas de business"
@@ -388,9 +401,11 @@ const CrawlPanel = () => {
       default: return true;
     }
   };
+  const traitesCount = baseResults.filter((r) => r.traitement).length;
   let visible = baseResults
     .filter((r) => platformFilter === 'all' ? true : (r.platform || 'Inconnu') === platformFilter)
-    .filter(passEnrich);
+    .filter(passEnrich)
+    .filter((r) => (hideTraites ? !r.traitement : true));
   // Tri par score de priorité décroissant (les prospects chauds en haut).
   visible = [...visible].sort((a, b) => prospectScore(b) - prospectScore(a));
   const selectableVisible = visible.filter((r) => !r.added_as_prospect);
@@ -586,6 +601,13 @@ const CrawlPanel = () => {
               ))}
             </div>
             <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setHideTraites((v) => !v)}
+                className={`px-3 py-2 rounded-lg text-sm flex items-center gap-1 ${hideTraites ? 'bg-surface-strong text-text-secondary hover:bg-border-strong' : 'bg-accent text-white'}`}
+                title="Prospects créés, en campagne, contactés, ayant répondu, gagnés ou pas de business. Masqués par défaut, jamais supprimés."
+              >
+                {hideTraites ? `Déjà traités masqués (${traitesCount})` : `Déjà traités affichés (${traitesCount})`}
+              </button>
               <button onClick={handleExport} className="px-3 py-2 bg-surface-strong hover:bg-border-strong text-text-primary rounded-lg text-sm flex items-center gap-1">
                 <FiDownload size={15} /> Télécharger le CSV
               </button>
@@ -713,8 +735,10 @@ const CrawlPanel = () => {
                               <FiShield size={10} /> SSL
                             </span>
                           )}
-                          {r.added_as_prospect && (
-                            <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-success-bg text-success-text">Déjà prospect</span>
+                          {r.traitement && (
+                            <span className={`ml-2 text-xs px-2 py-0.5 rounded-full ${TRAITEMENT_BADGE[r.traitement].cls}`} title={r.lead_id ? `Prospect #${r.lead_id}` : ''}>
+                              {TRAITEMENT_BADGE[r.traitement].label}
+                            </span>
                           )}
                           {/* Badges d'audit gratuit : autant d'angles d'approche pour l'email */}
                           {auditFlags(r).length > 0 && (

@@ -394,11 +394,29 @@ const crawlController = {
     try {
       const jr = await db.pool.query('SELECT * FROM crawl_jobs WHERE id = $1', [id]);
       if (jr.rows.length === 0) return res.status(404).json({ message: 'Job introuvable' });
+      // État de traitement de chaque ligne, pour masquer ce qui est déjà pris en charge :
+      // prospect créé, en campagne (ligne active), contacté par email, a répondu, gagné, pas de business.
       const rr = await db.pool.query(
-        'SELECT * FROM crawl_results WHERE job_id = $1 ORDER BY platform ASC, domain ASC',
+        `SELECT r.*, l.id AS lead_id, l.relation_status AS lead_relation_status,
+                EXISTS (SELECT 1 FROM campaign_items ci JOIN campaigns c ON c.id = ci.campaign_id
+                        WHERE ci.lead_id = l.id AND ci.statut IN ('pret','a_verifier','valide','programme') AND c.statut IN ('brouillon','en_cours','pause')) AS en_campagne,
+                EXISTS (SELECT 1 FROM interactions it WHERE it.contact_type = 'lead' AND it.contact_id = l.id AND it.type = 'email') AS contacte_email
+         FROM crawl_results r
+         LEFT JOIN LATERAL (SELECT id, relation_status FROM leads WHERE crawl_result_id = r.id ORDER BY id LIMIT 1) l ON TRUE
+         WHERE r.job_id = $1 ORDER BY r.platform ASC, r.domain ASC`,
         [id]
-      );
-      res.json({ job: jr.rows[0], results: rr.rows });
+      ).catch(() => db.pool.query('SELECT * FROM crawl_results WHERE job_id = $1 ORDER BY platform ASC, domain ASC', [id]));
+      const traitement = (r) => {
+        if (!r.lead_id && !r.added_as_prospect) return null;
+        const rs = r.lead_relation_status || '';
+        if (rs === 'gagne') return 'gagne';
+        if (rs === 'pas_business' || rs === 'perdu') return 'pas_business';
+        if (rs === 'en_discussion') return 'repondu';
+        if (r.en_campagne) return 'en_campagne';
+        if (r.contacte_email || rs === 'contacte') return 'contacte';
+        return 'prospect';
+      };
+      res.json({ job: jr.rows[0], results: rr.rows.map((r) => ({ ...r, traitement: traitement(r) })) });
     } catch (error) {
       console.error('[Crawl] Erreur lecture:', error);
       res.status(500).json({ message: 'Erreur serveur' });
