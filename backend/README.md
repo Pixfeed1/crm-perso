@@ -101,6 +101,13 @@ Les emails sont assemblés par le code (`services/proofEmailService.js`), sans m
 - **Traçabilité** : la réponse de `POST /api/leads/:id/draft-email` porte `detail` (signal brut,
   URL contrôlée, date `analyse_le`, confiance, identité, contexte), affiché sous l'email.
 
+- **Claude libre, encadré** (`services/coldEmailService.js`) : le modèle n'écrit que le constat (1 à 3
+  phrases) et la question, à partir des seules PREUVES (jamais PHP, versions, SSL bientôt, copyright) ;
+  sans preuve, observation neutre sans aucun défaut. Présentation, proposition, refus discret et fin
+  sont assemblés par le code (mêmes phrases que l'email par la preuve). Le texte du modèle est
+  vérifié (`validerTexte` : formules interdites, sujet technique sans preuve, délai inventé,
+  tutoiement) ; rejeté, un second essai ; sinon refus 422, rien n'est affiché.
+
 **Réanalyser depuis la fiche** (`POST /api/leads/:id/reanalyze`, bouton « Réanalyser le site » dans la
 fenêtre d'email) : relance le crawler sur le seul domaine du prospect, met à jour sa ligne
 `crawl_results` (ou en crée une dans le job `reanalyse`), refait la correspondance SIRENE avec le

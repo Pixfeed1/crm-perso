@@ -277,25 +277,17 @@ router.post('/:id/draft-email', async (req, res) => {
       if (!draft.ok) return res.status(422).json({ message: draft.raison, indices: draft.indices, sans_preuve: true });
       return res.json({ subject: draft.subject, body: draft.body, preuve: draft.preuve, preuves: draft.preuves, indices: draft.indices, detail: draft.detail || null, mode: 'preuve', problemes });
     }
-    // Plateforme / dirigeant : depuis le crawl_result si dispo, sinon parsés des notes.
-    const platMatch = (lead.notes || '').match(/Plateforme\s*:\s*([^\n(]+)(?:\(([^)]+)\))?/i);
-    const prospect = {
-      domain: lead.company || lead.name || '',
-      company: lead.company || '',
-      raison_sociale: (row && row.raison_sociale) || null,
-      dirigeant: (row && row.gerant) || null,
-      platform: (row && row.platform) || (platMatch && platMatch[1].trim()) || null,
-      platform_version: (row && row.platform_version) || (platMatch && platMatch[2] && platMatch[2].trim()) || null,
-      problemes
-    };
-    const draft = await coldEmailService.draftColdEmail(prospect, { ton });
-    res.json({ ...draft, problemes });
+    // « Claude libre » : le modèle n'écrit que le constat et la question, à partir des seules
+    // preuves de la ligne de crawl ; présentation, proposition et fin sont assemblées par le code.
+    // Les puces des notes ne lui sont jamais transmises (anciens textes).
+    const draft = await coldEmailService.draftColdEmail({ row, lead }, { ton });
+    res.json({ ...draft, mode: 'claude', problemes });
   } catch (e) {
     console.error('[Lead] draftEmail:', e.message);
     const msg = /ANTHROPIC_API_KEY/.test(e.message)
       ? 'Clé Anthropic non configurée sur le serveur (ANTHROPIC_API_KEY).'
-      : `Échec de la rédaction : ${e.message}`;
-    res.status(500).json({ message: msg });
+      : (e.status === 422 ? e.message : `Échec de la rédaction : ${e.message}`);
+    res.status(e.status || 500).json({ message: msg, refus: e.status === 422 });
   }
 });
 

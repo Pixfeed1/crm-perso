@@ -301,4 +301,4 @@ function buildProofEmail(r, lead) {
   };
 }
 
-module.exports = { buildProofEmail, PREUVES_ORDRE, CATALOGUE, presentation, joliNom, joliVille, nomCourt, salutation, FORMULES_INTERDITES };
+module.exports = { buildProofEmail, PREUVES_ORDRE, CATALOGUE, presentation, conclusion, nomBoutique, typeSite, joliNom, joliVille, nomCourt, salutation, FORMULES_INTERDITES };

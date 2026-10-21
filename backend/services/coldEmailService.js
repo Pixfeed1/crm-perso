@@ -1,229 +1,199 @@
 // backend/services/coldEmailService.js
 //
-// Rédaction d'un email de prospection PERSONNALISÉ par Claude (Anthropic Haiku).
+// Mode « Claude libre » : rédaction assistée par Claude (Anthropic Haiku), ENCADRÉE.
 //
-// Principe (voulu) :
-//   - L'ANALYSE est faite par NOS outils (crawler : plateforme, SSL, mentions
-//     légales, SPF, mobile…). Claude ne touche PAS à l'analyse -> 0 token gaspillé.
-//   - Claude fait UNIQUEMENT la rédaction finale à partir des problèmes déjà
-//     détectés, dans un ton HUMAIN (pas « gros gratteur »).
-//   - L'humain relit/modifie avant d'envoyer (aucun envoi automatique ici).
+// Leçon des relectures : un modèle paraphrase. Quand on lui demandait « recopie cette
+// présentation », il écrivait « je dirige une structure spécialisée ». Quand on lui donnait tous
+// les signaux, il annonçait un certificat « qui affichera une alerte » et des versions
+// « obsolètes ». Donc :
+//   - le modèle n'écrit QUE deux choses : le constat (1 à 3 phrases) et la question finale ;
+//   - il ne reçoit QUE les preuves (jamais les indices : PHP, versions, SSL bientôt, copyright…) ;
+//     sans preuve, il écrit une observation neutre sur la boutique, sans aucun défaut ;
+//   - la présentation, la proposition, le refus discret et la fin sont les MÊMES phrases que
+//     l'email par la preuve, assemblées par le code ;
+//   - son texte est vérifié (formules interdites, sujets non prouvés) : rejeté, on réessaie une
+//     fois, puis on refuse plutôt que d'afficher un texte douteux.
 //
-// Réutilise le même appel que la veille (fetch direct, x-api-key, Haiku) :
-// pas de nouvelle dépendance, même clé ANTHROPIC_API_KEY, coût ~0,003 $/email.
+// Coût ~0,003 $/email. L'humain relit avant d'envoyer, rien ne part d'ici.
+
+const proof = require('./proofEmailService');
+const { auditFlags, PREUVE_KEYS } = require('../utils/prospectScore');
 
 const LLM_MODEL = 'claude-haiku-4-5-20251001';
 
-// Identité de l'expéditeur (surchargée par l'appel ou par l'env, repli neutre).
-// nom volontairement vide par défaut : on ne veut JAMAIS signer avec un faux prénom
-// inventé. À renseigner via OUTREACH_SENDER_NAME (ou l'appel) sinon signature entreprise.
+// Identité de l'expéditeur (env). Conservée pour les autres appelants.
 function senderIdentity(overrides = {}) {
   return {
     nom: overrides.nom || process.env.OUTREACH_SENDER_NAME || '',
     entreprise: overrides.entreprise || process.env.OUTREACH_SENDER_COMPANY || 'PixFeed',
-    metier: overrides.metier || process.env.OUTREACH_SENDER_ROLE || 'création et refonte de sites web'
+    metier: overrides.metier || process.env.OUTREACH_SENDER_ROLE || 'maintenance et dépannage de sites professionnels'
   };
 }
 
-// Consigne de ton. 'humain' par défaut. Tous les tons restent HUMBLES : on écrit à
-// quelqu'un qui n'a rien demandé.
 const TONS = {
-  humain:
-    "Ton professionnel, naturel et respectueux : un prestataire sérieux qui a identifié une " +
-    "opportunité et le dit simplement. Vouvoiement. Ni familier, ni commercial, ni « gratteur ».",
-  direct:
-    "Ton sobre et factuel, tu vas à l'essentiel, avec courtoisie, sans jamais donner de leçon ni presser.",
-  doux:
-    "Ton prudent et courtois, aucune pression, tu proposes simplement ton aide."
+  humain: 'Ton professionnel et naturel, courtois, direct.',
+  direct: 'Ton sobre et factuel, va à l\'essentiel avec courtoisie.',
+  doux: 'Ton prudent et courtois, aucune pression.'
 };
 
-// Filet de sécurité : supprime les tirets (signature typique d'un texte IA) même si le
-// modèle en glisse malgré la consigne. Tirets cadratin/demi -> virgule ; puces -> rien.
+// Sujets que le modèle n'a pas le droit d'aborder s'ils ne figurent pas dans les preuves fournies.
+const SUJETS_NON_PROUVES = /\bphp\b|version|obsol|plus (maintenu|mis à jour|de mise)|certificat|\bssl\b|https|expir|alerte|avertissement|faille|sécurité|risque|sitemap|copyright|référencement|\bseo\b|google|mentions légales|cookies|rgpd|spf|dmarc|lent|vitesse|performance/i;
+
 function stripDashes(text) {
   return String(text || '')
-    .replace(/\s*[—–]\s*/g, ', ')     // — ou – (incise/parenthèse IA) -> virgule
-    .replace(/^[ \t]*[-*•]\s+/gm, '')  // puces en début de ligne -> supprimées
-    .replace(/ +-\s+/g, ', ')          // " - " connecteur -> virgule
-    .replace(/ ,/g, ',')               // nettoyage espace avant virgule
-    .replace(/,\s*,/g, ',')            // virgules doublées
-    .replace(/,\s*\./g, '.')           // ", ." -> "."
-    .replace(/[ \t]{2,}/g, ' ')        // espaces multiples
-    .trim();
-}
-
-// Formule de politesse de fin adaptée au moment de la journée (heure Europe/Paris).
-// L'email est généré au moment où l'on clique, donc au plus près de l'envoi.
-function formuleDeFin(date = new Date()) {
-  let h;
-  try {
-    // fr-FR formate en « 10 h » -> parseInt lit bien le nombre en tête. hour12:false.
-    const s = new Intl.DateTimeFormat('fr-FR', {
-      timeZone: 'Europe/Paris', hour: 'numeric', hour12: false
-    }).format(date);
-    h = parseInt(s, 10);
-    if (Number.isNaN(h)) h = date.getHours();
-    if (h === 24) h = 0; // minuit selon l'ICU
-  } catch {
-    h = date.getHours();
-  }
-  if (h < 12) return 'Belle matinée';
-  if (h < 14) return 'Bon appétit';          // créneau déjeuner
-  return 'Belle fin de journée';
+    .replace(/\s*[—–]\s*/g, ', ')
+    .replace(/^\s*-\s+/gm, '')
+    .replace(/\s+-\s+/g, ', ')
+    .replace(/,\s*,/g, ',');
 }
 
 function buildSystemPrompt(ton) {
-  const consigneTon = TONS[ton] || TONS.humain;
   return [
-    "Tu es un développeur web indépendant, spécialisé dans la maintenance technique des sites",
-    "professionnels, qui écrit un PREMIER email de contact à un commerçant ou artisan dont tu viens",
-    "de regarder le site. Objectif : ouvrir une discussion sur la maintenance, sans forcer.",
-    consigneTon,
-    "",
-    "POSTURE (la personne n'a rien demandé) :",
-    "- Prestataire sérieux qui a identifié une opportunité : factuel, respectueux, direct.",
-    "- JAMAIS de diagnostic autoritaire, d'injonction, de ton alarmiste, de leçon ni de culpabilisation.",
-    "- Un constat n'est jamais transformé en conséquence certaine (pas de « vous perdez des clients »,",
-    "  pas de « personne ne suit votre site », pas de « vos nouveautés mettent des semaines »).",
-    "- Propose ton aide UNE fois : contrat de maintenance (mises à jour, sauvegardes, suivi technique).",
-    "- FORMULES INTERDITES, à ne jamais écrire ni paraphraser : « je ne vous relancerai pas »,",
-    "  « un simple oui suffit », « une chose m'a sauté aux yeux », « que vous n'avez peut-être pas vu",
-    "  de l'intérieur », « rien de grave », « si je ne dis pas de bêtise », « je fais des sites à mon compte ».",
-    "",
-    "STRUCTURE (dans cet ordre) :",
-    "1. « Bonjour, » puis EXACTEMENT cette présentation (remplace le prénom et l'entreprise par ceux",
-    "   fournis) : « Je suis <Prénom>, développeur web indépendant et je dirige <Entreprise>, spécialisé",
-    "   dans la maintenance et le dépannage de sites professionnels. » Ne présente jamais l'entreprise",
-    "   comme une grosse agence.",
-    "2. Motif de contact factuel, UNIQUEMENT à partir des problèmes fournis (au plus 2).",
-    "3. Proposition concrète de maintenance ou d'aide.",
-    "4. Une question simple pour ouvrir la discussion.",
-    "5. La phrase exacte : « Si vous ne souhaitez plus être contacté, n'hésitez pas à me le signaler. »",
-    "",
-    "STYLE :",
-    "- Écris comme un VRAI humain qui a pris deux minutes pour regarder le site.",
-    "- Le texte doit COULER naturellement. N'enchaîne pas « D'abord… Ensuite… » de façon",
-    "  mécanique : intègre les points dans des phrases fluides et courtes.",
-    "- Commence par « Bonjour, ». Vouvoiement du début à la fin.",
-    "- INTERDICTION ABSOLUE DE TIRETS : aucun tiret cadratin (—), demi-cadratin (–), ni tiret",
-    "  « - » utilisé comme ponctuation, incise ou puce. C'est LE signe d'un texte écrit par une",
-    "  IA. Utilise UNIQUEMENT des virgules, des points ou des parenthèses. Zéro tiret.",
-    "",
-    "RÈGLES STRICTES :",
-    "- N'invente AUCUN fait. Utilise UNIQUEMENT les problèmes fournis dans les données.",
-    "- Mentionne AU MAXIMUM 2 problèmes, les plus parlants pour un non-technicien,",
-    "  expliqués en langage clair et avec ménagement (le bénéfice, pas le jargon).",
-    "- Interdits : superlatifs marketing (« boostez », « explosez vos ventes »), fausse urgence,",
-    "  flatterie fausse, jargon technique lourd, emojis (0).",
-    "- Longueur du corps : 80 à 120 mots. Phrases courtes.",
-    "- Termine le corps par UNE question ouverte discrète (savoir si c'est un sujet pour lui,",
-    "  ou s'il y avait déjà pensé), sans jamais forcer un rendez-vous.",
-    "- DERNIÈRE ligne = formule de politesse : utilise EXACTEMENT la formule de fin fournie",
-    "  dans les données (ex. « Belle matinée »), suivie d'une virgule.",
-    "- NE SIGNE PAS. N'ajoute NI nom, NI « PixFeed », NI coordonnées après la formule :",
-    "  la signature est ajoutée AUTOMATIQUEMENT par le CRM. Le body TERMINE sur la formule.",
-    "- Écris en français.",
-    "",
-    "Réponds UNIQUEMENT avec un objet JSON valide, sans texte autour, de la forme :",
-    '{"subject": "...", "body": "..."}',
-    "Le body contient des vrais retours à la ligne (\\n)."
-  ].join("\n");
+    'Tu aides un développeur web indépendant à rédiger un PREMIER email à un commerçant ou artisan.',
+    'Tu n\'écris PAS l\'email entier. Le code assemble la présentation, la proposition et la fin.',
+    'Tu écris UNIQUEMENT :',
+    '  - "motif" : 1 à 3 phrases courtes. Si des PREUVES sont fournies, reformule-en une (au plus deux)',
+    '    telles quelles, sans rien ajouter ni déduire. Si AUCUNE preuve n\'est fournie, écris une observation',
+    '    neutre sur la boutique (ce qu\'elle vend, d\'après son nom et sa technologie), SANS mentionner le',
+    '    moindre défaut, risque, version, certificat ou réglage.',
+    '  - "question" : UNE question courte et ouverte pour savoir si un prestataire assure déjà le suivi',
+    '    technique, ou si le sujet intéresse.',
+    '  - "subject" : un objet d\'email court et factuel, sans point d\'exclamation.',
+    TONS[ton] || TONS.humain,
+    'Vouvoiement. Français. Aucun tiret (—, –, ou « - » de ponctuation) : virgules et points seulement.',
+    'INTERDIT : alarmisme, leçon, culpabilisation, flatterie, superlatifs, emojis, toute conséquence non',
+    'démontrée (« vous perdez des clients », « ça affichera une alerte », « votre site est à risque »),',
+    'toute information absente des données (versions, PHP, certificat, Google, référencement).',
+    'INTERDIT aussi : « une structure », « à mon compte », « je fais des sites », « sauté aux yeux »,',
+    '« de l\'intérieur », « je ne vous relancerai pas », « un simple oui suffit », « rien de grave ».',
+    'Ne te présente pas, ne signe pas, ne salue pas : seulement motif, question, subject.',
+    'Réponds UNIQUEMENT avec un objet JSON valide : {"subject": "...", "motif": "...", "question": "..."}'
+  ].join('\n');
 }
 
-function buildUserPrompt(prospect, sender) {
-  const cible = prospect.dirigeant
-    ? `${prospect.dirigeant} (dirigeant)`
-    : (prospect.raison_sociale || prospect.company || prospect.domain);
-  const problemes = (prospect.problemes || []).filter(Boolean);
-  const lignes = [
-    "DONNÉES DU PROSPECT (détectées par notre outil, factuelles) :",
-    `- Site : ${prospect.domain || '—'}`,
-    prospect.raison_sociale ? `- Entreprise : ${prospect.raison_sociale}` : null,
-    prospect.dirigeant ? `- Interlocuteur : ${prospect.dirigeant}` : null,
-    prospect.platform && prospect.platform !== 'Inconnu'
-      ? `- Technologie du site : ${prospect.platform}${prospect.platform_version ? ` (${prospect.platform_version})` : ''}`
-      : null,
-    prospect.secteur ? `- Secteur : ${prospect.secteur}` : null,
-    "",
-    problemes.length
-      ? `PROBLÈMES DÉTECTÉS (choisis-en 1 ou 2, les plus parlants) :\n${problemes.map((p) => `- ${p}`).join("\n")}`
-      : "PROBLÈMES DÉTECTÉS : aucun signal fort — reste général, propose simplement un regard extérieur sur le site.",
-    "",
-    "CONTEXTE EXPÉDITEUR (uniquement pour ajuster le propos — NE PAS signer avec) :",
-    `- Activité de l'expéditeur : ${sender.metier}`,
-    "  (La signature du CRM sera ajoutée automatiquement après : ne mets aucune signature toi-même.)",
-    "",
-    `FORMULE DE FIN À UTILISER (obligatoire, telle quelle, en toute dernière ligne) : ${sender.formuleFin}`,
-    "",
-    `Écris l'email à ${cible}.`
-  ].filter(Boolean);
-  return lignes.join("\n");
+// Preuves fournies au modèle : les phrases VÉRIFIÉES du catalogue (jamais les indices).
+function preuvesPour(row) {
+  if (!row) return [];
+  const flags = auditFlags(row);
+  return proof.PREUVES_ORDRE.filter((k) => flags.some((f) => f.key === k)).slice(0, 2)
+    .map((k) => proof.CATALOGUE[k](row).preuve);
 }
 
-// Extrait le premier objet JSON d'une réponse (robuste aux ```json … ``` ou texte parasite).
+function buildUserPrompt(row, lead) {
+  const r = row || { domain: (lead && (lead.company || lead.website)) || '' };
+  const nom = proof.nomBoutique(r) || (lead && lead.name) || r.domain;
+  const preuves = preuvesPour(row);
+  return [
+    'DONNÉES (seules informations utilisables) :',
+    `- Boutique : ${nom}`,
+    `- Site : ${r.domain || '—'}`,
+    r.platform && r.platform !== 'Inconnu' ? `- Technologie : ${r.platform}` : null,
+    r.naf_label && r.sirene_match === 'sur' ? `- Activité : ${r.naf_label}` : null,
+    '',
+    preuves.length
+      ? `PREUVES VÉRIFIÉES (reformule-en une, au plus deux, sans rien ajouter) :\n${preuves.map((p) => `- ${p}`).join('\n')}`
+      : 'PREUVES VÉRIFIÉES : aucune. Observation neutre uniquement, aucun défaut, aucun sujet technique.',
+    '',
+    'Réponds avec le JSON demandé.'
+  ].filter(Boolean).join('\n');
+}
+
 function parseJsonLoose(text) {
   if (!text) return null;
-  let t = text.trim().replace(/^```(?:json)?/i, '').replace(/```$/i, '').trim();
+  const t = text.trim().replace(/^```(?:json)?/i, '').replace(/```$/i, '').trim();
   const start = t.indexOf('{');
   const end = t.lastIndexOf('}');
   if (start === -1 || end === -1 || end <= start) return null;
-  try {
-    return JSON.parse(t.slice(start, end + 1));
-  } catch {
-    return null;
-  }
+  try { return JSON.parse(t.slice(start, end + 1)); } catch { return null; }
 }
 
 /**
- * Rédige un email de prospection.
- * @param {object} prospect { domain, company, raison_sociale, dirigeant, platform,
- *                            platform_version, secteur, problemes: string[] }
- * @param {object} options  { ton, sender: {nom, entreprise, metier} }
- * @returns {Promise<{subject:string, body:string, model:string}>}
+ * Vérifie le texte du modèle. Renvoie null si acceptable, sinon la raison du rejet.
+ * @param {string} texte motif + question
+ * @param {boolean} avecPreuves des preuves ont-elles été fournies ?
  */
-async function draftColdEmail(prospect, options = {}) {
+function validerTexte(texte, avecPreuves) {
+  const t = String(texte || '');
+  if (!t.trim()) return 'texte vide';
+  if (proof.FORMULES_INTERDITES.test(t)) return 'formule interdite';
+  if (/\bune structure\b/i.test(t)) return 'présentation paraphrasée';
+  if (!avecPreuves && SUJETS_NON_PROUVES.test(t)) return 'sujet technique sans preuve';
+  if (/\d+\s*jours?/i.test(t) && !avecPreuves) return 'délai inventé';
+  if (/\btu\b|\bton\b|\btes\b/i.test(t)) return 'tutoiement';
+  if (t.split(/\s+/).filter(Boolean).length > 90) return 'trop long';
+  return null;
+}
+
+// Assemblage déterministe : mêmes briques que l'email par la preuve.
+function assembleColdEmail({ row, lead, motif, question }) {
+  const r = row || { domain: (lead && (lead.company || lead.website)) || '', platform: lead && lead.platform };
+  return [
+    proof.salutation(r, lead),
+    '',
+    proof.presentation(),
+    '',
+    stripDashes(motif).trim(),
+    '',
+    proof.conclusion(r).split('\n')[0], // proposition + lien
+    '',
+    stripDashes(question).trim() || 'Est-ce un sujet pour vous en ce moment ?',
+    '',
+    "Si vous ne souhaitez plus être contacté, n'hésitez pas à me le signaler.",
+    '',
+    'Bonne journée à vous,'
+  ].join('\n');
+}
+
+async function callAnthropic(system, userPrompt) {
   const key = process.env.ANTHROPIC_API_KEY;
   if (!key) throw new Error('ANTHROPIC_API_KEY manquante dans .env');
-
-  const ton = options.ton || 'humain';
-  const sender = senderIdentity(options.sender || {});
-  // Formule de fin selon l'heure (surchargeable via options.formuleFin pour tester).
-  sender.formuleFin = options.formuleFin || formuleDeFin();
-  const system = buildSystemPrompt(ton);
-  const userPrompt = buildUserPrompt(prospect, sender);
-
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': key,
-      'anthropic-version': '2023-06-01'
-    },
-    body: JSON.stringify({
-      model: LLM_MODEL,
-      max_tokens: 700,
-      system,
-      messages: [{ role: 'user', content: userPrompt }]
-    })
+    headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
+    body: JSON.stringify({ model: LLM_MODEL, max_tokens: 400, system, messages: [{ role: 'user', content: userPrompt }] })
   });
-
   if (!res.ok) {
     const detail = await res.text().catch(() => '');
     throw new Error(`Anthropic ${res.status} : ${detail.slice(0, 200)}`);
   }
   const data = await res.json();
-  const text = (data.content || []).map((c) => c.text || '').join('').trim();
-  const parsed = parseJsonLoose(text);
-
-  if (parsed && parsed.body) {
-    return {
-      // stripDashes : filet anti-tirets (le tell de l'IA) en plus de la consigne du prompt.
-      subject: stripDashes(String(parsed.subject || '').trim()) || 'Un mot à propos de votre site',
-      body: stripDashes(String(parsed.body).trim()),
-      model: LLM_MODEL
-    };
-  }
-  // Repli : si le JSON n'a pas été respecté, on renvoie le texte brut (nettoyé) comme corps.
-  return { subject: 'Un mot à propos de votre site', body: stripDashes(text) || '(réponse vide)', model: LLM_MODEL };
+  return (data.content || []).map((c) => c.text || '').join('').trim();
 }
 
-module.exports = { draftColdEmail, senderIdentity, buildSystemPrompt };
+/**
+ * Rédige l'email « Claude libre ».
+ * @param {{ row: object|null, lead: object }} input  ligne crawl_results (ou null) + fiche prospect
+ * @param {{ ton?: string, callModel?: Function }} options  callModel injectable (tests, sans réseau)
+ * @returns {Promise<{subject, body, model, preuves_utilisees: string[]}>}
+ */
+async function draftColdEmail(input, options = {}) {
+  const row = input.row || null;
+  const lead = input.lead || {};
+  const ton = options.ton || 'humain';
+  const callModel = options.callModel || callAnthropic;
+  const preuves = preuvesPour(row);
+  const system = buildSystemPrompt(ton);
+  const userPrompt = buildUserPrompt(row, lead);
+
+  let dernierRejet = null;
+  for (let essai = 0; essai < 2; essai++) {
+    const rappel = essai === 0 ? '' : `\n\nTon précédent texte a été refusé (${dernierRejet}). Respecte strictement les règles : aucun sujet technique hors preuves, aucune formule interdite.`;
+    const text = await callModel(system, userPrompt + rappel);
+    const parsed = parseJsonLoose(text);
+    if (!parsed || !parsed.motif) { dernierRejet = 'réponse illisible'; continue; }
+    const motif = stripDashes(parsed.motif);
+    const question = stripDashes(parsed.question || '');
+    dernierRejet = validerTexte(`${motif} ${question}`, preuves.length > 0);
+    if (dernierRejet) continue;
+    const subject = stripDashes(String(parsed.subject || '').trim()).replace(/!+/g, '').trim();
+    return {
+      subject: subject && !proof.FORMULES_INTERDITES.test(subject) ? subject : `Votre ${proof.typeSite(row || {})} ${(row && row.domain) || lead.company || ''}`.trim(),
+      body: assembleColdEmail({ row, lead, motif, question }),
+      model: LLM_MODEL,
+      preuves_utilisees: preuves
+    };
+  }
+  throw Object.assign(new Error(`Rédaction refusée : le texte produit par le modèle contenait « ${dernierRejet} ». Utilisez « Email par la preuve » ou un modèle du menu.`), { status: 422 });
+}
+
+module.exports = { draftColdEmail, senderIdentity, buildSystemPrompt, buildUserPrompt, validerTexte, assembleColdEmail, preuvesPour, SUJETS_NON_PROUVES };

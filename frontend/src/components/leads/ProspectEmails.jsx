@@ -156,6 +156,11 @@ const ProspectEmails = ({ lead, autoCompose = false }) => {
       if (data && data.sans_preuve) {
         setSansPreuve(data);
         toast.error('Pas de preuve vérifiable : email non généré');
+      } else if (data && data.refus) {
+        // Claude libre : le texte du modèle a été rejeté par les règles (formule interdite, sujet
+        // non prouvé). Rien n'est affiché plutôt qu'un texte douteux.
+        setSansPreuve({ message: data.message, indices: [] });
+        toast.error('Texte refusé par les règles : rien n\'a été généré');
       } else {
         toast.error(e.message || 'Échec de la rédaction');
       }

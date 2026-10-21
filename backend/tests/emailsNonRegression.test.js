@@ -106,8 +106,14 @@ test('email création (signaux) et consigne Claude libre : mêmes règles de ton
   for (const phrase of ['je ne vous relancerai pas', 'un simple oui suffit', "sauté aux yeux", "de l'intérieur", 'rien de grave', 'à mon compte']) {
     assert.ok(prompt.toLowerCase().includes(phrase.toLowerCase()), `interdit listé dans la consigne : ${phrase}`);
   }
-  assert.match(prompt, /80 à 120 mots/);
-  assert.match(prompt, /Si vous ne souhaitez plus être contacté, n'hésitez pas à me le signaler/);
+  // Le modèle n'écrit plus l'email entier : présentation, proposition, refus discret et fin sont
+  // assemblés par le code (assembleColdEmail), donc présents quoi qu'il réponde.
+  const { assembleColdEmail } = require('../services/coldEmailService');
+  const corps = assembleColdEmail({ row: { domain: 'x.fr', platform: 'PrestaShop' }, lead: {}, motif: 'Constat.', question: 'Question ?' });
+  assert.match(corps, /développeur web indépendant et je dirige PixFeed, spécialisé dans la maintenance et le dépannage de sites professionnels\./);
+  assert.match(corps, /Si vous ne souhaitez plus être contacté, n'hésitez pas à me le signaler\./);
+  assert.match(corps, /pixfeed\.net\/maintenance/);
+  assert.match(corps, /Bonne journée à vous,$/);
 });
 
 test('modèles d\'email du menu « Modèle » : même présentation, aucune formule interdite', () => {
