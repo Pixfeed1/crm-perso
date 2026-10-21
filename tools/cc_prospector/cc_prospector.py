@@ -649,6 +649,7 @@ CSV_FIELDS = [
     "site_type", "ecommerce_actif",
     # --- traçabilité : pour chaque preuve, retrouver le signal brut, l'URL, la date ---
     "ssl_erreur",        # raison TLS lisible (nom non couvert, expiré, autorité inconnue…) ou vide
+    "https_erreur",      # dernière erreur brute rencontrée sur un candidat https strict (vide si https a servi la page)
     "sitemap_detail",    # « https://x.fr/sitemap.xml -> 200 text/html (page HTML) » etc.
     "code_postal_site",  # code postal lu sur la page (recoupement SIRENE)
     "php_source",        # d'où vient serveur_php : X-Powered-By | Server | vide
@@ -970,6 +971,7 @@ async def detect_one(domain: str, sem, timeout: float, clients: dict, retries: i
     async with sem:
         last_err = ""
         tls_err = ""          # première erreur TLS rencontrée sur un candidat https (strict)
+        https_err = ""        # dernière erreur brute sur un candidat https strict (traçabilité)
         tried_https_strict = False
         for url, verify in candidate_attempts(domain):
             is_https = url.startswith("https://")
@@ -980,6 +982,7 @@ async def detect_one(domain: str, sem, timeout: float, clients: dict, retries: i
                     last_err = err or last_err
                     if is_https and verify:
                         tried_https_strict = True
+                        https_err = err or https_err
                         if tls and not tls_err:
                             tls_err = err
                     continue      # candidat suivant (les https sans vérif viennent en dernier)
@@ -1053,6 +1056,7 @@ async def detect_one(domain: str, sem, timeout: float, clients: dict, retries: i
                     ssl_ok=("oui" if (final_https and verify) else ("non" if tls_err else "")),
                     ssl_erreur=(tls_reason(tls_err) if (tls_err and not (final_https and verify)) else ""),
                     https_final=("oui" if final_https else "non"),
+                    https_erreur=("" if final_https else https_err[:120]),
                     analyse_le=_now_iso(),
                     protected=("oui" if protected else "non"),
                     lang=detect_lang(html),

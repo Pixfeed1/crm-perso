@@ -114,8 +114,15 @@ async function enrichMatch({ query, domain = '', title = '', code_postal_site = 
   const q = (query || '').trim();
   if (!q) return { found: false };
   try {
-    const res = await axios.get(API, { params: { q, per_page: 5, page: 1 }, timeout: 8000 });
-    const results = Array.isArray(res.data?.results) ? res.data.results : [];
+    let res = await axios.get(API, { params: { q, per_page: 5, page: 1 }, timeout: 8000 });
+    let results = Array.isArray(res.data?.results) ? res.data.results : [];
+    // Le titre de la page ne donne rien (« AGRIGOM SAS », « Atelier du sucre, la boutique… ») :
+    // on réessaie avec la racine du domaine, débarrassée des tirets.
+    const root = String(domain || '').toLowerCase().replace(/^www\./, '').split('.')[0].replace(/-/g, ' ').trim();
+    if (results.length === 0 && root && root.length >= 3 && root !== q.toLowerCase()) {
+      res = await axios.get(API, { params: { q: root, per_page: 5, page: 1 }, timeout: 8000 });
+      results = Array.isArray(res.data?.results) ? res.data.results : [];
+    }
     if (results.length === 0) return { found: false };
     const scored = results.map((c) => ({ c, sc: matchScore(c, { domain, title, code_postal_site }) })).sort((a, b) => b.sc - a.sc);
     const best = scored[0].c; const bestScore = scored[0].sc;

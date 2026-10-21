@@ -47,13 +47,13 @@ for (const raw of rows) {
       r.sirene_match = data.match;
       if (data.match !== 'douteux') Object.assign(r, { raison_sociale: data.raison_sociale, gerant: data.dirigeant, gerant_nom: data.dirigeant_nom, gerant_prenom: data.dirigeant_prenom, ville: data.ville, code_postal: data.code_postal, siren: data.siren, naf_label: data.naf_label });
       console.log(`SIRENE : ${data.match} (score ${data.match_score}${data.match_second != null ? `, second ${data.match_second}` : ''}) ${data.raison_sociale || ''} ${data.code_postal || ''} ${data.ville || ''}`);
-    } else console.log('SIRENE : aucune entreprise trouvée');
+    } else console.log(data.error ? `SIRENE : appel en échec (${data.error})` : 'SIRENE : aucune entreprise trouvée (titre puis racine du domaine)');
     await new Promise((res) => setTimeout(res, 250));
   }
   const flags = auditFlags(r);
   console.log('═'.repeat(78));
   console.log(`${r.domain}  [${r.platform || '?'}${r.platform_version ? ' ' + r.platform_version : ''}]  HTTP ${r.http_status ?? '?'}  ${r.final_url || ''}`);
-  console.log(`analysé le : ${r.analyse_le || 'inconnu'} · ssl_ok=${r.ssl_ok} ssl_erreur=${r.ssl_erreur || '-'} https_final=${r.https_final} · sitemap=${r.sitemap} (${r.sitemap_detail || '-'}) · php=${r.serveur_php || '-'} (${r.php_source || '-'}) · cp site=${r.code_postal_site || '-'}`);
+  console.log(`analysé le : ${r.analyse_le || 'inconnu'} · ssl_ok=${r.ssl_ok} ssl_erreur=${r.ssl_erreur || '-'} https_erreur=${raw.https_erreur || '-'} https_final=${r.https_final} · sitemap=${r.sitemap} (${r.sitemap_detail || '-'}) · php=${r.serveur_php || '-'} (${r.php_source || '-'}) · cp site=${r.code_postal_site || '-'}`);
   const blocker = promotionBlocker(r);
   if (blocker) console.log(`BLOQUÉ à la promotion : ${blocker}`);
   console.log(`signaux : ${flags.map((f) => `${f.key}${niveauFlag && niveauFlag(f.key) === 'preuve' ? '*' : ''}`).join(', ') || 'aucun'}   (* = preuve)`);

@@ -186,8 +186,11 @@ function nomBoutique(r) {
     const rs = String(r.raison_sociale).trim();
     if (rs.length <= 40) return joliNom(rs);
   }
-  const segs = String(r.title || '').split(/\s+[-|–—:]\s+/).map((x) => x.trim())
-    .filter((x) => x && x.length <= 40 && !/^(prestashop|wordpress|accueil|home|bienvenue|boutique|shop)$/i.test(x));
+  // Segments du titre : séparateurs « - | – — : », puis coupe à la virgule (« Atelier du sucre,
+  // la boutique en ligne » -> « Atelier du sucre ») et forme juridique retirée (« AGRIGOM SAS »).
+  const segs = String(r.title || '').split(/\s+[-|–—:]\s+/)
+    .map((x) => x.split(/,\s/)[0].replace(/\b(SARL|SAS|SASU|EURL|SA|SCI|SNC|EI)\b\.?/g, '').replace(/\s+/g, ' ').trim())
+    .filter((x) => x && x.length >= 3 && x.length <= 40 && !/^(prestashop|wordpress|accueil|home|bienvenue|boutique|shop)$/i.test(x));
   if (segs.length === 0) return '';
   // Le segment qui ressemble au domaine gagne (« Gourmands d'Antan » pour gourmandsdantan.fr),
   // sinon le plus court en mots, puis en lettres.
