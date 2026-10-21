@@ -77,14 +77,15 @@ Les emails sont assemblés par le code (`services/proofEmailService.js`), sans m
   réseau. `https_final` reste un fait : la page finale est servie en HTTP.
 - **Preuves retenues** (`PREUVE_KEYS`) : constatées, visibles par le gérant, d'impact réel :
   accueil 404, erreur serveur, noindex / robots, servi en HTTP (y compris « certificat valide mais
-  redirigé vers http »), certificat expiré / invalide / bientôt expiré, nom mal orthographié, titre
-  d'installation, lien mentions légales cassé, pas d'affichage mobile. Copyright ancien, description
-  Google, adresses non réécrites, sitemap vide, PHP, SPF, DMARC : **indices**, jamais le motif d'un
-  email. Sans preuve, le mode refuse de générer.
+  redirigé vers http »), certificat expiré ou invalide, nom mal orthographié, titre d'installation,
+  lien mentions légales cassé, pas d'affichage mobile. Certificat bientôt expiré, copyright ancien,
+  description Google, adresses non réécrites, sitemap vide, PHP, SPF, DMARC : **indices**, jamais le
+  motif d'un email. Sans preuve, le mode refuse de générer.
 - **PHP** : `serveur_php` vient d'une entête (`php_source` = X-Powered-By ou Server). C'est une
   déclaration : elle n'apparaît plus dans le corps de l'email, seulement dans le bloc de traçabilité.
-- **Ton et structure** (tous les modes : preuve, Claude libre, création) : présentation courte en
-  « développeur web indépendant (PixFeed), spécialisé dans la maintenance… », motif factuel daté,
+- **Ton et structure** (tous les modes : preuve, Claude libre, création, et les modèles du menu
+  « Modèle ») : présentation unique « Je suis Marc, développeur web indépendant et je dirige PixFeed,
+  spécialisé dans la maintenance et le dépannage de sites professionnels. », motif factuel daté,
   proposition de maintenance avec lien (`OUTREACH_OFFER_URL`), une question, refus discret
   (« Si vous ne souhaitez plus être contacté, n'hésitez pas à me le signaler. »). 80 à 120 mots,
   vouvoiement. Formules interdites vérifiées par test (`FORMULES_INTERDITES`) : « je ne vous

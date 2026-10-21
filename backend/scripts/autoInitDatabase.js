@@ -1285,58 +1285,133 @@ async function ensureStripeIdempotencyColumns(client) {
  * Seed des 6 modèles d'email par défaut (uniquement si la table est vide ;
  * ils restent éditables/supprimables ensuite).
  */
-async function ensureEmailTemplatesSeed(client) {
-  const { rows } = await client.query('SELECT COUNT(*)::int AS n FROM email_templates');
-  if (rows[0].n > 0) return;
-  console.log('\n🔧 Seed des modèles d\'email par défaut...');
-  const T = [
-    ['Premier contact', 'contact', 'Un détail repéré sur {site}',
+// Modèles d'email de prospection (menu « Modèle » de la fiche prospect). Même ton que les
+// générateurs : présentation professionnelle, constat factuel, proposition, question courte.
+// Jamais d'alerte, de « simple oui », de « je n'insiste pas ».
+const PRESENTATION_TEMPLATE = "Je suis {expediteur}, développeur web indépendant et je dirige {entreprise}, spécialisé dans la maintenance et le dépannage de sites professionnels.";
+const EMAIL_TEMPLATE_SEED = [
+  ['Premier contact', 'contact', 'Un point relevé sur {site}',
 `{prenom},
+
+${PRESENTATION_TEMPLATE}
+
+En consultant {site}, j'ai relevé un point à vous signaler : {constat}.
+
+Si personne n'assure le suivi technique de votre site (mises à jour, sauvegardes, incidents), je peux m'en charger.
+
+Est-ce un sujet pour vous en ce moment ?
+
+Si vous ne souhaitez plus être contacté, n'hésitez pas à me le signaler.`],
+  ['Relance', 'relance', 'Re: Un point relevé sur {site}',
+`{prenom},
+
+Je me permets de revenir vers vous au sujet du point relevé sur {site}.
+
+Si le sujet n'est pas d'actualité, aucun souci. Sinon, je reste disponible pour en parler.
+
+Si vous ne souhaitez plus être contacté, n'hésitez pas à me le signaler.`],
+  ['Clôture', 'cloture', 'Dernier message de ma part',
+`{prenom},
+
+Sans retour de votre part, je ne vous solliciterai pas davantage.
+
+Si vous avez un jour besoin d'un développeur pour {plateforme} (mise à jour, incident, refonte, migration), mes coordonnées restent valables.
+
+Bonne continuation.`],
+  ['Intéressé', 'interesse', 'Suite à votre retour',
+`{prenom},
+
+Merci pour votre retour. Pour cerner vos besoins sur {site}, un échange de quinze à vingt minutes suffit.
+
+Indiquez-moi le créneau qui vous convient, je m'adapte.
+
+À bientôt,`],
+  ['PrestaShop', 'presta', 'Maintenance de votre boutique PrestaShop',
+`{prenom},
+
+${PRESENTATION_TEMPLATE}
+
+Les boutiques PrestaShop en version 1.6 ou 1.7 ne reçoivent plus de mises à jour de l'éditeur, ce qui complique la sécurité et la compatibilité des modules avec le temps.
+
+Je peux vérifier où en est {site} et vous dire ce que cela implique, sans engagement.
+
+Est-ce un sujet pour lequel vous disposez déjà d'un prestataire ?
+
+Si vous ne souhaitez plus être contacté, n'hésitez pas à me le signaler.`],
+  ['WooCommerce', 'woo', 'Maintenance de votre boutique WooCommerce',
+`{prenom},
+
+${PRESENTATION_TEMPLATE}
+
+Sur une boutique WooCommerce, ce sont le plus souvent WordPress et les extensions laissés sans mise à jour qui finissent par poser problème.
+
+Je peux regarder où en est {site} et vous faire un retour, sans engagement.
+
+Est-ce un sujet pour lequel vous disposez déjà d'un prestataire ?
+
+Si vous ne souhaitez plus être contacté, n'hésitez pas à me le signaler.`]
+];
+// Anciens textes des modèles d'origine : remplacés SEULEMENT s'ils n'ont jamais été modifiés
+// (corps strictement identique au seed d'origine). Un modèle retouché à la main est conservé.
+const EMAIL_TEMPLATE_SEED_V1 = {
+  'Premier contact': `{prenom},
 
 En parcourant {site}, j'ai remarqué {constat} — rien de dramatique, mais le genre de détail qui peut faire fuir un visiteur (ou pénaliser votre référencement) sans qu'on s'en rende compte.
 
 Développeur freelance spécialisé {plateforme}, c'est précisément le type de choses que je corrige au quotidien.
 
-Si ça vous parle, je vous envoie le détail de ce que j'ai repéré et comment le régler. Un mot de votre part et c'est parti.`],
-    ['Relance', 'relance', 'Re: Un détail repéré sur {site}',
-`{prenom},
+Si ça vous parle, je vous envoie le détail de ce que j'ai repéré et comment le régler. Un mot de votre part et c'est parti.`,
+  'Relance': `{prenom},
 
 Je reviens vers vous au sujet de ce que j'avais repéré sur {site}.
 
-Ce sont des points rapides à corriger, et qui vous font sûrement perdre quelques visiteurs au passage. Si vous voulez le détail, un simple « oui » suffit — je vous envoie tout.`],
-    ['Clôture', 'cloture', 'Je n\'insiste pas',
-`{prenom},
+Ce sont des points rapides à corriger, et qui vous font sûrement perdre quelques visiteurs au passage. Si vous voulez le détail, un simple « oui » suffit — je vous envoie tout.`,
+  'Clôture': `{prenom},
 
 Sans retour, je ne vais pas vous encombrer davantage.
 
 Si un jour vous avez besoin d'un développeur de confiance sur {plateforme} — bug, mise à jour, refonte, migration — gardez mon contact, ce sera avec plaisir.
 
-Bonne continuation à {site} !`],
-    ['Intéressé', 'interesse', 'Super, on en parle ?',
-`{prenom},
+Bonne continuation à {site} !`,
+  'Intéressé': `{prenom},
 
 Content que ça vous parle ! Pour bien cerner vos besoins sur {site}, le plus simple est un court échange de 15-20 min.
 
 Dites-moi le créneau qui vous arrange, je m'adapte.
 
-À très vite,`],
-    ['PrestaShop', 'presta', 'Votre PrestaShop est-il à jour ?',
-`{prenom},
+À très vite,`,
+  'PrestaShop': `{prenom},
 
 Beaucoup de boutiques PrestaShop tournent encore sous 1.6 ou 1.7, des versions qui ne sont plus maintenues : failles de sécurité, modules qui cassent, incompatibilité PHP.
 
 Développeur freelance spécialisé PrestaShop (jusqu'à la 8.x), je gère ces migrations sans perte de données ni de référencement.
 
-Je peux vérifier où en est {site} et vous dire s'il y a un risque, sans engagement. Ça vous intéresse ?`],
-    ['WooCommerce', 'woo', 'Vos extensions WooCommerce sont-elles à jour ?',
-`{prenom},
+Je peux vérifier où en est {site} et vous dire s'il y a un risque, sans engagement. Ça vous intéresse ?`,
+  'WooCommerce': `{prenom},
 
 Sur {site}, comme sur beaucoup de boutiques WooCommerce, ce sont souvent les extensions et WordPress laissés sans mises à jour qui posent problème : failles de sécurité, conflits, lenteurs.
 
 Développeur freelance spécialisé WooCommerce, je m'occupe de la maintenance, de la sécurité et des performances de ce type de boutique.
 
-Je peux regarder où en est {site} et vous faire un retour, sans engagement. Ça vous intéresse ?`]
-  ];
+Je peux regarder où en est {site} et vous faire un retour, sans engagement. Ça vous intéresse ?`
+};
+
+async function ensureEmailTemplatesTone(client) {
+  let n = 0;
+  for (const [name, , subject, body] of EMAIL_TEMPLATE_SEED) {
+    const old = EMAIL_TEMPLATE_SEED_V1[name];
+    if (!old) continue;
+    const r = await client.query('UPDATE email_templates SET subject = $1, body = $2 WHERE name = $3 AND body = $4', [subject, body, name, old]).catch(() => ({ rowCount: 0 }));
+    n += r.rowCount || 0;
+  }
+  if (n) console.log(`  ✓ Modèles d'email : ${n} texte(s) d'origine mis au ton professionnel (les modèles retouchés à la main sont conservés)`);
+}
+
+async function ensureEmailTemplatesSeed(client) {
+  const { rows } = await client.query('SELECT COUNT(*)::int AS n FROM email_templates');
+  if (rows[0].n > 0) return;
+  console.log('\n🔧 Seed des modèles d\'email par défaut...');
+  const T = EMAIL_TEMPLATE_SEED;
   for (const [name, category, subject, body] of T) {
     await client.query(
       'INSERT INTO email_templates (name, category, subject, body) VALUES ($1, $2, $3, $4)',
@@ -2600,6 +2675,7 @@ async function autoInitDatabase(pool) {
 
     // Seeds emails (modèles + signature par défaut) — seulement si vides
     await ensureEmailTemplatesSeed(client);
+    await ensureEmailTemplatesTone(client);
     await ensureEmailSignatureSeed(client);
     await ensureSignatureUnsubRemoval(client);
 
@@ -2625,4 +2701,4 @@ async function autoInitDatabase(pool) {
   }
 }
 
-module.exports = { autoInitDatabase, DATABASE_SCHEMA };
+module.exports = { autoInitDatabase, DATABASE_SCHEMA, EMAIL_TEMPLATE_SEED };

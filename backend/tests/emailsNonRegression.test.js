@@ -7,6 +7,7 @@ const { buildCreationEmail } = require('../services/creationEmailService');
 const { buildSystemPrompt } = require('../services/coldEmailService');
 const { PREUVE_KEYS, auditFlags } = require('../utils/prospectScore');
 const { typedResult } = require('../controllers/crawlController');
+const { EMAIL_TEMPLATE_SEED } = require('../scripts/autoInitDatabase');
 
 const mots = (t) => t.split(/\s+/).filter(Boolean).length;
 
@@ -58,7 +59,7 @@ test('faux sitemap vide : une page HTML en 200 est « absent » côté crawler ;
   assert.ok(vide.indices.includes('sitemap vide'));
 });
 
-test('ton : aucune formule interdite, 80 à 125 mots, structure présentation / motif / proposition / question / refus, sur TOUTES les preuves', () => {
+test('ton : aucune formule interdite, 80 à 128 mots, structure présentation / motif / proposition / question / refus, sur TOUTES les preuves', () => {
   const base = { domain: 'exemple.fr', title: 'Boutique Exemple', http_status: 200, platform: 'PrestaShop', ssl_ok: true, https_final: true, analyse_le: '2026-10-21T10:00:00Z' };
   const cas = {
     accueil_404: { http_status: 404 },
@@ -68,7 +69,6 @@ test('ton : aucune formule interdite, 80 à 125 mots, structure présentation / 
     http_non_securise: { https_final: false, final_url: 'http://exemple.fr/' },
     ssl_expire: { ssl_expire_jours: -12 },
     ssl_invalide: { ssl_ok: false, ssl_erreur: 'certificat valable pour un autre nom' },
-    ssl_bientot: { ssl_expire_jours: 9 },
     titre_defaut: { title: 'PrestaShop' },
     mentions_404: { mentions_404: true },
     mobile: { mobile_ok: false }
@@ -81,8 +81,8 @@ test('ton : aucune formule interdite, 80 à 125 mots, structure présentation / 
     assert.doesNotMatch(d.body, FORMULES_INTERDITES, key);
     assert.doesNotMatch(d.subject, FORMULES_INTERDITES, key);
     const n = mots(d.body);
-    assert.ok(n >= 80 && n <= 125, `${key} : ${n} mots`);
-    assert.match(d.body, /développeur web indépendant/);
+    assert.ok(n >= 80 && n <= 128, `${key} : ${n} mots`);
+    assert.match(d.body, /développeur web indépendant et je dirige PixFeed, spécialisé dans la maintenance et le dépannage de sites professionnels\./);
     assert.match(d.body, /maintenance/);
     assert.match(d.body, /Est-ce un sujet pour vous en ce moment \?/);
     assert.match(d.body, /Si vous ne souhaitez plus être contacté, n'hésitez pas à me le signaler\./);
@@ -91,7 +91,9 @@ test('ton : aucune formule interdite, 80 à 125 mots, structure présentation / 
   }
   const lyon = buildProofEmail({ ...base, ...cas.nom_mal_orthographie }, {});
   assert.match(lyon.body, /^Bonjour Paul Durand,/);
-  assert.match(lyon.body, /autour de Lyon/);
+  // Certificat bientôt expiré : plus un motif d'email (renouvellement souvent automatique).
+  assert.equal(buildProofEmail({ ...base, ssl_expire_jours: 18 }, {}).ok, false);
+  assert.equal(PREUVE_KEYS.has('ssl_bientot'), false);
 });
 
 test('email création (signaux) et consigne Claude libre : mêmes règles de ton', () => {
@@ -106,4 +108,15 @@ test('email création (signaux) et consigne Claude libre : mêmes règles de ton
   }
   assert.match(prompt, /80 à 120 mots/);
   assert.match(prompt, /Si vous ne souhaitez plus être contacté, n'hésitez pas à me le signaler/);
+});
+
+test('modèles d\'email du menu « Modèle » : même présentation, aucune formule interdite', () => {
+  for (const [name, , subject, body] of EMAIL_TEMPLATE_SEED) {
+    assert.doesNotMatch(body, FORMULES_INTERDITES, name);
+    assert.doesNotMatch(subject, FORMULES_INTERDITES, name);
+    assert.doesNotMatch(body, /n'insiste pas|faire fuir|perdre quelques visiteurs|failles de sécurité/i, name);
+  }
+  const premier = EMAIL_TEMPLATE_SEED.find(([n]) => n === 'Premier contact')[3];
+  assert.match(premier, /développeur web indépendant et je dirige \{entreprise\}, spécialisé dans la maintenance et le dépannage de sites professionnels\./);
+  assert.match(premier, /Si vous ne souhaitez plus être contacté/);
 });

@@ -19,7 +19,7 @@ const { auditFlags, phpEol, nomMalOrthographie } = require('../utils/prospectSco
 // Ordre de conviction des preuves : ce qui coûte des ventes ou fait honte d'abord.
 const PREUVES_ORDRE = [
   'accueil_404', 'erreur_serveur', 'invisible_google', 'nom_mal_orthographie', 'http_non_securise', 'ssl_expire',
-  'ssl_invalide', 'ssl_bientot', 'titre_defaut', 'mentions_404', 'mobile'
+  'ssl_invalide', 'titre_defaut', 'mentions_404', 'mobile'
 ];
 const PREUVES = new Set(PREUVES_ORDRE);
 
@@ -58,7 +58,7 @@ const CATALOGUE = {
   invisible_google: (r) => ({
     sujet: `votre site demande à Google de ne pas l'indexer`,
     preuve: r.noindex
-      ? `La page d'accueil de ${site(r)} contient une balise « noindex », qui demande à Google de ne pas l'indexer.`
+      ? `La page d'accueil de ${site(r)} porte une balise « noindex », qui demande à Google de ne pas l'indexer.`
       : `Le fichier robots.txt de ${site(r)} interdit à Google de parcourir le site (Disallow: /).`,
     consequence: `C'est un réglage de mise en construction souvent oublié ; tant qu'il est là, ces pages restent hors de Google.`,
     brut: r.noindex ? 'meta robots noindex sur la page d\'accueil' : 'robots.txt : Disallow: / pour tous les robots ou Googlebot'
@@ -69,10 +69,10 @@ const CATALOGUE = {
     return {
       sujet: `« Non sécurisé » s'affiche sur ${site(r)}`,
       preuve: redirige
-        ? `En tapant https://${site(r)}${quand(r)}, on est renvoyé vers ${finale} : le certificat existe, mais le site ne l'utilise pas, et le navigateur affiche « Non sécurisé » à côté de l'adresse.`
+        ? `En tapant https://${site(r)}, on est renvoyé vers ${finale} : le certificat existe mais n'est pas utilisé, et le navigateur affiche « Non sécurisé ».`
         : `${site(r)} s'ouvre en HTTP, sans cadenas${quand(r)} : le navigateur affiche « Non sécurisé » à côté de l'adresse.`,
       consequence: redirige
-        ? `Le certificat étant déjà en place, il s'agit d'un réglage de redirection, pas d'une refonte.`
+        ? `Le certificat étant en place, c'est un réglage de redirection, pas une refonte.`
         : `Dans la plupart des cas, le certificat existe déjà et il suffit de l'imposer.`,
       brut: redirige ? `https accepté puis redirigé vers ${r.final_url} (servi en HTTP)` : `URL finale ${r.final_url || 'http://' + site(r)} servie en HTTP`
     };
@@ -89,16 +89,10 @@ const CATALOGUE = {
     consequence: `Souvent, seule l'adresse sans « www » est concernée, et cela se règle côté hébergement.`,
     brut: r.ssl_erreur || 'erreur TLS à la connexion'
   }),
-  ssl_bientot: (r) => ({
-    sujet: `votre certificat expire dans ${r.ssl_expire_jours} jours`,
-    preuve: `Le certificat de sécurité de ${site(r)} expire dans ${r.ssl_expire_jours} jour${r.ssl_expire_jours > 1 ? 's' : ''}${quand(r)}, ce qui se lit en cliquant sur le cadenas du navigateur.`,
-    consequence: `Le renouvellement est le plus souvent automatique ; je vous le signale au cas où il ne le serait pas.`,
-    brut: `certificat : ${r.ssl_expire_jours} jour(s) restants`
-  }),
   titre_defaut: (r) => ({
     sujet: `votre site s'appelle « ${String(r.title || '').trim()} » dans Google`,
-    preuve: `Le titre de la page d'accueil de ${site(r)}, celui qui s'affiche dans Google et dans l'onglet du navigateur, est encore « ${String(r.title || '').trim()} »${quand(r)}.`,
-    consequence: `Votre boutique apparaît donc sous ce nom dans les résultats, sans ce que vous vendez ; c'est un réglage rapide.`,
+    preuve: `Le titre de la page d'accueil de ${site(r)}, celui qui s'affiche dans Google et dans l'onglet du navigateur, est encore « ${String(r.title || '').trim()} ».`,
+    consequence: `Votre ${typeSite(r)} apparaît donc sous ce nom dans Google, sans ce que vous proposez ; c'est un réglage rapide.`,
     brut: `<title> = « ${String(r.title || '').trim()} »`
   }),
   mentions_404: (r) => ({
@@ -144,7 +138,7 @@ function contexteTechnique(r, flags) {
 
 // Ce qu'on ne dit JAMAIS à un prospect (familier, culpabilisant, alarmiste ou donneur de leçon).
 // Vérifié par les tests sur tout le catalogue.
-const FORMULES_INTERDITES = /relancerai pas|un simple « ?oui ?»|simple oui|sauté aux yeux|de l'intérieur|personne ne suit|semaines à apparaître|écran rouge|plein écran|encore ouvert|à mon compte|rien de grave|si je ne dis pas de bêtise|vous perdez|perte de clients/i;
+const FORMULES_INTERDITES = /relancerai pas|un simple « ?oui ?»|simple oui|sauté aux yeux|de l'intérieur|personne ne suit|semaines à apparaître|écran rouge|plein écran|encore ouvert|à mon compte|je fais des sites|rien de grave|si je ne dis pas de bêtise|vous perdez|perte de clients|faire fuir|client mécontent|grosse agence/i;
 
 // Correspondance SIRENE jugée sûre : seule base pour personnaliser (nom, dirigeant, ville).
 // « probable » ou « douteux » -> aucune personnalisation : un prénom ou une ville faux, et le
@@ -220,14 +214,12 @@ function villeConfirmee(r) {
   const cpSiege = String(r.code_postal || '').trim();
   return cpSite && cpSiege && cpSite === cpSiege ? joliVille(r.ville) : '';
 }
-function presentation(r) {
+// Présentation unique, validée, identique dans tous les modes (preuve, création, Claude libre).
+// Partagée via module.exports pour qu'aucun générateur n'en dérive.
+function presentation() {
   const prenom = (process.env.OUTREACH_SENDER_NAME || '').trim();
   const entreprise = (process.env.OUTREACH_SENDER_COMPANY || 'PixFeed').trim();
-  const ville = villeConfirmee(r);
-  const ou = ville ? `, notamment autour de ${ville}` : '';
-  return prenom
-    ? `Je m'appelle ${prenom}, développeur web indépendant (${entreprise}), spécialisé dans ${specialite(r)}${ou}.`
-    : `Je suis développeur web indépendant (${entreprise}), spécialisé dans ${specialite(r)}${ou}.`;
+  return `Je suis ${prenom ? `${prenom}, ` : ''}développeur web indépendant et je dirige ${entreprise}, spécialisé dans la maintenance et le dépannage de sites professionnels.`;
 }
 
 // Motif de contact : factuel, sans formule qui juge ou qui flatte.
@@ -241,7 +233,7 @@ function motif(r, c) {
 function conclusion(r) {
   const url = (process.env.OUTREACH_OFFER_URL || 'https://pixfeed.net/maintenance/').trim();
   return [
-    `Si personne n'assure le suivi technique de votre ${typeSite(r)} (mises à jour, sauvegardes), je peux m'en charger ; mon offre de maintenance est détaillée ici : ${url}`,
+    `Si personne n'assure le suivi technique de votre ${typeSite(r)} ${String(r.platform || '').match(/prestashop|woocommerce|wordpress/i) ? `${r.platform} ` : ''}(mises à jour, sauvegardes), je peux m'en charger ; mon offre de maintenance est détaillée ici : ${url}`,
     '',
     'Est-ce un sujet pour vous en ce moment ?',
     '',

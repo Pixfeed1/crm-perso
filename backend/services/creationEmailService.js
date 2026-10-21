@@ -6,16 +6,8 @@
 // facile. Assemblé sans LLM, comme l'email par la preuve.
 const { joliNom, nomCourt } = require('./proofEmailService');
 
-// Qui écrit, en une phrase. Le métier du destinataire n'est pas repris ici : à ce stade on ne sait
-// pas toujours ce qu'il fait, et « des travaux de plomberie comme la vôtre » sonnerait faux.
-function presentation(s) {
-  const prenom = (process.env.OUTREACH_SENDER_NAME || '').trim();
-  const entreprise = (process.env.OUTREACH_SENDER_COMPANY || 'PixFeed').trim();
-  const ou = s.city && s.match_confidence === 'sur' ? `, notamment autour de ${String(s.city).trim()}` : '';
-  return prenom
-    ? `Je m'appelle ${prenom}, développeur web indépendant (${entreprise}), spécialisé dans la création et la maintenance technique de sites professionnels${ou}.`
-    : `Je suis développeur web indépendant (${entreprise}), spécialisé dans la création et la maintenance technique de sites professionnels${ou}.`;
-}
+// Présentation : la même phrase que l'email par la preuve (une seule source).
+const { presentation } = require('./proofEmailService');
 
 function nomEntreprise(signal, lead) {
   const raw = (signal && (signal.match_confidence === 'sur' || signal.match_confidence === 'probable') && signal.company_name)
@@ -54,7 +46,7 @@ function buildCreationEmail(signal, lead) {
   const body = [
     salutation(s),
     '',
-    presentation(s),
+    presentation(),
     '',
     contexte,
     '',

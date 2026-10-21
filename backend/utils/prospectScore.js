@@ -213,8 +213,9 @@ function departmentFromPostalCode(cp) {
 // Preuves = constatées, visibles par le gérant, et d'impact réel pour ses clients. Copyright
 // ancien, description Google, adresses non réécrites, sitemap vide : vrais mais mineurs ou
 // discutables -> indices, jamais le motif d'un email.
+// Un certificat qui expire bientôt n'est pas un défaut (renouvellement souvent automatique) : indice.
 const PREUVE_KEYS = new Set(['accueil_404', 'erreur_serveur', 'invisible_google', 'http_non_securise', 'ssl_expire',
-  'ssl_invalide', 'ssl_bientot', 'nom_mal_orthographie', 'titre_defaut', 'mentions_404', 'mobile']);
+  'ssl_invalide', 'nom_mal_orthographie', 'titre_defaut', 'mentions_404', 'mobile']);
 const niveauFlag = (key) => (PREUVE_KEYS.has(key) ? 'preuve' : 'indice');
 
 module.exports = { auditFlags, prospectScore, disqualifyReason, promotionBlocker, departmentFromPostalCode, phpEol, niveauFlag, PREUVE_KEYS, NOCODE_NAMES, descriptionAbsurde, nomMalOrthographie, grandeEntreprise, GRANDES_MARQUES };

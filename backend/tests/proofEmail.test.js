@@ -51,10 +51,10 @@ test('salutation : premier prénom + nom en casse de nom, jamais l\'état civil 
   const r = { domain: 'a.fr', title: 'A', https_final: false, http_status: 200, sirene_match: 'sur', gerant: 'LUDOVIC MARCEL ROBERT AUGUSTE BAUDRY', raison_sociale: 'A SARL', ville: 'OYONNAX', code_postal: '01100', code_postal_site: '01100', platform: 'PrestaShop' };
   const d = buildProofEmail(r, {});
   assert.match(d.body, /^Bonjour Ludovic Baudry,/);
-  assert.match(d.body, /autour de Oyonnax/);
-  // Ville citée seulement si le code postal lu sur le site confirme le siège.
+  // La ville n'est jamais dans le corps (présentation unique) ; la trace dit si elle est confirmée.
+  assert.doesNotMatch(d.body, /Oyonnax/);
+  assert.match(d.detail.identite, /confirmée par le code postal du site/);
   const sansCp = buildProofEmail({ ...r, code_postal_site: null }, {});
-  assert.doesNotMatch(sansCp.body, /Oyonnax/);
   assert.match(sansCp.detail.identite, /non confirmée/);
   const { joliVille, joliNom } = require('../services/proofEmailService');
   assert.equal(joliVille("CREVECŒUR-SUR-L'ESCAUT"), "Crevecœur-sur-l'Escaut");
@@ -79,7 +79,7 @@ test('correspondance SIRENE probable ou douteuse : ni nom, ni ville, ni raison s
 
 test('portées sobres : aucune affirmation sur Google ou les clients qu\'on ne peut pas démontrer', () => {
   const cas = [
-    { domain: 'b.fr', title: 'B', ssl_ok: true, ssl_expire_jours: 12, http_status: 200, analyse_le: '2026-10-20T08:00:00Z' },
+    { domain: 'b.fr', title: 'B', ssl_ok: true, ssl_expire_jours: -12, http_status: 200, analyse_le: '2026-10-20T08:00:00Z' },
     { domain: 'c.fr', title: 'C', ssl_ok: false, ssl_erreur: 'certificat valable pour un autre nom', http_status: 200 },
     { domain: 'd.fr', title: 'D', mobile_ok: false, http_status: 200 }
   ];
@@ -89,9 +89,10 @@ test('portées sobres : aucune affirmation sur Google ou les clients qu\'on ne p
     assert.doesNotMatch(d.body, /semaines à apparaître|écran rouge|plein écran|plus de la moitié|ferment avant|encore ouvert|perd(ez|re) des clients/i, r.domain);
     assert.ok(d.detail.brut, r.domain);
   }
-  const bientot = buildProofEmail(cas[0], {});
-  assert.match(bientot.body, /En consultant b\.fr le 20\/10\/2026/);
-  assert.match(bientot.body, /le plus souvent automatique/);
+  const expire = buildProofEmail(cas[0], {});
+  assert.match(expire.body, /En consultant b\.fr le 20\/10\/2026/);
+  assert.match(expire.body, /expiré depuis 12 jours/);
+  assert.match(expire.body, /Si le renouvellement est déjà programmé/);
   const inval = buildProofEmail(cas[1], {});
   assert.match(inval.body, /certificat valable pour un autre nom/);
   // Copyright ancien et sitemap vide ne sont plus des motifs d'email.
