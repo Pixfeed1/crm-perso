@@ -69,7 +69,7 @@ const getLeadById = (db, id) => {
                         h1_present, mentions_legales, rgpd_confidentialite, cookie_banner, analytics,
                         spf, dmarc, serveur_php, copyright_annee,
                         https_final, final_url, http_status, noindex, robots_bloque, mentions_404, sitemap, title,
-                        analyse_le, sirene_match, raison_sociale, ville, code_postal, code_postal_site, https_variantes, ssl_erreur, ssl_sujet
+                        analyse_le, sirene_match, raison_sociale, ville, code_postal, code_postal_site, https_variantes, ssl_erreur, ssl_sujet, ssl_hote
                  FROM crawl_results WHERE id = $1`,
                 [lead.crawl_result_id],
                 (auditErr, audit) => {

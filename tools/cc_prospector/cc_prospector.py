@@ -651,6 +651,7 @@ CSV_FIELDS = [
     "ssl_erreur",        # raison TLS lisible (nom non couvert, expiré, autorité inconnue…) ou vide
     "https_erreur",      # dernière erreur brute rencontrée sur un candidat https strict (vide si https a servi la page)
     "ssl_sujet",         # nom (CN) du certificat présenté quand il ne couvre pas le domaine (ex. preview.infomaniak.website)
+    "ssl_hote",          # hôte sur lequel le certificat a été refusé (batterie4moto.fr ou www.batterie4moto.fr)
     "https_variantes",   # trace de chaque variante testée : « https://x.fr -> TLS: nom non couvert | https://www.x.fr -> 200 https://www.x.fr/ »
     "sitemap_detail",    # « https://x.fr/sitemap.xml -> 200 text/html (page HTML) » etc.
     "code_postal_site",  # code postal lu sur la page (recoupement SIRENE)
@@ -1022,6 +1023,7 @@ async def detect_one(domain: str, sem, timeout: float, clients: dict, retries: i
     async with sem:
         last_err = ""
         tls_err = ""          # première erreur TLS rencontrée sur un candidat https (strict)
+        tls_host = ""         # hôte sur lequel ce certificat a été refusé (nu ou www)
         https_err = ""        # dernière erreur brute sur un candidat https strict (traçabilité)
         variantes = []        # une entrée par essai : ce qu'on a testé et ce qu'on a obtenu
         tried_https_strict = False
@@ -1039,6 +1041,7 @@ async def detect_one(domain: str, sem, timeout: float, clients: dict, retries: i
                         https_err = err or https_err
                         if tls and not tls_err:
                             tls_err = err
+                            tls_host = url.split("://", 1)[1].split("/")[0]
                     continue      # candidat suivant (les https sans vérif viennent en dernier)
                 variantes.append(f"{url}{'' if verify else ' (sans vérif)'} -> {r.status_code} {str(r.url)}")
 
@@ -1091,9 +1094,12 @@ async def detect_one(domain: str, sem, timeout: float, clients: dict, retries: i
                 # même si le site redirige ensuite vers http : le certificat existe, il n'est
                 # juste pas imposé (angle « site servi en HTTP »).
                 if final_https or tried_https_strict:
+                    # Certificat lu sur l'hôte qui a réellement répondu en https, sinon sur celui
+                    # qui a refusé le handshake (souvent www), jamais sur un hôte muet.
+                    cert_host = (r.url.host if final_https else None) or tls_host or bare
                     dns, cert = await asyncio.gather(
                         check_dns(bare, timeout, clients.get("dns")),
-                        ssl_cert_info((r.url.host if final_https else None) or bare, timeout),
+                        ssl_cert_info(cert_host, timeout),
                     )
                 else:
                     dns, cert = await check_dns(bare, timeout, clients.get("dns")), {"days": "", "cn": "", "valide": ""}
@@ -1125,6 +1131,7 @@ async def detect_one(domain: str, sem, timeout: float, clients: dict, retries: i
                     parked=("oui" if is_parked(html, title) else "non"),
                     ssl_expire_jours=ssl_days,
                     ssl_sujet=ssl_sujet,
+                    ssl_hote=(tls_host if tls_err else ""),
                     error="",
                     **contacts,
                     **site,

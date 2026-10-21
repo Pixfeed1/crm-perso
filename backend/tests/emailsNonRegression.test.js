@@ -161,14 +161,19 @@ test('Batterie4moto : mesure HTTPS de l\'ancien crawl non confirmée -> pas d\'a
 
 test('Batterie4moto (crawl frais) : certificat d\'hébergeur présenté sur les deux variantes https -> preuve nommant le certificat, pas de « il suffit »', () => {
   const r = typedResult({ domain: 'batterie4moto.fr', title: 'Batterie4moto', http_status: '200', final_url: 'http://www.batterie4moto.fr', https_final: 'non', ssl_ok: 'non',
-    ssl_erreur: 'certificat valable pour un autre nom', ssl_sujet: 'preview.infomaniak.website', platform: 'PrestaShop', analyse_le: '2026-10-21T16:03:09+00:00',
-    https_variantes: 'https://batterie4moto.fr -> TLS: certificat valable pour un autre nom | https://www.batterie4moto.fr -> TLS: certificat valable pour un autre nom | http://batterie4moto.fr -> 200 http://www.batterie4moto.fr' });
+    ssl_erreur: 'certificat valable pour un autre nom', ssl_sujet: 'preview.infomaniak.website', ssl_hote: 'www.batterie4moto.fr', platform: 'PrestaShop', analyse_le: '2026-10-21T16:03:09+00:00',
+    https_variantes: 'https://batterie4moto.fr -> erreur: ConnectError: | https://www.batterie4moto.fr -> TLS: certificat valable pour un autre nom | http://batterie4moto.fr -> 200 http://www.batterie4moto.fr' });
   const d = buildProofEmail(r, {});
   assert.equal(d.ok, true);
   assert.equal(d.preuve, 'http_non_securise');
   assert.match(d.body, /certificat présenté est au nom de « preview\.infomaniak\.website », celui de l'hébergeur/);
+  // L'adresse citée est celle où le certificat a été refusé (www), pas le domaine nu qui ne répond pas.
+  assert.match(d.body, /En tapant https:\/\/www\.batterie4moto\.fr, le navigateur/);
+  // Sans colonne ssl_hote (ancienne ligne), l'adresse est lue dans la trace des variantes.
+  const sansHote = buildProofEmail({ ...r, ssl_hote: null }, {});
+  assert.match(sansHote.body, /En tapant https:\/\/www\.batterie4moto\.fr/);
   assert.match(d.body, /ne s'ouvre donc qu'en HTTP, sans cadenas/);
   assert.doesNotMatch(d.body, /imposer|Dans la plupart des cas/);
-  assert.match(d.detail.brut, /variantes : https:\/\/batterie4moto\.fr -> TLS/);
+  assert.match(d.detail.brut, /variantes : https:\/\/batterie4moto\.fr -> erreur: ConnectError: \| https:\/\/www\.batterie4moto\.fr -> TLS/);
   assert.ok(mots(d.body) <= 140, String(mots(d.body)));
 });
