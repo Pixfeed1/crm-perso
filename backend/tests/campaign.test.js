@@ -163,8 +163,78 @@ test('parcours complet : préparer, relire, programmer, hooks du worker, pause a
     assert.equal((await pool.query("SELECT COUNT(*)::int AS n FROM scheduled_emails WHERE campaign_id = $1 AND status = 'cancelled'", [c3.id])).rows[0].n, 2);
     assert.equal((await pool.query("SELECT COUNT(*)::int AS n FROM campaign_items WHERE campaign_id = $1 AND statut = 'arrete'", [c3.id])).rows[0].n, 1);
     await assert.rejects(S.addLeads(db, c3.id, [l5]), /arrêtée/);
+    // « Commencer le » : les créneaux partent de la date choisie, pas de maintenant.
+    const c4 = await S.createCampaign(db, { nom: 'Différée' });
+    const l7 = (await pool.query("INSERT INTO leads (name, company, email, crawl_result_id) VALUES ('Sept', 'sept.fr', 'c@sept.fr', $1) RETURNING id", [frais])).rows[0].id;
+    await S.addLeads(db, c4.id, [l7]);
+    await S.validateMany(db, c4.id, (await S.getCampaignFull(db, c4.id)).items.map((i) => i.id));
+    const dansDixJours = new Date(Date.now() + 10 * 86400000);
+    const sch4 = await S.schedule(db, c4.id, { debut: dansDixJours.toISOString() });
+    assert.ok(new Date(sch4.premier) >= new Date(dansDixJours.getTime() - 3 * 60000), 'premier créneau à la date choisie');
+    await assert.rejects(S.schedule(db, c4.id, { debut: 'pas une date' }), /invalide/);
     // Statistiques : réponses et contrats avant les ouvertures.
     const st = await S.stats(db, c.id);
     assert.equal(st.envoyes, 1); assert.match(st.note, /pas détectés automatiquement/);
+  });
+});
+
+test('options de la fiche reprises en campagne : modèle du menu rempli, relance optionnelle, réanalyse de ligne', { skip: !hasDb() && 'TEST_DATABASE_URL absent' }, async () => {
+  await withSchema('campagne2', async ({ pool }) => {
+    const db = { pool };
+    const S = require('../services/campaignService');
+    const { typedResult, insertCrawlResult } = require('../controllers/crawlController');
+    for (const t of ['crawl_jobs', 'crawl_results', 'campaigns', 'campaign_items', 'scheduled_emails', 'email_templates']) await createFromSchema(pool, t);
+    await pool.query('CREATE TABLE crawl_seen_domains (domain TEXT PRIMARY KEY, source VARCHAR(20), first_seen TIMESTAMP DEFAULT NOW())');
+    await pool.query(`CREATE TABLE leads (id SERIAL PRIMARY KEY, name TEXT, company TEXT, website TEXT, email TEXT, relation_status TEXT DEFAULT 'nouveau', status TEXT, crawl_result_id INTEGER, platform TEXT, angles TEXT, score INTEGER, notes TEXT, updated_at TIMESTAMP)`);
+    await pool.query(`CREATE TABLE interactions (id SERIAL PRIMARY KEY, contact_type VARCHAR(10), contact_id INT, type TEXT, reached TEXT, date TIMESTAMP DEFAULT NOW(), notes TEXT, next_followup_date DATE, next_followup_channel TEXT, followup_done BOOLEAN DEFAULT FALSE, relance_step INT)`);
+    await pool.query('CREATE TABLE email_optout (email TEXT PRIMARY KEY, source TEXT)');
+    await pool.query('CREATE TABLE email_log (id SERIAL PRIMARY KEY, to_email TEXT, source VARCHAR(40), created_at TIMESTAMP DEFAULT NOW())');
+    await pool.query('CREATE TABLE email_signatures (id SERIAL PRIMARY KEY, content TEXT, is_default BOOLEAN DEFAULT FALSE)');
+    await pool.query("INSERT INTO email_signatures (content, is_default) VALUES ('<p>défaut</p>', TRUE), ('<p>campagne</p>', FALSE)");
+    process.env.OUTREACH_SENDER_NAME = 'Marc';
+    const tpl = (await pool.query("INSERT INTO email_templates (name, category, subject, body) VALUES ('Perso', 'contact', 'Un mot sur {site}', '{prenom},\n\nJe suis {expediteur} et je dirige {entreprise}.\n\n{constat}\n\nÀ bientôt,') RETURNING id")).rows[0].id;
+    const job = await pool.query("INSERT INTO crawl_jobs (techno, nb_sites, statut) VALUES ('prestashop', 1, 'done') RETURNING id");
+    const rid = await insertCrawlResult(db, job.rows[0].id, typedResult({ domain: 'agrigom.fr', platform: 'PrestaShop', http_status: '200', final_url: 'http://www.agrigom.fr/', https_final: 'non', ssl_ok: 'oui', title: 'Accueil - AGRIGOM SAS', email: 'contact@agrigom.fr', analyse_le: '2026-10-21T14:21:31+00:00' }));
+    await pool.query("UPDATE crawl_results SET sirene_match = 'sur', raison_sociale = 'AGRIGOM', gerant_nom = 'SAVARY', gerant_prenom = 'FRANCK' WHERE id = $1", [rid]);
+    const lead = (await pool.query("INSERT INTO leads (name, company, email, crawl_result_id) VALUES ('AGRIGOM', 'agrigom.fr', 'contact@agrigom.fr', $1) RETURNING id", [rid])).rows[0].id;
+
+    // Mode modèle : variables remplies, civilité sûre, constat = preuve retenue.
+    const c = await S.createCampaign(db, { nom: 'Modèle', mode: 'modele', template_id: tpl, signature_id: 2, bcc: 'copie@pixfeed.net', relance_jours: 7, relance_canal: 'appel' });
+    await S.addLeads(db, c.id, [lead]);
+    const it = (await S.getCampaignFull(db, c.id)).items[0];
+    assert.equal(it.mode, 'modele');
+    assert.equal(it.subject, 'Un mot sur agrigom.fr');
+    assert.match(it.body, /^Bonjour Franck Savary,\n/);
+    assert.match(it.body, /Je suis Marc et je dirige PixFeed\./);
+    assert.match(it.body, /renvoyé vers http:\/\/www\.agrigom\.fr/);
+    await assert.rejects(S.createCampaign(db, { nom: 'Sans modèle', mode: 'modele' }), /modèle/);
+
+    // Programmation : signature choisie et copie cachée appliquées.
+    await S.validateMany(db, c.id, [it.id]);
+    await S.schedule(db, c.id, {});
+    const se = (await pool.query('SELECT * FROM scheduled_emails WHERE campaign_id = $1', [c.id])).rows[0];
+    assert.match(se.body_html, /<p>campagne<\/p>/); assert.equal(se.bcc_email, 'copie@pixfeed.net');
+    // Relance J+7 (appel) créée APRÈS l'envoi seulement, et seulement parce que la campagne le demande.
+    assert.equal((await pool.query('SELECT COUNT(*)::int AS n FROM interactions')).rows[0].n, 0);
+    await pool.query("UPDATE scheduled_emails SET status = 'sent', sent_at = NOW() WHERE id = $1", [se.id]);
+    await S.afterSent(db, se);
+    const rel = (await pool.query('SELECT * FROM interactions WHERE contact_id = $1', [lead])).rows;
+    assert.equal(rel.length, 1); assert.equal(rel[0].next_followup_channel, 'appel'); assert.equal(rel[0].relance_step, null);
+    assert.equal(Math.round((new Date(rel[0].next_followup_date) - new Date(new Date().toISOString().slice(0, 10))) / 86400000), 7);
+
+    // Réanalyse d'une ligne « ancien crawl » : mesures fraîches injectées -> preuve confirmée -> ligne prête.
+    const vieux = await insertCrawlResult(db, job.rows[0].id, typedResult({ domain: 'vieux.fr', platform: 'PrestaShop', http_status: '200', final_url: 'http://vieux.fr/', https_final: 'non', ssl_ok: 'non', title: 'Vieux', email: 'c@vieux.fr' }));
+    const l2 = (await pool.query("INSERT INTO leads (name, company, email, crawl_result_id) VALUES ('Vieux', 'vieux.fr', 'c@vieux.fr', $1) RETURNING id", [vieux])).rows[0].id;
+    const c2 = await S.createCampaign(db, { nom: 'Réanalyse' });
+    await S.addLeads(db, c2.id, [l2]);
+    let it2 = (await S.getCampaignFull(db, c2.id)).items[0];
+    assert.equal(it2.statut, 'a_verifier'); assert.match(it2.raison, /ancien crawl/);
+    const detect = async () => [{ domain: 'vieux.fr', platform: 'PrestaShop', http_status: '200', final_url: 'http://www.vieux.fr/', https_final: 'non', ssl_ok: 'oui', title: 'Vieux', email: 'c@vieux.fr', analyse_le: '2026-10-21T16:00:00+00:00' }];
+    const r = await S.reanalyzeItem(db, c2.id, it2.id, { detect, sirene: async () => ({ found: false }) });
+    assert.equal(r.item.statut, 'pret'); assert.equal(r.item.preuve_signal, 'http_non_securise'); assert.ok(r.item.preuve_date);
+    // Régénération « maintenance » d'une ligne validée : elle repasse en prêt à valider.
+    await S.updateItem(db, c2.id, it2.id, { statut: 'valide' });
+    const regen = await S.updateItem(db, c2.id, it2.id, { mode: 'maintenance' });
+    assert.equal(regen.mode, 'maintenance'); assert.equal(regen.statut, 'pret');
   });
 });

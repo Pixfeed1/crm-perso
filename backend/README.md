@@ -149,6 +149,13 @@ sélection) et dans la liste des Prospects (vue tableau, cases à cocher). Aucun
    expéditeur (`GET /api/campagnes/sender-check`) : connexion SMTP, SPF, DMARC, DKIM si
    `EMAIL_DKIM_SELECTOR`.
 
+**Options de la fiche reprises** : mode `modele` (modèle du menu rempli par prospect : `{prenom}` =
+civilité sûre ou « Bonjour », `{site}`, `{plateforme}`, `{constat}` = preuve retenue, `{expediteur}`,
+`{entreprise}`), régénération d'une ligne en preuve / maintenance / modèle / Claude libre encadré
+(la ligne repasse en « prêt »), « Réanalyser » la ligne (même service que la fiche, puis reclassement),
+signature choisie, copie cachée, « Commencer le » (date de début des créneaux), relance manuelle
+optionnelle J+N dans le Suivi (désactivée par défaut, créée après l'envoi réel seulement).
+
 **Worker** : `scheduledEmailWorker` appelle `beforeSend` (pause → l'email attend ; arrêt, ligne
 marquée répondu/rebond/opposition, désinscrit, fiche fermée ou en discussion → annulé), `afterSent`
 (ligne envoyée, campagne terminée quand plus rien n'attend), `afterFailed` (ligne en échec, **pause

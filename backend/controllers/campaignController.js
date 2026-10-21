@@ -33,6 +33,10 @@ module.exports = {
   updateItem: async (req, res) => {
     try { res.json(await service.updateItem(req.app.locals.db, req.params.id, req.params.itemId, req.body || {})); } catch (e) { fail(res, e, 'ligne'); }
   },
+  // POST /:id/items/:itemId/reanalyze -> mesures du jour, SIRENE, email régénéré, ligne reclassée
+  reanalyzeItem: async (req, res) => {
+    try { res.json(await service.reanalyzeItem(req.app.locals.db, req.params.id, req.params.itemId)); } catch (e) { fail(res, e, 'réanalyse'); }
+  },
   // POST /:id/items/validate { ids, statut? }
   validateMany: async (req, res) => {
     const ids = ints(req.body?.ids);
@@ -41,7 +45,7 @@ module.exports = {
   },
   // POST /:id/schedule { test?, test_emails? }
   schedule: async (req, res) => {
-    try { res.json(await service.schedule(req.app.locals.db, req.params.id, { test: !!req.body?.test, test_emails: req.body?.test_emails })); } catch (e) { fail(res, e, 'programmation'); }
+    try { res.json(await service.schedule(req.app.locals.db, req.params.id, { test: !!req.body?.test, test_emails: req.body?.test_emails, debut: req.body?.debut || null })); } catch (e) { fail(res, e, 'programmation'); }
   },
   pause: async (req, res) => { try { res.json(await service.pause(req.app.locals.db, req.params.id)); } catch (e) { fail(res, e, 'pause'); } },
   resume: async (req, res) => { try { res.json(await service.resume(req.app.locals.db, req.params.id)); } catch (e) { fail(res, e, 'reprise'); } },

@@ -17,6 +17,7 @@ router.post('/:id/items/from-leads', ctrl.addLeads);
 router.post('/:id/items/from-crawl', ctrl.addFromCrawl);
 router.post('/:id/items/validate', ctrl.validateMany);
 router.patch('/:id/items/:itemId', ctrl.updateItem);
+router.post('/:id/items/:itemId/reanalyze', ctrl.reanalyzeItem);
 router.post('/:id/schedule', ctrl.schedule);
 router.post('/:id/pause', ctrl.pause);
 router.post('/:id/resume', ctrl.resume);

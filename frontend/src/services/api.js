@@ -1356,6 +1356,7 @@ export const campagnesAPI = {
   addLeads: (id, lead_ids) => apiRequest(`/campagnes/${id}/items/from-leads`, 'POST', { lead_ids }),
   addFromCrawl: (id, job_id, result_ids) => apiRequest(`/campagnes/${id}/items/from-crawl`, 'POST', { job_id, result_ids }),
   updateItem: (id, itemId, payload) => apiRequest(`/campagnes/${id}/items/${itemId}`, 'PATCH', payload),
+  reanalyzeItem: (id, itemId) => apiRequest(`/campagnes/${id}/items/${itemId}/reanalyze`, 'POST', {}),
   validateMany: (id, ids, statut = 'valide') => apiRequest(`/campagnes/${id}/items/validate`, 'POST', { ids, statut }),
   schedule: (id, payload = {}) => apiRequest(`/campagnes/${id}/schedule`, 'POST', payload),
   pause: (id) => apiRequest(`/campagnes/${id}/pause`, 'POST', {}),

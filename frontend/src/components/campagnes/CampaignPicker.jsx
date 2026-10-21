@@ -4,7 +4,7 @@
 // créer une, puis y ajouter la sélection. Rien n'est envoyé ici : on prépare seulement.
 import React, { useEffect, useState } from 'react';
 import { FiX, FiSend, FiPlus } from 'react-icons/fi';
-import { campagnesAPI } from '../../services/api';
+import { campagnesAPI, emailTemplatesAPI } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
 
 const CampaignPicker = ({ count, onConfirm, onClose }) => {
@@ -13,6 +13,8 @@ const CampaignPicker = ({ count, onConfirm, onClose }) => {
   const [choix, setChoix] = useState('new');
   const [nom, setNom] = useState(`Campagne du ${new Date().toLocaleDateString('fr-FR')}`);
   const [mode, setMode] = useState('preuve');
+  const [templates, setTemplates] = useState([]);
+  const [templateId, setTemplateId] = useState('');
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -21,6 +23,7 @@ const CampaignPicker = ({ count, onConfirm, onClose }) => {
       setCampagnes(ouvertes);
       if (ouvertes[0]) setChoix(String(ouvertes[0].id));
     }).catch(() => {});
+    emailTemplatesAPI.list().then((l) => setTemplates(l || [])).catch(() => {});
   }, []);
 
   const confirm = async () => {
@@ -28,7 +31,8 @@ const CampaignPicker = ({ count, onConfirm, onClose }) => {
       setBusy(true);
       let id = choix;
       if (choix === 'new') {
-        const c = await campagnesAPI.create({ nom, mode });
+        if (mode === 'modele' && !templateId) { toast.error('Choisis un modèle'); setBusy(false); return; }
+        const c = await campagnesAPI.create({ nom, mode, template_id: mode === 'modele' ? parseInt(templateId, 10) : null });
         id = c.id;
       }
       await onConfirm(Number(id));
@@ -66,8 +70,19 @@ const CampaignPicker = ({ count, onConfirm, onClose }) => {
               <select value={mode} onChange={(e) => setMode(e.target.value)} className="w-full px-3 py-2 bg-surface border border-border rounded-lg text-text-primary focus:outline-none focus:border-accent">
                 <option value="preuve">Preuve (repli maintenance sans alerte si aucune preuve)</option>
                 <option value="maintenance">Maintenance seule (aucune alerte technique)</option>
+                <option value="modele">Un modèle du menu, rempli par prospect</option>
               </select>
             </div>
+            {mode === 'modele' && (
+              <div>
+                <label className="block text-sm text-text-secondary mb-1">Modèle</label>
+                <select value={templateId} onChange={(e) => setTemplateId(e.target.value)} className="w-full px-3 py-2 bg-surface border border-border rounded-lg text-text-primary focus:outline-none focus:border-accent">
+                  <option value="">Choisir…</option>
+                  {templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                </select>
+                <p className="text-xs text-text-muted mt-1">Variables : {'{prenom}'} (civilité sûre ou « Bonjour »), {'{site}'}, {'{plateforme}'}, {'{constat}'} (preuve retenue), {'{expediteur}'}, {'{entreprise}'}.</p>
+              </div>
+            )}
           </div>
         )}
         <div className="flex justify-end gap-2">

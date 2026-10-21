@@ -313,6 +313,13 @@ const DATABASE_SCHEMA = {
       heure_fin: 'INTEGER DEFAULT 18',
       espacement_min: 'INTEGER DEFAULT 20',
       jours_ouvres: 'BOOLEAN DEFAULT TRUE',
+      // Mêmes options que la fenêtre d'email de la fiche : signature, modèle du menu, copie cachée,
+      // relance manuelle (désactivée par défaut : aucune relance automatique).
+      signature_id: 'INTEGER',
+      template_id: 'INTEGER',                    // mode 'modele' : modèle du menu rempli par prospect
+      bcc: 'TEXT',
+      relance_jours: 'INTEGER',                  // null = aucune relance ; sinon relance prévue J+N après l'envoi
+      relance_canal: "VARCHAR(10) DEFAULT 'email'",
       statut: "VARCHAR(20) DEFAULT 'brouillon'", // brouillon | en_cours | pause | arretee | terminee
       test_mode: 'BOOLEAN DEFAULT FALSE',        // les envois partent vers test_emails, pas vers les prospects
       test_emails: 'TEXT',

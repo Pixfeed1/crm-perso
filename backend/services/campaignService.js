@@ -14,6 +14,8 @@ const proof = require('./proofEmailService');
 const crawl = require('../controllers/crawlController');
 const { classifyItem, planSlots } = require('../utils/campaignRules');
 const { normalizeDomain } = require('../utils/csvParse');
+const coldEmail = require('./coldEmailService');
+const reanalyse = require('./leadReanalyzeService');
 
 const ECHECS_PAUSE = 3; // échecs d'envoi consécutifs -> pause automatique de la campagne
 
@@ -88,19 +90,23 @@ async function stats(db, id) {
 }
 
 // ─── Création ───────────────────────────────────────────────────────────────
-async function createCampaign(db, { nom, mode = 'preuve', from_account = 'pro', par_jour = 15, heure_debut = 9, heure_fin = 18, espacement_min = 20, jours_ouvres = true } = {}) {
+const MODES = ['preuve', 'maintenance', 'modele'];
+async function createCampaign(db, { nom, mode = 'preuve', from_account = 'pro', par_jour = 15, heure_debut = 9, heure_fin = 18, espacement_min = 20, jours_ouvres = true, template_id = null, signature_id = null, bcc = null, relance_jours = null, relance_canal = 'email' } = {}) {
   const n = String(nom || '').trim() || `Campagne du ${new Date().toLocaleDateString('fr-FR')}`;
-  const m = mode === 'maintenance' ? 'maintenance' : 'preuve';
+  const m = MODES.includes(mode) ? mode : 'preuve';
+  if (m === 'modele' && !template_id) throw Object.assign(new Error('Mode modèle : choisissez un modèle du menu.'), { status: 400 });
   const r = await db.pool.query(
-    `INSERT INTO campaigns (nom, mode, from_account, par_jour, heure_debut, heure_fin, espacement_min, jours_ouvres)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
-    [n, m, from_account === 'gmail' ? 'gmail' : 'pro', Math.max(1, Math.min(100, par_jour | 0 || 15)), heure_debut | 0, heure_fin | 0, Math.max(1, espacement_min | 0 || 20), !!jours_ouvres]
+    `INSERT INTO campaigns (nom, mode, from_account, par_jour, heure_debut, heure_fin, espacement_min, jours_ouvres, template_id, signature_id, bcc, relance_jours, relance_canal)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *`,
+    [n, m, from_account === 'gmail' ? 'gmail' : 'pro', Math.max(1, Math.min(100, par_jour | 0 || 15)), heure_debut | 0, heure_fin | 0, Math.max(1, espacement_min | 0 || 20), !!jours_ouvres,
+     template_id || null, signature_id || null, (bcc || '').trim() || null, relance_jours ? Math.max(1, relance_jours | 0) : null, ['email', 'appel', 'sms', 'autre'].includes(relance_canal) ? relance_canal : 'email']
   );
   return r.rows[0];
 }
 
 async function updateCampaign(db, id, fields) {
-  const allowed = ['nom', 'mode', 'from_account', 'par_jour', 'heure_debut', 'heure_fin', 'espacement_min', 'jours_ouvres', 'test_mode', 'test_emails'];
+  const allowed = ['nom', 'mode', 'from_account', 'par_jour', 'heure_debut', 'heure_fin', 'espacement_min', 'jours_ouvres', 'test_mode', 'test_emails', 'template_id', 'signature_id', 'bcc', 'relance_jours', 'relance_canal'];
+  if (fields && fields.relance_jours === '' ) fields.relance_jours = null;
   const keys = Object.keys(fields || {}).filter((k) => allowed.includes(k));
   if (!keys.length) return getCampaign(db, id);
   const set = keys.map((k, i) => `${k} = $${i + 1}`).join(', ');
@@ -137,7 +143,33 @@ async function controles(db, lead, campaignId, { ignoreSelf = null } = {}) {
 }
 
 // ─── Génération ─────────────────────────────────────────────────────────────
-function generer(campaign, row, lead) {
+// Modèle du menu rempli pour ce prospect : {prenom} (civilité sûre ou « Bonjour »), {site},
+// {plateforme}, {constat} (la preuve retenue, sinon vide), {expediteur}, {entreprise}.
+function remplirModele(texte, row, lead) {
+  const r = row || {};
+  const salut = proof.salutation(r, lead).replace(/,$/, ''); // « Bonjour Franck Savary » ou « Bonjour »
+  const site = (r.domain || lead.company || '').replace(/^www\./, '');
+  const plateforme = (r.platform && r.platform !== 'Inconnu') ? r.platform : '';
+  const d = row ? proof.buildProofEmail(row, lead) : { ok: false };
+  const constat = d.ok ? proof.CATALOGUE[d.preuve](row).preuve : '';
+  return String(texte || '')
+    .replace(/\{prenom\}/g, salut).replace(/\{site\}/g, site).replace(/\{plateforme\}/g, plateforme)
+    .replace(/\{constat\}/g, constat)
+    .replace(/\{expediteur\}/g, (process.env.OUTREACH_SENDER_NAME || '').trim())
+    .replace(/\{entreprise\}/g, (process.env.OUTREACH_SENDER_COMPANY || 'PixFeed').trim())
+    .replace(/[ \t]+\n/g, '\n');
+}
+
+function generer(campaign, row, lead, template = null) {
+  if (campaign.mode === 'modele') {
+    if (!template) return { ok: false, raison: 'modèle introuvable' };
+    const body = remplirModele(template.body, row, lead);
+    if (/\{constat\}/.test(template.body || '') && !/\S/.test(remplirModele('{constat}', row, lead))) {
+      return { ok: false, raison: 'le modèle attend un constat ({constat}) et aucune preuve n\'est disponible' };
+    }
+    if (proof.FORMULES_INTERDITES.test(body)) return { ok: false, raison: 'le modèle contient une formulation interdite' };
+    return { ok: true, mode: 'modele', subject: remplirModele(template.subject, row, lead), body, detail: null };
+  }
   if (campaign.mode === 'maintenance') {
     const m = row ? proof.buildMaintenanceEmail(row, lead) : { ok: false, raison: 'aucune mesure du site' };
     return m.ok ? { ok: true, mode: 'maintenance', subject: m.subject, body: m.body, detail: null } : { ok: false, raison: m.raison };
@@ -146,6 +178,12 @@ function generer(campaign, row, lead) {
   if (d.ok) return { ok: true, mode: 'preuve', subject: d.subject, body: d.body, detail: d.detail };
   if (d.maintenance && d.maintenance.ok) return { ok: true, mode: 'maintenance', subject: d.maintenance.subject, body: d.maintenance.body, detail: { signal: 'aucune preuve', brut: d.raison, url_controlee: row ? (row.final_url || `https://${row.domain}`) : null, analyse_le: row ? row.analyse_le : null, identite: null } };
   return { ok: false, raison: d.raison };
+}
+
+async function templateFor(db, campaign) {
+  if (campaign.mode !== 'modele' || !campaign.template_id) return null;
+  const r = await db.pool.query('SELECT * FROM email_templates WHERE id = $1', [campaign.template_id]).catch(() => ({ rows: [] }));
+  return r.rows[0] || null;
 }
 
 async function rowForLead(db, lead) {
@@ -159,6 +197,7 @@ async function addLeads(db, campaignId, leadIds) {
   const campaign = await getCampaign(db, campaignId);
   if (!['brouillon', 'en_cours', 'pause'].includes(campaign.statut)) throw Object.assign(new Error('Campagne arrêtée ou terminée : créez-en une nouvelle.'), { status: 409 });
   const out = { ajoutes: 0, pret: 0, a_verifier: 0, exclu: 0, ignores: [] };
+  const template = await templateFor(db, campaign);
   for (const leadId of leadIds) {
     const lr = await db.pool.query('SELECT * FROM leads WHERE id = $1', [leadId]);
     const lead = lr.rows[0];
@@ -167,7 +206,7 @@ async function addLeads(db, campaignId, leadIds) {
     if (deja.rows.length) { out.ignores.push({ lead_id: leadId, raison: 'déjà dans la campagne' }); continue; }
     const row = await rowForLead(db, lead);
     const ctl = await controles(db, lead, campaignId);
-    const email = generer(campaign, row, lead);
+    const email = generer(campaign, row, lead, template);
     const cls = classifyItem({ lead, row, controles: ctl, email });
     const detail = email.ok ? email.detail : null;
     await db.pool.query(
@@ -220,14 +259,22 @@ async function updateItem(db, campaignId, itemId, { subject, body, statut, raiso
     if (proof.FORMULES_INTERDITES.test(b)) throw Object.assign(new Error('Le texte contient une formulation interdite par les règles de ton.'), { status: 422 });
     fields.body = b.slice(0, 6000);
   }
-  if (mode && ['preuve', 'maintenance'].includes(mode) && ['pret', 'a_verifier', 'valide'].includes(item.statut)) {
-    // Régénération dans l'autre mode.
+  if (mode && ['preuve', 'maintenance', 'modele', 'claude'].includes(mode) && ['pret', 'a_verifier', 'valide'].includes(item.statut)) {
+    // Régénération dans un autre mode : preuve, maintenance, modèle du menu, ou Claude libre
+    // (encadré : présentation et proposition viennent du code, texte vérifié, ~0,003 € l'appel).
     const lead = (await db.pool.query('SELECT * FROM leads WHERE id = $1', [item.lead_id])).rows[0] || {};
     const row = await rowForLead(db, lead);
     const campaign = await getCampaign(db, campaignId);
-    const email = generer({ ...campaign, mode }, row, lead);
+    let email;
+    if (mode === 'claude') {
+      const d = await coldEmail.draftColdEmail({ row, lead }, {});
+      email = { ok: true, mode: 'claude', subject: d.subject, body: d.body, detail: null };
+    } else {
+      email = generer({ ...campaign, mode }, row, lead, await templateFor(db, { ...campaign, mode }));
+    }
     if (!email.ok) throw Object.assign(new Error(email.raison || 'génération impossible dans ce mode'), { status: 422 });
     Object.assign(fields, { mode: email.mode, subject: email.subject, body: email.body, preuve_signal: email.detail ? email.detail.signal : null, preuve_brut: email.detail ? email.detail.brut : null });
+    if (item.statut === 'valide') fields.statut = 'pret'; // un texte régénéré se relit avant d'être validé
   }
   if (statut) {
     if (!TRANSITIONS[statut] || !TRANSITIONS[statut].includes(item.statut)) throw Object.assign(new Error(`Passage ${item.statut} → ${statut} non permis`), { status: 409 });
@@ -259,6 +306,32 @@ async function updateItem(db, campaignId, itemId, { subject, body, statut, raiso
   return (await db.pool.query('SELECT * FROM campaign_items WHERE id = $1', [itemId])).rows[0];
 }
 
+// « Réanalyser » depuis la ligne : même service que la fiche (mesures du jour, SIRENE, score), puis
+// email régénéré dans le mode de la ligne et ligne reclassée (une « à vérifier : ancien crawl »
+// devient « prêt » si les mesures fraîches confirment une preuve). deps : injection pour les tests.
+async function reanalyzeItem(db, campaignId, itemId, deps = {}) {
+  const item = (await db.pool.query('SELECT * FROM campaign_items WHERE id = $1 AND campaign_id = $2', [itemId, campaignId])).rows[0];
+  if (!item) throw Object.assign(new Error('Ligne introuvable'), { status: 404 });
+  if (!['pret', 'a_verifier', 'valide', 'exclu'].includes(item.statut)) throw Object.assign(new Error('Ligne déjà programmée ou envoyée'), { status: 409 });
+  const campaign = await getCampaign(db, campaignId);
+  const out = await reanalyse.reanalyzeLead(db, item.lead_id, deps);
+  const lead = (await db.pool.query('SELECT * FROM leads WHERE id = $1', [item.lead_id])).rows[0];
+  const row = await rowForLead(db, lead);
+  // Toujours dans le mode de la campagne : une ligne tombée en « maintenance » faute de preuve sur
+  // l'ancien crawl doit pouvoir retrouver sa preuve avec les mesures fraîches.
+  const email = generer(campaign, row, lead, await templateFor(db, campaign));
+  const ctl = await controles(db, lead, campaignId, { ignoreSelf: item.id });
+  const cls = classifyItem({ lead, row, controles: ctl, email });
+  const detail = email.ok ? email.detail : null;
+  await db.pool.query(
+    `UPDATE campaign_items SET crawl_result_id = $2, to_email = COALESCE($3, to_email), statut = $4, raison = $5, mode = $6, subject = $7, body = $8,
+       preuve_signal = $9, preuve_brut = $10, preuve_url = $11, preuve_date = $12, identite = $13, updated_at = NOW() WHERE id = $1`,
+    [item.id, lead.crawl_result_id || item.crawl_result_id, (lead.email || '').trim() || null, cls.statut, cls.raison, email.ok ? email.mode : null, email.ok ? email.subject : null, email.ok ? email.body : null,
+     detail ? detail.signal : null, detail ? detail.brut : null, detail ? detail.url_controlee : null, detail && detail.analyse_le ? detail.analyse_le : null, detail ? detail.identite : null]
+  );
+  return { item: (await db.pool.query('SELECT * FROM campaign_items WHERE id = $1', [item.id])).rows[0], analyse: out };
+}
+
 async function validateMany(db, campaignId, itemIds, statut = 'valide') {
   let n = 0;
   for (const id of itemIds) {
@@ -268,8 +341,12 @@ async function validateMany(db, campaignId, itemIds, statut = 'valide') {
 }
 
 // ─── Programmation ─────────────────────────────────────────────────────────
-async function signatureParDefaut(db) {
+async function signaturePour(db, campaign) {
   try {
+    if (campaign && campaign.signature_id) {
+      const r = await db.pool.query('SELECT content FROM email_signatures WHERE id = $1', [campaign.signature_id]);
+      if (r.rows[0]) return r.rows[0].content || '';
+    }
     const r = await db.pool.query('SELECT content FROM email_signatures ORDER BY is_default DESC, id ASC LIMIT 1');
     return (r.rows[0] && r.rows[0].content) || '';
   } catch { return ''; }
@@ -286,15 +363,22 @@ function htmlDe(body, signature) {
  * Programme les lignes VALIDÉES. En mode test, chaque email part vers les adresses de test
  * (objet préfixé [TEST]) et la ligne garde une trace « test », sans toucher au prospect.
  */
-async function schedule(db, campaignId, { test = false, test_emails = '' } = {}) {
+async function schedule(db, campaignId, { test = false, test_emails = '', debut = null } = {}) {
   const campaign = await getCampaign(db, campaignId);
+  // Date de début choisie (« Commencer le ») : les créneaux partent de là ; sinon de maintenant.
+  let depart = new Date();
+  if (debut) {
+    const d = new Date(debut);
+    if (Number.isNaN(d.getTime())) throw Object.assign(new Error('Date de début invalide'), { status: 400 });
+    if (d > depart) depart = new Date(d.getTime() - 2 * 60000); // planSlots ajoute 2 min de marge
+  }
   if (['arretee', 'terminee'].includes(campaign.statut)) throw Object.assign(new Error('Campagne arrêtée : créez-en une nouvelle.'), { status: 409 });
   const tests = String(test_emails || campaign.test_emails || '').split(/[\s,;]+/).map((x) => x.trim()).filter((x) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(x));
   if (test && tests.length === 0) throw Object.assign(new Error('Mode test : indiquez au moins une adresse de test.'), { status: 400 });
   const { rows: items } = await db.pool.query("SELECT * FROM campaign_items WHERE campaign_id = $1 AND statut = 'valide' ORDER BY id", [campaignId]);
   if (!items.length) return { programmes: 0, ignores: [], premier: null, dernier: null };
-  const signature = await signatureParDefaut(db);
-  const slots = planSlots(items.length * (test ? tests.length : 1), campaign);
+  const signature = await signaturePour(db, campaign);
+  const slots = planSlots(items.length * (test ? tests.length : 1), campaign, depart);
   let k = 0; let programmes = 0; const ignores = [];
   for (const item of items) {
     // Recontrôle au moment de programmer (la préparation peut dater).
@@ -314,6 +398,7 @@ async function schedule(db, campaignId, { test = false, test_emails = '' } = {})
         to_email: to, to_name: test ? 'Test' : (lead.name || null),
         subject: test ? `[TEST ${item.to_email || item.domain}] ${item.subject}` : item.subject,
         body_html: htmlDe(item.body, signature), body_text: item.body,
+        bcc_email: test ? null : ((campaign.bcc || '').trim() || null),
         scheduled_at: at, email_type: 'prospect', related_type: test ? null : 'lead', related_id: test ? null : item.lead_id,
         notes: `campagne #${campaignId}${test ? ' (test)' : ''}`, from_account: campaign.from_account
       });
@@ -378,6 +463,16 @@ async function beforeSend(db, email) {
 async function afterSent(db, email) {
   if (!email.campaign_id) return;
   if (email.campaign_item_id) await db.pool.query("UPDATE campaign_items SET statut = 'envoye', sent_at = NOW(), updated_at = NOW() WHERE id = $1 AND statut = 'programme'", [email.campaign_item_id]);
+  // Relance : seulement si la campagne le demande (désactivé par défaut). Relance MANUELLE
+  // (relance_step NULL : hors cascade automatique), visible dans le Suivi, fermée par une réponse.
+  const c = (await db.pool.query('SELECT relance_jours, relance_canal, test_mode FROM campaigns WHERE id = $1', [email.campaign_id])).rows[0];
+  if (c && c.relance_jours && !c.test_mode && email.related_type === 'lead' && email.related_id) {
+    await db.pool.query(
+      `INSERT INTO interactions (contact_type, contact_id, type, date, notes, next_followup_date, next_followup_channel, followup_done)
+       VALUES ('lead', $1, 'note', NOW(), $2, CURRENT_DATE + $3::int, $4, FALSE)`,
+      [email.related_id, `Relance prévue par la campagne #${email.campaign_id} (J+${c.relance_jours}).`, c.relance_jours, c.relance_canal || 'email']
+    ).catch((e) => console.error('[Campagnes] relance :', e.message));
+  }
   await db.pool.query('UPDATE campaigns SET echecs_consecutifs = 0, updated_at = NOW() WHERE id = $1', [email.campaign_id]);
   // Plus rien en attente : campagne terminée.
   const rest = await db.pool.query("SELECT COUNT(*)::int AS n FROM scheduled_emails WHERE campaign_id = $1 AND status = 'pending'", [email.campaign_id]);
@@ -428,6 +523,6 @@ async function checkSender(emailService, seoOutreach) {
 
 module.exports = {
   listCampaigns, getCampaign, getCampaignFull, stats, createCampaign, updateCampaign, addLeads, addFromCrawl,
-  updateItem, validateMany, schedule, pause, resume, stop, removeCampaign,
+  updateItem, reanalyzeItem, validateMany, schedule, pause, resume, stop, removeCampaign, remplirModele,
   beforeSend, afterSent, afterFailed, afterCancelled, checkSender, controles, generer, ECHECS_PAUSE
 };

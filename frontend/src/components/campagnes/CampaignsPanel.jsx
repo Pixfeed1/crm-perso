@@ -9,7 +9,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiSend, FiPlus, FiTrash2, FiArrowLeft, FiCheck, FiCheckCircle, FiAlertTriangle, FiXCircle, FiPause, FiPlay, FiStopCircle, FiChevronDown, FiChevronUp, FiRefreshCw, FiShield, FiLoader, FiExternalLink, FiMessageCircle, FiSlash } from 'react-icons/fi';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { campagnesAPI } from '../../services/api';
+import { campagnesAPI, emailTemplatesAPI, emailSignaturesAPI } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
 
 const STATUT_CAMPAGNE = {
@@ -113,7 +113,8 @@ const CampaignList = ({ onOpen }) => {
 };
 
 // ─── Ligne dépliable ────────────────────────────────────────────────────────
-const ItemRow = ({ item, campaign, selected, onToggle, onChange }) => {
+const ItemRow = ({ item, campaign, selected, onToggle, onChange, onReanalyze }) => {
+  const [reanalyzing, setReanalyzing] = useState(false);
   const [open, setOpen] = useState(false);
   const [subject, setSubject] = useState(item.subject || '');
   const [body, setBody] = useState(item.body || '');
@@ -151,6 +152,12 @@ const ItemRow = ({ item, campaign, selected, onToggle, onChange }) => {
           {item.body && <button onClick={() => setOpen((v) => !v)} className="p-2 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-strong" title="Voir / modifier l'email">{open ? <FiChevronUp size={15} /> : <FiChevronDown size={15} />}</button>}
           {['pret', 'a_verifier'].includes(item.statut) && item.body && <button onClick={() => act({ statut: 'valide' })} className="px-2.5 py-1 text-xs rounded-lg bg-accent text-white hover:bg-accent-hover">Valider</button>}
           {item.statut === 'valide' && <button onClick={() => act({ statut: 'pret' })} className="px-2.5 py-1 text-xs rounded-lg bg-surface-strong text-text-primary hover:bg-border-strong">Dévalider</button>}
+          {['pret', 'a_verifier', 'valide', 'exclu'].includes(item.statut) && (
+            <button onClick={async () => { setReanalyzing(true); try { await onReanalyze(item.id); } finally { setReanalyzing(false); } }} disabled={reanalyzing}
+              className="p-2 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-strong disabled:opacity-50" title="Réanalyser le site (mesures du jour, SIRENE), régénérer l'email et reclasser la ligne">
+              <FiRefreshCw size={14} className={reanalyzing ? 'animate-spin' : ''} />
+            </button>
+          )}
           {['pret', 'a_verifier', 'valide'].includes(item.statut) && <button onClick={() => act({ statut: 'exclu', raison: 'écarté à la relecture' })} className="p-2 rounded-lg text-text-muted hover:text-danger-text hover:bg-surface-strong" title="Exclure"><FiSlash size={14} /></button>}
           {['envoye', 'programme'].includes(item.statut) && (
             <>
@@ -172,7 +179,16 @@ const ItemRow = ({ item, campaign, selected, onToggle, onChange }) => {
               <div className="flex items-center justify-between gap-2 flex-wrap">
                 <span className="text-xs text-text-muted">{body.split(/\s+/).filter(Boolean).length} mots · la signature et le pied de désinscription sont ajoutés à l'envoi.</span>
                 <div className="flex items-center gap-2">
-                  {editable && campaign.mode !== 'maintenance' && <button onClick={() => act({ mode: item.mode === 'preuve' ? 'maintenance' : 'preuve' })} className="px-2.5 py-1 text-xs rounded-lg bg-surface-strong text-text-primary hover:bg-border-strong flex items-center gap-1"><FiRefreshCw size={12} /> Régénérer en mode {item.mode === 'preuve' ? 'maintenance' : 'preuve'}</button>}
+                  {editable && (
+                    <select value="" onChange={(e) => { if (e.target.value) act({ mode: e.target.value }); }}
+                      className="px-2 py-1 text-xs bg-surface-strong border border-border rounded-lg text-text-primary" title="Régénérer l'email dans un autre mode (le texte repasse en « prêt à valider »)">
+                      <option value="">Régénérer…</option>
+                      <option value="preuve">par la preuve</option>
+                      <option value="maintenance">maintenance, sans alerte</option>
+                      {campaign.template_id && <option value="modele">avec le modèle de la campagne</option>}
+                      <option value="claude">Claude libre (payant, encadré)</option>
+                    </select>
+                  )}
                   {editable && dirty && <button onClick={save} disabled={saving} className="px-2.5 py-1 text-xs rounded-lg bg-accent text-white hover:bg-accent-hover disabled:opacity-50">{saving ? 'Enregistrement…' : 'Enregistrer'}</button>}
                 </div>
               </div>
@@ -195,8 +211,15 @@ const CampaignView = ({ id, onBack }) => {
   const [checking, setChecking] = useState(false);
   const [testMode, setTestMode] = useState(false);
   const [testEmails, setTestEmails] = useState('');
+  const [debut, setDebut] = useState(''); // « Commencer le » : vide = dès maintenant, à la cadence
   const [working, setWorking] = useState(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [signatures, setSignatures] = useState([]);
+  const [templates, setTemplates] = useState([]);
+  useEffect(() => {
+    emailSignaturesAPI.list().then((l) => setSignatures(l || [])).catch(() => {});
+    emailTemplatesAPI.list().then((l) => setTemplates(l || [])).catch(() => {});
+  }, []);
   const pollRef = useRef(null);
 
   const load = useCallback(async () => {
@@ -219,6 +242,13 @@ const CampaignView = ({ id, onBack }) => {
   const counts = stats.par_statut || {};
   const selectables = visibles.filter((i) => ['pret', 'a_verifier', 'valide'].includes(i.statut));
 
+  const reanalyzeItem = async (itemId) => {
+    try {
+      const r = await campagnesAPI.reanalyzeItem(id, itemId);
+      toast.success(r.analyse && r.analyse.preuves && r.analyse.preuves.length ? `Réanalysé : ${r.analyse.preuves.join(', ')} · ligne ${badge(STATUT_LIGNE, r.item.statut).label.toLowerCase()}` : `Réanalysé : aucune preuve · ligne ${badge(STATUT_LIGNE, r.item.statut).label.toLowerCase()}`);
+      load();
+    } catch (e) { toast.error(e.message || 'Réanalyse impossible'); }
+  };
   const changeItem = async (itemId, payload) => {
     try {
       const it = await campagnesAPI.updateItem(id, itemId, payload);
@@ -235,13 +265,14 @@ const CampaignView = ({ id, onBack }) => {
     const n = counts.valide || 0;
     if (!n) { toast.error('Aucune ligne validée à programmer'); return; }
     if (testMode && !testEmails.trim()) { toast.error('Indique au moins une adresse de test'); return; }
+    const quand = debut ? ` à partir du ${new Date(debut).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}` : ' dès maintenant';
     const ok = window.confirm(testMode
-      ? `Programmer ${n} email${n > 1 ? 's' : ''} de TEST vers ${testEmails} ?`
-      : `Programmer ${n} email${n > 1 ? 's' : ''} RÉELS vers les prospects validés, ${campaign.par_jour} par jour entre ${campaign.heure_debut} h et ${campaign.heure_fin} h ?`);
+      ? `Programmer ${n} email${n > 1 ? 's' : ''} de TEST vers ${testEmails}${quand} ?`
+      : `Programmer ${n} email${n > 1 ? 's' : ''} RÉELS vers les prospects validés${quand}, ${campaign.par_jour} par jour entre ${campaign.heure_debut} h et ${campaign.heure_fin} h ?`);
     if (!ok) return;
     try {
       setWorking('schedule');
-      const r = await campagnesAPI.schedule(id, { test: testMode, test_emails: testEmails });
+      const r = await campagnesAPI.schedule(id, { test: testMode, test_emails: testEmails, debut: debut ? new Date(debut).toISOString() : null });
       toast.success(`${r.programmes} envoi${r.programmes > 1 ? 's' : ''} programmé${r.programmes > 1 ? 's' : ''}${r.premier ? `, du ${fmt(r.premier)} au ${fmt(r.dernier)}` : ''}`);
       if (r.ignores && r.ignores.length) toast.info(`${r.ignores.length} ligne${r.ignores.length > 1 ? 's' : ''} exclue${r.ignores.length > 1 ? 's' : ''} au recontrôle`);
       setVue('programme'); load();
@@ -290,9 +321,9 @@ const CampaignView = ({ id, onBack }) => {
             <h4 className="text-sm font-semibold text-text-primary flex items-center gap-2"><FiSend size={14} /> Programmer les envois validés ({counts.valide || 0})</h4>
             <button onClick={() => setShowSettings((v) => !v)} className="text-xs text-accent hover:underline">{showSettings ? 'Masquer les réglages' : 'Réglages de cadence'}</button>
           </div>
-          <div className="text-xs text-text-muted mt-1">{campaign.par_jour} par jour, de {campaign.heure_debut} h à {campaign.heure_fin} h, espacés d'au moins {campaign.espacement_min} min{campaign.jours_ouvres ? ', jours ouvrés' : ''} · compte {campaign.from_account}</div>
+          <div className="text-xs text-text-muted mt-1">{campaign.par_jour} par jour, de {campaign.heure_debut} h à {campaign.heure_fin} h, espacés d'au moins {campaign.espacement_min} min{campaign.jours_ouvres ? ', jours ouvrés' : ''} · compte {campaign.from_account} · mode {campaign.mode} · signature {campaign.signature_id ? `#${campaign.signature_id}` : 'par défaut'}{campaign.bcc ? ` · Cci ${campaign.bcc}` : ''} · relance {campaign.relance_jours ? `J+${campaign.relance_jours} (${campaign.relance_canal})` : 'aucune'}</div>
           {showSettings && (
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mt-3">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
               {[['par_jour', 'Par jour', 1, 100], ['heure_debut', 'Début (h)', 0, 23], ['heure_fin', 'Fin (h)', 1, 24], ['espacement_min', 'Espacement (min)', 1, 240]].map(([k, l, min, max]) => (
                 <div key={k}>
                   <label className="block text-xs text-text-secondary mb-1">{l}</label>
@@ -306,10 +337,50 @@ const CampaignView = ({ id, onBack }) => {
                   <option value="pro">Pro (SMTP)</option><option value="gmail">Gmail</option>
                 </select>
               </div>
+              <div>
+                <label className="block text-xs text-text-secondary mb-1">Mode de génération</label>
+                <select defaultValue={campaign.mode} onChange={(e) => saveSettings({ mode: e.target.value })} className="w-full px-2 py-1.5 bg-surface-muted border border-border rounded-lg text-text-primary text-sm" title="S'applique aux prochains prospects ajoutés ; les lignes existantes se régénèrent une par une">
+                  <option value="preuve">Preuve (repli maintenance)</option><option value="maintenance">Maintenance seule</option><option value="modele">Modèle du menu</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-text-secondary mb-1">Modèle (mode modèle)</label>
+                <select defaultValue={campaign.template_id || ''} onChange={(e) => saveSettings({ template_id: e.target.value ? parseInt(e.target.value, 10) : null })} className="w-full px-2 py-1.5 bg-surface-muted border border-border rounded-lg text-text-primary text-sm">
+                  <option value="">Aucun</option>
+                  {templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-text-secondary mb-1">Signature</label>
+                <select defaultValue={campaign.signature_id || ''} onChange={(e) => saveSettings({ signature_id: e.target.value ? parseInt(e.target.value, 10) : null })} className="w-full px-2 py-1.5 bg-surface-muted border border-border rounded-lg text-text-primary text-sm">
+                  <option value="">Par défaut (Paramètres)</option>
+                  {signatures.map((sg) => <option key={sg.id} value={sg.id}>{sg.name || sg.title || `Signature #${sg.id}`}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-text-secondary mb-1">Copie cachée (Cci)</label>
+                <input type="email" defaultValue={campaign.bcc || ''} placeholder="moi@pixfeed.net" onBlur={(e) => saveSettings({ bcc: e.target.value.trim() || null })}
+                  className="w-full px-2 py-1.5 bg-surface-muted border border-border rounded-lg text-text-primary text-sm focus:outline-none focus:border-accent" />
+              </div>
+              <div>
+                <label className="block text-xs text-text-secondary mb-1">Relance (manuelle, dans le Suivi)</label>
+                <select defaultValue={campaign.relance_jours || ''} onChange={(e) => saveSettings({ relance_jours: e.target.value ? parseInt(e.target.value, 10) : null })} className="w-full px-2 py-1.5 bg-surface-muted border border-border rounded-lg text-text-primary text-sm" title="Désactivée par défaut. Si activée, une relance à faire apparaît dans le Suivi J+N après chaque envoi ; une réponse la ferme.">
+                  <option value="">Aucune</option><option value="3">J+3</option><option value="7">J+7</option><option value="14">J+14</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-text-secondary mb-1">Canal de relance</label>
+                <select defaultValue={campaign.relance_canal || 'email'} onChange={(e) => saveSettings({ relance_canal: e.target.value })} className="w-full px-2 py-1.5 bg-surface-muted border border-border rounded-lg text-text-primary text-sm">
+                  <option value="email">Email</option><option value="appel">Appel</option><option value="sms">SMS</option>
+                </select>
+              </div>
             </div>
           )}
           <div className="flex items-center gap-3 mt-3 flex-wrap">
             <button onClick={checkSender} disabled={checking} className="px-3 py-2 rounded-lg bg-surface-strong text-text-primary hover:bg-border-strong text-sm flex items-center gap-1.5 disabled:opacity-50"><FiShield size={14} className={checking ? 'animate-spin' : ''} /> Vérifier l'expéditeur</button>
+            <label className="flex items-center gap-2 text-sm text-text-secondary" title="Vide : les envois commencent tout de suite, à la cadence. Rempli : les créneaux partent de cette date.">Commencer le
+              <input type="datetime-local" value={debut} onChange={(e) => setDebut(e.target.value)} className="px-2 py-1.5 bg-surface-muted border border-border rounded-lg text-text-primary text-sm focus:outline-none focus:border-accent" />
+            </label>
             <label className="flex items-center gap-2 text-sm text-text-secondary"><input type="checkbox" checked={testMode} onChange={(e) => setTestMode(e.target.checked)} /> Mode test (vers mes adresses)</label>
             {testMode && <input value={testEmails} onChange={(e) => setTestEmails(e.target.value)} placeholder="moi@exemple.fr, autre@exemple.fr" className="px-3 py-1.5 bg-surface-muted border border-border rounded-lg text-text-primary text-sm focus:outline-none focus:border-accent min-w-[260px]" />}
             <button onClick={programmer} disabled={!!working || !(counts.valide || 0)} className={`px-4 py-2 rounded-lg text-white text-sm font-medium flex items-center gap-1.5 disabled:opacity-50 ${testMode ? 'bg-warning-text' : 'bg-accent hover:bg-accent-hover'}`}>
@@ -349,7 +420,7 @@ const CampaignView = ({ id, onBack }) => {
         </div>
       ) : (
         <div className="space-y-2">
-          {visibles.map((it) => <ItemRow key={it.id} item={it} campaign={campaign} selected={selected.has(it.id)} onToggle={(iid) => setSelected((p) => { const n = new Set(p); if (n.has(iid)) n.delete(iid); else n.add(iid); return n; })} onChange={changeItem} />)}
+          {visibles.map((it) => <ItemRow key={it.id} item={it} campaign={campaign} selected={selected.has(it.id)} onToggle={(iid) => setSelected((p) => { const n = new Set(p); if (n.has(iid)) n.delete(iid); else n.add(iid); return n; })} onChange={changeItem} onReanalyze={reanalyzeItem} />)}
         </div>
       )}
       <p className="text-xs text-text-muted mt-4 flex items-center gap-1"><FiCheck size={12} /> Chaque email est généré par les règles validées : présentation PixFeed, preuve vérifiée ou maintenance sans alerte, refus discret. Aucune relance automatique n'est créée.</p>
