@@ -33,7 +33,7 @@ function joliNom(raw) {
   // « AGRIGOM (AGRIGOM) » : l'annuaire répète le sigle entre parenthèses quand il égale le nom.
   n = n.replace(/\s*\(([^)]+)\)\s*$/, (m, inner) => (inner.trim().toLowerCase() === n.replace(m, '').trim().toLowerCase() ? '' : m)).trim();
   if (n && n === n.toUpperCase()) {
-    n = n.toLowerCase().replace(/(^|[\s'’-])([a-zà-ÿ])/g, (m, sep, c) => sep + c.toUpperCase());
+    n = n.toLowerCase().replace(/(^|[\s'’(-])([a-zà-ÿ])/g, (m, sep, c) => sep + c.toUpperCase());
   }
   return n;
 }
