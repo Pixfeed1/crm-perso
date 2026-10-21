@@ -31,6 +31,15 @@ const dirigeantName = (dirigeants) => {
   if (d.nom || d.prenoms) return `${(d.prenoms || '').trim()} ${(d.nom || '').trim()}`.trim();
   return d.denomination || null;
 };
+// Nom et PREMIER prénom séparés : pour une salutation (« Bonjour Ludovic Baudry, »), jamais
+// l'état civil complet en capitales. null pour une personne morale.
+const dirigeantParts = (dirigeants) => {
+  if (!Array.isArray(dirigeants) || !dirigeants.length) return { nom: null, prenom: null };
+  const d = dirigeants[0];
+  if (!d.nom && !d.prenoms) return { nom: null, prenom: null };
+  const prenom = String(d.prenoms || '').trim().split(/[\s,]+/)[0] || null;
+  return { nom: String(d.nom || '').trim() || null, prenom };
+};
 
 // Parse une réponse brute de l'API en objet normalisé (exporté pour tests).
 function parseCompany(company) {
@@ -43,6 +52,8 @@ function parseCompany(company) {
     naf: company.activite_principale || null,
     naf_label: company.libelle_activite_principale || null,
     dirigeant: dirigeantName(company.dirigeants),
+    dirigeant_nom: dirigeantParts(company.dirigeants).nom,
+    dirigeant_prenom: dirigeantParts(company.dirigeants).prenom,
     effectif: trancheEffectif(company.tranche_effectif_salarie),
     adresse: formatAddress(company.siege),
     code_postal: company.siege?.code_postal || null,
@@ -62,7 +73,7 @@ const fold = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0
 const words = (s) => fold(s).split(' ').filter((w) => w.length >= 4 && !STOP.has(w));
 const compact = (s) => fold(s).replace(/ /g, '');
 
-function matchScore(company, { domain = '', title = '' } = {}) {
+function matchScore(company, { domain = '', title = '', code_postal_site = '' } = {}) {
   const nom = fold(`${company.nom_complet || ''} ${company.nom_raison_sociale || ''} ${(company.sigle || '')}`);
   const nomCompact = compact(nom);
   const root = compact(String(domain || '').toLowerCase().replace(/^www\./, '').split('.')[0]);
@@ -73,28 +84,44 @@ function matchScore(company, { domain = '', title = '' } = {}) {
   const nomWords = new Set(words(nom));
   const hits = words(title).filter((w) => nomWords.has(w)).length;
   score += Math.min(40, hits * 20);
+  // Code postal lu sur le site contre celui du siège : un même nom dans deux villes n'est pas
+  // la même société. Autre département : la correspondance tombe. Même département, autre
+  // commune : elle n'est plus que probable.
+  const cpSite = String(code_postal_site || '').trim();
+  const cpSiege = String(company.siege?.code_postal || '').trim();
+  if (cpSite && cpSiege) {
+    if (cpSite === cpSiege) score += 15;
+    else if (cpSite.slice(0, 2) !== cpSiege.slice(0, 2)) score = Math.min(score, 15);
+    else score = Math.min(score, 45);
+  }
   return score;
+}
+
+// Sûr / probable / douteux à partir du meilleur score ET de l'écart avec le second : deux
+// candidats aussi bons l'un que l'autre, c'est une ambiguïté, pas une certitude.
+function confidence(best, second) {
+  if (best >= 60 && (second == null || best - second >= 20)) return 'sur';
+  if (best >= 20) return 'probable';
+  return 'douteux';
 }
 
 /**
  * Enrichissement avec contrôle de correspondance.
- * @param {object} p { query, domain?, title? }
+ * @param {object} p { query, domain?, title?, code_postal_site? }
  * @returns {{ found, match: 'sur'|'probable'|'douteux', match_score, ...parseCompany }}
  */
-async function enrichMatch({ query, domain = '', title = '' }) {
+async function enrichMatch({ query, domain = '', title = '', code_postal_site = '' }) {
   const q = (query || '').trim();
   if (!q) return { found: false };
   try {
     const res = await axios.get(API, { params: { q, per_page: 5, page: 1 }, timeout: 8000 });
     const results = Array.isArray(res.data?.results) ? res.data.results : [];
     if (results.length === 0) return { found: false };
-    let best = null; let bestScore = -1;
-    for (const c of results) {
-      const sc = matchScore(c, { domain, title });
-      if (sc > bestScore) { best = c; bestScore = sc; }
-    }
-    const match = bestScore >= 60 ? 'sur' : bestScore >= 20 ? 'probable' : 'douteux';
-    return { ...parseCompany(best), match, match_score: bestScore };
+    const scored = results.map((c) => ({ c, sc: matchScore(c, { domain, title, code_postal_site }) })).sort((a, b) => b.sc - a.sc);
+    const best = scored[0].c; const bestScore = scored[0].sc;
+    const second = scored[1] ? scored[1].sc : null;
+    const match = confidence(bestScore, second);
+    return { ...parseCompany(best), match, match_score: bestScore, match_second: second };
   } catch (e) {
     return { found: false, error: e.message };
   }
@@ -114,4 +141,4 @@ async function enrich(query) {
   }
 }
 
-module.exports = { enrich, enrichMatch, parseCompany, matchScore };
+module.exports = { enrich, enrichMatch, parseCompany, matchScore, confidence };

@@ -25,6 +25,25 @@ test('ligne CSV brute -> typée : booléens, entiers, https déduit, titre antib
   assert.equal(r.parked, false);
   const r2 = crawl.typedResult({ domain: 'b.fr', https_final: 'oui', final_url: 'http://b.fr/' });
   assert.equal(r2.https_final, true);         // colonne présente : elle prime
+  // Certificat inconnu (https a échoué pour une raison réseau) : ni oui ni non.
+  const r3 = crawl.typedResult({ domain: 'c.fr', ssl_ok: '', ssl_erreur: '', sitemap_detail: 'https://c.fr/sitemap.xml -> 404', code_postal_site: '01000', php_source: 'X-Powered-By', analyse_le: '2026-10-20T08:00:00+00:00' });
+  assert.equal(r3.ssl_ok, null);
+  assert.equal(r3.code_postal_site, '01000'); assert.equal(r3.php_source, 'X-Powered-By'); assert.match(r3.sitemap_detail, /404/); assert.ok(r3.analyse_le);
+});
+
+test('SIRENE : le code postal du site tranche entre homonymes ; deux candidats équivalents = probable, pas sûr', () => {
+  const S = require('../services/sireneEnrich');
+  const c = (cp, nom) => ({ nom_complet: nom, siege: { code_postal: cp } });
+  const o = { domain: 'uneaffairedefilles.fr', code_postal_site: '01000' };
+  assert.ok(S.matchScore(c('01000', 'UNE AFFAIRE DE FILLES'), o) >= 60);
+  assert.ok(S.matchScore(c('75011', 'UNE AFFAIRE DE FILLES'), o) < 20, 'autre département : douteux');
+  const memeDept = S.matchScore(c('01100', 'UNE AFFAIRE DE FILLES'), o);
+  assert.ok(memeDept >= 20 && memeDept < 60, 'même département, autre commune : probable au plus');
+  assert.equal(S.confidence(60, 60), 'probable');
+  assert.equal(S.confidence(75, 40), 'sur');
+  assert.equal(S.confidence(60, null), 'sur');
+  const p = S.parseCompany({ nom_complet: 'X', dirigeants: [{ nom: 'BAUDRY', prenoms: 'LUDOVIC MARCEL ROBERT AUGUSTE' }] });
+  assert.equal(p.dirigeant_nom, 'BAUDRY'); assert.equal(p.dirigeant_prenom, 'LUDOVIC');
 });
 
 test('insertion + prospect depuis un résultat, promotion d\'un signal sans site', { skip: !hasDb() && 'TEST_DATABASE_URL absent' }, async () => {

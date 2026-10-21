@@ -336,6 +336,26 @@ def extract_credit(html: str, domain: str) -> str:
     return ""
 
 
+# Code postal lu sur la page (pied de page, bloc contact) : « 01000 Bourg-en-Bresse ».
+# Sert à recouper l'entreprise SIRENE : même nom dans deux villes = pas la même société.
+_CP_RE = re.compile(r"(?<![\d.,])((?:0[1-9]|[1-8]\d|9[0-5])\d{3})\s+(?:[A-ZÀ-Ý][A-Za-zÀ-ÿ'\-]{2,}|[A-ZÀ-Ý]{3,})")
+
+
+def extract_postal_code(html: str) -> str:
+    text = re.sub(r"<[^>]+>", " ", html or "")
+    counts: dict[str, int] = {}
+    for cp in _CP_RE.findall(text):
+        counts[cp] = counts.get(cp, 0) + 1
+    if not counts:
+        return ""
+    return max(counts.items(), key=lambda kv: kv[1])[0]
+
+
+def _now_iso() -> str:
+    from datetime import datetime, timezone
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+
+
 def extract_contacts(html: str, domain: str) -> dict:
     """Email, téléphone, Facebook, Instagram depuis le HTML de la home."""
     out = {"email": "", "phone": "", "facebook_url": "", "instagram_url": ""}
@@ -492,11 +512,16 @@ def analyze_site(html: str, headers: dict) -> dict:
     srv = hdr.get("server", "")
     leak = ""
     mphp = re.search(r"php/\d+(?:\.\d+){1,3}", xpb, re.IGNORECASE)
+    source = ""
     if mphp:
         leak = mphp.group(0).upper().replace("PHP/", "PHP ")
+        source = "X-Powered-By"
     elif re.search(r"/\d+\.\d", srv):  # Apache/2.2.15, nginx/1.10.3…
         leak = srv[:40]
+        source = "Server"
     out["serveur_php"] = leak
+    out["php_source"] = source  # une DÉCLARATION du serveur, jamais une mesure : l'email le dit
+    out["code_postal_site"] = extract_postal_code(html)
     return out
 
 
@@ -620,6 +645,12 @@ CSV_FIELDS = [
     "meta_desc_txt", "urls_reecrites", "sitemap",  # texte de la description Google ; adresses réécrites ? ; sitemap ok|vide|absent|erreur
     # --- pré-tri prospect ---
     "site_type", "ecommerce_actif",
+    # --- traçabilité : pour chaque preuve, retrouver le signal brut, l'URL, la date ---
+    "ssl_erreur",        # raison TLS lisible (nom non couvert, expiré, autorité inconnue…) ou vide
+    "sitemap_detail",    # « https://x.fr/sitemap.xml -> 200 text/html (page HTML) » etc.
+    "code_postal_site",  # code postal lu sur la page (recoupement SIRENE)
+    "php_source",        # d'où vient serveur_php : X-Powered-By | Server | vide
+    "analyse_le",        # horodatage ISO de l'analyse
     "error",
 ]
 
@@ -690,30 +721,75 @@ async def ssl_expiry_days(host: str, timeout: float) -> str:
         return ""
 
 
-async def check_sitemap(client, base_url) -> str:
-    """sitemap.xml : 'ok' (au moins une URL), 'vide' (200 mais aucune <loc>), 'absent' (404),
-    'erreur' (autre), '' si injoignable. Un sitemap vide = Google n'a aucune liste de pages."""
+_SITEMAP_ALTERNATES = ["/sitemap_index.xml", "/1_index_sitemap.xml", "/sitemap-index.xml", "/wp-sitemap.xml"]
+
+
+def classify_sitemap_response(status: int, content_type: str, body: str) -> tuple[str, str]:
+    """Statut d'un sitemap d'après la réponse : (ok|vide|absent|erreur, détail lisible).
+    Un 200 n'est un sitemap que s'il est du XML de sitemap. Beaucoup de boutiques renvoient
+    leur page « introuvable » en HTML avec un code 200 : ce n'est pas un sitemap vide, c'est
+    un sitemap absent."""
+    if status in (404, 410):
+        return "absent", f"{status}"
+    if status != 200:
+        return "erreur", f"{status}"
+    ct = (content_type or "").split(";")[0].strip().lower()
+    head = (body or "").lstrip()[:200].lower()
+    is_xml = ("xml" in ct) or head.startswith("<?xml") or head.startswith("<urlset") or head.startswith("<sitemapindex")
+    if not is_xml:
+        return "absent", f"200 {ct or 'sans type'} (page HTML, pas un sitemap)"
+    low = (body or "").lower()
+    if "<urlset" not in low and "<sitemapindex" not in low:
+        return "absent", f"200 {ct} (XML sans structure de sitemap)"
+    n = low.count("<loc>") + low.count("<loc ")
+    if n == 0:
+        return "vide", f"200 {ct}, 0 <loc>"
+    return "ok", f"200 {ct}, {n} <loc>"
+
+
+async def check_sitemap(client, base_url, declared: list[str] | None = None) -> tuple[str, str]:
+    """(statut, détail). Lit /sitemap.xml ; s'il est absent, les sitemaps déclarés dans
+    robots.txt puis les emplacements usuels (Yoast, module PrestaShop). Ne conclut « vide »
+    que sur un vrai document XML de sitemap sans aucune adresse."""
+    root = base_url.rstrip("/")
+    from urllib.parse import urljoin
+    candidates = [root + "/sitemap.xml"]
+    for d in (declared or []):
+        u = urljoin(root + "/", d)
+        if u not in candidates:
+            candidates.append(u)
+    for alt in _SITEMAP_ALTERNATES:
+        if root + alt not in candidates:
+            candidates.append(root + alt)
+    detail_parts = []
+    first_result = None
     try:
-        r = await client.get(base_url.rstrip("/") + "/sitemap.xml")
-        if r.status_code == 404 or r.status_code == 410:
-            return "absent"
-        if r.status_code != 200:
-            return "erreur"
-        body = (r.text or "").strip()
-        if not body or ("<loc>" not in body.lower() and "<sitemap" not in body.lower()):
-            return "vide"
-        return "ok"
+        for i, url in enumerate(candidates):
+            r = await client.get(url)
+            statut, d = classify_sitemap_response(r.status_code, r.headers.get("content-type", ""), r.text or "")
+            detail_parts.append(f"{url} -> {d}")
+            if statut in ("ok", "vide"):
+                return statut, " ; ".join(detail_parts)
+            if first_result is None:
+                first_result = statut
+            # Après /sitemap.xml absent : on ne tente les alternatives que si rien n'est déclaré
+            # ou pour les deux premières, pour ne pas multiplier les requêtes.
+            if i >= 2 and not declared:
+                break
+        return (first_result or "absent"), " ; ".join(detail_parts)
     except Exception:
-        return ""
+        return "", " ; ".join(detail_parts)
 
 
-async def check_robots_blocked(client, base_url) -> str:
+async def check_robots_blocked(client, base_url) -> tuple[str, list[str]]:
     """robots.txt : « Disallow: / » pour tous les robots ou pour Googlebot = boutique
-    volontairement (ou par oubli après migration) invisible sur Google. oui / non / ''."""
+    volontairement (ou par oubli après migration) invisible sur Google. (oui / non / '',
+    liste des « Sitemap: » déclarés)."""
+    sitemaps: list[str] = []
     try:
         r = await client.get(base_url.rstrip("/") + "/robots.txt")
         if r.status_code != 200 or not r.text:
-            return "non"
+            return "non", sitemaps
         blocked = False
         current = set()
         last_was_rule = True
@@ -723,6 +799,9 @@ async def check_robots_blocked(client, base_url) -> str:
                 continue
             k, _, v = line.partition(":")
             k, v = k.strip().lower(), v.strip()
+            if k == "sitemap" and v:
+                sitemaps.append(v)
+                continue
             if k == "user-agent":
                 current = {v.lower()} if not current or last_was_rule else current | {v.lower()}
                 last_was_rule = False
@@ -730,9 +809,9 @@ async def check_robots_blocked(client, base_url) -> str:
             last_was_rule = True
             if k == "disallow" and v == "/" and ({"*", "googlebot"} & current):
                 blocked = True
-        return "oui" if blocked else "non"
+        return ("oui" if blocked else "non"), sitemaps
     except Exception:
-        return ""
+        return "", sitemaps
 
 
 async def check_retractation_on_cgv(client, base_url, html) -> str:
@@ -794,7 +873,36 @@ def candidate_urls(domain: str) -> list[str]:
     if not d:
         return []
     bare = d[4:] if d.startswith("www.") else d
-    return [f"https://{bare}", f"https://www.{bare}", f"http://{bare}"]
+    return [f"https://{bare}", f"https://www.{bare}", f"http://{bare}", f"http://www.{bare}"]
+
+
+def candidate_attempts(domain: str) -> list[tuple[str, bool]]:
+    """Ordre des essais (url, vérification TLS stricte).
+    1) toutes les variantes en strict : https nu, https www, http nu, http www (les http
+       suivent leurs redirections, souvent vers https) ;
+    2) seulement ensuite, les https SANS vérification : on ne conclut « certificat invalide »
+       qu'après avoir épuisé les variantes valides (un certificat qui ne couvre que www n'est
+       pas un site cassé, c'est un site qui s'appelle www)."""
+    urls = candidate_urls(domain)
+    strict = [(u, True) for u in urls]
+    loose = [(u, False) for u in urls if u.startswith("https://")]
+    return strict + loose
+
+
+def tls_reason(err: str) -> str:
+    """Erreur TLS brute (httpx/ssl) -> raison lisible, pour l'email et la traçabilité."""
+    low = (err or "").lower()
+    if "hostname mismatch" in low or "doesn't match" in low or "does not match" in low or "certificate_verify_failed" in low and "hostname" in low:
+        return "certificat valable pour un autre nom"
+    if "expired" in low or "has expired" in low:
+        return "certificat expiré"
+    if "self signed" in low or "self-signed" in low:
+        return "certificat auto-signé"
+    if "unable to get local issuer" in low or "unknown ca" in low or "issuer" in low:
+        return "autorité de certification non reconnue"
+    if "tlsv1" in low or "handshake" in low or "ssl" in low or "certificate" in low:
+        return "échec du handshake TLS"
+    return ""
 
 
 # Plafond de lecture d'une page : une home fait 50 à 500 Ko ; au-delà de 3 Mo c'est
@@ -859,18 +967,20 @@ async def detect_one(domain: str, sem, timeout: float, clients: dict, retries: i
     result["platform"] = "Inconnu"
     async with sem:
         last_err = ""
-        for url in candidate_urls(domain):
+        tls_err = ""          # première erreur TLS rencontrée sur un candidat https (strict)
+        tried_https_strict = False
+        for url, verify in candidate_attempts(domain):
             is_https = url.startswith("https://")
-            # 1) Essai avec vérification TLS stricte -> ssl_ok = oui/non (signal de vente).
-            #    2) Si l'erreur est TLS, on refait sans vérif pour ne pas perdre le prospect.
-            for verify in (True, False):
-                client = clients[verify]
+            client = clients[verify]
+            if True:
                 r, html, err, tls = await _fetch_with_retry(client, url, retries)
                 if r is None:
                     last_err = err or last_err
-                    if verify and tls and is_https:
-                        continue  # on retente le MÊME url sans vérif TLS
-                    break         # autre erreur -> URL candidate suivante
+                    if is_https and verify:
+                        tried_https_strict = True
+                        if tls and not tls_err:
+                            tls_err = err
+                    continue      # candidat suivant (les https sans vérif viennent en dernier)
 
                 platform, signals = detect_platform(html, dict(r.headers))
                 title = extract_title(html)
@@ -901,11 +1011,11 @@ async def detect_one(domain: str, sem, timeout: float, clients: dict, retries: i
                 # Deux lectures légères de plus, seulement si le site répond normalement :
                 # robots.txt (boutique bloquée pour Google) et cible du lien mentions légales.
                 if not protected and r.status_code < 400:
-                    site["robots_bloque"], site["mentions_404"], retract_cgv, site["sitemap"] = await asyncio.gather(
-                        check_robots_blocked(client, str(r.url)),
+                    site["robots_bloque"], robots_sitemaps = await check_robots_blocked(client, str(r.url))
+                    site["mentions_404"], retract_cgv, (site["sitemap"], site["sitemap_detail"]) = await asyncio.gather(
                         check_mentions_link(client, str(r.url), html),
                         check_retractation_on_cgv(client, str(r.url), html) if site.get("retractation") == "non" else asyncio.sleep(0, result=None),
-                        check_sitemap(client, str(r.url)),
+                        check_sitemap(client, str(r.url), robots_sitemaps),
                     )
                     # Rétractation absente de l'accueil : on ne conclut qu'après lecture des CGV.
                     # Sans lien CGV, l'absence est acquise ; lecture impossible -> inconnu.
@@ -915,12 +1025,12 @@ async def detect_one(domain: str, sem, timeout: float, clients: dict, retries: i
                         elif retract_cgv == "" and site.get("cgv") == "oui":
                             site["retractation"] = ""
                 else:
-                    site["robots_bloque"], site["mentions_404"], site["sitemap"] = "", "", ""
+                    site["robots_bloque"], site["mentions_404"], site["sitemap"], site["sitemap_detail"] = "", "", "", ""
                 # DNS et handshake TLS sont indépendants -> en parallèle (2 attentes -> 1).
                 # L'expiration TLS est lue dès qu'un certificat a répondu (candidat https),
                 # même si le site redirige ensuite vers http : le certificat existe, il n'est
                 # juste pas imposé (angle « site servi en HTTP »).
-                if final_https or (is_https and verify):
+                if final_https or tried_https_strict:
                     dns, ssl_days = await asyncio.gather(
                         check_dns(bare, timeout, clients.get("dns")),
                         ssl_expiry_days((r.url.host if final_https else None) or bare, timeout),
@@ -934,10 +1044,14 @@ async def detect_one(domain: str, sem, timeout: float, clients: dict, retries: i
                     http_status=str(r.status_code),
                     final_url=str(r.url),
                     title="" if protected else title,
-                    # Les candidats https passent avant http : arriver en http veut dire
-                    # qu'aucun HTTPS ne répond correctement -> certificat « non ».
-                    ssl_ok=("oui" if (is_https and verify) else "non"),
+                    # Certificat : « oui » si la page finale est servie en https avec vérification
+                    # stricte (y compris après redirection depuis http) ; « non » seulement si
+                    # une erreur TLS réelle a été constatée ; vide si https n'a échoué que pour
+                    # une raison réseau (délai, connexion refusée) : on ne conclut pas.
+                    ssl_ok=("oui" if (final_https and verify) else ("non" if tls_err else "")),
+                    ssl_erreur=(tls_reason(tls_err) if (tls_err and not (final_https and verify)) else ""),
                     https_final=("oui" if final_https else "non"),
+                    analyse_le=_now_iso(),
                     protected=("oui" if protected else "non"),
                     lang=detect_lang(html),
                     parked=("oui" if is_parked(html, title) else "non"),

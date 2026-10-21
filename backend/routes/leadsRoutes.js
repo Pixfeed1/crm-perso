@@ -261,7 +261,7 @@ router.post('/:id/draft-email', async (req, res) => {
       }
       const draft = proofEmail.buildProofEmail(row, lead);
       if (!draft.ok) return res.status(422).json({ message: draft.raison, indices: draft.indices, sans_preuve: true });
-      return res.json({ subject: draft.subject, body: draft.body, preuve: draft.preuve, preuves: draft.preuves, indices: draft.indices, mode: 'preuve', problemes });
+      return res.json({ subject: draft.subject, body: draft.body, preuve: draft.preuve, preuves: draft.preuves, indices: draft.indices, detail: draft.detail || null, mode: 'preuve', problemes });
     }
     // Plateforme / dirigeant : depuis le crawl_result si dispo, sinon parsés des notes.
     const platMatch = (lead.notes || '').match(/Plateforme\s*:\s*([^\n(]+)(?:\(([^)]+)\))?/i);

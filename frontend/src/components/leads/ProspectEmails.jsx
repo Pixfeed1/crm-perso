@@ -140,14 +140,16 @@ const ProspectEmails = ({ lead, autoCompose = false }) => {
   // affirmation vérifiable) ou « Claude » (rédaction libre). Sans preuve, le serveur refuse
   // et explique pourquoi : on n'envoie pas d'email générique.
   const [sansPreuve, setSansPreuve] = useState(null);
+  const [preuveDetail, setPreuveDetail] = useState(null); // traçabilité : signal brut, URL, date, confiance
   const generateWithClaude = async (mode = 'preuve') => {
     if (drafting) return;
     setDrafting(true);
-    setSansPreuve(null);
+    setSansPreuve(null); setPreuveDetail(null);
     try {
       const res = await leadsAPI.draftEmail(lead.id, { ton: draftTon, mode });
       if (res.subject) setSubject(res.subject);
       setBody(res.body || '');
+      if (res.detail) setPreuveDetail(res.detail);
       toast.success(res.mode === 'creation' ? 'Email « création de site » (domaine réservé, pas encore de site)' : mode === 'preuve' ? `Email par la preuve (${res.preuve})` : 'Brouillon rédigé par Claude');
     } catch (e) {
       const data = e && e.data;
@@ -351,6 +353,15 @@ const ProspectEmails = ({ lead, autoCompose = false }) => {
                     <div className="mb-2 text-xs rounded-lg border border-warning-text/30 bg-warning-bg text-warning-text px-3 py-2">
                       <div className="font-semibold">Email non généré : {sansPreuve.message}</div>
                       {sansPreuve.indices && sansPreuve.indices.length > 0 && <div className="mt-1 opacity-80">Indices seulement : {sansPreuve.indices.join(', ')}. Pas de preuve, pas d'email.</div>}
+                    </div>
+                  )}
+                  {preuveDetail && (
+                    <div className="mb-2 text-xs rounded-lg border border-border bg-surface-muted/60 text-text-secondary px-3 py-2 space-y-0.5">
+                      <div><span className="font-semibold text-text-primary">Preuve :</span> {preuveDetail.signal} · {preuveDetail.brut}</div>
+                      <div>Contrôlé sur <a href={preuveDetail.url_controlee} target="_blank" rel="noreferrer" className="text-accent hover:underline">{preuveDetail.url_controlee}</a>{preuveDetail.analyse_le ? ` le ${new Date(preuveDetail.analyse_le).toLocaleDateString('fr-FR')}` : ' (date d\'analyse inconnue : ancien crawl)'} · {preuveDetail.confiance}</div>
+                      <div>Identité : {preuveDetail.identite}</div>
+                      {preuveDetail.contexte && <div>Contexte : {preuveDetail.contexte} (déclaration du serveur, pas une mesure)</div>}
+                      <div className="opacity-80">Vérifie ces trois lignes dans ton navigateur avant d'envoyer.</div>
                     </div>
                   )}
                   <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={9}

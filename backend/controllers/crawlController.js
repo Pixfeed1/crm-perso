@@ -168,7 +168,10 @@ function typedResult(o) {
     https_final: 'https_final' in o ? boolCell('https_final') : (finalUrl ? /^https:/i.test(finalUrl) : null),
     noindex: boolCell('noindex'), robots_bloque: boolCell('robots_bloque'), cgv: boolCell('cgv'), retractation: boolCell('retractation'),
     contenu_mixte: boolCell('contenu_mixte'), mentions_404: boolCell('mentions_404'), prestataire: cell('prestataire'),
-    meta_desc_txt: cell('meta_desc_txt'), urls_reecrites: boolCell('urls_reecrites'), sitemap: cell('sitemap')
+    meta_desc_txt: cell('meta_desc_txt'), urls_reecrites: boolCell('urls_reecrites'), sitemap: cell('sitemap'),
+    // Traçabilité (colonnes récentes du crawler ; null sur les anciens CSV).
+    ssl_erreur: cell('ssl_erreur'), sitemap_detail: cell('sitemap_detail'), code_postal_site: cell('code_postal_site'),
+    php_source: cell('php_source'), analyse_le: cell('analyse_le')
   };
 }
 
@@ -178,7 +181,7 @@ const RESULT_COLUMNS = ['domain', 'platform', 'signals', 'http_status', 'final_u
   'analytics', 'poids_ko', 'copyright_annee', 'serveur_php', 'spf', 'dmarc', 'ssl_expire_jours',
   'site_type', 'ecommerce_actif', 'https_final',
   'noindex', 'robots_bloque', 'cgv', 'retractation', 'contenu_mixte', 'mentions_404', 'prestataire',
-  'meta_desc_txt', 'urls_reecrites', 'sitemap'];
+  'meta_desc_txt', 'urls_reecrites', 'sitemap', 'ssl_erreur', 'sitemap_detail', 'code_postal_site', 'php_source', 'analyse_le'];
 
 // Insère un résultat typé dans crawl_results (+ mémoire crawl_seen_domains). Renvoie l'id.
 async function insertCrawlResult(db, jobId, r) {
@@ -514,7 +517,7 @@ crawlController.enrichResults = async (req, res) => {
   if (ids.length === 0) return res.status(400).json({ message: 'Aucun résultat sélectionné' });
   try {
     const { rows } = await db.pool.query(
-      'SELECT id, domain, title FROM crawl_results WHERE job_id = $1 AND id = ANY($2::int[])',
+      'SELECT id, domain, title, code_postal_site FROM crawl_results WHERE job_id = $1 AND id = ANY($2::int[])',
       [parseInt(id, 10), ids]
     );
     let enriched = 0; let douteux = 0;
@@ -522,7 +525,7 @@ crawlController.enrichResults = async (req, res) => {
       // Requête : le titre de la home (souvent la vraie enseigne), repli sur la racine du domaine.
       const title = (decodeHtml(r.title) || '').trim();
       const query = title || normalizeDomain(r.domain).split('.')[0];
-      const data = await sireneEnrich.enrichMatch({ query, domain: r.domain, title });
+      const data = await sireneEnrich.enrichMatch({ query, domain: r.domain, title, code_postal_site: r.code_postal_site || '' });
       if (data.found) {
         // Douteux : rien de commun entre l'entreprise et le site. On garde la trace (sirene_match)
         // mais on n'écrit ni dirigeant ni SIREN, pour ne pas envoyer un « Bonjour M. X » faux.
@@ -534,10 +537,11 @@ crawlController.enrichResults = async (req, res) => {
              siren = CASE WHEN $2 THEN $5 ELSE siren END,
              naf = CASE WHEN $2 THEN $6 ELSE naf END, naf_label = CASE WHEN $2 THEN $7 ELSE naf_label END,
              effectif = CASE WHEN $2 THEN $8 ELSE effectif END, adresse = CASE WHEN $2 THEN $9 ELSE adresse END,
-             code_postal = CASE WHEN $2 THEN $10 ELSE code_postal END, ville = CASE WHEN $2 THEN $11 ELSE ville END
+             code_postal = CASE WHEN $2 THEN $10 ELSE code_postal END, ville = CASE WHEN $2 THEN $11 ELSE ville END,
+             gerant_nom = CASE WHEN $2 THEN $13 ELSE gerant_nom END, gerant_prenom = CASE WHEN $2 THEN $14 ELSE gerant_prenom END
            WHERE id = $12`,
           [data.match, ok, data.raison_sociale, data.dirigeant, data.siren, data.naf, data.naf_label,
-           data.effectif, data.adresse, data.code_postal, data.ville, r.id]
+           data.effectif, data.adresse, data.code_postal, data.ville, r.id, data.dirigeant_nom, data.dirigeant_prenom]
         );
         if (ok) enriched++; else douteux++;
       }

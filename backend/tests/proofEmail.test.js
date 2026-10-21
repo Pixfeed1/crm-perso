@@ -1,7 +1,7 @@
 // Email par la preuve : une seule affirmation vérifiable, refus sans preuve.
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { buildProofEmail, PREUVES_ORDRE } = require('../services/proofEmailService');
+const { buildProofEmail, PREUVES_ORDRE, nomCourt } = require('../services/proofEmailService');
 
 test('Equip\'Tout : la preuve retenue est le nom mal orthographié, avec le nom en casse lisible', () => {
   const r = { domain: 'www.equiptout.fr', title: 'Equit Tout', raison_sociale: "EQUIP'TOUT", sirene_match: 'sur', gerant: 'Maxime Lambin',
@@ -12,7 +12,10 @@ test('Equip\'Tout : la preuve retenue est le nom mal orthographié, avec le nom 
   assert.match(d.subject, /mal orthographié/);
   assert.match(d.body, /Bonjour Maxime Lambin,/);
   assert.match(d.body, /« Equit Tout »\. Votre société s'appelle Equip'Tout\./);
-  assert.match(d.body, /Equip'Tout en cherchant/);
+  assert.match(d.body, /découvert Equip'Tout en parcourant des boutiques PrestaShop/);
+  assert.match(d.body, /pixfeed\.net\/maintenance/);
+  assert.equal(d.detail.signal, 'nom_mal_orthographie');
+  assert.match(d.detail.identite, /SIRENE sûre/);
   assert.doesNotMatch(d.body, /rien de grave|si jamais ça vous intéresse/i);
 });
 
@@ -30,13 +33,59 @@ test('gérant douteux (SIRENE) : pas de nom dans la salutation ; contexte techni
   const d = buildProofEmail(r, {});
   assert.equal(d.preuve, 'http_non_securise');
   assert.match(d.body, /^Bonjour,\n/);
-  assert.match(d.body, /Gourmands d'Antan en cherchant/);
+  assert.match(d.body, /découvert Gourmands d'Antan en parcourant/);
   assert.equal((d.body.match(/Pour être complet/g) || []).length, 1);
-  assert.match(d.body, /PHP 5\.4, qui ne reçoit plus de correctifs/);
+  // PHP : une déclaration du serveur, jamais une certitude.
+  assert.match(d.body, /d'après l'entête que renvoie votre serveur, le site tournerait sur PHP 5\.4/);
+  assert.match(d.body, /votre hébergeur pourra confirmer/);
+  assert.match(d.detail.contexte, /PHP déclaré par l'entête/);
 });
 
 test('ordre des preuves : la panne passe avant tout le reste', () => {
   const d = buildProofEmail({ domain: 'x.fr', http_status: 503, title: 'PrestaShop', https_final: false }, {});
   assert.equal(d.preuve, 'erreur_serveur');
   assert.equal(PREUVES_ORDRE[0], 'accueil_404');
+});
+
+test('salutation : premier prénom + nom en casse de nom, jamais l\'état civil complet en capitales', () => {
+  assert.equal(nomCourt({ gerant: 'LUDOVIC MARCEL ROBERT AUGUSTE BAUDRY' }), 'Ludovic Baudry');
+  assert.equal(nomCourt({ gerant: 'LUDOVIC MARCEL BAUDRY', gerant_nom: 'DE LA CRUZ', gerant_prenom: 'MARCOS' }), 'Marcos De La Cruz');
+  const r = { domain: 'a.fr', title: 'A', https_final: false, http_status: 200, sirene_match: 'sur', gerant: 'LUDOVIC MARCEL ROBERT AUGUSTE BAUDRY', raison_sociale: 'A SARL', ville: 'Oyonnax', platform: 'PrestaShop' };
+  const d = buildProofEmail(r, {});
+  assert.match(d.body, /^Bonjour Ludovic Baudry,/);
+  assert.match(d.body, /autour de Oyonnax/);
+});
+
+test('correspondance SIRENE probable ou douteuse : ni nom, ni ville, ni raison sociale dans l\'email', () => {
+  for (const m of ['probable', 'douteux', null]) {
+    const r = { domain: 'uneaffairedefilles.fr', title: 'Une Affaire de Filles - Boutique', https_final: false, http_status: 200, sirene_match: m, gerant: 'JEANNE DUPONT', raison_sociale: 'UNE AFFAIRE DE FILLES', ville: 'Paris', platform: 'PrestaShop' };
+    const d = buildProofEmail(r, {});
+    assert.match(d.body, /^Bonjour,\n/);
+    assert.doesNotMatch(d.body, /Paris|Dupont/);
+    assert.match(d.detail.identite, /pas de personnalisation/);
+  }
+});
+
+test('portées sobres : aucune affirmation sur Google ou les clients qu\'on ne peut pas démontrer', () => {
+  const cas = [
+    { domain: 'a.fr', title: 'A', sitemap: 'vide', sitemap_detail: 'https://a.fr/sitemap.xml -> 200 application/xml, 0 <loc>', http_status: 200, analyse_le: '2026-10-20T08:00:00Z' },
+    { domain: 'b.fr', title: 'B', ssl_ok: true, ssl_expire_jours: 12, http_status: 200 },
+    { domain: 'c.fr', title: 'C', ssl_ok: false, ssl_erreur: 'certificat valable pour un autre nom', http_status: 200 },
+    { domain: 'd.fr', title: 'D', mobile_ok: false, http_status: 200 },
+    { domain: 'e.fr', title: 'E', copyright_annee: 2019, http_status: 200 }
+  ];
+  for (const r of cas) {
+    const d = buildProofEmail(r, {});
+    assert.equal(d.ok, true, r.domain);
+    assert.doesNotMatch(d.body, /semaines à apparaître|écran rouge|plein écran|plus de la moitié|ferment avant|encore ouvert|perd(ez|re) des clients/i, r.domain);
+    assert.ok(d.detail.brut, r.domain);
+  }
+  const sm = buildProofEmail(cas[0], {});
+  assert.match(sm.body, /constaté le 20\/10\/2026/);
+  assert.match(sm.body, /pas bloquant/);
+  assert.equal(sm.detail.brut, cas[0].sitemap_detail);
+  const bientot = buildProofEmail(cas[1], {});
+  assert.match(bientot.body, /renouvellement est automatique/);
+  const inval = buildProofEmail(cas[2], {});
+  assert.match(inval.body, /certificat valable pour un autre nom/);
 });

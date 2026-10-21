@@ -261,6 +261,8 @@ const DATABASE_SCHEMA = {
       naf: 'VARCHAR(10)',
       naf_label: 'TEXT',
       dirigeant: 'TEXT',
+      dirigeant_nom: 'TEXT',
+      dirigeant_prenom: 'TEXT',
       effectif: 'VARCHAR(20)',
       city: 'TEXT',
       postal_code: 'VARCHAR(10)',
@@ -309,6 +311,13 @@ const DATABASE_SCHEMA = {
       title: 'TEXT',
       error: 'TEXT',
       gerant: 'TEXT', // dirigeant (enrichissement SIRENE)
+      gerant_nom: 'TEXT',    // nom seul, pour une salutation en casse de nom
+      gerant_prenom: 'TEXT', // premier prénom seul
+      ssl_erreur: 'TEXT',           // raison TLS lisible (traçabilité de la preuve)
+      sitemap_detail: 'TEXT',       // URL(s) contrôlée(s) et réponse(s) du sitemap
+      code_postal_site: 'VARCHAR(5)', // code postal lu sur la page (recoupement SIRENE)
+      php_source: 'VARCHAR(20)',    // X-Powered-By | Server : d'où vient serveur_php
+      analyse_le: 'TIMESTAMP',      // horodatage de l'analyse par le crawler
       raison_sociale: 'TEXT', // raison sociale légale (enrichissement SIRENE)
       siren: 'VARCHAR(9)',    // SIREN (enrichissement SIRENE)
       email: 'TEXT',  // enrichi par cc_prospector (regex sur la home)

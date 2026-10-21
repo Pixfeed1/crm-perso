@@ -88,6 +88,8 @@ async function matchCompany(signal) {
     naf: data.naf,
     naf_label: data.naf_label,
     dirigeant: data.dirigeant,
+    dirigeant_nom: data.dirigeant_nom,
+    dirigeant_prenom: data.dirigeant_prenom,
     effectif: data.effectif,
     city: data.ville,
     postal_code: data.code_postal,
@@ -142,8 +144,8 @@ async function attachCrawlResult(db, signal, typed) {
   if (signal.match_confidence === 'sur' || signal.match_confidence === 'probable') {
     await db.pool.query(
       `UPDATE crawl_results SET sirene_match = $1, raison_sociale = $2, gerant = $3, siren = $4, naf = $5, naf_label = $6,
-              effectif = $7, code_postal = $8, ville = $9 WHERE id = $10`,
-      [signal.match_confidence, signal.company_name, signal.dirigeant, signal.siren, signal.naf, signal.naf_label, signal.effectif, signal.postal_code, signal.city, id]
+              effectif = $7, code_postal = $8, ville = $9, gerant_nom = $11, gerant_prenom = $12 WHERE id = $10`,
+      [signal.match_confidence, signal.company_name, signal.dirigeant, signal.siren, signal.naf, signal.naf_label, signal.effectif, signal.postal_code, signal.city, id, signal.dirigeant_nom || null, signal.dirigeant_prenom || null]
     );
   }
   await crawl.rescoreJob(db, jobId, [id]);
@@ -269,8 +271,8 @@ async function matchUnmatched(db, signals) {
       Object.assign(s, m);
       if (s.crawl_result_id && (m.match_confidence === 'sur' || m.match_confidence === 'probable')) {
         await db.pool.query(
-          `UPDATE crawl_results SET sirene_match = $1, raison_sociale = $2, gerant = $3, siren = $4, naf = $5, naf_label = $6, effectif = $7, code_postal = $8, ville = $9 WHERE id = $10`,
-          [m.match_confidence, m.company_name, m.dirigeant, m.siren, m.naf, m.naf_label, m.effectif, m.postal_code, m.city, s.crawl_result_id]
+          `UPDATE crawl_results SET sirene_match = $1, raison_sociale = $2, gerant = $3, siren = $4, naf = $5, naf_label = $6, effectif = $7, code_postal = $8, ville = $9, gerant_nom = $11, gerant_prenom = $12 WHERE id = $10`,
+          [m.match_confidence, m.company_name, m.dirigeant, m.siren, m.naf, m.naf_label, m.effectif, m.postal_code, m.city, s.crawl_result_id, m.dirigeant_nom || null, m.dirigeant_prenom || null]
         ).catch(() => {});
       }
     } catch (e) {

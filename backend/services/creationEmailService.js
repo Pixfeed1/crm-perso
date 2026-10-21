@@ -4,7 +4,7 @@
 // domaine réservé il y a quelques jours, entreprise souvent toute récente. Il n'y a rien à
 // prouver (pas de site), donc pas de leçon : une observation vraie, une question, une sortie
 // facile. Assemblé sans LLM, comme l'email par la preuve.
-const { joliNom } = require('./proofEmailService');
+const { joliNom, nomCourt } = require('./proofEmailService');
 
 // Qui écrit, en une phrase. Le métier du destinataire n'est pas repris ici : à ce stade on ne sait
 // pas toujours ce qu'il fait, et « des travaux de plomberie comme la vôtre » sonnerait faux.
@@ -25,7 +25,11 @@ function nomEntreprise(signal, lead) {
 
 function salutation(signal) {
   const sur = signal && signal.match_confidence === 'sur' && signal.dirigeant;
-  return sur ? `Bonjour ${String(signal.dirigeant).trim()},` : 'Bonjour,';
+  if (sur) {
+    const court = nomCourt({ gerant: signal.dirigeant, gerant_nom: signal.dirigeant_nom, gerant_prenom: signal.dirigeant_prenom });
+    return court ? `Bonjour ${court},` : 'Bonjour,';
+  }
+  return 'Bonjour,';
 }
 
 /**

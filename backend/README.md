@@ -61,3 +61,34 @@ réseau : coller la liste à la main dans l'onglet.
 
 Code : `utils/domainSignals.js` (fonctions pures, testées), `services/domainSignalService.js`
 (pipeline), `controllers/domainSignalController.js`, routes `/api/portefeuille/signaux`.
+
+## Email par la preuve : règles de fiabilité
+
+Les emails sont assemblés par le code (`services/proofEmailService.js`), sans modèle de langage,
+à partir des mesures du crawler. Règles issues de la relecture de prospects réels :
+
+- **Personnalisation seulement si la correspondance SIRENE est sûre** (`sirene_match = 'sur'`) :
+  nom du dirigeant (premier prénom + nom, en casse de nom), raison sociale, ville. « probable »
+  ou « douteux » = « Bonjour, » et rien d'autre. La confiance tient compte du code postal lu sur
+  le site (`code_postal_site`) et de l'écart avec le second candidat (`sireneEnrich.confidence`).
+- **HTTPS** : le crawler essaie https nu, https www, http nu, http www avec vérification stricte,
+  puis seulement les https sans vérification. `ssl_ok` vaut « non » uniquement sur une erreur
+  TLS réelle (`ssl_erreur` en donne la raison), vide si https n'a échoué que pour une raison
+  réseau. `https_final` reste un fait : la page finale est servie en HTTP.
+- **PHP** : `serveur_php` vient d'une entête (`php_source` = X-Powered-By ou Server). C'est une
+  déclaration ; l'email la rapporte comme telle (« votre serveur annonce… »), jamais comme une
+  faille certaine, et seulement en contexte, jamais comme preuve.
+- **Sitemap** : « vide » seulement sur un vrai document XML de sitemap sans `<loc>` ; une page
+  HTML en 200 est un sitemap absent. Les sitemaps déclarés dans robots.txt et les emplacements
+  usuels (Yoast, module PrestaShop) sont lus avant de conclure. Aucun délai d'indexation ni perte
+  SEO n'est déduit de ce signal.
+- **Portées** : chaque phrase de conséquence décrit ce que le visiteur ou le navigateur voit,
+  pas une perte de clients ni un classement Google. Test `tests/proofEmail.test.js`.
+- **Traçabilité** : la réponse de `POST /api/leads/:id/draft-email` porte `detail` (signal brut,
+  URL contrôlée, date `analyse_le`, confiance, identité, contexte), affiché sous l'email.
+
+Prévisualiser sur un CSV du crawler, sans base ni envoi :
+
+```bash
+node scripts/previewProofEmails.js resultats.csv [domaine] [--sirene]
+```
