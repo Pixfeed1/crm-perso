@@ -650,6 +650,7 @@ CSV_FIELDS = [
     # --- traçabilité : pour chaque preuve, retrouver le signal brut, l'URL, la date ---
     "ssl_erreur",        # raison TLS lisible (nom non couvert, expiré, autorité inconnue…) ou vide
     "https_erreur",      # dernière erreur brute rencontrée sur un candidat https strict (vide si https a servi la page)
+    "ssl_sujet",         # nom (CN) du certificat présenté quand il ne couvre pas le domaine (ex. preview.infomaniak.website)
     "https_variantes",   # trace de chaque variante testée : « https://x.fr -> TLS: nom non couvert | https://www.x.fr -> 200 https://www.x.fr/ »
     "sitemap_detail",    # « https://x.fr/sitemap.xml -> 200 text/html (page HTML) » etc.
     "code_postal_site",  # code postal lu sur la page (recoupement SIRENE)
@@ -699,30 +700,79 @@ async def check_dns(bare_domain: str, timeout: float, client=None) -> dict:
     return out
 
 
-def _ssl_days_sync(host: str, timeout: float) -> str:
-    """Jours restants avant expiration du certificat TLS (handshake direct sur :443)."""
+def _ssl_cert_sync(host: str, timeout: float) -> dict:
+    """Certificat TLS présenté sur :443 : jours restants et nom (CN) du certificat.
+    Handshake strict d'abord ; s'il échoue (nom non couvert, autorité inconnue…), relecture
+    SANS vérification pour savoir QUEL certificat est présenté : « preview.infomaniak.website »
+    au lieu de la boutique, c'est la preuve concrète d'un certificat d'hébergeur par défaut."""
     import ssl
     import socket
+    import tempfile
+    import os
     from datetime import datetime, timezone
-    try:
-        ctx = ssl.create_default_context()
+    out = {"days": "", "cn": "", "valide": ""}
+
+    def _lire(ctx):
         with socket.create_connection((host, 443), timeout=min(timeout, 6.0)) as sock:
             with ctx.wrap_socket(sock, server_hostname=host) as ss:
                 cert = ss.getpeercert()
-        na = cert.get("notAfter") if cert else None
-        if not na:
-            return ""
-        exp = datetime.strptime(na, "%b %d %H:%M:%S %Y %Z").replace(tzinfo=timezone.utc)
-        return str((exp - datetime.now(timezone.utc)).days)
+                der = ss.getpeercert(binary_form=True)
+        if not cert and der:
+            # Connexion non vérifiée : getpeercert() est vide, on décode le DER nous-mêmes.
+            pem = ssl.DER_cert_to_PEM_cert(der)
+            fd, path = tempfile.mkstemp(suffix=".pem")
+            try:
+                with os.fdopen(fd, "w") as f:
+                    f.write(pem)
+                cert = ssl._ssl._test_decode_cert(path)  # API privée mais stable (3.7+)
+            finally:
+                try:
+                    os.unlink(path)
+                except OSError:
+                    pass
+        return cert or {}
+
+    def _remplir(cert):
+        na = cert.get("notAfter")
+        if na:
+            exp = datetime.strptime(na, "%b %d %H:%M:%S %Y %Z").replace(tzinfo=timezone.utc)
+            out["days"] = str((exp - datetime.now(timezone.utc)).days)
+        for rdn in cert.get("subject", ()):
+            for k, v in rdn:
+                if k == "commonName":
+                    out["cn"] = v[:120]
+        if not out["cn"]:
+            for typ, val in cert.get("subjectAltName", ()):
+                if typ == "DNS":
+                    out["cn"] = val[:120]
+                    break
+
+    try:
+        _remplir(_lire(ssl.create_default_context()))
+        out["valide"] = "oui"
+        return out
     except Exception:
-        return ""
+        pass
+    try:
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+        _remplir(_lire(ctx))
+        out["valide"] = "non"
+    except Exception:
+        pass
+    return out
+
+
+async def ssl_cert_info(host: str, timeout: float) -> dict:
+    try:
+        return await asyncio.to_thread(_ssl_cert_sync, host, timeout)
+    except Exception:
+        return {"days": "", "cn": "", "valide": ""}
 
 
 async def ssl_expiry_days(host: str, timeout: float) -> str:
-    try:
-        return await asyncio.to_thread(_ssl_days_sync, host, timeout)
-    except Exception:
-        return ""
+    return (await ssl_cert_info(host, timeout)).get("days", "")
 
 
 _SITEMAP_ALTERNATES = ["/sitemap_index.xml", "/1_index_sitemap.xml", "/sitemap-index.xml", "/wp-sitemap.xml"]
@@ -1041,12 +1091,16 @@ async def detect_one(domain: str, sem, timeout: float, clients: dict, retries: i
                 # même si le site redirige ensuite vers http : le certificat existe, il n'est
                 # juste pas imposé (angle « site servi en HTTP »).
                 if final_https or tried_https_strict:
-                    dns, ssl_days = await asyncio.gather(
+                    dns, cert = await asyncio.gather(
                         check_dns(bare, timeout, clients.get("dns")),
-                        ssl_expiry_days((r.url.host if final_https else None) or bare, timeout),
+                        ssl_cert_info((r.url.host if final_https else None) or bare, timeout),
                     )
                 else:
-                    dns, ssl_days = await check_dns(bare, timeout, clients.get("dns")), ""
+                    dns, cert = await check_dns(bare, timeout, clients.get("dns")), {"days": "", "cn": "", "valide": ""}
+                ssl_days = cert.get("days", "")
+                # Nom porté par le certificat présenté : utile surtout quand il ne couvre pas le
+                # domaine (certificat d'hébergeur par défaut). Vide si le handshake n'a rien donné.
+                ssl_sujet = cert.get("cn", "") if cert.get("valide") == "non" or tls_err else ""
                 result.update(
                     platform=platform,
                     platform_version=extract_version(html, platform),
@@ -1070,6 +1124,7 @@ async def detect_one(domain: str, sem, timeout: float, clients: dict, retries: i
                     lang=detect_lang(html),
                     parked=("oui" if is_parked(html, title) else "non"),
                     ssl_expire_jours=ssl_days,
+                    ssl_sujet=ssl_sujet,
                     error="",
                     **contacts,
                     **site,

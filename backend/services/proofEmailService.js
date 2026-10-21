@@ -69,14 +69,23 @@ const CATALOGUE = {
   http_non_securise: (r) => {
     const redirige = r.ssl_ok === true && r.final_url && /^http:/i.test(r.final_url);
     const finale = redirige ? String(r.final_url).replace(/\/$/, '') : '';
+    // Certificat refusé : on dit lequel est présenté quand on le sait (certificat d'hébergeur
+    // par défaut, type « preview.infomaniak.website »). Vérifiable en cliquant sur le cadenas.
+    const mauvaisCert = r.ssl_ok === false;
+    const sujetCert = mauvaisCert && r.ssl_sujet ? ` : le certificat présenté est au nom de « ${r.ssl_sujet} », celui de l'hébergeur, pas de votre boutique` : (mauvaisCert && r.ssl_erreur ? ` (${r.ssl_erreur})` : '');
+    const typeS = typeSite(r);
     return {
       sujet: `« Non sécurisé » s'affiche sur ${site(r)}`,
       preuve: redirige
         ? `En tapant https://${site(r)}, on est renvoyé vers ${finale} : le certificat existe mais n'est pas utilisé, et le navigateur affiche « Non sécurisé ».`
-        : `${site(r)} s'ouvre en HTTP, sans cadenas${quand(r)} : le navigateur affiche « Non sécurisé » à côté de l'adresse.`,
+        : mauvaisCert
+          ? `En tapant https://${site(r)}, le navigateur affiche un avertissement${sujetCert}. La ${typeS} ne s'ouvre donc qu'en HTTP, sans cadenas.`
+          : `${site(r)} s'ouvre en HTTP, sans cadenas${quand(r)} : le navigateur affiche « Non sécurisé » à côté de l'adresse.`,
       consequence: redirige
         ? `Le certificat étant en place, c'est un réglage de redirection, pas une refonte.`
-        : `La correction dépend de votre hébergement et de votre certificat ; je peux la regarder avec vous.`,
+        : mauvaisCert
+          ? `Un certificat à votre nom règle les deux points ; je peux le voir avec votre hébergeur.`
+          : `La correction dépend de votre hébergement et de votre certificat ; je peux la regarder avec vous.`,
       brut: `${redirige ? `https accepté puis redirigé vers ${r.final_url} (servi en HTTP)` : `URL finale ${r.final_url || 'http://' + site(r)} servie en HTTP`}${r.https_variantes ? ` · variantes : ${r.https_variantes}` : ''}`
     };
   },
@@ -88,7 +97,7 @@ const CATALOGUE = {
   }),
   ssl_invalide: (r) => ({
     sujet: `avertissement de sécurité sur ${site(r)}`,
-    preuve: `En ouvrant https://${site(r)}${quand(r)}, le navigateur affiche un avertissement de sécurité : ${r.ssl_erreur ? r.ssl_erreur : 'le certificat n\'est pas valide pour cette adresse'}.`,
+    preuve: `En ouvrant https://${site(r)}${quand(r)}, le navigateur affiche un avertissement de sécurité : ${r.ssl_sujet ? `le certificat présenté est au nom de « ${r.ssl_sujet} », pas de votre boutique` : (r.ssl_erreur ? r.ssl_erreur : 'le certificat n\'est pas valide pour cette adresse')}.`,
     consequence: `Souvent, seule l'adresse sans « www » est concernée, et cela se règle côté hébergement.`,
     brut: `${r.ssl_erreur || 'erreur TLS à la connexion'}${r.https_variantes ? ` · variantes : ${r.https_variantes}` : ''}`
   }),

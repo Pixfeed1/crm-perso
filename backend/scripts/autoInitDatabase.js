@@ -315,6 +315,7 @@ const DATABASE_SCHEMA = {
       gerant_prenom: 'TEXT', // premier prénom seul
       ssl_erreur: 'TEXT',           // raison TLS lisible (traçabilité de la preuve)
       https_variantes: 'TEXT',      // chaque variante testée (https nu / www, http nu / www) : TLS, code, URL finale
+      ssl_sujet: 'TEXT',            // nom du certificat présenté quand il ne couvre pas le domaine (certificat d'hébergeur)
       sitemap_detail: 'TEXT',       // URL(s) contrôlée(s) et réponse(s) du sitemap
       code_postal_site: 'VARCHAR(5)', // code postal lu sur la page (recoupement SIRENE)
       php_source: 'VARCHAR(20)',    // X-Powered-By | Server : d'où vient serveur_php
