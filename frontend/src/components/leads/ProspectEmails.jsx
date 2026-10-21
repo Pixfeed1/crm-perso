@@ -5,7 +5,7 @@
 // Réutilise l'envoi email existant (leadsAPI.sendEmail / scheduledEmailsAPI) et le log Suivi.
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiMail, FiSend, FiClock, FiX, FiTrash2, FiCpu, FiLoader, FiRefreshCw } from 'react-icons/fi';
+import { FiMail, FiSend, FiClock, FiX, FiTrash2, FiCpu, FiLoader } from 'react-icons/fi';
 import { leadsAPI, scheduledEmailsAPI, emailTemplatesAPI, emailSignaturesAPI } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
 import { CHANNELS } from '../../utils/relationStatus';
@@ -141,24 +141,6 @@ const ProspectEmails = ({ lead, autoCompose = false }) => {
   // et explique pourquoi : on n'envoie pas d'email générique.
   const [sansPreuve, setSansPreuve] = useState(null);
   const [preuveDetail, setPreuveDetail] = useState(null); // traçabilité : signal brut, URL, date, confiance
-  const [reanalyzing, setReanalyzing] = useState(false);
-  const [reanalyse, setReanalyse] = useState(null); // résumé de la dernière réanalyse (preuves, indices, SIRENE)
-
-  // Relance le crawler sur ce seul domaine : mesures du jour, SIRENE recoupé, score à jour.
-  // Ensuite seulement, « Email par la preuve » repart de données fraîches.
-  const reanalyzeSite = async () => {
-    if (reanalyzing) return;
-    setReanalyzing(true); setReanalyse(null); setPreuveDetail(null);
-    try {
-      const r = await leadsAPI.reanalyze(lead.id);
-      setReanalyse(r);
-      toast.success(r.preuves.length ? `Site réanalysé : ${r.preuves.length} preuve${r.preuves.length > 1 ? 's' : ''} (${r.preuves.join(', ')})` : 'Site réanalysé : aucune preuve, seulement des indices');
-    } catch (e) {
-      toast.error(e.message || 'Réanalyse impossible');
-    } finally {
-      setReanalyzing(false);
-    }
-  };
   const generateWithClaude = async (mode = 'preuve') => {
     if (drafting) return;
     setDrafting(true);
@@ -342,48 +324,40 @@ const ProspectEmails = ({ lead, autoCompose = false }) => {
                 </div>
 
                 <div>
-                  <div className="flex items-center justify-between gap-2 mb-1 flex-wrap">
+                  {/* Une ligne lisible : à gauche le libellé, à droite deux façons de rédiger.
+                      « Email par la preuve » (gratuit, assemblé par le code) est l'action principale ;
+                      « Claude libre » est secondaire et porte son réglage de ton juste à côté. */}
+                  <div className="flex items-center justify-between gap-3 mb-1.5 flex-wrap">
                     <label className="text-sm text-text-secondary">Message</label>
-                    <div className="flex items-center gap-1.5">
-                      <select value={draftTon} onChange={(e) => setDraftTon(e.target.value)} disabled={drafting}
-                        className="px-2 py-1 text-xs bg-surface-muted border border-border rounded-lg text-text-secondary focus:outline-none focus:border-accent disabled:opacity-50"
-                        title="Ton de l'email">
-                        <option value="humain">Ton humain</option>
-                        <option value="direct">Ton direct</option>
-                        <option value="doux">Ton doux</option>
-                      </select>
-                      <button type="button" onClick={reanalyzeSite} disabled={reanalyzing || drafting}
-                        title="Relance le crawler sur ce domaine (une vingtaine de secondes) : mesures du jour, correspondance SIRENE, score. À faire avant d'écrire à un prospect analysé par l'ancien crawl."
-                        className="px-2.5 py-1 text-xs rounded-lg bg-surface-strong text-text-primary hover:bg-border-strong flex items-center gap-1.5 disabled:opacity-50">
-                        <FiRefreshCw size={13} className={reanalyzing ? 'animate-spin' : ''} /> {reanalyzing ? 'Analyse…' : 'Réanalyser le site'}
-                      </button>
-                      <button type="button" onClick={() => generateWithClaude('preuve')} disabled={drafting || reanalyzing}
-                        title="Une seule affirmation, vérifiable par le gérant en dix secondes sur son site, sa conséquence pour son activité, un contexte technique mesuré. Refusé s'il n'y a pas de preuve."
-                        className="px-2.5 py-1 text-xs rounded-lg bg-accent text-white hover:bg-accent-hover flex items-center gap-1.5 disabled:opacity-50">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <button type="button" onClick={() => generateWithClaude('preuve')} disabled={drafting}
+                        title="Assemblé par le code à partir des mesures du site : une preuve vérifiable, une proposition de maintenance. Gratuit. Refusé s'il n'y a pas de preuve."
+                        className="px-3 py-1.5 text-xs font-medium rounded-lg bg-accent text-white hover:bg-accent-hover flex items-center gap-1.5 disabled:opacity-50">
                         {drafting
                           ? <motion.span animate={{ rotate: 360 }} transition={{ duration: 0.9, repeat: Infinity, ease: 'linear' }} className="inline-flex"><FiLoader size={13} /></motion.span>
                           : <FiCpu size={13} />}
                         {drafting ? 'Rédaction…' : 'Email par la preuve'}
                       </button>
-                      <button type="button" onClick={() => generateWithClaude('claude')} disabled={drafting}
-                        title="Rédaction libre par Claude à partir de tous les problèmes détectés (moins sûr : à relire fait par fait)"
-                        className="px-2.5 py-1 text-xs rounded-lg bg-accent/15 text-accent hover:bg-accent/25 disabled:opacity-50">
-                        Claude libre
-                      </button>
+                      <div className="flex items-center rounded-lg border border-border overflow-hidden">
+                        <button type="button" onClick={() => generateWithClaude('claude')} disabled={drafting}
+                          title="Rédaction par Claude (payant, ~0,003 €) à partir des problèmes détectés, avec le ton choisi à droite. À relire fait par fait."
+                          className="px-3 py-1.5 text-xs text-text-primary bg-surface-strong hover:bg-border-strong disabled:opacity-50">
+                          Claude libre
+                        </button>
+                        <select value={draftTon} onChange={(e) => setDraftTon(e.target.value)} disabled={drafting}
+                          className="px-2 py-1.5 text-xs bg-surface-muted border-l border-border text-text-secondary focus:outline-none disabled:opacity-50"
+                          title="Ton de la rédaction Claude libre">
+                          <option value="humain">ton humain</option>
+                          <option value="direct">ton direct</option>
+                          <option value="doux">ton doux</option>
+                        </select>
+                      </div>
                     </div>
                   </div>
                   {sansPreuve && (
                     <div className="mb-2 text-xs rounded-lg border border-warning-text/30 bg-warning-bg text-warning-text px-3 py-2">
                       <div className="font-semibold">Email non généré : {sansPreuve.message}</div>
                       {sansPreuve.indices && sansPreuve.indices.length > 0 && <div className="mt-1 opacity-80">Indices seulement : {sansPreuve.indices.join(', ')}. Pas de preuve, pas d'email.</div>}
-                    </div>
-                  )}
-                  {reanalyse && (
-                    <div className="mb-2 text-xs rounded-lg border border-border bg-surface-muted/60 text-text-secondary px-3 py-2 space-y-0.5">
-                      <div><span className="font-semibold text-text-primary">Réanalysé</span> {reanalyse.analyse_le ? `le ${new Date(reanalyse.analyse_le).toLocaleDateString('fr-FR')}` : ''} · {reanalyse.domain} · HTTP {reanalyse.http_status ?? '?'}</div>
-                      <div>Preuves : {reanalyse.preuves.length ? reanalyse.preuves.join(', ') : 'aucune'} · Indices : {reanalyse.indices.length ? reanalyse.indices.join(', ') : 'aucun'}</div>
-                      {reanalyse.sirene && <div>SIRENE : {reanalyse.sirene.match}{reanalyse.sirene.raison_sociale ? ` · ${reanalyse.sirene.raison_sociale}${reanalyse.sirene.ville ? ` (${reanalyse.sirene.ville})` : ''}` : ''}</div>}
-                      <div className="opacity-80">Clique maintenant sur « Email par la preuve » pour un texte fondé sur ces mesures.</div>
                     </div>
                   )}
                   {preuveDetail && (

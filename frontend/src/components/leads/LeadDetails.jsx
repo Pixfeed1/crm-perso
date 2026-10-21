@@ -1,7 +1,7 @@
 // src/components/leads/LeadDetails.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiStar, FiEye, FiCheckCircle, FiMessageCircle, FiAward, FiXCircle, FiHelpCircle, FiClipboard, FiBriefcase, FiUser, FiFileText, FiUsers, FiEdit2, FiTrash2, FiUserCheck } from 'react-icons/fi';
+import { FiStar, FiEye, FiCheckCircle, FiMessageCircle, FiAward, FiXCircle, FiHelpCircle, FiClipboard, FiBriefcase, FiUser, FiFileText, FiUsers, FiEdit2, FiTrash2, FiUserCheck, FiRefreshCw, FiAlertCircle } from 'react-icons/fi';
 import { leadsAPI, clientsAPI } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
 import { useConfirm } from '../../hooks/useConfirm';
@@ -16,14 +16,21 @@ import ConfirmModal from '../common/ConfirmModal';
 
 // Checklist d'audit du site (issue du crawl) : problèmes d'abord (angles de vente),
 // puis points conformes. ok=false => problème, ok=true => conforme.
+// Preuves (constatées, visibles par le gérant : ce qui ouvre un email) distinguées des indices
+// (vrais mais mineurs ou déclarés : ce qui ne suffit jamais). Même règle que le serveur.
 const buildAuditItems = (a) => {
   if (!a) return [];
   const items = [];
-  if (a.ssl_ok === false) items.push({ ok: false, label: 'Pas de certificat SSL valide' });
+  if ([404, 410].includes(Number(a.http_status))) items.push({ ok: false, preuve: true, label: 'Page d\'accueil en erreur 404' });
+  if (Number(a.http_status) >= 500) items.push({ ok: false, preuve: true, label: `Site en erreur serveur (${a.http_status})` });
+  if (a.noindex === true || a.robots_bloque === true) items.push({ ok: false, preuve: true, label: 'Demande à Google de ne pas indexer (noindex / robots.txt)' });
+  if (a.https_final === false) items.push({ ok: false, preuve: true, label: a.ssl_ok === true ? 'Certificat valide mais site servi en HTTP (« Non sécurisé »)' : 'Site servi en HTTP (« Non sécurisé »)' });
+  if (a.mentions_404 === true) items.push({ ok: false, preuve: true, label: 'Lien « mentions légales » en erreur' });
+  if (a.ssl_ok === false) items.push({ ok: false, preuve: true, label: 'Certificat SSL invalide' });
   else if (a.ssl_ok === true) items.push({ ok: true, label: 'SSL valide' });
   if (a.ssl_expire_jours != null && a.ssl_expire_jours < 30)
-    items.push({ ok: false, label: a.ssl_expire_jours < 0 ? 'Certificat SSL expiré' : `SSL expire dans ${a.ssl_expire_jours} j` });
-  if (a.mobile_ok === false) items.push({ ok: false, label: 'Site non responsive (mobile)' });
+    items.push({ ok: false, preuve: a.ssl_expire_jours < 0, label: a.ssl_expire_jours < 0 ? 'Certificat SSL expiré' : `SSL expire dans ${a.ssl_expire_jours} j (renouvellement souvent automatique)` });
+  if (a.mobile_ok === false) items.push({ ok: false, preuve: true, label: 'Pas d\'affichage mobile (site non responsive)' });
   else if (a.mobile_ok === true) items.push({ ok: true, label: 'Responsive mobile' });
   if (a.mentions_legales === false) items.push({ ok: false, label: 'Pas de mentions légales (obligation légale)' });
   if (a.rgpd_confidentialite === false) items.push({ ok: false, label: 'Pas de politique de confidentialité (RGPD)' });
@@ -32,8 +39,10 @@ const buildAuditItems = (a) => {
   if (a.dmarc === false) items.push({ ok: false, label: 'Pas de DMARC (domaine usurpable)' });
   if (a.meta_desc === false || a.h1_present === false) items.push({ ok: false, label: 'SEO de base incomplet (meta description / H1)' });
   if (a.analytics === false) items.push({ ok: false, label: "Aucune mesure d'audience installée" });
-  if (a.serveur_php) items.push({ ok: false, label: `Serveur exposé : ${a.serveur_php}` });
-  return items.sort((x, y) => Number(x.ok) - Number(y.ok)); // problèmes d'abord
+  if (a.serveur_php) items.push({ ok: false, label: `Serveur annonce ${a.serveur_php} (entête, déclaratif)` });
+  if (a.copyright_annee && a.copyright_annee < new Date().getFullYear() - 1) items.push({ ok: false, label: `Copyright figé à ${a.copyright_annee}` });
+  // Preuves d'abord, puis indices, puis points conformes.
+  return items.sort((x, y) => Number(x.ok) - Number(y.ok) || Number(!!y.preuve) - Number(!!x.preuve));
 };
 
 const LeadDetails = ({ lead, autoCompose = false, onUpdate, onDelete, onAddContact, onUpdateContact, onDeleteContact, onAddInteraction, onUpdateInteraction, onDeleteInteraction }) => {
@@ -43,6 +52,28 @@ const LeadDetails = ({ lead, autoCompose = false, onUpdate, onDelete, onAddConta
   const [isAddingContact, setIsAddingContact] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isConverting, setIsConverting] = useState(false);
+
+  // Analyse du site : mesures du crawl liées à la fiche. Mise à jour sur place après « Réanalyser »,
+  // sans recharger la fiche. Réinitialisée quand on change de prospect.
+  const [audit, setAudit] = useState(lead.crawl_audit || null);
+  const [reanalyzing, setReanalyzing] = useState(false);
+  const [reanalyse, setReanalyse] = useState(null);
+  useEffect(() => { setAudit(lead.crawl_audit || null); setReanalyse(null); }, [lead.id, lead.crawl_audit]);
+  const reanalyzeSite = async () => {
+    if (reanalyzing) return;
+    setReanalyzing(true);
+    try {
+      const r = await leadsAPI.reanalyze(lead.id);
+      setAudit(r.crawl_audit || audit);
+      setReanalyse(r);
+      toast.success(r.preuves.length ? `Site réanalysé : ${r.preuves.length} preuve${r.preuves.length > 1 ? 's' : ''}` : 'Site réanalysé : aucune preuve, seulement des indices');
+    } catch (e) {
+      toast.error(e.message || 'Réanalyse impossible');
+    } finally {
+      setReanalyzing(false);
+    }
+  };
+  const domaineFiche = (lead.website || lead.company || '').replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0];
 
   // Format de la date
   const formatDate = (dateString) => {
@@ -357,29 +388,57 @@ const LeadDetails = ({ lead, autoCompose = false, onUpdate, onDelete, onAddConta
         
         {/* Panneau de droite (Audit du site + Notes) */}
         <div className="bg-surface/30 backdrop-blur-sm rounded-xl p-4 sm:p-5 space-y-5">
-          {/* Checklist d'audit issue du crawl : l'argumentaire de vente, visible et exploitable */}
-          {lead.crawl_audit && buildAuditItems(lead.crawl_audit).length > 0 && (
+          {/* Analyse du site : date, preuves / indices, correspondance SIRENE, et le bouton pour
+              relancer le crawler sur ce domaine. Toujours visible dès que la fiche a un domaine. */}
+          {domaineFiche && domaineFiche.includes('.') && (
             <div>
-              <h3 className="text-base sm:text-lg font-medium text-text-primary mb-3 flex items-center gap-2 flex-wrap">
-                <FiClipboard className="text-base sm:text-lg" />
-                Audit du site
-                {lead.crawl_audit.platform && lead.crawl_audit.platform !== 'Inconnu' && (
-                  <span className="text-xs font-normal text-text-muted">
-                    · {lead.crawl_audit.platform}{lead.crawl_audit.platform_version ? ` ${lead.crawl_audit.platform_version.replace(/^\S+\s/, 'v')}` : ''}
-                  </span>
+              <div className="flex items-start justify-between gap-3 mb-3 flex-wrap">
+                <h3 className="text-base sm:text-lg font-medium text-text-primary flex items-center gap-2 flex-wrap">
+                  <FiClipboard className="text-base sm:text-lg" />
+                  Analyse du site
+                  {audit && audit.platform && audit.platform !== 'Inconnu' && (
+                    <span className="text-xs font-normal text-text-muted">
+                      · {audit.platform}{audit.platform_version ? ` ${audit.platform_version.replace(/^\S+\s/, 'v')}` : ''}
+                    </span>
+                  )}
+                </h3>
+                <button onClick={reanalyzeSite} disabled={reanalyzing}
+                  title="Relance le crawler sur ce domaine (une vingtaine de secondes) : mesures du jour, correspondance SIRENE, score."
+                  className="px-3 py-1.5 rounded-lg text-sm flex items-center gap-1.5 bg-accent hover:bg-accent-hover text-white transition-colors disabled:opacity-50">
+                  <FiRefreshCw size={14} className={reanalyzing ? 'animate-spin' : ''} /> {reanalyzing ? 'Analyse en cours…' : 'Réanalyser le site'}
+                </button>
+              </div>
+              <div className="text-xs text-text-muted mb-2">
+                {audit
+                  ? (audit.analyse_le
+                    ? `Analysé le ${formatDate(audit.analyse_le)} · ${domaineFiche}`
+                    : <span className="text-warning-text flex items-center gap-1"><FiAlertCircle size={12} /> Mesures de l'ancien crawl, date inconnue : réanalyse avant d'écrire.</span>)
+                  : `Jamais analysé · ${domaineFiche}`}
+                {audit && audit.sirene_match && (
+                  <span> · SIRENE {audit.sirene_match}{audit.sirene_match === 'sur' && audit.raison_sociale ? ` : ${audit.raison_sociale}` : ''}</span>
                 )}
-              </h3>
-              <ul className="space-y-1.5">
-                {buildAuditItems(lead.crawl_audit).map((it, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm">
-                    {it.ok
-                      ? <FiCheckCircle className="text-success-text mt-0.5 flex-shrink-0" size={15} />
-                      : <FiXCircle className="text-warning-text mt-0.5 flex-shrink-0" size={15} />}
-                    <span className={it.ok ? 'text-text-muted' : 'text-text-primary'}>{it.label}</span>
-                  </li>
-                ))}
-              </ul>
-              <p className="text-xs text-text-muted mt-3">Ces points alimentent l'email de prospection rédigé par Claude.</p>
+              </div>
+              {reanalyse && (
+                <div className="text-xs rounded-lg border border-border bg-surface-muted/60 text-text-secondary px-3 py-2 mb-2">
+                  Preuves : {reanalyse.preuves.length ? reanalyse.preuves.join(', ') : 'aucune'} · Indices : {reanalyse.indices.length ? reanalyse.indices.join(', ') : 'aucun'}
+                  {reanalyse.sirene && reanalyse.sirene.match !== 'erreur' && <span> · SIRENE {reanalyse.sirene.match}</span>}
+                </div>
+              )}
+              {audit && buildAuditItems(audit).length > 0 ? (
+                <ul className="space-y-1.5">
+                  {buildAuditItems(audit).map((it, i) => (
+                    <li key={i} className="flex items-start gap-2 text-sm">
+                      {it.ok
+                        ? <FiCheckCircle className="text-success-text mt-0.5 flex-shrink-0" size={15} />
+                        : <FiXCircle className={`${it.preuve ? 'text-danger-text' : 'text-warning-text'} mt-0.5 flex-shrink-0`} size={15} />}
+                      <span className={it.ok ? 'text-text-muted' : 'text-text-primary'}>{it.label}{it.preuve ? <span className="ml-1.5 text-[10px] uppercase tracking-wide text-danger-text">preuve</span> : null}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-text-muted">{audit ? 'Aucun défaut relevé.' : 'Clique sur « Réanalyser le site » pour obtenir les mesures.'}</p>
+              )}
+              <p className="text-xs text-text-muted mt-3">Seules les lignes marquées « preuve » peuvent ouvrir un « Email par la preuve ». Les autres sont des indices.</p>
             </div>
           )}
 

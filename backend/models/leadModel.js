@@ -67,7 +67,9 @@ const getLeadById = (db, id) => {
               db.get(
                 `SELECT platform, platform_version, ssl_ok, ssl_expire_jours, mobile_ok, meta_desc,
                         h1_present, mentions_legales, rgpd_confidentialite, cookie_banner, analytics,
-                        spf, dmarc, serveur_php, copyright_annee
+                        spf, dmarc, serveur_php, copyright_annee,
+                        https_final, final_url, http_status, noindex, robots_bloque, mentions_404, sitemap, title,
+                        analyse_le, sirene_match, raison_sociale, ville, code_postal, code_postal_site
                  FROM crawl_results WHERE id = $1`,
                 [lead.crawl_result_id],
                 (auditErr, audit) => {
