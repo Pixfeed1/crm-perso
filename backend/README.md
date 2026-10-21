@@ -72,9 +72,15 @@ Les emails sont assemblés par le code (`services/proofEmailService.js`), sans m
   ou « douteux » = « Bonjour, » et rien d'autre. La confiance tient compte du code postal lu sur
   le site (`code_postal_site`) et de l'écart avec le second candidat (`sireneEnrich.confidence`).
 - **HTTPS** : le crawler essaie https nu, https www, http nu, http www avec vérification stricte,
-  puis seulement les https sans vérification. `ssl_ok` vaut « non » uniquement sur une erreur
-  TLS réelle (`ssl_erreur` en donne la raison), vide si https n'a échoué que pour une raison
-  réseau. `https_final` reste un fait : la page finale est servie en HTTP.
+  puis seulement les https sans vérification, et garde la trace de chaque variante
+  (`https_variantes` : URL testée, résultat TLS ou code HTTP et URL finale). `ssl_ok` vaut « non »
+  uniquement sur une erreur TLS réelle (`ssl_erreur`), vide si https n'a échoué que pour une raison
+  réseau. `https_final` reste un fait : la page finale est servie en HTTP. Les mesures HTTPS d'une
+  ligne **sans date d'analyse** (ancien crawler) ne sont jamais des preuves : « non confirmé,
+  réanalyser ».
+- **Bascule maintenance** : sans preuve confirmée, si la boutique est identifiée (PrestaShop,
+  WooCommerce, WordPress) et en ligne, le mode preuve renvoie un email de maintenance sobre, sans
+  aucune alerte technique (`buildMaintenanceEmail`), avec la raison du refus de preuve dans la trace.
 - **Preuves retenues** (`PREUVE_KEYS`) : constatées, visibles par le gérant, d'impact réel :
   accueil 404, erreur serveur, noindex / robots, servi en HTTP (y compris « certificat valide mais
   redirigé vers http »), certificat expiré ou invalide, nom mal orthographié, titre d'installation,

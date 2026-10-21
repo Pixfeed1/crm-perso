@@ -150,7 +150,7 @@ const ProspectEmails = ({ lead, autoCompose = false }) => {
       if (res.subject) setSubject(res.subject);
       setBody(res.body || '');
       if (res.detail) setPreuveDetail(res.detail);
-      toast.success(res.mode === 'creation' ? 'Email « création de site » (domaine réservé, pas encore de site)' : mode === 'preuve' ? `Email par la preuve (${res.preuve})` : 'Brouillon rédigé par Claude');
+      toast.success(res.mode === 'creation' ? 'Email « création de site » (domaine réservé, pas encore de site)' : res.mode === 'maintenance' ? 'Aucune preuve confirmée : email de maintenance sobre, sans alerte technique' : mode === 'preuve' ? `Email par la preuve (${res.preuve})` : 'Brouillon rédigé par Claude');
     } catch (e) {
       const data = e && e.data;
       if (data && data.sans_preuve) {

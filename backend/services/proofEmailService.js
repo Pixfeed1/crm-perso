@@ -22,6 +22,9 @@ const PREUVES_ORDRE = [
   'ssl_invalide', 'titre_defaut', 'mentions_404', 'mobile'
 ];
 const PREUVES = new Set(PREUVES_ORDRE);
+// Preuves qui dépendent du test HTTPS du crawler (quatre variantes, strict d'abord) : exigent une
+// analyse datée par le crawler corrigé.
+const PREUVES_HTTPS = new Set(['http_non_securise', 'ssl_invalide', 'ssl_expire']);
 
 const site = (r) => (r.domain || '').replace(/^www\./, '');
 
@@ -73,8 +76,8 @@ const CATALOGUE = {
         : `${site(r)} s'ouvre en HTTP, sans cadenas${quand(r)} : le navigateur affiche « Non sécurisé » à côté de l'adresse.`,
       consequence: redirige
         ? `Le certificat étant en place, c'est un réglage de redirection, pas une refonte.`
-        : `Dans la plupart des cas, le certificat existe déjà et il suffit de l'imposer.`,
-      brut: redirige ? `https accepté puis redirigé vers ${r.final_url} (servi en HTTP)` : `URL finale ${r.final_url || 'http://' + site(r)} servie en HTTP`
+        : `La correction dépend de votre hébergement et de votre certificat ; je peux la regarder avec vous.`,
+      brut: `${redirige ? `https accepté puis redirigé vers ${r.final_url} (servi en HTTP)` : `URL finale ${r.final_url || 'http://' + site(r)} servie en HTTP`}${r.https_variantes ? ` · variantes : ${r.https_variantes}` : ''}`
     };
   },
   ssl_expire: (r) => ({
@@ -87,7 +90,7 @@ const CATALOGUE = {
     sujet: `avertissement de sécurité sur ${site(r)}`,
     preuve: `En ouvrant https://${site(r)}${quand(r)}, le navigateur affiche un avertissement de sécurité : ${r.ssl_erreur ? r.ssl_erreur : 'le certificat n\'est pas valide pour cette adresse'}.`,
     consequence: `Souvent, seule l'adresse sans « www » est concernée, et cela se règle côté hébergement.`,
-    brut: r.ssl_erreur || 'erreur TLS à la connexion'
+    brut: `${r.ssl_erreur || 'erreur TLS à la connexion'}${r.https_variantes ? ` · variantes : ${r.https_variantes}` : ''}`
   }),
   titre_defaut: (r) => ({
     sujet: `votre site s'appelle « ${String(r.title || '').trim()} » dans Google`,
@@ -242,6 +245,36 @@ function conclusion(r) {
 }
 
 /**
+ * Email de maintenance sobre : aucune alerte technique. Utilisé quand aucune preuve n'est
+ * confirmée mais que la boutique est identifiée (PrestaShop, WooCommerce, WordPress) et en ligne.
+ * @returns {{ ok: boolean, subject?, body?, raison? }}
+ */
+function buildMaintenanceEmail(r, lead) {
+  const p = String(r.platform || '');
+  const identifiee = /prestashop|woocommerce|wordpress/i.test(p);
+  const enLigne = Number(r.http_status) >= 200 && Number(r.http_status) < 400 && !r.parked && !r.protected;
+  if (!identifiee || !enLigne) return { ok: false, raison: identifiee ? 'site pas en ligne au moment de l\'analyse' : 'technologie non identifiée' };
+  const nom = nomBoutique(r) || site(r);
+  const date = r.analyse_le ? ` le ${new Date(r.analyse_le).toLocaleDateString('fr-FR')}` : '';
+  const body = [
+    salutation(r, lead),
+    '',
+    presentation(),
+    '',
+    `J'ai découvert ${nom}${date}, une ${typeSite(r)} ${p}, en parcourant des ${typeSite(r)}s de votre secteur.`,
+    '',
+    conclusion(r).split('\n')[0],
+    '',
+    `Un prestataire assure-t-il déjà ce suivi pour votre ${typeSite(r)} ?`,
+    '',
+    "Si vous ne souhaitez plus être contacté, n'hésitez pas à me le signaler.",
+    '',
+    'Bonne journée à vous,'
+  ].join('\n');
+  return { ok: true, subject: `Suivi technique de ${nom}`, body, mode: 'maintenance' };
+}
+
+/**
  * Construit l'email par la preuve.
  * @param {object} r     ligne crawl_results (peut être null)
  * @param {object} lead  fiche prospect
@@ -252,15 +285,26 @@ function buildProofEmail(r, lead) {
     return { ok: false, raison: "Aucune donnée d'audit pour ce prospect (pas issu du crawl) : impossible de citer une preuve.", indices: [] };
   }
   const flags = auditFlags(r);
-  const preuvesTrouvees = PREUVES_ORDRE.filter((k) => flags.some((f) => f.key === k));
-  const indices = flags.filter((f) => !PREUVES.has(f.key)).map((f) => f.label);
+  // Les mesures HTTPS de l'ancien crawler (sans date d'analyse) ne testaient pas la variante
+  // « www » avant de conclure : « servi en HTTP » ou « certificat invalide » n'y sont pas des
+  // preuves. Elles deviennent « non confirmées », à réanalyser depuis la fiche.
+  const ancienCrawl = !r.analyse_le;
+  const nonConfirmees = ancienCrawl ? flags.filter((f) => PREUVES_HTTPS.has(f.key)).map((f) => `${f.label} (ancien crawl, non confirmé : réanalyser)`) : [];
+  const preuvesTrouvees = PREUVES_ORDRE.filter((k) => flags.some((f) => f.key === k) && !(ancienCrawl && PREUVES_HTTPS.has(k)));
+  const indices = [...flags.filter((f) => !PREUVES.has(f.key)).map((f) => f.label), ...nonConfirmees];
   if (preuvesTrouvees.length === 0) {
+    // Boutique identifiée et en ligne, sans preuve confirmée : email de maintenance sobre, sans
+    // alerte technique, plutôt que rien ou qu'une alerte fabriquée.
+    const maintenance = buildMaintenanceEmail(r, lead);
     return {
       ok: false,
-      raison: indices.length
-        ? `Aucune preuve solide sur ce site, seulement des indices (${indices.join(', ')}). Aucun email généré : on ne contacte pas un prospect sur un détail ou une supposition.`
-        : 'Aucun défaut visible sur ce site. Aucun email généré : rien de vérifié à signaler.',
-      indices
+      raison: nonConfirmees.length
+        ? `Mesure HTTPS de l'ancien crawl non confirmée (${nonConfirmees.join(', ')}). Réanalysez le site avant toute affirmation.`
+        : indices.length
+          ? `Aucune preuve solide sur ce site, seulement des indices (${indices.join(', ')}). Aucun email généré : on ne contacte pas un prospect sur un détail ou une supposition.`
+          : 'Aucun défaut visible sur ce site. Aucun email généré : rien de vérifié à signaler.',
+      indices,
+      maintenance
     };
   }
   const key = preuvesTrouvees[0];
@@ -301,4 +345,4 @@ function buildProofEmail(r, lead) {
   };
 }
 
-module.exports = { buildProofEmail, PREUVES_ORDRE, CATALOGUE, presentation, conclusion, nomBoutique, typeSite, joliNom, joliVille, nomCourt, salutation, FORMULES_INTERDITES };
+module.exports = { buildProofEmail, buildMaintenanceEmail, PREUVES_ORDRE, PREUVES_HTTPS, CATALOGUE, presentation, conclusion, nomBoutique, typeSite, joliNom, joliVille, nomCourt, salutation, FORMULES_INTERDITES };

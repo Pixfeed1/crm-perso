@@ -170,7 +170,7 @@ function typedResult(o) {
     contenu_mixte: boolCell('contenu_mixte'), mentions_404: boolCell('mentions_404'), prestataire: cell('prestataire'),
     meta_desc_txt: cell('meta_desc_txt'), urls_reecrites: boolCell('urls_reecrites'), sitemap: cell('sitemap'),
     // Traçabilité (colonnes récentes du crawler ; null sur les anciens CSV).
-    ssl_erreur: cell('ssl_erreur'), sitemap_detail: cell('sitemap_detail'), code_postal_site: cell('code_postal_site'),
+    ssl_erreur: cell('ssl_erreur'), https_variantes: cell('https_variantes'), sitemap_detail: cell('sitemap_detail'), code_postal_site: cell('code_postal_site'),
     php_source: cell('php_source'), analyse_le: cell('analyse_le')
   };
 }
@@ -181,7 +181,7 @@ const RESULT_COLUMNS = ['domain', 'platform', 'signals', 'http_status', 'final_u
   'analytics', 'poids_ko', 'copyright_annee', 'serveur_php', 'spf', 'dmarc', 'ssl_expire_jours',
   'site_type', 'ecommerce_actif', 'https_final',
   'noindex', 'robots_bloque', 'cgv', 'retractation', 'contenu_mixte', 'mentions_404', 'prestataire',
-  'meta_desc_txt', 'urls_reecrites', 'sitemap', 'ssl_erreur', 'sitemap_detail', 'code_postal_site', 'php_source', 'analyse_le'];
+  'meta_desc_txt', 'urls_reecrites', 'sitemap', 'ssl_erreur', 'https_variantes', 'sitemap_detail', 'code_postal_site', 'php_source', 'analyse_le'];
 
 // Insère un résultat typé dans crawl_results (+ mémoire crawl_seen_domains). Renvoie l'id.
 async function insertCrawlResult(db, jobId, r) {

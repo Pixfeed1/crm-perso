@@ -28,10 +28,10 @@ test('AGRIGOM : certificat valide mais site renvoyé en http -> preuve exacte, d
 
 test('Atelier du Sucre : deux candidats SIRENE à égalité -> aucune personnalisation', () => {
   const r = { domain: 'atelierdusucre.fr', title: 'Atelier du sucre, la boutique en ligne', https_final: false, ssl_ok: true, final_url: 'http://www.atelierdusucre.fr/fr/',
-    http_status: 200, platform: 'PrestaShop', sirene_match: 'probable', raison_sociale: "L'ATELIER SUCRE", gerant: 'X Y', ville: 'MANOSQUE', code_postal: '04100' };
+    http_status: 200, platform: 'PrestaShop', sirene_match: 'probable', raison_sociale: "L'ATELIER SUCRE", gerant: 'X Y', ville: 'MANOSQUE', code_postal: '04100', analyse_le: '2026-10-21T15:03:02Z' };
   const d = buildProofEmail(r, {});
   assert.match(d.body, /^Bonjour,\n/);
-  assert.match(d.body, /En consultant Atelier du sucre,/);
+  assert.match(d.body, /En consultant Atelier du sucre le 21\/10\/2026,/);
   assert.doesNotMatch(d.body, /Manosque|MANOSQUE|X Y|ATELIER SUCRE/);
 });
 
@@ -125,4 +125,36 @@ test('modèles d\'email du menu « Modèle » : même présentation, aucune form
   const premier = EMAIL_TEMPLATE_SEED.find(([n]) => n === 'Premier contact')[3];
   assert.match(premier, /développeur web indépendant et je dirige \{entreprise\}, spécialisé dans la maintenance et le dépannage de sites professionnels\./);
   assert.match(premier, /Si vous ne souhaitez plus être contacté/);
+});
+
+test('Batterie4moto : mesure HTTPS de l\'ancien crawl non confirmée -> pas d\'alerte, email de maintenance sobre ; crawl frais sur www -> rien à signaler', () => {
+  const { buildMaintenanceEmail } = require('../services/proofEmailService');
+  // Ancien crawl (sans analyse_le) : « servi en HTTP » n'est pas une preuve.
+  const ancien = { domain: 'batterie4moto.fr', title: 'Batterie4moto', https_final: false, ssl_ok: false, final_url: 'http://batterie4moto.fr/', http_status: 200, platform: 'PrestaShop' };
+  const d = buildProofEmail(ancien, {});
+  assert.equal(d.ok, false);
+  assert.match(d.raison, /ancien crawl, non confirmé/);
+  assert.ok(d.maintenance && d.maintenance.ok);
+  assert.doesNotMatch(d.maintenance.body, /HTTP|cadenas|certificat|imposer|Non sécurisé/);
+  assert.match(d.maintenance.body, /développeur web indépendant et je dirige PixFeed/);
+  assert.match(d.maintenance.body, /Un prestataire assure-t-il déjà ce suivi/);
+  assert.doesNotMatch(d.maintenance.body, FORMULES_INTERDITES);
+  // Crawl frais : https://www a répondu en strict -> aucune preuve HTTPS, boutique saine.
+  const frais = typedResult({ domain: 'batterie4moto.fr', title: 'Batterie4moto', http_status: '200', final_url: 'https://www.batterie4moto.fr/', https_final: 'oui', ssl_ok: 'oui', platform: 'PrestaShop', analyse_le: '2026-10-21T16:00:00+00:00',
+    https_variantes: 'https://batterie4moto.fr -> TLS: certificat valable pour un autre nom | https://www.batterie4moto.fr -> 200 https://www.batterie4moto.fr/' });
+  assert.equal(auditFlags(frais).some((f) => ['http_non_securise', 'ssl_invalide'].includes(f.key)), false);
+  const m = buildProofEmail(frais, {});
+  assert.equal(m.ok, false); assert.ok(m.maintenance.ok);
+  // Même mesure, mais le crawl frais confirme le HTTP (AGRIGOM) : la preuve passe, avec les variantes dans la trace.
+  const agrigom = typedResult({ domain: 'agrigom.fr', title: 'Accueil - AGRIGOM SAS', http_status: '200', final_url: 'http://www.agrigom.fr/', https_final: 'non', ssl_ok: 'oui', platform: 'PrestaShop', analyse_le: '2026-10-21T16:00:00+00:00',
+    https_variantes: 'https://agrigom.fr -> 200 http://www.agrigom.fr/' });
+  const a = buildProofEmail(agrigom, {});
+  assert.equal(a.preuve, 'http_non_securise');
+  assert.match(a.detail.brut, /variantes : https:\/\/agrigom\.fr -> 200 http:\/\/www\.agrigom\.fr\//);
+  assert.doesNotMatch(a.body, /imposer/);
+  // Atelier du Sucre : idem, servi en HTTP confirmé par le crawl frais.
+  const atelier = typedResult({ domain: 'atelierdusucre.fr', title: 'Atelier du sucre, la boutique en ligne', http_status: '200', final_url: 'http://www.atelierdusucre.fr/fr/', https_final: 'non', ssl_ok: 'oui', platform: 'PrestaShop', analyse_le: '2026-10-21T16:00:00+00:00' });
+  assert.equal(buildProofEmail(atelier, {}).preuve, 'http_non_securise');
+  // Sans technologie identifiée : pas de bascule maintenance, refus simple.
+  assert.equal(buildMaintenanceEmail({ domain: 'x.fr', http_status: 200, platform: 'Inconnu' }, {}).ok, false);
 });

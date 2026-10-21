@@ -274,7 +274,14 @@ router.post('/:id/draft-email', async (req, res) => {
         return res.json({ subject: draft.subject, body: draft.body, preuve: 'creation_site', preuves: [], indices: [], mode: 'creation', problemes });
       }
       const draft = proofEmail.buildProofEmail(row, lead);
-      if (!draft.ok) return res.status(422).json({ message: draft.raison, indices: draft.indices, sans_preuve: true });
+      if (!draft.ok) {
+        // Pas de preuve confirmée mais boutique identifiée et en ligne : email de maintenance
+        // sobre, sans alerte technique. La raison du refus de preuve reste visible.
+        if (draft.maintenance && draft.maintenance.ok) {
+          return res.json({ subject: draft.maintenance.subject, body: draft.maintenance.body, preuve: null, preuves: [], indices: draft.indices, mode: 'maintenance', raison_preuve: draft.raison, detail: { signal: 'aucune preuve', brut: draft.raison, url_controlee: row.final_url || `https://${row.domain}`, analyse_le: row.analyse_le || null, confiance: 'email sans alerte technique', identite: row.sirene_match === 'sur' ? `SIRENE sûre : ${row.raison_sociale || ''}` : 'pas de personnalisation', contexte: null }, problemes });
+        }
+        return res.status(422).json({ message: draft.raison, indices: draft.indices, sans_preuve: true });
+      }
       return res.json({ subject: draft.subject, body: draft.body, preuve: draft.preuve, preuves: draft.preuves, indices: draft.indices, detail: draft.detail || null, mode: 'preuve', problemes });
     }
     // « Claude libre » : le modèle n'écrit que le constat et la question, à partir des seules

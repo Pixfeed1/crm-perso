@@ -650,6 +650,7 @@ CSV_FIELDS = [
     # --- traçabilité : pour chaque preuve, retrouver le signal brut, l'URL, la date ---
     "ssl_erreur",        # raison TLS lisible (nom non couvert, expiré, autorité inconnue…) ou vide
     "https_erreur",      # dernière erreur brute rencontrée sur un candidat https strict (vide si https a servi la page)
+    "https_variantes",   # trace de chaque variante testée : « https://x.fr -> TLS: nom non couvert | https://www.x.fr -> 200 https://www.x.fr/ »
     "sitemap_detail",    # « https://x.fr/sitemap.xml -> 200 text/html (page HTML) » etc.
     "code_postal_site",  # code postal lu sur la page (recoupement SIRENE)
     "php_source",        # d'où vient serveur_php : X-Powered-By | Server | vide
@@ -972,6 +973,7 @@ async def detect_one(domain: str, sem, timeout: float, clients: dict, retries: i
         last_err = ""
         tls_err = ""          # première erreur TLS rencontrée sur un candidat https (strict)
         https_err = ""        # dernière erreur brute sur un candidat https strict (traçabilité)
+        variantes = []        # une entrée par essai : ce qu'on a testé et ce qu'on a obtenu
         tried_https_strict = False
         for url, verify in candidate_attempts(domain):
             is_https = url.startswith("https://")
@@ -980,12 +982,15 @@ async def detect_one(domain: str, sem, timeout: float, clients: dict, retries: i
                 r, html, err, tls = await _fetch_with_retry(client, url, retries)
                 if r is None:
                     last_err = err or last_err
+                    etiquette = ("TLS: " + (tls_reason(err) or "erreur TLS")) if tls else ("erreur: " + (err or "sans réponse")[:60])
+                    variantes.append(f"{url}{'' if verify else ' (sans vérif)'} -> {etiquette}")
                     if is_https and verify:
                         tried_https_strict = True
                         https_err = err or https_err
                         if tls and not tls_err:
                             tls_err = err
                     continue      # candidat suivant (les https sans vérif viennent en dernier)
+                variantes.append(f"{url}{'' if verify else ' (sans vérif)'} -> {r.status_code} {str(r.url)}")
 
                 platform, signals = detect_platform(html, dict(r.headers))
                 title = extract_title(html)
@@ -1059,6 +1064,7 @@ async def detect_one(domain: str, sem, timeout: float, clients: dict, retries: i
                     ssl_erreur=(tls_reason(tls_err) if (tls_err and not (final_https and verify)) else ""),
                     https_final=("oui" if final_https else "non"),
                     https_erreur=("" if final_https else https_err[:120]),
+                    https_variantes=" | ".join(variantes)[:600],
                     analyse_le=_now_iso(),
                     protected=("oui" if protected else "non"),
                     lang=detect_lang(html),
@@ -1071,6 +1077,7 @@ async def detect_one(domain: str, sem, timeout: float, clients: dict, retries: i
                 )
                 return result
         result["error"] = last_err or "no response"
+        result["https_variantes"] = " | ".join(variantes)[:600]
         return result
 
 
