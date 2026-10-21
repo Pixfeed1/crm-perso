@@ -127,3 +127,35 @@ Prévisualiser sur un CSV du crawler, sans base ni envoi :
 ```bash
 node scripts/previewProofEmails.js resultats.csv [domaine] [--sirene]
 ```
+
+## Campagnes de prospection : préparer, relire, programmer
+
+Onglet **Portefeuille → Campagnes**. Points d'entrée : « Préparer une campagne » dans le Crawl (sur la
+sélection) et dans la liste des Prospects (vue tableau, cases à cocher). Aucun envoi sans validation.
+
+1. **Préparer** (`campaignService.addLeads` / `addFromCrawl`) : promotion en prospect si besoin, puis
+   pour chaque fiche : contrôles d'exclusion (désinscrit ou opposition = bloquant définitif, email de
+   prospection envoyé depuis moins de 90 jours, autre campagne active, fiche gagnée/perdue/pas de
+   business, bloqué par les règles du crawl), génération (mode `preuve` avec repli maintenance sans
+   alerte, ou `maintenance` seul), classement `classifyItem` : **prêt**, **à vérifier** (pas de
+   mesures, ancien crawl, adresse d'un autre domaine, SIRENE probable), **exclu** (raison).
+2. **Relire** : objet et corps modifiables (formules interdites refusées), régénération dans l'autre
+   mode, preuve avec signal brut, URL contrôlée, date de mesure et identité ; validation ligne par
+   ligne ou en lot. Les « à vérifier » ne partent jamais sans validation explicite.
+3. **Programmer** (`schedule`) : lignes **validées** seulement, recontrôlées à ce moment ; créneaux
+   `planSlots` (défaut 15 par jour, 9 h à 18 h Paris, ≥ 20 min, jours ouvrés, jamais immédiat) dans
+   `scheduled_emails` (`email_type = 'prospect'`, `campaign_id`, `campaign_item_id`). Mode test :
+   vers les adresses indiquées, objet préfixé `[TEST …]`, sans rattacher le prospect. Vérification
+   expéditeur (`GET /api/campagnes/sender-check`) : connexion SMTP, SPF, DMARC, DKIM si
+   `EMAIL_DKIM_SELECTOR`.
+
+**Worker** : `scheduledEmailWorker` appelle `beforeSend` (pause → l'email attend ; arrêt, ligne
+marquée répondu/rebond/opposition, désinscrit, fiche fermée ou en discussion → annulé), `afterSent`
+(ligne envoyée, campagne terminée quand plus rien n'attend), `afterFailed` (ligne en échec, **pause
+automatique après 3 échecs consécutifs**). **Aucune relance automatique** n'est créée.
+
+**Marquages manuels** sur la ligne : « A répondu » (relances fermées, fiche en discussion),
+« Rebond » et « Opposition » (adresse ajoutée à `email_optout`, opposition = fiche pas de business).
+Les réponses et rebonds différés **ne sont pas détectés automatiquement** (pas de lecture IMAP) :
+l'interface le rappelle en permanence. Statistiques : envoyés, réponses, discussions, rendez-vous,
+contrats, échecs ; ouvertures en dernier. Tests : `tests/campaign.test.js`.

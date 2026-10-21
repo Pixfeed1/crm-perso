@@ -1,15 +1,16 @@
 // src/pages/Leads.jsx
 import React, { useState, useEffect, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiUsers, FiPlus, FiDownload, FiUpload, FiGrid, FiList, FiTrello, FiSearch, FiSend, FiTarget } from 'react-icons/fi';
-import { leadsAPI, exportAPI } from '../services/api';
+import { leadsAPI, exportAPI, campagnesAPI } from '../services/api';
 import { useToast } from '../hooks/useToast';
 import { useConfirm } from '../hooks/useConfirm';
 
 // Composants
 import LeadCard from '../components/leads/LeadCard';
 import LeadTable from '../components/leads/LeadTable';
+import CampaignPicker from '../components/campagnes/CampaignPicker';
 import LeadDetails from '../components/leads/LeadDetails';
 import LeadForm from '../components/leads/LeadForm';
 import LeadFilter from '../components/leads/LeadFilter';
@@ -23,11 +24,15 @@ import QuickEmail from '../components/common/QuickEmail';
 
 const Leads = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const { confirm, confirmState } = useConfirm();
   const fileInputRef = useRef(null);
   const [leads, setLeads] = useState([]);
   const [filteredLeads, setFilteredLeads] = useState([]);
   const [selectedLead, setSelectedLead] = useState(null);
+  // Sélection multiple (vue tableau) pour préparer une campagne de prospection.
+  const [checkedLeads, setCheckedLeads] = useState(new Set());
+  const [campaignPick, setCampaignPick] = useState(false);
   const [isAddingLead, setIsAddingLead] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [showDetails, setShowDetails] = useState(false);
@@ -638,6 +643,19 @@ const Leads = () => {
                 accept=".json"
                 className="hidden"
               />
+              {view === 'table' && (
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setCampaignPick(true)}
+                  disabled={checkedLeads.size === 0}
+                  className="px-4 py-2 bg-surface-strong hover:bg-border-strong text-text-primary rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50"
+                  title="Préparer une campagne avec les prospects cochés (vue tableau). Rien n'est envoyé."
+                >
+                  <FiSend />
+                  <span className="hidden sm:inline">Préparer une campagne{checkedLeads.size ? ` (${checkedLeads.size})` : ''}</span>
+                </motion.button>
+              )}
               <QuickEmail />
               <motion.button
                 whileHover={{ scale: 1.05 }}
@@ -761,11 +779,25 @@ const Leads = () => {
 
                 {/* Vue tableau */}
                 {view === 'table' && (
+                  <>
                   <LeadTable
                     leads={paginatedLeads}
                     selectedLead={selectedLead}
                     onSelectLead={handleSelectLead}
+                    checked={checkedLeads}
+                    onToggleCheck={(id) => setCheckedLeads((p) => { const n = new Set(p); if (n.has(id)) n.delete(id); else n.add(id); return n; })}
+                    onToggleAll={(all) => setCheckedLeads((p) => { const n = new Set(p); paginatedLeads.forEach((l) => (all ? n.add(l.id) : n.delete(l.id))); return n; })}
                   />
+                  {campaignPick && (
+                    <CampaignPicker count={checkedLeads.size} onClose={() => setCampaignPick(false)}
+                      onConfirm={async (campaignId) => {
+                        const r = await campagnesAPI.addLeads(campaignId, [...checkedLeads]);
+                        toast.success(`${r.ajoutes} ligne${r.ajoutes > 1 ? 's' : ''} préparée${r.ajoutes > 1 ? 's' : ''} : ${r.pret} prête${r.pret > 1 ? 's' : ''}, ${r.a_verifier} à vérifier, ${r.exclu} exclue${r.exclu > 1 ? 's' : ''}`);
+                        setCampaignPick(false); setCheckedLeads(new Set());
+                        navigate(`/portefeuille?tab=campagnes&campagne=${campaignId}`);
+                      }} />
+                  )}
+                  </>
                 )}
 
                 {/* Pagination */}

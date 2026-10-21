@@ -5,9 +5,10 @@
 // Charte : tokens de thème, react-icons, framer-motion. Aucune couleur en dur.
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiSearch, FiDownload, FiUserPlus, FiGlobe, FiCheckCircle, FiAlertTriangle, FiLoader, FiTrash2, FiClock, FiSlash, FiX, FiMail, FiPhone, FiFacebook, FiInstagram, FiShield } from 'react-icons/fi';
+import { FiSearch, FiDownload, FiUserPlus, FiGlobe, FiCheckCircle, FiAlertTriangle, FiLoader, FiTrash2, FiClock, FiSlash, FiX, FiMail, FiPhone, FiFacebook, FiInstagram, FiShield, FiSend } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
-import { crawlAPI } from '../../services/api';
+import { crawlAPI, campagnesAPI } from '../../services/api';
+import CampaignPicker from '../campagnes/CampaignPicker';
 import { useToast } from '../../hooks/useToast';
 
 const TECHNOS = [
@@ -180,6 +181,7 @@ const CrawlPanel = () => {
   const [starting, setStarting] = useState(false);
   const [adding, setAdding] = useState(false);
   const [pbTarget, setPbTarget] = useState(null); // { ids: [...] } pour "Pas de business"
+  const [campaignPick, setCampaignPick] = useState(false); // fenêtre « Préparer une campagne »
   const [pbNote, setPbNote] = useState('');
   const [pbSaving, setPbSaving] = useState(false);
   const [history, setHistory] = useState([]);
@@ -603,6 +605,14 @@ const CrawlPanel = () => {
                 <FiUserPlus size={15} /> Ajouter aux prospects{selected.size > 0 ? ` (${selected.size})` : ''}
               </button>
               <button
+                onClick={() => setCampaignPick(true)}
+                disabled={selected.size === 0}
+                className="px-3 py-2 bg-surface-strong hover:bg-border-strong text-text-primary rounded-lg text-sm flex items-center gap-1 disabled:opacity-50"
+                title="Créer les prospects, générer et classer leurs emails dans une campagne. Rien n'est envoyé."
+              >
+                <FiSend size={15} /> Préparer une campagne{selected.size > 0 ? ` (${selected.size})` : ''}
+              </button>
+              <button
                 onClick={() => { setPbNote(''); setPbTarget({ ids: [...selected] }); }}
                 disabled={selected.size === 0}
                 className="px-3 py-2 bg-surface-strong hover:bg-border-strong text-text-primary rounded-lg text-sm flex items-center gap-1 disabled:opacity-50"
@@ -770,6 +780,15 @@ const CrawlPanel = () => {
 
       {/* Modale note "Pas de business" */}
       <AnimatePresence>
+        {campaignPick && (
+          <CampaignPicker count={selected.size} onClose={() => setCampaignPick(false)}
+            onConfirm={async (campaignId) => {
+              const r = await campagnesAPI.addFromCrawl(campaignId, jobId, [...selected]);
+              toast.success(`${r.ajoutes} ligne${r.ajoutes > 1 ? 's' : ''} préparée${r.ajoutes > 1 ? 's' : ''} : ${r.pret} prête${r.pret > 1 ? 's' : ''}, ${r.a_verifier} à vérifier, ${r.exclu} exclue${r.exclu > 1 ? 's' : ''}`);
+              setCampaignPick(false); setSelected(new Set()); poll(jobId);
+              navigate(`/portefeuille?tab=campagnes&campagne=${campaignId}`);
+            }} />
+        )}
         {pbTarget && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}

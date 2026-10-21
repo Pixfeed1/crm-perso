@@ -6,7 +6,7 @@
 import React from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { FiUsers, FiUserCheck, FiBriefcase, FiClock, FiSearch, FiRadio } from 'react-icons/fi';
+import { FiUsers, FiUserCheck, FiBriefcase, FiClock, FiSearch, FiRadio, FiSend } from 'react-icons/fi';
 
 import Leads from './Leads';
 import Clients from './Clients';
@@ -14,6 +14,7 @@ import Projects from './Projects';
 import SuiviCockpit from '../components/suivi/SuiviCockpit';
 import CrawlPanel from '../components/crawl/CrawlPanel';
 import SignauxPanel from '../components/signaux/SignauxPanel';
+import CampaignsPanel from '../components/campagnes/CampaignsPanel';
 
 const TABS = [
   { key: 'prospects', label: 'Prospects', icon: FiUsers },
@@ -21,7 +22,8 @@ const TABS = [
   { key: 'projets', label: 'Projets', icon: FiBriefcase },
   { key: 'suivi', label: 'Suivi', icon: FiClock },
   { key: 'crawl', label: 'Crawl', icon: FiSearch },
-  { key: 'signaux', label: 'Signaux', icon: FiRadio }
+  { key: 'signaux', label: 'Signaux', icon: FiRadio },
+  { key: 'campagnes', label: 'Campagnes', icon: FiSend }
 ];
 
 const Portefeuille = () => {
@@ -86,6 +88,13 @@ const Portefeuille = () => {
           <div className="h-full overflow-y-auto p-2 sm:p-4 lg:p-6">
             <div className="max-w-6xl mx-auto w-full">
               <SignauxPanel />
+            </div>
+          </div>
+        )}
+        {activeTab === 'campagnes' && (
+          <div className="h-full overflow-y-auto p-2 sm:p-4 lg:p-6">
+            <div className="max-w-6xl mx-auto w-full">
+              <CampaignsPanel />
             </div>
           </div>
         )}

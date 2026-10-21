@@ -198,6 +198,7 @@ app.use('/api/interventions', require('./routes/interventionRoutes'));
 app.use('/api/interactions', require('./routes/interactionRoutes'));
 app.use('/api/portefeuille/crawl', require('./routes/crawlRoutes'));
 app.use('/api/portefeuille/signaux', require('./routes/domainSignalRoutes')); // nouveaux domaines .fr (AFNIC)
+app.use('/api/campagnes', require('./routes/campaignRoutes')); // campagnes de prospection (préparer, relire, programmer)
 app.use('/api/email-templates', require('./routes/emailTemplateRoutes'));
 app.use('/api/email-signatures', require('./routes/emailSignatureRoutes'));
 app.use('/api/maintenance-reports', require('./routes/maintenanceReportRoutes'));

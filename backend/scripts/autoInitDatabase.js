@@ -298,6 +298,66 @@ const DATABASE_SCHEMA = {
     ]
   },
 
+  // ── Campagnes de prospection : préparer, relire, programmer ──────────────────
+  // Une campagne regroupe des prospects, génère leurs emails (preuve ou maintenance), les
+  // classe (prêt / à vérifier / exclu), puis programme les seuls emails VALIDÉS à la main,
+  // à cadence lente, via le worker d'envois programmés existant. Aucun envoi sans validation.
+  campaigns: {
+    columns: {
+      id: 'SERIAL PRIMARY KEY',
+      nom: 'TEXT NOT NULL',
+      mode: "VARCHAR(20) DEFAULT 'preuve'",      // preuve (repli maintenance) | maintenance
+      from_account: "VARCHAR(10) DEFAULT 'pro'", // pro | gmail
+      par_jour: 'INTEGER DEFAULT 15',
+      heure_debut: 'INTEGER DEFAULT 9',
+      heure_fin: 'INTEGER DEFAULT 18',
+      espacement_min: 'INTEGER DEFAULT 20',
+      jours_ouvres: 'BOOLEAN DEFAULT TRUE',
+      statut: "VARCHAR(20) DEFAULT 'brouillon'", // brouillon | en_cours | pause | arretee | terminee
+      test_mode: 'BOOLEAN DEFAULT FALSE',        // les envois partent vers test_emails, pas vers les prospects
+      test_emails: 'TEXT',
+      message: 'TEXT',                           // dernier événement (pause auto après échecs, arrêt…)
+      echecs_consecutifs: 'INTEGER DEFAULT 0',
+      started_at: 'TIMESTAMP',
+      stopped_at: 'TIMESTAMP',
+      created_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP',
+      updated_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'
+    },
+    indexes: ['CREATE INDEX IF NOT EXISTS idx_campaigns_statut ON campaigns(statut)']
+  },
+
+  campaign_items: {
+    columns: {
+      id: 'SERIAL PRIMARY KEY',
+      campaign_id: 'INTEGER REFERENCES campaigns(id) ON DELETE CASCADE',
+      lead_id: 'INTEGER',
+      crawl_result_id: 'INTEGER',
+      domain: 'TEXT',
+      to_email: 'TEXT',
+      // pret | a_verifier | exclu | valide | programme | envoye | echec | arrete | repondu | rebond | oppose
+      statut: "VARCHAR(20) DEFAULT 'pret'",
+      raison: 'TEXT',                            // pourquoi exclu / à vérifier / échec
+      mode: 'VARCHAR(20)',                       // preuve | maintenance
+      subject: 'TEXT',
+      body: 'TEXT',
+      preuve_signal: 'TEXT',                     // traçabilité : signal, valeur brute, URL, date
+      preuve_brut: 'TEXT',
+      preuve_url: 'TEXT',
+      preuve_date: 'TIMESTAMP',
+      identite: 'TEXT',
+      scheduled_email_id: 'INTEGER',
+      scheduled_at: 'TIMESTAMP',
+      sent_at: 'TIMESTAMP',
+      created_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP',
+      updated_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'
+    },
+    indexes: [
+      'CREATE INDEX IF NOT EXISTS idx_campaign_items_campaign ON campaign_items(campaign_id)',
+      'CREATE INDEX IF NOT EXISTS idx_campaign_items_lead ON campaign_items(lead_id)',
+      'CREATE INDEX IF NOT EXISTS idx_campaign_items_statut ON campaign_items(statut)'
+    ]
+  },
+
   // Table crawl_results (sites détectés par un crawl)
   crawl_results: {
     columns: {
@@ -999,11 +1059,15 @@ const DATABASE_SCHEMA = {
       // Métadonnées
       created_by: 'INTEGER REFERENCES users(id)',
       notes: 'TEXT',
+      // Campagne de prospection (null pour les autres envois programmés)
+      campaign_id: 'INTEGER',
+      campaign_item_id: 'INTEGER',
       created_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP',
       updated_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'
     },
     indexes: [
       'CREATE INDEX IF NOT EXISTS idx_scheduled_emails_status ON scheduled_emails(status)',
+      'CREATE INDEX IF NOT EXISTS idx_scheduled_emails_campaign ON scheduled_emails(campaign_id)',
       'CREATE INDEX IF NOT EXISTS idx_scheduled_emails_scheduled_at ON scheduled_emails(scheduled_at)',
       'CREATE INDEX IF NOT EXISTS idx_scheduled_emails_related ON scheduled_emails(related_type, related_id)',
       'CREATE INDEX IF NOT EXISTS idx_scheduled_emails_pending ON scheduled_emails(status, scheduled_at) WHERE status = \'pending\''

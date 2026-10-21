@@ -5,6 +5,7 @@ const emailService = require('./emailService');
 const emailTracking = require('./emailTracking');
 const seoOutreach = require('./seoOutreachService'); // transport Gmail perso (choix d'expéditeur)
 const optout = require('./optout'); // désinscription RGPD (emails de prospection)
+const campaigns = require('./campaignService'); // hooks des campagnes de prospection (recontrôle avant envoi, pause, arrêt)
 
 /**
  * WORKER POUR L'ENVOI AUTOMATIQUE DES EMAILS PROGRAMMÉS
@@ -104,6 +105,19 @@ class ScheduledEmailWorker {
     try {
       console.log(`📧 Envoi de l'email #${email.id} à ${email.to_email}...`);
 
+      // Campagne de prospection : recontrôle au moment de l'envoi (pause -> on laisse en attente,
+      // arrêt / réponse / opposition / désinscription -> annulé). Les autres envois ne sont pas concernés.
+      if (email.campaign_id) {
+        const verdict = await campaigns.beforeSend(this.db, email);
+        if (verdict.action === 'skip') return;
+        if (verdict.action === 'cancel') {
+          await this.db.pool.query("UPDATE scheduled_emails SET status='cancelled', error_message=$2, updated_at=NOW() WHERE id=$1", [email.id, verdict.raison || 'annulé par la campagne']).catch(() => {});
+          await campaigns.afterCancelled(this.db, email, verdict.raison).catch(() => {});
+          console.log(`⛔ Email de campagne #${email.id} annulé : ${verdict.raison}`);
+          return;
+        }
+      }
+
       // RGPD : les emails de PROSPECTION portent identification + désinscription, et on
       // n'écrit jamais à une adresse désinscrite. (Les emails transactionnels client — devis,
       // factures, abonnement — ne sont PAS concernés.)
@@ -159,6 +173,7 @@ class ScheduledEmailWorker {
       // Marquer comme envoyé
       await scheduledEmailModel.markAsSent(this.db, email.id);
       this.processedCount++;
+      if (email.campaign_id) await campaigns.afterSent(this.db, email).catch((e) => console.error('[Campagnes] afterSent:', e.message));
 
       // Log automatique COMPLET dans Suivi pour un email programmé lié à un prospect (lead),
       // au moment de l'envoi réel (destinataire + sujet + corps intégral) pour pouvoir
@@ -194,8 +209,9 @@ class ScheduledEmailWorker {
       console.error(`❌ Erreur envoi email #${email.id}:`, error.message);
 
       // Marquer comme échoué
-      await scheduledEmailModel.markAsFailed(this.db, email.id, error.message);
+      const apres = await scheduledEmailModel.markAsFailed(this.db, email.id, error.message);
       this.errorCount++;
+      if (email.campaign_id) await campaigns.afterFailed(this.db, email, error.message, !!(apres && apres.status === 'failed')).catch((e) => console.error('[Campagnes] afterFailed:', e.message));
     }
   }
 

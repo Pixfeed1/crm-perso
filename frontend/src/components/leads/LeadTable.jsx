@@ -3,7 +3,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { FiBriefcase, FiUser, FiMail, FiPhone } from 'react-icons/fi';
 
-const LeadTable = ({ leads, selectedLead, onSelectLead }) => {
+const LeadTable = ({ leads, selectedLead, onSelectLead, checked = null, onToggleCheck = null, onToggleAll = null }) => {
   const statusConfig = {
     new: { label: 'Nouveau', color: 'bg-blue-500/20 text-blue-300 border-blue-500/30' },
     contacted: { label: 'Contacté', color: 'bg-purple-500/20 text-purple-300 border-purple-500/30' },
@@ -20,6 +20,11 @@ const LeadTable = ({ leads, selectedLead, onSelectLead }) => {
         <table className="w-full">
           <thead className="bg-surface-muted/50 border-b border-border">
             <tr>
+              {checked && (
+                <th className="px-4 py-3 w-10">
+                  <input type="checkbox" title="Tout sélectionner (page)" checked={leads.length > 0 && leads.every((l) => checked.has(l.id))} onChange={(e) => onToggleAll && onToggleAll(e.target.checked)} />
+                </th>
+              )}
               <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider">
                 Lead
               </th>
@@ -49,6 +54,11 @@ const LeadTable = ({ leads, selectedLead, onSelectLead }) => {
                   selectedLead?.id === lead.id ? 'bg-indigo-500/10' : ''
                 }`}
               >
+                {checked && (
+                  <td className="px-4 py-4" onClick={(e) => e.stopPropagation()}>
+                    <input type="checkbox" checked={checked.has(lead.id)} onChange={() => onToggleCheck && onToggleCheck(lead.id)} />
+                  </td>
+                )}
                 {/* Lead */}
                 <td className="px-4 py-4">
                   <div className="flex items-center gap-3">

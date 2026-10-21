@@ -1346,6 +1346,24 @@ export const signauxAPI = {
   update: (id, payload) => apiRequest(`/portefeuille/signaux/${id}`, 'PATCH', payload)
 };
 
+// Campagnes de prospection : préparer, relire, programmer (aucun envoi sans validation)
+export const campagnesAPI = {
+  list: () => apiRequest('/campagnes'),
+  create: (payload) => apiRequest('/campagnes', 'POST', payload),
+  get: (id) => apiRequest(`/campagnes/${id}`),
+  update: (id, payload) => apiRequest(`/campagnes/${id}`, 'PATCH', payload),
+  remove: (id) => apiRequest(`/campagnes/${id}`, 'DELETE'),
+  addLeads: (id, lead_ids) => apiRequest(`/campagnes/${id}/items/from-leads`, 'POST', { lead_ids }),
+  addFromCrawl: (id, job_id, result_ids) => apiRequest(`/campagnes/${id}/items/from-crawl`, 'POST', { job_id, result_ids }),
+  updateItem: (id, itemId, payload) => apiRequest(`/campagnes/${id}/items/${itemId}`, 'PATCH', payload),
+  validateMany: (id, ids, statut = 'valide') => apiRequest(`/campagnes/${id}/items/validate`, 'POST', { ids, statut }),
+  schedule: (id, payload = {}) => apiRequest(`/campagnes/${id}/schedule`, 'POST', payload),
+  pause: (id) => apiRequest(`/campagnes/${id}/pause`, 'POST', {}),
+  resume: (id) => apiRequest(`/campagnes/${id}/resume`, 'POST', {}),
+  stop: (id) => apiRequest(`/campagnes/${id}/stop`, 'POST', {}),
+  senderCheck: () => apiRequest('/campagnes/sender-check')
+};
+
 // API pour les emails programmés
 export const scheduledEmailsAPI = {
   // Récupérer tous les emails programmés
