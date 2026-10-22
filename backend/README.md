@@ -173,3 +173,23 @@ automatique après 3 échecs consécutifs**). **Aucune relance automatique** n'e
 Les réponses et rebonds différés **ne sont pas détectés automatiquement** (pas de lecture IMAP) :
 l'interface le rappelle en permanence. Statistiques : envoyés, réponses, discussions, rendez-vous,
 contrats, échecs ; ouvertures en dernier. Tests : `tests/campaign.test.js`.
+
+## Veille missions : flux RSS/Atom supplémentaires et fiche prospect
+
+En plus de France Travail, JSearch et Jooble (clés en `.env`), la veille lit les flux déclarés dans
+les critères (`veille_criteres.flux`, `[{ label, url }]`, 20 max) : alertes Google (posts LinkedIn
+indexés, « cherche freelance PrestaShop »…), forums d'aide PrestaShop / WordPress, plateformes de
+projets qui publient un flux. Aucune clé, aucun scraping : seulement des flux publiés par la source
+(`utils/feedParse.js`, RSS 2.0 et Atom, sans dépendance). Les items de plus de 45 jours sont ignorés ;
+chaque item passe par les mêmes filtres (mots requis, langue, techno, anti-CDI) et la même
+qualification IA que les annonces ; le prompt accepte un « besoin exprimé » (message public décrivant
+un problème de site) comme une mission. Le rapport du run détaille chaque flux (lues, retenues,
+erreur : URL morte, page HTML…).
+
+`POST /api/veille/annonces/:id/prospect` crée la fiche prospect depuis l'annonce (nom, lien, source
+« Veille missions », extrait de l'annonce dans les notes), une seule fois (`veille_annonces.lead_id`),
+et passe l'annonce en « traité ». Le front ouvre la fiche.
+
+Pour vérifier qu'une URL est bien un flux avant de l'ajouter (sur le serveur) :
+`curl -sS -A "Mozilla/5.0" -o /dev/null -w "%{http_code} %{content_type}\n" URL` doit renvoyer 200 et
+un type xml/rss/atom.

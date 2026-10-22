@@ -5,10 +5,11 @@
 // Tokens de thème, react-icons, framer-motion, aucune couleur en dur.
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
+import { FiUserPlus,
   FiCpu, FiSliders, FiExternalLink, FiCopy, FiEdit2, FiXCircle, FiRefreshCw,
   FiPlay, FiPause, FiCheck, FiX, FiAlertCircle, FiLoader
 } from 'react-icons/fi';
+import { useNavigate } from 'react-router-dom';
 import { veilleAPI } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
 
@@ -168,6 +169,18 @@ const VeilleMissionsPanel = () => {
     }
   };
 
+  const navigate = useNavigate();
+  const creerProspect = async (id) => {
+    try {
+      const r = await veilleAPI.creerProspect(id);
+      setAnnonces((list) => list.map((a) => (a.id === id ? { ...a, lead_id: r.lead_id, statut: a.statut === 'nouveau' ? 'traite' : a.statut } : a)));
+      toast.success(r.deja ? 'Fiche déjà créée' : 'Fiche prospect créée');
+      navigate(`/leads?lead=${r.lead_id}`);
+    } catch (e) {
+      toast.error(e.message || 'Création impossible');
+    }
+  };
+
   const copier = async (texte) => {
     try { await navigator.clipboard.writeText(texte || ''); toast.success('Brouillon copié'); }
     catch { toast.info('Copie impossible'); }
@@ -277,7 +290,14 @@ const VeilleMissionsPanel = () => {
                   <div className="text-xs opacity-80 mt-0.5">
                     {runState.report.recuperees} récupérées → {runState.report.apres_prefiltre_langue} filtrées → {runState.report.qualifiees_ia} qualifiées → {runState.report.retenues} retenues
                     {runState.report.sources && (
-                      <> · France Travail {runState.report.sources.france_travail.retenues} · JSearch {runState.report.sources.jsearch.retenues} · Jooble {runState.report.sources.jooble.retenues}</>
+                      <> · France Travail {runState.report.sources.france_travail.retenues} · JSearch {runState.report.sources.jsearch.retenues} · Jooble {runState.report.sources.jooble.retenues}{runState.report.sources.flux ? <> · Flux {runState.report.sources.flux.retenues} (sur {runState.report.sources.flux.recuperees})</> : null}</>
+                    )}
+                    {Array.isArray(runState.report.flux_detail) && runState.report.flux_detail.length > 0 && (
+                      <div className="mt-0.5">
+                        {runState.report.flux_detail.map((f) => (
+                          <span key={f.url} className={`inline-block mr-3 ${f.erreur ? 'text-danger-text' : ''}`}>{f.label} : {f.erreur ? `erreur (${f.erreur})` : `${f.retenues} retenue${f.retenues > 1 ? 's' : ''} sur ${f.recuperees}`}</span>
+                        ))}
+                      </div>
                     )}
                     {runState.report.rejets && (
                       <> · rejets : {runState.report.rejets.hors_zone || 0} hors zone, {runState.report.rejets.anti_cdi || 0} CDI, {runState.report.rejets.techno || 0} techno, {runState.report.rejets.non_francophone} langue, {runState.report.rejets.non_remote} sur site, {runState.report.rejets.tjm_insuffisant} TJM, {runState.report.rejets.doublon} doublons</>
@@ -337,7 +357,7 @@ const VeilleMissionsPanel = () => {
         <div className="space-y-3">
           <AnimatePresence initial={false}>
             {visibles.map((a) => (
-              <AnnonceCard key={a.id} annonce={a} onEcarter={ecarter} onReactiver={reactiver} onCopier={copier} ecartee={statutView === 'ecartees'} />
+              <AnnonceCard onProspect={creerProspect} onVoirFiche={(id) => navigate(`/leads?lead=${id}`)} key={a.id} annonce={a} onEcarter={ecarter} onReactiver={reactiver} onCopier={copier} ecartee={statutView === 'ecartees'} />
             ))}
           </AnimatePresence>
         </div>
@@ -346,7 +366,7 @@ const VeilleMissionsPanel = () => {
   );
 };
 
-const AnnonceCard = ({ annonce, onEcarter, onReactiver, onCopier, ecartee }) => {
+const AnnonceCard = ({ annonce, onEcarter, onReactiver, onCopier, onProspect, onVoirFiche, ecartee }) => {
   const sm = scoreMeta(annonce.score_label, annonce.score);
   const ecarte = annonce.statut === 'ecarte';
   const faible = (annonce.score_label || '') === 'faible';
@@ -402,6 +422,15 @@ const AnnonceCard = ({ annonce, onEcarter, onReactiver, onCopier, ecartee }) => 
             <FiExternalLink size={14} /> Ouvrir l'offre
           </a>
         )}
+        {annonce.lead_id ? (
+          <button onClick={() => onVoirFiche(annonce.lead_id)} className="px-3 py-1.5 rounded-lg bg-success-bg text-success-text text-sm flex items-center gap-1.5" title="Fiche prospect créée depuis cette annonce">
+            <FiUserPlus size={14} /> Prospect #{annonce.lead_id}
+          </button>
+        ) : (
+          <button onClick={() => onProspect(annonce.id)} className="px-3 py-1.5 rounded-lg bg-surface-strong hover:bg-border-strong text-text-primary text-sm flex items-center gap-1.5" title="Crée la fiche prospect (entreprise, lien, source, extrait de l'annonce) et l'ouvre">
+            <FiUserPlus size={14} /> Créer la fiche prospect
+          </button>
+        )}
         <button onClick={() => onCopier(brouillon)} className="px-3 py-1.5 rounded-lg bg-surface-strong hover:bg-border-strong text-text-primary text-sm flex items-center gap-1.5">
           <FiCopy size={14} /> Copier le brouillon
         </button>
@@ -432,7 +461,8 @@ const CriteresEditor = ({ criteres, onClose, onSaved }) => {
     full_remote_only: criteres.full_remote_only,
     garder_sans_montant: criteres.garder_sans_montant,
     heure_run: criteres.heure_run,
-    actif: criteres.actif
+    actif: criteres.actif,
+    flux: (Array.isArray(criteres.flux) ? criteres.flux : []).map((f) => `${f.label || ''} | ${f.url || ''}`).join('\n')
   });
   const [saving, setSaving] = useState(false);
 
@@ -446,7 +476,11 @@ const CriteresEditor = ({ criteres, onClose, onSaved }) => {
         full_remote_only: !!form.full_remote_only,
         garder_sans_montant: !!form.garder_sans_montant,
         heure_run: form.heure_run,
-        actif: !!form.actif
+        actif: !!form.actif,
+        flux: form.flux.split('\n').map((l) => l.trim()).filter(Boolean).map((l) => {
+          const i = l.indexOf('|');
+          return i >= 0 ? { label: l.slice(0, i).trim(), url: l.slice(i + 1).trim() } : { label: '', url: l };
+        }).filter((f) => /^https?:\/\//i.test(f.url))
       };
       const updated = await veilleAPI.updateCriteres(payload);
       onSaved(updated);
@@ -491,6 +525,12 @@ const CriteresEditor = ({ criteres, onClose, onSaved }) => {
               <input type="checkbox" checked={form.garder_sans_montant} onChange={(e) => setForm((p) => ({ ...p, garder_sans_montant: e.target.checked }))} className="accent-accent" /> Garder sans montant
             </label>
           </div>
+        </div>
+        <div>
+          <label className="block text-xs text-text-muted mb-1">Flux RSS / Atom supplémentaires (un par ligne : <span className="font-mono">Libellé | URL</span>)</label>
+          <textarea value={form.flux} onChange={(e) => setForm((p) => ({ ...p, flux: e.target.value }))} rows={4} className={field}
+            placeholder={'Alerte Google PrestaShop | https://www.google.fr/alerts/feeds/…\nForum WordPress FR | https://fr.wordpress.org/support/…/feed/'} />
+          <p className="text-xs text-text-muted mt-1">Alertes Google, forums d'aide PrestaShop ou WordPress, plateformes de projets qui publient un flux. Aucune clé, aucun scraping : seulement des flux publiés par la source. Chaque message passe par les mêmes filtres et la même qualification que les annonces. Le rapport du run indique, flux par flux, ce qui a été lu et retenu.</p>
         </div>
         <label className="flex items-center gap-2 text-sm text-text-secondary">
           <input type="checkbox" checked={form.actif} onChange={(e) => setForm((p) => ({ ...p, actif: e.target.checked }))} className="accent-accent" /> Veille active (run quotidien)

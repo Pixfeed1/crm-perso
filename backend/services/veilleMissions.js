@@ -14,6 +14,7 @@
 // Voir aussi backend/.env.example.
 
 const poleEmploiService = require('./poleEmploiService');
+const { parseFeed } = require('../utils/feedParse');
 const googleJobsService = require('./googleJobsService'); // JSearch (RapidAPI)
 
 const LLM_MODEL = 'claude-haiku-4-5-20251001';
@@ -21,6 +22,8 @@ const MAX_LLM_CALLS = 80;          // garde-fou coût : 80 qualifications LLM ma
 const JOOBLE_PAGES = 5;            // nb de pages récupérées par mot-clé (Jooble) — + de volume
 const JSEARCH_MAX_CALLS = 3;       // complément bridé : 3 requêtes JSearch max par run (quota)
 const FT_RANGES = ['0-149', '150-299']; // France Travail : 2 pages de 150 -> + de volume
+const FLUX_MAX_AGE_JOURS = 45;     // flux RSS/Atom : on ignore les archives plus anciennes
+const FLUX_TIMEOUT_MS = 15000;
 
 const lower = (s) => (s || '').toString().toLowerCase();
 
@@ -156,6 +159,53 @@ async function getCriteres(db) {
 // Appel Jooble pour un mot-clé / une page. Renvoie un tableau d'annonces brutes.
 // IMPORTANT : on N'envoie PAS location:"France" (cela étrangle les résultats à ~1) ;
 // on cherche large et on filtre la langue/le remote ensuite (heuristique + IA).
+// ─── Flux RSS / Atom supplémentaires (veille_criteres.flux) ─────────────────
+// Alertes Google (posts LinkedIn indexés, « cherche freelance PrestaShop »…), forums d'aide
+// PrestaShop / WordPress, plateformes de projets qui publient un flux. Aucune clé, aucun
+// scraping : seulement des flux publiés par la source. Chaque item devient une annonce
+// normalisée qui passe par les mêmes filtres et la même qualification que les autres.
+async function fetchFlux(url) {
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), FLUX_TIMEOUT_MS);
+  try {
+    const res = await fetch(url, { signal: ctl.signal, headers: { 'User-Agent': 'Mozilla/5.0 (compatible; CRM PixFeed veille)', Accept: 'application/rss+xml, application/atom+xml, application/xml, text/xml;q=0.9, */*;q=0.5' } });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const xml = await res.text();
+    const items = parseFeed(xml);
+    if (!items.length && !/<rss\b|<feed\b|<rdf:RDF\b/i.test(xml)) throw new Error('pas un flux RSS/Atom (page HTML ?)');
+    return items;
+  } finally { clearTimeout(timer); }
+}
+
+function hostOf(url) {
+  try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; }
+}
+
+// Un item de flux -> annonce normalisée. L'« entreprise » n'est pas connue : on garde le
+// site d'origine en libellé de source et l'auteur du message s'il est donné.
+function normalizeFeedItem(item, flux) {
+  const label = (flux && flux.label) || hostOf(item.link) || 'flux';
+  return {
+    source: 'flux',
+    flux_label: label,
+    uid: item.link,
+    titre: (item.title || 'Sans titre').slice(0, 300),
+    entreprise: (item.author || '').slice(0, 120),
+    source_label: `via ${label}`,
+    lien: item.link,
+    description: (item.description || '').slice(0, 4000),
+    date_annonce: item.date ? item.date.toISOString().slice(0, 10) : null,
+    montant_brut: null,
+    localisation: ''
+  };
+}
+
+function fluxConfigures(criteres) {
+  const raw = criteres && criteres.flux;
+  const arr = Array.isArray(raw) ? raw : (typeof raw === 'string' ? (() => { try { return JSON.parse(raw); } catch { return []; } })() : []);
+  return arr.filter((f) => f && typeof f.url === 'string' && /^https?:\/\//i.test(f.url)).map((f) => ({ label: String(f.label || hostOf(f.url) || 'flux').slice(0, 60), url: f.url.trim() }));
+}
+
 async function fetchJooble(keyword, page) {
   const key = process.env.JOOBLE_API_KEY;
   if (!key) throw new Error('JOOBLE_API_KEY manquante dans .env');
@@ -191,7 +241,7 @@ async function qualifyLLM(annonce, profilReference) {
   const key = process.env.ANTHROPIC_API_KEY;
   if (!key) throw new Error('ANTHROPIC_API_KEY manquante dans .env');
 
-  const prompt = `Tu qualifies une annonce de mission pour un développeur freelance.
+  const prompt = `Tu qualifies une annonce de mission pour un développeur freelance. L'annonce peut aussi être un message public (forum d'aide, alerte web) où une entreprise ou un commerçant décrit un problème sur son site ou cherche un prestataire : c'est un besoin exprimé, à qualifier de la même façon (score élevé si le besoin correspond au profil, même sans montant ni durée).
 
 PROFIL DE RÉFÉRENCE :
 ${profilReference || ''}
@@ -322,8 +372,9 @@ async function runVeille(db, opts = {}) {
   const ftOk = poleEmploiService.isConfigured();
   const jsOk = googleJobsService.isConfigured();
   const joobleOk = !!process.env.JOOBLE_API_KEY;
-  if (!ftOk && !jsOk && !joobleOk) {
-    throw new Error('Aucune source configurée (.env) : France Travail, JSearch ou Jooble');
+  const flux = fluxConfigures(criteres);
+  if (!ftOk && !jsOk && !joobleOk && !flux.length) {
+    throw new Error('Aucune source configurée : France Travail, JSearch ou Jooble (.env), ou un flux RSS/Atom dans les critères');
   }
 
   runStatus = {
@@ -341,11 +392,14 @@ async function runVeille(db, opts = {}) {
     sources: {
       france_travail: { recuperees: 0, retenues: 0 },
       jsearch: { recuperees: 0, retenues: 0 },
-      jooble: { recuperees: 0, retenues: 0 }
+      jooble: { recuperees: 0, retenues: 0 },
+      flux: { recuperees: 0, retenues: 0 }
     },
+    // Détail par flux RSS/Atom : récupérées, erreur éventuelle (URL morte, page HTML…).
+    flux_detail: flux.map((f) => ({ label: f.label, url: f.url, recuperees: 0, retenues: 0, erreur: null })),
     // Quelles sources sont réellement CONFIGURÉES (clés en .env) : évite un "0 annonce"
     // trompeur quand p.ex. France Travail n'a pas ses identifiants.
-    sources_configurees: { france_travail: ftOk, jsearch: jsOk, jooble: joobleOk },
+    sources_configurees: { france_travail: ftOk, jsearch: jsOk, jooble: joobleOk, flux: flux.length > 0 },
     erreurs: 0,
     llm_calls: 0
   };
@@ -403,6 +457,22 @@ async function runVeille(db, opts = {}) {
           console.error(`[Veille] Jooble "${kw}" p${page}:`, e.message);
         }
       }
+    }
+  }
+  // 4) FLUX RSS / ATOM — sources ajoutées dans les critères (sans clé, sans scraping).
+  for (let i = 0; i < flux.length; i++) {
+    const f = flux[i];
+    const det = report.flux_detail[i];
+    try {
+      const items = await fetchFlux(f.url);
+      const limite = Date.now() - FLUX_MAX_AGE_JOURS * 86400000;
+      const recents = items.filter((it) => !it.date || it.date.getTime() >= limite);
+      det.recuperees = recents.length;
+      brutes.push(...recents.map((it) => normalizeFeedItem(it, f)));
+    } catch (e) {
+      det.erreur = e.name === 'AbortError' ? 'délai dépassé' : e.message;
+      report.erreurs++;
+      console.error(`[Veille] Flux « ${f.label} » :`, e.message);
     }
   }
   report.recuperees = brutes.length;
@@ -552,6 +622,7 @@ async function runVeille(db, opts = {}) {
       );
       report.retenues++;
       if (report.sources[annonce.source]) report.sources[annonce.source].retenues++;
+      if (annonce.source === 'flux') { const d = report.flux_detail.find((x) => x.label === annonce.flux_label); if (d) d.retenues++; }
     } catch (e) {
       report.erreurs++;
       console.error('[Veille] Insert:', e.message);
@@ -566,7 +637,7 @@ async function runVeille(db, opts = {}) {
   console.log(
     `[Veille] Par source — France Travail: ${s.france_travail.retenues} (sur ${s.france_travail.recuperees}), ` +
     `JSearch: ${s.jsearch.retenues} (sur ${s.jsearch.recuperees}), ` +
-    `Jooble: ${s.jooble.retenues} (sur ${s.jooble.recuperees}) -> total retenues ${report.retenues}`
+    `Jooble: ${s.jooble.retenues} (sur ${s.jooble.recuperees}), Flux: ${s.flux.retenues} (sur ${s.flux.recuperees}) -> total retenues ${report.retenues}`
   );
   const rj = report.rejets;
   console.log(
@@ -602,4 +673,4 @@ async function runVeille(db, opts = {}) {
   }
 }
 
-module.exports = { runVeille, getCriteres, getRunStatus };
+module.exports = { normalizeFeedItem, fluxConfigures, runVeille, getCriteres, getRunStatus };

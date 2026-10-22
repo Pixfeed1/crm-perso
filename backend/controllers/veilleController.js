@@ -92,19 +92,63 @@ const veilleController = {
       const profil = b.profil_reference === undefined ? cur.profil_reference : String(b.profil_reference);
       const heureRun = b.heure_run === undefined ? cur.heure_run : String(b.heure_run);
       const actif = b.actif === undefined ? cur.actif : !!b.actif;
+      // Flux RSS/Atom : [{ label, url }], 20 max, URL http(s) obligatoire.
+      let flux = cur.flux;
+      if (Array.isArray(b.flux)) {
+        flux = b.flux
+          .map((f) => ({ label: String((f && f.label) || '').trim().slice(0, 60), url: String((f && f.url) || '').trim() }))
+          .filter((f) => /^https?:\/\/\S+$/i.test(f.url))
+          .slice(0, 20)
+          .map((f) => ({ label: f.label || f.url.replace(/^https?:\/\/(www\.)?/i, '').split('/')[0], url: f.url }));
+      }
 
       const upd = await db.pool.query(
         `UPDATE veille_criteres SET
            mots_requis=$2, mots_exclus=$3, full_remote_only=$4, tjm_min=$5,
-           garder_sans_montant=$6, profil_reference=$7, heure_run=$8, actif=$9, updated_at=NOW()
+           garder_sans_montant=$6, profil_reference=$7, heure_run=$8, actif=$9, flux=$10, updated_at=NOW()
          WHERE id=$1 RETURNING *`,
-        [cur.id, motsRequis, motsExclus, fullRemoteOnly, tjmMin, garderSansMontant, profil, heureRun, actif]
+        [cur.id, motsRequis, motsExclus, fullRemoteOnly, tjmMin, garderSansMontant, profil, heureRun, actif, JSON.stringify(flux || [])]
       );
       // Reprogrammer le cron si l'heure a changé.
       veilleWorker.reschedule().catch((e) => console.error('[Veille] reschedule:', e.message));
       res.json(upd.rows[0]);
     } catch (error) {
       console.error('[Veille] updateCriteres:', error.message);
+      res.status(500).json({ message: 'Erreur serveur' });
+    }
+  },
+
+  // POST /api/veille/annonces/:id/prospect -> fiche prospect créée depuis l'annonce (une seule fois)
+  creerProspect: async (req, res) => {
+    const db = req.app.locals.db;
+    const id = parseInt(req.params.id, 10);
+    if (Number.isNaN(id)) return res.status(400).json({ message: 'Annonce invalide' });
+    try {
+      const a = (await db.pool.query('SELECT * FROM veille_annonces WHERE id = $1', [id])).rows[0];
+      if (!a) return res.status(404).json({ message: 'Annonce introuvable' });
+      if (a.lead_id) return res.json({ lead_id: a.lead_id, deja: true });
+      let host = '';
+      try { host = new URL(a.lien).hostname.replace(/^www\./, ''); } catch { /* lien absent ou invalide */ }
+      const nom = (a.entreprise || a.titre || host || 'Annonce veille').trim().slice(0, 120);
+      const notes = [
+        `Annonce : ${a.titre || ''}`,
+        a.lien ? `Lien : ${a.lien}` : null,
+        a.source_label ? `Source : ${a.source_label.replace(/^via\s+/i, '')}` : null,
+        a.date_annonce ? `Publiée le ${new Date(a.date_annonce).toLocaleDateString('fr-FR')}` : null,
+        a.montant ? `Montant : ${a.montant}` : null,
+        a.raison ? `Qualification : ${a.raison}` : null,
+        a.description ? `\n${String(a.description).slice(0, 1500)}` : null
+      ].filter(Boolean).join('\n');
+      const ins = await db.pool.query(
+        `INSERT INTO leads (name, company, type, status, source, notes, relation_status, website, score, created_at, updated_at)
+         VALUES ($1, $2, 'company', 'nouveau', 'Veille missions', $3, 'nouveau', $4, $5, NOW(), NOW()) RETURNING id`,
+        [nom, a.entreprise || host || null, notes, a.lien || null, Math.max(0, Math.min(100, a.score || 0))]
+      );
+      const leadId = ins.rows[0].id;
+      await db.pool.query("UPDATE veille_annonces SET lead_id = $2, statut = CASE WHEN statut = 'nouveau' THEN 'traite' ELSE statut END WHERE id = $1", [id, leadId]);
+      res.status(201).json({ lead_id: leadId, deja: false });
+    } catch (error) {
+      console.error('[Veille] creerProspect:', error.message);
       res.status(500).json({ message: 'Erreur serveur' });
     }
   },

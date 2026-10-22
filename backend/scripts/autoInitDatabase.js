@@ -1968,6 +1968,10 @@ async function ensureVeilleTables(client) {
   // Requêtes orientées "mission" envoyées aux sources (éditable). Distinct des mots_requis
   // (qui servent au pré-filtre/scoring). Idempotent.
   await client.query("ALTER TABLE veille_criteres ADD COLUMN IF NOT EXISTS requetes TEXT[] NOT NULL DEFAULT '{}';");
+  // Flux RSS/Atom supplémentaires [{ label, url }] (alertes Google, forums d'aide, plateformes
+  // de projets) et lien annonce -> fiche prospect créée depuis la veille. Idempotent.
+  await client.query("ALTER TABLE veille_criteres ADD COLUMN IF NOT EXISTS flux JSONB NOT NULL DEFAULT '[]'::jsonb;");
+  await client.query('ALTER TABLE veille_annonces ADD COLUMN IF NOT EXISTS lead_id INTEGER;');
   // Seed des requêtes par défaut si la colonne est vide.
   await client.query(
     'UPDATE veille_criteres SET requetes = $1 WHERE requetes IS NULL OR cardinality(requetes) = 0',
