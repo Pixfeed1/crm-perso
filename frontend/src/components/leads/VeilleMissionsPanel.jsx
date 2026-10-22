@@ -300,7 +300,7 @@ const VeilleMissionsPanel = () => {
                       </div>
                     )}
                     {runState.report.rejets && (
-                      <> · rejets : {runState.report.rejets.hors_zone || 0} hors zone, {runState.report.rejets.anti_cdi || 0} CDI, {runState.report.rejets.techno || 0} techno, {runState.report.rejets.non_francophone} langue, {runState.report.rejets.non_remote} sur site, {runState.report.rejets.tjm_insuffisant} TJM, {runState.report.rejets.doublon} doublons</>
+                      <> · rejets : {runState.report.rejets.hors_zone || 0} hors zone, {runState.report.rejets.anti_cdi || 0} CDI, {runState.report.rejets.techno || 0} techno, {runState.report.rejets.non_francophone} langue, {runState.report.rejets.non_remote} sur site, {runState.report.rejets.tjm_insuffisant} TJM, {runState.report.rejets.entraide || 0} entraide / hors sujet, {runState.report.rejets.doublon} doublons</>
                     )}
                   </div>
                 )}
@@ -396,6 +396,8 @@ const AnnonceCard = ({ annonce, onEcarter, onReactiver, onCopier, onProspect, on
 
       {/* Pastilles raisons */}
       <div className="flex flex-wrap gap-2 mt-2">
+        {annonce.nature === 'besoin_pro' && <span className="text-xs px-2 py-0.5 rounded-full bg-warning-bg text-warning-text" title="Un professionnel décrit un problème sur son site : besoin exprimé, pas une mission publiée. Entreprise à identifier avant contact.">Besoin exprimé</span>}
+        {annonce.nature === 'mission' && annonce.source_label && /^via (?!France Travail|JSearch|Jooble)/.test(annonce.source_label) && <span className="text-xs px-2 py-0.5 rounded-full bg-success-bg text-success-text">Recherche un prestataire</span>}
         {annonce.full_remote && <span className="text-xs px-2 py-0.5 rounded-full bg-info-bg text-info-text">Full remote</span>}
         {annonce.montant && <span className="text-xs px-2 py-0.5 rounded-full bg-neutral-bg text-neutral-text">{annonce.montant}</span>}
         {annonce.raison && <span className="text-xs px-2 py-0.5 rounded-full bg-surface-strong text-text-secondary">{annonce.raison}</span>}

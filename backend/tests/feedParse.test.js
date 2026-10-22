@@ -46,7 +46,7 @@ test('normalisation : source flux, libellé du flux, uid = lien, date ; flux con
   const [it] = parseFeed(ATOM);
   const a = normalizeFeedItem(it, { label: 'Forum WordPress FR', url: 'https://fr.wordpress.org/support/feed/' });
   assert.equal(a.source, 'flux'); assert.equal(a.flux_label, 'Forum WordPress FR'); assert.equal(a.source_label, 'via Forum WordPress FR');
-  assert.equal(a.uid, a.lien); assert.equal(a.date_annonce, '2026-10-20'); assert.equal(a.entreprise, 'boutiquelea'); assert.equal(a.localisation, '');
+  assert.equal(a.uid, a.lien); assert.equal(a.date_annonce, '2026-10-20'); assert.equal(a.entreprise, '', 'un pseudo n\'est pas une entreprise'); assert.match(a.description, /^Auteur : boutiquelea\n/); assert.equal(a.localisation, '');
   const sans = normalizeFeedItem(parseFeed(RSS)[0], null);
   assert.equal(sans.source_label, 'via linkedin.com');
   assert.deepEqual(fluxConfigures({ flux: [{ label: 'A', url: 'https://a.fr/rss' }, { label: 'B', url: 'ftp://x' }, { url: 'https://b.fr/feed' }, null] }),

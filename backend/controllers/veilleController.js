@@ -129,8 +129,12 @@ const veilleController = {
       if (a.lead_id) return res.json({ lead_id: a.lead_id, deja: true });
       let host = '';
       try { host = new URL(a.lien).hostname.replace(/^www\./, ''); } catch { /* lien absent ou invalide */ }
+      // Sans raison sociale (flux, forum) : la fiche porte le titre de l'annonce et est marquée
+      // « entreprise à identifier » ; un pseudo n'est jamais pris pour un nom d'entreprise.
+      const sansEntreprise = !a.entreprise;
       const nom = (a.entreprise || a.titre || host || 'Annonce veille').trim().slice(0, 120);
       const notes = [
+        sansEntreprise ? 'ENTREPRISE À IDENTIFIER : annonce sans raison sociale (forum ou flux). Vérifier qui est derrière le message avant tout contact, et contacter par le canal de la plateforme ou l\'adresse professionnelle publiée sur son site.' : null,
         `Annonce : ${a.titre || ''}`,
         a.lien ? `Lien : ${a.lien}` : null,
         a.source_label ? `Source : ${a.source_label.replace(/^via\s+/i, '')}` : null,
@@ -142,7 +146,7 @@ const veilleController = {
       const ins = await db.pool.query(
         `INSERT INTO leads (name, company, type, status, source, notes, relation_status, website, score, created_at, updated_at)
          VALUES ($1, $2, 'company', 'nouveau', 'Veille missions', $3, 'nouveau', $4, $5, NOW(), NOW()) RETURNING id`,
-        [nom, a.entreprise || host || null, notes, a.lien || null, Math.max(0, Math.min(100, a.score || 0))]
+        [nom, a.entreprise || null, notes, a.lien || null, Math.max(0, Math.min(100, a.score || 0))]
       );
       const leadId = ins.rows[0].id;
       await db.pool.query("UPDATE veille_annonces SET lead_id = $2, statut = CASE WHEN statut = 'nouveau' THEN 'traite' ELSE statut END WHERE id = $1", [id, leadId]);

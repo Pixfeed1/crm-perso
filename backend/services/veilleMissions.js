@@ -181,19 +181,21 @@ function hostOf(url) {
   try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; }
 }
 
-// Un item de flux -> annonce normalisée. L'« entreprise » n'est pas connue : on garde le
-// site d'origine en libellé de source et l'auteur du message s'il est donné.
+// Un item de flux -> annonce normalisée. L'entreprise n'est PAS connue : un pseudo de forum
+// n'est pas une raison sociale, il reste dans la description (« Auteur : … ») et la fiche
+// prospect créée plus tard est marquée « entreprise à identifier ».
 function normalizeFeedItem(item, flux) {
   const label = (flux && flux.label) || hostOf(item.link) || 'flux';
+  const auteur = String(item.author || '').trim().slice(0, 120);
   return {
     source: 'flux',
     flux_label: label,
     uid: item.link,
     titre: (item.title || 'Sans titre').slice(0, 300),
-    entreprise: (item.author || '').slice(0, 120),
+    entreprise: '',
     source_label: `via ${label}`,
     lien: item.link,
-    description: (item.description || '').slice(0, 4000),
+    description: `${auteur ? `Auteur : ${auteur}\n` : ''}${item.description || ''}`.slice(0, 4000),
     date_annonce: item.date ? item.date.toISOString().slice(0, 10) : null,
     montant_brut: null,
     localisation: ''
@@ -252,7 +254,7 @@ Entreprise : ${annonce.entreprise || ''}
 Description : ${(annonce.description || '').slice(0, 2000)}
 
 Réponds UNIQUEMENT par un objet JSON valide, sans texte autour, avec EXACTEMENT ces clés :
-{"francophone": bool (mets false UNIQUEMENT si l'annonce est clairement dans une autre langue / la mission ne peut pas se mener en français ; en cas de doute mets true), "remote_statut": "full_remote" | "sur_site" | "non_precise" ("full_remote" si télétravail total / remote / 100% télétravail ; "non_precise" si télétravail partiel/hybride (ex: 2 jours sur site) OU si non précisé ; "sur_site" UNIQUEMENT si présentiel strict explicite SANS aucun télétravail), "montant": "string (ex '400€/j', ou 'à confirmer' si non chiffré)", "score": int (0-100, adéquation avec le profil), "score_label": "fort" | "à vérifier" | "faible", "raison": "phrase courte en français", "brouillon": "réponse FR personnalisée ~4 lignes, sans signature"}`;
+{"nature": "mission" | "besoin_pro" | "entraide" | "hors_sujet" ("mission" = une entreprise cherche un prestataire ou publie une mission ; "besoin_pro" = un professionnel décrit un problème réel sur SON site ou SA boutique sans forcément chercher un prestataire ; "entraide" = question technique générale, demande d'aide entre développeurs, tutoriel, débat, étudiant ; "hors_sujet" = tout le reste), "francophone": bool (mets false UNIQUEMENT si l'annonce est clairement dans une autre langue / la mission ne peut pas se mener en français ; en cas de doute mets true), "remote_statut": "full_remote" | "sur_site" | "non_precise" ("full_remote" si télétravail total / remote / 100% télétravail ; "non_precise" si télétravail partiel/hybride (ex: 2 jours sur site) OU si non précisé ; "sur_site" UNIQUEMENT si présentiel strict explicite SANS aucun télétravail), "montant": "string (ex '400€/j', ou 'à confirmer' si non chiffré)", "score": int (0-100, adéquation avec le profil), "score_label": "fort" | "à vérifier" | "faible", "raison": "phrase courte en français", "brouillon": "réponse FR personnalisée ~4 lignes, sans signature"}`;
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -388,7 +390,7 @@ async function runVeille(db, opts = {}) {
     apres_prefiltre_langue: 0,
     qualifiees_ia: 0,
     retenues: 0,
-    rejets: { anti_cdi: 0, techno: 0, non_francophone: 0, hors_zone: 0, non_remote: 0, tjm_insuffisant: 0, sans_montant_rejete: 0, doublon: 0 },
+    rejets: { anti_cdi: 0, techno: 0, non_francophone: 0, hors_zone: 0, non_remote: 0, tjm_insuffisant: 0, sans_montant_rejete: 0, doublon: 0, entraide: 0 },
     sources: {
       france_travail: { recuperees: 0, retenues: 0 },
       jsearch: { recuperees: 0, retenues: 0 },
@@ -405,7 +407,7 @@ async function runVeille(db, opts = {}) {
   };
   if (!ftOk) console.warn('[Veille] France Travail NON configuré (POLE_EMPLOI_CLIENT_ID/SECRET) -> source francophone absente.');
   // Exemples d'écartés PAR catégorie (max 3) pour diagnostic.
-  const rejetsExemples = { langue: [], zone: [], anti_cdi: [], techno: [], remote: [], tjm: [] };
+  const rejetsExemples = { langue: [], zone: [], anti_cdi: [], techno: [], remote: [], tjm: [], entraide: [] };
   const ajoutRejet = (cat, titre, raison) => {
     if (rejetsExemples[cat] && rejetsExemples[cat].length < 3) rejetsExemples[cat].push({ titre, raison });
   };
@@ -582,6 +584,15 @@ async function runVeille(db, opts = {}) {
       continue;
     }
 
+    // d1bis) Nature : une question d'entraide entre développeurs ou un message hors sujet n'est
+    //        pas une demande commerciale -> écarté (compté à part dans le rapport).
+    const nature = ['mission', 'besoin_pro', 'entraide', 'hors_sujet'].includes(q.nature) ? q.nature : 'mission';
+    if (nature === 'entraide' || nature === 'hors_sujet') {
+      report.rejets.entraide++;
+      ajoutRejet('entraide', annonce.titre, `${nature} : ${q.raison || ''}`);
+      continue;
+    }
+
     // d2) Remote : rejeter UNIQUEMENT si explicitement sur site/présentiel.
     //     'non_precise' -> on garde avec un tag "remote à confirmer".
     const remoteStatut = q.remote_statut || (q.full_remote === true ? 'full_remote' : 'non_precise');
@@ -613,12 +624,12 @@ async function runVeille(db, opts = {}) {
       await db.pool.query(
         `INSERT INTO veille_annonces
            (jooble_uid, titre, entreprise, source_label, lien, description, date_annonce,
-            full_remote, montant, score, score_label, raison, brouillon, statut)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,'nouveau')
+            full_remote, montant, score, score_label, raison, brouillon, statut, nature)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,'nouveau',$14)
          ON CONFLICT (jooble_uid) DO NOTHING`,
         [annonce.uid, annonce.titre, annonce.entreprise, annonce.source_label, annonce.lien,
          annonce.description, annonce.date_annonce, fullRemote, montantFinal,
-         score, label, raison, (q.brouillon || '').slice(0, 2000)]
+         score, label, raison, (q.brouillon || '').slice(0, 2000), nature]
       );
       report.retenues++;
       if (report.sources[annonce.source]) report.sources[annonce.source].retenues++;
