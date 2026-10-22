@@ -295,8 +295,6 @@ function buildMaintenanceEmail(r, lead) {
     '',
     conclusion(r),
     '',
-    "Si vous ne souhaitez plus être contacté, n'hésitez pas à me le signaler.",
-    '',
     'Bonne journée à vous,'
   ].join('\n');
   return { ok: true, subject: `Suivi technique de ${nom}`, body, mode: 'maintenance' };
@@ -348,8 +346,6 @@ function buildProofEmail(r, lead) {
     motif(r, c),
     '',
     conclusion(r),
-    '',
-    "Si vous ne souhaitez plus être contacté, n'hésitez pas à me le signaler.",
     '',
     'Bonne journée à vous,'
   ].join('\n');

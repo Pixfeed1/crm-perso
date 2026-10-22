@@ -1373,17 +1373,13 @@ En consultant {site}, j'ai relevé un point à vous signaler : {constat}.
 
 J'interviens notamment sur la maintenance des sites {plateforme} : mises à jour, sauvegardes, sécurité et résolution d'incidents techniques.
 
-Je souhaitais savoir si vous disposez déjà d'un prestataire pour assurer ce suivi, ou si un accompagnement ponctuel ou régulier pourrait vous être utile.
-
-Si vous ne souhaitez plus être contacté, n'hésitez pas à me le signaler.`],
+Je souhaitais savoir si vous disposez déjà d'un prestataire pour assurer ce suivi, ou si un accompagnement ponctuel ou régulier pourrait vous être utile.`],
   ['Relance', 'relance', 'Re: Un point relevé sur {site}',
 `{prenom},
 
 Je me permets de revenir vers vous au sujet du point relevé sur {site}.
 
-Si le sujet n'est pas d'actualité, aucun souci. Sinon, je reste disponible pour en parler.
-
-Si vous ne souhaitez plus être contacté, n'hésitez pas à me le signaler.`],
+Si le sujet n'est pas d'actualité, aucun souci. Sinon, je reste disponible pour en parler.`],
   ['Clôture', 'cloture', 'Dernier message de ma part',
 `{prenom},
 
@@ -1409,9 +1405,7 @@ Les boutiques PrestaShop en version 1.6 ou 1.7 ne reçoivent plus de mises à jo
 
 Je peux vérifier où en est {site} et vous dire ce que cela implique, sans engagement.
 
-Est-ce un sujet pour lequel vous disposez déjà d'un prestataire ?
-
-Si vous ne souhaitez plus être contacté, n'hésitez pas à me le signaler.`],
+Est-ce un sujet pour lequel vous disposez déjà d'un prestataire ?`],
   ['WooCommerce', 'woo', 'Maintenance de votre boutique WooCommerce',
 `{prenom},
 
@@ -1421,9 +1415,7 @@ Sur une boutique WooCommerce, ce sont le plus souvent WordPress et les extension
 
 Je peux regarder où en est {site} et vous faire un retour, sans engagement.
 
-Est-ce un sujet pour lequel vous disposez déjà d'un prestataire ?
-
-Si vous ne souhaitez plus être contacté, n'hésitez pas à me le signaler.`]
+Est-ce un sujet pour lequel vous disposez déjà d'un prestataire ?`]
 ];
 // Anciens textes des modèles d'origine : remplacés SEULEMENT s'ils n'ont jamais été modifiés
 // (corps strictement identique au seed d'origine). Un modèle retouché à la main est conservé.
@@ -1479,6 +1471,17 @@ async function ensureEmailTemplatesTone(client) {
     n += r.rowCount || 0;
   }
   if (n) console.log(`  ✓ Modèles d'email : ${n} texte(s) d'origine mis au ton professionnel (les modèles retouchés à la main sont conservés)`);
+}
+
+// Phrase d'opt-out retirée du corps des modèles (demande du 22/10/2026) : le lien de désinscription
+// reste ajouté au pied de chaque email de prospection à l'envoi (optout.js). Idempotent.
+async function ensureEmailTemplatesNoOptoutSentence(client) {
+  const phrase = "Si vous ne souhaitez plus être contacté, n'hésitez pas à me le signaler.";
+  const r = await client.query(
+    `UPDATE email_templates SET body = regexp_replace(body, $1, '', 'g') WHERE body LIKE $2`,
+    ['\n{0,2}' + phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), `%${phrase}%`]
+  ).catch(() => ({ rowCount: 0 }));
+  if (r.rowCount) console.log(`  ✓ Modèles d'email : phrase d'opt-out retirée de ${r.rowCount} modèle(s)`);
 }
 
 async function ensureEmailTemplatesSeed(client) {
@@ -2750,6 +2753,7 @@ async function autoInitDatabase(pool) {
     // Seeds emails (modèles + signature par défaut) — seulement si vides
     await ensureEmailTemplatesSeed(client);
     await ensureEmailTemplatesTone(client);
+    await ensureEmailTemplatesNoOptoutSentence(client);
     await ensureEmailSignatureSeed(client);
     await ensureSignatureUnsubRemoval(client);
 

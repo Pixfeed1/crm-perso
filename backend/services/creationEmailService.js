@@ -54,8 +54,6 @@ function buildCreationEmail(signal, lead) {
     '',
     'Avez-vous déjà prévu quelque chose pour ce site ?',
     '',
-    "Si vous ne souhaitez plus être contacté, n'hésitez pas à me le signaler.",
-    '',
     'Bonne journée à vous,'
   ].join('\n');
   const subject = nom ? `Le site de ${nom}` : `Votre site sur ${domaine}`;

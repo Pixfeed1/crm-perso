@@ -88,7 +88,7 @@ test('ton : aucune formule interdite, 90 à 150 mots, structure présentation / 
     assert.match(d.body, /maintenance/);
     assert.match(d.body, /disposez déjà d'un prestataire pour assurer ce suivi/);
     assert.doesNotMatch(d.body, /Si personne n'assure|en parcourant|\d{2}\/\d{2}\/\d{4}/);
-    assert.match(d.body, /Si vous ne souhaitez plus être contacté, n'hésitez pas à me le signaler\./);
+    assert.doesNotMatch(d.body, /Si vous ne souhaitez plus être contacté/);
     assert.match(d.body, /Bonne journée à vous,$/);
     assert.doesNotMatch(d.body, /\btu\b|\bton\b|\btes\b/i);
   }
@@ -103,7 +103,7 @@ test('email création (signaux) et consigne Claude libre : mêmes règles de ton
   const c = buildCreationEmail({ domain: 'dupont-plomberie.fr', match_confidence: 'sur', company_name: 'DUPONT PLOMBERIE', dirigeant: 'JEAN DUPONT', city: 'Bourg-en-Bresse', website_status: 'parking', company_created_at: new Date(Date.now() - 12 * 86400000) }, { company: 'dupont-plomberie.fr' });
   assert.doesNotMatch(c.body, FORMULES_INTERDITES);
   assert.match(c.body, /développeur web indépendant/);
-  assert.match(c.body, /Si vous ne souhaitez plus être contacté/);
+  assert.doesNotMatch(c.body, /Si vous ne souhaitez plus être contacté/);
   assert.ok(mots(c.body) <= 125, String(mots(c.body)));
   const prompt = buildSystemPrompt('humain');
   for (const phrase of ['je ne vous relancerai pas', 'un simple oui suffit', "sauté aux yeux", "de l'intérieur", 'rien de grave', 'à mon compte']) {
@@ -114,7 +114,7 @@ test('email création (signaux) et consigne Claude libre : mêmes règles de ton
   const { assembleColdEmail } = require('../services/coldEmailService');
   const corps = assembleColdEmail({ row: { domain: 'x.fr', platform: 'PrestaShop' }, lead: {}, motif: 'Constat.', question: 'Question ?' });
   assert.match(corps, /développeur web indépendant et je dirige PixFeed, spécialisé dans la maintenance et le dépannage de sites professionnels\./);
-  assert.match(corps, /Si vous ne souhaitez plus être contacté, n'hésitez pas à me le signaler\./);
+  assert.doesNotMatch(corps, /Si vous ne souhaitez plus être contacté/);
   assert.match(corps, /pixfeed\.net\/maintenance/);
   assert.match(corps, /Bonne journée à vous,$/);
 });
@@ -127,7 +127,7 @@ test('modèles d\'email du menu « Modèle » : même présentation, aucune form
   }
   const premier = EMAIL_TEMPLATE_SEED.find(([n]) => n === 'Premier contact')[3];
   assert.match(premier, /développeur web indépendant et je dirige \{entreprise\}, spécialisé dans la maintenance et le dépannage de sites professionnels\./);
-  assert.match(premier, /Si vous ne souhaitez plus être contacté/);
+  assert.doesNotMatch(premier, /Si vous ne souhaitez plus être contacté/);
 });
 
 test('Batterie4moto : mesure HTTPS de l\'ancien crawl non confirmée -> pas d\'alerte, email de maintenance sobre ; crawl frais sur www -> rien à signaler', () => {

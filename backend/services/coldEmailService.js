@@ -135,8 +135,6 @@ function assembleColdEmail({ row, lead, motif }) {
     '',
     proof.conclusion(r), // proposition, question, lien : mêmes phrases que l'email par la preuve
     '',
-    "Si vous ne souhaitez plus être contacté, n'hésitez pas à me le signaler.",
-    '',
     'Bonne journée à vous,'
   ].join('\n');
 }

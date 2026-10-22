@@ -26,7 +26,7 @@ test('la présentation vient du code, jamais du modèle : une paraphrase du mod�
   assert.match(ok.body, /^Bonjour,\n\nJe suis Marc/);
   assert.match(ok.body, /pixfeed\.net\/maintenance/);
   assert.match(ok.body, /disposez déjà d'un prestataire/);
-  assert.match(ok.body, /Si vous ne souhaitez plus être contacté/);
+  assert.doesNotMatch(ok.body, /Si vous ne souhaitez plus être contacté/);
   assert.match(ok.body, /Bonne journée à vous,$/);
   assert.doesNotMatch(ok.body, FORMULES_INTERDITES);
   assert.doesNotMatch(ok.body, /structure/);
