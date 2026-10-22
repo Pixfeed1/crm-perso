@@ -156,6 +156,13 @@ civilité sûre ou « Bonjour », `{site}`, `{plateforme}`, `{constat}` = preuve
 signature choisie, copie cachée, « Commencer le » (date de début des créneaux), relance manuelle
 optionnelle J+N dans le Suivi (désactivée par défaut, créée après l'envoi réel seulement).
 
+**Reprise des lignes qui n'ont pas pu partir** (`POST /:id/items/:itemId/reprendre`,
+`POST /:id/items/reprendre { quoi }`) : une ligne exclue faute d'adresse se reprend en saisissant
+l'adresse sur la ligne (enregistrée sur la fiche, contrôles rejoués, email généré s'il manque, pas de
+recrawl) ; « Reprendre les exclus sans email » reclasse d'un coup celles dont la fiche a reçu une
+adresse depuis ; « Réessayer » remet une ligne en échec ou arrêtée en « validé » (elle part au prochain
+« Programmer »). Désinscrit, opposition et 90 jours restent bloquants ; les autres exclusions ne bougent pas.
+
 **Worker** : `scheduledEmailWorker` appelle `beforeSend` (pause → l'email attend ; arrêt, ligne
 marquée répondu/rebond/opposition, désinscrit, fiche fermée ou en discussion → annulé), `afterSent`
 (ligne envoyée, campagne terminée quand plus rien n'attend), `afterFailed` (ligne en échec, **pause

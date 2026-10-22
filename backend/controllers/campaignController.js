@@ -37,6 +37,15 @@ module.exports = {
   reanalyzeItem: async (req, res) => {
     try { res.json(await service.reanalyzeItem(req.app.locals.db, req.params.id, req.params.itemId)); } catch (e) { fail(res, e, 'réanalyse'); }
   },
+  // POST /:id/items/:itemId/reprendre { to_email? } -> ligne exclue sans adresse, en échec ou arrêtée reclassée sans recrawl
+  reprendreItem: async (req, res) => {
+    try { res.json(await service.reprendreItem(req.app.locals.db, req.params.id, req.params.itemId, { to_email: req.body?.to_email })); } catch (e) { fail(res, e, 'reprise'); }
+  },
+  // POST /:id/items/reprendre { quoi: 'sans_email' | 'echecs' }
+  reprendreMany: async (req, res) => {
+    const quoi = req.body?.quoi === 'echecs' ? 'echecs' : 'sans_email';
+    try { res.json(await service.reprendreMany(req.app.locals.db, req.params.id, quoi)); } catch (e) { fail(res, e, 'reprise en lot'); }
+  },
   // POST /:id/items/validate { ids, statut? }
   validateMany: async (req, res) => {
     const ids = ints(req.body?.ids);

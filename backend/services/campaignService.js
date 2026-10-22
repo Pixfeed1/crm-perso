@@ -332,6 +332,63 @@ async function reanalyzeItem(db, campaignId, itemId, deps = {}) {
   return { item: (await db.pool.query('SELECT * FROM campaign_items WHERE id = $1', [item.id])).rows[0], analyse: out };
 }
 
+// ─── Reprise : exclus sans adresse, échecs, arrêts ──────────────────────────
+// Reprend une ligne qui n'a pas pu partir, sans relancer le crawl : adresse saisie ici (ou ajoutée
+// sur la fiche entre-temps), contrôles rejoués, email régénéré seulement s'il manque, ligne
+// reclassée. Une ligne déjà relue avant son échec ou son arrêt qui revient « prêt » est remise en
+// « validé » : elle part au prochain « Programmer ». Désinscrit, opposition, 90 jours : toujours bloquants.
+const REPRENABLES = ['exclu', 'echec', 'arrete'];
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+async function reprendreItem(db, campaignId, itemId, { to_email } = {}) {
+  const item = (await db.pool.query('SELECT * FROM campaign_items WHERE id = $1 AND campaign_id = $2', [itemId, campaignId])).rows[0];
+  if (!item) throw Object.assign(new Error('Ligne introuvable'), { status: 404 });
+  if (!REPRENABLES.includes(item.statut)) throw Object.assign(new Error('Seules les lignes exclues, en échec ou arrêtées se reprennent'), { status: 409 });
+  const campaign = await getCampaign(db, campaignId);
+  if (!['brouillon', 'en_cours', 'pause'].includes(campaign.statut)) throw Object.assign(new Error('Campagne arrêtée ou terminée'), { status: 409 });
+  let lead = (await db.pool.query('SELECT * FROM leads WHERE id = $1', [item.lead_id])).rows[0];
+  if (!lead) throw Object.assign(new Error('Fiche supprimée'), { status: 404 });
+  const saisie = String(to_email || '').trim().toLowerCase();
+  if (saisie) {
+    if (!EMAIL_RE.test(saisie)) throw Object.assign(new Error('Adresse email invalide'), { status: 422 });
+    await db.pool.query('UPDATE leads SET email = $2, updated_at = NOW() WHERE id = $1', [lead.id, saisie]);
+    lead = { ...lead, email: saisie };
+  }
+  const row = await rowForLead(db, lead);
+  const regenere = !item.body;
+  const email = regenere ? generer(campaign, row, lead, await templateFor(db, campaign))
+    : { ok: true, mode: item.mode || campaign.mode, subject: item.subject, body: item.body, detail: null };
+  const ctl = await controles(db, lead, campaignId, { ignoreSelf: item.id });
+  const cls = classifyItem({ lead, row, controles: ctl, email });
+  const dejaRelu = item.statut !== 'exclu';
+  const statut = cls.statut === 'pret' && dejaRelu ? 'valide' : cls.statut;
+  const detail = regenere && email.ok ? email.detail : null;
+  const champs = regenere
+    ? `, mode = $5, subject = $6, body = $7, preuve_signal = $8, preuve_brut = $9, preuve_url = $10, preuve_date = $11, identite = $12`
+    : '';
+  const params = [item.id, (lead.email || '').trim() || null, statut, statut === 'valide' ? null : cls.raison];
+  if (regenere) params.push(email.ok ? email.mode : null, email.ok ? email.subject : null, email.ok ? email.body : null,
+    detail ? detail.signal : null, detail ? detail.brut : null, detail ? detail.url_controlee : null, detail && detail.analyse_le ? detail.analyse_le : null, detail ? detail.identite : null);
+  await db.pool.query(
+    `UPDATE campaign_items SET to_email = $2, statut = $3, raison = $4, scheduled_email_id = NULL, scheduled_at = NULL, updated_at = NOW()${champs} WHERE id = $1`, params
+  );
+  return (await db.pool.query('SELECT * FROM campaign_items WHERE id = $1', [item.id])).rows[0];
+}
+
+// En lot. quoi = 'sans_email' : lignes exclues faute d'adresse dont la fiche a reçu une adresse
+// depuis ; quoi = 'echecs' : lignes en échec ou arrêtées. Les autres exclusions ne sont pas touchées.
+async function reprendreMany(db, campaignId, quoi) {
+  const r = quoi === 'echecs'
+    ? await db.pool.query("SELECT id FROM campaign_items WHERE campaign_id = $1 AND statut IN ('echec', 'arrete') ORDER BY id", [campaignId])
+    : await db.pool.query(
+      `SELECT i.id FROM campaign_items i JOIN leads l ON l.id = i.lead_id
+       WHERE i.campaign_id = $1 AND i.statut = 'exclu' AND i.raison LIKE 'aucune adresse%' AND COALESCE(l.email, '') <> '' ORDER BY i.id`, [campaignId]);
+  const out = { repris: 0, valide: 0, pret: 0, a_verifier: 0, exclu: 0, ignores: 0 };
+  for (const { id } of r.rows) {
+    try { const it = await reprendreItem(db, campaignId, id, {}); out.repris++; out[it.statut] = (out[it.statut] || 0) + 1; } catch { out.ignores++; }
+  }
+  return out;
+}
+
 async function validateMany(db, campaignId, itemIds, statut = 'valide') {
   let n = 0;
   for (const id of itemIds) {
@@ -523,6 +580,6 @@ async function checkSender(emailService, seoOutreach) {
 
 module.exports = {
   listCampaigns, getCampaign, getCampaignFull, stats, createCampaign, updateCampaign, addLeads, addFromCrawl,
-  updateItem, reanalyzeItem, validateMany, schedule, pause, resume, stop, removeCampaign, remplirModele,
+  updateItem, reanalyzeItem, reprendreItem, reprendreMany, validateMany, schedule, pause, resume, stop, removeCampaign, remplirModele,
   beforeSend, afterSent, afterFailed, afterCancelled, checkSender, controles, generer, ECHECS_PAUSE
 };

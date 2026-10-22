@@ -238,3 +238,61 @@ test('options de la fiche reprises en campagne : modèle du menu rempli, relance
     assert.equal(regen.mode, 'maintenance'); assert.equal(regen.statut, 'pret');
   });
 });
+
+test('reprise : adresse saisie sur une ligne exclue, exclus repris en lot, échec réessayé, désinscrit toujours bloqué', { skip: !hasDb() && 'TEST_DATABASE_URL absent' }, async () => {
+  await withSchema('campagne3', async ({ pool }) => {
+    const db = { pool };
+    const S = require('../services/campaignService');
+    const { typedResult, insertCrawlResult } = require('../controllers/crawlController');
+    for (const t of ['crawl_jobs', 'crawl_results', 'campaigns', 'campaign_items', 'scheduled_emails']) await createFromSchema(pool, t);
+    await pool.query('CREATE TABLE crawl_seen_domains (domain TEXT PRIMARY KEY, source VARCHAR(20), first_seen TIMESTAMP DEFAULT NOW())');
+    await pool.query(`CREATE TABLE leads (id SERIAL PRIMARY KEY, name TEXT, company TEXT, website TEXT, email TEXT, relation_status TEXT DEFAULT 'nouveau', status TEXT, crawl_result_id INTEGER, platform TEXT, angles TEXT, score INTEGER, notes TEXT, updated_at TIMESTAMP)`);
+    await pool.query(`CREATE TABLE interactions (id SERIAL PRIMARY KEY, contact_type VARCHAR(10), contact_id INT, type TEXT, reached TEXT, date TIMESTAMP DEFAULT NOW(), notes TEXT, next_followup_date DATE, next_followup_channel TEXT, followup_done BOOLEAN DEFAULT FALSE, relance_step INT)`);
+    await pool.query('CREATE TABLE email_optout (email TEXT PRIMARY KEY, source TEXT)');
+    await pool.query('CREATE TABLE email_log (id SERIAL PRIMARY KEY, to_email TEXT, source VARCHAR(40), created_at TIMESTAMP DEFAULT NOW())');
+    await pool.query('CREATE TABLE email_signatures (id SERIAL PRIMARY KEY, content TEXT, is_default BOOLEAN DEFAULT FALSE)');
+    await pool.query("INSERT INTO email_signatures (content, is_default) VALUES ('<p>Marc</p>', TRUE)");
+    process.env.OUTREACH_SENDER_NAME = 'Marc';
+    const job = await pool.query("INSERT INTO crawl_jobs (techno, nb_sites, statut) VALUES ('prestashop', 3, 'done') RETURNING id");
+    const mk = (domain) => insertCrawlResult(db, job.rows[0].id, typedResult({ domain, platform: 'PrestaShop', http_status: '200', final_url: `http://www.${domain}/`, https_final: 'non', ssl_ok: 'oui', title: domain, analyse_le: '2026-10-21T14:21:31+00:00' }));
+    const r1 = await mk('sansmail.fr'); const r2 = await mk('plustard.fr'); const r3 = await mk('echec.fr');
+    const l1 = (await pool.query("INSERT INTO leads (name, company, crawl_result_id) VALUES ('Sans mail', 'sansmail.fr', $1) RETURNING id", [r1])).rows[0].id;
+    const l2 = (await pool.query("INSERT INTO leads (name, company, crawl_result_id) VALUES ('Plus tard', 'plustard.fr', $1) RETURNING id", [r2])).rows[0].id;
+    const l3 = (await pool.query("INSERT INTO leads (name, company, email, crawl_result_id) VALUES ('Echec', 'echec.fr', 'contact@echec.fr', $1) RETURNING id", [r3])).rows[0].id;
+    const c = await S.createCampaign(db, { nom: 'Reprise', mode: 'preuve' });
+    const prep = await S.addLeads(db, c.id, [l1, l2, l3]);
+    assert.equal(prep.exclu, 2); assert.equal(prep.pret, 1);
+    const items = Object.fromEntries((await S.getCampaignFull(db, c.id)).items.map((i) => [i.lead_id, i]));
+    assert.match(items[l1].raison, /aucune adresse/);
+
+    // 1. Adresse saisie sur la ligne : enregistrée sur la fiche, ligne reclassée « prêt » sans recrawl, email présent.
+    await assert.rejects(S.reprendreItem(db, c.id, items[l1].id, { to_email: 'pas une adresse' }), /invalide/);
+    const rep1 = await S.reprendreItem(db, c.id, items[l1].id, { to_email: 'Contact@SansMail.fr' });
+    assert.equal(rep1.statut, 'pret'); assert.equal(rep1.to_email, 'contact@sansmail.fr'); assert.ok(rep1.body);
+    assert.equal((await pool.query('SELECT email FROM leads WHERE id = $1', [l1])).rows[0].email, 'contact@sansmail.fr');
+    // Une ligne « prêt » ne se reprend pas (elle se relit).
+    await assert.rejects(S.reprendreItem(db, c.id, items[l1].id, {}), /exclues, en échec ou arrêtées/);
+
+    // 2. En lot : seule la fiche qui a reçu une adresse depuis est reprise ; un désinscrit reste exclu.
+    let lot = await S.reprendreMany(db, c.id, 'sans_email');
+    assert.equal(lot.repris, 0, 'rien tant que la fiche n\'a pas d\'adresse');
+    await pool.query("UPDATE leads SET email = 'stop@plustard.fr' WHERE id = $1", [l2]);
+    await pool.query("INSERT INTO email_optout (email, source) VALUES ('stop@plustard.fr', 'lien')");
+    lot = await S.reprendreMany(db, c.id, 'sans_email');
+    assert.equal(lot.repris, 1); assert.equal(lot.exclu, 1);
+    assert.match((await pool.query('SELECT raison FROM campaign_items WHERE id = $1', [items[l2].id])).rows[0].raison, /définitivement/);
+
+    // 3. Échec réessayé : contrôles rejoués, ligne remise en « validé », ancien envoi délié ; elle repart au prochain « Programmer ».
+    await S.updateItem(db, c.id, items[l3].id, { statut: 'valide' });
+    await S.schedule(db, c.id, {});
+    const se = (await pool.query('SELECT * FROM scheduled_emails WHERE campaign_item_id = $1', [items[l3].id])).rows[0];
+    await S.afterFailed(db, se, 'SMTP 550', true);
+    assert.equal((await pool.query('SELECT statut FROM campaign_items WHERE id = $1', [items[l3].id])).rows[0].statut, 'echec');
+    const rep3 = await S.reprendreItem(db, c.id, items[l3].id, {});
+    assert.equal(rep3.statut, 'valide'); assert.equal(rep3.raison, null); assert.equal(rep3.scheduled_email_id, null);
+    const again = await S.schedule(db, c.id, {});
+    assert.equal(again.programmes, 1);
+    // Réessayer en lot sur une campagne sans échec : rien à faire.
+    assert.equal((await S.reprendreMany(db, c.id, 'echecs')).repris, 0);
+  });
+});

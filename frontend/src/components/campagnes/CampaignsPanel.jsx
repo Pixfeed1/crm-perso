@@ -37,7 +37,7 @@ const fmt = (s) => { if (!s) return ''; const d = new Date(s); return isNaN(d) ?
 const fmtDate = (s) => { if (!s) return ''; const d = new Date(s); return isNaN(d) ? '' : d.toLocaleDateString('fr-FR'); };
 const VUES = [
   { key: 'pret', label: 'Prêts à valider' }, { key: 'a_verifier', label: 'À vérifier' }, { key: 'valide', label: 'Validés' },
-  { key: 'programme', label: 'Programmés' }, { key: 'envoye', label: 'Envoyés' }, { key: 'exclu', label: 'Exclus' }, { key: 'tous', label: 'Tous' }
+  { key: 'programme', label: 'Programmés' }, { key: 'envoye', label: 'Envoyés' }, { key: 'echec', label: 'Échecs' }, { key: 'exclu', label: 'Exclus' }, { key: 'tous', label: 'Tous' }
 ];
 
 // ─── Liste ───────────────────────────────────────────────────────────────────
@@ -113,8 +113,12 @@ const CampaignList = ({ onOpen }) => {
 };
 
 // ─── Ligne dépliable ────────────────────────────────────────────────────────
-const ItemRow = ({ item, campaign, selected, onToggle, onChange, onReanalyze }) => {
+const ItemRow = ({ item, campaign, selected, onToggle, onChange, onReanalyze, onReprendre }) => {
   const [reanalyzing, setReanalyzing] = useState(false);
+  const [adresse, setAdresse] = useState('');
+  const [reprise, setReprise] = useState(false);
+  const sansAdresse = item.statut === 'exclu' && /^aucune adresse/i.test(item.raison || '');
+  const reprendre = async (to_email) => { setReprise(true); try { await onReprendre(item.id, to_email); setAdresse(''); } finally { setReprise(false); } };
   const [open, setOpen] = useState(false);
   const [subject, setSubject] = useState(item.subject || '');
   const [body, setBody] = useState(item.body || '');
@@ -157,6 +161,16 @@ const ItemRow = ({ item, campaign, selected, onToggle, onChange, onReanalyze }) 
               className="p-2 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-strong disabled:opacity-50" title="Réanalyser le site (mesures du jour, SIRENE), régénérer l'email et reclasser la ligne">
               <FiRefreshCw size={14} className={reanalyzing ? 'animate-spin' : ''} />
             </button>
+          )}
+          {sansAdresse && (
+            <form onSubmit={(e) => { e.preventDefault(); if (adresse.trim()) reprendre(adresse.trim()); }} className="flex items-center gap-1">
+              <input type="email" value={adresse} onChange={(e) => setAdresse(e.target.value)} placeholder="adresse@domaine.fr" required
+                className="px-2 py-1 text-xs rounded-lg bg-surface border border-border text-text-primary w-48" />
+              <button type="submit" disabled={reprise || !adresse.trim()} className="px-2.5 py-1 text-xs rounded-lg bg-accent text-white hover:bg-accent-hover disabled:opacity-50" title="Enregistrer l'adresse sur la fiche et reclasser la ligne">{reprise ? '…' : 'Reprendre'}</button>
+            </form>
+          )}
+          {['echec', 'arrete'].includes(item.statut) && (
+            <button onClick={() => reprendre()} disabled={reprise} className="px-2.5 py-1 text-xs rounded-lg bg-accent text-white hover:bg-accent-hover disabled:opacity-50 flex items-center gap-1" title="Contrôles rejoués, ligne remise en validé : elle part au prochain « Programmer »"><FiRefreshCw size={12} className={reprise ? 'animate-spin' : ''} /> Réessayer</button>
           )}
           {['pret', 'a_verifier', 'valide'].includes(item.statut) && <button onClick={() => act({ statut: 'exclu', raison: 'écarté à la relecture' })} className="p-2 rounded-lg text-text-muted hover:text-danger-text hover:bg-surface-strong" title="Exclure"><FiSlash size={14} /></button>}
           {['envoye', 'programme'].includes(item.statut) && (
@@ -238,7 +252,7 @@ const CampaignView = ({ id, onBack }) => {
   if (!data) return <div className="text-center py-10 text-text-muted"><FiLoader className="inline animate-spin" /> Chargement…</div>;
   const { campaign, items, stats } = data;
   const b = badge(STATUT_CAMPAGNE, campaign.statut);
-  const visibles = vue === 'tous' ? items : items.filter((i) => i.statut === vue);
+  const visibles = vue === 'tous' ? items : vue === 'echec' ? items.filter((i) => ['echec', 'arrete'].includes(i.statut)) : items.filter((i) => i.statut === vue);
   const counts = stats.par_statut || {};
   const selectables = visibles.filter((i) => ['pret', 'a_verifier', 'valide'].includes(i.statut));
 
@@ -248,6 +262,20 @@ const CampaignView = ({ id, onBack }) => {
       toast.success(r.analyse && r.analyse.preuves && r.analyse.preuves.length ? `Réanalysé : ${r.analyse.preuves.join(', ')} · ligne ${badge(STATUT_LIGNE, r.item.statut).label.toLowerCase()}` : `Réanalysé : aucune preuve · ligne ${badge(STATUT_LIGNE, r.item.statut).label.toLowerCase()}`);
       load();
     } catch (e) { toast.error(e.message || 'Réanalyse impossible'); }
+  };
+  const reprendreItem = async (itemId, to_email) => {
+    try {
+      const it = await campagnesAPI.reprendreItem(id, itemId, to_email);
+      toast.success(`Ligne ${badge(STATUT_LIGNE, it.statut).label.toLowerCase()}${it.raison ? ` : ${it.raison}` : ''}`);
+      load();
+    } catch (e) { toast.error(e.message || 'Reprise impossible'); }
+  };
+  const reprendreTous = async (quoi) => {
+    try {
+      const r = await campagnesAPI.reprendreMany(id, quoi);
+      toast.success(r.repris ? `${r.repris} ligne${r.repris > 1 ? 's' : ''} reprise${r.repris > 1 ? 's' : ''} : ${r.valide} validée${r.valide > 1 ? 's' : ''}, ${r.pret} prête${r.pret > 1 ? 's' : ''}, ${r.a_verifier} à vérifier, ${r.exclu} toujours exclue${r.exclu > 1 ? 's' : ''}` : 'Rien à reprendre : aucune fiche n\'a reçu d\'adresse');
+      load();
+    } catch (e) { toast.error(e.message || 'Reprise impossible'); }
   };
   const changeItem = async (itemId, payload) => {
     try {
@@ -402,9 +430,19 @@ const CampaignView = ({ id, onBack }) => {
         {VUES.map((v) => (
           <button key={v.key} onClick={() => { setVue(v.key); setSelected(new Set()); }}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${vue === v.key ? 'bg-accent text-white' : 'bg-surface-strong text-text-secondary hover:bg-border-strong'}`}>
-            {v.label} ({v.key === 'tous' ? stats.total : (counts[v.key] || 0)})
+            {v.label} ({v.key === 'tous' ? stats.total : v.key === 'echec' ? (counts.echec || 0) + (counts.arrete || 0) : (counts[v.key] || 0)})
           </button>
         ))}
+        {vue === 'exclu' && items.some((i) => i.statut === 'exclu' && /^aucune adresse/i.test(i.raison || '')) && (
+          <button onClick={() => reprendreTous('sans_email')} className="px-3 py-1.5 rounded-lg text-sm bg-surface-strong text-text-primary hover:bg-border-strong flex items-center gap-1" title="Reclasse les lignes exclues faute d'adresse dont la fiche a reçu une adresse depuis. Les autres exclusions ne bougent pas.">
+            <FiRefreshCw size={14} /> Reprendre les exclus sans email ({items.filter((i) => i.statut === 'exclu' && /^aucune adresse/i.test(i.raison || '')).length})
+          </button>
+        )}
+        {vue === 'echec' && visibles.length > 0 && (
+          <button onClick={() => reprendreTous('echecs')} className="px-3 py-1.5 rounded-lg text-sm bg-surface-strong text-text-primary hover:bg-border-strong flex items-center gap-1" title="Contrôles rejoués, lignes remises en validé : elles partent au prochain « Programmer ».">
+            <FiRefreshCw size={14} /> Réessayer les échecs ({visibles.length})
+          </button>
+        )}
       </div>
       {selectables.length > 0 && (
         <div className="flex items-center gap-2 mb-3 flex-wrap">
@@ -420,11 +458,11 @@ const CampaignView = ({ id, onBack }) => {
         </div>
       ) : (
         <div className="space-y-2">
-          {visibles.map((it) => <ItemRow key={it.id} item={it} campaign={campaign} selected={selected.has(it.id)} onToggle={(iid) => setSelected((p) => { const n = new Set(p); if (n.has(iid)) n.delete(iid); else n.add(iid); return n; })} onChange={changeItem} onReanalyze={reanalyzeItem} />)}
+          {visibles.map((it) => <ItemRow key={it.id} item={it} campaign={campaign} selected={selected.has(it.id)} onToggle={(iid) => setSelected((p) => { const n = new Set(p); if (n.has(iid)) n.delete(iid); else n.add(iid); return n; })} onChange={changeItem} onReanalyze={reanalyzeItem} onReprendre={reprendreItem} />)}
         </div>
       )}
       <p className="text-xs text-text-muted mt-4 flex items-center gap-1"><FiCheck size={12} /> Chaque email est généré par les règles validées : présentation PixFeed, preuve vérifiée ou maintenance sans alerte, refus discret. Aucune relance automatique n'est créée.</p>
-      <p className="text-xs text-text-muted mt-1 flex items-center gap-1"><FiXCircle size={12} /> Une ligne exclue ne part jamais : désinscrit, sollicité depuis moins de 90 jours, autre campagne active, fiche fermée, site bloqué par le crawl.</p>
+      <p className="text-xs text-text-muted mt-1 flex items-center gap-1"><FiXCircle size={12} /> Une ligne exclue ne part jamais : désinscrit, sollicité depuis moins de 90 jours, autre campagne active, fiche fermée, site bloqué par le crawl. Une ligne exclue faute d'adresse se reprend en saisissant l'adresse ; un échec se réessaie après « Programmer ».</p>
     </div>
   );
 };
