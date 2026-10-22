@@ -1,7 +1,8 @@
 // Email par la preuve : une seule affirmation vérifiable, refus sans preuve.
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { buildProofEmail, PREUVES_ORDRE, nomCourt } = require('../services/proofEmailService');
+const P = require('../services/proofEmailService');
+const { buildProofEmail, PREUVES_ORDRE, nomCourt } = P;
 
 test('Equip\'Tout : la preuve retenue est le nom mal orthographié, avec le nom en casse lisible', () => {
   const r = { domain: 'www.equiptout.fr', title: 'Equit Tout', raison_sociale: "EQUIP'TOUT", sirene_match: 'sur', gerant: 'Maxime Lambin',
@@ -99,4 +100,13 @@ test('portées sobres : aucune affirmation sur Google ou les clients qu\'on ne p
   // Copyright ancien et sitemap vide ne sont plus des motifs d'email.
   assert.equal(buildProofEmail({ domain: 'e.fr', title: 'E', copyright_annee: 2019, http_status: 200 }, {}).ok, false);
   assert.equal(buildProofEmail({ domain: 'a.fr', title: 'A', sitemap: 'vide', http_status: 200 }, {}).ok, false);
+});
+
+test('entreprise individuelle : la boutique est l\'enseigne, jamais le nom de la personne', () => {
+  const base = { domain: 'creasence.fr', platform: 'PrestaShop', http_status: '200', title: 'Creasence – Bougies artisanales', sirene_match: 'sur', gerant_nom: 'PERNET', gerant_prenom: 'AMANDINE' };
+  const ligne = (r) => P.buildMaintenanceEmail(r, {}).body.split('\n')[4];
+  assert.equal(ligne({ ...base, raison_sociale: 'AMANDINE PERNET (CREASENCE)' }), 'J\'ai découvert votre boutique Creasence.');
+  assert.equal(ligne({ ...base, raison_sociale: 'PERNET AMANDINE' }), 'J\'ai découvert votre boutique Creasence.'); // pas d'enseigne : titre du site
+  assert.equal(P.buildMaintenanceEmail({ ...base, raison_sociale: 'AMANDINE PERNET (CREASENCE)' }, {}).subject, 'Suivi technique de Creasence');
+  assert.equal(ligne({ ...base, raison_sociale: 'AGRIGOM SAS', gerant_nom: 'SAVARY', gerant_prenom: 'FRANCK', title: 'Accueil - AGRIGOM SAS' }), 'J\'ai découvert votre boutique Agrigom.'); // société : raison sociale conservée
 });

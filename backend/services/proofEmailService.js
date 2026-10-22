@@ -176,13 +176,28 @@ function salutation(r, lead) {
   return nom ? `Bonjour ${nom},` : 'Bonjour,';
 }
 
+// « PERNET AMANDINE » ou « AMANDINE PERNET » = le dirigeant SIRENE ? (nom et prénom tous deux présents)
+function estLaPersonne(nom, r) {
+  const fold = (x) => String(x || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z\s-]/g, ' ').split(/[\s-]+/).filter(Boolean);
+  const mots = new Set(fold(nom));
+  const n = fold(r.gerant_nom), p = fold(r.gerant_prenom);
+  if (!n.length || !mots.size) return false;
+  return n.every((x) => mots.has(x)) && (!p.length || p.some((x) => mots.has(x)));
+}
+
 // Nom de la boutique tel qu'elle se présente : début du titre, avant le séparateur.
 function nomBoutique(r) {
   // Raison sociale SÛRE d'abord (SIRENE), sinon le segment du titre qui ressemble le plus à un
   // nom : le plus court (« Gourmands d'Antan » plutôt que « Epicerie fine gourmande en ligne »).
   if (matchSur(r) && r.raison_sociale) {
     const rs = String(r.raison_sociale).trim();
-    if (rs.length <= 40) return joliNom(rs);
+    // Entreprise individuelle : l'annuaire donne « AMANDINE PERNET (CREASENCE) », le nom de la
+    // personne puis l'enseigne. La boutique, c'est l'enseigne ; un nom de personne n'est jamais
+    // un nom de boutique (on passe alors au titre du site).
+    const m = rs.match(/^(.*?)\s*\(([^)]+)\)\s*$/);
+    const base = (m ? m[1] : rs).trim();
+    if (!estLaPersonne(base, r)) { if (rs.length <= 40) return joliNom(rs); }
+    else if (m && m[2].trim().length >= 2 && m[2].trim().length <= 40) return joliNom(m[2].trim());
   }
   // Segments du titre : séparateurs « - | – — : », puis coupe à la virgule (« Atelier du sucre,
   // la boutique en ligne » -> « Atelier du sucre ») et forme juridique retirée (« AGRIGOM SAS »).
