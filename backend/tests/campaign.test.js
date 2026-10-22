@@ -158,10 +158,16 @@ test('parcours complet : préparer, relire, programmer, hooks du worker, pause a
     assert.equal((await S.getCampaign(db, c3.id)).statut, 'pause');
     assert.equal((await pool.query('SELECT statut FROM campaign_items WHERE id = $1', [ses3[0].campaign_item_id])).rows[0].statut, 'echec');
     await S.resume(db, c3.id);
+    // Adresse inexistante : rebond (pas échec), adresse bloquée, et pas de pause pour autant.
+    await S.afterFailed(db, ses3[1], `550 5.1.1 <${ses3[1].to_email}>: Recipient address rejected: User unknown`, true);
+    const it6 = (await pool.query('SELECT statut, raison FROM campaign_items WHERE id = $1', [ses3[1].campaign_item_id])).rows[0];
+    assert.equal(it6.statut, 'rebond'); assert.match(it6.raison, /Adresse inexistante/);
+    assert.equal((await pool.query('SELECT COUNT(*)::int AS n FROM email_optout WHERE email = $1', [ses3[1].to_email])).rows[0].n, 1, 'adresse rebondie bloquée');
+    assert.equal((await S.getCampaign(db, c3.id)).statut, 'en_cours', 'un rebond ne compte pas dans les échecs consécutifs');
     const stopped = await S.stop(db, c3.id);
     assert.equal(stopped.annules, 2);
     assert.equal((await pool.query("SELECT COUNT(*)::int AS n FROM scheduled_emails WHERE campaign_id = $1 AND status = 'cancelled'", [c3.id])).rows[0].n, 2);
-    assert.equal((await pool.query("SELECT COUNT(*)::int AS n FROM campaign_items WHERE campaign_id = $1 AND statut = 'arrete'", [c3.id])).rows[0].n, 1);
+    assert.equal((await pool.query("SELECT COUNT(*)::int AS n FROM campaign_items WHERE campaign_id = $1 AND statut = 'arrete'", [c3.id])).rows[0].n, 0, 'échec et rebond ne sont pas touchés par l\'arrêt');
     await assert.rejects(S.addLeads(db, c3.id, [l5]), /arrêtée/);
     // « Commencer le » : les créneaux partent de la date choisie, pas de maintenant.
     const c4 = await S.createCampaign(db, { nom: 'Différée' });

@@ -114,12 +114,13 @@ const markAsSent = async (db, emailId) => {
  * @param {string} errorMessage - Message d'erreur
  * @returns {Promise<Object>} - Email mis à jour
  */
-const markAsFailed = async (db, emailId, errorMessage) => {
+// permanent = erreur SMTP 5xx : échec définitif tout de suite, sans nouvelle tentative.
+const markAsFailed = async (db, emailId, errorMessage, { permanent = false } = {}) => {
   try {
     const result = await db.pool.query(
       `UPDATE scheduled_emails
        SET status = CASE
-             WHEN retry_count + 1 >= max_retries THEN 'failed'
+             WHEN $3::boolean OR retry_count + 1 >= max_retries THEN 'failed'
              ELSE 'pending'
            END,
            retry_count = retry_count + 1,
@@ -127,7 +128,7 @@ const markAsFailed = async (db, emailId, errorMessage) => {
            updated_at = NOW()
        WHERE id = $1
        RETURNING *`,
-      [emailId, errorMessage]
+      [emailId, errorMessage, !!permanent]
     );
 
     return result.rows[0];

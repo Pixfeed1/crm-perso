@@ -6,6 +6,7 @@ const emailTracking = require('./emailTracking');
 const seoOutreach = require('./seoOutreachService'); // transport Gmail perso (choix d'expéditeur)
 const optout = require('./optout'); // désinscription RGPD (emails de prospection)
 const campaigns = require('./campaignService'); // hooks des campagnes de prospection (recontrôle avant envoi, pause, arrêt)
+const smtpErrors = require('../utils/smtpErrors'); // 5xx = définitif (pas de reprise) ; adresse inexistante = rebond
 
 /**
  * WORKER POUR L'ENVOI AUTOMATIQUE DES EMAILS PROGRAMMÉS
@@ -208,10 +209,14 @@ class ScheduledEmailWorker {
     } catch (error) {
       console.error(`❌ Erreur envoi email #${email.id}:`, error.message);
 
-      // Marquer comme échoué
-      const apres = await scheduledEmailModel.markAsFailed(this.db, email.id, error.message);
+      // Marquer comme échoué. Erreur SMTP permanente (5xx) : définitif tout de suite, le worker
+      // ne réessaie pas (inutile, et trois tentatives sur une adresse morte pèsent sur la réputation).
+      const permanent = smtpErrors.isPermanentSmtpError(error);
+      const texte = smtpErrors.smtpErrorText(error);
+      if (permanent) console.log(`   ↳ erreur permanente (${smtpErrors.smtpCode(error)}), aucune nouvelle tentative`);
+      const apres = await scheduledEmailModel.markAsFailed(this.db, email.id, texte, { permanent });
       this.errorCount++;
-      if (email.campaign_id) await campaigns.afterFailed(this.db, email, error.message, !!(apres && apres.status === 'failed')).catch((e) => console.error('[Campagnes] afterFailed:', e.message));
+      if (email.campaign_id) await campaigns.afterFailed(this.db, email, texte, !!(apres && apres.status === 'failed')).catch((e) => console.error('[Campagnes] afterFailed:', e.message));
     }
   }
 

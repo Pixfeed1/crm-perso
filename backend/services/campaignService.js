@@ -10,6 +10,7 @@
 // test vers des adresses à soi. Tout en db.pool.query.
 const scheduledEmailModel = require('../models/scheduledEmailModel');
 const optout = require('./optout');
+const smtpErrors = require('../utils/smtpErrors');
 const proof = require('./proofEmailService');
 const crawl = require('../controllers/crawlController');
 const { classifyItem, planSlots } = require('../utils/campaignRules');
@@ -538,6 +539,14 @@ async function afterSent(db, email) {
 
 async function afterFailed(db, email, erreur, definitif) {
   if (!email.campaign_id) return;
+  // Adresse inexistante (550 5.1.1 « User unknown »…) : c'est un rebond, pas un problème
+  // d'expéditeur. Ligne en « rebond », adresse bloquée comme un marquage à la main, et ça ne
+  // compte pas dans les échecs consécutifs qui mettent la campagne en pause.
+  if (definitif && smtpErrors.isRecipientUnknown(erreur)) {
+    if (email.campaign_item_id) await db.pool.query("UPDATE campaign_items SET statut = 'rebond', raison = $2, updated_at = NOW() WHERE id = $1", [email.campaign_item_id, `Adresse inexistante (rebond) : ${String(erreur || '').slice(0, 250)}`]);
+    if (email.to_email) await optout.addOptout(db, email.to_email, 'rebond').catch(() => {});
+    return;
+  }
   if (definitif && email.campaign_item_id) await db.pool.query("UPDATE campaign_items SET statut = 'echec', raison = $2, updated_at = NOW() WHERE id = $1", [email.campaign_item_id, String(erreur || '').slice(0, 300)]);
   const r = await db.pool.query('UPDATE campaigns SET echecs_consecutifs = echecs_consecutifs + 1, updated_at = NOW() WHERE id = $1 RETURNING echecs_consecutifs', [email.campaign_id]);
   if (r.rows[0] && r.rows[0].echecs_consecutifs >= ECHECS_PAUSE) {
