@@ -193,3 +193,50 @@ et passe l'annonce en « traité ». Le front ouvre la fiche.
 Pour vérifier qu'une URL est bien un flux avant de l'ajouter (sur le serveur) :
 `curl -sS -A "Mozilla/5.0" -o /dev/null -w "%{http_code} %{content_type}\n" URL` doit renvoyer 200 et
 un type xml/rss/atom.
+
+## Diffuseur : diffusion des créations 3D (phase 1)
+
+Onglet **Diffuseur** du menu. Prépare la diffusion des rendus Daz Studio : rien n'est publié
+automatiquement, sauf Bluesky après validation (voir plus bas).
+
+1. **Scène** : nom, article jurojin.net facultatif, tableau Pinterest, case « scène sensible »
+   (seulement X, à publier à la main), assets Daz avec leur lien affilié CJ.
+2. **Rendus** : envoi par le navigateur, 50 Mo par image, 12 par envoi (`routes/diffuseurRoutes.js`).
+   L'original reste privé (`uploads/diffuseur/originaux`, ignoré par git). Copies publiques dans
+   `DIFFUSEUR_MEDIA_DIR/r/` (défaut `/home/jurojinn/media.jurojin.net`), servies par
+   `DIFFUSEUR_MEDIA_URL` (défaut `https://media.jurojin.net`) : JPEG sRGB **sans aucune métadonnée**
+   (ni EXIF, ni XMP, ni logiciel de rendu), recadrage 4:5 Instagram autour d'un point d'intérêt
+   (stratégie « attention » de sharp, déplaçable d'un clic), copie Bluesky sous 950 ko. Noms neutres :
+   nom de la scène + numéro + suffixe aléatoire.
+3. **Textes** : un appel Claude par image (`services/diffuseurTextes.js`, SDK `@anthropic-ai/sdk`,
+   modèle `DIFFUSEUR_MODEL`, défaut `claude-sonnet-5-5`, clé `ANTHROPIC_API_KEY`). Claude voit l'image et
+   rend, en français et en anglais, légende Instagram, titre et description Pinterest, texte court X et
+   Bluesky, texte alternatif, hashtags et mots-clés, en JSON contraint par un schéma. Le code contrôle
+   ensuite : aucune émoticône ni pictogramme, aucune liste, aucun tiret cadratin, aucun lien, aucune
+   mention de PixFeed ; une seule nouvelle tentative, sinon refus. Le repli serveur
+   (`fallbacks: "default"`) est activé : si le modèle décline une image, l'API la rejoue sur un autre
+   modèle. Le lien, la mention « Lien affilié / Affiliate link » et les hashtags finaux sont ajoutés par
+   le code (`utils/diffuseurRules.js` → `composer`), jamais par le modèle ; Instagram ne reçoit ni lien
+   ni mention (liens non cliquables).
+4. **Liens** : Pinterest → lien affilié de l'asset principal de l'image ; ailleurs, image principale →
+   article jurojin, sinon lien affilié. Modifiable par publication.
+5. **Calendrier** : une image par jour sur toutes ses plateformes, scènes alternées, jamais deux jours
+   de suite la même scène (les images restantes d'une scène seule attendent). Replanifier déplace les
+   publications non parties.
+6. **Validation** : chaque publication se valide, se modifie ou se rejette. Validation refusée sans
+   date, si le texte dépasse la limite de la plateforme (X : lien compté 23) ou enfreint les règles.
+7. **Exports CSV** (publications validées) : Pinterest, Meta Business Suite (Instagram + Facebook), X.
+   Les colonnes suivent la ligne d'en-tête collée dans les réglages : aucun modèle officiel n'a pu être
+   confirmé, collez celle du modèle vierge téléchargé depuis votre compte.
+
+**Bluesky via JurojinReposter** : une publication Bluesky validée et datée est déposée dans
+`DIFFUSEUR_BLUESKY_INBOX` (défaut `/home/jurojinn/auto.spindel.fr/JurojinReposter/data/crm_inbox`) ;
+la commande `python -m cli.crm_inbox` de JurojinReposter (cron toutes les 15 minutes, branche
+`claude/diffuseur-bluesky`) la publie sur jurojinet.bsky.social à l'heure prévue et écrit le résultat
+dans `crm_outbox/`, relu par le CRM à chaque ouverture de l'écran. Dévalider, rejeter ou modifier une
+publication non partie retire son dépôt.
+
+**Phase 2** : tables `diffuseur_connexions` et `diffuseur_file` créées, non utilisées.
+
+Tests : `diffuseurRules`, `diffuseurImages` (rendu fictif avec EXIF « DAZ Studio »), `diffuseurTextes`
+(requête du SDK vers un faux serveur local), `diffuseur` (scène fictive de bout en bout en base jetable).
