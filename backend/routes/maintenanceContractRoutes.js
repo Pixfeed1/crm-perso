@@ -29,6 +29,12 @@ router.put('/:id', contractController.updateContract);
 // PUT /api/maintenance-contracts/:id/pagespeed - Mettre à jour les scores PageSpeed
 router.put('/:id/pagespeed', contractController.updatePageSpeed);
 
+// Contrat complet et conditions à télécharger
+router.get('/:id/contrat', contractController.getContrat);
+router.put('/:id/contrat', contractController.saveContrat);
+router.get('/:id/contrat/pdf', contractController.downloadContrat);
+router.get('/:id/conditions/pdf', contractController.downloadConditions);
+
 // POST /api/maintenance-contracts/:id/billing/checkout - Créer la session de prélèvement (Stripe)
 router.post('/:id/billing/checkout', contractController.createBillingCheckout);
 

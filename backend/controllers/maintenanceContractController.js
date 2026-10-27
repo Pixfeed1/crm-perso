@@ -3,6 +3,7 @@ const maintenanceContractModel = require('../models/maintenanceContractModel');
 const maintenanceBillingService = require('../services/maintenanceBillingService');
 const emailService = require('../services/emailService');
 const conditionsService = require('../services/conditionsService');
+const contratMaintenance = require('../services/contratMaintenance');
 
 // Convertit les pièces jointes reçues du front (base64) en pièces jointes nodemailer.
 function parseClientAttachments(list) {
@@ -324,5 +325,93 @@ const maintenanceContractController = {
     }
   }
 };
+
+// ─── Contrat PDF et conditions à télécharger ───────────────────────────────
+// Les informations propres au contrat (raison sociale, représentant, devis…) sont enregistrées sur
+// le contrat de maintenance ; celles du prestataire (forme juridique, mention TVA, tribunal) dans
+// settings.contrat_prestataire, communes à tous les contrats.
+const CHAMPS_CONTRAT = [...contratMaintenance.CHAMPS_CLIENT, ...contratMaintenance.CHAMPS_SERVICE, ...contratMaintenance.CHAMPS_DEVIS, 'date_signature'];
+
+async function chargerPourContrat(db, id) {
+  const { rows } = await db.pool.query(
+    `SELECT mc.*, c.name AS client_name, c.email AS client_email, c.address AS client_address, c.siret AS client_siret, c.notes AS client_notes
+     FROM maintenance_contracts mc LEFT JOIN crm_clients c ON mc.client_id = c.id WHERE mc.id = $1`, [id]);
+  const contract = rows[0];
+  if (!contract) throw Object.assign(new Error('Contrat de maintenance introuvable.'), { status: 404 });
+  const client = { name: contract.client_name, address: contract.client_address, siret: contract.client_siret, notes: contract.client_notes };
+  const company = (await db.pool.query('SELECT * FROM company_settings ORDER BY id LIMIT 1').catch(() => ({ rows: [] }))).rows[0] || {};
+  const presta = (await db.pool.query("SELECT value FROM settings WHERE key = 'contrat_prestataire'").catch(() => ({ rows: [] }))).rows[0];
+  const infos = { ...contratMaintenance.prefill(contract, client), ...(contract.contrat_infos || {}), ...((presta && presta.value) || {}) };
+  return { contract, client, company, infos };
+}
+
+const nettoyer = (v) => String(v == null ? '' : v).trim().slice(0, 500);
+
+Object.assign(maintenanceContractController, {
+  // GET /:id/contrat -> champs préremplis (fiche client, puis valeurs déjà enregistrées)
+  getContrat: async (req, res) => {
+    try {
+      const { contract, infos } = await chargerPourContrat(req.app.locals.db, req.params.id);
+      res.json({ infos, formule: conditionsService.maintenanceConditions(contract.plan), enregistre: !!contract.contrat_infos });
+    } catch (e) {
+      if (!e.status) console.error('[MaintenanceContract] getContrat:', e.message);
+      res.status(e.status || 500).json({ message: e.status ? e.message : 'Erreur serveur' });
+    }
+  },
+
+  // PUT /:id/contrat { ...champs } -> enregistre les champs du contrat et ceux du prestataire
+  saveContrat: async (req, res) => {
+    const db = req.app.locals.db;
+    const b = req.body || {};
+    try {
+      await chargerPourContrat(db, req.params.id);
+      const infos = Object.fromEntries(CHAMPS_CONTRAT.filter((k) => b[k] !== undefined).map((k) => [k, nettoyer(b[k])]));
+      await db.pool.query('UPDATE maintenance_contracts SET contrat_infos = COALESCE(contrat_infos, \'{}\'::jsonb) || $2::jsonb, updated_at = NOW() WHERE id = $1', [req.params.id, JSON.stringify(infos)]);
+      const presta = Object.fromEntries(contratMaintenance.CHAMPS_PRESTATAIRE.filter((k) => b[k] !== undefined).map((k) => [k, nettoyer(b[k])]));
+      if (Object.keys(presta).length) {
+        await db.pool.query(
+          `INSERT INTO settings (key, value, description) VALUES ('contrat_prestataire', $1::jsonb, 'Forme juridique, mention TVA et tribunal repris dans les contrats de maintenance')
+           ON CONFLICT (key) DO UPDATE SET value = settings.value || EXCLUDED.value, updated_at = NOW()`, [JSON.stringify(presta)]);
+      }
+      const { infos: tout } = await chargerPourContrat(db, req.params.id);
+      res.json({ infos: tout });
+    } catch (e) {
+      if (!e.status) console.error('[MaintenanceContract] saveContrat:', e.message);
+      res.status(e.status || 500).json({ message: e.status ? e.message : 'Erreur serveur' });
+    }
+  },
+
+  // GET /:id/contrat/pdf -> contrat complet rempli (téléchargement)
+  downloadContrat: async (req, res) => {
+    try {
+      const { contract, company, infos } = await chargerPourContrat(req.app.locals.db, req.params.id);
+      const pdf = await contratMaintenance.renderPdf(contract, infos, company);
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${contratMaintenance.nomFichier(contract, infos)}"`);
+      res.send(Buffer.from(pdf));
+    } catch (e) {
+      console.error('[MaintenanceContract] downloadContrat:', e.message);
+      res.status(e.status || 500).json({ message: e.status ? e.message : 'Génération du contrat impossible' });
+    }
+  },
+
+  // GET /:id/conditions/pdf -> conditions de la formule (même document que celui joint au lien de paiement)
+  downloadConditions: async (req, res) => {
+    try {
+      const { contract } = await chargerPourContrat(req.app.locals.db, req.params.id);
+      const { type, label } = conditionsService.maintenanceConditions(contract.plan);
+      const pdf = await conditionsService.renderConditionsPdf(type, {
+        client_name: contract.client_name || '', site_url: contract.site_url || '',
+        price: formatEur(contract.monthly_amount), date: new Date().toLocaleDateString('fr-FR')
+      });
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="Conditions_Maintenance_${label}.pdf"`);
+      res.send(Buffer.from(pdf));
+    } catch (e) {
+      console.error('[MaintenanceContract] downloadConditions:', e.message);
+      res.status(e.status || 500).json({ message: e.status ? e.message : 'Génération des conditions impossible' });
+    }
+  }
+});
 
 module.exports = maintenanceContractController;

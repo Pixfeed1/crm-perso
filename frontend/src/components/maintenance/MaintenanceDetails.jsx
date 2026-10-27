@@ -9,12 +9,15 @@ import { useConfirm } from '../../hooks/useConfirm';
 import Modal from '../common/Modal';
 import ConfirmModal from '../common/ConfirmModal';
 import BillingLinkEmailModal from '../billing/BillingLinkEmailModal';
+import ContratModal, { telecharger } from './ContratModal';
 
 const MaintenanceDetails = ({ contract, onDelete, onRefresh, onEdit, onGenerateReport }) => {
   const { toast } = useToast();
   const { confirm, confirmState } = useConfirm();
   const [sendingReport, setSendingReport] = useState(null);
   const [billingEmailOpen, setBillingEmailOpen] = useState(false);
+  const [contratOpen, setContratOpen] = useState(false);
+  const [conditionsLoading, setConditionsLoading] = useState(false);
   const [billingUrl, setBillingUrl] = useState(null);
   const [billingLoading, setBillingLoading] = useState(false);
   const [billingSending, setBillingSending] = useState(false);
@@ -365,6 +368,33 @@ const MaintenanceDetails = ({ contract, onDelete, onRefresh, onEdit, onGenerateR
             {freqSaving && <span className="text-xs">enregistrement…</span>}
           </div>
         </div>
+      </div>
+
+      {/* Section Contrat et conditions */}
+      <div className="border-t border-border pt-6">
+        <h3 className="text-lg font-medium text-text-primary flex items-center gap-2 mb-2">
+          <FiFileText />
+          Contrat et conditions
+        </h3>
+        <p className="text-sm text-text-muted mb-3">Le contrat complet à signer, rempli avec la fiche client et la formule, et les conditions de la formule (le document joint au lien de paiement).</p>
+        <div className="flex flex-wrap gap-2">
+          <button onClick={() => setContratOpen(true)} className="px-4 py-2 bg-accent hover:bg-indigo-700 text-white rounded-lg text-sm flex items-center gap-2">
+            <FiDownload size={16} /> Contrat (PDF)
+          </button>
+          <button
+            onClick={async () => {
+              setConditionsLoading(true);
+              try { await telecharger(await maintenanceContractsAPI.downloadConditions(contract.id), 'Conditions_Maintenance.pdf'); }
+              catch (e) { toast.error(e.message || 'Téléchargement impossible'); }
+              finally { setConditionsLoading(false); }
+            }}
+            disabled={conditionsLoading}
+            className="px-4 py-2 bg-surface-strong hover:bg-border-strong text-text-primary rounded-lg text-sm flex items-center gap-2 disabled:opacity-50"
+          >
+            <FiDownload size={16} /> {conditionsLoading ? 'Génération…' : 'Conditions (PDF)'}
+          </button>
+        </div>
+        <ContratModal isOpen={contratOpen} onClose={() => setContratOpen(false)} contract={contract} />
       </div>
 
       {/* Section Prélèvement */}

@@ -1034,6 +1034,7 @@ const DATABASE_SCHEMA = {
       next_report_due: 'DATE',
       plugins_count: 'INTEGER DEFAULT 0',
       notes: 'TEXT',
+      contrat_infos: 'JSONB',                 // champs du contrat PDF (raison sociale, représentant, devis…)
       created_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP',
       updated_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'
     },

@@ -1272,7 +1272,12 @@ export const maintenanceContractsAPI = {
   resumeBilling: (id) => {
     console.log(`Appel API: réactivation prélèvement contrat ${id}`);
     return apiRequest(`/maintenance-contracts/${id}/billing/resume`, 'POST');
-  }
+  },
+  // Contrat complet et conditions à télécharger
+  getContrat: (id) => apiRequest(`/maintenance-contracts/${id}/contrat`),
+  saveContrat: (id, data) => apiRequest(`/maintenance-contracts/${id}/contrat`, 'PUT', data),
+  downloadContrat: (id) => apiRequestRaw(`/maintenance-contracts/${id}/contrat/pdf`),
+  downloadConditions: (id) => apiRequestRaw(`/maintenance-contracts/${id}/conditions/pdf`)
 };
 
 // API pour les abonnements libres (facturation récurrente Stripe)
