@@ -26,6 +26,7 @@ const Revenues = lazy(() => import('./pages/Revenues'));
 const Activities = lazy(() => import('./pages/Activities'));
 const Goals = lazy(() => import('./pages/Goals'));
 const Seo = lazy(() => import('./pages/Seo'));
+const Diffuseur = lazy(() => import('./pages/Diffuseur'));
 const Reports = lazy(() => import('./pages/Reports'));
 const Quotes = lazy(() => import('./pages/Quotes'));
 const Invoices = lazy(() => import('./pages/Invoices'));
@@ -181,6 +182,14 @@ const App = () => {
             <ProtectedRoute>
               <Layout>
                 <Seo />
+              </Layout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/diffuseur" element={
+            <ProtectedRoute>
+              <Layout>
+                <Diffuseur />
               </Layout>
             </ProtectedRoute>
           } />

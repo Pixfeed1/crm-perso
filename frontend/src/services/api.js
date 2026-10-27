@@ -1348,6 +1348,32 @@ export const signauxAPI = {
 };
 
 // Campagnes de prospection : préparer, relire, programmer (aucun envoi sans validation)
+// Diffuseur : préparation de la diffusion des créations 3D (scènes, rendus, textes, calendrier, exports)
+export const diffuseurAPI = {
+  getReglages: () => apiRequest('/diffuseur/reglages'),
+  updateReglages: (data) => apiRequest('/diffuseur/reglages', 'PUT', data),
+  listScenes: () => apiRequest('/diffuseur/scenes'),
+  getScene: (id) => apiRequest(`/diffuseur/scenes/${id}`),
+  createScene: (data) => apiRequest('/diffuseur/scenes', 'POST', data),
+  updateScene: (id, data) => apiRequest(`/diffuseur/scenes/${id}`, 'PATCH', data),
+  deleteScene: (id) => apiRequest(`/diffuseur/scenes/${id}`, 'DELETE'),
+  uploadImages: (id, files) => { const fd = new FormData(); [...files].forEach((f) => fd.append('images', f)); return apiUpload(`/diffuseur/scenes/${id}/images`, fd); },
+  updateImage: (imageId, data) => apiRequest(`/diffuseur/images/${imageId}`, 'PATCH', data),
+  deleteImage: (imageId) => apiRequest(`/diffuseur/images/${imageId}`, 'DELETE'),
+  genererTextes: (imageId) => apiRequest(`/diffuseur/images/${imageId}/textes`, 'POST', {}),
+  planifier: (data) => apiRequest('/diffuseur/planning', 'POST', data),
+  listPosts: (params = {}) => {
+    const qs = new URLSearchParams(Object.entries(params).filter(([, v]) => v !== '' && v != null)).toString();
+    return apiRequest(`/diffuseur/posts${qs ? `?${qs}` : ''}`);
+  },
+  updatePost: (postId, data) => apiRequest(`/diffuseur/posts/${postId}`, 'PATCH', data),
+  validerPlusieurs: (ids, statut = 'valide') => apiRequest('/diffuseur/posts/validate', 'POST', { ids, statut }),
+  exporter: (cible, params = {}) => {
+    const qs = new URLSearchParams(Object.entries(params).filter(([, v]) => v)).toString();
+    return apiRequestRaw(`/diffuseur/export/${cible}${qs ? `?${qs}` : ''}`);
+  }
+};
+
 export const campagnesAPI = {
   list: () => apiRequest('/campagnes'),
   create: (payload) => apiRequest('/campagnes', 'POST', payload),
