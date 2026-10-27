@@ -14,6 +14,7 @@ const TEMPLATES_DIR = path.join(__dirname, '..', 'templates', 'conditions');
 const TEMPLATE_FILES = {
   'maintenance-essentiel': 'conditions-maintenance-essentiel.html',
   'maintenance-pro': 'conditions-maintenance-pro.html',
+  'maintenance-sur-mesure': 'conditions-maintenance-sur-mesure.html',
   abonnement: 'conditions-abonnement.html'
 };
 
@@ -77,6 +78,16 @@ function buildModalitesHtml(text) {
     .join('\n        ');
 }
 
+// Formule d'un contrat de maintenance -> modèle de conditions et libellé du fichier.
+// « Sur mesure » a son propre modèle ; « Professionnel » (ou tout libellé contenant « pro ») le
+// sien ; le reste, dont une formule vide, reçoit Essentiel.
+function maintenanceConditions(plan) {
+  const p = String(plan || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  if (/sur[\s-]*mesure/.test(p)) return { type: 'maintenance-sur-mesure', label: 'Sur_mesure' };
+  if (p.includes('pro')) return { type: 'maintenance-pro', label: 'Professionnel' };
+  return { type: 'maintenance-essentiel', label: 'Essentiel' };
+}
+
 function loadTemplate(type) {
   const file = TEMPLATE_FILES[type];
   if (!file) {
@@ -97,7 +108,7 @@ function injectVariables(html, variables) {
 /**
  * Construit le HTML final des conditions selon le type, puis le rend en PDF.
  *
- * @param {string} type - 'maintenance-essentiel' | 'maintenance-pro' | 'abonnement'
+ * @param {string} type - 'maintenance-essentiel' | 'maintenance-pro' | 'maintenance-sur-mesure' | 'abonnement'
  * @param {object} data - variables à injecter (selon le type)
  * @returns {Promise<Buffer>} PDF
  */
@@ -139,6 +150,7 @@ async function renderConditionsPdf(type, data = {}) {
 }
 
 module.exports = {
+  maintenanceConditions,
   renderConditionsPdf,
   renderConditionsHtml
 };

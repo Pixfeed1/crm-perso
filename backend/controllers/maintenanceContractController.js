@@ -226,8 +226,7 @@ const maintenanceContractController = {
       // Pièces jointes : conditions de la formule (auto) + éventuelles pièces ajoutées
       const attachments = parseClientAttachments(clientAttachments);
       if (includeConditions !== false) {
-        const isPro = String(contract.plan || '').toLowerCase().includes('pro');
-        const type = isPro ? 'maintenance-pro' : 'maintenance-essentiel';
+        const { type, label } = conditionsService.maintenanceConditions(contract.plan);
         try {
           const pdf = await conditionsService.renderConditionsPdf(type, {
             client_name: contract.client_name || '',
@@ -236,7 +235,7 @@ const maintenanceContractController = {
             date: new Date().toLocaleDateString('fr-FR')
           });
           attachments.push({
-            filename: `Conditions_Maintenance_${isPro ? 'Professionnel' : 'Essentiel'}.pdf`,
+            filename: `Conditions_Maintenance_${label}.pdf`,
             content: pdf,
             contentType: 'application/pdf'
           });
