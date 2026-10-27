@@ -49,7 +49,7 @@ app.use((req, res, next) => {
 //  - connect-src : l'API est servie par ce meme serveur ('self') ; seule
 //    l'autocompletion d'adresse interroge directement api-adresse.data.gouv.fr.
 //  - img-src : logos et signatures heberges sur pixfeed.net / jurojin.net, apercus
-//    en data:/blob:.
+//    en data:/blob:, rendus du Diffuseur servis par media.jurojin.net.
 //  - frame-src : apercus d'emails en <iframe srcDoc> et PDF generes en blob:.
 //  - object-src 'none', base-uri 'self', frame-ancestors 'self' : durcissements
 //    sans effet sur l'application.
@@ -60,7 +60,7 @@ app.use(helmet({
       'default-src': ["'self'"],
       'script-src': ["'self'"],
       'style-src': ["'self'", "'unsafe-inline'"],
-      'img-src': ["'self'", 'data:', 'blob:', 'https://pixfeed.net', 'https://jurojin.net'],
+      'img-src': ["'self'", 'data:', 'blob:', 'https://pixfeed.net', 'https://jurojin.net', 'https://media.jurojin.net'],
       'font-src': ["'self'", 'data:'],
       'connect-src': ["'self'", 'https://api-adresse.data.gouv.fr'],
       'frame-src': ["'self'", 'blob:', 'data:'],
@@ -199,6 +199,7 @@ app.use('/api/interactions', require('./routes/interactionRoutes'));
 app.use('/api/portefeuille/crawl', require('./routes/crawlRoutes'));
 app.use('/api/portefeuille/signaux', require('./routes/domainSignalRoutes')); // nouveaux domaines .fr (AFNIC)
 app.use('/api/campagnes', require('./routes/campaignRoutes')); // campagnes de prospection (préparer, relire, programmer)
+app.use('/api/diffuseur', require('./routes/diffuseurRoutes')); // diffusion des créations 3D (préparation, validation, exports, dépôt Bluesky)
 app.use('/api/email-templates', require('./routes/emailTemplateRoutes'));
 app.use('/api/email-signatures', require('./routes/emailSignatureRoutes'));
 app.use('/api/maintenance-reports', require('./routes/maintenanceReportRoutes'));

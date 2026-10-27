@@ -365,6 +365,133 @@ const DATABASE_SCHEMA = {
     ]
   },
 
+  // ─── Diffuseur : préparation de la diffusion des créations 3D (phase 1, sans publication
+  // automatique sauf Bluesky via JurojinReposter, seulement après validation) ───────────────
+  diffuseur_scenes: {
+    columns: {
+      id: 'SERIAL PRIMARY KEY',
+      nom: 'TEXT NOT NULL',
+      article_url: 'TEXT',                       // article jurojin.net consacré à la scène (facultatif)
+      sensible: 'BOOLEAN DEFAULT FALSE',         // scène sensible : seulement X (publication à la main)
+      tableau_pinterest: 'TEXT',
+      notes: 'TEXT',                             // contexte donné à Claude (facultatif)
+      created_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP',
+      updated_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'
+    },
+    indexes: []
+  },
+
+  diffuseur_assets: {
+    columns: {
+      id: 'SERIAL PRIMARY KEY',
+      scene_id: 'INTEGER REFERENCES diffuseur_scenes(id) ON DELETE CASCADE',
+      nom: 'TEXT NOT NULL',
+      url_affilie: 'TEXT',                       // lien affilié CJ vers le produit Daz
+      ordre: 'INTEGER DEFAULT 0'
+    },
+    indexes: ['CREATE INDEX IF NOT EXISTS idx_diffuseur_assets_scene ON diffuseur_assets(scene_id)']
+  },
+
+  diffuseur_images: {
+    columns: {
+      id: 'SERIAL PRIMARY KEY',
+      scene_id: 'INTEGER REFERENCES diffuseur_scenes(id) ON DELETE CASCADE',
+      ordre: 'INTEGER DEFAULT 0',
+      nom_original: 'TEXT',
+      fichier_original: 'TEXT',                  // chemin privé de l'original (jamais servi)
+      largeur: 'INTEGER',
+      hauteur: 'INTEGER',
+      focal_x: 'REAL DEFAULT 0.5',               // point d'intérêt du recadrage 4:5 (0 à 1)
+      focal_y: 'REAL DEFAULT 0.5',
+      principale: 'BOOLEAN DEFAULT FALSE',       // image principale : renvoie vers l'article
+      asset_id: 'INTEGER',                       // asset principal visible : son lien affilié
+      jpeg_nom: 'TEXT',                          // copies publiques (media.jurojin.net/r/...)
+      ig_nom: 'TEXT',
+      bs_nom: 'TEXT',
+      description: 'TEXT',                       // description factuelle rédigée par Claude
+      alt_fr: 'TEXT',
+      alt_en: 'TEXT',
+      mots_cles: 'TEXT',                         // mots-clés Pinterest, séparés par des virgules
+      textes_le: 'TIMESTAMP',                    // date de la dernière rédaction des textes
+      created_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'
+    },
+    indexes: ['CREATE INDEX IF NOT EXISTS idx_diffuseur_images_scene ON diffuseur_images(scene_id)']
+  },
+
+  diffuseur_posts: {
+    columns: {
+      id: 'SERIAL PRIMARY KEY',
+      scene_id: 'INTEGER REFERENCES diffuseur_scenes(id) ON DELETE CASCADE',
+      image_id: 'INTEGER REFERENCES diffuseur_images(id) ON DELETE CASCADE',
+      plateforme: 'VARCHAR(20) NOT NULL',        // instagram | facebook | pinterest | x | bluesky
+      langue: "VARCHAR(5) DEFAULT 'fr_en'",      // fr | en | fr_en
+      titre_fr: 'TEXT',
+      titre_en: 'TEXT',
+      texte_fr: 'TEXT',
+      texte_en: 'TEXT',
+      hashtags_fr: 'TEXT',                       // mots séparés par des virgules, sans #
+      hashtags_en: 'TEXT',
+      lien_type: "VARCHAR(10) DEFAULT 'aucun'",  // affilie | article | aucun
+      lien_url: 'TEXT',
+      date_prevue: 'DATE',
+      heure: 'VARCHAR(5)',
+      statut: "VARCHAR(12) DEFAULT 'a_valider'", // a_valider | valide | rejete
+      bluesky_etat: 'VARCHAR(10)',               // depose | publie | erreur (dépôt JurojinReposter)
+      bluesky_uri: 'TEXT',
+      bluesky_erreur: 'TEXT',
+      publie_at: 'TIMESTAMP',
+      created_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP',
+      updated_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'
+    },
+    indexes: [
+      'CREATE UNIQUE INDEX IF NOT EXISTS idx_diffuseur_posts_image_plateforme ON diffuseur_posts(image_id, plateforme)',
+      'CREATE INDEX IF NOT EXISTS idx_diffuseur_posts_date ON diffuseur_posts(date_prevue)'
+    ]
+  },
+
+  diffuseur_reglages: {
+    columns: {
+      id: 'SERIAL PRIMARY KEY',
+      hashtags_fr: 'TEXT',                       // hashtags de base, séparés par des virgules
+      hashtags_en: 'TEXT',
+      tableau_pinterest: 'TEXT',                 // tableau par défaut
+      heures: 'JSONB',                           // heure de publication par plateforme
+      entetes: 'JSONB',                          // en-têtes des modèles d'import (pinterest, meta, x)
+      updated_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'
+    },
+    indexes: []
+  },
+
+  // Phase 2 (non implémentée) : connexions aux plateformes et file de publication.
+  diffuseur_connexions: {
+    columns: {
+      id: 'SERIAL PRIMARY KEY',
+      plateforme: 'VARCHAR(20) NOT NULL',
+      compte: 'TEXT',
+      etat: "VARCHAR(20) DEFAULT 'non_connecte'",
+      config: 'JSONB',                           // jamais de secret ici : les jetons restent dans .env
+      created_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP',
+      updated_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'
+    },
+    indexes: ['CREATE UNIQUE INDEX IF NOT EXISTS idx_diffuseur_connexions_plateforme ON diffuseur_connexions(plateforme)']
+  },
+
+  diffuseur_file: {
+    columns: {
+      id: 'SERIAL PRIMARY KEY',
+      post_id: 'INTEGER REFERENCES diffuseur_posts(id) ON DELETE CASCADE',
+      plateforme: 'VARCHAR(20) NOT NULL',
+      prevu_at: 'TIMESTAMP',
+      statut: "VARCHAR(20) DEFAULT 'en_attente'",
+      tentatives: 'INTEGER DEFAULT 0',
+      derniere_erreur: 'TEXT',
+      ref_externe: 'TEXT',
+      publie_at: 'TIMESTAMP',
+      created_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'
+    },
+    indexes: ['CREATE INDEX IF NOT EXISTS idx_diffuseur_file_statut ON diffuseur_file(statut)']
+  },
+
   // Table crawl_results (sites détectés par un crawl)
   crawl_results: {
     columns: {

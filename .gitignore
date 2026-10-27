@@ -31,3 +31,5 @@ config/credentials.js
 config/database.js
 *.pem
 *.key
+# Diffuseur : rendus envoyés (originaux privés, fichiers temporaires)
+backend/uploads/diffuseur/
