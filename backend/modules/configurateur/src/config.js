@@ -11,7 +11,7 @@ module.exports = {
   amazonTag: env("AMAZON_PARTNER_TAG"),                    // identifiant partenaire, ex. « xxxx-21 »
   dossierPublication: env("CONFIGURATEUR_DOSSIER", path.join(process.env.HOME || "", "public_html/wp-content/uploads/configurateur")),
   cheminWordPress: env("CONFIGURATEUR_WP_PATH", path.join(process.env.HOME || "", "public_html")),
-  idPageWordPress: env("CONFIGURATEUR_WP_PAGE_ID"),         // id de la page du configurateur, pour vider son cache WP Rocket
+  idPageWordPress: env("CONFIGURATEUR_WP_PAGE_ID"),         // facultatif : sans lui, les pages au modèle « Configurateur PC » sont retrouvées seules
   mailValidation: env("CONFIGURATEUR_MAIL_VALIDATION"),     // adresse où partent la proposition mensuelle et les alertes
   urlEcranValidation: env("CONFIGURATEUR_URL_VALIDATION", "https://crm.pixfeed.net/configurateur"),
 

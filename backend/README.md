@@ -259,7 +259,9 @@ validation dans le CRM (SEO → Configurateur PC, ou `/configurateur?proposition
 - **Tables** `cfg_*` déclarées dans `DATABASE_SCHEMA`.
 - **Variables** (`backend/.env`, jamais dans git) : `CONFIGURATEUR_ANTHROPIC_API_KEY` (clé dédiée avec plafond),
   `AWIN_FEEDLIST_URL`, `AMAZON_PARTNER_TAG`, `CONFIGURATEUR_DOSSIER`, `CONFIGURATEUR_WP_PATH`,
-  `CONFIGURATEUR_WP_PAGE_ID`, `CONFIGURATEUR_MAIL_VALIDATION`, `CONFIGURATEUR_URL_VALIDATION`.
+  `CONFIGURATEUR_WP_PAGE_ID` (facultatif), `CONFIGURATEUR_MAIL_VALIDATION`, `CONFIGURATEUR_URL_VALIDATION`.
+- **Page WordPress** : modèle de page « Configurateur PC » (JurojiNet est un thème enfant de GeneratePress :
+  le fichier se charge avec `get_stylesheet_directory()`). L'outil s'ajoute sous le texte de la page.
 - **Ajouts à l'intégration** : liens marchands des flux acceptés seulement en https sans caractère dangereux
   (un lien piégé n'atteint jamais la page) ; refus du modèle et réponses coupées signalés comme erreurs ;
   recherche web `web_search_20260209` ; messages explicites quand la liste Awin n'est pas configurée ou

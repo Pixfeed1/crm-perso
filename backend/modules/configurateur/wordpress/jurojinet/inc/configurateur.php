@@ -1,6 +1,6 @@
 <?php
 /**
- * Configurateur PC : shortcode [configurateur_pc].
+ * Configurateur PC : modèle de page « Configurateur PC » (ou shortcode [configurateur_pc]).
  *
  * À placer dans le thème JurojiNet (inc/configurateur.php) et à charger depuis functions.php :
  *     require_once get_stylesheet_directory() . '/inc/configurateur.php';
@@ -20,13 +20,39 @@ function jurojin_cfg_chemin_donnees() {
 	return trailingslashit( $up['basedir'] ) . JUROJIN_CFG_FICHIER;
 }
 
-/** Styles et script seulement sur les pages qui contiennent le shortcode. */
-add_action( 'wp_enqueue_scripts', function () {
-	if ( ! is_singular() ) {
-		return;
+const JUROJIN_CFG_MODELE = 'configurateur-pc';
+
+/** Modèle de page « Configurateur PC » : à choisir dans l'éditeur (panneau Page, Modèle).
+    Pas de fichier de gabarit : la page garde la mise en page normale du thème, et l'outil s'affiche
+    sous le texte de la page. Le shortcode reste possible pour placer l'outil ailleurs dans le texte. */
+add_filter( 'theme_page_templates', function ( $modeles ) {
+	$modeles[ JUROJIN_CFG_MODELE ] = 'Configurateur PC';
+	return $modeles;
+} );
+
+function jurojin_cfg_page_concernee( $post = null ) {
+	$post = get_post( $post );
+	if ( ! $post ) {
+		return false;
+	}
+	return get_page_template_slug( $post ) === JUROJIN_CFG_MODELE || has_shortcode( $post->post_content, 'configurateur_pc' );
+}
+
+/** Page au modèle « Configurateur PC » sans shortcode dans son texte : l'outil est ajouté à la fin. */
+add_filter( 'the_content', function ( $contenu ) {
+	if ( ! is_singular( 'page' ) || ! in_the_loop() || ! is_main_query() ) {
+		return $contenu;
 	}
 	$post = get_post();
-	if ( ! $post || ! has_shortcode( $post->post_content, 'configurateur_pc' ) ) {
+	if ( ! $post || get_page_template_slug( $post ) !== JUROJIN_CFG_MODELE || has_shortcode( $post->post_content, 'configurateur_pc' ) ) {
+		return $contenu;
+	}
+	return $contenu . do_shortcode( '[configurateur_pc]' );
+}, 20 );
+
+/** Styles et script seulement sur les pages du configurateur (modèle ou shortcode). */
+add_action( 'wp_enqueue_scripts', function () {
+	if ( ! is_singular() || ! jurojin_cfg_page_concernee() ) {
 		return;
 	}
 	$dir = get_stylesheet_directory() . '/configurateur/';

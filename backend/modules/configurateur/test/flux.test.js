@@ -138,3 +138,14 @@ test("messages d'erreur explicites : liste Awin non configurée, source injoigna
   const blender = require("../src/sources/blenderOpenData");
   await assert.rejects(blender.telecharger({ fetchImpl: panne }), /Blender Open Data CPU injoignable : ENOTFOUND/);
 });
+
+test("cache WP Rocket : sans numéro de page, WordPress retrouve les pages au modèle Configurateur PC", () => {
+  const pub = require("../src/publication");
+  const auto = pub.codeViderCache(undefined);
+  assert.match(auto, /'meta_value' => 'configurateur-pc'/);
+  assert.match(auto, /'s' => 'configurateur_pc'/);
+  assert.match(auto, /rocket_clean_post\(\$i\)/);
+  assert.doesNotMatch(auto, /\$ids = array\(\d/);
+  assert.match(pub.codeViderCache("1234"), /^\$ids = array\(1234\);/);
+  assert.match(pub.codeViderCache("1234; system('x')"), /^\$ids = array\(1234\);/, "seul le nombre est gardé");
+});

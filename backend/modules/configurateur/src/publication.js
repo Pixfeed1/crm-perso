@@ -49,12 +49,23 @@ async function nettoyerArchives(dossier, garder) {
   for (const n of f.slice(0, Math.max(0, f.length - garder))) await fs.unlink(path.join(dossier, n));
 }
 
-/** Vide le cache WP Rocket de la seule page du configurateur, par WP-CLI. */
+/** Code PHP (WP-CLI) qui vide le cache WP Rocket des pages du configurateur.
+    Avec CONFIGURATEUR_WP_PAGE_ID : cette page seulement. Sinon : les pages publiées au modèle
+    « Configurateur PC » et celles qui contiennent le shortcode, retrouvées par WordPress lui-même. */
+function codeViderCache(idPage = config.idPageWordPress) {
+  const id = parseInt(idPage, 10);
+  const pages = Number.isInteger(id) && id > 0
+    ? `$ids = array(${id});`
+    : "$q = array('post_type' => 'page', 'post_status' => 'publish', 'numberposts' => -1, 'fields' => 'ids');" +
+      " $ids = array_unique(array_merge(get_posts($q + array('meta_key' => '_wp_page_template', 'meta_value' => 'configurateur-pc')), get_posts($q + array('s' => 'configurateur_pc'))));";
+  return `${pages} if (!function_exists('rocket_clean_post')) { echo 'wp-rocket-absent'; } elseif (!$ids) { echo 'aucune-page'; } else { foreach ($ids as $i) { rocket_clean_post($i); } echo 'ok'; }`;
+}
+
+/** Vide le cache WP Rocket des pages du configurateur, par WP-CLI. */
 function viderCache() {
-  if (!config.idPageWordPress) return Promise.resolve({ fait: false, raison: "CONFIGURATEUR_WP_PAGE_ID non défini" });
-  const code = `if (function_exists('rocket_clean_post')) { rocket_clean_post(${parseInt(config.idPageWordPress, 10)}); echo 'ok'; } else { echo 'wp-rocket-absent'; }`;
+  const code = codeViderCache();
   return new Promise(ok => execFile("wp", ["eval", code, `--path=${config.cheminWordPress}`], { timeout: 60000 },
     (err, out) => ok({ fait: !err && out.trim() === "ok", raison: err ? err.message : out.trim() })));
 }
 
-module.exports = { publier, ecrireTemporaire, basculer, annuler, lirePrecedent, viderCache, FICHIER };
+module.exports = { publier, ecrireTemporaire, basculer, annuler, lirePrecedent, viderCache, codeViderCache, FICHIER };

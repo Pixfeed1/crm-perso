@@ -47,7 +47,7 @@ Garanties tenues par le code (et vérifiées par les tests d'intégration) :
    AMAZON_PARTNER_TAG=                # identifiant partenaire …-21 ; vide = aucun lien Amazon
    CONFIGURATEUR_DOSSIER=/home/jurojinn/public_html/wp-content/uploads/configurateur
    CONFIGURATEUR_WP_PATH=/home/jurojinn/public_html
-   CONFIGURATEUR_WP_PAGE_ID=          # id de la page WordPress du configurateur (étape 6)
+   CONFIGURATEUR_WP_PAGE_ID=          # facultatif (étape 6)
    CONFIGURATEUR_MAIL_VALIDATION=     # adresse de Marc
    CONFIGURATEUR_URL_VALIDATION=      # adresse de l'écran de validation dans le CRM
    ```
@@ -58,7 +58,7 @@ Garanties tenues par le code (et vérifiées par les tests d'intégration) :
    ```
    Le shortcode `[configurateur_pc]` imprime l'outil et les données. CSS et JS ne sont chargés que sur la page qui contient le shortcode ; les styles sont limités à `.cfg-pc`. Le fichier exclut le script du « retard du JavaScript » de WP Rocket, sinon l'outil reste vide jusqu'au premier geste du visiteur.
    Si le thème a un dépôt git, y committer ces fichiers ; sinon les déposer tels quels.
-6. **Page** : Marc crée la page (brouillon) avec son texte et le shortcode à l'endroit voulu. Relever son id pour `CONFIGURATEUR_WP_PAGE_ID`.
+6. **Page** : Marc crée la page (brouillon) avec son texte et choisit le modèle « Configurateur PC » (panneau Page, Modèle) : l'outil s'affiche sous le texte. Le shortcode reste possible pour le placer ailleurs. `CONFIGURATEUR_WP_PAGE_ID` est facultatif : sans lui, l'agent retrouve les pages au modèle « Configurateur PC » ou contenant le shortcode pour vider leur cache.
 7. **Écran de validation dans le CRM** (front) — routes déjà prêtes, sous `/api/configurateur`, derrière l'authentification :
    - `GET /etat` : dix dernières publications (statut, erreurs, taille, résumé), propositions en attente, sélection active ;
    - `POST /propositions/:id/valider` avec `{ "decisions": { "0": true, "1": false } }` : lance la validation (relevé, calcul, contrôles, puis enregistrement et publication si tout passe) ;
