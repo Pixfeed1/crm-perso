@@ -191,21 +191,17 @@ function jurojin_cfg_sections( $d ) {
 
 	$blender = ! empty( $d['sources'][0] ) ? $d['sources'][0] : null;
 	$h .= '<h2>Comment le configurateur choisit</h2>';
-	$h .= '<p>Les prix viennent des catalogues des marchands, relus chaque nuit. Un prix n\'est retenu que pour un produit neuf, en stock, '
-		. 'dans un catalogue mis à jour par le marchand depuis moins de 48 heures. La date affichée est celle du relevé.</p>';
-	$h .= '<p>Pour chaque usage, l\'outil assemble les machines compatibles : support du processeur, puissance de l\'alimentation, '
-		. 'longueur de la carte graphique et refroidissement. À chaque budget, il garde la plus efficace pour votre logiciel. '
-		. esc_html( count( $d['profils'] ) ) . ' combinaisons d\'usages sont recalculées à chaque relevé.</p>';
+	$h .= '<p>Les prix viennent des catalogues de Cdiscount et de la Fnac, relus chaque nuit : seuls les produits neufs et en stock sont retenus.</p>';
+	$h .= '<p>Pour chaque usage, l\'outil assemble les machines compatibles (support du processeur, alimentation, place pour la carte graphique, refroidissement) '
+		. 'et garde, à chaque budget, la plus efficace pour votre logiciel.</p>';
 	if ( $blender ) {
-		$h .= '<p>Les durées de rendu affichées pour Blender viennent de ' . esc_html( $blender['nom'] ) . ' (version ' . esc_html( $blender['version'] )
-			. ') : la médiane des tests publiés par les utilisateurs pour chaque carte graphique et chaque processeur. '
-			. 'Quand aucune mesure publiée n\'existe, l\'outil n\'affiche pas de chiffre.</p>';
+		$h .= '<p>Les durées de rendu Blender viennent de ' . esc_html( $blender['nom'] ) . ' (version ' . esc_html( $blender['version'] )
+			. '), la base publique des tests des utilisateurs. Sans mesure publiée, l\'outil n\'affiche aucun chiffre.</p>';
 	}
-	$h .= '<p>Quand un modèle est en rupture, un modèle équivalent choisi à l\'avance prend sa place.</p>';
 
 	$q = array();
 	$q[] = array( 'Les prix affichés sont-ils à jour ?',
-		'Ils ont été relevés' . ( $date ? ' le ' . $date : '' ) . '. Les marchands changent souvent leurs prix : le prix qui compte est celui affiché sur leur site au moment de l\'achat.' );
+		'Oui, ils ont été relevés' . ( $date ? ' le ' . $date : '' ) . ', mais le prix qui compte reste celui du marchand au moment de l\'achat.' );
 	if ( ! empty( $d['systeme']['nom'] ) ) {
 		$q[] = array( 'Windows est-il compris dans le total ?',
 			'Non. Comptez ' . jurojin_cfg_euros( $d['systeme']['prix'] ) . ' pour une licence ' . $d['systeme']['nom']
@@ -225,10 +221,6 @@ function jurojin_cfg_sections( $d ) {
 		$q[] = array( 'Pourquoi la mémoire vive pèse-t-elle autant dans le budget ?',
 			'Aux prix relevés' . ( $date ? ' le ' . $date : '' ) . ', les kits de mémoire coûtent cher : ' . implode( ', ', $ram )
 			. '. L\'outil ne met donc l\'argent dans la mémoire que lorsque votre logiciel en profite vraiment.' );
-	}
-	if ( $blender ) {
-		$q[] = array( 'D\'où viennent les durées de rendu ?',
-			'De ' . $blender['nom'] . ', la base publique où les utilisateurs de Blender publient leurs tests de rendu. L\'outil retient la médiane de ces tests pour chaque pièce.' );
 	}
 	$q[] = array( 'Le site touche-t-il une commission ?',
 		'Oui. Les liens vers les marchands sont des liens affiliés : si vous achetez par leur biais, Jurojin touche une petite commission, sans surcoût pour vous. Elle ne change pas le choix des pièces : l\'outil retient le prix le plus bas en stock.' );
