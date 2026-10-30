@@ -66,13 +66,14 @@
       <button type="button" class="btn" id="cfg-next">Suivant</button>
     </div>
 
-    <div class="sheet" id="cfg-sheet" aria-live="polite">
+    <div class="sheet" id="cfg-sheet">
       <div class="side">
         <div class="verdict">
           <button type="button" class="btn ghost restart" id="cfg-restart">← Changer mes réponses</button>
           <span class="tag" id="cfg-for"></span>
-          <h3 id="cfg-headline"></h3>
+          <h3 id="cfg-headline" tabindex="-1"></h3>
           <div class="total"><span class="lbl">Total estimé</span><span class="num" id="cfg-total"></span></div>
+          <span class="sr" id="cfg-annonce" aria-live="polite"></span>
           <p class="date" id="cfg-date"></p>
           <p class="date" id="cfg-os"></p>
           <p class="date affil">Liens affiliés : si vous achetez par leur biais, Jurojin touche une petite commission, sans surcoût pour vous.</p>

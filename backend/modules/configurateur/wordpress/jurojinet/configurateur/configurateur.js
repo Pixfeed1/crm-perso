@@ -68,7 +68,7 @@ const setBudget=v=>{v=Math.round((+v||0)/D.budget.pas)*D.budget.pas;v=Math.min(D
 
 /* ---------- Questions ---------- */
 function fillSofts(){
-  const fam=form.fam.value, list=FAM[fam], cur=form.soft?form.soft.value:null;
+  const fam=form.fam.value, list=FAM[fam].filter(id=>D.projets&&D.projets[id]&&D.textes[id]), cur=form.soft?form.soft.value:null;   // seulement les logiciels présents dans les données publiées
   $("softs").innerHTML=list.map((id,i)=>`<label class="opt"><input type="radio" name="soft" id="cfg-s-${id}" value="${id}" ${(cur===id||(!list.includes(cur)&&i===0))?"checked":""}><span class="card">${logo(id)}<span class="c-name">${NOMS[id][0]}</span></span></label>`).join("");
   $("softs").querySelectorAll(".logo img[data-o]").forEach(detourer);
   fillProjets();
@@ -107,7 +107,7 @@ const calme=matchMedia("(prefers-reduced-motion: reduce)").matches;
 let affiche=null, anim=0;
 /* le total défile jusqu'à son montant (pas d'animation si le visiteur les a désactivées) */
 function compte(v){
-  const el=$("total");
+  const el=$("total"); clearTimeout(compte.t); compte.t=setTimeout(()=>{$("annonce").textContent=`Total estimé : ${fmt(v)}`;},700);   // annonce une seule fois, montant final
   if(calme||affiche===null){affiche=v;el.textContent=fmt(v);return;}
   const de=affiche,t0=performance.now();cancelAnimationFrame(anim);affiche=v;
   const pas=t=>{const k=Math.min(1,(t-t0)/650);el.textContent=fmt(de+(v-de)*(1-Math.pow(1-k,3)));if(k<1)anim=requestAnimationFrame(pas);};
@@ -184,7 +184,7 @@ function render(){
 
   const p=at(prof,bud);
   if(!p){
-    $("parts").innerHTML=""; $("total").textContent="";
+    $("parts").innerHTML=`<li class="sep"><button type="button" class="btn" data-v="${prof.paliers[0].budget}">Voir la machine à ${fmt(prof.paliers[0].budget)}</button></li>`; cancelAnimationFrame(anim); $("total").textContent="—"; affiche=null; $("choix").hidden=true; $("effet").innerHTML="";
     $("left").textContent=nb(`Pour cet usage, la première machine qui tient la route démarre à ${fmt(prof.paliers[0].budget)}.`);
     $("upsell").innerHTML=nb(`<b>${fmt(prof.paliers[0].budget-bud)} de plus</b> suffiraient pour une machine adaptée.`); $("upsell").hidden=false;
     return;
@@ -248,10 +248,12 @@ function render(){
 $("date").textContent=`Prix constatés le ${dateFr(D.prix_constates_le)}`+(D.selection.validee_le?"":" (exemple)");
 $("choix").addEventListener("click",e=>{const b=e.target.closest(".opt-btn");if(b){choix=b.dataset.c;render();}});
 $("presets").addEventListener("click",e=>{const b=e.target.closest(".chip");if(b) setBudget(b.dataset.v);});
+$("parts").addEventListener("click",e=>{const b=e.target.closest(".btn[data-v]");if(b) setBudget(b.dataset.v);});
 $("marks").addEventListener("click",e=>{const m=e.target.closest(".mark");if(m) setBudget(m.dataset.v);});
 budIn.addEventListener("change",()=>setBudget(budIn.value));
 budIn.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();setBudget(budIn.value);}});
 range.addEventListener("input",render);
+form.addEventListener("submit",e=>e.preventDefault());
 form.addEventListener("change",e=>{
   if(e.target.name==="fam") fillSofts();
   else if(e.target.name==="soft") fillProjets();
@@ -277,12 +279,16 @@ function show(){
   if(steps[step]==="budget") render();
 }
 const enVue=()=>{const r=tool.getBoundingClientRect();if(r.top<0||r.top>innerHeight*.6)tool.scrollIntoView({behavior:calme?"auto":"smooth",block:"start"});};
-function avancer(){if(step<steps.length-1){step++;show();enVue();}else reveler();}
+/* le focus suit la question affichée : choix coché (ou premier choix) de la nouvelle étape, sans faire défiler */
+function focusEtape(){const f=form.querySelector("fieldset.on");if(!f)return;const i=f.querySelector("input:checked")||f.querySelector("input");if(i)i.focus({preventScroll:true});}
+function avancer(){if(step<steps.length-1){step++;show();enVue();focusEtape();}else reveler();}
 function reveler(){
   tool.classList.add("done"); affiche=0; render();
   const sh=$("sheet"); sh.classList.remove("reveal");
   if(!calme){void sh.offsetWidth;sh.classList.add("reveal");setTimeout(()=>sh.classList.remove("reveal"),1800);}
-  tool.scrollIntoView({behavior:calme?"auto":"smooth",block:"start"});
+  // sur téléphone, le budget occupe tout l'écran : on va directement au résultat (le budget reste juste au-dessus)
+  (innerWidth<=720?sh:tool).scrollIntoView({behavior:calme?"auto":"smooth",block:"start"});
+  $("headline").focus({preventScroll:true});
 }
 const crayon='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
 function recap(){
@@ -293,9 +299,9 @@ function recap(){
 }
 let steps=[],step=0; const tool=$("tool"),next=$("next"),prevB=$("prev");
 next.onclick=avancer;
-prevB.onclick=()=>{if(step>0){step--;show();}};
+prevB.onclick=()=>{if(step>0){step--;show();focusEtape();}};
 $("restart").onclick=()=>{tool.classList.remove("done");step=0;show();enVue();};
-$("recap").addEventListener("click",e=>{const b=e.target.closest(".rc");if(b){tool.classList.remove("done");step=+b.dataset.i;show();enVue();}});
+$("recap").addEventListener("click",e=>{const b=e.target.closest(".rc");if(b){tool.classList.remove("done");step=+b.dataset.i;show();enVue();focusEtape();}});
 // un clic (souris ou doigt) sur une carte fait avancer ; au clavier, les flèches changent le choix sans avancer
 form.addEventListener("pointerup",e=>{if(!e.target.closest(".opt")||tool.classList.contains("done")||!AUTO.includes(steps[step]))return;
   const at=step;setTimeout(()=>{if(step===at&&!tool.classList.contains("done"))avancer();},calme?0:260);});

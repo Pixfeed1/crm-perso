@@ -8,6 +8,7 @@
   --r-sm:6px; --r-md:10px; --r-lg:14px;
   --f:'DM Sans',system-ui,-apple-system,"Segoe UI",sans-serif;}
 .cfg-pc,.cfg-pc *{box-sizing:border-box}
+.cfg-pc [hidden]{display:none!important}   /* « caché » l'emporte toujours sur les display des blocs (alternatives, étapes…) */
 .cfg-pc .tag{display:inline-block;font-size:12px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;background:var(--accent-light);color:var(--accent-dark);border-radius:var(--r-sm);padding:3px 8px;line-height:1.4}
 
 /* ---------- Questions ---------- */
@@ -74,6 +75,8 @@
   display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1.25fr);grid-template-areas:"s p" "f f";align-items:start;column-gap:clamp(24px,4vw,48px)}
 .cfg-pc .side{grid-area:s;min-width:0}
 .cfg-pc .pp{grid-area:p;min-width:0}
+.cfg-pc .verdict h3:focus{outline:none}
+.cfg-pc .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .cfg-pc .verdict h3{font-size:clamp(21px,2.4vw,24px);font-weight:700;color:var(--title);line-height:1.25;margin:12px 0 0;text-wrap:balance}
 .cfg-pc .total{margin:18px 0 10px;padding:16px 0;border-top:1px solid var(--border-strong);border-bottom:1px solid var(--border-strong);display:flex;align-items:baseline;justify-content:space-between;gap:12px}
 .cfg-pc .total .lbl{font-size:14px;font-weight:600;color:var(--muted)}
