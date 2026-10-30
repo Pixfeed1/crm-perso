@@ -223,23 +223,39 @@ function jurojin_cfg_sections( $d ) {
 	$exemple = empty( $d['selection']['validee_le'] );
 	$h       = '<section class="cfg-pc-seo" aria-label="Configurations conseillées et méthode">';
 
+	// [ clé du profil, titre de la section, libellé court de l'onglet ]
 	$usages = array(
-		'blender|lourd|-'   => 'Pour la 3D avec Blender (projets lourds)',
-		'premiere|lourd|-'  => 'Pour le montage vidéo avec Premiere Pro (projets lourds)',
-		'photoshop|lourd|-' => 'Pour la photo et le graphisme avec Photoshop',
-		'jeu|solo|1440'     => 'Pour jouer en 1440p (grands jeux solo)',
-		'courant|-|-'       => 'Pour un usage courant (bureautique, web, études)',
+		array( 'blender|lourd|-', 'Pour la 3D avec Blender (projets lourds)', 'Blender' ),
+		array( 'premiere|lourd|-', 'Pour le montage vidéo avec Premiere Pro (projets lourds)', 'Premiere Pro' ),
+		array( 'photoshop|lourd|-', 'Pour la photo et le graphisme avec Photoshop', 'Photoshop' ),
+		array( 'jeu|solo|1440', 'Pour jouer en 1440p (grands jeux solo)', 'Jeu en 1440p' ),
+		array( 'courant|-|-', 'Pour un usage courant (bureautique, web, études)', 'Usage courant' ),
 	);
+	$ram = '';
+	// phrase seulement quand la mémoire est vraiment chère (au-delà de ces seuils, en euros)
+	foreach ( array( 'ram-32' => 200, 'ram-16' => 120 ) as $id => $seuil ) {
+		if ( ! $ram && ! empty( $d['composants'][ $id ]['prix'] ) && $d['composants'][ $id ]['prix'] > $seuil ) {
+			$ram = ' La mémoire vive pèse lourd en ce moment : un kit de ' . esc_html( $d['composants'][ $id ]['puce'] ) . ' coûte '
+				. esc_html( jurojin_cfg_euros( $d['composants'][ $id ]['prix'] ) ) . '.';
+		}
+	}
 	$h .= '<h2>Configurations conseillées selon votre budget</h2>';
 	$h .= '<p>Les machines conseillées par l\'outil pour les usages les plus courants, aux prix relevés'
 		. ( $date ? ' le ' . esc_html( $date ) : '' ) . ' chez Cdiscount et à la Fnac' . ( $exemple ? ' (sélection d\'exemple)' : '' )
-		. '. Le total comprend aussi la carte mère, le refroidissement, l\'alimentation et le boîtier, sans le système d\'exploitation.</p>';
-	foreach ( $usages as $cle => $titre ) {
-		$t = jurojin_cfg_tableau( $d, $cle );
-		if ( $t ) {
-			$h .= '<h3>' . esc_html( $titre ) . '</h3>' . $t;
+		. '. Le total comprend aussi la carte mère, le refroidissement, l\'alimentation et le boîtier, sans le système d\'exploitation.' . $ram . '</p>';
+	// Onglets : un usage à la fois. Sans script, la barre reste cachée et tous les tableaux s'affichent à la suite,
+	// avec leur titre : les moteurs de recherche lisent tout dans les deux cas.
+	$onglets = '';
+	$panneaux = '';
+	foreach ( $usages as $i => $u ) {
+		$t = jurojin_cfg_tableau( $d, $u[0] );
+		if ( ! $t ) {
+			continue;
 		}
+		$onglets  .= '<button type="button" role="tab" id="cfg-onglet-' . $i . '" aria-controls="cfg-usage-' . $i . '" aria-selected="false">' . esc_html( $u[2] ) . '</button>';
+		$panneaux .= '<div class="cfg-usage" id="cfg-usage-' . $i . '" role="tabpanel" aria-labelledby="cfg-onglet-' . $i . '"><h3>' . esc_html( $u[1] ) . '</h3>' . $t . '</div>';
 	}
+	$h .= '<div class="cfg-onglets" role="tablist" aria-label="Usages" hidden>' . $onglets . '</div>' . $panneaux;
 
 	$blender = ! empty( $d['sources'][0] ) ? $d['sources'][0] : null;
 	$h .= '<h2>Comment le configurateur choisit</h2>';

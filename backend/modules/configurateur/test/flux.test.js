@@ -159,6 +159,16 @@ test("Awin : image du produit reprise si elle est en https, jamais autrement", a
   assert.equal(C["gpu-5070ti"].offres[0].image, "https://images2.productserve.com/?w=200&url=a.jpg");
 });
 
+test("catalogue : une offre très sous le prix habituel (autre produit mal reconnu) est écartée et signalée", () => {
+  const base = { id: "cpu-285k", rang: 0, marchand: "cdiscount", nom: "Cdiscount", en_stock: true, lien: "https://x.example/", releve_le: "2026-10-30" };
+  const offres = [{ ...base, prix: 81, produit: "Support compatible Core Ultra 9 285K" }, { ...base, prix: 599, produit: "Processeur Intel Core Ultra 9 285K" }];
+  const { C, alertes } = construire(selection, { offres, prixExemple: true, amazonTag: "" });
+  assert.equal(C["cpu-285k"].prix, 599);
+  assert.ok(alertes.some(a => a.niveau === "prix_suspect" && a.id === "cpu-285k" && /Support compatible/.test(a.message)));
+  const seul = construire(selection, { offres: [offres[0]], prixExemple: false, amazonTag: "" });
+  assert.equal(seul.C["cpu-285k"], undefined);
+});
+
 test("Awin : formats de date lus", () => {
   assert.equal(awin.dateFlux("28/10/2026 03:12").toISOString(), "2026-10-28T03:12:00.000Z");
   assert.equal(awin.dateFlux("2026-10-28T03:12:44+01:00").toISOString(), "2026-10-28T02:12:44.000Z");

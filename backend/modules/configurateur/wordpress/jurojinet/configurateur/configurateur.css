@@ -72,7 +72,7 @@
 /* ---------- Résultat : une seule surface ---------- */
 .cfg-pc .sheet{margin-top:36px;background:var(--bg-alt);border-radius:var(--r-lg);padding:clamp(20px,3.2vw,36px);
   display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1.25fr);grid-template-areas:"s p" "f f";align-items:start;column-gap:clamp(24px,4vw,48px)}
-.cfg-pc .side{grid-area:s;min-width:0;position:sticky;top:24px}
+.cfg-pc .side{grid-area:s;min-width:0}
 .cfg-pc .pp{grid-area:p;min-width:0}
 .cfg-pc .verdict h3{font-size:clamp(21px,2.4vw,24px);font-weight:700;color:var(--title);line-height:1.25;margin:12px 0 0;text-wrap:balance}
 .cfg-pc .total{margin:18px 0 10px;padding:16px 0;border-top:1px solid var(--border-strong);border-bottom:1px solid var(--border-strong);display:flex;align-items:baseline;justify-content:space-between;gap:12px}
@@ -95,6 +95,9 @@
 
 /* composants : une liste, des filets, une vignette */
 .cfg-pc .parts{list-style:none;margin:0;padding:0;min-width:0}
+/* listes protégées des styles d'article du thème (puces, marges) */
+.cfg-pc ul,.cfg-pc ol{list-style:none;margin:0;padding:0}
+.cfg-pc .parts > li::before,.cfg-pc .parts > li::marker{content:none}
 .cfg-pc .parts > li{display:grid;grid-template-columns:64px minmax(0,1fr) auto;column-gap:16px;row-gap:3px;align-items:start;padding:20px 0;border-bottom:1px solid var(--border);margin:0}
 .cfg-pc .parts > li:first-child{padding-top:8px}
 .cfg-pc .parts > li:last-child{border-bottom:0}
@@ -127,7 +130,7 @@
 .cfg-pc .more summary::after{content:" +"}
 .cfg-pc .more[open] summary::after{content:" −"}
 .cfg-pc .more summary:focus-visible{outline:2px solid var(--accent-dark);outline-offset:2px;border-radius:2px}
-.cfg-pc .more ul{margin:6px 0 2px;padding:0 0 0 18px;color:var(--text);line-height:1.55}
+.cfg-pc .more ul{list-style:disc;margin:6px 0 2px;padding:0 0 0 18px;color:var(--text);line-height:1.55}
 .cfg-pc .more li{margin:0 0 2px}
 .cfg-pc .foot{grid-area:f;font-size:13.5px;color:var(--muted);margin:24px 0 0;padding-top:16px;border-top:1px solid var(--border);line-height:1.5}
 
@@ -207,3 +210,12 @@
 .cfg-pc-seo .faq-item__answer{padding:0 20px 16px;color:#4b5563;font-size:.9rem;line-height:1.7}
 .cfg-pc-seo .faq-item__answer p{margin:0}
 @media (max-width:768px){.cfg-pc-seo .faq-item__question{padding:14px 16px;font-size:.875rem}.cfg-pc-seo .faq-item__answer{padding:0 16px 14px;font-size:.85rem}}
+/* onglets des configurations par budget */
+.cfg-pc-seo .cfg-onglets{display:flex;flex-wrap:wrap;gap:6px;margin:18px 0 4px;border-bottom:1px solid #e5e7eb}
+.cfg-pc-seo .cfg-onglets[hidden]{display:none}
+.cfg-pc-seo [role="tab"]{font:inherit;font-size:.95rem;font-weight:600;color:#4b5563;background:none;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;padding:10px 14px;cursor:pointer}
+.cfg-pc-seo [role="tab"]:hover{color:#111827}
+.cfg-pc-seo [role="tab"][aria-selected="true"]{color:#4f46e5;border-bottom-color:#6366f1}
+.cfg-pc-seo [role="tab"]:focus-visible{outline:2px solid #6366f1;outline-offset:2px;border-radius:4px}
+.cfg-pc-seo.avec-onglets .cfg-usage h3{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+@media (max-width:640px){.cfg-pc-seo .cfg-onglets{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch}.cfg-pc-seo [role="tab"]{white-space:nowrap;padding:10px 12px}}

@@ -18,7 +18,12 @@ function construire(selection, { scores = {}, offres = [], prixExemple = false, 
     // modèles achetables, dans l'ordre de la sélection : le retenu d'abord, puis les réserves
     const liste = [];
     (s.modeles || []).forEach((m, rang) => {
-      const o = offres.filter(x => x.id === id && x.rang === rang && x.en_stock && x.prix > 0);
+      // Une offre très en dessous du prix habituel (prix_exemple) vient presque toujours d'un autre produit dont le nom
+      // contient la référence (accessoire, pièce « compatible ») : elle fausserait tout le calcul, on l'écarte et on le signale.
+      const plancher = s.prix_exemple ? s.prix_exemple * config.controles.prixPlancherPct / 100 : 0;
+      const toutes = offres.filter(x => x.id === id && x.rang === rang && x.en_stock && x.prix > 0);
+      const o = toutes.filter(x => x.prix >= plancher);
+      if (o.length < toutes.length) alertes.push({ niveau: "prix_suspect", id, message: `${s.puce} : ${toutes.length - o.length} offre(s) écartée(s), prix trop bas pour être ce produit (moins de ${Math.round(plancher)} €), par exemple « ${toutes.find(x => x.prix < plancher).produit || "?"} » à ${toutes.find(x => x.prix < plancher).prix} €.` });
       if (o.length) liste.push({ rang, offres: o });
     });
     if (!liste.length && prixExemple && s.prix_exemple)

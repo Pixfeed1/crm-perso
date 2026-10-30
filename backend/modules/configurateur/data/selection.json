@@ -1,5 +1,5 @@
 {
-  "version": "2026-11-propose-2",
+  "version": "2026-11-propose-3",
   "validee_le": null,
   "validee_par": null,
   "note": "Sélection de départ à valider par Marc. Prix d'exemple : remplacés chaque nuit par les flux Awin. Indices jeu : estimations éditoriales tant qu'aucune source mesurée n'est branchée.",
@@ -506,7 +506,16 @@
               "8600G"
             ],
             "exclure": [
-              "tray"
+              "tray",
+              "Carte mère",
+              "Carte mere",
+              "Ventirad",
+              "Watercooling",
+              "Refroidissement",
+              "Ordinateur",
+              "PC Gamer",
+              "PC portable",
+              "Pâte thermique"
             ]
           }
         }
@@ -542,7 +551,16 @@
               "9600X"
             ],
             "exclure": [
-              "tray"
+              "tray",
+              "Carte mère",
+              "Carte mere",
+              "Ventirad",
+              "Watercooling",
+              "Refroidissement",
+              "Ordinateur",
+              "PC Gamer",
+              "PC portable",
+              "Pâte thermique"
             ]
           }
         }
@@ -578,7 +596,16 @@
               "9700X"
             ],
             "exclure": [
-              "tray"
+              "tray",
+              "Carte mère",
+              "Carte mere",
+              "Ventirad",
+              "Watercooling",
+              "Refroidissement",
+              "Ordinateur",
+              "PC Gamer",
+              "PC portable",
+              "Pâte thermique"
             ]
           }
         }
@@ -614,7 +641,16 @@
               "9800X3D"
             ],
             "exclure": [
-              "tray"
+              "tray",
+              "Carte mère",
+              "Carte mere",
+              "Ventirad",
+              "Watercooling",
+              "Refroidissement",
+              "Ordinateur",
+              "PC Gamer",
+              "PC portable",
+              "Pâte thermique"
             ]
           }
         }
@@ -651,7 +687,16 @@
             ],
             "exclure": [
               "9900X3D",
-              "tray"
+              "tray",
+              "Carte mère",
+              "Carte mere",
+              "Ventirad",
+              "Watercooling",
+              "Refroidissement",
+              "Ordinateur",
+              "PC Gamer",
+              "PC portable",
+              "Pâte thermique"
             ]
           }
         }
@@ -688,7 +733,16 @@
             ],
             "exclure": [
               "9950X3D",
-              "tray"
+              "tray",
+              "Carte mère",
+              "Carte mere",
+              "Ventirad",
+              "Watercooling",
+              "Refroidissement",
+              "Ordinateur",
+              "PC Gamer",
+              "PC portable",
+              "Pâte thermique"
             ]
           }
         }
@@ -725,7 +779,16 @@
             ],
             "exclure": [
               "245KF",
-              "tray"
+              "tray",
+              "Carte mère",
+              "Carte mere",
+              "Ventirad",
+              "Watercooling",
+              "Refroidissement",
+              "Ordinateur",
+              "PC Gamer",
+              "PC portable",
+              "Pâte thermique"
             ]
           }
         }
@@ -762,7 +825,16 @@
             ],
             "exclure": [
               "265KF",
-              "tray"
+              "tray",
+              "Carte mère",
+              "Carte mere",
+              "Ventirad",
+              "Watercooling",
+              "Refroidissement",
+              "Ordinateur",
+              "PC Gamer",
+              "PC portable",
+              "Pâte thermique"
             ]
           }
         }
@@ -798,7 +870,16 @@
               "285K"
             ],
             "exclure": [
-              "tray"
+              "tray",
+              "Carte mère",
+              "Carte mere",
+              "Ventirad",
+              "Watercooling",
+              "Refroidissement",
+              "Ordinateur",
+              "PC Gamer",
+              "PC portable",
+              "Pâte thermique"
             ]
           }
         }
@@ -835,7 +916,16 @@
             ],
             "exclure": [
               "14600KF",
-              "tray"
+              "tray",
+              "Carte mère",
+              "Carte mere",
+              "Ventirad",
+              "Watercooling",
+              "Refroidissement",
+              "Ordinateur",
+              "PC Gamer",
+              "PC portable",
+              "Pâte thermique"
             ]
           }
         }
@@ -872,7 +962,16 @@
             ],
             "exclure": [
               "14700KF",
-              "tray"
+              "tray",
+              "Carte mère",
+              "Carte mere",
+              "Ventirad",
+              "Watercooling",
+              "Refroidissement",
+              "Ordinateur",
+              "PC Gamer",
+              "PC portable",
+              "Pâte thermique"
             ]
           }
         }
@@ -910,7 +1009,16 @@
             "exclure": [
               "14900KF",
               "14900KS",
-              "tray"
+              "tray",
+              "Carte mère",
+              "Carte mere",
+              "Ventirad",
+              "Watercooling",
+              "Refroidissement",
+              "Ordinateur",
+              "PC Gamer",
+              "PC portable",
+              "Pâte thermique"
             ]
           }
         }

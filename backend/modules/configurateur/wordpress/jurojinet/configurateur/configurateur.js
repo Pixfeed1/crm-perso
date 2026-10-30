@@ -300,5 +300,16 @@ $("recap").addEventListener("click",e=>{const b=e.target.closest(".rc");if(b){to
 form.addEventListener("pointerup",e=>{if(!e.target.closest(".opt")||tool.classList.contains("done")||!AUTO.includes(steps[step]))return;
   const at=step;setTimeout(()=>{if(step===at&&!tool.classList.contains("done"))avancer();},calme?0:260);});
 
+/* ---------- Onglets des configurations par budget (sections écrites par le serveur sous l'outil) ---------- */
+const barre=document.querySelector(".cfg-pc-seo .cfg-onglets");
+if(barre){
+  const ong=[...barre.querySelectorAll('[role="tab"]')], pan=ong.map(b=>document.getElementById(b.getAttribute("aria-controls")));
+  const choisir=(i,focus)=>{ong.forEach((b,j)=>{b.setAttribute("aria-selected",String(i===j));b.tabIndex=i===j?0:-1;if(pan[j])pan[j].hidden=i!==j;});if(focus)ong[i].focus();};
+  ong.forEach((b,i)=>{b.addEventListener("click",()=>choisir(i));
+    b.addEventListener("keydown",e=>{const n=e.key==="ArrowRight"?i+1:e.key==="ArrowLeft"?i-1:e.key==="Home"?0:e.key==="End"?ong.length-1:null;
+      if(n!==null){e.preventDefault();choisir((n+ong.length)%ong.length,true);}});});
+  barre.hidden=false; barre.closest(".cfg-pc-seo").classList.add("avec-onglets"); choisir(0);
+}
+
 fillSofts(); setSteps(); render();
 })();
