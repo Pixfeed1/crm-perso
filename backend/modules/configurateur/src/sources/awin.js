@@ -24,6 +24,8 @@ const prixNombre = v => { if (v == null) return null; const n = parseFloat(Strin
 const enStock = v => v == null ? true : /^(1|yes|y|true|in stock|in_stock|en stock|disponible)$/i.test(String(v).trim());
 const neuf = v => v == null || /^(new|neuf|nouveau)$/i.test(String(v).trim());
 const sansAccent = s => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+// Écritures équivalentes des marchands ramenées à une seule : « 2x48 » = « 2 x 48 », « 2To » = « 2 To », « 500go » = « 500 Go ».
+const normaliser = s => sansAccent(s).replace(/(\d)\s*x\s*(\d)/g, "$1x$2").replace(/(\d)\s*(to|go|tb|gb)\b/g, "$1 $2");
 // Lien d'achat sûr à insérer dans la page : https uniquement, sans espace ni guillemet ni chevron.
 // Un flux marchand est une donnée externe : un lien malformé ou piégé (javascript:, guillemet qui
 // ferme l'attribut href) ne doit jamais atteindre le HTML de jurojin.net.
@@ -55,7 +57,7 @@ function reglesCorrespondance(selection) {
     (c.modeles || []).forEach((m, rang) => {
       if (!m.correspondance) return;
       regles.push({ id, rang, modele: m.modele, ean: new Set((m.correspondance.ean || []).map(String)),
-        motifs: (m.correspondance.motifs || []).map(sansAccent), exclure: (m.correspondance.exclure || []).map(sansAccent) });
+        motifs: (m.correspondance.motifs || []).map(normaliser), exclure: (m.correspondance.exclure || []).map(normaliser) });
     });
   }
   return regles;
@@ -63,7 +65,7 @@ function reglesCorrespondance(selection) {
 function correspond(regle, p) {
   if (p.ean && regle.ean.has(String(p.ean))) return true;
   if (!regle.motifs.length) return false;
-  const n = sansAccent(p.nom);
+  const n = normaliser(p.nom);
   return regle.motifs.every(m => n.includes(m)) && !regle.exclure.some(m => n.includes(m));
 }
 

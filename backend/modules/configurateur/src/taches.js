@@ -20,9 +20,18 @@ const SELECTION_INITIALE = path.join(__dirname, "..", "data", "selection.json");
 /* ---------- accès base ---------- */
 async function selectionActive(db) {
   const r = await db.query("SELECT id, contenu, validee_le, validee_par FROM cfg_selections WHERE statut = 'validee' ORDER BY id DESC LIMIT 1");
-  if (r.rows.length) return { id: r.rows[0].id, ...r.rows[0].contenu };
-  // premier lancement : la sélection de départ, pas encore validée par Marc (la page affiche « exemple »)
   const s = JSON.parse(fs.readFileSync(SELECTION_INITIALE, "utf8"));
+  if (r.rows.length) {
+    const { id, contenu, validee_le } = r.rows[0];
+    // Tant que Marc n'a rien validé, la sélection de départ suit le fichier (motifs ou réserves corrigés après un relevé).
+    // Dès la première validation, la base fait foi et le fichier n'est plus relu.
+    if (!validee_le && contenu.version !== s.version) {
+      await db.query("UPDATE cfg_selections SET version = $2, contenu = $3 WHERE id = $1 AND validee_le IS NULL", [id, s.version, s]);
+      return { id, ...s };
+    }
+    return { id, ...contenu };
+  }
+  // premier lancement : la sélection de départ, pas encore validée par Marc (la page affiche « exemple »)
   const ins = await db.query("INSERT INTO cfg_selections (version, contenu, statut) VALUES ($1, $2, 'validee') RETURNING id", [s.version, s]);
   return { id: ins.rows[0].id, ...s };
 }

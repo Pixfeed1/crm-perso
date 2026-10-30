@@ -1,5 +1,5 @@
 {
-  "version": "2026-11-propose-1",
+  "version": "2026-11-propose-2",
   "validee_le": null,
   "validee_par": null,
   "note": "Sélection de départ à valider par Marc. Prix d'exemple : remplacés chaque nuit par les flux Awin. Indices jeu : estimations éditoriales tant qu'aucune source mesurée n'est branchée.",
@@ -1070,6 +1070,23 @@
             ],
             "exclure": []
           }
+        },
+        {
+          "modele": "Crucial P310 500 Go",
+          "correspondance": {
+            "ean": [
+              "0649528941787",
+              "0649528942289"
+            ],
+            "motifs": [
+              "P310",
+              "500"
+            ],
+            "exclure": [
+              "1 To",
+              "2 To"
+            ]
+          }
         }
       ],
       "pourquoi": "Assez pour le système et les logiciels. Les fichiers lourds peuvent vivre sur un disque externe.",
@@ -1140,7 +1157,11 @@
               "T705",
               "2 To"
             ],
-            "exclure": []
+            "exclure": [],
+            "ean": [
+              "0649528940339",
+              "0649528940179"
+            ]
           }
         }
       ],
@@ -1189,6 +1210,31 @@
           "correspondance": {
             "motifs": [
               "A620M-HDV"
+            ],
+            "exclure": []
+          }
+        },
+        {
+          "modele": "Gigabyte A620M H",
+          "correspondance": {
+            "ean": [
+              "4719331855512"
+            ],
+            "motifs": [
+              "Gigabyte",
+              "A620M H"
+            ],
+            "exclure": []
+          }
+        },
+        {
+          "modele": "MSI PRO A620M-B",
+          "correspondance": {
+            "ean": [
+              "4711377276597"
+            ],
+            "motifs": [
+              "A620M-B"
             ],
             "exclure": []
           }

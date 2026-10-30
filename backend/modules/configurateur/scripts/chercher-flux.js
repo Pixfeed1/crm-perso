@@ -1,6 +1,6 @@
 /* Cherche des produits dans les flux Awin retenus, pour régler les motifs de data/selection.json.
    Une recherche = des mots qui doivent tous figurer dans le nom (accents, majuscules et espaces ignorés :
-   « 2x48 ddr5 » trouve « Kit 2 x 48 Go DDR5 »). N'affiche ni l'adresse des flux ni la clé.
+   « 2x48 ddr5 » trouve « Kit 2 x 48 Go DDR5 »). Un mot précédé de « - » écarte les noms qui le contiennent. N'affiche ni l'adresse des flux ni la clé.
    Usage, depuis backend/ : node modules/configurateur/scripts/chercher-flux.js "2x48 ddr5" "a620m" */
 require("dotenv").config();
 const { Readable } = require("stream");
@@ -10,7 +10,10 @@ const awin = require("../src/sources/awin");
 
 const MAX = 15;
 const plat = s => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/\s+/g, "");
-const recherches = process.argv.slice(2).map(q => ({ q, mots: q.split(/\s+/).filter(Boolean).map(plat), trouves: [], total: 0 }));
+const recherches = process.argv.slice(2).map(q => {
+  const mots = q.split(/\s+/).filter(Boolean);
+  return { q, mots: mots.filter(m => !m.startsWith("-")).map(plat), sauf: mots.filter(m => m.startsWith("-")).map(m => plat(m.slice(1))).filter(Boolean), trouves: [], total: 0 };
+});
 if (!recherches.length) { console.error('Usage : node modules/configurateur/scripts/chercher-flux.js "2x48 ddr5" "a620m"'); process.exit(1); }
 
 (async () => {
@@ -27,7 +30,7 @@ if (!recherches.length) { console.error('Usage : node modules/configurateur/scri
       const nom = l.product_name || l.title;
       if (!nom) continue;
       const n = plat(nom);
-      for (const x of recherches) if (x.mots.every(m => n.includes(m))) {
+      for (const x of recherches) if (x.mots.every(m => n.includes(m)) && !x.sauf.some(m => n.includes(m))) {
         x.total++;
         if (x.trouves.length < MAX) x.trouves.push(`${f.nom} | ${l.search_price || l.store_price || "?"} € | stock ${l.in_stock ?? l.stock_status ?? "?"} | ${l.condition || "?"} | EAN ${l.ean || l.product_gtin || "-"} | ${nom}`);
       }

@@ -54,6 +54,18 @@ test("tâches et validation sur base réelle", opts, async t => {
     assert.ok(fs.existsSync(fichier));
   });
 
+  await t.test("sélection de départ non validée : suit le fichier quand sa version change, plus après validation", async () => {
+    const lire = async () => (await db.query("SELECT version, contenu, validee_le FROM cfg_selections WHERE statut = 'validee'")).rows;
+    await db.query("UPDATE cfg_selections SET version = 'ancienne', contenu = contenu || '{\"version\":\"ancienne\",\"composants\":{}}'::jsonb");
+    const a = await taches.selectionActive(db);
+    assert.equal(a.version, selection.version);
+    assert.equal(Object.keys(a.composants).length, Object.keys(selection.composants).length);
+    assert.equal((await lire()).length, 1);
+    await db.query("UPDATE cfg_selections SET validee_le = now(), contenu = contenu || '{\"version\":\"validee-par-marc\"}'::jsonb");
+    assert.equal((await taches.selectionActive(db)).version, "validee-par-marc");
+    await db.query("UPDATE cfg_selections SET validee_le = NULL, version = $1, contenu = $2", [selection.version, selection]);
+  });
+
   await t.test("une deuxième demande pendant qu'une tâche tourne est refusée et tracée", async () => {
     lenteur = 300;
     const a = await taches.demarrer(deps, "nuit");

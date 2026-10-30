@@ -129,6 +129,22 @@ test("Awin : liste des flux au format réel (en-têtes et date « Last Imported 
   assert.equal(awin.dateFlux(l["88636"].maj).toISOString(), "2026-10-29T20:03:56.000Z");
 });
 
+test("Awin : écritures des marchands sans espaces reconnues (2x48, 2To, 500go), sans attraper la capacité voisine", async () => {
+  const entete = "aw_deep_link,product_name,search_price,ean,in_stock,condition,merchant_name\n";
+  const lignes = [
+    "https://x.example/1,SSD Interne Gaming - CRUCIAL - T705 SSD 2To PCIe Gen5 NVMe M.2,389.99,,1,new,Cdiscount",
+    "https://x.example/2,SSD Interne Gaming - CRUCIAL - T705 SSD 1To PCIe Gen5 NVMe M.2,245.81,,1,new,Cdiscount",
+    "https://x.example/3,Mémoire Corsair Vengeance 96Go (2x48Go) DDR5 5600 MHz,330,,1,new,Cdiscount",
+    "https://x.example/4,Disque SSD Interne - CRUCIAL - P310 500Go PCIe Gen4 NVMe M.2 SSD,139.99,,1,new,Cdiscount"
+  ];
+  const offres = await lire(entete + lignes.join("\n"));
+  const de = id => offres.filter(o => o.id === id).map(o => o.lien);
+  assert.deepEqual(de("ssd-2to5"), ["https://x.example/1"]);
+  assert.deepEqual(de("ram-96"), ["https://x.example/3"]);
+  assert.deepEqual(de("ssd-512"), ["https://x.example/4"]);
+  assert.deepEqual(de("ssd-1to"), []);
+});
+
 test("Awin : formats de date lus", () => {
   assert.equal(awin.dateFlux("28/10/2026 03:12").toISOString(), "2026-10-28T03:12:00.000Z");
   assert.equal(awin.dateFlux("2026-10-28T03:12:44+01:00").toISOString(), "2026-10-28T02:12:44.000Z");
