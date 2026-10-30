@@ -4,7 +4,7 @@
 .cfg-pc{font-family:var(--f);color:var(--text);font-size:17px;line-height:1.55;color-scheme:light;
   --bg:#ffffff; --bg-alt:#f8f9fb; --border:#e4e6eb; --border-strong:#d3d6de;
   --text:#2f343d; --title:#111827; --muted:#596270;
-  --accent:#5b5bd6; --accent-dark:#4338ca; --accent-light:#eef0ff; --accent-border:#c7cdfb;
+  --accent:var(--jn-violet,#5b53e0); --accent-dark:#4338ca; --accent-light:var(--jn-lav,#ecebfb); --accent-border:#c9c5f2;   /* couleurs de la charte du thème */
   --r-sm:6px; --r-md:10px; --r-lg:14px;
   --f:'DM Sans',system-ui,-apple-system,"Segoe UI",sans-serif;}
 .cfg-pc,.cfg-pc *{box-sizing:border-box}
@@ -80,7 +80,7 @@
 .cfg-pc .verdict h3{font-size:clamp(21px,2.4vw,24px);font-weight:700;color:var(--title);line-height:1.25;margin:12px 0 0;text-wrap:balance}
 .cfg-pc .total{margin:18px 0 10px;padding:16px 0;border-top:1px solid var(--border-strong);border-bottom:1px solid var(--border-strong);display:flex;align-items:baseline;justify-content:space-between;gap:12px}
 .cfg-pc .total .lbl{font-size:14px;font-weight:600;color:var(--muted)}
-.cfg-pc .total .num{font-size:clamp(32px,4vw,40px);font-weight:700;color:var(--title);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.cfg-pc .total .num{font-size:clamp(32px,4vw,40px);font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
 .cfg-pc .date{font-size:14px;color:var(--muted);margin:0 0 4px;line-height:1.45}
 .cfg-pc .effet{font-size:15.5px;color:var(--text);margin:14px 0 0;line-height:1.55}
 .cfg-pc .effet b{font-weight:600;color:var(--title)}
@@ -144,7 +144,12 @@
 .cfg-pc .questions fieldset{display:none}
 .cfg-pc .questions fieldset.on{display:block;animation:cfg-in .28s ease both}
 .cfg-pc .questions legend{font-size:clamp(20px,2.4vw,24px);font-weight:700;color:var(--title);line-height:1.25;margin-bottom:18px}
-.cfg-pc .fams .card{min-height:104px;justify-content:center}
+.cfg-pc .fams .card{min-height:104px}
+/* icône de chaque activité : pastille lavande, violette une fois choisie */
+.cfg-pc .fic{width:40px;height:40px;border-radius:11px;background:var(--accent-light);display:flex;align-items:center;justify-content:center;margin-bottom:8px;transition:background .15s ease}
+.cfg-pc .fic svg{width:22px;height:22px;fill:none;stroke:var(--accent);stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.cfg-pc .opt input:checked + .card .fic{background:var(--accent)}
+.cfg-pc .opt input:checked + .card .fic svg{stroke:#fff}
 .cfg-pc .stepnav{display:flex;justify-content:space-between;align-items:center;margin-top:26px}
 .cfg-pc .restart{display:none}
 .cfg-pc .recap{display:none}
@@ -181,7 +186,8 @@
 @media (max-width:720px){
 .cfg-pc{font-size:16px}
 .cfg-pc .fams,.cfg-pc .pair,.cfg-pc .trio{grid-template-columns:1fr}
-.cfg-pc .fams .card{min-height:0}
+.cfg-pc .fams .card{min-height:0;display:grid;grid-template-columns:40px minmax(0,1fr);column-gap:14px;align-items:center}
+.cfg-pc .fams .fic{grid-row:1/span 2;margin:0}
 .cfg-pc .fams .card,.cfg-pc .pair .card,.cfg-pc .trio .card{padding:16px}
 .cfg-pc .softs{grid-template-columns:repeat(2,minmax(0,1fr))}
 .cfg-pc .budget-head{flex-direction:column-reverse;align-items:stretch}
@@ -222,3 +228,33 @@
 .cfg-pc-seo [role="tab"]:focus-visible{outline:2px solid #6366f1;outline-offset:2px;border-radius:4px}
 .cfg-pc-seo.avec-onglets .cfg-usage h3{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 @media (max-width:640px){.cfg-pc-seo .cfg-onglets{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch}.cfg-pc-seo [role="tab"]{white-space:nowrap;padding:10px 12px}}
+
+/* ---------- Mise en page de la page (gabarit.php), comme la visionneuse 3D : pas de boîte blanche d'article ---------- */
+.cfg-content{width:100%;float:none}
+.cfg-page{max-width:1080px;margin:0 auto;padding:34px 20px 56px;font-family:"DM Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:var(--jn-navy,#1f2333)}
+.cfg-crumb{font-size:13px;color:var(--jn-muted,#6b7280);margin-bottom:12px}
+.cfg-crumb a{color:var(--jn-muted,#6b7280);text-decoration:none}
+.cfg-crumb a:hover{color:var(--jn-violet,#5b53e0)}
+.cfg-crumb b{color:var(--jn-violet,#5b53e0);font-weight:600}
+.cfg-crumb span{margin:0 6px}
+.cfg-head{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap}
+.cfg-head h1{font-size:clamp(28px,5vw,40px);font-weight:800;letter-spacing:-.8px;line-height:1.05;margin:0;color:var(--jn-navy,#1f2333)}
+.cfg-badge{display:inline-flex;align-items:center;gap:8px;background:var(--jn-lav,#ecebfb);color:var(--jn-violet,#5b53e0);font-size:13.5px;font-weight:700;padding:7px 14px;border-radius:999px;margin-bottom:4px}
+.cfg-badge svg{width:16px;height:16px;fill:var(--jn-violet,#5b53e0)}
+.cfg-intro{font-size:17px;color:var(--jn-muted,#6b7280);margin:12px 0 26px;max-width:760px;line-height:1.55}
+.cfg-intro p{margin:0 0 .7em}
+/* l'outil : une carte blanche comme celle de la visionneuse ; le résultat s'y déploie sans second cadre */
+.cfg-page .cfg-pc .tool{background:#fff;border:1px solid #e7e8ee;border-radius:18px;box-shadow:0 10px 34px rgba(31,35,51,.07);padding:clamp(18px,3.4vw,34px);margin:0 0 44px}
+.cfg-page .cfg-pc .sheet{background:transparent;border-radius:0;margin-inline:0;padding:28px 0 0;border-top:1px solid #e7e8ee}
+/* sections sous l'outil, sur le fond du site */
+.cfg-page .cfg-pc-seo h2{font-size:clamp(22px,3vw,28px);font-weight:800;letter-spacing:-.4px;color:var(--jn-navy,#1f2333);margin:44px 0 12px;line-height:1.2}
+.cfg-page .cfg-pc-seo h3{color:var(--jn-navy,#1f2333)}
+.cfg-page .cfg-pc-seo > p{font-size:16px;color:var(--jn-muted,#6b7280);line-height:1.6;max-width:820px}
+.cfg-page .cfg-pc-seo .faq-item{background:#fff}
+.cfg-feats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:18px}
+.cfg-feat{background:#fff;border:1px solid #e7e8ee;border-radius:14px;padding:20px}
+.cfg-fic{width:44px;height:44px;border-radius:12px;background:var(--jn-lav,#ecebfb);display:flex;align-items:center;justify-content:center;margin-bottom:12px}
+.cfg-fic svg{width:24px;height:24px;fill:none;stroke:var(--jn-violet,#5b53e0);stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.cfg-feat b{font-size:17px;font-weight:700;display:block;margin-bottom:5px;color:var(--jn-navy,#1f2333)}
+.cfg-feat p{font-size:14.5px;color:var(--jn-muted,#6b7280);line-height:1.45;margin:0}
+@media (max-width:820px){.cfg-feats{grid-template-columns:1fr}.cfg-page{padding:24px 14px 44px}}

@@ -38,9 +38,22 @@ function jurojin_cfg_page_concernee( $post = null ) {
 	return get_page_template_slug( $post ) === JUROJIN_CFG_MODELE || has_shortcode( $post->post_content, 'configurateur_pc' );
 }
 
-/** Page au modèle « Configurateur PC » sans shortcode dans son texte : l'outil est ajouté à la fin. */
+/** Page au modèle « Configurateur PC » : mise en page propre (configurateur/gabarit.php), comme la visionneuse 3D,
+    sans la boîte blanche d'article. Le fichier manquant, la page garde la mise en page normale du thème. */
+add_filter( 'template_include', function ( $gabarit ) {
+	if ( is_singular( 'page' ) && get_page_template_slug() === JUROJIN_CFG_MODELE ) {
+		$f = get_stylesheet_directory() . '/configurateur/gabarit.php';
+		if ( is_readable( $f ) ) {
+			return $f;
+		}
+	}
+	return $gabarit;
+} );
+
+/** Page au modèle « Configurateur PC » sans shortcode dans son texte : l'outil est ajouté à la fin
+    (seulement avec la mise en page normale du thème : le gabarit place l'outil lui-même). */
 add_filter( 'the_content', function ( $contenu ) {
-	if ( ! is_singular( 'page' ) || ! in_the_loop() || ! is_main_query() ) {
+	if ( did_action( 'jurojin_cfg_gabarit' ) || ! is_singular( 'page' ) || ! in_the_loop() || ! is_main_query() ) {
 		return $contenu;
 	}
 	$post = get_post();
@@ -264,10 +277,15 @@ function jurojin_cfg_sections( $d ) {
 	$blender = ! empty( $d['sources'][0] ) ? $d['sources'][0] : null;
 	// Ce qui rend les recommandations fiables, dit en promesses vérifiables, sans la méthode (sources, règles, calculs).
 	$h .= '<h2>Pourquoi vous pouvez vous fier à ces configurations</h2>';
-	$h .= '<p><strong>Des prix du jour.</strong> Ils sont vérifiés chaque jour chez les marchands, et seuls les produits neufs et en stock sont proposés.</p>';
-	$h .= '<p><strong>Des machines qui fonctionnent.</strong> Chaque configuration est vérifiée pièce par pièce : tout est compatible, de l\'alimentation à la place dans le boîtier.</p>';
-	$h .= '<p><strong>Des chiffres sourcés.</strong> Les temps de rendu affichés viennent de mesures publiques. Quand une mesure manque, aucun chiffre n\'est inventé.</p>';
-	$h .= '<p><strong>Un choix indépendant.</strong> Les commissions ne changent rien au choix des pièces, toujours proposées au meilleur prix disponible.</p>';
+	$ico = function ( $d ) {
+		return '<span class="cfg-fic"><svg viewBox="0 0 24 24" aria-hidden="true">' . $d . '</svg></span>';
+	};
+	$h .= '<div class="cfg-feats">'
+		. '<div class="cfg-feat">' . $ico( '<path d="M3 12h4l3-8 4 16 3-8h4"/>' ) . '<b>Des prix du jour</b><p>Vérifiés chaque jour chez les marchands. Seuls les produits neufs et en stock sont proposés.</p></div>'
+		. '<div class="cfg-feat">' . $ico( '<path d="M20 6 9 17l-5-5"/>' ) . '<b>Des machines qui fonctionnent</b><p>Chaque configuration est vérifiée pièce par pièce, de l\'alimentation à la place dans le boîtier.</p></div>'
+		. '<div class="cfg-feat">' . $ico( '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>' ) . '<b>Des chiffres sourcés</b><p>Les temps de rendu viennent de mesures publiques. Quand une mesure manque, aucun chiffre n\'est inventé.</p></div>'
+		. '<div class="cfg-feat">' . $ico( '<path d="M12 3v18M5 8l7-5 7 5M5 8l-3 7a4 4 0 0 0 6 0zM19 8l-3 7a4 4 0 0 0 6 0z"/>' ) . '<b>Un choix indépendant</b><p>Les commissions ne changent rien au choix des pièces, toujours proposées au meilleur prix disponible.</p></div>'
+		. '</div>';
 
 	$q = array();
 	$q[] = array( 'Les prix affichés sont-ils à jour ?',
