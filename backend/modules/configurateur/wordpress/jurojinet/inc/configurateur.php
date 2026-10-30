@@ -83,8 +83,54 @@ add_shortcode( 'configurateur_pc', function () {
 	$outil = file_get_contents( get_stylesheet_directory() . '/configurateur/outil.html' );
 	// "</" échappé : le JSON ne peut pas fermer la balise script
 	$donnees = '<script type="application/json" id="configurateur-data">' . str_replace( '</', '<\/', $json ) . '</script>';
-	return $outil . $donnees . jurojin_cfg_sections( json_decode( $json, true ) );
+	return $outil . $donnees . jurojin_cfg_logiciels() . jurojin_cfg_sections( json_decode( $json, true ) );
 } );
+
+/** Logo et adresse des fiches logiciel du site (type de contenu « logiciel », champ « URL du logo »), pour les boutons
+    de l'outil et les liens « Notre fiche ». Un logiciel sans fiche publiée garde le logo ou le monogramme de l'outil. */
+function jurojin_cfg_logiciels() {
+	if ( ! post_type_exists( 'logiciel' ) ) {
+		return '';
+	}
+	// identifiant de l'outil => fiches possibles, dans l'ordre : [ nom affiché, adresses (slugs) essayées ]
+	$fiches = array(
+		'blender'     => array( array( 'Blender', array( 'blender' ) ) ),
+		'unreal'      => array( array( 'Unreal Engine', array( 'unreal-engine' ) ), array( 'Unity', array( 'unity' ) ) ),
+		'zbrush'      => array( array( 'ZBrush', array( 'zbrush' ) ) ),
+		'daz'         => array( array( 'Daz Studio', array( 'daz-studio' ) ) ),
+		'keyshot'     => array( array( 'KeyShot', array( 'keyshot' ) ) ),
+		'premiere'    => array( array( 'Premiere Pro', array( 'adobe-premiere-pro', 'premiere-pro', 'premiere' ) ) ),
+		'resolve'     => array( array( 'DaVinci Resolve', array( 'davinci-resolve', 'resolve' ) ) ),
+		'ae'          => array( array( 'After Effects', array( 'adobe-after-effects', 'after-effects' ) ) ),
+		'photoshop'   => array( array( 'Photoshop', array( 'photoshop', 'adobe-photoshop' ) ) ),
+		'lightroom'   => array( array( 'Lightroom', array( 'adobe-lightroom', 'lightroom' ) ) ),
+		'illustrator' => array( array( 'Illustrator', array( 'adobe-illustrator', 'illustrator' ) ) ),
+		'figma'       => array( array( 'Figma', array( 'figma' ) ) ),
+	);
+	$sur    = function ( $u ) {
+		return is_string( $u ) && preg_match( '#^(https://|/(?!/))[^\s"\'<>`\\\\]*$#', $u ) ? $u : '';
+	};
+	$sortie = array();
+	foreach ( $fiches as $id => $liste ) {
+		foreach ( $liste as $f ) {
+			foreach ( $f[1] as $slug ) {
+				$post = get_page_by_path( $slug, OBJECT, 'logiciel' );
+				if ( $post && 'publish' === $post->post_status ) {
+					$sortie[ $id ][] = array(
+						'nom'  => $f[0],
+						'logo' => $sur( esc_url_raw( (string) get_post_meta( $post->ID, '_logiciel_logo_url', true ) ) ),
+						'url'  => $sur( (string) get_permalink( $post ) ),
+					);
+					break;
+				}
+			}
+		}
+	}
+	if ( ! $sortie ) {
+		return '';
+	}
+	return '<script type="application/json" id="configurateur-logiciels">' . str_replace( '</', '<\/', wp_json_encode( $sortie ) ) . '</script>';
+}
 
 /* ---------- Sections en HTML sous l'outil ----------
    L'outil est dessiné par le script ; ces sections sont écrites par le serveur à partir des mêmes données,
@@ -239,10 +285,12 @@ function jurojin_cfg_sections( $d ) {
     sinon l'outil reste vide jusqu'au premier geste du visiteur. */
 add_filter( 'rocket_delay_js_exclusions', function ( $exclusions ) {
 	$exclusions[] = 'configurateur-data';
+	$exclusions[] = 'configurateur-logiciels';
 	$exclusions[] = 'configurateur.js';
 	return $exclusions;
 } );
 add_filter( 'rocket_exclude_defer_js', function ( $exclusions ) {
 	$exclusions[] = 'configurateur-data';
+	$exclusions[] = 'configurateur-logiciels';
 	return $exclusions;
 } );

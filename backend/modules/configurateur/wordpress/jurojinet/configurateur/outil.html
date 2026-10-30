@@ -4,9 +4,11 @@
     <p class="progress"><span id="cfg-progress"></span><span id="cfg-plabel"></span></p>
     <span class="bar"><i id="cfg-barfill"></i></span>
 
+    <div class="recap" id="cfg-recap" aria-label="Vos réponses"></div>
+
     <form class="questions" id="cfg-form">
       <fieldset class="on" data-step="fam">
-        <legend>Ce que vous faites</legend>
+        <legend>Que faites-vous avec ce PC&#8239;?</legend>
         <div class="opts fams">
           <label class="opt"><input type="radio" name="fam" id="cfg-f-3d" value="3d" checked><span class="card"><span class="c-name">3D</span><span class="c-sub">Modélisation, sculpture, rendu, temps réel</span></span></label>
           <label class="opt"><input type="radio" name="fam" id="cfg-f-video" value="video"><span class="card"><span class="c-name">Vidéo et motion</span><span class="c-sub">Montage, étalonnage, animation</span></span></label>
@@ -17,18 +19,18 @@
       </fieldset>
 
       <fieldset data-step="soft" id="cfg-softset">
-        <legend>Votre logiciel principal</legend>
+        <legend>Quel logiciel utilisez-vous le plus&#8239;?</legend>
         <div class="opts softs" id="cfg-softs"></div>
       </fieldset>
 
       <fieldset data-step="load" id="cfg-loadset">
-        <legend>Vos projets</legend>
+        <legend>Vos projets sont plutôt…</legend>
         <div class="opts pair" id="cfg-projets"></div>
         <label class="also" for="cfg-alsoGame"><input type="checkbox" id="cfg-alsoGame" name="alsoGame"><span><span class="c-name">Je joue aussi</span><br><span class="c-sub">On vous demandera la définition de votre écran</span></span></label>
       </fieldset>
 
       <fieldset data-step="screen" id="cfg-screenset" hidden>
-        <legend id="cfg-screenleg">Votre écran</legend>
+        <legend id="cfg-screenleg">Sur quel écran jouez-vous&#8239;?</legend>
         <div class="opts trio">
           <label class="opt"><input type="radio" name="screen" id="cfg-sc-1080" value="1080"><span class="card"><span class="c-name">1080p</span><span class="c-sub">Full HD, le plus courant</span></span></label>
           <label class="opt"><input type="radio" name="screen" id="cfg-sc-1440" value="1440" checked><span class="card"><span class="c-name">1440p</span><span class="c-sub">Le bon équilibre en 2026</span></span></label>
@@ -37,7 +39,7 @@
       </fieldset>
 
       <fieldset data-step="games" id="cfg-gameset" hidden>
-        <legend>Vos jeux</legend>
+        <legend>Quels jeux&#8239;?</legend>
         <div class="opts pair">
           <label class="opt"><input type="radio" name="games" id="cfg-g-solo" value="solo" checked><span class="card"><span class="c-name">Grands jeux solo</span><span class="c-sub">Beaux graphismes, mondes ouverts</span></span></label>
           <label class="opt"><input type="radio" name="games" id="cfg-g-comp" value="comp"><span class="card"><span class="c-name">Compétitif</span><span class="c-sub">FPS en ligne, un maximum d'images par seconde</span></span></label>
@@ -45,7 +47,7 @@
       </fieldset>
 
       <fieldset data-step="budget">
-        <legend>Votre budget</legend>
+        <legend id="cfg-budleg">Quel budget pour le PC, sans l'écran&#8239;?</legend>
         <div class="budget-head">
           <label class="budget-val"><input type="number" id="cfg-budgetIn" inputmode="numeric" min="500" max="5000" step="100" value="2000" aria-label="Budget en euros, de 500 à 5 000"><span aria-hidden="true">€</span></label>
           <div class="presets" id="cfg-presets"></div>

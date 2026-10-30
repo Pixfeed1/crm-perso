@@ -34,7 +34,8 @@
 .cfg-pc .softs .card{align-items:center;text-align:center;justify-content:center;gap:8px;padding:16px 10px 14px}
 .cfg-pc .logo{height:36px;min-width:36px;display:inline-flex;align-items:center;justify-content:center;gap:6px;border-radius:50%;
   background:var(--bg-alt);color:var(--muted);font-size:13px;font-weight:700;letter-spacing:.02em;transition:color .15s ease,background .15s ease}
-.cfg-pc .logo.svg{background:none;border-radius:0;color:#3b4250}
+.cfg-pc .logo.svg,.cfg-pc .logo.img{background:none;border-radius:0;color:#3b4250}
+.cfg-pc .logo img{width:32px;height:32px;object-fit:contain;display:block}
 .cfg-pc .logo svg{width:30px;height:30px;display:block}
 .cfg-pc .opt input:checked + .card .logo{color:var(--accent-dark)}
 .cfg-pc .opt input:checked + .card .logo:not(.svg){background:#fff}
@@ -128,9 +129,39 @@
 .cfg-pc .more li{margin:0 0 2px}
 .cfg-pc .foot{grid-area:f;font-size:13.5px;color:var(--muted);margin:24px 0 0;padding-top:16px;border-top:1px solid var(--border);line-height:1.5}
 
-/* ---------- Parcours pas à pas (mobile) ---------- */
-.cfg-pc .stepnav,.cfg-pc .progress,.cfg-pc .restart,.cfg-pc .bar{display:none}
-.cfg-pc .btn{font-family:var(--f);font-size:16px;font-weight:600;border:0;border-radius:var(--r-md);padding:14px 20px;cursor:pointer;background:var(--accent);color:#fff}
+/* ---------- Parcours : une question à la fois, puis le résultat ---------- */
+.cfg-pc .progress{display:flex;justify-content:space-between;font-size:14px;font-weight:600;color:var(--muted);margin:0 0 10px}
+.cfg-pc .bar{display:block;height:4px;background:var(--border);border-radius:2px;margin:0 0 26px;overflow:hidden}
+.cfg-pc .bar i{display:block;height:100%;background:var(--accent);transition:width .3s ease}
+.cfg-pc .questions fieldset{display:none}
+.cfg-pc .questions fieldset.on{display:block;animation:cfg-in .28s ease both}
+.cfg-pc .questions legend{font-size:clamp(20px,2.4vw,24px);font-weight:700;color:var(--title);line-height:1.25;margin-bottom:18px}
+.cfg-pc .fams .card{min-height:104px;justify-content:center}
+.cfg-pc .stepnav{display:flex;justify-content:space-between;align-items:center;margin-top:26px}
+.cfg-pc .restart{display:none}
+.cfg-pc .recap{display:none}
+.cfg-pc .sheet{display:none}
+.cfg-pc .tool.done .progress,.cfg-pc .tool.done .bar,.cfg-pc .tool.done .stepnav,.cfg-pc .tool.done h2{display:none}
+/* résultat : les réponses en bandeau, le budget gardé pour jouer en direct */
+.cfg-pc .tool.done .questions fieldset{display:none}
+.cfg-pc .tool.done .questions fieldset[data-step="budget"]{display:block;animation:none}
+.cfg-pc .tool.done .questions legend{font-size:15px;margin-bottom:8px}
+.cfg-pc .tool.done .recap{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 22px}
+.cfg-pc .tool.done .sheet{display:grid}
+.cfg-pc .rc-l{font-size:14px;font-weight:600;color:var(--muted);margin-right:4px}
+.cfg-pc .rc{display:inline-flex;align-items:center;gap:6px;font-family:var(--f);font-size:14.5px;font-weight:600;color:var(--accent-dark);background:var(--accent-light);border:1px solid var(--accent-border);border-radius:999px;padding:6px 12px;cursor:pointer}
+.cfg-pc .rc svg{width:13px;height:13px;opacity:.7}
+.cfg-pc .rc:hover{border-color:var(--accent)}
+.cfg-pc .rc:focus-visible{outline:2px solid var(--accent-dark);outline-offset:2px}
+/* révélation du résultat */
+.cfg-pc .sheet.reveal .side{animation:cfg-in .4s ease both}
+.cfg-pc .sheet.reveal .parts > li{animation:cfg-in .35s ease both;animation-delay:calc(var(--i,0) * 70ms + 200ms)}
+@keyframes cfg-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.cfg-pc .fiche{margin:6px 0 0;font-size:15px}
+.cfg-pc .fiche a{color:var(--accent-dark);font-weight:600;text-decoration:none;margin-right:14px}
+.cfg-pc .fiche a:hover{text-decoration:underline}
+.cfg-pc .btn{font-family:var(--f);font-size:16px;font-weight:600;border:0;border-radius:var(--r-md);padding:14px 22px;cursor:pointer;background:var(--accent);color:#fff}
+.cfg-pc .btn:hover{background:var(--accent-dark)}
 .cfg-pc .btn.ghost{background:transparent;color:var(--accent-dark);padding-inline:2px}
 .cfg-pc .btn:focus-visible{outline:2px solid var(--accent-dark);outline-offset:2px}
 @media (max-width:900px){.cfg-pc .fams{grid-template-columns:repeat(3,minmax(0,1fr))}
@@ -141,12 +172,8 @@
 .cfg-pc .pp{margin-top:20px}}
 @media (max-width:720px){
 .cfg-pc{font-size:16px}
-.cfg-pc .progress{display:flex;justify-content:space-between;font-size:14px;color:var(--muted);margin:0 0 10px}
-.cfg-pc .bar{display:block;height:4px;background:var(--border);border-radius:2px;margin:0 0 20px;overflow:hidden}
-.cfg-pc .bar i{display:block;height:100%;background:var(--accent);transition:width .25s ease}
-.cfg-pc .questions fieldset{display:none}
-.cfg-pc .questions fieldset.on{display:block}
 .cfg-pc .fams,.cfg-pc .pair,.cfg-pc .trio{grid-template-columns:1fr}
+.cfg-pc .fams .card{min-height:0}
 .cfg-pc .fams .card,.cfg-pc .pair .card,.cfg-pc .trio .card{padding:16px}
 .cfg-pc .softs{grid-template-columns:repeat(2,minmax(0,1fr))}
 .cfg-pc .budget-head{flex-direction:column-reverse;align-items:stretch}
@@ -154,14 +181,10 @@
 .cfg-pc .chip{padding:12px 14px;font-size:15px;border-radius:var(--r-md);text-align:left}
 .cfg-pc .marks{height:46px}
 .cfg-pc .mark{font-size:12px}
-.cfg-pc .stepnav{display:flex;justify-content:space-between;align-items:center;margin-top:22px}
-.cfg-pc .sheet{display:none;margin-top:0;padding:18px 16px;margin-inline:-4px}
+.cfg-pc .sheet{padding:18px 16px;margin-inline:-4px}
 .cfg-pc .parts > li{grid-template-columns:52px minmax(0,1fr) auto;column-gap:12px}
-.cfg-pc .thumb{width:52px;height:52px}
-.cfg-pc .tool.done .questions,.cfg-pc .tool.done .stepnav,.cfg-pc .tool.done .progress,.cfg-pc .tool.done .bar,.cfg-pc .tool.done h2{display:none}
-.cfg-pc .tool.done .sheet{display:grid}
-.cfg-pc .restart{display:inline-block}}
-@media (prefers-reduced-motion:reduce){.cfg-pc *{transition:none!important}}
+.cfg-pc .thumb{width:52px;height:52px}}
+@media (prefers-reduced-motion:reduce){.cfg-pc *{transition:none!important;animation:none!important}}
 
 /* ---------- Sections lisibles sous l'outil (configurations par budget, méthode, questions) ----------
    Titres, paragraphes et tableaux gardent le style du thème (tableaux : [jn_table_products], css/tables.css). */
