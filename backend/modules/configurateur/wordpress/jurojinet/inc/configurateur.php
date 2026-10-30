@@ -336,3 +336,31 @@ add_filter( 'rocket_exclude_defer_js', function ( $exclusions ) {
 	$exclusions[] = 'configurateur-logiciels';
 	return $exclusions;
 } );
+
+/* ---------- Encart de la page d'accueil ----------
+   Même construction et mêmes classes que l'encart de la visionneuse 3D (front-page.php, css/homepage.css) :
+   à appeler dans la colonne de droite de l'accueil avec
+       <?php if ( function_exists( 'jurojin_cfg_widget_accueil' ) ) echo jurojin_cfg_widget_accueil(); ?>
+   Rien ne s'affiche tant que la page du configurateur n'est pas publiée (pas de lien vers une page absente). */
+function jurojin_cfg_widget_accueil() {
+	$pages = get_posts( array(
+		'post_type'      => 'page',
+		'post_status'    => 'publish',
+		'posts_per_page' => 1,
+		'fields'         => 'ids',
+		'meta_key'       => '_wp_page_template',
+		'meta_value'     => JUROJIN_CFG_MODELE,
+	) );
+	if ( ! $pages ) {
+		return '';
+	}
+	$url = get_permalink( $pages[0] );
+	return '<div class="widget widget--tool">'
+		. '<h3 class="widget__title"><svg class="icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>Configurateur PC</h3>'
+		. '<p class="widget-tool__desc">Dites ce que vous faites et votre budget : on vous propose la machine la plus adaptée, pièce par pièce, au prix du jour.</p>'
+		. '<div class="widget-tool__formats"><span>3D</span><span>Montage</span><span>Photo</span><span>CAO</span><span>Jeu</span></div>'
+		. '<a href="' . esc_url( $url ) . '" class="btn btn--primary widget-tool__btn">Trouver mon PC</a>'
+		. '<p class="widget-tool__privacy"><svg class="icon" viewBox="0 0 24 24"><path d="M12 1 3 5v6c0 5.5 3.8 10.7 9 12 5.2-1.3 9-6.5 9-12V5Zm-1 15-4-4 1.4-1.4L11 13.2l5.6-5.6L18 9Z"/></svg>'
+		. '<span>Prix vérifiés chaque jour chez les marchands.</span></p>'
+		. '</div>';
+}
