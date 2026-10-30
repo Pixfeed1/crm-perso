@@ -149,3 +149,20 @@ test("cache WP Rocket : sans numéro de page, WordPress retrouve les pages au mo
   assert.match(pub.codeViderCache("1234"), /^\$ids = array\(1234\);/);
   assert.match(pub.codeViderCache("1234; system('x')"), /^\$ids = array\(1234\);/, "seul le nombre est gardé");
 });
+
+test("Amazon : lien partenaire sans prix, jamais retenu comme meilleure offre, ASIN et identifiant vérifiés", () => {
+  const id = Object.keys(selection.composants).find(i => { const c = selection.composants[i]; return !c.inclus_dans && !c.integree && !["gpu", "cpu"].includes(c.categorie) && (c.modeles || []).length; });
+  const sel = structuredClone(selection);
+  sel.composants[id].modeles[0].asin = "b0dxyz1234";
+  const offres = [{ id, rang: 0, marchand: "fnac", nom: "Fnac", prix: 400, en_stock: true, lien: "https://www.awin1.com/x", releve_le: "2026-10-30" }];
+  const ok = construire(sel, { offres, amazonTag: "jurojin-21" }).C[id];
+  assert.equal(ok.prix, 400, "le prix vient du marchand, pas d'Amazon");
+  assert.equal(ok.offres[0].marchand, "fnac");
+  const amz = ok.offres.find(o => o.marchand === "amazon");
+  assert.equal(amz.prix, null);
+  assert.equal(amz.lien, "https://www.amazon.fr/dp/B0DXYZ1234?tag=jurojin-21");
+  assert.ok(!construire(sel, { offres, amazonTag: "" }).C[id].offres.some(o => o.marchand === "amazon"), "sans identifiant : pas de lien");
+  assert.ok(!construire(sel, { offres, amazonTag: "x\"><script>-21" }).C[id].offres.some(o => o.marchand === "amazon"), "identifiant piégé refusé");
+  sel.composants[id].modeles[0].asin = "B0X\" onclick=\"";
+  assert.ok(!construire(sel, { offres, amazonTag: "jurojin-21" }).C[id].offres.some(o => o.marchand === "amazon"), "ASIN invalide refusé");
+});
