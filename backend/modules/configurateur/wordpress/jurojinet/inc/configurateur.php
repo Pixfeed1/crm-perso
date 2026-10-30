@@ -112,13 +112,16 @@ function jurojin_cfg_palier( $profil, $budget ) {
 	return $retenu;
 }
 
+/** Tableau d'un usage, au format du shortcode [jn_table_products] du thème (classes et style de css/tables.css) :
+    une colonne par repère de budget avec son total en tête, une ligne par pièce, « Le bon équilibre » en recommandé.
+    Une ligne « Total » en plus, affichée seulement sur mobile, où le thème masque l'en-tête (et donc les totaux). */
 function jurojin_cfg_tableau( $d, $cle ) {
 	if ( empty( $d['profils'][ $cle ]['budgets_conseilles'] ) ) {
 		return '';
 	}
 	$profil = $d['profils'][ $cle ];
 	$K      = $d['composants'];
-	$lignes = '';
+	$cols   = array();
 	foreach ( $profil['budgets_conseilles'] as $repere ) {
 		$p = jurojin_cfg_palier( $profil, $repere['budget'] );
 		if ( ! $p || empty( $d['configs'][ $p['config'] ] ) ) {
@@ -129,19 +132,35 @@ function jurojin_cfg_tableau( $d, $cle ) {
 		foreach ( $c as $id ) {
 			$total += isset( $K[ $id ]['prix'] ) ? (float) $K[ $id ]['prix'] : 0;
 		}
-		$nom = function ( $k ) use ( $c, $K ) {
-			return isset( $K[ $c[ $k ] ]['puce'] ) ? esc_html( $K[ $c[ $k ] ]['puce'] ) : '';
-		};
-		$lignes .= '<tr><th scope="row">' . esc_html( $repere['libelle'] ) . '<br><span class="meta">' . esc_html( jurojin_cfg_euros( $repere['budget'] ) ) . '</span></th>'
-			. '<td data-label="Carte graphique">' . $nom( 'gpu' ) . '</td><td data-label="Processeur">' . $nom( 'cpu' ) . '</td>'
-			. '<td data-label="Mémoire">' . $nom( 'ram' ) . '</td><td data-label="Stockage">' . $nom( 'ssd' ) . '</td>'
-			. '<td class="num" data-label="Total">' . esc_html( jurojin_cfg_euros( $total ) ) . '</td></tr>';
+		$cols[] = array( 'nom' => $repere['libelle'], 'budget' => $repere['budget'], 'config' => $c, 'total' => $total,
+			'rec' => 0 === strpos( $repere['libelle'], 'Le bon équilibre' ) );
 	}
-	if ( ! $lignes ) {
+	if ( ! $cols ) {
 		return '';
 	}
-	return '<div class="tableau"><table><thead><tr><th scope="col">Budget</th><th scope="col">Carte graphique</th><th scope="col">Processeur</th>'
-		. '<th scope="col">Mémoire</th><th scope="col">Stockage</th><th scope="col" class="num">Total</th></tr></thead><tbody>' . $lignes . '</tbody></table></div>';
+	$h = '<div class="jn-table-scroll"><table class="jn-table-products"><thead><tr><th></th>';
+	foreach ( $cols as $col ) {
+		$h .= '<th' . ( $col['rec'] ? ' class="highlight"' : '' ) . '><span class="product-name">' . esc_html( $col['nom'] ) . '</span>'
+			. '<span class="product-price">' . esc_html( jurojin_cfg_euros( $col['total'] ) )
+			. '<span class="product-period">pour un budget de ' . esc_html( jurojin_cfg_euros( $col['budget'] ) ) . '</span></span></th>';
+	}
+	$h .= '</tr></thead><tbody>';
+	$pieces = array( 'gpu' => 'Carte graphique', 'cpu' => 'Processeur', 'ram' => 'Mémoire', 'ssd' => 'Stockage' );
+	foreach ( $pieces as $k => $libelle ) {
+		$h .= '<tr><td>' . esc_html( $libelle ) . '</td>';
+		foreach ( $cols as $col ) {
+			$id = $col['config'][ $k ];
+			$h .= '<td' . ( $col['rec'] ? ' class="highlight"' : '' ) . ' data-label="' . esc_attr( $col['nom'] . ( $col['rec'] ? ' ★' : '' ) ) . '">'
+				. ( isset( $K[ $id ]['puce'] ) ? esc_html( $K[ $id ]['puce'] ) : '' ) . '</td>';
+		}
+		$h .= '</tr>';
+	}
+	$h .= '<tr class="cfg-total"><td>Total estimé</td>';
+	foreach ( $cols as $col ) {
+		$h .= '<td' . ( $col['rec'] ? ' class="highlight"' : '' ) . ' data-label="' . esc_attr( $col['nom'] . ( $col['rec'] ? ' ★' : '' ) ) . '"><strong>'
+			. esc_html( jurojin_cfg_euros( $col['total'] ) ) . '</strong></td>';
+	}
+	return $h . '</tr></tbody></table></div>';
 }
 
 function jurojin_cfg_sections( $d ) {
