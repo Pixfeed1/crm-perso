@@ -9,7 +9,7 @@ Ne modifie pas la logique du moteur (`src/moteur/`, `src/controles.js`) sans en 
 
 | Quand (heure de Paris) | Tâche | IA ? |
 |---|---|---|
-| Chaque nuit, 3 h 30 | Relève les prix dans les flux Awin, recalcule les 111 profils, contrôle, publie le JSON, vide le cache WP Rocket de la page | Non |
+| Chaque nuit, 3 h 30 | Relève les prix dans les flux Awin, recalcule les 151 profils, contrôle, publie le JSON, vide le cache WP Rocket de la page | Non |
 | Lundi, 6 h | Idem, et si un modèle en rupture a basculé sur sa réserve : rédige sa nouvelle ligne « pourquoi » (claude-haiku-5-5), à valider | Un petit appel, seulement en cas de bascule |
 | Le 1er du mois, 7 h | Idem avec de nouvelles mesures Blender Open Data, puis proposition de sélection (claude-sonnet-5-5 + recherche web limitée à `config.domainesRecherche`, 10 recherches max) envoyée par mail à Marc | Un appel |
 

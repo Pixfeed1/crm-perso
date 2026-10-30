@@ -96,6 +96,10 @@ function jurojin_cfg_logiciels() {
 	$fiches = array(
 		'blender'     => array( array( 'Blender', array( 'blender' ) ) ),
 		'maya'        => array( array( 'Maya', array( 'maya' ) ) ),
+		'cinema4d'    => array( array( 'Cinema 4D', array( 'cinema-4d' ) ) ),
+		'3dsmax'      => array( array( '3ds Max', array( '3ds-max' ) ) ),
+		'houdini'     => array( array( 'Houdini', array( 'houdini' ) ) ),
+		'substance'   => array( array( 'Substance 3D Painter', array( 'substance-painter' ) ) ),
 		'unreal'      => array( array( 'Unreal Engine', array( 'unreal-engine' ) ), array( 'Unity', array( 'unity' ) ) ),
 		'zbrush'      => array( array( 'ZBrush', array( 'zbrush' ) ) ),
 		'daz'         => array( array( 'Daz Studio', array( 'daz-studio' ) ) ),
@@ -106,6 +110,7 @@ function jurojin_cfg_logiciels() {
 		'photoshop'   => array( array( 'Photoshop', array( 'photoshop', 'adobe-photoshop' ) ) ),
 		'lightroom'   => array( array( 'Lightroom', array( 'adobe-lightroom', 'lightroom' ) ) ),
 		'illustrator' => array( array( 'Illustrator', array( 'adobe-illustrator', 'illustrator' ) ) ),
+		'clipstudio'  => array( array( 'Clip Studio Paint', array( 'clip-studio-paint' ) ) ),
 		'figma'       => array( array( 'Figma', array( 'figma' ) ) ),
 	);
 	$sur    = function ( $u ) {
