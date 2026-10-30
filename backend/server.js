@@ -200,6 +200,10 @@ app.use('/api/portefeuille/crawl', require('./routes/crawlRoutes'));
 app.use('/api/portefeuille/signaux', require('./routes/domainSignalRoutes')); // nouveaux domaines .fr (AFNIC)
 app.use('/api/campagnes', require('./routes/campaignRoutes')); // campagnes de prospection (préparer, relire, programmer)
 app.use('/api/diffuseur', require('./routes/diffuseurRoutes')); // diffusion des créations 3D (préparation, validation, exports, dépôt Bluesky)
+// Configurateur PC de jurojin.net : ses routes (/api/configurateur) sont branchées dans cet emplacement
+// au démarrage, une fois la base prête (ses tâches lisent leurs tables dès le branchement).
+const configurateurSlot = express.Router();
+app.use(configurateurSlot);
 app.use('/api/email-templates', require('./routes/emailTemplateRoutes'));
 app.use('/api/email-signatures', require('./routes/emailSignatureRoutes'));
 app.use('/api/maintenance-reports', require('./routes/maintenanceReportRoutes'));
@@ -329,6 +333,18 @@ async function startServer() {
   // Signaux de domaine : contrôles à échéance des .fr suivis (06:15)
   domainSignalWorker.initialize(app.locals.db);
   domainSignalWorker.start();
+
+  // Configurateur PC : routes derrière l'authentification du CRM, tâches nuit / lundi / mois (Europe/Paris),
+  // alertes et propositions envoyées par email à CONFIGURATEUR_MAIL_VALIDATION.
+  try {
+    require('./modules/configurateur').brancher(configurateurSlot, {
+      db: db.pool,
+      envoyerMail: ({ to, subject, text, html }) => require('./services/emailService').sendEmail({ to, subject, text, html, source: 'configurateur' }),
+      authentifier: require('./middleware/authMiddleware')
+    });
+  } catch (e) {
+    console.error('[Configurateur] Échec du branchement :', e.message);
+  }
 
   // Démarrer le serveur HTTP
   const server = app.listen(PORT, () => {

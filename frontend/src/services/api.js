@@ -1379,6 +1379,17 @@ export const diffuseurAPI = {
   }
 };
 
+// Configurateur PC de jurojin.net : état, tâches, validation des propositions, restauration.
+// Les POST répondent 202 { id, statut: 'en_cours' } (à suivre avec tache(id)) ou 409 si une tâche tourne déjà.
+export const configurateurAPI = {
+  etat: () => apiRequest('/configurateur/etat'),
+  lancer: (nom) => apiRequest(`/configurateur/taches/${nom}`, 'POST', {}),
+  tache: (id) => apiRequest(`/configurateur/taches/${id}`),
+  validerProposition: (id, decisions) => apiRequest(`/configurateur/propositions/${id}/valider`, 'POST', { decisions }),
+  validerSelection: () => apiRequest('/configurateur/selection/valider', 'POST', {}),
+  restaurer: (id) => apiRequest(`/configurateur/publications/${id}/restaurer`, 'POST', {})
+};
+
 export const campagnesAPI = {
   list: () => apiRequest('/campagnes'),
   create: (payload) => apiRequest('/campagnes', 'POST', payload),

@@ -25,8 +25,7 @@ const Calendar = lazy(() => import('./pages/Calendar'));
 const Revenues = lazy(() => import('./pages/Revenues'));
 const Activities = lazy(() => import('./pages/Activities'));
 const Goals = lazy(() => import('./pages/Goals'));
-const Seo = lazy(() => import('./pages/Seo'));
-const Diffuseur = lazy(() => import('./pages/Diffuseur'));
+const SeoHub = lazy(() => import('./pages/SeoHub'));
 const Reports = lazy(() => import('./pages/Reports'));
 const Quotes = lazy(() => import('./pages/Quotes'));
 const Invoices = lazy(() => import('./pages/Invoices'));
@@ -78,6 +77,15 @@ const RedirectToPortefeuille = ({ tab }) => {
 
 // Redirige /treasury vers l'onglet correspondant du hub Finances (/invoices),
 // en préservant les query params éventuels.
+// Anciennes adresses du Diffuseur et du Configurateur (liens des emails de l'agent compris) :
+// redirigées vers leur section de la page SEO, paramètres gardés (ex. ?proposition=3).
+const RedirectToSeoSection = ({ section }) => {
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  params.set('section', section);
+  return <Navigate to={`/seo?${params.toString()}`} replace />;
+};
+
 const RedirectToInvoicesTab = ({ tab }) => {
   const location = useLocation();
   const params = new URLSearchParams(location.search);
@@ -181,16 +189,20 @@ const App = () => {
           <Route path="/seo" element={
             <ProtectedRoute>
               <Layout>
-                <Seo />
+                <SeoHub />
               </Layout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/configurateur" element={
+            <ProtectedRoute>
+              <RedirectToSeoSection section="configurateur" />
             </ProtectedRoute>
           } />
 
           <Route path="/diffuseur" element={
             <ProtectedRoute>
-              <Layout>
-                <Diffuseur />
-              </Layout>
+              <RedirectToSeoSection section="diffuseur" />
             </ProtectedRoute>
           } />
 

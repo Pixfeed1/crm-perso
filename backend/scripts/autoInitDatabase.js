@@ -365,6 +365,87 @@ const DATABASE_SCHEMA = {
     ]
   },
 
+  // ─── Configurateur PC de jurojin.net (module backend/modules/configurateur, voir son BRIEF.md) ───
+  cfg_selections: {
+    columns: {
+      id: 'SERIAL PRIMARY KEY',
+      version: 'TEXT NOT NULL',
+      contenu: 'JSONB NOT NULL',                 // la sélection complète (format data/selection.json)
+      statut: "TEXT NOT NULL DEFAULT 'validee'",  // validee | remplacee
+      validee_le: 'TIMESTAMPTZ',
+      validee_par: 'TEXT',
+      cree_le: 'TIMESTAMPTZ NOT NULL DEFAULT now()'
+    },
+    indexes: []
+  },
+
+  cfg_mesures: {
+    columns: {
+      id: 'SERIAL PRIMARY KEY',
+      source: 'TEXT NOT NULL',                   // blender-open-data
+      contenu: 'JSONB NOT NULL',
+      releve_le: 'TIMESTAMPTZ NOT NULL DEFAULT now()'
+    },
+    indexes: []
+  },
+
+  cfg_offres: {                                  // historique des prix relevés
+    columns: {
+      id: 'BIGSERIAL PRIMARY KEY',
+      releve_le: 'TIMESTAMPTZ NOT NULL DEFAULT now()',
+      composant: 'TEXT NOT NULL',
+      rang: 'INT NOT NULL',                      // 0 = modèle retenu, 1+ = réserves
+      marchand: 'TEXT NOT NULL',
+      produit: 'TEXT',
+      ean: 'TEXT',
+      prix: 'NUMERIC(10,2)',
+      en_stock: 'BOOLEAN',
+      lien: 'TEXT',
+      source: 'TEXT'
+    },
+    indexes: ['CREATE INDEX IF NOT EXISTS cfg_offres_composant_date ON cfg_offres (composant, releve_le DESC)']
+  },
+
+  cfg_publications: {
+    columns: {
+      id: 'SERIAL PRIMARY KEY',
+      publie_le: 'TIMESTAMPTZ NOT NULL DEFAULT now()',
+      statut: 'TEXT NOT NULL',                   // publiee | bloquee | echec_ecriture
+      erreurs: 'JSONB',
+      taille_ko: 'INT',
+      resume: 'JSONB',
+      version: 'TEXT',                           // identifiant écrit aussi dans le fichier (version_publication)
+      contenu: 'JSONB'                           // fichier exact, gardé pour les 30 dernières publications
+    },
+    indexes: []
+  },
+
+  cfg_propositions: {
+    columns: {
+      id: 'SERIAL PRIMARY KEY',
+      cree_le: 'TIMESTAMPTZ NOT NULL DEFAULT now()',
+      contenu: 'JSONB NOT NULL',                 // { resume, changements:[{ type, id, detail, raison, sources }] }
+      statut: "TEXT NOT NULL DEFAULT 'en_attente'", // en_attente | traitee
+      decisions: 'JSONB',
+      traitee_le: 'TIMESTAMPTZ'
+    },
+    indexes: []
+  },
+
+  cfg_taches: {                                  // suivi des tâches (planifiées, manuelles, validations)
+    columns: {
+      id: 'SERIAL PRIMARY KEY',
+      nom: 'TEXT NOT NULL',
+      origine: "TEXT NOT NULL DEFAULT 'manuel'", // planifiee | manuel | reconciliation
+      statut: 'TEXT NOT NULL',                   // en_cours | terminee | echouee | refusee | interrompue
+      debut: 'TIMESTAMPTZ NOT NULL DEFAULT now()',
+      fin: 'TIMESTAMPTZ',
+      resultat: 'JSONB',
+      erreur: 'TEXT'
+    },
+    indexes: ['CREATE INDEX IF NOT EXISTS cfg_taches_statut ON cfg_taches (statut)']
+  },
+
   // ─── Diffuseur : préparation de la diffusion des créations 3D (phase 1, sans publication
   // automatique sauf Bluesky via JurojinReposter, seulement après validation) ───────────────
   diffuseur_scenes: {

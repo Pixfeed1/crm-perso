@@ -240,3 +240,30 @@ publication non partie retire son dépôt.
 
 Tests : `diffuseurRules`, `diffuseurImages` (rendu fictif avec EXIF « DAZ Studio »), `diffuseurTextes`
 (requête du SDK vers un faux serveur local), `diffuseur` (scène fictive de bout en bout en base jetable).
+
+## Configurateur PC de jurojin.net (`modules/configurateur`)
+
+Module fourni avec son brief (`modules/configurateur/BRIEF.md`) et son format de données (`FORMAT.md`).
+Il relève les prix des flux Awin, recalcule 103 profils de machines, contrôle, et publie
+`configurateur-data.json` dans le dossier uploads de jurojin.net, lu par le shortcode `[configurateur_pc]`
+du thème (fichiers dans `modules/configurateur/wordpress/`). Rien de ce que propose l'IA n'est publié sans
+validation dans le CRM (SEO → Configurateur PC, ou `/configurateur?proposition=ID` depuis les emails).
+
+- **Branchement** (`server.js`) : un emplacement de routes est monté avec les autres API, puis le module y est
+  branché au démarrage, une fois la base prête (`brancher(slot, { db: db.pool, envoyerMail, authentifier })`).
+  Routes `/api/configurateur/*` derrière l'authentification du CRM.
+- **Tâches** (node-cron, Europe/Paris) : relevé chaque nuit à 3 h 30, lundi 6 h (texte « pourquoi » par
+  claude-haiku-5-5 si un modèle bascule sur sa réserve), le 1er du mois 7 h (mesures Blender Open Data et
+  proposition de sélection par claude-sonnet-5-5 avec recherche web limitée à une liste de domaines, repli
+  serveur activé). Une seule tâche à la fois (verrou PostgreSQL).
+- **Tables** `cfg_*` déclarées dans `DATABASE_SCHEMA`.
+- **Variables** (`backend/.env`, jamais dans git) : `CONFIGURATEUR_ANTHROPIC_API_KEY` (clé dédiée avec plafond),
+  `AWIN_FEEDLIST_URL`, `AMAZON_PARTNER_TAG`, `CONFIGURATEUR_DOSSIER`, `CONFIGURATEUR_WP_PATH`,
+  `CONFIGURATEUR_WP_PAGE_ID`, `CONFIGURATEUR_MAIL_VALIDATION`, `CONFIGURATEUR_URL_VALIDATION`.
+- **Ajouts à l'intégration** : liens marchands des flux acceptés seulement en https sans caractère dangereux
+  (un lien piégé n'atteint jamais la page) ; refus du modèle et réponses coupées signalés comme erreurs ;
+  recherche web `web_search_20260209` ; messages explicites quand la liste Awin n'est pas configurée ou
+  qu'une source est injoignable.
+- **Tests** : `cd backend/modules/configurateur && node --test test/*.test.js` (sans base) et
+  `PGTEST_URL=postgres://…/base_vide EXIGER_PG=1 node --test test/*.test.js` (36 tests, base de test vide,
+  jamais celle du CRM).

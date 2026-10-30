@@ -1,0 +1,1685 @@
+{
+  "version": "2026-11-propose-1",
+  "validee_le": null,
+  "validee_par": null,
+  "note": "Sélection de départ à valider par Marc. Prix d'exemple : remplacés chaque nuit par les flux Awin. Indices jeu : estimations éditoriales tant qu'aucune source mesurée n'est branchée.",
+  "composants": {
+    "gpu-igpu": {
+      "categorie": "gpu",
+      "puce": "Graphique intégrée au processeur",
+      "court": "intégrée",
+      "marque_puce": "integree",
+      "integree": true,
+      "caracteristiques": {
+        "vram": 0,
+        "tdp": 0,
+        "longueur": 0,
+        "alim_recommandee": 0,
+        "connecteur": null
+      },
+      "indice_jeu": {
+        "valeur": 6,
+        "source": "estimation éditoriale"
+      },
+      "modeles": [
+        {
+          "modele": null,
+          "inclus_dans": "cpu"
+        }
+      ],
+      "pourquoi": "Aucune carte à acheter : le processeur affiche tout seul l'image, et c'est suffisant pour cet usage."
+    },
+    "gpu-5060": {
+      "categorie": "gpu",
+      "puce": "Nvidia RTX 5060 8 Go",
+      "court": "RTX 5060",
+      "marque_puce": "nvidia",
+      "blender": {
+        "type": "OPTIX",
+        "nom": "NVIDIA GeForce RTX 5060"
+      },
+      "caracteristiques": {
+        "vram": 8,
+        "tdp": 145,
+        "longueur": 250,
+        "alim_recommandee": 550,
+        "connecteur": "8pin"
+      },
+      "indice_jeu": {
+        "valeur": 48,
+        "source": "estimation éditoriale"
+      },
+      "modeles": [
+        {
+          "modele": "Gainward GeForce RTX 5060 Python III",
+          "correspondance": {
+            "motifs": [
+              "RTX 5060",
+              "Python"
+            ],
+            "exclure": [
+              "5060 Ti",
+              "Laptop",
+              "portable"
+            ]
+          },
+          "caracteristiques": {
+            "longueur": 250
+          }
+        }
+      ],
+      "pourquoi": "Toutes les RTX 5060 se valent à quelques pour cent près. On a pris la moins chère en stock dans un format qui entre dans tous les boîtiers.",
+      "prix_exemple": 310
+    },
+    "gpu-5060ti": {
+      "categorie": "gpu",
+      "puce": "Nvidia RTX 5060 Ti 16 Go",
+      "court": "RTX 5060 Ti",
+      "marque_puce": "nvidia",
+      "blender": {
+        "type": "OPTIX",
+        "nom": "NVIDIA GeForce RTX 5060 Ti"
+      },
+      "caracteristiques": {
+        "vram": 16,
+        "tdp": 180,
+        "longueur": 250,
+        "alim_recommandee": 600,
+        "connecteur": "8pin"
+      },
+      "indice_jeu": {
+        "valeur": 56,
+        "source": "estimation éditoriale"
+      },
+      "modeles": [
+        {
+          "modele": "PNY GeForce RTX 5060 Ti 16 Go OC Dual Fan",
+          "correspondance": {
+            "motifs": [
+              "5060 Ti",
+              "16"
+            ],
+            "exclure": [
+              "8 Go",
+              "8GB",
+              "8G ",
+              "Laptop"
+            ]
+          },
+          "caracteristiques": {
+            "longueur": 250
+          }
+        }
+      ],
+      "pourquoi": "Attention à la version : la 5060 Ti existe aussi en 8 Go. On a retenu la 16 Go, la moins chère cette semaine.",
+      "prix_exemple": 470
+    },
+    "gpu-5070": {
+      "categorie": "gpu",
+      "puce": "Nvidia RTX 5070 12 Go",
+      "court": "RTX 5070",
+      "marque_puce": "nvidia",
+      "blender": {
+        "type": "OPTIX",
+        "nom": "NVIDIA GeForce RTX 5070"
+      },
+      "caracteristiques": {
+        "vram": 12,
+        "tdp": 250,
+        "longueur": 240,
+        "alim_recommandee": 650,
+        "connecteur": "12v-2x6"
+      },
+      "indice_jeu": {
+        "valeur": 70,
+        "source": "estimation éditoriale"
+      },
+      "modeles": [
+        {
+          "modele": "MSI GeForce RTX 5070 12G Ventus 2X OC",
+          "correspondance": {
+            "motifs": [
+              "RTX 5070",
+              "Ventus"
+            ],
+            "exclure": [
+              "5070 Ti",
+              "Laptop"
+            ]
+          },
+          "caracteristiques": {
+            "longueur": 240
+          }
+        }
+      ],
+      "pourquoi": "Les RTX 5070 font toutes le même travail. Celle-ci est la moins chère en stock, et son format court passe partout.",
+      "prix_exemple": 590
+    },
+    "gpu-5070ti": {
+      "categorie": "gpu",
+      "puce": "Nvidia RTX 5070 Ti 16 Go",
+      "court": "RTX 5070 Ti",
+      "marque_puce": "nvidia",
+      "blender": {
+        "type": "OPTIX",
+        "nom": "NVIDIA GeForce RTX 5070 Ti"
+      },
+      "caracteristiques": {
+        "vram": 16,
+        "tdp": 300,
+        "longueur": 305,
+        "alim_recommandee": 750,
+        "connecteur": "12v-2x6"
+      },
+      "indice_jeu": {
+        "valeur": 85,
+        "source": "estimation éditoriale"
+      },
+      "modeles": [
+        {
+          "modele": "MSI GeForce RTX 5070 Ti 16G Ventus 3X OC",
+          "correspondance": {
+            "motifs": [
+              "5070 Ti",
+              "Ventus 3X"
+            ],
+            "exclure": [
+              "Laptop"
+            ]
+          },
+          "caracteristiques": {
+            "longueur": 305
+          }
+        },
+        {
+          "modele": "Gigabyte GeForce RTX 5070 Ti Windforce OC SFF 16G",
+          "correspondance": {
+            "motifs": [
+              "5070 Ti",
+              "Windforce"
+            ],
+            "exclure": [
+              "Laptop"
+            ]
+          },
+          "caracteristiques": {
+            "longueur": 304
+          }
+        },
+        {
+          "modele": "ASUS TUF Gaming GeForce RTX 5070 Ti 16G",
+          "correspondance": {
+            "motifs": [
+              "5070 Ti",
+              "TUF"
+            ],
+            "exclure": [
+              "Laptop"
+            ]
+          },
+          "caracteristiques": {
+            "longueur": 329
+          }
+        }
+      ],
+      "pourquoi": "Toutes les 5070 Ti se valent en rendu. On a pris la moins chère des modèles à trois ventilateurs.",
+      "prix_exemple": 850
+    },
+    "gpu-5080": {
+      "categorie": "gpu",
+      "puce": "Nvidia RTX 5080 16 Go",
+      "court": "RTX 5080",
+      "marque_puce": "nvidia",
+      "blender": {
+        "type": "OPTIX",
+        "nom": "NVIDIA GeForce RTX 5080"
+      },
+      "caracteristiques": {
+        "vram": 16,
+        "tdp": 360,
+        "longueur": 304,
+        "alim_recommandee": 850,
+        "connecteur": "12v-2x6"
+      },
+      "indice_jeu": {
+        "valeur": 100,
+        "source": "estimation éditoriale (référence 100)"
+      },
+      "modeles": [
+        {
+          "modele": "Gigabyte GeForce RTX 5080 Windforce OC SFF 16G",
+          "correspondance": {
+            "motifs": [
+              "RTX 5080",
+              "Windforce"
+            ],
+            "exclure": [
+              "Laptop"
+            ]
+          },
+          "caracteristiques": {
+            "longueur": 304
+          }
+        }
+      ],
+      "pourquoi": "Les modèles « premium » de 5080 coûtent jusqu'à 300 € de plus pour 2 à 3 % de performances. On a retenu une version de base.",
+      "prix_exemple": 1250
+    },
+    "gpu-5090": {
+      "categorie": "gpu",
+      "puce": "Nvidia RTX 5090 32 Go",
+      "court": "RTX 5090",
+      "marque_puce": "nvidia",
+      "blender": {
+        "type": "OPTIX",
+        "nom": "NVIDIA GeForce RTX 5090"
+      },
+      "caracteristiques": {
+        "vram": 32,
+        "tdp": 575,
+        "longueur": 332,
+        "alim_recommandee": 1000,
+        "connecteur": "12v-2x6"
+      },
+      "indice_jeu": {
+        "valeur": 140,
+        "source": "estimation éditoriale"
+      },
+      "modeles": [
+        {
+          "modele": "Gainward GeForce RTX 5090 Phantom",
+          "correspondance": {
+            "motifs": [
+              "RTX 5090",
+              "Phantom"
+            ],
+            "exclure": [
+              "Laptop",
+              "5090 D"
+            ]
+          },
+          "caracteristiques": {
+            "longueur": 332
+          }
+        },
+        {
+          "modele": "MSI GeForce RTX 5090 32G Suprim Liquid SOC",
+          "correspondance": {
+            "motifs": [
+              "RTX 5090",
+              "Suprim Liquid"
+            ],
+            "exclure": [
+              "Laptop"
+            ]
+          },
+          "caracteristiques": {
+            "longueur": 280,
+            "tdp": 600
+          }
+        }
+      ],
+      "pourquoi": "À ce niveau, l'écart entre marques tient surtout au bruit et au prix. On a pris le modèle le moins cher réellement disponible.",
+      "prix_exemple": 2300
+    },
+    "gpu-9060xt": {
+      "categorie": "gpu",
+      "puce": "AMD Radeon RX 9060 XT 16 Go",
+      "court": "RX 9060 XT",
+      "marque_puce": "amd",
+      "blender": {
+        "type": "HIP",
+        "nom": "AMD Radeon RX 9060 XT"
+      },
+      "caracteristiques": {
+        "vram": 16,
+        "tdp": 160,
+        "longueur": 240,
+        "alim_recommandee": 450,
+        "connecteur": "8pin"
+      },
+      "indice_jeu": {
+        "valeur": 55,
+        "source": "estimation éditoriale"
+      },
+      "modeles": [
+        {
+          "modele": "Sapphire Pulse Radeon RX 9060 XT 16GB",
+          "correspondance": {
+            "motifs": [
+              "9060 XT",
+              "16"
+            ],
+            "exclure": [
+              "8GB",
+              "8 Go"
+            ]
+          },
+          "caracteristiques": {
+            "longueur": 240
+          }
+        }
+      ],
+      "pourquoi": "En jeu, elle rivalise avec la RTX 5060 Ti 16 Go pour un peu moins cher. Version 16 Go uniquement.",
+      "prix_exemple": 390
+    },
+    "gpu-9070": {
+      "categorie": "gpu",
+      "puce": "AMD Radeon RX 9070 16 Go",
+      "court": "RX 9070",
+      "marque_puce": "amd",
+      "blender": {
+        "type": "HIP",
+        "nom": "AMD Radeon RX 9070"
+      },
+      "caracteristiques": {
+        "vram": 16,
+        "tdp": 220,
+        "longueur": 280,
+        "alim_recommandee": 650,
+        "connecteur": "8pin"
+      },
+      "indice_jeu": {
+        "valeur": 75,
+        "source": "estimation éditoriale"
+      },
+      "modeles": [
+        {
+          "modele": "PowerColor Reaper Radeon RX 9070 16GB",
+          "correspondance": {
+            "motifs": [
+              "RX 9070",
+              "16"
+            ],
+            "exclure": [
+              "9070 XT",
+              "GRE"
+            ]
+          },
+          "caracteristiques": {
+            "longueur": 280
+          }
+        }
+      ],
+      "pourquoi": "16 Go de mémoire vidéo et une consommation sage : un excellent choix pour le jeu en 1440p.",
+      "prix_exemple": 560
+    },
+    "gpu-9070xt": {
+      "categorie": "gpu",
+      "puce": "AMD Radeon RX 9070 XT 16 Go",
+      "court": "RX 9070 XT",
+      "marque_puce": "amd",
+      "blender": {
+        "type": "HIP",
+        "nom": "AMD Radeon RX 9070 XT"
+      },
+      "caracteristiques": {
+        "vram": 16,
+        "tdp": 304,
+        "longueur": 305,
+        "alim_recommandee": 750,
+        "connecteur": "8pin"
+      },
+      "indice_jeu": {
+        "valeur": 85,
+        "source": "estimation éditoriale"
+      },
+      "modeles": [
+        {
+          "modele": "Sapphire Pulse Radeon RX 9070 XT 16GB",
+          "correspondance": {
+            "motifs": [
+              "9070 XT"
+            ],
+            "exclure": []
+          },
+          "caracteristiques": {
+            "longueur": 305
+          }
+        }
+      ],
+      "pourquoi": "En jeu, elle se place au niveau d'une RTX 5070 Ti pour moins cher. En rendu 3D, les cartes Nvidia restent nettement devant.",
+      "prix_exemple": 680
+    },
+    "gpu-b580": {
+      "categorie": "gpu",
+      "puce": "Intel Arc B580 12 Go",
+      "court": "Arc B580",
+      "marque_puce": "intel",
+      "blender": {
+        "type": "ONEAPI",
+        "nom": "Intel Arc B580 Graphics"
+      },
+      "caracteristiques": {
+        "vram": 12,
+        "tdp": 190,
+        "longueur": 272,
+        "alim_recommandee": 600,
+        "connecteur": "8pin"
+      },
+      "indice_jeu": {
+        "valeur": 48,
+        "source": "estimation éditoriale"
+      },
+      "modeles": [
+        {
+          "modele": "Intel Arc B580 Limited Edition 12GB",
+          "correspondance": {
+            "motifs": [
+              "Arc B580"
+            ],
+            "exclure": []
+          },
+          "caracteristiques": {
+            "longueur": 272
+          }
+        }
+      ],
+      "pourquoi": "12 Go de mémoire vidéo pour le prix d'une carte d'entrée de gamme. Les pilotes ont bien mûri.",
+      "prix_exemple": 270
+    },
+    "cpu-8600g": {
+      "categorie": "cpu",
+      "puce": "AMD Ryzen 5 8600G",
+      "court": "Ryzen 5 8600G",
+      "famille": "am5-zen4-apu",
+      "blender": {
+        "type": "CPU",
+        "nom": "AMD Ryzen 5 8600G w/ Radeon 760M Graphics"
+      },
+      "caracteristiques": {
+        "socket": "AM5",
+        "tdp": 65,
+        "conso_max": 88,
+        "graphique_integree": "forte",
+        "ventirad_fourni": true
+      },
+      "indice_jeu": {
+        "valeur": 55,
+        "source": "estimation éditoriale"
+      },
+      "modeles": [
+        {
+          "modele": null,
+          "correspondance": {
+            "motifs": [
+              "8600G"
+            ],
+            "exclure": [
+              "tray"
+            ]
+          }
+        }
+      ],
+      "fiche": "6 cœurs, 12 threads, graphique Radeon 760M",
+      "pourquoi": "Le seul de la sélection avec une partie graphique assez solide pour se passer de carte graphique.",
+      "prix_exemple": 200
+    },
+    "cpu-9600x": {
+      "categorie": "cpu",
+      "puce": "AMD Ryzen 5 9600X",
+      "court": "Ryzen 5 9600X",
+      "famille": "am5-zen5",
+      "blender": {
+        "type": "CPU",
+        "nom": "AMD Ryzen 5 9600X 6-Core Processor"
+      },
+      "caracteristiques": {
+        "socket": "AM5",
+        "tdp": 65,
+        "conso_max": 88,
+        "graphique_integree": "basique"
+      },
+      "indice_jeu": {
+        "valeur": 70,
+        "source": "estimation éditoriale"
+      },
+      "modeles": [
+        {
+          "modele": null,
+          "correspondance": {
+            "motifs": [
+              "9600X"
+            ],
+            "exclure": [
+              "tray"
+            ]
+          }
+        }
+      ],
+      "fiche": "6 cœurs, 12 threads",
+      "pourquoi": "Six cœurs récents : le plus petit processeur qui ne freine pas une carte graphique moderne.",
+      "prix_exemple": 220
+    },
+    "cpu-9700x": {
+      "categorie": "cpu",
+      "puce": "AMD Ryzen 7 9700X",
+      "court": "Ryzen 7 9700X",
+      "famille": "am5-zen5",
+      "blender": {
+        "type": "CPU",
+        "nom": "AMD Ryzen 7 9700X 8-Core Processor"
+      },
+      "caracteristiques": {
+        "socket": "AM5",
+        "tdp": 65,
+        "conso_max": 88,
+        "graphique_integree": "basique"
+      },
+      "indice_jeu": {
+        "valeur": 75,
+        "source": "estimation éditoriale"
+      },
+      "modeles": [
+        {
+          "modele": null,
+          "correspondance": {
+            "motifs": [
+              "9700X"
+            ],
+            "exclure": [
+              "tray"
+            ]
+          }
+        }
+      ],
+      "fiche": "8 cœurs, 16 threads",
+      "pourquoi": "Huit cœurs pour un prix encore raisonnable : le bon milieu de gamme quand le processeur compte.",
+      "prix_exemple": 330
+    },
+    "cpu-9800x3d": {
+      "categorie": "cpu",
+      "puce": "AMD Ryzen 7 9800X3D",
+      "court": "Ryzen 7 9800X3D",
+      "famille": "am5-zen5",
+      "blender": {
+        "type": "CPU",
+        "nom": "AMD Ryzen 7 9800X3D 8-Core Processor"
+      },
+      "caracteristiques": {
+        "socket": "AM5",
+        "tdp": 120,
+        "conso_max": 162,
+        "graphique_integree": "basique"
+      },
+      "indice_jeu": {
+        "valeur": 100,
+        "source": "estimation éditoriale (référence 100)"
+      },
+      "modeles": [
+        {
+          "modele": null,
+          "correspondance": {
+            "motifs": [
+              "9800X3D"
+            ],
+            "exclure": [
+              "tray"
+            ]
+          }
+        }
+      ],
+      "fiche": "8 cœurs, 16 threads, 96 Mo de cache L3",
+      "pourquoi": "Son grand cache fait gagner plus d'images par seconde en jeu que des cœurs supplémentaires.",
+      "prix_exemple": 480
+    },
+    "cpu-9900x": {
+      "categorie": "cpu",
+      "puce": "AMD Ryzen 9 9900X",
+      "court": "Ryzen 9 9900X",
+      "famille": "am5-zen5",
+      "blender": {
+        "type": "CPU",
+        "nom": "AMD Ryzen 9 9900X 12-Core Processor"
+      },
+      "caracteristiques": {
+        "socket": "AM5",
+        "tdp": 120,
+        "conso_max": 162,
+        "graphique_integree": "basique"
+      },
+      "indice_jeu": {
+        "valeur": 76,
+        "source": "estimation éditoriale"
+      },
+      "modeles": [
+        {
+          "modele": null,
+          "correspondance": {
+            "motifs": [
+              "9900X"
+            ],
+            "exclure": [
+              "9900X3D",
+              "tray"
+            ]
+          }
+        }
+      ],
+      "fiche": "12 cœurs, 24 threads",
+      "pourquoi": "Douze cœurs : de quoi calculer vite sans payer le prix du modèle le plus haut.",
+      "prix_exemple": 430
+    },
+    "cpu-9950x": {
+      "categorie": "cpu",
+      "puce": "AMD Ryzen 9 9950X",
+      "court": "Ryzen 9 9950X",
+      "famille": "am5-zen5",
+      "blender": {
+        "type": "CPU",
+        "nom": "AMD Ryzen 9 9950X 16-Core Processor"
+      },
+      "caracteristiques": {
+        "socket": "AM5",
+        "tdp": 170,
+        "conso_max": 230,
+        "graphique_integree": "basique"
+      },
+      "indice_jeu": {
+        "valeur": 78,
+        "source": "estimation éditoriale"
+      },
+      "modeles": [
+        {
+          "modele": null,
+          "correspondance": {
+            "motifs": [
+              "9950X"
+            ],
+            "exclure": [
+              "9950X3D",
+              "tray"
+            ]
+          }
+        }
+      ],
+      "fiche": "16 cœurs, 32 threads",
+      "pourquoi": "Seize cœurs : le plus rapide de la gamme grand public pour tout ce qui se calcule sur le processeur.",
+      "prix_exemple": 560
+    },
+    "cpu-245k": {
+      "categorie": "cpu",
+      "puce": "Intel Core Ultra 5 245K",
+      "court": "Core Ultra 5 245K",
+      "famille": "lga1851-arrow",
+      "blender": {
+        "type": "CPU",
+        "nom": "Intel Core Ultra 5 245K"
+      },
+      "caracteristiques": {
+        "socket": "LGA1851",
+        "tdp": 125,
+        "conso_max": 159,
+        "graphique_integree": "basique"
+      },
+      "indice_jeu": {
+        "valeur": 72,
+        "source": "estimation éditoriale"
+      },
+      "modeles": [
+        {
+          "modele": null,
+          "correspondance": {
+            "motifs": [
+              "245K"
+            ],
+            "exclure": [
+              "245KF",
+              "tray"
+            ]
+          }
+        }
+      ],
+      "fiche": "14 cœurs (6 performants, 8 efficaces), 14 threads",
+      "pourquoi": "Quatorze cœurs pour le prix d'un six cœurs AMD : intéressant quand on calcule beaucoup sur le processeur.",
+      "prix_exemple": 260
+    },
+    "cpu-265k": {
+      "categorie": "cpu",
+      "puce": "Intel Core Ultra 7 265K",
+      "court": "Core Ultra 7 265K",
+      "famille": "lga1851-arrow",
+      "blender": {
+        "type": "CPU",
+        "nom": "Intel Core Ultra 7 265K"
+      },
+      "caracteristiques": {
+        "socket": "LGA1851",
+        "tdp": 125,
+        "conso_max": 250,
+        "graphique_integree": "basique"
+      },
+      "indice_jeu": {
+        "valeur": 78,
+        "source": "estimation éditoriale"
+      },
+      "modeles": [
+        {
+          "modele": null,
+          "correspondance": {
+            "motifs": [
+              "265K"
+            ],
+            "exclure": [
+              "265KF",
+              "tray"
+            ]
+          }
+        }
+      ],
+      "fiche": "20 cœurs (8 performants, 12 efficaces), 20 threads",
+      "pourquoi": "Vingt cœurs : très bon en calcul pour son prix, avec une plateforme récente.",
+      "prix_exemple": 330
+    },
+    "cpu-285k": {
+      "categorie": "cpu",
+      "puce": "Intel Core Ultra 9 285K",
+      "court": "Core Ultra 9 285K",
+      "famille": "lga1851-arrow",
+      "blender": {
+        "type": "CPU",
+        "nom": "Intel Core Ultra 9 285K"
+      },
+      "caracteristiques": {
+        "socket": "LGA1851",
+        "tdp": 125,
+        "conso_max": 250,
+        "graphique_integree": "basique"
+      },
+      "indice_jeu": {
+        "valeur": 80,
+        "source": "estimation éditoriale"
+      },
+      "modeles": [
+        {
+          "modele": null,
+          "correspondance": {
+            "motifs": [
+              "285K"
+            ],
+            "exclure": [
+              "tray"
+            ]
+          }
+        }
+      ],
+      "fiche": "24 cœurs (8 performants, 16 efficaces), 24 threads",
+      "pourquoi": "Le plus haut de gamme d'Intel : vingt-quatre cœurs pour le calcul lourd.",
+      "prix_exemple": 560
+    },
+    "cpu-14600k": {
+      "categorie": "cpu",
+      "puce": "Intel Core i5-14600K",
+      "court": "Core i5-14600K",
+      "famille": "lga1700-raptor",
+      "blender": {
+        "type": "CPU",
+        "nom": "Intel Core i5-14600K"
+      },
+      "caracteristiques": {
+        "socket": "LGA1700",
+        "tdp": 125,
+        "conso_max": 181,
+        "graphique_integree": "basique"
+      },
+      "indice_jeu": {
+        "valeur": 74,
+        "source": "estimation éditoriale"
+      },
+      "modeles": [
+        {
+          "modele": null,
+          "correspondance": {
+            "motifs": [
+              "14600K"
+            ],
+            "exclure": [
+              "14600KF",
+              "tray"
+            ]
+          }
+        }
+      ],
+      "fiche": "14 cœurs (6 performants, 8 efficaces), 20 threads",
+      "pourquoi": "Une plateforme en fin de vie, mais souvent bradée : à surveiller pour les petits budgets.",
+      "prix_exemple": 230
+    },
+    "cpu-14700k": {
+      "categorie": "cpu",
+      "puce": "Intel Core i7-14700K",
+      "court": "Core i7-14700K",
+      "famille": "lga1700-raptor",
+      "blender": {
+        "type": "CPU",
+        "nom": "Intel Core i7-14700K"
+      },
+      "caracteristiques": {
+        "socket": "LGA1700",
+        "tdp": 125,
+        "conso_max": 253,
+        "graphique_integree": "basique"
+      },
+      "indice_jeu": {
+        "valeur": 80,
+        "source": "estimation éditoriale"
+      },
+      "modeles": [
+        {
+          "modele": null,
+          "correspondance": {
+            "motifs": [
+              "14700K"
+            ],
+            "exclure": [
+              "14700KF",
+              "tray"
+            ]
+          }
+        }
+      ],
+      "fiche": "20 cœurs (8 performants, 12 efficaces), 28 threads",
+      "pourquoi": "Beaucoup de cœurs pour son prix actuel, au prix d'une forte consommation sous charge.",
+      "prix_exemple": 330
+    },
+    "cpu-14900k": {
+      "categorie": "cpu",
+      "puce": "Intel Core i9-14900K",
+      "court": "Core i9-14900K",
+      "famille": "lga1700-raptor",
+      "blender": {
+        "type": "CPU",
+        "nom": "Intel Core i9-14900K"
+      },
+      "caracteristiques": {
+        "socket": "LGA1700",
+        "tdp": 125,
+        "conso_max": 253,
+        "graphique_integree": "basique"
+      },
+      "indice_jeu": {
+        "valeur": 82,
+        "source": "estimation éditoriale"
+      },
+      "modeles": [
+        {
+          "modele": null,
+          "correspondance": {
+            "motifs": [
+              "14900K"
+            ],
+            "exclure": [
+              "14900KF",
+              "14900KS",
+              "tray"
+            ]
+          }
+        }
+      ],
+      "fiche": "24 cœurs (8 performants, 16 efficaces), 32 threads",
+      "pourquoi": "Le haut de gamme de l'ancienne plateforme Intel : rapide, mais gourmand et chaud.",
+      "prix_exemple": 430
+    },
+    "ram-16": {
+      "categorie": "ram",
+      "puce": "16 Go DDR5",
+      "court": "16 Go",
+      "caracteristiques": {
+        "go": 16,
+        "memoire": "DDR5"
+      },
+      "modeles": [
+        {
+          "modele": "Kit 2 × 8 Go DDR5-6000 CL30",
+          "correspondance": {
+            "motifs": [
+              "DDR5",
+              "2 x 8",
+              "6000"
+            ],
+            "exclure": [
+              "SO-DIMM",
+              "SODIMM"
+            ]
+          }
+        }
+      ],
+      "pourquoi": "Deux barrettes plutôt qu'une : la mémoire va presque deux fois plus vite.",
+      "prix_exemple": 60
+    },
+    "ram-32": {
+      "categorie": "ram",
+      "puce": "32 Go DDR5",
+      "court": "32 Go",
+      "caracteristiques": {
+        "go": 32,
+        "memoire": "DDR5"
+      },
+      "modeles": [
+        {
+          "modele": "Kit 2 × 16 Go DDR5-6000 CL30",
+          "correspondance": {
+            "motifs": [
+              "DDR5",
+              "2 x 16",
+              "6000"
+            ],
+            "exclure": [
+              "SO-DIMM",
+              "SODIMM"
+            ]
+          }
+        }
+      ],
+      "pourquoi": "6000 MHz, c'est la fréquence la mieux adaptée aux processeurs actuels. Plus haut, on paie sans rien gagner.",
+      "prix_exemple": 120
+    },
+    "ram-64": {
+      "categorie": "ram",
+      "puce": "64 Go DDR5",
+      "court": "64 Go",
+      "caracteristiques": {
+        "go": 64,
+        "memoire": "DDR5"
+      },
+      "modeles": [
+        {
+          "modele": "Kit 2 × 32 Go DDR5-6000 CL30",
+          "correspondance": {
+            "motifs": [
+              "DDR5",
+              "2 x 32",
+              "6000"
+            ],
+            "exclure": [
+              "SO-DIMM",
+              "SODIMM"
+            ]
+          }
+        }
+      ],
+      "pourquoi": "Deux barrettes de 32 Go, pas quatre de 16 : avec quatre barrettes, la mémoire doit ralentir.",
+      "prix_exemple": 230
+    },
+    "ram-96": {
+      "categorie": "ram",
+      "puce": "96 Go DDR5",
+      "court": "96 Go",
+      "caracteristiques": {
+        "go": 96,
+        "memoire": "DDR5"
+      },
+      "modeles": [
+        {
+          "modele": "Kit 2 × 48 Go DDR5-5600",
+          "correspondance": {
+            "motifs": [
+              "DDR5",
+              "2 x 48"
+            ],
+            "exclure": [
+              "SO-DIMM",
+              "SODIMM"
+            ]
+          }
+        }
+      ],
+      "pourquoi": "Deux barrettes de 48 Go gardent la mémoire rapide là où quatre barrettes la ralentiraient.",
+      "prix_exemple": 330
+    },
+    "ram-128": {
+      "categorie": "ram",
+      "puce": "128 Go DDR5",
+      "court": "128 Go",
+      "caracteristiques": {
+        "go": 128,
+        "memoire": "DDR5"
+      },
+      "modeles": [
+        {
+          "modele": "Kit 4 × 32 Go DDR5-5200",
+          "correspondance": {
+            "motifs": [
+              "DDR5",
+              "4 x 32"
+            ],
+            "exclure": [
+              "SO-DIMM",
+              "SODIMM"
+            ]
+          }
+        }
+      ],
+      "pourquoi": "À 128 Go, il faut quatre barrettes et accepter une fréquence plus basse. Le volume compte plus que la vitesse ici.",
+      "prix_exemple": 450
+    },
+    "ssd-512": {
+      "categorie": "ssd",
+      "puce": "SSD 512 Go NVMe Gen4",
+      "court": "512 Go",
+      "caracteristiques": {
+        "to": 0.5,
+        "gen": 4
+      },
+      "modeles": [
+        {
+          "modele": "Crucial P3 Plus 500 Go",
+          "correspondance": {
+            "motifs": [
+              "P3 Plus",
+              "500"
+            ],
+            "exclure": []
+          }
+        }
+      ],
+      "pourquoi": "Assez pour le système et les logiciels. Les fichiers lourds peuvent vivre sur un disque externe.",
+      "prix_exemple": 45
+    },
+    "ssd-1to": {
+      "categorie": "ssd",
+      "puce": "SSD 1 To NVMe Gen4",
+      "court": "1 To",
+      "caracteristiques": {
+        "to": 1,
+        "gen": 4
+      },
+      "modeles": [
+        {
+          "modele": "Crucial T500 1 To",
+          "correspondance": {
+            "motifs": [
+              "T500",
+              "1 To"
+            ],
+            "exclure": [
+              "2 To",
+              "4 To"
+            ]
+          }
+        }
+      ],
+      "pourquoi": "Un Gen4 rapide : en usage réel, un Gen5 ne raccourcit presque aucun chargement.",
+      "prix_exemple": 80
+    },
+    "ssd-2to": {
+      "categorie": "ssd",
+      "puce": "SSD 2 To NVMe Gen4",
+      "court": "2 To",
+      "caracteristiques": {
+        "to": 2,
+        "gen": 4
+      },
+      "modeles": [
+        {
+          "modele": "Crucial T500 2 To",
+          "correspondance": {
+            "motifs": [
+              "T500",
+              "2 To"
+            ],
+            "exclure": []
+          }
+        }
+      ],
+      "pourquoi": "Le meilleur prix au téraoctet cette semaine, et la place pour plusieurs gros projets.",
+      "prix_exemple": 150
+    },
+    "ssd-2to5": {
+      "categorie": "ssd",
+      "puce": "SSD 2 To NVMe Gen5",
+      "court": "2 To Gen5",
+      "caracteristiques": {
+        "to": 2,
+        "gen": 5
+      },
+      "modeles": [
+        {
+          "modele": "Crucial T705 2 To",
+          "correspondance": {
+            "motifs": [
+              "T705",
+              "2 To"
+            ],
+            "exclure": []
+          }
+        }
+      ],
+      "pourquoi": "Ici le Gen5 sert vraiment : la compilation des shaders et le chargement des niveaux lisent énormément de données.",
+      "prix_exemple": 230
+    },
+    "ssd-4to": {
+      "categorie": "ssd",
+      "puce": "SSD 4 To NVMe Gen4",
+      "court": "4 To",
+      "caracteristiques": {
+        "to": 4,
+        "gen": 4
+      },
+      "modeles": [
+        {
+          "modele": "Crucial T500 4 To",
+          "correspondance": {
+            "motifs": [
+              "T500",
+              "4 To"
+            ],
+            "exclure": []
+          }
+        }
+      ],
+      "pourquoi": "Un seul grand SSD rapide plutôt que deux petits : plus simple, et tous les projets au même endroit.",
+      "prix_exemple": 300
+    },
+    "cm-a620": {
+      "categorie": "cm",
+      "puce": "Carte mère AM5 A620 (micro-ATX)",
+      "caracteristiques": {
+        "socket": "AM5",
+        "memoire": "DDR5",
+        "format": "mATX",
+        "vrm_max": 120,
+        "familles": [
+          "am5-zen4-apu",
+          "am5-zen5"
+        ]
+      },
+      "modeles": [
+        {
+          "modele": "ASRock A620M-HDV/M.2+",
+          "correspondance": {
+            "motifs": [
+              "A620M-HDV"
+            ],
+            "exclure": []
+          }
+        }
+      ],
+      "pourquoi": "Pour un processeur sobre et sans carte graphique, une carte mère simple suffit.",
+      "prix_exemple": 100
+    },
+    "cm-b650": {
+      "categorie": "cm",
+      "puce": "Carte mère AM5 B650",
+      "caracteristiques": {
+        "socket": "AM5",
+        "memoire": "DDR5",
+        "format": "ATX",
+        "vrm_max": 230,
+        "familles": [
+          "am5-zen4-apu",
+          "am5-zen5"
+        ]
+      },
+      "modeles": [
+        {
+          "modele": "MSI B650 Gaming Plus WiFi",
+          "correspondance": {
+            "motifs": [
+              "B650 Gaming Plus"
+            ],
+            "exclure": []
+          }
+        }
+      ],
+      "pourquoi": "Le Wi-Fi intégré et assez d'emplacements pour ajouter un SSD plus tard. Livrée avec un BIOS récent pour les Ryzen 9000.",
+      "prix_exemple": 150
+    },
+    "cm-x870": {
+      "categorie": "cm",
+      "puce": "Carte mère AM5 X870",
+      "caracteristiques": {
+        "socket": "AM5",
+        "memoire": "DDR5",
+        "format": "ATX",
+        "vrm_max": 300,
+        "familles": [
+          "am5-zen5"
+        ]
+      },
+      "modeles": [
+        {
+          "modele": "Gigabyte X870 Eagle WiFi7",
+          "correspondance": {
+            "motifs": [
+              "X870 Eagle"
+            ],
+            "exclure": [
+              "X870E"
+            ]
+          }
+        }
+      ],
+      "pourquoi": "Une alimentation électrique plus robuste pour les gros processeurs tenus à pleine charge pendant des heures.",
+      "prix_exemple": 230
+    },
+    "cm-b860": {
+      "categorie": "cm",
+      "puce": "Carte mère LGA1851 B860",
+      "caracteristiques": {
+        "socket": "LGA1851",
+        "memoire": "DDR5",
+        "format": "ATX",
+        "vrm_max": 260,
+        "familles": [
+          "lga1851-arrow"
+        ]
+      },
+      "modeles": [
+        {
+          "modele": "MSI B860 Gaming Plus WiFi",
+          "correspondance": {
+            "motifs": [
+              "B860 Gaming Plus"
+            ],
+            "exclure": []
+          }
+        }
+      ],
+      "pourquoi": "La carte mère raisonnable de la plateforme Intel actuelle, sans payer l'overclocking qu'on n'utilisera pas.",
+      "prix_exemple": 170
+    },
+    "cm-z890": {
+      "categorie": "cm",
+      "puce": "Carte mère LGA1851 Z890",
+      "caracteristiques": {
+        "socket": "LGA1851",
+        "memoire": "DDR5",
+        "format": "ATX",
+        "vrm_max": 320,
+        "familles": [
+          "lga1851-arrow"
+        ]
+      },
+      "modeles": [
+        {
+          "modele": "Gigabyte Z890 Eagle WiFi7",
+          "correspondance": {
+            "motifs": [
+              "Z890 Eagle"
+            ],
+            "exclure": []
+          }
+        }
+      ],
+      "pourquoi": "Pour un Core Ultra 9 tenu à pleine charge : des étages d'alimentation plus solides.",
+      "prix_exemple": 240
+    },
+    "cm-b760": {
+      "categorie": "cm",
+      "puce": "Carte mère LGA1700 B760 DDR5",
+      "caracteristiques": {
+        "socket": "LGA1700",
+        "memoire": "DDR5",
+        "format": "ATX",
+        "vrm_max": 200,
+        "familles": [
+          "lga1700-raptor"
+        ]
+      },
+      "modeles": [
+        {
+          "modele": "MSI PRO B760-P WiFi DDR5",
+          "correspondance": {
+            "motifs": [
+              "B760",
+              "DDR5"
+            ],
+            "exclure": [
+              "DDR4"
+            ]
+          }
+        }
+      ],
+      "pourquoi": "Version DDR5 obligatoire : on ne recommande pas de nouvelle machine en DDR4.",
+      "prix_exemple": 130
+    },
+    "cm-z790": {
+      "categorie": "cm",
+      "puce": "Carte mère LGA1700 Z790 DDR5",
+      "caracteristiques": {
+        "socket": "LGA1700",
+        "memoire": "DDR5",
+        "format": "ATX",
+        "vrm_max": 300,
+        "familles": [
+          "lga1700-raptor"
+        ]
+      },
+      "modeles": [
+        {
+          "modele": "Gigabyte Z790 Eagle AX",
+          "correspondance": {
+            "motifs": [
+              "Z790 Eagle"
+            ],
+            "exclure": [
+              "DDR4"
+            ]
+          }
+        }
+      ],
+      "pourquoi": "Les i7 et i9 de 14e génération dépassent 250 W en charge : il leur faut une carte mère qui suit.",
+      "prix_exemple": 200
+    },
+    "ventirad-boite": {
+      "categorie": "ventirad",
+      "puce": "Ventirad fourni",
+      "inclus_dans": "cpu",
+      "caracteristiques": {
+        "tdpMax": 88,
+        "hauteur": 50,
+        "sockets": [
+          "AM5"
+        ],
+        "type": "tour"
+      },
+      "modeles": [
+        {
+          "modele": "AMD Wraith Stealth",
+          "inclus_dans": "cpu"
+        }
+      ],
+      "pourquoi": "Livré dans la boîte du processeur : rien à acheter."
+    },
+    "ventirad-simple": {
+      "categorie": "ventirad",
+      "puce": "Ventirad à tour",
+      "caracteristiques": {
+        "tdpMax": 150,
+        "hauteur": 159,
+        "sockets": [
+          "AM5",
+          "LGA1851",
+          "LGA1700"
+        ],
+        "type": "tour"
+      },
+      "modeles": [
+        {
+          "modele": "Arctic Freezer 36",
+          "correspondance": {
+            "motifs": [
+              "Freezer 36"
+            ],
+            "exclure": [
+              "A-RGB"
+            ]
+          }
+        }
+      ],
+      "pourquoi": "Ce processeur est vendu sans refroidissement. Un ventirad à tour simple le garde au frais et au calme.",
+      "prix_exemple": 30
+    },
+    "ventirad-double": {
+      "categorie": "ventirad",
+      "puce": "Double ventirad à tour",
+      "caracteristiques": {
+        "tdpMax": 230,
+        "hauteur": 155,
+        "sockets": [
+          "AM5",
+          "LGA1851",
+          "LGA1700"
+        ],
+        "type": "tour"
+      },
+      "modeles": [
+        {
+          "modele": "Thermalright Peerless Assassin 120 SE",
+          "correspondance": {
+            "motifs": [
+              "Peerless Assassin 120"
+            ],
+            "exclure": []
+          }
+        }
+      ],
+      "pourquoi": "Vendu sans refroidissement, ce processeur chauffe sous charge longue. Un double ventirad suffit, pas besoin de watercooling.",
+      "prix_exemple": 40
+    },
+    "ventirad-aio360": {
+      "categorie": "ventirad",
+      "puce": "Watercooling tout-en-un 360 mm",
+      "caracteristiques": {
+        "tdpMax": 320,
+        "hauteur": 0,
+        "radiateur": 360,
+        "sockets": [
+          "AM5",
+          "LGA1851",
+          "LGA1700"
+        ],
+        "type": "aio"
+      },
+      "modeles": [
+        {
+          "modele": "Arctic Liquid Freezer III 360",
+          "correspondance": {
+            "motifs": [
+              "Liquid Freezer III",
+              "360"
+            ],
+            "exclure": [
+              "A-RGB"
+            ]
+          }
+        }
+      ],
+      "pourquoi": "Les gros Intel dépassent 250 W en charge : un ventirad à air n'arriverait pas à les tenir sans ralentir.",
+      "prix_exemple": 100
+    },
+    "alim-550": {
+      "categorie": "alim",
+      "puce": "Alimentation 550 W",
+      "caracteristiques": {
+        "watts": 550,
+        "connecteurs": [
+          "8pin",
+          "12v-2x6"
+        ]
+      },
+      "modeles": [
+        {
+          "modele": "be quiet! Pure Power 12 550W",
+          "correspondance": {
+            "motifs": [
+              "Pure Power 12",
+              "550"
+            ],
+            "exclure": []
+          }
+        }
+      ],
+      "pourquoi": "Largement assez pour cette machine, et silencieuse.",
+      "prix_exemple": 70
+    },
+    "alim-650": {
+      "categorie": "alim",
+      "puce": "Alimentation 650 W",
+      "caracteristiques": {
+        "watts": 650,
+        "connecteurs": [
+          "8pin",
+          "12v-2x6"
+        ]
+      },
+      "modeles": [
+        {
+          "modele": "Corsair RM650e",
+          "correspondance": {
+            "motifs": [
+              "RM650e"
+            ],
+            "exclure": []
+          }
+        }
+      ],
+      "pourquoi": "Juste ce qu'il faut avec la marge recommandée pour cette carte, sans payer de watts inutiles.",
+      "prix_exemple": 95
+    },
+    "alim-750": {
+      "categorie": "alim",
+      "puce": "Alimentation 750 W",
+      "caracteristiques": {
+        "watts": 750,
+        "connecteurs": [
+          "8pin",
+          "12v-2x6"
+        ]
+      },
+      "modeles": [
+        {
+          "modele": "Corsair RM750e",
+          "correspondance": {
+            "motifs": [
+              "RM750e"
+            ],
+            "exclure": []
+          }
+        }
+      ],
+      "pourquoi": "La puissance recommandée par le fabricant de la carte, avec le connecteur prévu pour elle.",
+      "prix_exemple": 110
+    },
+    "alim-850": {
+      "categorie": "alim",
+      "puce": "Alimentation 850 W",
+      "caracteristiques": {
+        "watts": 850,
+        "connecteurs": [
+          "8pin",
+          "12v-2x6"
+        ]
+      },
+      "modeles": [
+        {
+          "modele": "Corsair RM850e",
+          "correspondance": {
+            "motifs": [
+              "RM850e"
+            ],
+            "exclure": []
+          }
+        }
+      ],
+      "pourquoi": "De la marge sur la consommation de la carte graphique, avec le connecteur prévu pour elle.",
+      "prix_exemple": 130
+    },
+    "alim-1000": {
+      "categorie": "alim",
+      "puce": "Alimentation 1000 W",
+      "caracteristiques": {
+        "watts": 1000,
+        "connecteurs": [
+          "8pin",
+          "12v-2x6"
+        ]
+      },
+      "modeles": [
+        {
+          "modele": "Corsair RM1000x",
+          "correspondance": {
+            "motifs": [
+              "RM1000x"
+            ],
+            "exclure": []
+          }
+        }
+      ],
+      "pourquoi": "La RTX 5090 consomme jusqu'à 575 W à elle seule : on ne transige pas sur l'alimentation.",
+      "prix_exemple": 180
+    },
+    "boitier-compact": {
+      "categorie": "boitier",
+      "puce": "Boîtier compact",
+      "caracteristiques": {
+        "chaleurMax": 250,
+        "gpuMax": 315,
+        "ventiradMax": 165,
+        "radiateurs": [
+          240
+        ],
+        "formats": [
+          "mATX"
+        ]
+      },
+      "modeles": [
+        {
+          "modele": "Fractal Design Pop Mini Silent",
+          "correspondance": {
+            "motifs": [
+              "Pop Mini Silent"
+            ],
+            "exclure": []
+          }
+        }
+      ],
+      "pourquoi": "Un boîtier compact et insonorisé, largement assez pour une machine sobre.",
+      "prix_exemple": 70
+    },
+    "boitier-aere": {
+      "categorie": "boitier",
+      "puce": "Boîtier ventilé",
+      "caracteristiques": {
+        "chaleurMax": 600,
+        "gpuMax": 405,
+        "ventiradMax": 170,
+        "radiateurs": [
+          240,
+          280,
+          360
+        ],
+        "formats": [
+          "ATX",
+          "mATX"
+        ]
+      },
+      "modeles": [
+        {
+          "modele": "Fractal Design Pop Air",
+          "correspondance": {
+            "motifs": [
+              "Pop Air"
+            ],
+            "exclure": [
+              "Mini"
+            ]
+          }
+        }
+      ],
+      "pourquoi": "Bien ventilé et assez long pour toutes les cartes de la sélection.",
+      "prix_exemple": 90
+    },
+    "boitier-grand": {
+      "categorie": "boitier",
+      "puce": "Grand boîtier",
+      "caracteristiques": {
+        "chaleurMax": 950,
+        "gpuMax": 413,
+        "ventiradMax": 170,
+        "radiateurs": [
+          240,
+          280,
+          360
+        ],
+        "formats": [
+          "ATX",
+          "mATX"
+        ]
+      },
+      "modeles": [
+        {
+          "modele": "Fractal Design North XL",
+          "correspondance": {
+            "motifs": [
+              "North XL"
+            ],
+            "exclure": []
+          }
+        }
+      ],
+      "pourquoi": "Les cartes et processeurs les plus gourmands chauffent beaucoup : il leur faut de la place et de l'air.",
+      "prix_exemple": 150
+    }
+  }
+}

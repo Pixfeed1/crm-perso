@@ -52,14 +52,14 @@ const Scenes = ({ onOpen }) => {
   );
 };
 
-const Diffuseur = () => {
+const Diffuseur = ({ embedded = false }) => {
   const [params, setParams] = useSearchParams();
   const tab = TABS.some((t) => t.key === params.get('tab')) ? params.get('tab') : 'scenes';
   const sceneId = parseInt(params.get('scene'), 10) || null;
-  const aller = (p) => setParams(Object.fromEntries(Object.entries(p).filter(([, v]) => v != null)));
+  const aller = (p) => setParams(Object.fromEntries(Object.entries({ section: params.get('section'), ...p }).filter(([, v]) => v != null)));
   return (
     <div className="h-full flex flex-col">
-      <div className="flex gap-1 px-2 sm:px-4 lg:pl-72 pt-16 sm:pt-2 border-b border-border/50 shrink-0 overflow-x-auto">
+      <div className={`flex gap-1 px-2 sm:px-4 border-b border-border/50 shrink-0 overflow-x-auto ${embedded ? 'pt-2' : 'lg:pl-72 pt-16 sm:pt-2'}`}>
         {TABS.map((t) => {
           const Icon = t.icon; const actif = tab === t.key;
           return (

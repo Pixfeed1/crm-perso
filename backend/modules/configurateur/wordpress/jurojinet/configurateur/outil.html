@@ -1,0 +1,86 @@
+<div class="cfg-pc">
+<section class="tool" id="cfg-tool" aria-labelledby="cfg-t">
+    <h2 id="cfg-t">Quel PC pour ce que vous faites&#8239;?</h2>
+    <p class="progress"><span id="cfg-progress"></span><span id="cfg-plabel"></span></p>
+    <span class="bar"><i id="cfg-barfill"></i></span>
+
+    <form class="questions" id="cfg-form">
+      <fieldset class="on" data-step="fam">
+        <legend>Ce que vous faites</legend>
+        <div class="opts fams">
+          <label class="opt"><input type="radio" name="fam" id="cfg-f-3d" value="3d" checked><span class="card"><span class="c-name">3D</span><span class="c-sub">Modélisation, sculpture, rendu, temps réel</span></span></label>
+          <label class="opt"><input type="radio" name="fam" id="cfg-f-video" value="video"><span class="card"><span class="c-name">Vidéo et motion</span><span class="c-sub">Montage, étalonnage, animation</span></span></label>
+          <label class="opt"><input type="radio" name="fam" id="cfg-f-photo" value="photo"><span class="card"><span class="c-name">Photo et design</span><span class="c-sub">Retouche, développement, graphisme</span></span></label>
+          <label class="opt"><input type="radio" name="fam" id="cfg-f-game" value="game"><span class="card"><span class="c-name">Jeu vidéo</span><span class="c-sub">Grands jeux solo, compétitif</span></span></label>
+          <label class="opt"><input type="radio" name="fam" id="cfg-f-office" value="office"><span class="card"><span class="c-name">Usage courant</span><span class="c-sub">Bureautique, web, études</span></span></label>
+        </div>
+      </fieldset>
+
+      <fieldset data-step="soft" id="cfg-softset">
+        <legend>Votre logiciel principal</legend>
+        <div class="opts softs" id="cfg-softs"></div>
+      </fieldset>
+
+      <fieldset data-step="load" id="cfg-loadset">
+        <legend>Vos projets</legend>
+        <div class="opts pair" id="cfg-projets"></div>
+        <label class="also" for="cfg-alsoGame"><input type="checkbox" id="cfg-alsoGame" name="alsoGame"><span><span class="c-name">Je joue aussi</span><br><span class="c-sub">On vous demandera la définition de votre écran</span></span></label>
+      </fieldset>
+
+      <fieldset data-step="screen" id="cfg-screenset" hidden>
+        <legend id="cfg-screenleg">Votre écran</legend>
+        <div class="opts trio">
+          <label class="opt"><input type="radio" name="screen" id="cfg-sc-1080" value="1080"><span class="card"><span class="c-name">1080p</span><span class="c-sub">Full HD, le plus courant</span></span></label>
+          <label class="opt"><input type="radio" name="screen" id="cfg-sc-1440" value="1440" checked><span class="card"><span class="c-name">1440p</span><span class="c-sub">Le bon équilibre en 2026</span></span></label>
+          <label class="opt"><input type="radio" name="screen" id="cfg-sc-2160" value="2160"><span class="card"><span class="c-name">4K</span><span class="c-sub">Grand écran ou téléviseur</span></span></label>
+        </div>
+      </fieldset>
+
+      <fieldset data-step="games" id="cfg-gameset" hidden>
+        <legend>Vos jeux</legend>
+        <div class="opts pair">
+          <label class="opt"><input type="radio" name="games" id="cfg-g-solo" value="solo" checked><span class="card"><span class="c-name">Grands jeux solo</span><span class="c-sub">Beaux graphismes, mondes ouverts</span></span></label>
+          <label class="opt"><input type="radio" name="games" id="cfg-g-comp" value="comp"><span class="card"><span class="c-name">Compétitif</span><span class="c-sub">FPS en ligne, un maximum d'images par seconde</span></span></label>
+        </div>
+      </fieldset>
+
+      <fieldset data-step="budget">
+        <legend>Votre budget</legend>
+        <div class="budget-head">
+          <label class="budget-val"><input type="number" id="cfg-budgetIn" inputmode="numeric" min="500" max="5000" step="100" value="2000" aria-label="Budget en euros, de 500 à 5 000"><span aria-hidden="true">€</span></label>
+          <div class="presets" id="cfg-presets"></div>
+        </div>
+        <div class="slider">
+          <input type="range" id="cfg-budget" name="budget" min="500" max="5000" step="100" value="2000" aria-label="Budget" aria-describedby="cfg-upsell">
+          <div class="marks" id="cfg-marks" aria-hidden="true"></div>
+          <div class="scale"><span>500&nbsp;€</span><span class="cap" id="cfg-markcap"></span><span>5&#8239;000&nbsp;€</span></div>
+        </div>
+        <p class="upsell" id="cfg-upsell" hidden></p>
+      </fieldset>
+    </form>
+
+    <div class="stepnav">
+      <button type="button" class="btn ghost" id="cfg-prev">Retour</button>
+      <button type="button" class="btn" id="cfg-next">Suivant</button>
+    </div>
+
+    <div class="sheet" id="cfg-sheet" aria-live="polite">
+      <div class="verdict">
+        <button type="button" class="btn ghost restart" id="cfg-restart">← Changer mes réponses</button>
+        <span class="tag" id="cfg-for"></span>
+        <h3 id="cfg-headline"></h3>
+        <div class="total"><span class="lbl">Total estimé</span><span class="num" id="cfg-total"></span></div>
+        <p class="date" id="cfg-date"></p>
+        <p class="date" id="cfg-os"></p>
+        <p class="effet" id="cfg-effet"></p>
+        <p class="left" id="cfg-left"></p>
+      </div>
+      <div class="pp">
+        <div class="choix" id="cfg-choix" role="radiogroup" aria-label="Deux machines possibles" hidden></div>
+        <ul class="parts" id="cfg-parts"></ul>
+      </div>
+      <div class="advice" id="cfg-advice"></div>
+      <p class="foot">Les liens vers les marchands sont des liens affiliés : si vous achetez par leur biais, Jurojin touche une petite commission, sans surcoût pour vous. Les marques et logos cités appartiennent à leurs propriétaires respectifs.</p>
+    </div>
+  </section>
+</div>

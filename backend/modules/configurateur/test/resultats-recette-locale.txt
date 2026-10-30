@@ -1,0 +1,42 @@
+Exécution du 30/10/2026 08:47 · Node v22.23.4 · PostgreSQL 16.15 · base de test vide
+
+✔ Awin : prix à virgule, produits reconditionnés et lignes sans lien écartés (15.262043ms)
+✔ Awin : flux gzip lu en continu (10.750711ms)
+✔ Awin : liste des flux, seuls les flux retenus sont gardés (2.738408ms)
+✔ catalogue : rupture du modèle retenu, bascule sur la réserve en stock (59.57013ms)
+✔ catalogue : lien Amazon sans prix quand l'ASIN et l'identifiant partenaire existent (35.498129ms)
+✔ validation : seuls les changements acceptés sont appliqués (0.783331ms)
+✔ catalogue : un modèle en stock qui n'entre dans aucune machine cède la place à la réserve suivante (37.405758ms)
+✔ catalogue : si aucun modèle ne convient, la puce est écartée sans faire échouer le calcul (44.204482ms)
+✔ Awin : un flux pas mis à jour depuis plus de 48 h est écarté, les offres sont datées du flux (36.624273ms)
+✔ Awin : formats de date lus (0.641937ms)
+✔ disparitions : une puce retirée est signalée avec sa raison (526.035955ms)
+✔ Blender Open Data : chaque puce mesurable a un score, la ligne la plus testée l'emporte (1.570643ms)
+✔ Blender Open Data : un appareil sous le minimum de tests est écarté (0.700159ms)
+✔ compatibilité : un APU n'est jamais associé à une carte graphique dédiée (0.911874ms)
+✔ compatibilité : l'alimentation couvre la marge de 10 % et la recommandation du fabricant (0.466406ms)
+✔ compatibilité : toutes les machines publiées passent toutes les vérifications (1.344076ms)
+✔ format : 103 profils, paliers triés, dans le budget (2.778642ms)
+✔ Daz : uniquement des cartes Nvidia (0.56564ms)
+✔ option deux machines : au moins 10 % et 100 € de moins, au plus 5 % plus lente, jamais moins de mémoire (1.449747ms)
+✔ contrôles : le fichier d'essai passe, une machine trafiquée bloque la publication (17.037322ms)
+✔ contrôles : une variation de prix de plus de 30 % bloque (11.188629ms)
+✔ réserves affichées : seulement celles qui conviennent à toutes les machines publiées de la puce (0.945942ms)
+▶ tâches et validation sur base réelle
+  ✔ le module refuse de démarrer sans authentification (2.010084ms)
+  ✔ la tâche de nuit publie et se termine (464.808511ms)
+  ✔ une deuxième demande pendant qu'une tâche tourne est refusée et tracée (642.610296ms)
+  ✔ une validation qui échoue aux contrôles ne change ni la sélection, ni la proposition, ni le fichier (550.824812ms)
+  ✔ verrou partagé : si un autre processus tient le verrou, la demande est refusée (207.435765ms)
+  ✔ COMMIT en échec : ni le fichier en ligne ni la base ne changent, aucun temporaire ne traîne (288.245712ms)
+  ✔ mise en ligne en échec après le COMMIT : publication marquée, Marc prévenu (232.157612ms)
+  ✔ réconciliation au démarrage : un fichier en ligne différent de la base est republié (86.190837ms)
+  ✔ routes : 401 sans authentification, 202 puis suivi par identifiant (397.117887ms)
+✔ tâches et validation sur base réelle (3043.348353ms)
+ℹ tests 32
+ℹ suites 0
+ℹ pass 32
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
