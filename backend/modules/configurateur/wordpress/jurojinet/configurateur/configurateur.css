@@ -18,7 +18,7 @@
 .cfg-pc fieldset{border:0;margin:0;padding:0;min-width:0}
 .cfg-pc legend{font-size:14px;font-weight:700;color:var(--title);margin-bottom:12px;padding:0}
 .cfg-pc .opts{display:grid;gap:10px}
-.cfg-pc .fams{grid-template-columns:repeat(5,minmax(0,1fr))}
+.cfg-pc .fams{grid-template-columns:repeat(3,minmax(0,1fr))}
 .cfg-pc .trio{grid-template-columns:repeat(3,minmax(0,1fr))}
 .cfg-pc .pair{grid-template-columns:repeat(2,minmax(0,1fr))}
 .cfg-pc .softs{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}

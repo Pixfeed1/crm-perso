@@ -39,6 +39,33 @@ function detailLisible(c) {
   return Object.keys(d).length ? JSON.stringify(d) : '';
 }
 
+// Alertes du relevé (catalogue) : ce qui a été écarté ou remplacé, sans passer par le terminal.
+const NIVEAUX = {
+  prix_suspect: ['Offre écartée, prix suspect', 'text-danger-text'],
+  rupture: ['Plus d\'offre en stock', 'text-warning-text'],
+  incompatible: ['N\'entre dans aucune machine', 'text-warning-text'],
+  ecarte: ['Écarté du calcul', 'text-warning-text'],
+  bascule: ['Passé sur sa réserve', 'text-text-secondary']
+};
+function Alertes({ liste, ouvert = false }) {
+  const a = (liste || []).filter((x) => x && x.message);
+  if (!a.length) return null;
+  const parNiveau = {};
+  for (const x of a) (parNiveau[x.niveau] = parNiveau[x.niveau] || []).push(x.message);
+  const resume = Object.entries(parNiveau).map(([n, l]) => `${l.length} ${(NIVEAUX[n] || [n])[0].toLowerCase()}`).join(' · ');
+  return (
+    <details className="text-xs mt-1" open={ouvert}>
+      <summary className="cursor-pointer text-text-secondary">Alertes du relevé : {resume}</summary>
+      {Object.entries(parNiveau).map(([n, l]) => (
+        <div key={n} className="mt-1">
+          <div className={`font-semibold ${(NIVEAUX[n] || [])[1] || 'text-text-secondary'}`}>{(NIVEAUX[n] || [n])[0]}</div>
+          <ul className="list-disc ml-5 text-text-secondary">{l.map((m) => <li key={m}>{m}</li>)}</ul>
+        </div>
+      ))}
+    </details>
+  );
+}
+
 function ResultatTache({ t }) {
   const r = t.resultat || {};
   const res = r.resume || {};
@@ -53,6 +80,7 @@ function ResultatTache({ t }) {
       {erreurs.length > 0 && <ul className="list-disc ml-5 text-danger-text text-xs">{erreurs.slice(0, 20).map((e) => <li key={e}>{e}</li>)}</ul>}
       {(res.erreursFlux || []).length > 0 && <div className="text-xs text-warning-text">Flux : {res.erreursFlux.join(' · ')}</div>}
       {(res.disparitions || []).length > 0 && <div className="text-xs text-warning-text">Retirées de la page : {res.disparitions.map((d) => `${d.puce} (${d.raison})`).join(', ')}</div>}
+      <Alertes liste={res.alertes} ouvert />
     </div>
   );
 }
@@ -213,6 +241,7 @@ const Configurateur = ({ embedded = false }) => {
                       </button>
                     )}
                   </div>
+                  {p.resume && <Alertes liste={p.resume.alertes} />}
                   {Array.isArray(p.erreurs) && p.erreurs.length > 0 && (
                     <ul className={`list-disc ml-5 mt-1 text-xs ${p.statut === 'publiee' ? 'text-warning-text' : 'text-danger-text'}`}>
                       {p.erreurs.slice(0, 10).map((e) => <li key={e}>{e}</li>)}

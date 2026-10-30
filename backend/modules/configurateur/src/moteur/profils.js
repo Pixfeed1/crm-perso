@@ -48,9 +48,19 @@ const P = {
                projets: ["Illustrations, planches simples", "Grandes toiles, nombreux calques, animation"] },
   figma:     { n: "Figma", gpu: "jeu", cpu: "calcul", w: [1, 4, 2, 1], cap: 32, gcap: 6, ccap: 45, ramLourd: 32,
                projets: ["Quelques maquettes", "Gros fichiers, design systems complets"] },
+  // Architecture et CAO : ces logiciels calculent presque tout sur un seul cœur. Faute de mesure dédiée, on prend
+  // l'indice processeur du jeu, qui récompense la même chose (fréquence et cache), plutôt que le calcul multicœur.
+  sketchup:  { n: "SketchUp", gpu: "jeu", cpu: "jeu", w: [5, 8, 3, 1], cap: 64, gcap: 60, ramLourd: 32,
+               projets: ["Maisons, intérieurs, plans simples", "Grands projets, modèles importés, rendu Enscape ou V-Ray"] },
+  rhino:     { n: "Rhino", gpu: "jeu", cpu: "jeu", w: [4, 8, 3, 1], cap: 64, gcap: 60, ramLourd: 32,
+               projets: ["Pièces et objets, modélisation précise", "Grands assemblages, Grasshopper, rendus"] },
+  fusion:    { n: "Fusion 360", gpu: "jeu", cpu: "jeu", w: [3, 8, 3, 1], cap: 64, gcap: 45, ramLourd: 32,
+               projets: ["Pièces simples, impression 3D", "Assemblages complexes, simulations"] },
+  autocad:   { n: "AutoCAD", gpu: "jeu", cpu: "jeu", w: [2, 8, 3, 1], cap: 32, gcap: 35, ramLourd: 32,
+               projets: ["Plans 2D, petits projets", "Gros plans, modélisation 3D, nombreux calques"] },
   courant:   { n: "Usage courant", office: true, gpu: "jeu", cpu: "calcul", w: [0.2, 3, 2, 1], cap: 16, gcap: 6, ccap: 40 }
 };
-const CREA = ["blender", "maya", "cinema4d", "3dsmax", "houdini", "zbrush", "substance", "unreal", "daz", "keyshot", "premiere", "resolve", "ae", "photoshop", "lightroom", "illustrator", "clipstudio", "figma"];
+const CREA = ["blender", "maya", "cinema4d", "3dsmax", "houdini", "zbrush", "substance", "unreal", "daz", "keyshot", "premiere", "resolve", "ae", "photoshop", "lightroom", "illustrator", "clipstudio", "figma", "sketchup", "rhino", "fusion", "autocad"];
 const ECRANS = ["1080", "1440", "2160"];
 
 /** Profil jeu : la définition de l'écran fixe le plafond utile de la carte graphique. */
@@ -84,6 +94,10 @@ const TEXTES = {
   illustrator: { titre: "Une machine équilibrée suffit", conseils: ["Illustrator reste léger : un processeur récent et 32 Go de mémoire couvrent même les fichiers d'impression complexes.", "Mieux vaut investir l'écart de prix dans un bon écran calibré."] },
   clipstudio: { titre: "Une machine simple, un bon écran et une tablette", conseils: ["Clip Studio Paint demande peu : un processeur récent et 16 à 32 Go de mémoire suffisent, même sur de grandes toiles.", "Gardez le budget pour un écran fidèle et une tablette graphique : c'est là que se joue le confort de dessin."] },
   figma: { titre: "Presque n'importe quelle machine récente", conseils: ["Figma tourne dans le navigateur et calcule peu localement. Un processeur moderne et 16 à 32 Go de mémoire suffisent largement.", "Gardez votre budget pour un grand écran : c'est là que vous gagnerez en confort."] },
+  sketchup: { titre: "Un processeur rapide sur un cœur, une carte correcte", conseils: ["SketchUp n'utilise presque qu'un cœur du processeur pour modéliser : c'est sa vitesse par cœur, pas le nombre de cœurs, qui rend la navigation fluide.", "La carte graphique affiche le modèle : un modèle milieu de gamme suffit, sauf pour le rendu temps réel avec Enscape, qui en demande davantage."] },
+  rhino: { titre: "Vitesse par cœur et affichage fluide", conseils: ["Rhino modélise surtout sur un cœur du processeur : un modèle récent et rapide compte plus qu'un grand nombre de cœurs.", "Une carte graphique milieu de gamme garde l'affichage fluide ; Grasshopper et le rendu profitent ensuite de la mémoire vive."] },
+  fusion: { titre: "Un bon processeur, sans excès", conseils: ["Fusion calcule la plupart des opérations sur un cœur du processeur : un modèle récent et rapide suffit largement.", "Les simulations et le rendu peuvent partir dans le cloud d'Autodesk : inutile de surdimensionner la carte graphique."] },
+  autocad: { titre: "Un processeur rapide, le reste sans excès", conseils: ["AutoCAD travaille presque entièrement sur un seul cœur du processeur : sa fréquence compte plus que le nombre de cœurs.", "Une carte graphique d'entrée de gamme et 16 à 32 Go de mémoire suffisent : gardez le budget pour un grand écran."] },
   courant: { titre: "Simple, silencieux et sans dépense inutile", conseils: ["Pour la bureautique, le web et la vidéo en streaming, un processeur avec graphique intégrée fait tout le travail.", "Au-delà d'un certain budget, plus rien ne change : mieux vaut le garder pour un bon écran ou un portable."] },
   "jeu-comp": { titre: "Des images par seconde avant tout", conseils: ["Dans les jeux compétitifs, chaque image compte et le processeur devient vite la limite. Les modèles avec beaucoup de cache, comme les X3D d'AMD, y excellent.", "La carte graphique n'a pas besoin d'être énorme si vous baissez un peu les réglages pour gagner en fluidité."] },
   "jeu-solo": { titre: "La carte graphique fait les belles images", conseils: ["En grands jeux solo, la carte graphique fait presque tout. La définition de votre écran décide du modèle : ce qui suffit en 1080p s'essouffle en 4K.", "Un processeur milieu de gamme suffit, et 32 Go de mémoire couvrent tous les jeux actuels."] },

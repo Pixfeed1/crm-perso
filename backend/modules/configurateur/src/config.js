@@ -43,7 +43,7 @@ module.exports = {
   suivant: { gainMinPct: 5, fenetreEuros: 600 },
   budgetsConseilles: { coude: 0.8, ecartMinPlafond: 300 },
   alimentation: { marge: 1.1, resteDuPc: 100 },
-  controles: { variationPrixMaxPct: 30, tailleMaxKo: 400, prixPlancherPct: 40 },   // offre sous 40 % du prix habituel : produit mal reconnu, écartée
+  controles: { variationPrixMaxPct: 30, tailleMaxKo: 600, prixPlancherPct: 40 },   // offre sous 40 % du prix habituel : produit mal reconnu, écartée
   publicationsGardees: 30,   // fichiers exacts gardés en base, pour restaurer sans recalculer
   fraicheurFluxHeures: 48,   // un flux marchand plus ancien est écarté (Awin met à jour une fois par jour)
 

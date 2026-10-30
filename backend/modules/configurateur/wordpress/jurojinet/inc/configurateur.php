@@ -112,6 +112,10 @@ function jurojin_cfg_logiciels() {
 		'illustrator' => array( array( 'Illustrator', array( 'adobe-illustrator', 'illustrator' ) ) ),
 		'clipstudio'  => array( array( 'Clip Studio Paint', array( 'clip-studio-paint' ) ) ),
 		'figma'       => array( array( 'Figma', array( 'figma' ) ) ),
+		'sketchup'    => array( array( 'SketchUp', array( 'sketchup' ) ) ),
+		'rhino'       => array( array( 'Rhino', array( 'rhinoceros-3d', 'rhino' ) ) ),
+		'fusion'      => array( array( 'Fusion 360', array( 'fusion-360' ) ) ),
+		'autocad'     => array( array( 'AutoCAD', array( 'autocad' ) ) ),
 	);
 	$sur    = function ( $u ) {
 		return is_string( $u ) && preg_match( '#^(https://|/(?!/))[^\s"\'<>`\\\\]*$#', $u ) ? $u : '';

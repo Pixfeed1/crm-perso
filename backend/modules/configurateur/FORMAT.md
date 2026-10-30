@@ -85,8 +85,8 @@ Une ou deux phrases, au ton du site, qui répondent à « pourquoi celui-là par
 | Jeu vidéo | `jeu\|<solo ou comp>\|<1080, 1440 ou 2160>` |
 | Usage courant | `courant\|-\|-` |
 
-Logiciels : `blender maya cinema4d 3dsmax houdini zbrush substance unreal daz keyshot premiere resolve ae photoshop lightroom illustrator clipstudio figma`.
-Soit 151 profils, tous présents même s'ils se ressemblent.
+Logiciels : `blender maya cinema4d 3dsmax houdini zbrush substance unreal daz keyshot premiere resolve ae photoshop lightroom illustrator clipstudio figma sketchup rhino fusion autocad`.
+Soit 183 profils, tous présents même s'ils se ressemblent.
 
 ## Profil
 
