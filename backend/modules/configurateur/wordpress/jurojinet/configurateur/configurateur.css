@@ -166,6 +166,19 @@
 /* ---------- Sections lisibles sous l'outil (configurations par budget, méthode, questions) ----------
    Titres, paragraphes et tableaux gardent le style du thème (tableaux : [jn_table_products], css/tables.css). */
 .cfg-pc-seo{margin:8px 0 40px}
+.cfg-pc-seo,.cfg-pc-seo *{box-sizing:border-box}
 .cfg-pc-seo .jn-table-products tr.cfg-total td{font-weight:700;color:#111827}
 .cfg-pc-seo .jn-table-products .product-period{display:block;margin-top:4px}
 @media (min-width:641px){.cfg-pc-seo .jn-table-products tr.cfg-total{display:none}}
+/* FAQ : copie du style de la FAQ des guides (css/guide.css, chargé seulement sur les guides), limitée à cette page */
+.cfg-pc-seo .faq-list{display:flex;flex-direction:column;gap:8px;margin-top:1rem}
+.cfg-pc-seo .faq-item{background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden}
+.cfg-pc-seo .faq-item__question{display:flex;align-items:center;justify-content:space-between;gap:16px;width:100%;padding:16px 20px;color:#111827;font-size:.95rem;font-weight:600;text-align:left;cursor:pointer;list-style:none}
+.cfg-pc-seo .faq-item__question::-webkit-details-marker{display:none}
+.cfg-pc-seo .faq-item__question:hover{background:#f3f4f6}
+.cfg-pc-seo .faq-item__question:focus-visible{outline:2px solid #6366f1;outline-offset:-2px}
+.cfg-pc-seo .faq-item__icon{width:20px;height:20px;color:#6366f1;transition:transform .2s;flex-shrink:0}
+.cfg-pc-seo .faq-item[open] .faq-item__icon{transform:rotate(45deg)}
+.cfg-pc-seo .faq-item__answer{padding:0 20px 16px;color:#4b5563;font-size:.9rem;line-height:1.7}
+.cfg-pc-seo .faq-item__answer p{margin:0}
+@media (max-width:768px){.cfg-pc-seo .faq-item__question{padding:14px 16px;font-size:.875rem}.cfg-pc-seo .faq-item__answer{padding:0 16px 14px;font-size:.85rem}}

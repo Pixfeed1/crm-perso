@@ -225,11 +225,14 @@ function jurojin_cfg_sections( $d ) {
 	$q[] = array( 'Le site touche-t-il une commission ?',
 		'Oui. Les liens vers les marchands sont des liens affiliés : si vous achetez par leur biais, Jurojin touche une petite commission, sans surcoût pour vous. Elle ne change pas le choix des pièces : l\'outil retient le prix le plus bas en stock.' );
 
-	$h .= '<div class="faq"><h2>Questions fréquentes</h2>';
-	foreach ( $q as $x ) {
-		$h .= '<h3>' . jurojin_cfg_nb( esc_html( $x[0] ) ) . '</h3><p>' . jurojin_cfg_nb( esc_html( $x[1] ) ) . '</p>';
+	// Même HTML que la FAQ des guides (single-guide.php), en <details> : s'ouvre sans script, et les réponses restent dans la page.
+	$icone = '<svg class="faq-item__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
+	$h .= '<div class="faq"><h2>Questions fréquentes</h2><div class="faq-list">';
+	foreach ( $q as $i => $x ) {
+		$h .= '<details class="faq-item"' . ( 0 === $i ? ' open' : '' ) . '><summary class="faq-item__question">' . jurojin_cfg_nb( esc_html( $x[0] ) ) . $icone . '</summary>'
+			. '<div class="faq-item__answer"><p>' . jurojin_cfg_nb( esc_html( $x[1] ) ) . '</p></div></details>';
 	}
-	return $h . '</div></section>';
+	return $h . '</div></div></section>';
 }
 
 /** WP Rocket : ni retard ni regroupement pour le script de l'outil et son bloc de données,
