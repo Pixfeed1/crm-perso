@@ -86,8 +86,8 @@ add_shortcode( 'configurateur_pc', function () {
 	return $outil . $donnees . jurojin_cfg_logiciels() . jurojin_cfg_sections( json_decode( $json, true ) );
 } );
 
-/** Adresse des fiches logiciel du site (type de contenu « logiciel »), pour les liens « Notre fiche » du résultat.
-    Les boutons de l'outil gardent leurs logos monochromes. */
+/** Logo et adresse des fiches logiciel du site (type de contenu « logiciel », champ « URL du logo »).
+    L'adresse sert aux liens « Notre fiche » du résultat ; le logo, seulement aux logiciels sans tracé officiel dans l'outil. */
 function jurojin_cfg_logiciels() {
 	if ( ! post_type_exists( 'logiciel' ) ) {
 		return '';
@@ -117,8 +117,9 @@ function jurojin_cfg_logiciels() {
 				$post = get_page_by_path( $slug, OBJECT, 'logiciel' );
 				if ( $post && 'publish' === $post->post_status ) {
 					$sortie[ $id ][] = array(
-						'nom' => $f[0],
-						'url' => $sur( (string) get_permalink( $post ) ),
+						'nom'  => $f[0],
+						'logo' => $sur( esc_url_raw( (string) get_post_meta( $post->ID, '_logiciel_logo_url', true ) ) ),
+						'url'  => $sur( (string) get_permalink( $post ) ),
 					);
 					break;
 				}
