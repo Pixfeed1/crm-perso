@@ -59,7 +59,7 @@ function detourer(img){
 }
 
 const $=id=>document.getElementById("cfg-"+id), form=$("form"), range=$("budget"), budIn=$("budgetIn");
-const fmt=n=>Math.round(n).toLocaleString("fr-FR")+" €";
+const fmt=n=>Math.round(n).toLocaleString("fr-FR").replace(/[\u202F\u00A0]/g,"\u00A0")+"\u00A0€";   // espace insécable ordinaire : l'espace fine manque dans certaines polices (gros total sans séparateur)
 const nb=t=>t.replace(/ ([?!:;%])/g," $1");          // typographie française
 const dateFr=iso=>new Date(iso+"T12:00:00").toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"});
 range.min=D.budget.min; range.max=D.budget.max; range.step=D.budget.pas;

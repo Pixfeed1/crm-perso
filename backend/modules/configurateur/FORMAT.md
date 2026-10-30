@@ -100,7 +100,7 @@ Soit 183 profils, tous présents même s'ils se ressemblent.
   ],
   "reperes": [{ "budget": 1700, "libelle": "5070 Ti" }],
   "paliers": [
-    { "budget": 1700, "config": 42, "suivant": { "budget": 1800, "gains": { "cpu": 22 } } }
+    { "budget": 1700, "config": 42, "mesures": { "duree": 245 }, "alternative": null }
   ]
 }
 ```
@@ -110,10 +110,10 @@ Soit 183 profils, tous présents même s'ils se ressemblent.
 - `plafond` : budget au-delà duquel la machine ne change plus. `null` si elle progresse jusqu'au maximum.
 - `budgets_conseilles` : « Le minimum », « Le bon équilibre » (80 % du gain utile atteint, affiché seulement s'il tombe au moins 300 € sous le plafond), « Le plafond utile ».
 - `reperes` : budgets où le composant prioritaire change. La page masque ceux qui se chevauchent à l'écran.
-- `suivant` : premier palier qui vaut vraiment la dépense, avec les gains mesurés pour CET usage, en pour cent :
-  - au moins 5 % sur la carte ou le processeur, ou davantage de mémoire ;
-  - un simple changement de SSD ou un gain de 1 % n'est jamais proposé ;
-  - la page ne l'affiche que s'il est à 600 € ou moins.
+- Marche suivante (« X € de plus suffiraient… ») : calculée par la page à partir des paliers, à 600 € au plus ; quand une pièce
+  prime pour l'usage, seule la marche qui améliore cette pièce est proposée. Elle n'est plus publiée dans le fichier.
+- Règles des paliers : carte graphique dédiée pour la 3D, la vidéo et la CAO 3D (`dediee`) ; 1 To au moins pour les projets
+  lourds ; jamais de SSD Gen5 dans un profil jeu ; quand le budget monte, la mémoire et le stockage ne baissent jamais.
 - `mesure` et `mesure_jeu` : ce que l'on mesure pour cet usage, dit en clair (« Rendu d'une scène type », « Grand jeu solo » en 1440p), avec l'unité et la `source`. `null` quand on n'a pas de mesure fiable (Figma, usage courant) : la page n'affiche alors aucun chiffre.
 - `paliers[].mesures` : le résultat de la machine pour cet usage, `duree` en secondes et/ou `ips` en images par seconde. La page l'affiche sous le total : « En pratique. Rendu d'une scène type : environ 4 min 10 s. »
 - `paliers[].alternative` : une machine moins chère qui fait presque aussi bien, proposée à côté de celle du budget. Elle n'existe que si :

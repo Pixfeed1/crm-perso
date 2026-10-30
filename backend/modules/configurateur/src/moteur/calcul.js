@@ -32,6 +32,7 @@ function machines(pr, projet, C, E, cache) {
   for (const g of gpus) {
     if (vram && (car(g).vram || 0) < vram) continue;
     if (pr.nvidia && !g.integree && g.marque_puce !== "nvidia") continue;          // contrainte dure (Iray)
+    if (pr.dediee && g.integree) continue;                                         // 3D, vidéo, CAO 3D : jamais la partie graphique du processeur
     if (pr.office && !g.integree && g.prix > 400) continue;                        // usage courant : pas de grosse carte
     const gp = gperf(g);
     for (const c of cpus) {
@@ -47,13 +48,15 @@ function machines(pr, projet, C, E, cache) {
         if (gj >= 100 && go < Math.min(64, cap) && !pr.game) continue;
         for (const s of ssds) {
           if (pr.office && car(s).to > 1.2) continue;
+          if (projet === "lourd" && car(s).to < 1) continue;                       // projets lourds : 1 To au moins
+          if (pr.game && car(s).gen === 5) continue;                               // jeu : un SSD Gen5 n'apporte rien, l'argent va à la carte
           const cfg = { gpu: g.id, cpu: c.id, ram: r.id, ssd: s.id, ...reste.reste };
           const cout = g.prix + c.prix + r.prix + s.prix + reste.prix;
           const ssdv = pr.gen5 ? car(s).to * (car(s).gen === 5 ? 1.3 : 1) : Math.min(car(s).to, 2);
           const gpc = Math.min(gp, pr.gcap || 999), cpc = Math.min(cp, pr.ccap || 999), rg = Math.min(go, cap);
           const utile = w[0] * Math.sqrt(gpc) + w[1] * Math.sqrt(cpc) + w[2] * Math.sqrt(rg) + w[3] * Math.sqrt(ssdv * 10);
           const indice = (w[0] * gpc + w[1] * cpc) / (w[0] + w[1]);                 // vitesse relative pour comparer deux machines
-          out.push({ cfg, cout: Math.round(cout * 100) / 100, utile, indice, gp: gpc, cp: cpc, go, vram: car(g).vram || 0 });
+          out.push({ cfg, cout: Math.round(cout * 100) / 100, utile, indice, gp: gpc, cp: cpc, go, to: car(s).to || 0, vram: car(g).vram || 0 });
         }
       }
     }
@@ -77,11 +80,13 @@ function profil(pr, projet, C, E, cache) {
   const toutes = machines(pr, projet, C, E, cache).sort((a, b) => a.cout - b.cout);
   const thrift = pr.office ? 0.03 : pr.game ? 0.002 : 0.0015;
   const sig = m => [m.cfg.gpu, m.cfg.cpu, m.cfg.ram, m.cfg.ssd].join("|");
-  const paliers = []; let dernier = "";
+  const paliers = []; let dernier = "", minGo = 0, minTo = 0;
   for (let b = min; b <= max; b += pas) {
+    // quand le budget monte, la mémoire et le stockage ne redescendent jamais : on ne reprend pas au visiteur ce qu'il avait
     let top = null;
-    for (const m of toutes) { if (m.cout > b) break; const sc = m.utile - thrift * m.cout; if (!top || sc > top.sc) top = { m, sc }; }
+    for (const m of toutes) { if (m.cout > b) break; if (m.go < minGo || m.to < minTo) continue; const sc = m.utile - thrift * m.cout; if (!top || sc > top.sc) top = { m, sc }; }
     if (top && sig(top.m) !== dernier) { paliers.push({ budget: b, m: top.m }); dernier = sig(top.m); }
+    if (top) { minGo = top.m.go; minTo = top.m.to; }
   }
   const plafond = paliers.length && paliers[paliers.length - 1].budget < max ? paliers[paliers.length - 1].budget : null;
   paliers.forEach(p => { p.mesures = mesurer(pr, p.m, C); p.v = vitesse(p.m, p.mesures); });

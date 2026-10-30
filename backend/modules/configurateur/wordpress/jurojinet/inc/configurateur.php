@@ -101,6 +101,22 @@ add_shortcode( 'configurateur_pc', function () {
 
 /** Logo et adresse des fiches logiciel du site (type de contenu « logiciel », champ « URL du logo »).
     L'adresse sert aux liens « Notre fiche » du résultat ; le logo, seulement aux logiciels sans tracé officiel dans l'outil. */
+/** Logo d'une fiche, en version légère : la miniature de la médiathèque (150 px) plutôt que l'original
+    (parfois 900 px pour une vignette de 32 px). Un logo hébergé sur un autre site n'est pas chargé : la page ne
+    dépend d'aucun site tiers, et le bouton garde alors ses initiales. */
+function jurojin_cfg_logo_leger( $url ) {
+	$url = esc_url_raw( $url );
+	if ( '' === $url ) {
+		return '';
+	}
+	$id = attachment_url_to_postid( $url );
+	if ( $id ) {
+		$mini = wp_get_attachment_image_src( $id, 'thumbnail' );
+		return $mini ? $mini[0] : $url;
+	}
+	return wp_parse_url( $url, PHP_URL_HOST ) === wp_parse_url( home_url(), PHP_URL_HOST ) ? $url : '';
+}
+
 function jurojin_cfg_logiciels() {
 	if ( ! post_type_exists( 'logiciel' ) ) {
 		return '';
@@ -141,7 +157,7 @@ function jurojin_cfg_logiciels() {
 				if ( $post && 'publish' === $post->post_status ) {
 					$sortie[ $id ][] = array(
 						'nom'  => $f[0],
-						'logo' => $sur( esc_url_raw( (string) get_post_meta( $post->ID, '_logiciel_logo_url', true ) ) ),
+						'logo' => $sur( jurojin_cfg_logo_leger( (string) get_post_meta( $post->ID, '_logiciel_logo_url', true ) ) ),
 						'url'  => $sur( (string) get_permalink( $post ) ),
 					);
 					break;
@@ -166,7 +182,7 @@ function jurojin_cfg_nb( $t ) {
 }
 
 function jurojin_cfg_euros( $n ) {
-	return number_format( (float) $n, 0, ',', "\u{202F}" ) . "\u{00A0}€";
+	return number_format( (float) $n, 0, ',', "\u{00A0}" ) . "\u{00A0}€";
 }
 
 /** Palier retenu pour un budget : le dernier dont le budget ne dépasse pas celui demandé. */

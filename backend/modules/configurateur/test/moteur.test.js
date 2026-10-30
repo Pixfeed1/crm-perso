@@ -58,6 +58,36 @@ test("format : 183 profils, paliers triés, dans le budget", () => {
   }
 });
 
+// Règles ajoutées après la relecture avec les vrais prix (cartes, mémoire et SSD en forte hausse) :
+// le moteur ne doit pas économiser là où le visiteur y perdrait. Vérifiées avec les prix d'exemple et avec des prix chers.
+function reglesTenues(d) {
+  const K = d.composants, pb = [];
+  const P = require("../src/moteur/profils").P;
+  for (const [cle, pr] of Object.entries(d.profils)) {
+    const [logiciel, projet] = cle.split("|");
+    let go = 0, to = 0;
+    for (const p of pr.paliers) {
+      const c = d.configs[p.config], g = K[c.ram].caracteristiques.go, t = K[c.ssd].caracteristiques.to;
+      if (g < go) pb.push(`${cle} : mémoire en baisse à ${p.budget} €`);
+      if (t < to) pb.push(`${cle} : stockage en baisse à ${p.budget} €`);
+      go = g; to = t;
+      if (P[logiciel] && P[logiciel].dediee && K[c.gpu].integree) pb.push(`${cle} : sans carte graphique à ${p.budget} €`);
+      if (projet === "lourd" && t < 1) pb.push(`${cle} : moins d'1 To à ${p.budget} €`);
+      if (logiciel === "jeu" && K[c.ssd].caracteristiques.gen === 5) pb.push(`${cle} : SSD Gen5 à ${p.budget} €`);
+    }
+  }
+  return pb;
+}
+
+test("règles : 3D et vidéo avec carte dédiée, 1 To pour les projets lourds, pas de Gen5 en jeu, mémoire et stockage jamais en baisse", () => {
+  assert.deepEqual(reglesTenues(data), []);
+  // même chose quand la mémoire, les SSD et les cartes coûtent très cher (situation de 2026)
+  const cher = structuredClone(selection);
+  for (const c of Object.values(cher.composants)) if (c.prix_exemple && ["ram", "ssd", "gpu"].includes(c.categorie)) c.prix_exemple *= c.categorie === "ram" ? 4 : 1.8;
+  const { C: Ccher } = construire(cher, { scores, prixExemple: true, amazonTag: "" });
+  assert.deepEqual(reglesTenues(assembler({ C: Ccher, selection: cher })), []);
+});
+
 test("Daz : uniquement des cartes Nvidia", () => {
   for (const [k, p] of Object.entries(data.profils)) if (k.startsWith("daz|"))
     for (const x of p.paliers) assert.match(data.configs[x.config].gpu, /^gpu-50/, k);

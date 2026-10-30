@@ -15,7 +15,8 @@ function assembler({ C, selection, sourcesMesures = [] }) {
       priorite: r.priorite, plafond: r.plafond, budgets_conseilles: r.budgets, reperes: r.reperes,
       mesure: pr.mesure ? { libelle: pr.mesure.libelle, unite: "secondes", source: pr.mesure.source, derivee: /dérivée/.test(pr.mesure.source) } : null,
       mesure_jeu: null,                    // aucune source mesurée pour les jeux : pas de chiffre affiché
-      paliers: r.paliers.map(p => ({ budget: p.budget, config: idx(p.m.cfg), mesures: p.mesures, suivant: p.suivant,
+      // « suivant » n'est plus publié : la page calcule elle-même la marche suivante utile, à partir des paliers (fichier allégé d'un quart)
+      paliers: r.paliers.map(p => ({ budget: p.budget, config: idx(p.m.cfg), mesures: p.mesures,
         alternative: p.alternative ? { config: idx(p.alternative.config), mesures: p.alternative.mesures, ecart_pct: p.alternative.ecart_pct } : null }))
     };
   };
