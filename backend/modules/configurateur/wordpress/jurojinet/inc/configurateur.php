@@ -282,7 +282,7 @@ function jurojin_cfg_sections( $d ) {
 	};
 	$h .= '<div class="cfg-feats">'
 		. '<div class="cfg-feat">' . $ico( '<path d="M3 12h4l3-8 4 16 3-8h4"/>' ) . '<b>Des prix du jour</b><p>Vérifiés chaque jour chez les marchands. Seuls les produits neufs et en stock sont proposés.</p></div>'
-		. '<div class="cfg-feat">' . $ico( '<path d="M20 6 9 17l-5-5"/>' ) . '<b>Des machines qui fonctionnent</b><p>Chaque configuration est vérifiée pièce par pièce, de l\'alimentation à la place dans le boîtier.</p></div>'
+		. '<div class="cfg-feat">' . $ico( '<path d="M20 6 9 17l-5-5"/>' ) . '<b>Des pièces compatibles entre elles</b><p>Pas de mauvaise surprise au montage : le processeur va avec la carte mère, l\'alimentation est assez puissante et la carte graphique entre dans le boîtier.</p></div>'
 		. '<div class="cfg-feat">' . $ico( '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>' ) . '<b>Des chiffres sourcés</b><p>Les temps de rendu viennent de mesures publiques. Quand une mesure manque, aucun chiffre n\'est inventé.</p></div>'
 		. '<div class="cfg-feat">' . $ico( '<path d="M12 3v18M5 8l7-5 7 5M5 8l-3 7a4 4 0 0 0 6 0zM19 8l-3 7a4 4 0 0 0 6 0z"/>' ) . '<b>Un choix indépendant</b><p>Les commissions ne changent rien au choix des pièces, toujours proposées au meilleur prix disponible.</p></div>'
 		. '</div>';
