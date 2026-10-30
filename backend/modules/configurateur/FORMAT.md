@@ -46,7 +46,7 @@ puis contrôlée par Marc une fois par mois.
   "pourquoi": "Toutes les 5070 Ti se valent en rendu. On a pris …",
   "prix": 850,
   "offres": [
-    { "marchand": "cdiscount", "nom": "Cdiscount", "prix": 850, "en_stock": true, "lien": "https://www.awin1.com/…", "releve_le": "2026-10-29T03:30:12Z", "source": "awin:44863" },
+    { "marchand": "cdiscount", "nom": "Cdiscount", "prix": 850, "en_stock": true, "lien": "https://www.awin1.com/…", "image": "https://images2.productserve.com/…", "releve_le": "2026-10-29T03:30:12Z", "source": "awin:44863" },
     { "marchand": "amazon", "nom": "Amazon", "prix": null, "en_stock": true, "lien": "https://www.amazon.fr/dp/B0…?tag=…-21", "releve_le": null, "source": "amazon" }
   ],
   "reserves": [{ "modele": "Gigabyte GeForce RTX 5070 Ti Windforce OC SFF 16G" }],
@@ -149,7 +149,8 @@ L'agent ne publie pas le fichier si l'un de ces contrôles échoue. Il garde alo
 
 - Le shortcode `[configurateur_pc]` (thème JurojiNet, `inc/configurateur.php`) imprime l'outil puis le fichier dans `<script type="application/json" id="configurateur-data">` : aucune requête en plus, rien à attendre. Les styles sont limités au bloc `.cfg-pc` et les identifiants préfixés `cfg-`, pour ne rien casser dans le thème.
 - La page hérite de DM Sans servie par le thème. Aucune police n'est chargée par le module.
-- Les liens vers les marchands portent `rel="sponsored nofollow"`.
+- Les liens vers les marchands portent `rel="sponsored nofollow noopener"` et s'ouvrent dans un nouvel onglet.
+- `image` (facultatif) : photo du produit fournie par le flux du marchand, en https uniquement. La page l'affiche en vignette de taille fixe.
 - La licence du système est affichée sous le total, jamais ajoutée dedans.
 
 ## Fichiers

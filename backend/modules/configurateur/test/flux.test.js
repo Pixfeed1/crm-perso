@@ -145,6 +145,20 @@ test("Awin : écritures des marchands sans espaces reconnues (2x48, 2To, 500go),
   assert.deepEqual(de("ssd-1to"), []);
 });
 
+test("Awin : image du produit reprise si elle est en https, jamais autrement", async () => {
+  const entete = "aw_deep_link,product_name,search_price,ean,in_stock,condition,merchant_name,aw_image_url,merchant_image_url\n";
+  const nom = "Carte graphique MSI GeForce RTX 5070 Ti 16G VENTUS 3X OC";
+  const lignes = [
+    `https://x.example/1,${nom},829.99,,1,new,Cdiscount,https://images2.productserve.com/?w=200&url=a.jpg,`,
+    `https://x.example/2,${nom},829.99,,1,new,Cdiscount,http://pas-sur.example/a.jpg,https://m.example/b.jpg`,
+    `https://x.example/3,${nom},829.99,,1,new,Cdiscount,"javascript:alert(1)",`
+  ];
+  const offres = (await lire(entete + lignes.join("\n"))).filter(o => o.id === "gpu-5070ti");
+  assert.deepEqual(offres.map(o => o.image), ["https://images2.productserve.com/?w=200&url=a.jpg", "https://m.example/b.jpg", null]);
+  const { C } = construire(selection, { offres: offres.map(o => ({ ...o, rang: 0 })), prixExemple: true, amazonTag: "" });
+  assert.equal(C["gpu-5070ti"].offres[0].image, "https://images2.productserve.com/?w=200&url=a.jpg");
+});
+
 test("Awin : formats de date lus", () => {
   assert.equal(awin.dateFlux("28/10/2026 03:12").toISOString(), "2026-10-28T03:12:00.000Z");
   assert.equal(awin.dateFlux("2026-10-28T03:12:44+01:00").toISOString(), "2026-10-28T02:12:44.000Z");

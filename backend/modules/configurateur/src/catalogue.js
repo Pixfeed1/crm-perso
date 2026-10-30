@@ -53,7 +53,7 @@ function entree(base, s, { rang, offres }, amazonTag) {
   const parMarchand = {};
   for (const o of offres) if (!parMarchand[o.marchand] || o.prix < parMarchand[o.marchand].prix) parMarchand[o.marchand] = o;
   const liste = Object.values(parMarchand).sort((a, b) => a.prix - b.prix)
-    .map(o => ({ marchand: o.marchand, nom: o.nom, prix: o.prix, en_stock: true, lien: o.lien, releve_le: o.releve_le, source: o.source }));
+    .map(o => ({ marchand: o.marchand, nom: o.nom, prix: o.prix, en_stock: true, lien: o.lien, ...(o.image ? { image: o.image } : {}), releve_le: o.releve_le, source: o.source }));
   const m = s.modeles[rang];
   // Amazon : lien partenaire seulement, JAMAIS de prix (sans accès à l'API produits, Amazon interdit d'en afficher).
   // Ajouté en dernier avec un prix vide : il n'est jamais retenu comme meilleure offre.

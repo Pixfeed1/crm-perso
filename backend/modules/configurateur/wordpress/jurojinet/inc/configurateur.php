@@ -83,8 +83,143 @@ add_shortcode( 'configurateur_pc', function () {
 	$outil = file_get_contents( get_stylesheet_directory() . '/configurateur/outil.html' );
 	// "</" échappé : le JSON ne peut pas fermer la balise script
 	$donnees = '<script type="application/json" id="configurateur-data">' . str_replace( '</', '<\/', $json ) . '</script>';
-	return $outil . $donnees;
+	return $outil . $donnees . jurojin_cfg_sections( json_decode( $json, true ) );
 } );
+
+/* ---------- Sections en HTML sous l'outil ----------
+   L'outil est dessiné par le script ; ces sections sont écrites par le serveur à partir des mêmes données,
+   pour qu'un moteur de recherche (ou un visiteur sans JavaScript) lise les configurations, la méthode et les réponses.
+   Elles se mettent à jour à chaque relevé, comme l'outil. */
+
+/** Typographie française : espace insécable avant « ? », « ! », « : » et « ; ». */
+function jurojin_cfg_nb( $t ) {
+	return preg_replace( array( '/ ([?!;])/u', '/ :/u' ), array( "\u{202F}$1", "\u{00A0}:" ), $t );
+}
+
+function jurojin_cfg_euros( $n ) {
+	return number_format( (float) $n, 0, ',', "\u{202F}" ) . "\u{00A0}€";
+}
+
+/** Palier retenu pour un budget : le dernier dont le budget ne dépasse pas celui demandé. */
+function jurojin_cfg_palier( $profil, $budget ) {
+	$retenu = null;
+	foreach ( $profil['paliers'] as $p ) {
+		if ( $p['budget'] > $budget ) {
+			break;
+		}
+		$retenu = $p;
+	}
+	return $retenu;
+}
+
+function jurojin_cfg_tableau( $d, $cle ) {
+	if ( empty( $d['profils'][ $cle ]['budgets_conseilles'] ) ) {
+		return '';
+	}
+	$profil = $d['profils'][ $cle ];
+	$K      = $d['composants'];
+	$lignes = '';
+	foreach ( $profil['budgets_conseilles'] as $repere ) {
+		$p = jurojin_cfg_palier( $profil, $repere['budget'] );
+		if ( ! $p || empty( $d['configs'][ $p['config'] ] ) ) {
+			continue;
+		}
+		$c     = $d['configs'][ $p['config'] ];
+		$total = 0;
+		foreach ( $c as $id ) {
+			$total += isset( $K[ $id ]['prix'] ) ? (float) $K[ $id ]['prix'] : 0;
+		}
+		$nom = function ( $k ) use ( $c, $K ) {
+			return isset( $K[ $c[ $k ] ]['puce'] ) ? esc_html( $K[ $c[ $k ] ]['puce'] ) : '';
+		};
+		$lignes .= '<tr><th scope="row">' . esc_html( $repere['libelle'] ) . '<br><span class="meta">' . esc_html( jurojin_cfg_euros( $repere['budget'] ) ) . '</span></th>'
+			. '<td data-label="Carte graphique">' . $nom( 'gpu' ) . '</td><td data-label="Processeur">' . $nom( 'cpu' ) . '</td>'
+			. '<td data-label="Mémoire">' . $nom( 'ram' ) . '</td><td data-label="Stockage">' . $nom( 'ssd' ) . '</td>'
+			. '<td class="num" data-label="Total">' . esc_html( jurojin_cfg_euros( $total ) ) . '</td></tr>';
+	}
+	if ( ! $lignes ) {
+		return '';
+	}
+	return '<div class="tableau"><table><thead><tr><th scope="col">Budget</th><th scope="col">Carte graphique</th><th scope="col">Processeur</th>'
+		. '<th scope="col">Mémoire</th><th scope="col">Stockage</th><th scope="col" class="num">Total</th></tr></thead><tbody>' . $lignes . '</tbody></table></div>';
+}
+
+function jurojin_cfg_sections( $d ) {
+	if ( ! is_array( $d ) || empty( $d['profils'] ) || empty( $d['composants'] ) ) {
+		return '';
+	}
+	$date   = ! empty( $d['prix_constates_le'] ) ? date_i18n( 'j F Y', strtotime( $d['prix_constates_le'] . ' 12:00:00' ) ) : '';
+	$exemple = empty( $d['selection']['validee_le'] );
+	$h       = '<section class="cfg-pc-seo" aria-label="Configurations conseillées et méthode">';
+
+	$usages = array(
+		'blender|lourd|-'   => 'Pour la 3D avec Blender (projets lourds)',
+		'premiere|lourd|-'  => 'Pour le montage vidéo avec Premiere Pro (projets lourds)',
+		'photoshop|lourd|-' => 'Pour la photo et le graphisme avec Photoshop',
+		'jeu|solo|1440'     => 'Pour jouer en 1440p (grands jeux solo)',
+		'courant|-|-'       => 'Pour un usage courant (bureautique, web, études)',
+	);
+	$h .= '<h2>Configurations conseillées selon votre budget</h2>';
+	$h .= '<p>Les machines conseillées par l\'outil pour les usages les plus courants, aux prix relevés'
+		. ( $date ? ' le ' . esc_html( $date ) : '' ) . ' chez Cdiscount et à la Fnac' . ( $exemple ? ' (sélection d\'exemple)' : '' )
+		. '. Le total comprend aussi la carte mère, le refroidissement, l\'alimentation et le boîtier, sans le système d\'exploitation.</p>';
+	foreach ( $usages as $cle => $titre ) {
+		$t = jurojin_cfg_tableau( $d, $cle );
+		if ( $t ) {
+			$h .= '<h3>' . esc_html( $titre ) . '</h3>' . $t;
+		}
+	}
+
+	$blender = ! empty( $d['sources'][0] ) ? $d['sources'][0] : null;
+	$h .= '<h2>Comment le configurateur choisit</h2>';
+	$h .= '<p>Les prix viennent des catalogues des marchands, relus chaque nuit. Un prix n\'est retenu que pour un produit neuf, en stock, '
+		. 'dans un catalogue mis à jour par le marchand depuis moins de 48 heures. La date affichée est celle du relevé.</p>';
+	$h .= '<p>Pour chaque usage, l\'outil assemble les machines compatibles : support du processeur, puissance de l\'alimentation, '
+		. 'longueur de la carte graphique et refroidissement. À chaque budget, il garde la plus efficace pour votre logiciel. '
+		. esc_html( count( $d['profils'] ) ) . ' combinaisons d\'usages sont recalculées à chaque relevé.</p>';
+	if ( $blender ) {
+		$h .= '<p>Les durées de rendu affichées pour Blender viennent de ' . esc_html( $blender['nom'] ) . ' (version ' . esc_html( $blender['version'] )
+			. ') : la médiane des tests publiés par les utilisateurs pour chaque carte graphique et chaque processeur. '
+			. 'Quand aucune mesure publiée n\'existe, l\'outil n\'affiche pas de chiffre.</p>';
+	}
+	$h .= '<p>Quand un modèle est en rupture, un modèle équivalent choisi à l\'avance prend sa place.</p>';
+
+	$q = array();
+	$q[] = array( 'Les prix affichés sont-ils à jour ?',
+		'Ils ont été relevés' . ( $date ? ' le ' . $date : '' ) . '. Les marchands changent souvent leurs prix : le prix qui compte est celui affiché sur leur site au moment de l\'achat.' );
+	if ( ! empty( $d['systeme']['nom'] ) ) {
+		$q[] = array( 'Windows est-il compris dans le total ?',
+			'Non. Comptez ' . jurojin_cfg_euros( $d['systeme']['prix'] ) . ' pour une licence ' . $d['systeme']['nom']
+			. '. Pour un usage courant, un système gratuit comme Linux suffit aussi.' );
+	}
+	if ( ! empty( $d['textes']['blender']['conseils'][0] ) ) {
+		$q[] = array( 'Pour Blender, pourquoi la carte graphique passe-t-elle avant le processeur ?', $d['textes']['blender']['conseils'][0] );
+	}
+	$ram = array();
+	foreach ( $d['composants'] as $c ) {
+		if ( 'ram' === $c['categorie'] && ! empty( $c['prix'] ) ) {
+			$ram[ (int) $c['caracteristiques']['go'] ] = $c['puce'] . ' : ' . jurojin_cfg_euros( $c['prix'] );
+		}
+	}
+	if ( $ram ) {
+		ksort( $ram );
+		$q[] = array( 'Pourquoi la mémoire vive pèse-t-elle autant dans le budget ?',
+			'Aux prix relevés' . ( $date ? ' le ' . $date : '' ) . ', les kits de mémoire coûtent cher : ' . implode( ', ', $ram )
+			. '. L\'outil ne met donc l\'argent dans la mémoire que lorsque votre logiciel en profite vraiment.' );
+	}
+	if ( $blender ) {
+		$q[] = array( 'D\'où viennent les durées de rendu ?',
+			'De ' . $blender['nom'] . ', la base publique où les utilisateurs de Blender publient leurs tests de rendu. L\'outil retient la médiane de ces tests pour chaque pièce.' );
+	}
+	$q[] = array( 'Le site touche-t-il une commission ?',
+		'Oui. Les liens vers les marchands sont des liens affiliés : si vous achetez par leur biais, Jurojin touche une petite commission, sans surcoût pour vous. Elle ne change pas le choix des pièces : l\'outil retient le prix le plus bas en stock.' );
+
+	$h .= '<div class="faq"><h2>Questions fréquentes</h2>';
+	foreach ( $q as $x ) {
+		$h .= '<h3>' . jurojin_cfg_nb( esc_html( $x[0] ) ) . '</h3><p>' . jurojin_cfg_nb( esc_html( $x[1] ) ) . '</p>';
+	}
+	return $h . '</div></section>';
+}
 
 /** WP Rocket : ni retard ni regroupement pour le script de l'outil et son bloc de données,
     sinon l'outil reste vide jusqu'au premier geste du visiteur. */

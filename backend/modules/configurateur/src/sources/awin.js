@@ -17,7 +17,8 @@ const COLONNES = {
   stock: ["in_stock", "availability", "stock_status"],
   etat: ["condition"],
   marchand: ["merchant_name"],
-  majProduit: ["last_updated"]
+  majProduit: ["last_updated"],
+  image: ["aw_image_url", "merchant_image_url", "large_image", "image_link", "aw_thumb_url"]
 };
 const choisir = (ligne, cles) => { for (const k of cles) if (ligne[k] !== undefined && ligne[k] !== "") return ligne[k]; return null; };
 const prixNombre = v => { if (v == null) return null; const n = parseFloat(String(v).replace(/[^\d.,]/g, "").replace(",", ".")); return Number.isFinite(n) && n > 0 ? n : null; };
@@ -76,10 +77,11 @@ async function lireFlux({ flux, regles, marchand, nomMarchand, source, releveLe 
   const parser = entree.pipe(parse({ columns: h => h.map(x => String(x).trim().toLowerCase()), relax_quotes: true, relax_column_count: true, skip_empty_lines: true }));
   for await (const l of parser) {
     const p = { nom: choisir(l, COLONNES.nom), ean: choisir(l, COLONNES.ean), prix: prixNombre(choisir(l, COLONNES.prix)),
-      lien: lienSur(choisir(l, COLONNES.lien)), stock: enStock(choisir(l, COLONNES.stock)), neuf: neuf(choisir(l, COLONNES.etat)) };
+      lien: lienSur(choisir(l, COLONNES.lien)), stock: enStock(choisir(l, COLONNES.stock)), neuf: neuf(choisir(l, COLONNES.etat)),
+      image: COLONNES.image.map(k => lienSur(l[k])).find(Boolean) || null };   // première image en https, sinon aucune
     if (!p.nom || !p.prix || !p.lien || !p.neuf) continue;
     for (const r of regles) if (correspond(r, p)) offres.push({ id: r.id, rang: r.rang, modele: r.modele, marchand, nom: nomMarchand,
-      produit: p.nom, ean: p.ean, prix: Math.round(p.prix * 100) / 100, en_stock: p.stock, lien: p.lien, releve_le: releveLe, source });
+      produit: p.nom, ean: p.ean, prix: Math.round(p.prix * 100) / 100, en_stock: p.stock, lien: p.lien, image: p.image, releve_le: releveLe, source });
   }
   return offres;
 }
