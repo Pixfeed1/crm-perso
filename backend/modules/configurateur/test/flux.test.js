@@ -110,6 +110,25 @@ test("Awin : un flux pas mis à jour depuis plus de 48 h est écarté, les offre
   assert.ok(r.offres.length > 0 && r.offres.every(o => o.source === "awin:44863" && o.releve_le === "2026-10-29T02:10:00.000Z"));
 });
 
+test("Awin : flux compressé reconnu à sa signature, adresse sans .gz ni Content-Encoding (forme réelle des flux Awin)", async () => {
+  const fetchImpl = async () => new Response(zlib.gzipSync(csv), { headers: { "content-type": "application/x-gzip" } });
+  const liste = { "44863": { url: "https://exemple.invalid/datafeed/download/fid/44863/format/csv/compression/gzip/columns/a%2Cb/", maj: "2026-10-29 20:28:21" } };
+  const r = await awin.releverOffres(selection, { fetchImpl, liste, maintenant: new Date("2026-10-30T03:30:00Z") });
+  assert.ok(r.offres.some(o => o.id === "gpu-5070ti" && o.prix === 829.99));
+  const brut = await awin.releverOffres(selection, { fetchImpl: async () => new Response(csv), liste, maintenant: new Date("2026-10-30T03:30:00Z") });
+  assert.equal(brut.offres.length, r.offres.length, "un flux non compressé reste lu tel quel");
+});
+
+test("Awin : liste des flux au format réel (en-têtes et date « Last Imported » du compte)", async () => {
+  const texte = 'Advertiser ID,Advertiser Name,Primary Region,Membership Status,Datafeed Format,Feed ID,Feed Name,Language,Vertical,Last Imported,Last Checked,No of products,URL\n'
+    + '6948,Cdiscount FR,FR,active,Awin,88636,Cdiscount FR - Flux High-Tech,French,Fashion,2026-10-29 20:03:56,2026-10-29 19:55:31,370266,https://exemple.invalid/fid/88636/\n'
+    + '1,Autre,FR,Not Joined,Awin,1234,Autre,French,Fashion,2026-10-29 20:03:56,2026-10-29 19:55:31,10,https://exemple.invalid/fid/1234/\n';
+  const l = await awin.listeFlux({ texte });
+  assert.deepEqual(Object.keys(l), ["88636"]);
+  assert.equal(l["88636"].produits, 370266);
+  assert.equal(awin.dateFlux(l["88636"].maj).toISOString(), "2026-10-29T20:03:56.000Z");
+});
+
 test("Awin : formats de date lus", () => {
   assert.equal(awin.dateFlux("28/10/2026 03:12").toISOString(), "2026-10-28T03:12:00.000Z");
   assert.equal(awin.dateFlux("2026-10-28T03:12:44+01:00").toISOString(), "2026-10-28T02:12:44.000Z");

@@ -93,6 +93,21 @@ function dateFlux(v) {
   return isNaN(d) ? null : d;
 }
 
+/** Décompresse le flux s'il commence par la signature gzip (1f 8b), quels que soient l'adresse et les en-têtes :
+    Awin envoie ses flux compressés à une adresse sans « .gz » et sans Content-Encoding,
+    et fetch décompresse déjà de lui-même ceux qui annoncent Content-Encoding. */
+async function ouvrirFlux(corps) {
+  const it = corps[Symbol.asyncIterator]();
+  const premier = await it.next();
+  if (premier.done) return Readable.from([]);
+  const tete = Buffer.from(premier.value);
+  const tout = Readable.from((async function* () { yield tete; for (let x = await it.next(); !x.done; x = await it.next()) yield x.value; })());
+  if (tete[0] !== 0x1f || tete[1] !== 0x8b) return tout;
+  const gz = zlib.createGunzip();
+  tout.on("error", e => gz.destroy(e));
+  return tout.pipe(gz);
+}
+
 /** Télécharge les flux retenus et renvoie toutes les offres correspondantes.
     Un flux que le marchand n'a pas mis à jour depuis plus de config.fraicheurFluxHeures est écarté :
     ses prix ne sont plus ceux du jour. Les offres sont datées de la mise à jour du flux, pas de notre lecture. */
@@ -111,12 +126,10 @@ async function releverOffres(selection, { fetchImpl = fetch, liste, maintenant =
     try {
       const r = await fetchImpl(info.url);
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      const corps = Readable.fromWeb(r.body);
-      const flot = /\.gz(\?|$)/.test(info.url) || r.headers.get("content-encoding") === "gzip" ? corps.pipe(zlib.createGunzip()) : corps;
-      toutes.push(...await lireFlux({ flux: flot, regles, marchand: f.marchand, nomMarchand: f.nom, source: `awin:${f.id}`, releveLe }));
+      toutes.push(...await lireFlux({ flux: await ouvrirFlux(Readable.fromWeb(r.body)), regles, marchand: f.marchand, nomMarchand: f.nom, source: `awin:${f.id}`, releveLe }));
     } catch (e) { erreurs.push(`Flux ${f.id} (${f.nom}) : ${e.message}`); }
   }
   return { offres: toutes, erreurs, ecartes };
 }
 
-module.exports = { listeFlux, reglesCorrespondance, correspond, lireFlux, releverOffres, dateFlux, lienSur };
+module.exports = { listeFlux, reglesCorrespondance, correspond, lireFlux, releverOffres, dateFlux, lienSur, ouvrirFlux };
