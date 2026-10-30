@@ -45,9 +45,9 @@ test("compatibilité : toutes les machines publiées passent toutes les vérific
   for (const cfg of data.configs) assert.deepEqual(verifier(cfg, C), [], JSON.stringify(cfg));
 });
 
-test("format : 103 profils, paliers triés, dans le budget", () => {
+test("format : 111 profils, paliers triés, dans le budget", () => {
   assert.equal(data.format, "configurateur-pc/1");
-  assert.equal(Object.keys(data.profils).length, 103);
+  assert.equal(Object.keys(data.profils).length, 111);
   const cout = cfg => Object.values(cfg).reduce((t, id) => t + data.composants[id].prix, 0);
   for (const [k, p] of Object.entries(data.profils)) {
     assert.ok(p.paliers.length > 0, k);

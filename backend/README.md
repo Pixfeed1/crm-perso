@@ -244,7 +244,7 @@ Tests : `diffuseurRules`, `diffuseurImages` (rendu fictif avec EXIF « DAZ Studi
 ## Configurateur PC de jurojin.net (`modules/configurateur`)
 
 Module fourni avec son brief (`modules/configurateur/BRIEF.md`) et son format de données (`FORMAT.md`).
-Il relève les prix des flux Awin, recalcule 103 profils de machines, contrôle, et publie
+Il relève les prix des flux Awin, recalcule 111 profils de machines, contrôle, et publie
 `configurateur-data.json` dans le dossier uploads de jurojin.net, lu par le shortcode `[configurateur_pc]`
 du thème (fichiers dans `modules/configurateur/wordpress/`). Rien de ce que propose l'IA n'est publié sans
 validation dans le CRM (SEO → Configurateur PC, ou `/configurateur?proposition=ID` depuis les emails).

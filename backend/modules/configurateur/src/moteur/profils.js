@@ -14,6 +14,8 @@ const P = {
                projets: ["Objets, personnages seuls, premiers rendus", "Scènes complètes, simulations, rendus d'animation"] },
   unreal:    { n: "Unreal / Unity", gpu: "jeu", cpu: "calcul", w: [8, 4, 3, 3], cap: 64, vram: 12, gen5: true, ramLourd: 64,
                projets: ["Prototypes, petits niveaux", "Mondes ouverts, textures 4K, Nanite et Lumen"] },
+  maya:      { n: "Maya", gpu: "rendu_nvidia", cpu: "calcul", w: [5, 8, 4, 1], cap: 128, gcap: 80, vram: 8, ramLourd: 64,
+               projets: ["Modélisation, animation de personnages, rendus simples", "Scènes lourdes, simulations, rendus Arnold"] },
   zbrush:    { n: "ZBrush", gpu: "jeu", cpu: "calcul", w: [1, 10, 6, 1], cap: 128, gcap: 40, ramLourd: 64,
                projets: ["Sculptures de quelques millions de polygones", "Modèles très denses, nombreux sous-outils"] },
   daz:       { n: "Daz Studio", gpu: "rendu_nvidia", nvidia: true, cpu: "calcul", w: [10, 2, 2, 1], cap: 64, vram: 12, vramLourd: 16, ramLourd: 32,
@@ -38,7 +40,7 @@ const P = {
                projets: ["Quelques maquettes", "Gros fichiers, design systems complets"] },
   courant:   { n: "Usage courant", office: true, gpu: "jeu", cpu: "calcul", w: [0.2, 3, 2, 1], cap: 16, gcap: 6, ccap: 40 }
 };
-const CREA = ["blender", "unreal", "zbrush", "daz", "keyshot", "premiere", "resolve", "ae", "photoshop", "lightroom", "illustrator", "figma"];
+const CREA = ["blender", "maya", "unreal", "zbrush", "daz", "keyshot", "premiere", "resolve", "ae", "photoshop", "lightroom", "illustrator", "figma"];
 const ECRANS = ["1080", "1440", "2160"];
 
 /** Profil jeu : la définition de l'écran fixe le plafond utile de la carte graphique. */
@@ -56,6 +58,7 @@ function mix(a, g) {
 const TEXTES = {
   blender: { titre: "La carte graphique d'abord, le reste suit", conseils: ["Cycles calcule le rendu sur la carte graphique, et c'est sur les cartes Nvidia, avec OptiX, qu'il va le plus vite. C'est donc là que part la plus grosse part du budget.", "Le processeur sert surtout à la modélisation et à la simulation : un modèle milieu de gamme suffit largement."] },
   unreal: { titre: "De la mémoire vidéo et un SSD qui suit", conseils: ["Les scènes temps réel chargent beaucoup de textures : au moins 12 Go de mémoire vidéo évitent de buter au premier projet ambitieux.", "La compilation des shaders sollicite le processeur et le disque. Un SSD rapide raccourcit nettement ces attentes."] },
+  maya: { titre: "Un processeur à beaucoup de cœurs pour Arnold", conseils: ["Arnold, le moteur de rendu livré avec Maya, calcule par défaut sur le processeur : plus il a de cœurs, plus le rendu va vite. Son mode carte graphique ne fonctionne qu'avec les cartes Nvidia.", "L'animation et la manipulation des scènes lourdes demandent surtout de la mémoire vive : 64 Go deviennent utiles sur les gros projets."] },
   zbrush: { titre: "Processeur et mémoire, carte graphique modeste", conseils: ["ZBrush sculpte ses millions de polygones avec le processeur et la mémoire vive. Une grosse carte graphique n'y change presque rien.", "L'argent économisé sur la carte part dans les cœurs et dans la RAM, pour garder une sculpture fluide sur les modèles lourds."] },
   daz: { titre: "Une carte Nvidia avec assez de mémoire vidéo", conseils: ["Iray, le moteur de rendu de Daz, ne fonctionne sur carte graphique qu'avec Nvidia. Si la scène dépasse la mémoire vidéo, le rendu bascule sur le processeur et devient très lent.", "Avec des personnages Genesis 9, des cheveux et un décor, 16 Go de mémoire vidéo font une vraie différence."] },
   keyshot: { titre: "Un processeur généreux, une carte Nvidia en bonus", conseils: ["KeyShot rend aussi bien sur le processeur que sur une carte Nvidia récente. Un processeur à beaucoup de cœurs garde le rendu rapide quel que soit le mode choisi.", "Les scènes produit restent raisonnables en mémoire : inutile de viser la carte la plus chère."] },

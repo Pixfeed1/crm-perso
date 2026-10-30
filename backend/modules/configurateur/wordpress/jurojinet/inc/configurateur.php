@@ -95,6 +95,7 @@ function jurojin_cfg_logiciels() {
 	// identifiant de l'outil => fiches possibles, dans l'ordre : [ nom affiché, adresses (slugs) essayées ]
 	$fiches = array(
 		'blender'     => array( array( 'Blender', array( 'blender' ) ) ),
+		'maya'        => array( array( 'Maya', array( 'maya' ) ) ),
 		'unreal'      => array( array( 'Unreal Engine', array( 'unreal-engine' ) ), array( 'Unity', array( 'unity' ) ) ),
 		'zbrush'      => array( array( 'ZBrush', array( 'zbrush' ) ) ),
 		'daz'         => array( array( 'Daz Studio', array( 'daz-studio' ) ) ),

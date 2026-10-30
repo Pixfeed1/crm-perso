@@ -6,8 +6,8 @@ const SRC=document.getElementById("configurateur-data"), TOOL0=document.querySel
 if(!SRC||!TOOL0)return;
 let D;try{D=JSON.parse(SRC.textContent);}catch(e){return;}
 const K=D.composants, CFG=D.configs;
-const FAM={"3d":["blender","unreal","zbrush","daz","keyshot"],video:["premiere","resolve","ae"],photo:["photoshop","lightroom","illustrator","figma"],game:[],office:[]};
-const NOMS={blender:["Blender","BL"],unreal:["Unreal / Unity","UE"],zbrush:["ZBrush","ZB"],daz:["Daz Studio","DS"],keyshot:["KeyShot","KS"],
+const FAM={"3d":["blender","maya","unreal","zbrush","daz","keyshot"],video:["premiere","resolve","ae"],photo:["photoshop","lightroom","illustrator","figma"],game:[],office:[]};
+const NOMS={blender:["Blender","BL"],maya:["Maya","MA"],unreal:["Unreal / Unity","UE"],zbrush:["ZBrush","ZB"],daz:["Daz Studio","DS"],keyshot:["KeyShot","KS"],
   premiere:["Premiere Pro","PR"],resolve:["DaVinci Resolve","DR"],ae:["After Effects","AE"],photoshop:["Photoshop","PS"],lightroom:["Lightroom","LR"],illustrator:["Illustrator","AI"],figma:["Figma","FG"]};
 const ECRAN={1080:"1080p",1440:"1440p",2160:"4K"};
 /* Logos officiels (tracés Simple Icons, en couleur de la marque) pour Blender, Unreal, Unity, DaVinci Resolve et Figma.
@@ -21,8 +21,42 @@ const sur=u=>typeof u==="string"&&/^(https:\/\/|\/(?!\/))[^\s"'<>`\\]*$/.test(u)
 const fichesDe=id=>(LOG[id]||[]).filter(l=>l&&sur(l.url));
 /* logo : tracé officiel en couleur s'il existe, sinon le logo de la fiche du site, sinon les initiales */
 const logo=id=>LOGO_DE[id]?`<span class="logo svg" aria-hidden="true">${LOGO_DE[id].map(k=>`<svg viewBox="0 0 24 24" width="24" height="24" focusable="false"><path fill="${COULEUR[k]}" d="${LOGOS[k]}"/></svg>`).join("")}</span>`
-  :(LOG[id]||[]).some(l=>l&&sur(l.logo))?`<span class="logo img" aria-hidden="true"><img src="${LOG[id].find(l=>l&&sur(l.logo)).logo}" alt="" width="32" height="32" decoding="async"></span>`
+  :(LOG[id]||[]).some(l=>l&&sur(l.logo))?`<span class="logo img" aria-hidden="true"><img src="${LOG[id].find(l=>l&&sur(l.logo)).logo}" data-o="${LOG[id].find(l=>l&&sur(l.logo)).logo}" alt="" width="32" height="32" decoding="async"></span>`
   :`<span class="logo" aria-hidden="true">${NOMS[id][1]}</span>`;
+
+/* Logos de fiches sur fond uni (blanc, gris…) : ce fond, la couleur des quatre coins, devient transparent en partant
+   des bords, sans toucher au dessin. Image d'un autre domaine sans autorisation, ou fond non uni : on garde l'originale. */
+const detoures=new Map();
+function sansFond(im){
+  const k=Math.min(1,128/Math.max(im.naturalWidth,im.naturalHeight)), w=Math.max(1,Math.round(im.naturalWidth*k)), h=Math.max(1,Math.round(im.naturalHeight*k));
+  const cv=document.createElement("canvas"); cv.width=w; cv.height=h; const cx=cv.getContext("2d"); cx.drawImage(im,0,0,w,h);
+  const d=cx.getImageData(0,0,w,h), p=d.data, coins=[0,w-1,(h-1)*w,h*w-1].map(n=>n*4);
+  if(coins.some(o=>p[o+3]<250)) return null;                                   // déjà transparent
+  const f=[0,1,2].map(c=>coins.reduce((t,o)=>t+p[o+c],0)/4), ecart=o=>Math.abs(p[o]-f[0])+Math.abs(p[o+1]-f[1])+Math.abs(p[o+2]-f[2]);
+  if(coins.some(o=>ecart(o)>30)) return null;                                  // pas de fond uni
+  const vu=new Uint8Array(w*h), pile=[];
+  for(let i=0;i<w;i++) pile.push(i,(h-1)*w+i);
+  for(let j=0;j<h;j++) pile.push(j*w,j*w+w-1);
+  while(pile.length){
+    const n=pile.pop(); if(vu[n]) continue; vu[n]=1;
+    const o=n*4, e=ecart(o);
+    if(e>=60) continue;
+    if(e>=30){p[o+3]=Math.min(p[o+3],Math.round(255*(e-30)/30));continue;}   // bord adouci, on ne va pas plus loin
+    p[o+3]=0;
+    const i=n%w, j=(n-i)/w;
+    if(i>0)pile.push(n-1); if(i<w-1)pile.push(n+1); if(j>0)pile.push(n-w); if(j<h-1)pile.push(n+w);
+  }
+  cx.putImageData(d,0,0); return cv.toDataURL("image/png");
+}
+function detourer(img){
+  const src=img.dataset.o;
+  if(detoures.has(src)){const u=detoures.get(src); if(u) img.src=u; return;}
+  detoures.set(src,null);
+  const im=new Image(); im.crossOrigin="anonymous";
+  im.onload=()=>{let u=null;try{u=sansFond(im);}catch(e){u=null;}
+    detoures.set(src,u); if(u) document.querySelectorAll(".cfg-pc .logo img").forEach(x=>{if(x.dataset.o===src) x.src=u;});};
+  im.src=src;
+}
 
 const $=id=>document.getElementById("cfg-"+id), form=$("form"), range=$("budget"), budIn=$("budgetIn");
 const fmt=n=>Math.round(n).toLocaleString("fr-FR")+" €";
@@ -36,6 +70,7 @@ const setBudget=v=>{v=Math.round((+v||0)/D.budget.pas)*D.budget.pas;v=Math.min(D
 function fillSofts(){
   const fam=form.fam.value, list=FAM[fam], cur=form.soft?form.soft.value:null;
   $("softs").innerHTML=list.map((id,i)=>`<label class="opt"><input type="radio" name="soft" id="cfg-s-${id}" value="${id}" ${(cur===id||(!list.includes(cur)&&i===0))?"checked":""}><span class="card">${logo(id)}<span class="c-name">${NOMS[id][0]}</span></span></label>`).join("");
+  $("softs").querySelectorAll(".logo img[data-o]").forEach(detourer);
   fillProjets();
   toggleSets();
 }
