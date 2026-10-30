@@ -3,7 +3,7 @@
  * Configurateur PC : shortcode [configurateur_pc].
  *
  * À placer dans le thème JurojiNet (inc/configurateur.php) et à charger depuis functions.php :
- *     require_once get_template_directory() . '/inc/configurateur.php';
+ *     require_once get_stylesheet_directory() . '/inc/configurateur.php';
  *
  * Le shortcode imprime le bloc de l'outil et, juste après, les données publiées par l'agent
  * (wp-content/uploads/configurateur/configurateur-data.json) dans une balise <script type="application/json">.
@@ -29,8 +29,8 @@ add_action( 'wp_enqueue_scripts', function () {
 	if ( ! $post || ! has_shortcode( $post->post_content, 'configurateur_pc' ) ) {
 		return;
 	}
-	$dir = get_template_directory() . '/configurateur/';
-	$url = get_template_directory_uri() . '/configurateur/';
+	$dir = get_stylesheet_directory() . '/configurateur/';
+	$url = get_stylesheet_directory_uri() . '/configurateur/';
 	wp_enqueue_style( 'jurojin-configurateur', $url . 'configurateur.css', array(), filemtime( $dir . 'configurateur.css' ) );
 	wp_enqueue_script( 'jurojin-configurateur', $url . 'configurateur.js', array(), filemtime( $dir . 'configurateur.js' ),
 		array( 'in_footer' => true, 'strategy' => 'defer' ) );
@@ -45,7 +45,7 @@ add_shortcode( 'configurateur_pc', function () {
 	if ( null === json_decode( $json ) ) {
 		return '<!-- configurateur : données illisibles -->';
 	}
-	$outil = file_get_contents( get_template_directory() . '/configurateur/outil.html' );
+	$outil = file_get_contents( get_stylesheet_directory() . '/configurateur/outil.html' );
 	// "</" échappé : le JSON ne peut pas fermer la balise script
 	$donnees = '<script type="application/json" id="configurateur-data">' . str_replace( '</', '<\/', $json ) . '</script>';
 	return $outil . $donnees;

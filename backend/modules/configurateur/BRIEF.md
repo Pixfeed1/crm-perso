@@ -54,7 +54,7 @@ Garanties tenues par le code (et vérifiées par les tests d'intégration) :
    Vérifier que `wp` (WP-CLI 2.12) est dans le PATH du service systemd, sinon le vidage du cache échoue sans bloquer (le résultat est noté dans `cfg_publications.resume.cache`).
 5. **Thème WordPress** : copier `wordpress/jurojinet/inc/configurateur.php` et le dossier `wordpress/jurojinet/configurateur/` dans `~/public_html/wp-content/themes/JurojiNet/`, puis ajouter à `functions.php` :
    ```php
-   require_once get_template_directory() . '/inc/configurateur.php';
+   require_once get_stylesheet_directory() . '/inc/configurateur.php';
    ```
    Le shortcode `[configurateur_pc]` imprime l'outil et les données. CSS et JS ne sont chargés que sur la page qui contient le shortcode ; les styles sont limités à `.cfg-pc`. Le fichier exclut le script du « retard du JavaScript » de WP Rocket, sinon l'outil reste vide jusqu'au premier geste du visiteur.
    Si le thème a un dépôt git, y committer ces fichiers ; sinon les déposer tels quels.
