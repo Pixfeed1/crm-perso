@@ -34,8 +34,7 @@
 .cfg-pc .softs .card{align-items:center;text-align:center;justify-content:center;gap:8px;padding:16px 10px 14px}
 .cfg-pc .logo{height:36px;min-width:36px;display:inline-flex;align-items:center;justify-content:center;gap:6px;border-radius:50%;
   background:var(--bg-alt);color:var(--muted);font-size:13px;font-weight:700;letter-spacing:.02em;transition:color .15s ease,background .15s ease}
-.cfg-pc .logo.svg,.cfg-pc .logo.img{background:none;border-radius:0;color:#3b4250}
-.cfg-pc .logo img{width:32px;height:32px;object-fit:contain;display:block}
+.cfg-pc .logo.svg{background:none;border-radius:0;color:#3b4250}
 .cfg-pc .logo svg{width:30px;height:30px;display:block}
 .cfg-pc .opt input:checked + .card .logo{color:var(--accent-dark)}
 .cfg-pc .opt input:checked + .card .logo:not(.svg){background:#fff}
