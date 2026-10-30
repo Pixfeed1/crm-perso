@@ -1,6 +1,7 @@
 /* Contrôles avant publication. Une seule erreur bloque la publication : l'ancien fichier reste en ligne et Marc est prévenu. */
 const config = require("./config");
 const { verifier } = require("./moteur/compat");
+const { P } = require("./moteur/profils");
 
 function controler(data, C, precedent = null) {
   const erreurs = [], alertes = [];
@@ -33,6 +34,23 @@ function controler(data, C, precedent = null) {
       }
     });
     if (p.plafond !== null && p.plafond !== p.paliers[p.paliers.length - 1].budget) erreurs.push(`profil ${k} : plafond incohérent`);
+  }
+
+  // 3 bis. règles d'usage (garde-fou : le moteur les applique déjà, une seule entorse bloque la publication)
+  for (const [k, p] of Object.entries(data.profils)) {
+    const [logiciel, projet] = k.split("|"), pr = P[logiciel] || {};
+    let go = 0, to = 0;
+    for (const x of p.paliers) {
+      const m = data.configs[x.config], g = C[m.gpu] || {}, ram = C[m.ram]?.caracteristiques?.go || 0, ssd = C[m.ssd]?.caracteristiques || {};
+      const ici = `profil ${k} @${x.budget}`;
+      if ((pr.dediee || (pr.dedieeLourd && projet === "lourd")) && g.integree) erreurs.push(`${ici} : graphique intégrée interdite pour cet usage`);
+      if (pr.nvidia && !g.integree && g.marque_puce !== "nvidia") erreurs.push(`${ici} : carte non Nvidia pour un usage réservé à Nvidia`);
+      if (projet === "lourd" && (ssd.to || 0) < 1) erreurs.push(`${ici} : moins d'1 To en projets lourds`);
+      if (logiciel === "jeu" && ssd.gen === 5) erreurs.push(`${ici} : SSD Gen5 dans un profil jeu`);
+      if (ram < go) erreurs.push(`${ici} : moins de mémoire qu'au palier précédent`);
+      if ((ssd.to || 0) < to) erreurs.push(`${ici} : moins de stockage qu'au palier précédent`);
+      go = ram; to = ssd.to || 0;
+    }
   }
 
   // 4. variations de prix anormales depuis la publication précédente (souvent une erreur de flux)

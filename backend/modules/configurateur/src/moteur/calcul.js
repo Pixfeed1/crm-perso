@@ -33,6 +33,7 @@ function machines(pr, projet, C, E, cache) {
     if (vram && (car(g).vram || 0) < vram) continue;
     if (pr.nvidia && !g.integree && g.marque_puce !== "nvidia") continue;          // contrainte dure (Iray)
     if (pr.dediee && g.integree) continue;                                         // 3D, vidéo, CAO 3D : jamais la partie graphique du processeur
+    if (pr.dedieeLourd && projet === "lourd" && g.integree) continue;              // Fusion, AutoCAD : gros assemblages = carte dédiée
     if (pr.office && !g.integree && g.prix > 400) continue;                        // usage courant : pas de grosse carte
     const gp = gperf(g);
     for (const c of cpus) {

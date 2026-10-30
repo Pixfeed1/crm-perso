@@ -7,21 +7,25 @@
      cpu « calcul »       : score Blender Open Data processeur (calcul multicœur)
      cpu « jeu »          : indice jeu éditorial du processeur
    Les plafonds (gcap, ccap) sont exprimés dans l'échelle de la métrique, normalisée à 100 = référence.
-   dediee : carte graphique dédiée obligatoire (jamais la partie graphique du processeur). */
+   dediee : carte graphique dédiée obligatoire (jamais la partie graphique du processeur).
+   dedieeLourd : carte dédiée obligatoire en projets lourds seulement (la graphique intégrée suffit en projets légers).
+   nvidia : cartes Nvidia seulement. Daz (Iray) et les profils de rendu GPU : les Radeon y sont nettement plus lentes
+   (Blender lourd à 2 000 € : 18 min 35 sur RX 9060 XT contre 8 min 10 sur RTX 5060 pour 100 € de plus), et Karma XPU
+   (Houdini) ne rend sur carte graphique qu'avec Nvidia. */
 
 const P = {
-  blender:   { n: "Blender", dediee: true, gpu: "rendu", cpu: "calcul", w: [10, 3, 2, 1], cap: 64, vram: 8, ramLourd: 32,
+  blender:   { n: "Blender", dediee: true, nvidia: true, gpu: "rendu", cpu: "calcul", w: [10, 3, 2, 1], cap: 64, vram: 8, ramLourd: 32,
                mesure: { type: "duree", base: "gpu", echantillons: 30000, libelle: "Rendu d'une scène type", source: "Blender Open Data" },
                projets: ["Objets, personnages seuls, premiers rendus", "Scènes complètes, simulations, rendus d'animation"] },
   unreal:    { n: "Unreal / Unity", dediee: true, gpu: "jeu", cpu: "calcul", w: [8, 4, 3, 3], cap: 64, vram: 12, gen5: true, ramLourd: 64,
                projets: ["Prototypes, petits niveaux", "Mondes ouverts, textures 4K, Nanite et Lumen"] },
-  maya:      { n: "Maya", dediee: true, gpu: "rendu_nvidia", cpu: "calcul", w: [5, 8, 4, 1], cap: 128, gcap: 80, vram: 8, ramLourd: 32,
+  maya:      { n: "Maya", dediee: true, nvidia: true, gpu: "rendu_nvidia", cpu: "calcul", w: [5, 8, 4, 1], cap: 128, gcap: 80, vram: 8, ramLourd: 32,
                projets: ["Modélisation, animation de personnages, rendus simples", "Scènes lourdes, simulations, rendus Arnold"] },
-  cinema4d:  { n: "Cinema 4D", dediee: true, gpu: "rendu", cpu: "calcul", w: [8, 5, 3, 1], cap: 64, vram: 12, ramLourd: 32,
+  cinema4d:  { n: "Cinema 4D", dediee: true, nvidia: true, gpu: "rendu", cpu: "calcul", w: [8, 5, 3, 1], cap: 64, vram: 12, ramLourd: 32,
                projets: ["Motion design, scènes légères", "Scènes lourdes, simulations, rendu Redshift"] },
-  "3dsmax":  { n: "3ds Max", dediee: true, gpu: "jeu", cpu: "calcul", w: [4, 9, 4, 1], cap: 128, gcap: 80, ramLourd: 32,
+  "3dsmax":  { n: "3ds Max", dediee: true, nvidia: true, gpu: "jeu", cpu: "calcul", w: [4, 9, 4, 1], cap: 128, gcap: 80, ramLourd: 32,
                projets: ["Modélisation, visualisations simples", "Visualisation architecturale, rendus V-Ray ou Corona"] },
-  houdini:   { n: "Houdini", dediee: true, gpu: "jeu", cpu: "calcul", w: [3, 10, 8, 2], cap: 128, gcap: 60, ramLourd: 64,
+  houdini:   { n: "Houdini", dediee: true, nvidia: true, gpu: "jeu", cpu: "calcul", w: [3, 10, 8, 2], cap: 128, gcap: 60, ramLourd: 64,
                projets: ["Effets simples, premiers systèmes procéduraux", "Simulations de fluides, de fumée et de destruction"] },
   substance: { n: "Substance 3D Painter", dediee: true, gpu: "jeu", cpu: "calcul", w: [8, 4, 4, 2], cap: 64, vram: 12, ramLourd: 32,
                projets: ["Objets isolés, textures 2K", "Personnages et décors, textures 4K, nombreux calques"] },
@@ -30,7 +34,7 @@ const P = {
   daz:       { n: "Daz Studio", dediee: true, gpu: "rendu_nvidia", nvidia: true, cpu: "calcul", w: [10, 2, 2, 1], cap: 64, vram: 12, vramLourd: 16, ramLourd: 32,
                mesure: { type: "duree", base: "gpu", echantillons: 45000, libelle: "Rendu Iray d'un personnage dans son décor", source: "dérivée de Blender Open Data (OptiX)" },
                projets: ["Un personnage, décor simple", "Plusieurs personnages, cheveux, décor complet"] },
-  keyshot:   { n: "KeyShot", dediee: true, gpu: "rendu_nvidia", cpu: "calcul", w: [4, 8, 3, 1], cap: 64, gcap: 80, ramLourd: 32,
+  keyshot:   { n: "KeyShot", dediee: true, nvidia: true, gpu: "rendu_nvidia", cpu: "calcul", w: [4, 8, 3, 1], cap: 64, gcap: 80, ramLourd: 32,
                mesure: { type: "duree", base: "cpu", echantillons: 2000, libelle: "Rendu d'une image produit sur le processeur", source: "dérivée de Blender Open Data (processeur)" },
                projets: ["Produits isolés, visuels fixes", "Scènes complètes, animations de produit"] },
   premiere:  { n: "Premiere Pro", dediee: true, gpu: "jeu", cpu: "calcul", w: [5, 7, 4, 3], cap: 64, gcap: 100, vram: 8, ramLourd: 32,
@@ -55,9 +59,9 @@ const P = {
                projets: ["Maisons, intérieurs, plans simples", "Grands projets, modèles importés, rendu Enscape ou V-Ray"] },
   rhino:     { n: "Rhino", dediee: true, gpu: "jeu", cpu: "jeu", w: [4, 8, 3, 1], cap: 64, gcap: 60, ramLourd: 32,
                projets: ["Pièces et objets, modélisation précise", "Grands assemblages, Grasshopper, rendus"] },
-  fusion:    { n: "Fusion 360", gpu: "jeu", cpu: "jeu", w: [3, 8, 3, 1], cap: 64, gcap: 45, ramLourd: 32,
+  fusion:    { n: "Fusion 360", dedieeLourd: true, gpu: "jeu", cpu: "jeu", w: [3, 8, 3, 1], cap: 64, gcap: 45, ramLourd: 32,
                projets: ["Pièces simples, impression 3D", "Assemblages complexes, simulations"] },
-  autocad:   { n: "AutoCAD", gpu: "jeu", cpu: "jeu", w: [2, 8, 3, 1], cap: 32, gcap: 35, ramLourd: 32,
+  autocad:   { n: "AutoCAD", dedieeLourd: true, gpu: "jeu", cpu: "jeu", w: [2, 8, 3, 1], cap: 32, gcap: 35, ramLourd: 32,
                projets: ["Plans 2D, petits projets", "Gros plans, modélisation 3D, nombreux calques"] },
   courant:   { n: "Usage courant", office: true, gpu: "jeu", cpu: "calcul", w: [0.2, 3, 2, 1], cap: 16, gcap: 6, ccap: 40 }
 };

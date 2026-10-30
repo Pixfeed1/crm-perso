@@ -72,6 +72,8 @@ function reglesTenues(d) {
       if (t < to) pb.push(`${cle} : stockage en baisse à ${p.budget} €`);
       go = g; to = t;
       if (P[logiciel] && P[logiciel].dediee && K[c.gpu].integree) pb.push(`${cle} : sans carte graphique à ${p.budget} €`);
+      if (P[logiciel] && P[logiciel].dedieeLourd && projet === "lourd" && K[c.gpu].integree) pb.push(`${cle} : sans carte graphique en projets lourds à ${p.budget} €`);
+      if (P[logiciel] && P[logiciel].nvidia && !K[c.gpu].integree && !/^Nvidia/.test(K[c.gpu].puce)) pb.push(`${cle} : carte non Nvidia à ${p.budget} €`);
       if (projet === "lourd" && t < 1) pb.push(`${cle} : moins d'1 To à ${p.budget} €`);
       if (logiciel === "jeu" && K[c.ssd].caracteristiques.gen === 5) pb.push(`${cle} : SSD Gen5 à ${p.budget} €`);
     }
@@ -86,6 +88,41 @@ test("règles : 3D et vidéo avec carte dédiée, 1 To pour les projets lourds, 
   for (const c of Object.values(cher.composants)) if (c.prix_exemple && ["ram", "ssd", "gpu"].includes(c.categorie)) c.prix_exemple *= c.categorie === "ram" ? 4 : 1.8;
   const { C: Ccher } = construire(cher, { scores, prixExemple: true, amazonTag: "" });
   assert.deepEqual(reglesTenues(assembler({ C: Ccher, selection: cher })), []);
+});
+
+test("rendu GPU : Blender, Maya, Cinema 4D, 3ds Max, KeyShot et Houdini sur Nvidia seulement ; Fusion et AutoCAD lourds avec carte dédiée", () => {
+  const P = require("../src/moteur/profils").P;
+  for (const l of ["blender", "maya", "cinema4d", "3dsmax", "keyshot", "houdini", "daz"]) assert.equal(P[l].nvidia, true, l);
+  for (const l of ["fusion", "autocad"]) assert.equal(P[l].dedieeLourd, true, l);
+  for (const [cle, pr] of Object.entries(data.profils)) {
+    const [l, projet] = cle.split("|");
+    for (const x of pr.paliers) {
+      const g = data.composants[data.configs[x.config].gpu];
+      if (P[l] && P[l].nvidia) assert.match(g.puce, /^Nvidia/, `${cle} @${x.budget}`);
+      if (["fusion", "autocad"].includes(l) && projet === "lourd") assert.ok(!C[data.configs[x.config].gpu].integree, `${cle} @${x.budget}`);
+    }
+  }
+});
+
+test("contrôles : chaque règle d'usage enfreinte bloque la publication", () => {
+  const K = C;                                                   // tout le catalogue : une pièce écartée par les règles n'est pas publiée
+  const trouver = f => Object.keys(K).find(id => f(K[id], C[id]));
+  const igpu = trouver((k, c) => c && c.integree), amd = trouver(k => k.categorie === "gpu" && /^AMD/.test(k.puce));
+  const petitSsd = trouver(k => k.categorie === "ssd" && k.caracteristiques.to < 1), gen5 = trouver(k => k.categorie === "ssd" && k.caracteristiques.gen === 5);
+  const cas = [
+    ["blender|leger|-", c => { c.gpu = amd; }, /non Nvidia/],
+    ["houdini|lourd|-", c => { c.gpu = igpu; }, /graphique intégrée interdite/],
+    ["fusion|lourd|-", c => { c.gpu = igpu; }, /graphique intégrée interdite/],
+    ["photoshop|lourd|-", c => { c.ssd = petitSsd; }, /moins d'1 To/],
+    ["jeu|solo|1440", c => { c.ssd = gen5; }, /Gen5/]
+  ];
+  for (const [cle, trafic, motif] of cas) {
+    const d = structuredClone(data), p = d.profils[cle].paliers.at(-1);
+    d.configs.push({ ...d.configs[p.config] }); p.config = d.configs.length - 1;
+    trafic(d.configs[p.config]);
+    const r = controler(d, C);
+    assert.ok(!r.ok && r.erreurs.some(e => motif.test(e)), `${cle} : ${r.erreurs.slice(0, 3).join(" | ")}`);
+  }
 });
 
 test("Daz : uniquement des cartes Nvidia", () => {
