@@ -262,14 +262,12 @@ function jurojin_cfg_sections( $d ) {
 	$h .= '<div class="cfg-onglets" role="tablist" aria-label="Usages" hidden>' . $onglets . '</div>' . $panneaux;
 
 	$blender = ! empty( $d['sources'][0] ) ? $d['sources'][0] : null;
-	$h .= '<h2>Comment le configurateur choisit</h2>';
-	$h .= '<p>Les prix viennent des catalogues de Cdiscount et de la Fnac, relus chaque nuit : seuls les produits neufs et en stock sont retenus.</p>';
-	$h .= '<p>Pour chaque usage, l\'outil assemble les machines compatibles (support du processeur, alimentation, place pour la carte graphique, refroidissement) '
-		. 'et garde, à chaque budget, la plus efficace pour votre logiciel.</p>';
-	if ( $blender ) {
-		$h .= '<p>Les durées de rendu Blender viennent de ' . esc_html( $blender['nom'] ) . ' (version ' . esc_html( $blender['version'] )
-			. '), la base publique des tests des utilisateurs. Sans mesure publiée, l\'outil n\'affiche aucun chiffre.</p>';
-	}
+	// Ce qui rend les recommandations fiables, dit en promesses vérifiables, sans la méthode (sources, règles, calculs).
+	$h .= '<h2>Pourquoi vous pouvez vous fier à ces configurations</h2>';
+	$h .= '<p><strong>Des prix du jour.</strong> Ils sont vérifiés chaque jour chez les marchands, et seuls les produits neufs et en stock sont proposés.</p>';
+	$h .= '<p><strong>Des machines qui fonctionnent.</strong> Chaque configuration est vérifiée pièce par pièce : tout est compatible, de l\'alimentation à la place dans le boîtier.</p>';
+	$h .= '<p><strong>Des chiffres sourcés.</strong> Les temps de rendu affichés viennent de mesures publiques. Quand une mesure manque, aucun chiffre n\'est inventé.</p>';
+	$h .= '<p><strong>Un choix indépendant.</strong> Les commissions ne changent rien au choix des pièces, toujours proposées au meilleur prix disponible.</p>';
 
 	$q = array();
 	$q[] = array( 'Les prix affichés sont-ils à jour ?',

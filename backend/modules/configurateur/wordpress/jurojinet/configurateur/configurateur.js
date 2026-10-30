@@ -124,7 +124,7 @@ function effetCourt(prof,m){ const t=[];
 function effetLong(prof,m){ const t=[];
   if(prof.mesure&&m.duree!=null) t.push(`<b>${prof.mesure.libelle}</b> : environ ${duree(m.duree)}.`);
   if(prof.mesure_jeu&&m.ips!=null) t.push(`<b>${prof.mesure_jeu.libelle} en ${ECRAN[prof.mesure_jeu.ecran]}</b> : environ ${m.ips} images par seconde.`);
-  const s=prof.mesure||{}, src=s.source==="exemple"?" (Mesures d'exemple.)":s.derivee?` (Estimation ${s.source.replace(/^dérivée/,"tirée")}.)`:s.source?` (Source : ${s.source}.)`:"";
+  const s=prof.mesure||{}, src=s.source==="exemple"?" (Mesures d'exemple.)":s.derivee||/^dérivée/.test(s.source||"")?" (Estimation à partir de mesures publiques.)":s.source?` (Source : ${s.source}.)`:"";
   return t.length?"En pratique. "+t.join(" ")+src:""; }
 function details(id){
   const c=K[id], x=c.caracteristiques||{}, l=[];
@@ -135,7 +135,6 @@ function details(id){
   if(x.longueur) l.push(`Longueur : ${x.longueur} mm`);
   if(c.categorie==="cpu") l.push(x.ventirad_fourni?"Ventirad fourni dans la boîte":"Vendu sans ventirad : il est compté dans « Le reste de la machine »");
   if(x.memoire&&c.categorie==="ram") l.push(`Type : ${x.memoire}`);
-  if(c.mesure&&c.mesure.score) l.push(`Score Blender ${c.mesure.source.version} : ${c.mesure.score.toLocaleString("fr-FR")}, médiane de ${c.mesure.tests.toLocaleString("fr-FR")} tests publiés sur Blender Open Data`);
   if(c.reserves&&c.reserves.length) l.push(`En cas de rupture : ${c.reserves.map(r=>r.modele).join(", ou ")}`);
   if(!l.length) return "";
   return `<details class="more"><summary>Détails</summary><ul>${l.map(t=>`<li>${nb(t)}</li>`).join("")}</ul></details>`;
