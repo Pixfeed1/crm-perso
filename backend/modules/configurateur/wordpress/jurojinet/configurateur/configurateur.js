@@ -1,7 +1,10 @@
 /* Configurateur PC (généré depuis la maquette par build-wp.py) */
 (()=>{
 /* La page ne calcule plus rien : elle lit les paliers préparés par l'agent. */
-const D=JSON.parse(document.getElementById("configurateur-data").textContent);
+/* Pas encore de données publiées (premier relevé pas fait, fichier illisible) : on s'arrête sans erreur. */
+const SRC=document.getElementById("configurateur-data"), TOOL0=document.querySelector(".cfg-pc");
+if(!SRC||!TOOL0)return;
+let D;try{D=JSON.parse(SRC.textContent);}catch(e){return;}
 const K=D.composants, CFG=D.configs;
 const FAM={"3d":["blender","unreal","zbrush","daz","keyshot"],video:["premiere","resolve","ae"],photo:["photoshop","lightroom","illustrator","figma"],game:[],office:[]};
 const NOMS={blender:["Blender","BL"],unreal:["Unreal / Unity","UE"],zbrush:["ZBrush","ZB"],daz:["Daz Studio","DS"],keyshot:["KeyShot","KS"],

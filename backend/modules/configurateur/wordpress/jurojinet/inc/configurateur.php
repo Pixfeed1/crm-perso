@@ -62,14 +62,23 @@ add_action( 'wp_enqueue_scripts', function () {
 		array( 'in_footer' => true, 'strategy' => 'defer' ) );
 } );
 
+/** Sans données : rien pour les visiteurs ; un avis pour les personnes qui peuvent modifier la page. */
+function jurojin_cfg_absent( $message ) {
+	if ( ! current_user_can( 'edit_pages' ) ) {
+		return '<!-- configurateur : données absentes -->';
+	}
+	return '<p class="cfg-pc-absent" style="padding:14px 16px;border:1px dashed #c7c7d1;border-radius:8px;color:#555">'
+		. esc_html( $message ) . ' <em>(visible seulement par les éditeurs)</em></p>';
+}
+
 add_shortcode( 'configurateur_pc', function () {
 	$fichier = jurojin_cfg_chemin_donnees();
 	if ( ! is_readable( $fichier ) ) {
-		return '<!-- configurateur : données absentes -->';
+		return jurojin_cfg_absent( 'Les données du configurateur ne sont pas encore publiées : lancez un premier relevé des prix.' );
 	}
 	$json = file_get_contents( $fichier );
 	if ( null === json_decode( $json ) ) {
-		return '<!-- configurateur : données illisibles -->';
+		return jurojin_cfg_absent( 'Le fichier de données du configurateur est illisible : relancez un relevé des prix.' );
 	}
 	$outil = file_get_contents( get_stylesheet_directory() . '/configurateur/outil.html' );
 	// "</" échappé : le JSON ne peut pas fermer la balise script
