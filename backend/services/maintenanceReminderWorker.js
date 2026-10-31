@@ -11,6 +11,9 @@ const emailService = require('./emailService');
 let db = null;
 let cronJob = null;
 
+// Statuts de prélèvement qui donnent lieu à un rapport : prélevé, impayé en cours de relance, résiliation en fin de période.
+const FACTURE = "('active', 'past_due', 'canceling')";
+
 /**
  * Récupère les contrats dont le rapport est dû bientôt (dans les X prochains jours)
  */
@@ -34,6 +37,9 @@ const getContractsNeedingReport = async (daysAhead = 1) => {
     WHERE mc.status = 'active'
       -- 'aucun' = rapport ponctuel, a la demande : aucun rappel automatique.
       AND COALESCE(mc.report_frequency, 'mensuel') <> 'aucun'
+      -- rapport du seulement pour un contrat reellement preleve (meme regle que les revenus) : pas de
+      -- rappel tant que le prelevement n'est pas en place (lien de paiement non signe, rien de configure, resilie)
+      AND COALESCE(mc.billing_status, 'none') IN ${FACTURE}
       AND mc.next_report_due <= CURRENT_DATE + INTERVAL '${daysAhead} days'
       AND mc.next_report_due >= CURRENT_DATE
     ORDER BY mc.next_report_due ASC
@@ -66,6 +72,9 @@ const getOverdueContracts = async () => {
     WHERE mc.status = 'active'
       -- 'aucun' = rapport ponctuel, a la demande : aucun rappel automatique.
       AND COALESCE(mc.report_frequency, 'mensuel') <> 'aucun'
+      -- rapport du seulement pour un contrat reellement preleve (meme regle que les revenus) : pas de
+      -- rappel tant que le prelevement n'est pas en place (lien de paiement non signe, rien de configure, resilie)
+      AND COALESCE(mc.billing_status, 'none') IN ${FACTURE}
       AND mc.next_report_due < CURRENT_DATE
     ORDER BY mc.next_report_due ASC
   `;
