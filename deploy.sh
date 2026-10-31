@@ -146,7 +146,8 @@ fi
 
 # Quels dossiers ont bougé ? Détermine ce qu'il faut reconstruire ou redémarrer.
 if [[ $FORCE -eq 1 ]]; then
-  CHANGES="frontend/ backend/ mcp_seo/ seo_worker/ tools/"
+  # une ligne par dossier : touche() cherche « ^dossier » ligne par ligne (sur une seule ligne, seul le front était vu)
+  CHANGES="$(printf '%s\n' frontend/ backend/ mcp_seo/ seo_worker/ tools/)"
   gris "   --force-all : tout est traité"
 else
   CHANGES="$(git diff --name-only "$AVANT" "$APRES")"
