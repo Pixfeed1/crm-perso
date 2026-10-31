@@ -222,6 +222,13 @@ test("Amazon : lien partenaire sans prix, jamais retenu comme meilleure offre, A
   assert.equal(amz.lien, "https://www.amazon.fr/dp/B0DXYZ1234?tag=jurojin-21");
   assert.ok(!construire(sel, { offres, amazonTag: "" }).C[id].offres.some(o => o.marchand === "amazon"), "sans identifiant : pas de lien");
   assert.ok(!construire(sel, { offres, amazonTag: "x\"><script>-21" }).C[id].offres.some(o => o.marchand === "amazon"), "identifiant piégé refusé");
+  // ASIN invalide (ou absent) : jamais repris dans le lien, recherche Amazon du modèle à la place
   sel.composants[id].modeles[0].asin = "B0X\" onclick=\"";
-  assert.ok(!construire(sel, { offres, amazonTag: "jurojin-21" }).C[id].offres.some(o => o.marchand === "amazon"), "ASIN invalide refusé");
+  const rech = construire(sel, { offres, amazonTag: "jurojin-21" }).C[id].offres.find(o => o.marchand === "amazon");
+  assert.ok(rech.lien.startsWith("https://www.amazon.fr/s?k=") && rech.lien.endsWith("&tag=jurojin-21") && !/onclick|"/.test(rech.lien), rech.lien);
+  assert.equal(rech.prix, null);
+  delete sel.composants[id].modeles[0].asin;
+  const sans = construire(sel, { offres, amazonTag: "jurojin-21" }).C[id].offres.find(o => o.marchand === "amazon");
+  assert.equal(sans.lien, "https://www.amazon.fr/s?k=" + encodeURIComponent(sel.composants[id].modeles[0].modele) + "&tag=jurojin-21");
+  assert.equal(sans.source, "amazon-recherche");
 });

@@ -258,3 +258,11 @@
 .cfg-feat b{font-size:17px;font-weight:700;display:block;margin-bottom:5px;color:var(--jn-navy,#1f2333)}
 .cfg-feat p{font-size:14.5px;color:var(--jn-muted,#6b7280);line-height:1.45;margin:0}
 @media (max-width:820px){.cfg-feats{grid-template-columns:1fr}.cfg-page{padding:24px 14px 44px}}
+/* bouton « Voir cette configuration » sous chaque colonne des tableaux */
+.cfg-pc-seo .cfg-voir{display:inline-block;font-size:.85rem;font-weight:700;color:#4f46e5;background:#fff;border:1px solid #c9c5f2;border-radius:8px;padding:7px 12px;text-decoration:none;white-space:nowrap;transition:background .15s ease,border-color .15s ease}
+.cfg-pc-seo .cfg-voir:hover{background:#eef2ff;border-color:#6366f1}
+.cfg-pc-seo .cfg-voir:focus-visible{outline:2px solid #6366f1;outline-offset:2px}
+.cfg-pc-seo td.highlight .cfg-voir{background:#6366f1;border-color:#6366f1;color:#fff}
+.cfg-pc-seo td.highlight .cfg-voir:hover{background:#4f46e5}
+.cfg-pc-seo .jn-table-products tr.cfg-voir-ligne td{padding-top:12px;padding-bottom:14px}
+@media (max-width:640px){.cfg-pc-seo .jn-table-products tr.cfg-voir-ligne td:first-child{display:none}}

@@ -62,9 +62,13 @@ function entree(base, s, { rang, offres }, amazonTag) {
   const m = s.modeles[rang];
   // Amazon : lien partenaire seulement, JAMAIS de prix (sans accès à l'API produits, Amazon interdit d'en afficher).
   // Ajouté en dernier avec un prix vide : il n'est jamais retenu comme meilleure offre.
+  // Sans ASIN connu : lien de recherche Amazon du modèle, avec l'identifiant partenaire (format autorisé, jamais cassé).
   const asin = String(m.asin || "").trim().toUpperCase(), tag = String(amazonTag || "").trim();
-  if (/^[A-Z0-9]{10}$/.test(asin) && /^[A-Za-z0-9-]+-21$/.test(tag))
-    liste.push({ marchand: "amazon", nom: "Amazon", prix: null, en_stock: true, lien: `https://www.amazon.fr/dp/${asin}?tag=${tag}`, releve_le: null, source: "amazon" });
+  if (/^[A-Za-z0-9-]+-21$/.test(tag)) {
+    const fiche = /^[A-Z0-9]{10}$/.test(asin);
+    const lien = fiche ? `https://www.amazon.fr/dp/${asin}?tag=${tag}` : `https://www.amazon.fr/s?k=${encodeURIComponent(m.modele || s.puce)}&tag=${tag}`;
+    liste.push({ marchand: "amazon", nom: "Amazon", prix: null, en_stock: true, lien, releve_le: null, source: fiche ? "amazon" : "amazon-recherche" });
+  }
   return { ...base, caracteristiques: { ...base.caracteristiques, ...(m.caracteristiques || {}) },
     modele: m.modele, modele_actif: rang, bascule: rang > 0, prix: liste[0].prix, offres: liste,
     reserves: (s.modeles || []).filter((_, r) => r !== rang).map(x => ({ modele: x.modele, caracteristiques: x.caracteristiques || {} })) };

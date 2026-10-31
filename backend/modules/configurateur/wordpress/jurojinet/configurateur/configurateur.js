@@ -305,6 +305,23 @@ $("recap").addEventListener("click",e=>{const b=e.target.closest(".rc");if(b){to
 form.addEventListener("pointerup",e=>{if(!e.target.closest(".opt")||tool.classList.contains("done")||!AUTO.includes(steps[step]))return;
   const at=step;setTimeout(()=>{if(step===at&&!tool.classList.contains("done"))avancer();},calme?0:260);});
 
+/* ---------- « Voir cette configuration » (tableaux sous l'outil) : réponses remplies, résultat affiché ---------- */
+function ouvrir(profil,budget){
+  const [a,b,c]=String(profil).split("|");
+  if(a==="courant") form.fam.value="office";
+  else if(a==="jeu"){form.fam.value="game";form.games.value=b;form.screen.value=c;}
+  else{
+    const fam=Object.keys(FAM).find(f=>FAM[f].includes(a)); if(!fam) return false;
+    form.fam.value=fam; fillSofts(); form.soft.value=a; fillProjets(); form.projet.value=b;
+    $("alsoGame").checked=c!=="-"; if(c!=="-") form.screen.value=c;
+  }
+  if(a==="courant"||a==="jeu") fillSofts();
+  if(!D.profils[cle()]) return false;
+  toggleSets(); setSteps(); step=steps.length-1; show(); setBudget(budget); reveler();
+  return true;
+}
+document.addEventListener("click",e=>{const v=e.target.closest(".cfg-voir");if(v&&ouvrir(v.dataset.profil,+v.dataset.budget))e.preventDefault();});
+
 /* ---------- Onglets des configurations par budget (sections écrites par le serveur sous l'outil) ---------- */
 const barre=document.querySelector(".cfg-pc-seo .cfg-onglets");
 if(barre){

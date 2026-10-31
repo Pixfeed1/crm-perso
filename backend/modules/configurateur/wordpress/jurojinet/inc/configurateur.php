@@ -245,6 +245,12 @@ function jurojin_cfg_tableau( $d, $cle ) {
 		$h .= '<td' . ( $col['rec'] ? ' class="highlight"' : '' ) . ' data-label="' . esc_attr( $col['nom'] . ( $col['rec'] ? ' ★' : '' ) ) . '"><strong>'
 			. esc_html( jurojin_cfg_euros( $col['total'] ) ) . '</strong></td>';
 	}
+	// un bouton par colonne : ouvre l'outil déjà rempli (usage, projets, budget), directement sur le résultat
+	$h .= '</tr><tr class="cfg-voir-ligne"><td></td>';
+	foreach ( $cols as $col ) {
+		$h .= '<td' . ( $col['rec'] ? ' class="highlight"' : '' ) . ' data-label="' . esc_attr( $col['nom'] ) . '">'
+			. '<a class="cfg-voir" href="#cfg-tool" data-profil="' . esc_attr( $cle ) . '" data-budget="' . esc_attr( (int) $col['budget'] ) . '">Voir cette configuration</a></td>';
+	}
 	return $h . '</tr></tbody></table></div>';
 }
 
