@@ -11,6 +11,7 @@ import {
 } from 'react-icons/fi';
 import { subscriptionsAPI, clientsAPI } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
+import SyncStripeButton from '../common/SyncStripeButton';
 import BillingLinkEmailModal from '../billing/BillingLinkEmailModal';
 import WelcomeEmailModal, { formatEnvoi } from '../common/WelcomeEmailModal';
 
@@ -371,6 +372,9 @@ const SubscriptionsTab = () => {
                         <span className={`w-1.5 h-1.5 rounded-full ${style.dot}`} />
                         {style.label}
                       </span>
+                      {sub.billing_status && sub.billing_status !== 'none' && (
+                        <SyncStripeButton api={subscriptionsAPI} id={sub.id} onDone={fetchSubscriptions} />
+                      )}
                     </div>
                     <p className="text-indigo-300 text-sm flex items-center gap-2 mt-1">
                       <FiUser size={14} />

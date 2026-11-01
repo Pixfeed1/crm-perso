@@ -1273,6 +1273,8 @@ export const maintenanceContractsAPI = {
     console.log(`Appel API: réactivation prélèvement contrat ${id}`);
     return apiRequest(`/maintenance-contracts/${id}/billing/resume`, 'POST');
   },
+  // Vérifier auprès de Stripe (aligne le statut du prélèvement)
+  syncBilling: (id) => apiRequest(`/maintenance-contracts/${id}/billing/sync`, 'POST'),
   // Contrat complet et conditions à télécharger
   getContrat: (id) => apiRequest(`/maintenance-contracts/${id}/contrat`),
   saveContrat: (id, data) => apiRequest(`/maintenance-contracts/${id}/contrat`, 'PUT', data),
@@ -1303,6 +1305,7 @@ export const subscriptionsAPI = {
   cancelBilling: (id, immediate = false) => apiRequest(`/subscriptions/${id}/billing/cancel`, 'POST', { immediate }),
   // Réactiver
   resumeBilling: (id) => apiRequest(`/subscriptions/${id}/billing/resume`, 'POST'),
+  syncBilling: (id) => apiRequest(`/subscriptions/${id}/billing/sync`, 'POST'),
   // Mail de bienvenue : aperçu, puis envoi
   welcomePreview: (id) => apiRequest(`/subscriptions/${id}/welcome`),
   welcomePdf: async (id) => (await apiRequestRaw(`/subscriptions/${id}/welcome/pdf`)).blob(),

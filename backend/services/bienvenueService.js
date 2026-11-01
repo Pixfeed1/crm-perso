@@ -115,10 +115,22 @@ async function envoyer(db, table, id, { auto = false } = {}) {
     if (auto) return { skipped: 'sans_email' };
     throw Object.assign(new Error("La fiche client n'a pas d'adresse email."), { status: 400 });
   }
-  const c = contenu(table, row);
-  const signature = await emailService.getSelectedSignature(db);
-  const mail = emailService.buildWelcomeEmail({ clientName: row.client_name, signature, ...c });
-  await emailService.sendEmail({ to: row.client_email, subject: mail.subject, html: mail.html, text: mail.text, attachments: await piecesJointes(table, row) });
+  // Automatique : on réserve l'envoi en base AVANT d'envoyer. Deux confirmations Stripe simultanées
+  // (fin du paiement et passage à « actif ») ne peuvent donc jamais produire deux mails.
+  if (auto) {
+    const pris = await db.pool.query(`UPDATE ${table} SET welcome_sent_at = NOW(), welcome_sent_to = $1 WHERE id = $2 AND welcome_sent_at IS NULL RETURNING id`, [row.client_email, id]);
+    if (!pris.rowCount) return { skipped: 'deja_envoye' };
+  }
+  try {
+    const c = contenu(table, row);
+    const signature = await emailService.getSelectedSignature(db);
+    const mail = emailService.buildWelcomeEmail({ clientName: row.client_name, signature, ...c });
+    await emailService.sendEmail({ to: row.client_email, subject: mail.subject, html: mail.html, text: mail.text, attachments: await piecesJointes(table, row) });
+  } catch (e) {
+    // envoi raté : la réservation est levée, le bouton de la fiche permet de réessayer
+    if (auto) await db.pool.query(`UPDATE ${table} SET welcome_sent_at = NULL, welcome_sent_to = NULL WHERE id = $1`, [id]).catch(() => {});
+    throw e;
+  }
   await db.pool.query(`UPDATE ${table} SET welcome_sent_at = NOW(), welcome_sent_to = $1, updated_at = NOW() WHERE id = $2`, [row.client_email, id]);
   return { sentTo: row.client_email };
 }

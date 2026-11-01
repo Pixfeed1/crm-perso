@@ -19,7 +19,15 @@ function fausseBase(row) {
     pool: {
       query: async (sql, params) => {
         if (/^\s*SELECT/i.test(sql)) return { rows: row ? [{ ...row }] : [] };
-        if (/^\s*UPDATE/i.test(sql)) { majs.push({ sql, params }); row.welcome_sent_at = new Date().toISOString(); row.welcome_sent_to = params[0]; return { rows: [] }; }
+        if (/^\s*UPDATE/i.test(sql)) {
+          majs.push({ sql, params });
+          if (/welcome_sent_at IS NULL RETURNING/.test(sql)) {            // réservation de l'envoi automatique
+            if (row.welcome_sent_at) return { rows: [], rowCount: 0 };
+            row.welcome_sent_at = new Date().toISOString(); row.welcome_sent_to = params[0]; return { rows: [{ id: row.id }], rowCount: 1 };
+          }
+          if (/welcome_sent_at = NULL/.test(sql)) { row.welcome_sent_at = null; row.welcome_sent_to = null; return { rows: [], rowCount: 1 }; }
+          row.welcome_sent_at = new Date().toISOString(); row.welcome_sent_to = params[0]; return { rows: [], rowCount: 1 };
+        }
         throw new Error('requête inattendue : ' + sql);
       }
     }
@@ -68,8 +76,7 @@ test('envoi automatique : une seule fois, avec les conditions en pièce jointe, 
   assert.match(envois[0].html, /Boulangerie Martin/);
   assert.equal(envois[0].attachments.length, 1);
   assert.match(envois[0].attachments[0].filename, /^Conditions_Maintenance_.*\.pdf$/);
-  assert.equal(majs.length, 1);
-  assert.match(majs[0].sql, /UPDATE maintenance_contracts SET welcome_sent_at = NOW\(\), welcome_sent_to = \$1/);
+  assert.match(majs[majs.length - 1].sql, /UPDATE maintenance_contracts SET welcome_sent_at = NOW\(\), welcome_sent_to = \$1/);
 
   // la confirmation Stripe peut arriver deux fois : pas de second mail
   const r2 = await bienvenue.envoyer(db, 'maintenance_contracts', 7, { auto: true });
@@ -118,4 +125,22 @@ test('client pas encore souscrit : aperçu possible, envoi manuel refusé (le ma
 test('fiche introuvable ou type inconnu : 404 et 400', async () => {
   await assert.rejects(bienvenue.envoyer(fausseBase(null), 'subscriptions', 99), (e) => e.status === 404);
   await assert.rejects(bienvenue.envoyer(fausseBase(null), 'clients', 1), (e) => e.status === 400);
+});
+
+test('deux confirmations Stripe en même temps : un seul mail', async () => {
+  const db = fausseBase(contrat());
+  const r = await Promise.all([
+    bienvenue.envoyer(db, 'maintenance_contracts', 7, { auto: true }),
+    bienvenue.envoyer(db, 'maintenance_contracts', 7, { auto: true })
+  ]);
+  assert.equal(envois.length, 1);
+  assert.equal(r.filter((x) => x.skipped === 'deja_envoye').length, 1);
+});
+
+test('envoi automatique raté : la réservation est levée, le mail reste « pas encore envoyé »', async () => {
+  const row = contrat();
+  const db = fausseBase(row);
+  emailService.sendEmail = async () => { throw new Error('SMTP indisponible'); };
+  await assert.rejects(bienvenue.envoyer(db, 'maintenance_contracts', 7, { auto: true }), /SMTP/);
+  assert.equal(row.welcome_sent_at, null);
 });

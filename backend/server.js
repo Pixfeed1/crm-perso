@@ -324,6 +324,8 @@ async function startServer() {
   // Initialiser et démarrer le worker de rappel maintenance
   maintenanceReminderWorker.initialize(app.locals.db);
   maintenanceReminderWorker.start(); // Tous les jours à 9h00
+  // Prélèvements : les fiches restées « en attente » sont relues chez Stripe (webhook manqué)
+  require('./services/maintenanceBillingService').startSyncEnAttente(app.locals.db);
 
   // Initialiser et démarrer le worker de veille missions (heure depuis veille_criteres)
   // start() est async : on l'attend et on logue toute erreur (pas d'échec silencieux).

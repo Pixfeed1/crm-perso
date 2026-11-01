@@ -30,6 +30,8 @@ router.post('/:id/billing/cancel', subscriptionController.cancelBilling);
 
 // POST /api/subscriptions/:id/billing/resume - réactiver
 router.post('/:id/billing/resume', subscriptionController.resumeBilling);
+// Vérifier auprès de Stripe : aligne le statut du prélèvement sur Stripe (webhook manqué)
+router.post('/:id/billing/sync', require('../services/maintenanceBillingService').syncRoute('subscriptions'));
 
 // Mail de bienvenue : aperçu, puis envoi (ou renvoi) depuis la carte de l'abonnement
 const bienvenue = require('../services/bienvenueService').routes('subscriptions');

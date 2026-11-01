@@ -533,31 +533,11 @@ async function applyStripeEvent(db, event) {
 
     case 'customer.subscription.created':
     case 'customer.subscription.updated': {
-      // subscription.status est la SOURCE DE VÉRITÉ du statut de facturation
-      const mapped = SUBSCRIPTION_STATUS_MAP[obj.status];
-      const activeLike = obj.status === 'active' || obj.status === 'trialing';
-
-      if (obj.cancel_at_period_end === true && activeLike) {
-        const cancelAt = obj.current_period_end ? new Date(obj.current_period_end * 1000).toISOString() : null;
-        await db.pool.query(
-          `UPDATE ${table} SET billing_status = 'canceling', billing_cancel_at = $1, stripe_subscription_id = COALESCE(stripe_subscription_id, $2), updated_at = NOW() WHERE id = $3`,
-          [cancelAt, obj.id, row.id]
-        );
-        console.log(`[Billing] ${event.type} -> ${tag} canceling (fin ${cancelAt})`);
-      } else if (mapped) {
-        const clearCancel = mapped === 'active';
-        await db.pool.query(
-          `UPDATE ${table} SET billing_status = $1, ${clearCancel ? 'billing_cancel_at = NULL, ' : ''}stripe_subscription_id = COALESCE(stripe_subscription_id, $2), updated_at = NOW() WHERE id = $3`,
-          [mapped, obj.id, row.id]
-        );
-        console.log(`[Billing] ${event.type} -> ${tag} status=${obj.status} -> ${mapped}`);
-      } else {
-        await db.pool.query(
-          `UPDATE ${table} SET stripe_subscription_id = COALESCE(stripe_subscription_id, $1), updated_at = NOW() WHERE id = $2`,
-          [obj.id, row.id]
-        );
-        console.log(`[Billing] ${event.type} -> ${tag} status=${obj.status} -> inchangé`);
-      }
+      // Stripe n'envoie pas les événements dans l'ordre : un « created » (statut incomplete) peut arriver
+      // après le « updated » (active) et repasser la fiche en attente. On relit donc l'abonnement tel qu'il
+      // est MAINTENANT chez Stripe plutôt que de se fier au contenu de l'événement.
+      const synced = await appliquerAbonnementStripe(db, table, row, await relireAbonnement(obj), { bienvenue: true });
+      console.log(`[Billing] ${event.type} -> ${tag} ${synced.detail}`);
       break;
     }
 
@@ -574,6 +554,105 @@ async function applyStripeEvent(db, event) {
       // Événement non géré : ignoré.
       break;
   }
+}
+
+/** L'abonnement tel qu'il est maintenant chez Stripe (repli : le contenu de l'événement). */
+async function relireAbonnement(obj) {
+  try { return await getStripe().subscriptions.retrieve(obj.id); } catch (e) {
+    console.warn('[Billing] relecture abonnement Stripe impossible, contenu de l\'événement utilisé :', e.message);
+    return obj;
+  }
+}
+
+const finDePeriode = (sub) => {
+  const t = sub.cancel_at || sub.current_period_end || (sub.items && sub.items.data && sub.items.data[0] && sub.items.data[0].current_period_end);
+  return t ? new Date(t * 1000).toISOString() : null;
+};
+
+/**
+ * Applique le statut d'un abonnement Stripe (source de vérité) sur la fiche.
+ * bienvenue=true (confirmation Stripe reçue en direct) : au passage à « actif », le mail de bienvenue part
+ * (une seule fois, sans bloquer). Un rattrapage (resynchronisation) ne l'envoie pas : il se relit et
+ * s'envoie depuis la fiche.
+ */
+async function appliquerAbonnementStripe(db, table, row, sub, { bienvenue = false } = {}) {
+  const activeLike = sub.status === 'active' || sub.status === 'trialing';
+  let statut = SUBSCRIPTION_STATUS_MAP[sub.status] || row.billing_status;
+  let cancelAt = null;
+  if ((sub.cancel_at_period_end === true || sub.cancel_at) && activeLike) { statut = 'canceling'; cancelAt = finDePeriode(sub); }
+  await db.pool.query(
+    `UPDATE ${table} SET billing_status = $1::varchar,
+       billing_cancel_at = CASE WHEN $1::varchar = 'canceling' THEN $2::timestamp WHEN $1::varchar = 'active' THEN NULL ELSE billing_cancel_at END,
+       stripe_subscription_id = $3,
+       stripe_customer_id = COALESCE(stripe_customer_id, $4), updated_at = NOW() WHERE id = $5`,
+    [statut, cancelAt, sub.id, typeof sub.customer === 'string' ? sub.customer : (sub.customer && sub.customer.id) || null, row.id]
+  );
+  if (bienvenue && ['active', 'past_due', 'canceling'].includes(statut) && !['active', 'past_due', 'canceling'].includes(row.billing_status)) {
+    require('./bienvenueService').envoyer(db, table, row.id, { auto: true })
+      .then((r) => { if (r && r.sentTo) console.log(`[Billing] mail de bienvenue envoyé (${table} ${row.id}) à ${r.sentTo}`); })
+      .catch((e) => console.error(`[Billing] mail de bienvenue non envoyé (${table} ${row.id}) :`, e.message));
+  }
+  return { billing_status: statut, billing_cancel_at: cancelAt, avant: row.billing_status, detail: `status=${sub.status} -> ${statut}` };
+}
+
+/**
+ * Resynchronise une fiche avec Stripe (webhook manqué, ou événements dans le désordre).
+ * Retrouve l'abonnement par son identifiant, sinon parmi ceux du client Stripe (métadonnées de la fiche).
+ */
+async function syncFromStripe(db, table, id) {
+  const { rows } = await db.pool.query(`SELECT * FROM ${table} WHERE id = $1`, [id]);
+  if (!rows[0]) throw Object.assign(new Error(table === 'subscriptions' ? 'Abonnement introuvable.' : 'Contrat de maintenance introuvable.'), { statusCode: 404 });
+  const row = rows[0];
+  const stripe = getStripe();
+  let sub = null;
+  if (row.stripe_subscription_id) sub = await stripe.subscriptions.retrieve(row.stripe_subscription_id).catch(() => null);
+  if (!sub && row.stripe_customer_id) {
+    const cle = table === 'subscriptions' ? 'subscription_id' : 'maintenance_contract_id';
+    const liste = await stripe.subscriptions.list({ customer: row.stripe_customer_id, status: 'all', limit: 20 });
+    const candidats = liste.data.filter((x) => x.status !== 'incomplete_expired');
+    sub = candidats.find((x) => x.metadata && String(x.metadata[cle]) === String(row.id)) || null;
+  }
+  if (!sub) return { billing_status: row.billing_status, trouve: false, avant: row.billing_status };
+  return { ...(await appliquerAbonnementStripe(db, table, row, sub)), trouve: true };
+}
+
+/** Route Express : POST /:id/billing/sync (bouton « Vérifier auprès de Stripe »). */
+function syncRoute(table) {
+  return async (req, res) => {
+    try { res.json({ success: true, ...(await syncFromStripe(req.app.locals.db, table, req.params.id)) }); } catch (e) {
+      const code = e.statusCode || 500;
+      if (code >= 500) console.error('[Billing] resynchronisation :', e.message);
+      res.status(code).json({ message: code < 500 ? e.message : 'Stripe injoignable, réessayez dans un instant.' });
+    }
+  };
+}
+
+/**
+ * Filet de sécurité si un webhook n'arrive pas : les fiches en attente (ou impayées) qui ont un client
+ * Stripe sont relues chez Stripe. Lancé au démarrage puis toutes les 30 minutes (si Stripe est configuré).
+ */
+async function syncEnAttente(db) {
+  let n = 0;
+  for (const table of ['subscriptions', 'maintenance_contracts']) {
+    const { rows } = await db.pool.query(
+      `SELECT id FROM ${table} WHERE billing_status IN ('pending', 'past_due')
+         AND (stripe_customer_id IS NOT NULL OR stripe_subscription_id IS NOT NULL)
+         AND updated_at > NOW() - INTERVAL '90 days'`);
+    for (const { id } of rows) {
+      try {
+        const r = await syncFromStripe(db, table, id);
+        if (r.trouve && r.billing_status !== r.avant) { n++; console.log(`[Billing] resynchronisation ${table} ${id} : ${r.avant} -> ${r.billing_status}`); }
+      } catch (e) { console.error(`[Billing] resynchronisation ${table} ${id} :`, e.message); }
+    }
+  }
+  return n;
+}
+
+function startSyncEnAttente(db) {
+  if (!process.env.STRIPE_SECRET_KEY) return null;
+  const tour = () => syncEnAttente(db).catch((e) => console.error('[Billing] resynchronisation :', e.message));
+  setTimeout(tour, 60 * 1000).unref();
+  return setInterval(tour, 30 * 60 * 1000).unref();
 }
 
 /**
@@ -663,6 +742,10 @@ module.exports = {
   contractBillingAnchor,
   firstBillingAnchor,
   applyStripeEvent,
+  syncFromStripe,
+  syncRoute,
+  syncEnAttente,
+  startSyncEnAttente,
   cancelSubscriptionForContract,
   resumeSubscriptionForContract,
   cancelSubscription,

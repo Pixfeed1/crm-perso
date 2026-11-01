@@ -11,6 +11,7 @@ import ConfirmModal from '../common/ConfirmModal';
 import BillingLinkEmailModal from '../billing/BillingLinkEmailModal';
 import ContratModal, { telecharger } from './ContratModal';
 import WelcomeEmailModal, { formatEnvoi } from '../common/WelcomeEmailModal';
+import SyncStripeButton from '../common/SyncStripeButton';
 
 const MaintenanceDetails = ({ contract, onDelete, onRefresh, onEdit, onGenerateReport }) => {
   const { toast } = useToast();
@@ -406,9 +407,14 @@ const MaintenanceDetails = ({ contract, onDelete, onRefresh, onEdit, onGenerateR
             <FiCreditCard />
             Prélèvement automatique
           </h3>
-          <span className={`text-xs px-3 py-1 rounded-full font-medium ${billingStyle.bg} ${billingStyle.text}`}>
-            {billingStyle.label}
-          </span>
+          <div className="flex items-center gap-2">
+            {contract.billing_status && contract.billing_status !== 'none' && (
+              <SyncStripeButton api={maintenanceContractsAPI} id={contract.id} onDone={onRefresh} />
+            )}
+            <span className={`text-xs px-3 py-1 rounded-full font-medium ${billingStyle.bg} ${billingStyle.text}`}>
+              {billingStyle.label}
+            </span>
+          </div>
         </div>
 
         {(contract.billing_status === 'none' || contract.billing_status === 'pending') && (

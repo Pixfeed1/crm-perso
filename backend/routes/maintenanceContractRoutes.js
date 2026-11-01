@@ -46,6 +46,8 @@ router.post('/:id/billing/cancel', contractController.cancelBilling);
 
 // POST /api/maintenance-contracts/:id/billing/resume - Réactiver l'abonnement (annule la résiliation programmée)
 router.post('/:id/billing/resume', contractController.resumeBilling);
+// Vérifier auprès de Stripe : aligne le statut du prélèvement sur Stripe (webhook manqué)
+router.post('/:id/billing/sync', require('../services/maintenanceBillingService').syncRoute('maintenance_contracts'));
 
 // Mail de bienvenue : aperçu, puis envoi (ou renvoi) depuis la fiche du contrat
 const bienvenue = require('../services/bienvenueService').routes('maintenance_contracts');

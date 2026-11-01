@@ -17,7 +17,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#fff;color:var(--ink)
 .kicker{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--purple);margin-bottom:12px}
 .title{font-size:36px;line-height:1.08;margin-bottom:14px}
 .meta{font-size:13px;color:var(--muted)}.meta strong{color:var(--ink);font-weight:600}
-.price{text-align:right}
+.price{text-align:right;max-width:250px}
 .price .amount{font-family:'Sora',sans-serif;font-size:30px;font-weight:800;line-height:1;letter-spacing:-.01em}
 .price .per{display:block;font-size:13px;color:var(--muted);margin-top:6px}
 .price .first{display:block;font-size:12px;color:var(--text);margin-top:12px;padding-top:10px;border-top:1px solid var(--rule)}
@@ -63,7 +63,8 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:#fff;color:var(--ink)
 .foot a{color:var(--muted);text-decoration:none}
 
 @media(max-width:620px){.head,.scope,.sign{grid-template-columns:1fr}.price{text-align:left}.mod-row{grid-template-columns:1fr;gap:4px}}
-@media print{body{padding:0}.sec,.scope>div{break-inside:avoid}}
+@page{size:A4;margin:14mm 0}
+@media print{body{padding:0}.doc{max-width:none;padding:0 16mm}.sec{break-inside:auto}.sec-h{break-after:avoid}.feat li,.mod-row,.mod-p,.accept,.sign,.head{break-inside:avoid}}
 </style></head><body>
 <div class="doc">
   <div class="top">
