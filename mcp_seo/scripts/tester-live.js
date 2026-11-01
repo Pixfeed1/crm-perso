@@ -1,5 +1,5 @@
 // Lance get_live_page sur de vraies adresses, comme le ferait Claude, sans passer par le MCP.
-// Usage, depuis mcp_seo/ :  node scripts/tester-live.js 2 https://jurojin.net/... [15 https://pixfeed.net/...]
+// Usage, depuis mcp_seo/ :  node scripts/tester-live.js 2 https://jurojin.net/... [15 https://pixfeed.net/... | 15 auto]
 // Écrit chaque sortie complète dans /tmp/live-<n>.json et affiche un résumé à comparer avec la page
 // ouverte dans un navigateur, plus la taille de la sortie en Ko. N'affiche aucun accès.
 import 'dotenv/config';
@@ -12,7 +12,14 @@ if (args.length < 2 || args.length % 2) { console.error('Usage : node scripts/te
 const premiers = (l, n = 3) => (l || []).slice(0, n).join(' | ');
 
 for (let i = 0; i < args.length; i += 2) {
-  const siteId = Number(args[i]), url = args[i + 1];
+  const siteId = Number(args[i]);
+  let url = args[i + 1];
+  if (url === 'auto') {   // l'article du site le plus vu dans Search Console (selon le dernier crawl)
+    const { rows } = await pool.query(
+      `SELECT url FROM seo_pages WHERE site_id = $1 AND type = 'post' ORDER BY COALESCE(gsc_impressions, 0) DESC, url LIMIT 1`, [siteId]);
+    if (!rows[0]) { console.log(`\n=== site ${siteId} : aucun article connu du CRM`); continue; }
+    url = rows[0].url;
+  }
   const t0 = Date.now();
   const o = await getLivePage(pool, siteId, url);
   const json = JSON.stringify(o);
