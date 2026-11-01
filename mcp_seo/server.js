@@ -15,6 +15,9 @@ import { pool } from './db.js';
 import * as tools from './tools.js';
 import * as bing from './bing.js';
 import { getLivePage } from './live.js';
+import { getPageDossier } from './dossier.js';
+import { checkUrls, MAX_URLS } from './checks.js';
+import { getSiteResources } from './ressources.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -300,6 +303,29 @@ function buildServer() {
     { site_id: z.number().int(), url: z.string() },
     // JSON compact (sans indentation) : la sortie est déjà dense
     async ({ site_id, url }) => ({ content: [{ type: 'text', text: JSON.stringify(await getLivePage(pool, site_id, url)) }] })
+  );
+
+  const compactJson = (data) => ({ content: [{ type: 'text', text: JSON.stringify(data) }] });
+
+  server.tool(
+    'get_page_dossier',
+    "Tout ce que le CRM sait d'une page, chaque bloc daté et sourcé : indexation et sitemap, Search Console (totaux, requêtes, pays), volumes Bing,\ncannibalisation (requêtes et phrase-clé), liens entrants du crawl, backlinks (ancre, dofollow), redirections. Données du CRM, pas de lecture du site.",
+    { site_id: z.number().int(), url: z.string(), days: z.number().int().optional() },
+    async ({ site_id, url, days }) => compactJson(await getPageDossier(pool, site_id, url, days ?? 90))
+  );
+
+  server.tool(
+    'check_urls',
+    `Vérifie en direct jusqu'à ${MAX_URLS} adresses, internes ou externes : code HTTP, adresse finale après redirections, title.\nPour les internes en plus : id, type et statut WordPress, canonique, noindex, état d'indexation connu du CRM avec sa date.`,
+    { site_id: z.number().int(), urls: z.array(z.string()).max(MAX_URLS) },
+    async ({ site_id, urls }) => compactJson(await checkUrls(pool, site_id, urls))
+  );
+
+  server.tool(
+    'get_site_resources',
+    "Ce qu'il faut connaître d'un site pour écrire : catégories et étiquettes (id, slug, parent, nombre de contenus), termes du glossaire,\nshortcodes déclarés par le thème et les extensions (origine, fichier), icônes disponibles pour [spec icon=\"\"] et où le thème les définit.",
+    { site_id: z.number().int() },
+    async ({ site_id }) => compactJson(await getSiteResources(pool, site_id))
   );
 
   return server;

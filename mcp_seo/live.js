@@ -34,6 +34,8 @@ const txt = (s) => String(s ?? '').replace(/\s+/g, ' ').trim();
 const decode = (s) => txt(parseHtml(`<p>${String(s ?? '')}</p>`).text);
 // retire null, '', [], {} (récursif) : sortie compacte
 function compact(v) {
+  // une date (PostgreSQL renvoie des objets Date, sans clé visible) n'est pas un objet vide : on la garde, en ISO
+  if (v instanceof Date) return isNaN(v.getTime()) ? null : v.toISOString();
   if (Array.isArray(v)) return v.map(compact).filter((x) => !vide(x));
   if (v && typeof v === 'object') {
     const o = {};
@@ -502,3 +504,8 @@ export async function getLivePage(pool, siteId, url) {
   }
   return out;
 }
+
+// Utilitaires communs aux outils de lecture (dossier.js, checks.js, ressources.js) : mêmes conventions
+// de sortie (compacte, listes { total, affiches, items }, erreurs { source, code, message }).
+export { plafonne, txt, decode, compact, hoteNu, requete, erreurHttp, erreurReseau, clientWp, typesWp };
+// accesWordPress est exporté plus haut

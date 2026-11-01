@@ -3002,4 +3002,4 @@ async function autoInitDatabase(pool) {
   }
 }
 
-module.exports = { autoInitDatabase, DATABASE_SCHEMA, EMAIL_TEMPLATE_SEED };
+module.exports = { autoInitDatabase, DATABASE_SCHEMA, EMAIL_TEMPLATE_SEED, ensureSeoTables };   // ensureSeoTables : tests du connecteur MCP (schéma réel)

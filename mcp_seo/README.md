@@ -153,3 +153,37 @@ Une adresse d'un autre domaine que le site est refusée.
 
 Essai hors MCP, depuis `mcp_seo/` : `node scripts/tester-live.js 2 https://jurojin.net/… 15 https://pixfeed.net/…`
 (résumé + taille en Ko ; sortie complète dans `/tmp/live-N.json`). Tests : `node --test test/live.test.js`.
+
+## Étape 2 : `get_page_dossier`, `check_urls`, `get_site_resources`
+
+Mêmes conventions que `get_live_page` : `fetched_at` en tête, source et date dans chaque bloc,
+champs vides retirés, listes `{ total, affiches, items }`, erreurs `{ source, code, message }`
+dans le bloc concerné.
+
+- `get_page_dossier(site_id, url, days=90)` (`dossier.js`) : ce que le CRM sait d'une page.
+  Réutilise sans les modifier `get_position_context`, `get_page_keywords`, `get_cannibalisation`,
+  `get_focus_keyword_conflicts`, `get_page_links`, `check_sitemap`, `get_redirects`, `list_sites`,
+  `get_page_content` et `bing.getKeywordVolume`. Requêtes propres : inspection d'UNE URL
+  (`gsc_index_status`), backlinks d'UNE page avec ancre et rel (`seo_backlinks` + `seo_ref_domains`),
+  bornes de dates Search Console.
+- `check_urls(site_id, urls)` (`checks.js`) : 50 adresses au maximum, 8 s par adresse,
+  5 en parallèle, User-Agent `SEO-LinkCheck/1.0` (ne nomme ni le CRM ni un domaine). Internes :
+  id et type lus dans les classes du `<body>`, statut par l'API REST.
+- `get_site_resources(site_id)` (`ressources.js`) : catégories, étiquettes, glossaire (API REST) ;
+  shortcodes et icônes de `[spec]` par la route de lecture `outils-site/v1/ressources`
+  (`wordpress/ressources-site.php`, réservée aux utilisateurs qui peuvent modifier des contenus,
+  nom neutre car la liste des routes de `/wp-json/` est publique).
+
+Scripts (depuis `mcp_seo/`) :
+- `bash scripts/bascule-editeur.sh <site_id> <dossier> <domaine> <identifiant> <url…>` : accès API
+  basculé sur un Éditeur dédié, sorties `get_live_page` comparées avant/après, mots de passe
+  « CRM lecture » de l'ancien compte révoqués seulement si tout est identique.
+- `node scripts/reparer-wp-auth.js <site_id> <dossier>` : pose ou met à jour
+  `mu-plugins/identification-api.php` (filtre limité aux chemins `/wp-json/` servis par l'index.php
+  du site).
+- `node scripts/installer-ressources.js <site_id> <dossier>` : pose ou met à jour la route de lecture,
+  vérifie 401 sans identification et 200 avec.
+- `node scripts/essais-etape2.js` : essais réels des trois outils, tailles en Ko.
+
+Tests : `MCP_PGTEST=postgres://postgres@127.0.0.1:55432 node --test test/outils.test.js`
+(base jetable au schéma réel, fausse instance WordPress).
