@@ -346,15 +346,21 @@ add_action( 'add_meta_boxes', function ( $type, $post ) {
 	}, null, 'side', 'high' );
 }, 10, 2 );
 
-add_action( 'admin_post_outils_remplacer_original', function () {
-	$copie_id = absint( isset( $_GET['copie'] ) ? $_GET['copie'] : 0 );
-	check_admin_referer( 'outils_remplacer_' . $copie_id );
-	$copie = get_post( $copie_id );
-	$orig  = $copie ? get_post( (int) get_post_meta( $copie_id, '_outils_copie_de', true ) ) : null;
-	if ( ! $copie || ! $orig || ! current_user_can( 'edit_post', $orig->ID ) || ! current_user_can( 'edit_post', $copie_id ) || ! current_user_can( 'publish_posts' ) ) {
-		wp_die( 'Remplacement refusé.' );
+/**
+ * Remplace l'original par sa copie de travail, par la mise à jour normale de WordPress (wp_update_post) :
+ * WordPress garde l'ancien slug (_wp_old_slug) et la surveillance des permaliens de Redirection, si elle
+ * est active pour ce type, crée la 301. Renvoie l'id de l'original ou une WP_Error. Supprime la copie.
+ */
+function outils_remplacer_original( $copie_id ) {
+	$copie = get_post( absint( $copie_id ) );
+	$orig  = $copie ? get_post( (int) get_post_meta( $copie->ID, '_outils_copie_de', true ) ) : null;
+	if ( ! $copie || ! $orig ) {
+		return new WP_Error( 'outils_copie', "Copie de travail ou original introuvable." );
 	}
-	$slug = get_post_meta( $copie_id, '_outils_slug', true );
+	if ( ! current_user_can( 'edit_post', $orig->ID ) || ! current_user_can( 'edit_post', $copie->ID ) || ! current_user_can( 'publish_posts' ) ) {
+		return new WP_Error( 'outils_interdit', 'Remplacement refusé.' );
+	}
+	$slug = get_post_meta( $copie->ID, '_outils_slug', true );
 	$maj  = array(
 		'ID'             => $orig->ID,
 		'post_title'     => $copie->post_title,
@@ -365,13 +371,16 @@ add_action( 'admin_post_outils_remplacer_original', function () {
 		'comment_status' => $copie->comment_status,
 	);
 	if ( $slug ) {
-		$maj['post_name'] = $slug;      // WordPress garde l'ancien slug en _wp_old_slug (redirection)
+		$maj['post_name'] = $slug;      // ancien slug gardé en _wp_old_slug ; 301 de Redirection si surveillé
 	}
-	wp_update_post( wp_slash( $maj ) );
+	$r = wp_update_post( wp_slash( $maj ), true );
+	if ( is_wp_error( $r ) ) {
+		return $r;
+	}
 	foreach ( get_object_taxonomies( $orig->post_type ) as $tx ) {
-		wp_set_object_terms( $orig->ID, wp_get_object_terms( $copie_id, $tx, array( 'fields' => 'ids' ) ), $tx );
+		wp_set_object_terms( $orig->ID, wp_get_object_terms( $copie->ID, $tx, array( 'fields' => 'ids' ) ), $tx );
 	}
-	$copiables = outils_meta_copiables( $copie_id );
+	$copiables = outils_meta_copiables( $copie->ID );
 	foreach ( array_keys( outils_meta_copiables( $orig->ID ) ) as $cle ) {
 		if ( ! isset( $copiables[ $cle ] ) ) {
 			delete_post_meta( $orig->ID, $cle );
@@ -383,7 +392,17 @@ add_action( 'admin_post_outils_remplacer_original', function () {
 			add_post_meta( $orig->ID, $cle, maybe_unserialize( $v ) );
 		}
 	}
-	wp_delete_post( $copie_id, true );
-	wp_safe_redirect( admin_url( 'post.php?post=' . $orig->ID . '&action=edit' ) );
+	wp_delete_post( $copie->ID, true );
+	return $orig->ID;
+}
+
+add_action( 'admin_post_outils_remplacer_original', function () {
+	$copie_id = absint( isset( $_GET['copie'] ) ? $_GET['copie'] : 0 );
+	check_admin_referer( 'outils_remplacer_' . $copie_id );
+	$id = outils_remplacer_original( $copie_id );
+	if ( is_wp_error( $id ) ) {
+		wp_die( esc_html( $id->get_error_message() ) );
+	}
+	wp_safe_redirect( admin_url( 'post.php?post=' . $id . '&action=edit' ) );
 	exit;
 } );

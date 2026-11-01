@@ -27,7 +27,7 @@ import { getLivePage } from './live.js';
 import { getPageDossier } from './dossier.js';
 import { checkUrls, MAX_URLS } from './checks.js';
 import { getSiteResources } from './ressources.js';
-import { demanderDepot, prepareDraft } from './brouillon.js';
+import { demanderDepot, prepareDraft, repointerLiens, poserEtiquettes, modifierMedia } from './brouillon.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -352,6 +352,27 @@ function buildServer() {
     "Prépare un brouillon WordPress complet depuis un dépôt (jamais publié) : contrôles (blocs, shortcodes, taxonomies, alt, marqueurs {{media:…}}, Yoast 60/135, slug, fichiers),\nmédias sans doublon, brouillon ou copie de travail en mise à jour. simulation=true par défaut (aucune écriture) ; un second appel reprend le même brouillon.",
     { depot: z.number().int(), simulation: z.boolean().optional(), creer_etiquettes: z.boolean().optional() },
     async ({ depot, simulation, creer_etiquettes }) => compactJson(await prepareDraft(depot, simulation ?? true, creer_etiquettes ?? false))
+  );
+
+  server.tool(
+    'repointer_liens',
+    "Remplace une adresse du site par une autre dans le contenu brut de TOUS les contenus publiés (tous types), sous toutes ses formes (absolue, relative, avec ou sans barre finale).\nancres = { adresse_de_page: nouveau_texte } change aussi le texte du lien sur ces pages. Rapport page par page (avant/après autour de chaque lien), métadonnées et réglages qui la contiennent (signalés, jamais modifiés), effet sur la date de modification affichée.\nsimulation=true par défaut (rien écrit) ; jamais de publication ni de suppression.",
+    { site_id: z.number().int(), ancienne_url: z.string(), nouvelle_url: z.string(), ancres: z.record(z.string()).optional(), simulation: z.boolean().optional() },
+    async ({ site_id, ancienne_url, nouvelle_url, ancres, simulation }) => compactJson(await repointerLiens(site_id, ancienne_url, nouvelle_url, ancres ?? {}, simulation ?? true))
+  );
+
+  server.tool(
+    'poser_etiquettes',
+    "Ajoute ou retire des étiquettes EXISTANTES (id) sur des contenus publiés, sans brouillon et sans réenregistrer le contenu (date de modification inchangée). N'en crée jamais ; contrôle que le type accepte les étiquettes.\nsimulation=true par défaut (rien écrit).",
+    { site_id: z.number().int(), urls: liste(z.array(z.string()).min(1).max(50)), ajouter: liste(z.array(z.coerce.number().int())).optional(), retirer: liste(z.array(z.coerce.number().int())).optional(), simulation: z.boolean().optional() },
+    async ({ site_id, urls, ajouter, retirer, simulation }) => compactJson(await poserEtiquettes(site_id, urls, ajouter ?? [], retirer ?? [], simulation ?? true))
+  );
+
+  server.tool(
+    'modifier_media',
+    "Modifie l'alt, la légende, le titre ou la description d'un fichier déjà dans la médiathèque (media = id ou adresse, même d'une taille générée).\nPour l'alt, signale les contenus qui insèrent l'image avec l'ancien alt écrit en dur (non modifiés). simulation=true par défaut (rien écrit).",
+    { site_id: z.number().int(), media: z.union([z.number().int(), z.string()]), alt: z.string().optional(), legende: z.string().optional(), titre: z.string().optional(), description: z.string().optional(), simulation: z.boolean().optional() },
+    async ({ site_id, media, alt, legende, titre, description, simulation }) => compactJson(await modifierMedia(site_id, String(media), { alt, legende, titre, description }, simulation ?? true))
   );
 
   return server;

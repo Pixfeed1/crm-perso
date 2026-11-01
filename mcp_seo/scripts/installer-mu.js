@@ -2,7 +2,8 @@
 // sa route refuse sans identification (401/403), répond à l'utilisateur dédié (200), l'accueil reste en 200.
 // Sinon, l'ancienne version est remise (ou le fichier retiré).
 // Usage, depuis mcp_seo/ : node scripts/installer-mu.js <site_id> <dossier du site> <fichier.php>
-//   redaction-site.php -> route outils-site/v1/inventaire ; ressources-site.php -> outils-site/v1/ressources
+//   redaction-site.php -> route outils-site/v1/inventaire ; ressources-site.php -> outils-site/v1/ressources ;
+//   publication-site.php -> outils-site/v1/redirection
 import 'dotenv/config';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -10,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 import { pool } from '../db.js';
 import { accesWordPress } from '../live.js';
 
-const ROUTES = { 'redaction-site.php': 'outils-site/v1/inventaire', 'ressources-site.php': 'outils-site/v1/ressources' };
+const ROUTES = { 'redaction-site.php': 'outils-site/v1/inventaire', 'ressources-site.php': 'outils-site/v1/ressources', 'publication-site.php': 'outils-site/v1/redirection' };
 const [siteId, dossier, nom] = [Number(process.argv[2]), process.argv[3], process.argv[4]];
 if (!siteId || !dossier || !ROUTES[nom]) { console.error(`Usage : node scripts/installer-mu.js <site_id> <dossier> <${Object.keys(ROUTES).join('|')}>`); process.exit(1); }
 const source = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'wordpress', nom);
@@ -38,6 +39,7 @@ try {
     console.log(`${base} : ${nom} vérification ratée (accueil ${accueil}, sans identification ${anonyme}, avec ${r.status} ${j.code || ''}) : ${ancien === null ? 'fichier retiré' : 'ancienne version remise'}.`);
     process.exit(1);
   }
-  const detail = nom === 'redaction-site.php' ? `${(j.types || []).length} types, ${(j.blocs || []).length} blocs, limite d'envoi ${Math.round((j.limite_envoi || 0) / 1048576)} Mo, Rewrite & Republish : ${j.rewrite_republish ? 'oui' : 'non'}` : `${(j.shortcodes || []).length} shortcodes`;
+  const surv = (x) => (!x.active ? 'Redirection absente ou inactive' : `Redirection ${x.version || ''}, surveillance des permaliens : ${x.surveillance && x.surveillance.active ? `oui (${x.surveillance.types.join(', ')} ; groupe « ${x.surveillance.groupe && x.surveillance.groupe.nom} »)` : 'NON'}`);
+  const detail = nom === 'publication-site.php' ? surv(j) : nom === 'redaction-site.php' ? `${(j.types || []).length} types, ${(j.blocs || []).length} blocs, limite d'envoi ${Math.round((j.limite_envoi || 0) / 1048576)} Mo, Rewrite & Republish : ${j.rewrite_republish ? 'oui' : 'non'}` : `${(j.shortcodes || []).length} shortcodes`;
   console.log(`${base} : OK, ${nom} ${ancien === nouveau ? 'déjà à jour' : ancien === null ? 'posé' : 'mis à jour'} (${detail} ; sans identification : ${anonyme}).`);
 } catch (e) { remettre(); console.log(`${base} : ${e.message} : ${ancien === null ? 'fichier retiré' : 'ancienne version remise'}.`); process.exit(1); }

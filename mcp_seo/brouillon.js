@@ -1,5 +1,6 @@
 // mcp_seo/brouillon.js
-// demander_depot et prepare_draft : le serveur MCP ne parle pas à WordPress pour écrire ; il passe
+// demander_depot, prepare_draft et les retouches après publication (repointer_liens, poser_etiquettes,
+// modifier_media) : le serveur MCP ne parle pas à WordPress pour écrire ; il passe
 // par le backend du CRM (seul à écrire, avec le compte dédié), avec le secret partagé OUTILS_MCP_SECRET
 // (backend/.env, lu ici sans rien d'autre).
 import fs from 'node:fs';
@@ -52,3 +53,16 @@ export async function prepareDraft(depot, simulation = true, creerEtiquettes = f
   if (j.erreur) return { fetched_at: new Date().toISOString(), depot, simulation, ...j };
   return compact(j);
 }
+
+// ---- retouches après publication : simulation par défaut, rapport du backend tel quel ----
+async function retouche(chemin, corps) {
+  const j = await backend(chemin, corps, 10 * 60 * 1000);
+  if (j.erreur) return { fetched_at: new Date().toISOString(), ...corps, ...j };
+  return compact(j);
+}
+export const repointerLiens = (siteId, ancienneUrl, nouvelleUrl, ancres = {}, simulation = true) =>
+  retouche('liens', { site_id: siteId, ancienne_url: ancienneUrl, nouvelle_url: nouvelleUrl, ancres, simulation });
+export const poserEtiquettes = (siteId, urls, ajouter = [], retirer = [], simulation = true) =>
+  retouche('etiquettes', { site_id: siteId, urls, ajouter, retirer, simulation });
+export const modifierMedia = (siteId, media, champs = {}, simulation = true) =>
+  retouche('media', { site_id: siteId, media, ...champs, simulation });

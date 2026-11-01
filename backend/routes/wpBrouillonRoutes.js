@@ -1,6 +1,7 @@
 // Brouillons WordPress préparés par Claude (outils MCP demander_depot / prepare_draft).
 // - POST /api/wp-depot/:jeton : ENVOI public par le lien à usage unique (zip « lot » ou « fichiers »).
 // - POST /api/wp-brouillon/depot et /preparer : réservés au serveur MCP (secret partagé OUTILS_MCP_SECRET).
+// - POST /api/wp-brouillon/liens, /etiquettes, /media : retouches après publication (étape 4), même secret.
 const express = require('express');
 const os = require('os');
 const path = require('path');
@@ -8,6 +9,7 @@ const crypto = require('crypto');
 const multer = require('multer');
 const depots = require('../services/wpBrouillon/depot');
 const { preparer } = require('../services/wpBrouillon/preparer');
+const apres = require('../services/wpBrouillon/apresPublication');
 
 const envoi = multer({
   dest: path.join(os.tmpdir(), 'wp-depot-envois'),
@@ -47,6 +49,26 @@ mcp.post('/preparer', async (req, res) => {
     res.json(await preparer(req.app.locals.db, {
       depot: Number(req.body.depot), simulation: req.body.simulation !== false, creer_etiquettes: req.body.creer_etiquettes === true,
     }));
+  } catch (e) { repondre(res, e); }
+});
+
+const simul = (b) => b.simulation !== false;
+mcp.post('/liens', async (req, res) => {
+  try {
+    const b = req.body;
+    res.json(await apres.repointerLiens(req.app.locals.db, { site_id: Number(b.site_id), ancienne_url: b.ancienne_url, nouvelle_url: b.nouvelle_url, ancres: b.ancres || {}, simulation: simul(b) }));
+  } catch (e) { repondre(res, e); }
+});
+mcp.post('/etiquettes', async (req, res) => {
+  try {
+    const b = req.body;
+    res.json(await apres.poserEtiquettes(req.app.locals.db, { site_id: Number(b.site_id), urls: b.urls || [], ajouter: b.ajouter || [], retirer: b.retirer || [], simulation: simul(b) }));
+  } catch (e) { repondre(res, e); }
+});
+mcp.post('/media', async (req, res) => {
+  try {
+    const b = req.body;
+    res.json(await apres.modifierMedia(req.app.locals.db, { site_id: Number(b.site_id), media: b.media, alt: b.alt, legende: b.legende, titre: b.titre, description: b.description, simulation: simul(b) }));
   } catch (e) { repondre(res, e); }
 });
 
