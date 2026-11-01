@@ -28,6 +28,9 @@ function etatInitial() {
       [11, { id: 11, type: 'guide', status: 'publish', slug: 'comparatif', titre: 'Comparatif combinaisons', modifie: '2026-02-01T10:00:00', tags: [],
         contenu: `<p>Lire <a class="x" href='${h().replace('http://', '//')}${ANC}'>ici</a>. À ne pas toucher : <a href="${ANC.slice(0, -1)}-2/">suite</a>, <a href="/autre${ANC}">autre</a>, <a href="https://ailleurs.example${ANC}">ailleurs</a>.</p>` }],
       [12, { id: 12, type: 'page', status: 'publish', slug: 'sans-lien', titre: 'Sans lien', modifie: '2026-03-01T10:00:00', tags: [], contenu: '<p>Rien.</p>' }],
+      [14, { id: 14, type: 'post', status: 'publish', slug: 'brouteurs', titre: 'Les brouteurs', modifie: '2026-04-01T10:00:00', tags: [],
+        contenu: '<!-- wp:heading --><h2 class="wp-block-heading">Sur un site de rencontre</h2><!-- /wp:heading -->\n<!-- wp:paragraph --><p>Le brouteur vous aborde sur un site de rencontre, puis passe sur WhatsApp.</p><!-- /wp:paragraph -->\n<!-- wp:paragraph --><p>Voir <a href="/guide/">un site de rencontre sûr</a> et les sites de rencontres.</p><!-- /wp:paragraph -->' }],
+      [15, { id: 15, type: 'post', status: 'publish', slug: 'badoo', titre: 'Badoo', modifie: '2026-04-02T10:00:00', tags: [], contenu: '<p>Badoo.</p>' }],
       [13, { id: 13, type: 'post', status: 'publish', slug: 'avec-image', titre: 'Avec image', modifie: '2026-03-02T10:00:00', tags: [],
         contenu: `<!-- wp:image {"id":500} --><figure class="wp-block-image"><img src="${h()}/wp-content/uploads/2026/01/capture-blender-1024x576.jpg" alt="Ancien alt" class="wp-image-500"/></figure><!-- /wp:image -->` }],
     ]),
@@ -76,6 +79,10 @@ function wpFaux(req, res, corps) {
     const x = W.posts.get(b.id); const avant = [...x.tags];
     x.tags = [...new Set([...x.tags, ...b.ajouter])].filter((t) => !b.retirer.includes(t));
     return json(200, { id: x.id, avant, apres: x.tags, modifie: x.modifie });
+  }
+  if (p === 'outils-site/v1/verifier') {
+    const utilises = {}; for (const x of b.contenu.matchAll(/<!-- wp:([a-z0-9/-]+)/g)) { const n = x[1].includes('/') ? x[1] : `core/${x[1]}`; utilises[n] = (utilises[n] || 0) + 1; }
+    return json(200, { blocs: { utilises, inconnus: [] }, shortcodes: { utilises: [], inconnus: [] }, embeds: [], images: [] });
   }
   if (p === 'wp/v2/tags') { const ids = String(u.searchParams.get('include') || '').split(',').map(Number); return json(200, ids.filter((i) => W.tags.has(i)).map((i) => ({ id: i, name: W.tags.get(i), count: 1 }))); }
   let m = /^wp\/v2\/(posts|pages|guides)\/(\d+)$/.exec(p);
@@ -206,5 +213,37 @@ test('modifier_media : par adresse d\'une taille générée, alt en dur signalé
     assert.ok(W.posts.get(13).contenu.includes('alt="Ancien alt"'), 'le contenu n\'est jamais modifié');
     const { rows } = await db.pool.query("SELECT avant, apres FROM seo_wp_journal WHERE mode = 'media'");
     assert.deepEqual(rows[0].avant, { alt: 'Ancien alt' }); assert.deepEqual(rows[0].apres, { alt: 'Nouvel alt' });
+  });
+});
+
+test('poser_lien : passage unique du texte visible, refus motivés, écriture limitée au passage', opts, async () => {
+  await avecBase(async (db) => {
+    const page = `${base}/brouteurs/`, cible = `${base}/badoo/`;
+    const sim = await ap.poserLien(db, { site_id: 15, url: page, texte: 'un site de rencontre', cible });
+    assert.equal(sim.statut, 'simulation : rien écrit', JSON.stringify(sim.erreurs));
+    assert.equal(W.ecritures, 0);
+    assert.deepEqual(sim.occurrences.map((o) => o.ecartee || 'retenue'), ['dans un titre', 'retenue', 'dans un lien existant']);
+    assert.ok(sim.extrait.apres.includes(`<a href="${cible}">un site de rencontre</a>, puis`));
+    assert.equal(sim.extrait.bloc, 'core/paragraph');
+    assert.match(sim.date_modification.wordpress, /2026-04-01/);
+    // refus : texte en double, cible absente, cible déjà liée, texte introuvable
+    const double = await ap.poserLien(db, { site_id: 15, url: page, texte: 'sur', cible });
+    assert.ok(double.erreurs.some((e) => /2 fois dans le texte visible/.test(e.message)), JSON.stringify(double.erreurs));
+    const absente = await ap.poserLien(db, { site_id: 15, url: page, texte: 'un site de rencontre', cible: `${base}/nulle-part/` });
+    assert.ok(absente.erreurs.some((e) => /n'existe pas/.test(e.message)));
+    const deja = await ap.poserLien(db, { site_id: 15, url: page, texte: 'un site de rencontre', cible: `${base}/guide/` });
+    assert.ok(deja.erreurs.some((e) => /pointe déjà/.test(e.message)));
+    const rien = await ap.poserLien(db, { site_id: 15, url: page, texte: 'Un Site', cible });
+    assert.ok(rien.erreurs.some((e) => /introuvable tel quel/.test(e.message)));
+    assert.equal(W.ecritures, 0);
+    // écriture : seul le passage change ; second appel refusé (la page pointe déjà vers la cible)
+    const avant = W.posts.get(14).contenu;
+    const ec = await ap.poserLien(db, { site_id: 15, url: page, texte: 'un site de rencontre', cible, simulation: false });
+    assert.equal(ec.statut, 'écrit', JSON.stringify(ec.erreurs));
+    assert.equal(W.posts.get(14).contenu, avant.replace('aborde sur un site de rencontre,', `aborde sur <a href="${cible}">un site de rencontre</a>,`));
+    const { rows } = await db.pool.query("SELECT post_id FROM seo_wp_journal WHERE mode = 'lien'");
+    assert.deepEqual(rows.map((x) => Number(x.post_id)), [14]);
+    const encore = await ap.poserLien(db, { site_id: 15, url: page, texte: 'un site de rencontre', cible, simulation: false });
+    assert.ok(encore.erreurs.some((e) => /pointe déjà/.test(e.message)));
   });
 });

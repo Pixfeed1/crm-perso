@@ -429,4 +429,138 @@ async function modifierMedia(db, { site_id: siteId, media, simulation = true, ..
   } catch (e) { bloque('écriture', e.message, e.code || 'ecriture'); return fin(); }
 }
 
-module.exports = { decoder, repointerLiens, poserEtiquettes, modifierMedia, motifAdresse, remplacerAdresses, changerAncres, affichageDate, cle, sonder };
+// ---------------------------------------------------------------------------------------------- 4. lien
+
+// Blocs dont le texte est du texte riche : un lien y est valide. Tout autre bloc (code, bouton, extension…) : refus.
+const BLOCS_TEXTE = new Set(['core/paragraph', 'core/list', 'core/list-item', 'core/quote', 'core/pullquote', 'core/table', 'core/verse', 'core/details', 'core/html', 'core/freeform', 'core/media-text', 'core/cover', 'core/group', 'core/column', 'core/columns']);
+const LETTRE = /[\p{L}\p{N}_]/u;
+
+/** Plages exclues du texte visible, avec leur raison (la plus parlante l'emporte). */
+function plagesExclues(html) {
+  const out = [];
+  const ajouter = (re, raison) => { for (const m of html.matchAll(re)) out.push({ a: m.index, b: m.index + m[0].length, raison }); };
+  ajouter(/<a\b[^>]*>[\s\S]*?<\/a\s*>/gi, 'dans un lien existant');
+  ajouter(/<h[1-6]\b[^>]*>[\s\S]*?<\/h[1-6]\s*>/gi, 'dans un titre');
+  ajouter(/<(script|style|code|pre)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, 'dans du code');
+  ajouter(/\[([a-zA-Z][\w-]*)\b[^\]]*\][\s\S]*?\[\/\1\]/g, 'dans un shortcode');
+  ajouter(/\[\/?[a-zA-Z][\w-]*(?:\s[^\]]*)?\/?\]/g, 'dans un shortcode');
+  ajouter(/<!--[\s\S]*?-->/g, 'dans un commentaire de bloc');
+  ajouter(/<[^>]*>/g, 'dans une balise ou un attribut HTML');
+  return out;
+}
+
+/** Bloc qui contient la position : le plus intérieur des blocs ouverts (commentaires <!-- wp:… -->). */
+function blocA(html, pos) {
+  const pile = [];
+  for (const m of html.slice(0, pos).matchAll(/<!--\s*(\/?)wp:([a-z0-9-]+(?:\/[a-z0-9-]+)?)(?:\s[\s\S]*?)?(\/?)\s*-->/g)) {
+    const nom = m[2].includes('/') ? m[2] : `core/${m[2]}`;
+    if (m[3] === '/') continue;                                     // bloc autofermant
+    if (m[1] === '/') { const i = pile.lastIndexOf(nom); if (i >= 0) pile.splice(i); } else pile.push(nom);
+  }
+  return pile.length ? pile[pile.length - 1] : 'core/freeform';
+}
+
+/** Occurrences du texte, classées : visibles (candidates) ou écartées (avec la raison). */
+function occurrencesTexte(html, texte) {
+  const plages = plagesExclues(html);
+  const res = [];
+  for (let i = html.indexOf(texte); i >= 0; i = html.indexOf(texte, i + 1)) {
+    const fin = i + texte.length;
+    const p = plages.find((x) => i < x.b && fin > x.a);
+    let raison = p && p.raison;
+    if (!raison && (LETTRE.test(html[i - 1] || '') || LETTRE.test(html[fin] || ''))) raison = "partie d'un mot plus long";
+    res.push({ pos: i, bloc: blocA(html, i), raison, extrait: contexteTexte(html, i, texte.length) });
+  }
+  return res;
+}
+const sequenceBlocs = (html) => [...html.matchAll(/<!--\s*\/?wp:[\s\S]*?-->/g)].map((m) => m[0]);
+
+async function poserLien(db, { site_id: siteId, url, texte, cible, simulation = true } = {}) {
+  const { r, bloque, avert, action, fin } = nouveauRapport('poser_lien', siteId, simulation);
+  let ctx;
+  try { ctx = await contexte(db, siteId); } catch (e) { bloque('site', e.message, e.code); return fin(); }
+  const { wp, base } = ctx;
+  const pU = adresseDuSite(url, ctx), cU = adresseDuSite(cible, ctx);
+  texte = String(texte == null ? '' : texte);
+  if (!pU) bloque('url', `« ${url} » n'est pas une adresse de ${ctx.hote}`);
+  if (!cU) bloque('cible', `« ${cible} » n'est pas une adresse de ${ctx.hote} (lien interne seulement)`);
+  if (!texte.trim()) bloque('texte', 'passage à lier vide');
+  if (/[<>]/.test(texte)) bloque('texte', 'le passage ne doit pas contenir de balise HTML');
+  if (r.erreurs.length) return fin();
+  r.url = pU.toString(); r.cible = cU.toString(); r.texte = texte;
+  if (cle(pU, base) === cle(cU, base)) { bloque('cible', 'la cible est la page elle-même'); return fin(); }
+
+  // la page : contenu publié, type, droits
+  let page;
+  try { page = ((await wp('outils-site/v1/resoudre', { methode: 'POST', corps: { urls: [r.url] } })).contenus || [])[0]; } catch (e) { bloque('page', routeAbsente(e, siteId), e.code); return fin(); }
+  if (!page || !page.id) { bloque('page', `aucun contenu à l'adresse ${r.url}`); return fin(); }
+  r.page = { id: page.id, type: page.type, titre: decoder(page.titre), lien: page.lien };
+  if (page.statut !== 'publish') { bloque('page', `contenu ${page.statut}, pas publié`); return fin(); }
+  if (!page.modifiable || !page.rest_base) { bloque('page', page.rest_base ? 'le compte API ne peut pas modifier ce contenu' : "type non modifiable par l'API REST"); return fin(); }
+  let avant;
+  try { avant = await wp(`wp/v2/${page.rest_base}/${page.id}`, { params: { context: 'edit', _fields: 'id,status,content,modified_gmt' } }); } catch (e) { bloque('page', e.message, e.code); return fin(); }
+  const brut = avant.content.raw;
+
+  // la cible : 200 sans redirection, et pas déjà liée depuis la page
+  const sc = await sonder(r.cible);
+  r.etat_cible = sc;
+  if (sc.code !== 200) bloque('cible', sc.code === 404 ? "la cible n'existe pas (HTTP 404)" : sc.code >= 300 && sc.code < 400 ? `la cible redirige (HTTP ${sc.code} vers ${sc.vers}) : viser l'adresse finale` : `la cible répond ${sc.code || sc.erreur} (200 attendu)`);
+  const deja = brut.match(motifAdresse(cU.pathname, ctx.hote));
+  if (deja) bloque('cible', `la page pointe déjà vers la cible (${deja.length} fois)`);
+
+  // le passage : une seule occurrence dans le texte visible
+  const occ = occurrencesTexte(brut, texte);
+  const visibles = occ.filter((o) => !o.raison);
+  r.occurrences = occ.map((o) => ({ bloc: o.bloc, retenue: !o.raison || undefined, ecartee: o.raison, extrait: o.extrait }));
+  if (!occ.length) bloque('texte', `« ${texte} » introuvable tel quel dans le contenu (casse, apostrophes et espaces comptent)`);
+  else if (!visibles.length) bloque('texte', `« ${texte} » n'apparaît que hors du texte visible (${[...new Set(occ.map((o) => o.raison))].join(', ')})`);
+  else if (visibles.length > 1) bloque('texte', `« ${texte} » apparaît ${visibles.length} fois dans le texte visible : préciser un passage plus long et unique (voir occurrences)`);
+  const o = visibles.length === 1 ? visibles[0] : null;
+  if (o && !BLOCS_TEXTE.has(o.bloc)) bloque('bloc', `le passage est dans un bloc ${o.bloc} : lien non posé automatiquement (à faire dans l'éditeur)`);
+
+  // remplacement et contrôles : blocs identiques, rien d'autre de changé
+  const href = r.cible.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+  const lienHtml = `<a href="${href}">${texte}</a>`;
+  const poser = (html, pos) => html.slice(0, pos) + lienHtml + html.slice(pos + texte.length);
+  let nouveau = null;
+  if (o) {
+    nouveau = poser(brut, o.pos);
+    if (nouveau.slice(0, o.pos) + texte + nouveau.slice(o.pos + lienHtml.length) !== brut) bloque('contrôle', "le remplacement modifierait autre chose que le passage");
+    if (JSON.stringify(sequenceBlocs(nouveau)) !== JSON.stringify(sequenceBlocs(brut))) bloque('contrôle', 'la structure des blocs changerait');
+    try {
+      const [v1, v2] = await Promise.all([brut, nouveau].map((c) => wp('outils-site/v1/verifier', { methode: 'POST', corps: { contenu: c } })));
+      if (JSON.stringify(v1.blocs.utilises) !== JSON.stringify(v2.blocs.utilises)) bloque('contrôle', 'WordPress ne lit plus les mêmes blocs après le remplacement');
+      if (v2.blocs.inconnus.length > v1.blocs.inconnus.length) bloque('contrôle', `bloc(s) non reconnu(s) après le remplacement : ${v2.blocs.inconnus.join(', ')}`);
+    } catch (e) { avert('contrôle', `vérification des blocs par le site impossible : ${e.message}`); }
+    r.extrait = { bloc: o.bloc, avant: contexteTexte(brut, o.pos, texte.length), apres: contexteTexte(nouveau, o.pos, lienHtml.length) };
+    action({ quoi: `poser un lien dans #${page.id}`, bloc: o.bloc, html: lienHtml });
+  }
+  const aff = affichageDate(await pagePublique(r.url));
+  r.date_modification = {
+    wordpress: `passera de ${avant.modified_gmt} (GMT) à la date de l'écriture`,
+    page: aff.lu ? (aff.mention_visible ? `date de mise à jour visible (« ${aff.mention_visible} ») : elle changera à l'écran` : `pas de date de mise à jour visible dans le texte de la page${[aff.balise_time_updated && 'time.updated', aff.meta_article_modified_time && 'article:modified_time', aff.schema_date_modified && 'dateModified (schéma)'].filter(Boolean).length ? ` ; elle change dans le code : ${[aff.balise_time_updated && 'time.updated', aff.meta_article_modified_time && 'article:modified_time', aff.schema_date_modified && 'dateModified (schéma)'].filter(Boolean).join(', ')}` : ''}`) : 'page publique illisible',
+  };
+  r.cle = sha256(`${siteId}|lien|${page.id}|${texte}|${cle(cU, base)}`);
+  if (r.erreurs.length || simulation) return fin();
+
+  // ================= écriture : contenu relu, mêmes contrôles sur le contenu frais =================
+  try {
+    const frais = await wp(`wp/v2/${page.rest_base}/${page.id}`, { params: { context: 'edit', _fields: 'id,status,content,modified_gmt' } });
+    if (frais.status !== 'publish') { bloque('écriture', `#${page.id} n'est plus publié (${frais.status}) : laissé tel quel`); return fin(); }
+    const vis = occurrencesTexte(frais.content.raw, texte).filter((x) => !x.raison);
+    if (vis.length !== 1 || frais.content.raw.match(motifAdresse(cU.pathname, ctx.hote))) { bloque('écriture', 'le contenu a changé depuis la vérification : relancer la simulation'); return fin(); }
+    const attendu = poser(frais.content.raw, vis[0].pos);
+    await wp(`wp/v2/${page.rest_base}/${page.id}`, { methode: 'POST', corps: { content: attendu } });
+    const relu = await wp(`wp/v2/${page.rest_base}/${page.id}`, { params: { context: 'edit', _fields: 'content,modified_gmt,status' } });
+    r.ecrit = true;
+    if (relu.content.raw !== attendu) bloque('vérification', 'le contenu relu diffère du contenu envoyé (filtre du site ?) : vérifier la page dans l\'éditeur', 'controle');
+    if (relu.status !== 'publish') bloque('vérification', `statut relu : ${relu.status}`, 'controle');
+    r.modifie_le = { avant: frais.modified_gmt, apres: relu.modified_gmt };
+    await journaliser(db, { site_id: siteId, cle: r.cle, mode: 'lien', post_id: page.id, type: page.type, titre: r.page.titre,
+      avant: { content: frais.content.raw, modified_gmt: frais.modified_gmt }, apres: { content: relu.content.raw, modified_gmt: relu.modified_gmt },
+      rapport: { texte, cible: r.cible, extrait: r.extrait } });
+  } catch (e) { bloque('écriture', e.message, e.code || 'ecriture'); }
+  return fin();
+}
+
+module.exports = { poserLien, occurrencesTexte, decoder, repointerLiens, poserEtiquettes, modifierMedia, motifAdresse, remplacerAdresses, changerAncres, affichageDate, cle, sonder };

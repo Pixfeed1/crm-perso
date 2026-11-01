@@ -1,7 +1,7 @@
 // Brouillons WordPress préparés par Claude (outils MCP demander_depot / prepare_draft).
 // - POST /api/wp-depot/:jeton : ENVOI public par le lien à usage unique (zip « lot » ou « fichiers »).
 // - POST /api/wp-brouillon/depot et /preparer : réservés au serveur MCP (secret partagé OUTILS_MCP_SECRET).
-// - POST /api/wp-brouillon/liens, /etiquettes, /media : retouches après publication (étape 4), même secret.
+// - POST /api/wp-brouillon/liens, /lien, /etiquettes, /media : retouches après publication (étape 4), même secret.
 const express = require('express');
 const os = require('os');
 const path = require('path');
@@ -63,6 +63,12 @@ mcp.post('/etiquettes', async (req, res) => {
   try {
     const b = req.body;
     res.json(await apres.poserEtiquettes(req.app.locals.db, { site_id: Number(b.site_id), urls: b.urls || [], ajouter: b.ajouter || [], retirer: b.retirer || [], simulation: simul(b) }));
+  } catch (e) { repondre(res, e); }
+});
+mcp.post('/lien', async (req, res) => {
+  try {
+    const b = req.body;
+    res.json(await apres.poserLien(req.app.locals.db, { site_id: Number(b.site_id), url: b.url, texte: b.texte, cible: b.cible, simulation: simul(b) }));
   } catch (e) { repondre(res, e); }
 });
 mcp.post('/media', async (req, res) => {

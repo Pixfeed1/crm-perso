@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 const PUBLIC = process.argv[2] || 'https://seo.crm.pixfeed.net/mcp';
 const LOCAL = `http://127.0.0.1:${process.env.MCP_SEO_PORT || 8790}/mcp`;
 const TOKEN = process.env.MCP_SEO_TOKEN || '';
-const ATTENDUS = ['get_live_page', 'get_page_dossier', 'check_urls', 'get_site_resources', 'demander_depot', 'prepare_draft', 'repointer_liens', 'poser_etiquettes', 'modifier_media'];
+const ATTENDUS = ['get_live_page', 'get_page_dossier', 'check_urls', 'get_site_resources', 'demander_depot', 'prepare_draft', 'repointer_liens', 'poser_etiquettes', 'modifier_media', 'poser_lien'];
 
 // outils déclarés dans le code déployé (server.js), pour comparer
 const code = fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'server.js'), 'utf8');

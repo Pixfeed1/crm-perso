@@ -27,7 +27,7 @@ import { getLivePage } from './live.js';
 import { getPageDossier } from './dossier.js';
 import { checkUrls, MAX_URLS } from './checks.js';
 import { getSiteResources } from './ressources.js';
-import { demanderDepot, prepareDraft, repointerLiens, poserEtiquettes, modifierMedia } from './brouillon.js';
+import { demanderDepot, prepareDraft, repointerLiens, poserEtiquettes, modifierMedia, poserLien } from './brouillon.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -359,6 +359,13 @@ function buildServer() {
     "Remplace une adresse du site par une autre dans le contenu brut de TOUS les contenus publiés (tous types), sous toutes ses formes (absolue, relative, avec ou sans barre finale).\nancres = { adresse_de_page: nouveau_texte } change aussi le texte du lien sur ces pages. Rapport page par page (avant/après autour de chaque lien), métadonnées et réglages qui la contiennent (signalés, jamais modifiés), effet sur la date de modification affichée.\nsimulation=true par défaut (rien écrit) ; jamais de publication ni de suppression.",
     { site_id: z.number().int(), ancienne_url: z.string(), nouvelle_url: z.string(), ancres: z.record(z.string()).optional(), simulation: z.boolean().optional() },
     async ({ site_id, ancienne_url, nouvelle_url, ancres, simulation }) => compactJson(await repointerLiens(site_id, ancienne_url, nouvelle_url, ancres ?? {}, simulation ?? true))
+  );
+
+  server.tool(
+    'poser_lien',
+    "Pose un lien interne sur un passage EXACT du contenu d'une page publiée (content.raw), sans toucher au reste : <a href=\"cible\">texte</a>.\nLe passage doit apparaître une seule fois dans le texte visible (les occurrences dans un lien, un attribut, un shortcode, un commentaire de bloc, un titre ou du code sont ignorées et listées). Refus si la cible ne répond pas 200 ou si la page pointe déjà vers elle. Contrôle que les blocs restent identiques ; rapport avant/après et effet sur la date de modification.\nsimulation=true par défaut (rien écrit) ; jamais de publication, de dépublication ni de suppression.",
+    { site_id: z.number().int(), url: z.string(), texte: z.string().min(1), cible: z.string(), simulation: z.boolean().optional() },
+    async ({ site_id, url, texte, cible, simulation }) => compactJson(await poserLien(site_id, url, texte, cible, simulation ?? true))
   );
 
   server.tool(
