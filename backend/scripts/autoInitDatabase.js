@@ -2810,6 +2810,42 @@ async function ensureSeoTables(client) {
   // Chaque nouvelle table SEO exigeait un GRANT a la main apres le deploiement, oublie une
   // fois sur deux : le backend, proprietaire des tables, l'accorde lui-meme a chaque
   // demarrage. Lecture seule, tables SEO uniquement, jamais seo_oauth_tokens (secrets).
+  // Brouillons WordPress préparés par Claude (outil prepare_draft) : réglage de l'auteur par site,
+  // dépôts (lien d'envoi à usage unique) et journal de chaque préparation (avant / après).
+  await client.query('ALTER TABLE seo_sites ADD COLUMN IF NOT EXISTS wp_auteur TEXT;');   // identifiant WordPress qui signe les articles
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS seo_wp_depots (
+      id          SERIAL PRIMARY KEY,
+      site_id     INTEGER NOT NULL REFERENCES seo_sites(id) ON DELETE CASCADE,
+      jeton_hash  TEXT NOT NULL UNIQUE,          -- SHA-256 du jeton du lien d'envoi (le jeton n'est jamais stocké)
+      statut      TEXT NOT NULL DEFAULT 'attente', -- attente | recu | expire
+      fichiers    JSONB,                         -- [{chemin, octets}] après réception
+      cree_le     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      expire_le   TIMESTAMPTZ NOT NULL,
+      recu_le     TIMESTAMPTZ
+    );
+  `);
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS seo_wp_journal (
+      id          SERIAL PRIMARY KEY,
+      site_id     INTEGER NOT NULL REFERENCES seo_sites(id) ON DELETE CASCADE,
+      depot_id    INTEGER REFERENCES seo_wp_depots(id) ON DELETE SET NULL,
+      cle         TEXT NOT NULL,                 -- identifie un même manifeste d'un appel à l'autre (même brouillon)
+      mode        TEXT NOT NULL,                 -- nouveau | mise_a_jour
+      simulation  BOOLEAN NOT NULL,
+      post_id     BIGINT,                        -- brouillon ou copie de travail
+      original_id BIGINT,                        -- article d'origine (mise à jour)
+      type        TEXT,
+      titre       TEXT,
+      fichiers    JSONB,                         -- [{fichier, id, url, reutilise}]
+      avant       JSONB,
+      apres       JSONB,
+      rapport     JSONB,
+      cree_le     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `);
+  await client.query('CREATE INDEX IF NOT EXISTS idx_seo_wp_journal_cle ON seo_wp_journal(site_id, cle, cree_le DESC);');
+
   await ensureLinkPlatformRules(client);
   await grantMcpReadOnly(client);
 

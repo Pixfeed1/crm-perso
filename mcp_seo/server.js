@@ -18,6 +18,7 @@ import { getLivePage } from './live.js';
 import { getPageDossier } from './dossier.js';
 import { checkUrls, MAX_URLS } from './checks.js';
 import { getSiteResources } from './ressources.js';
+import { demanderDepot, prepareDraft } from './brouillon.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -326,6 +327,20 @@ function buildServer() {
     "Ce qu'il faut connaître d'un site pour écrire : catégories et étiquettes (id, slug, parent, nombre de contenus), termes du glossaire,\nshortcodes déclarés par le thème et les extensions (origine, fichier), icônes de [spec icon=\"\"] (table du thème, sprite) ; icones=[…] dit pour chaque nom s'il s'affiche ou s'il est remplacé.",
     { site_id: z.number().int(), icones: z.array(z.string()).max(50).optional() },
     async ({ site_id, icones }) => compactJson(await getSiteResources(pool, site_id, icones ?? []))
+  );
+
+  server.tool(
+    'demander_depot',
+    "ÉCRITURE préparatoire : réserve un dossier de dépôt sur le serveur et renvoie un lien d'envoi à usage unique (30 min) avec la commande pour y envoyer,\nen zip, le dossier qui contient manifeste-wp.json (contenu en blocs + fichiers). Ensuite : prepare_draft(depot).",
+    { site_id: z.number().int() },
+    async ({ site_id }) => compactJson(await demanderDepot(site_id))
+  );
+
+  server.tool(
+    'prepare_draft',
+    "Prépare un brouillon WordPress complet depuis un dépôt (jamais publié) : contrôles (blocs, shortcodes, taxonomies, alt, marqueurs {{media:…}}, Yoast 60/135, slug, fichiers),\nmédias sans doublon, brouillon ou copie de travail en mise à jour. simulation=true par défaut (aucune écriture) ; un second appel reprend le même brouillon.",
+    { depot: z.number().int(), simulation: z.boolean().optional(), creer_etiquettes: z.boolean().optional() },
+    async ({ depot, simulation, creer_etiquettes }) => compactJson(await prepareDraft(depot, simulation ?? true, creer_etiquettes ?? false))
   );
 
   return server;

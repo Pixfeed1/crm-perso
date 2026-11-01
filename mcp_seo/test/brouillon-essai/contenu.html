@@ -1,0 +1,89 @@
+<!-- wp:paragraph -->
+<p>Brouillon d'essai préparé automatiquement par l'outil <strong>prepare_draft</strong>. Il montre chaque type de bloc demandé ; il sera supprimé après vérification.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Galerie</h2>
+<!-- /wp:heading -->
+
+<!-- wp:gallery {"linkTo":"none"} -->
+<figure class="wp-block-gallery has-nested-images columns-default is-cropped"><!-- wp:image {"id":{{media:images/vue-1.jpg:id}},"sizeSlug":"large","linkDestination":"none"} -->
+<figure class="wp-block-image size-large"><img src="{{media:images/vue-1.jpg:url:large}}" alt="Dégradé bleu, première vue d'essai" class="wp-image-{{media:images/vue-1.jpg:id}}"/><figcaption class="wp-element-caption">Première vue</figcaption></figure>
+<!-- /wp:image -->
+
+<!-- wp:image {"id":{{media:images/vue-2.jpg:id}},"sizeSlug":"large","linkDestination":"none"} -->
+<figure class="wp-block-image size-large"><img src="{{media:images/vue-2.jpg:url:large}}" alt="Dégradé rose, deuxième vue d'essai" class="wp-image-{{media:images/vue-2.jpg:id}}"/><figcaption class="wp-element-caption">Deuxième vue</figcaption></figure>
+<!-- /wp:image -->
+
+<!-- wp:image {"id":{{media:images/vue-3.jpg:id}},"sizeSlug":"large","linkDestination":"none"} -->
+<figure class="wp-block-image size-large"><img src="{{media:images/vue-3.jpg:url:large}}" alt="Dégradé vert, troisième vue d'essai" class="wp-image-{{media:images/vue-3.jpg:id}}"/><figcaption class="wp-element-caption">Troisième vue</figcaption></figure>
+<!-- /wp:image --></figure>
+<!-- /wp:gallery -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Colonnes et boutons</h2>
+<!-- /wp:heading -->
+
+<!-- wp:columns -->
+<div class="wp-block-columns"><!-- wp:column -->
+<div class="wp-block-column"><!-- wp:paragraph -->
+<p>Première colonne : un paragraphe court pour vérifier la mise en page sur deux colonnes.</p>
+<!-- /wp:paragraph --></div>
+<!-- /wp:column -->
+
+<!-- wp:column -->
+<div class="wp-block-column"><!-- wp:paragraph -->
+<p>Deuxième colonne : elle passe sous la première sur mobile.</p>
+<!-- /wp:paragraph --></div>
+<!-- /wp:column --></div>
+<!-- /wp:columns -->
+
+<!-- wp:buttons -->
+<div class="wp-block-buttons"><!-- wp:button -->
+<div class="wp-block-button"><a class="wp-block-button__link wp-element-button" href="https://pixfeed.net/">Découvrir PixFeed</a></div>
+<!-- /wp:button -->
+
+<!-- wp:button {"className":"is-style-outline"} -->
+<div class="wp-block-button is-style-outline"><a class="wp-block-button__link wp-element-button" href="https://pixfeed.net/contact/">Nous écrire</a></div>
+<!-- /wp:button --></div>
+<!-- /wp:buttons -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Image avec légende</h2>
+<!-- /wp:heading -->
+
+<!-- wp:image {"id":{{media:images/vue-2.jpg:id}},"sizeSlug":"large","linkDestination":"none"} -->
+<figure class="wp-block-image size-large"><img src="{{media:images/vue-2.jpg:url:large}}" alt="Dégradé rose, deuxième vue d'essai" class="wp-image-{{media:images/vue-2.jpg:id}}"/><figcaption class="wp-element-caption">La même image, seule, avec sa légende (le fichier n'est envoyé qu'une fois)</figcaption></figure>
+<!-- /wp:image -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Vidéo, audio et document</h2>
+<!-- /wp:heading -->
+
+<!-- wp:video {"id":{{media:media/demo.mp4:id}}} -->
+<figure class="wp-block-video"><video controls src="{{media:media/demo.mp4:url}}"></video><figcaption class="wp-element-caption">Vidéo d'essai de deux secondes</figcaption></figure>
+<!-- /wp:video -->
+
+<!-- wp:audio {"id":{{media:media/son.mp3:id}}} -->
+<figure class="wp-block-audio"><audio controls src="{{media:media/son.mp3:url}}"></audio><figcaption class="wp-element-caption">Son d'essai de deux secondes</figcaption></figure>
+<!-- /wp:audio -->
+
+<!-- wp:file {"id":{{media:docs/fiche.pdf:id}},"href":"{{media:docs/fiche.pdf:url}}"} -->
+<div class="wp-block-file"><a id="wp-block-file--media-essai" href="{{media:docs/fiche.pdf:url}}">Fiche d'essai (PDF)</a><a href="{{media:docs/fiche.pdf:url}}" class="wp-block-file__button wp-element-button" download aria-describedby="wp-block-file--media-essai">Télécharger</a></div>
+<!-- /wp:file -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Intégrations</h2>
+<!-- /wp:heading -->
+
+<!-- wp:embed {"url":"https://www.youtube.com/watch?v=aqz-KE-bpKQ","type":"video","providerNameSlug":"youtube","responsive":true,"className":"wp-embed-aspect-16-9 wp-has-aspect-ratio"} -->
+<figure class="wp-block-embed is-type-video is-provider-youtube wp-block-embed-youtube wp-embed-aspect-16-9 wp-has-aspect-ratio"><div class="wp-block-embed__wrapper">
+https://www.youtube.com/watch?v=aqz-KE-bpKQ
+</div><figcaption class="wp-element-caption">YouTube : Big Buck Bunny (Blender Foundation)</figcaption></figure>
+<!-- /wp:embed -->
+
+<!-- wp:embed {"url":"https://vimeo.com/1084537","type":"video","providerNameSlug":"vimeo","responsive":true,"className":"wp-embed-aspect-16-9 wp-has-aspect-ratio"} -->
+<figure class="wp-block-embed is-type-video is-provider-vimeo wp-block-embed-vimeo wp-embed-aspect-16-9 wp-has-aspect-ratio"><div class="wp-block-embed__wrapper">
+https://vimeo.com/1084537
+</div><figcaption class="wp-element-caption">Vimeo : Big Buck Bunny</figcaption></figure>
+<!-- /wp:embed -->

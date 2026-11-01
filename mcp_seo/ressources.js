@@ -8,6 +8,7 @@ const MAX = { termes: 1000, glossaire: 2000 };
 const SRC = {
   termes: 'API REST WordPress (en direct)',
   route: 'route REST de lecture outils-site/v1/ressources (mu-plugin ressources-site.php)',
+  redaction: 'route REST outils-site/v1/inventaire (mu-plugin redaction-site.php) + schéma REST de chaque type',
 };
 
 /** Toutes les pages d'une collection REST (100 par page), jusqu'à `max` éléments. */
@@ -69,6 +70,40 @@ export async function getSiteResources(pool, siteId, icones = []) {
     source: route.source, releve_le: route.releve_le, theme: route.theme,
     ...plafonne((route.shortcodes || []).map((s) => ({ tag: s.tag, origine: s.nom ? `${s.origine} ${s.nom}` : s.origine, fichier: s.fichier, ligne: s.ligne })), 500),
   };
+  // inventaire de rédaction (mu-plugin redaction-site.php) : blocs, compositions, types et leurs champs, fichiers
+  const redaction = acces.erreur ? { source: SRC.redaction, erreur: { source: SRC.redaction, code: 'config', message: acces.erreur } } : await (async () => {
+    try {
+      const r = await requete(`${base}/wp-json/outils-site/v1/inventaire`, { headers: { Authorization: acces.auth, Accept: 'application/json' } });
+      if (r.status === 404) return { source: SRC.redaction, erreur: { source: SRC.redaction, code: 404, message: 'route de rédaction non installée : node scripts/installer-mu.js <site_id> <dossier> redaction-site.php (dans mcp_seo/)' } };
+      if (!r.ok) return { source: SRC.redaction, erreur: await erreurHttp(r, SRC.redaction) };
+      const inv = await r.json();
+      const STANDARD = new Set(['date', 'date_gmt', 'guid', 'id', 'link', 'modified', 'modified_gmt', 'slug', 'status', 'type', 'password', 'permalink_template', 'generated_slug', 'title', 'content', 'author', 'featured_media', 'template', 'meta', 'acf', 'outils_yoast', 'class_list']);
+      const types = await Promise.all((inv.types || []).map(async (t) => {
+        let champs = [], meta = [];
+        try {
+          const o = await requete(`${base}/wp-json/wp/v2/${t.rest_base}`, { method: 'OPTIONS', headers: { Authorization: acces.auth, Accept: 'application/json' } });
+          const props = ((await o.json()).schema || {}).properties || {};
+          champs = Object.keys(props).filter((k) => !STANDARD.has(k) && !t.taxonomies.some((x) => x === k || (inv.taxonomies || []).some((y) => y.taxonomie === x && y.rest_base === k)));
+          meta = Object.keys((props.meta && props.meta.properties) || {});
+        } catch { /* type sans schéma lisible */ }
+        return {
+          type: t.type, rest_base: t.rest_base, nom: t.nom, hierarchique: t.hierarchique || undefined, supports: t.supports,
+          taxonomies: t.taxonomies.map((x) => { const y = (inv.taxonomies || []).find((z) => z.taxonomie === x); return y ? `${x} (${y.rest_base})` : x; }),
+          modeles: t.modeles, champs_rest: champs, meta, acf: t.acf,
+        };
+      }));
+      const exts = Object.keys(inv.types_fichiers || {}).flatMap((k) => k.split('|'));
+      return {
+        source: SRC.redaction, releve_le: inv.releve_le,
+        types,
+        blocs: plafonne((inv.blocs || []).map((b) => ({ nom: b.nom, titre: b.titre, attributs: b.attributs })), 600),
+        compositions: plafonne((inv.compositions || []).map((c) => ({ nom: c.nom, titre: c.titre })), 400),
+        reutilisables: plafonne(inv.reutilisables || [], 200),
+        fichiers: { extensions: exts, limite_envoi_mo: inv.limite_envoi ? Math.round(inv.limite_envoi / 104857.6) / 10 : undefined },
+        acf_actif: inv.acf_actif, yoast_actif: inv.yoast_actif, rewrite_republish: inv.rewrite_republish,
+      };
+    } catch (e) { return { source: SRC.redaction, erreur: { source: SRC.redaction, code: 'réseau', message: txt(e.message) } }; }
+  })();
   const iconesSpec = route.erreur ? undefined : { source: route.source, releve_le: route.releve_le, ...(route.icones || {}) };
-  return compact({ ...sortie, categories, etiquettes, glossaire, shortcodes, icones_spec: iconesSpec });
+  return compact({ ...sortie, categories, etiquettes, glossaire, shortcodes, icones_spec: iconesSpec, redaction });
 }

@@ -187,3 +187,30 @@ Scripts (depuis `mcp_seo/`) :
 
 Tests : `MCP_PGTEST=postgres://postgres@127.0.0.1:55432 node --test test/outils.test.js`
 (base jetable au schéma réel, fausse instance WordPress).
+
+## Étape 3 : `demander_depot` + `prepare_draft` (brouillons WordPress)
+
+Claude prépare un dossier (`manifeste-wp.json`, contenu en blocs Gutenberg, fichiers), puis :
+1. `demander_depot(site_id)` : lien d'envoi à usage unique (30 min, jeton jamais stocké en clair)
+   et commande prête (zip + curl, ou PowerShell) ;
+2. il envoie le zip au lien (`POST /api/wp-depot/<jeton>`, champ `lot`, ou `fichiers` séparés) :
+   dossier dédié sur le serveur (`backend/uploads/wp-depots/<id>/`), chemins confinés, « .. »,
+   absolus et liens symboliques refusés, 300 fichiers et 1 Go au plus ;
+3. `prepare_draft(depot, simulation=true, creer_etiquettes=false)` : le serveur MCP passe par le
+   backend (`/api/wp-brouillon/*`, secret partagé `OUTILS_MCP_SECRET` de `backend/.env`), seul à
+   écrire dans WordPress, avec l'utilisateur dédié. Jamais publié.
+
+Côté WordPress : `wordpress/redaction-site.php` (mu-plugin, `node scripts/installer-mu.js <site_id>
+<dossier> redaction-site.php`) : vérification d'un contenu (blocs enregistrés, shortcodes,
+intégrations, images), médias par empreinte SHA-256 (`outils_sha256`), inventaire (blocs,
+compositions, types, taxonomies, auteurs, fichiers acceptés, limite d'envoi), champ `outils_yoast`
+en écriture (liste fermée, `edit_post`), copie de travail pour les mises à jour (Rewrite &
+Republish de Yoast Duplicate Post s'il est là, sinon copie + bouton « Remplacer l'original » ;
+le nouveau slug est appliqué à la validation, WordPress garde l'ancien en `_wp_old_slug`).
+
+Auteur des articles : réglage par site dans le CRM (`seo_sites.wp_auteur`), jamais le compte API.
+Journal : `seo_wp_journal` (date, site, contenu, fichiers, avant / après). Un second appel sur le
+même manifeste reprend le même brouillon (clé site + type + mode + slug ou adresse d'origine).
+
+Essais réels : `node scripts/essais-brouillon.js` (dans `backend/`), puis `--nettoyer`.
+Tests : `TEST_DATABASE_URL=… node --test tests/wpBrouillon.test.js` (backend).

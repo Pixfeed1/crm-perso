@@ -164,7 +164,10 @@ function normalizeSiteInput(body) {
   // propriete > ID). On accepte aussi la forme "properties/123" et on ne garde que les chiffres.
   let ga = String(body.ga_property_id || '').trim().replace(/^properties\//, '');
   if (ga && !/^\d{5,16}$/.test(ga)) return { error: 'ID de propriété GA4 invalide (attendu : chiffres uniquement, ex. 123456789)' };
-  return { domain, wp_base_url: wp, gsc_property: gsc, ga_property_id: ga || null };
+  // Identifiant WordPress qui signe les articles préparés par Claude (prepare_draft) : jamais le compte API.
+  const auteur = String(body.wp_auteur || '').trim();
+  if (auteur && !/^[A-Za-z0-9._@+-]{1,60}$/.test(auteur)) return { error: "Auteur WordPress invalide (identifiant de connexion attendu)" };
+  return { domain, wp_base_url: wp, gsc_property: gsc, ga_property_id: ga || null, wp_auteur: auteur || null };
 }
 
 // Type de recherche Search Analytics accepte par les vues de positions (defaut web).
@@ -177,7 +180,7 @@ const seoController = {
     const db = req.app.locals.db;
     try {
       const { rows } = await db.pool.query(
-        'SELECT id, domain, wp_base_url, gsc_property, ga_property_id, created_at, updated_at FROM seo_sites ORDER BY domain ASC'
+        'SELECT id, domain, wp_base_url, gsc_property, ga_property_id, wp_auteur, created_at, updated_at FROM seo_sites ORDER BY domain ASC'
       );
       res.json(rows);
     } catch (e) {
@@ -198,9 +201,9 @@ const seoController = {
     if (v.error) return res.status(400).json({ message: v.error });
     try {
       const r = await db.pool.query(
-        `INSERT INTO seo_sites (domain, wp_base_url, gsc_property, ga_property_id) VALUES ($1, $2, $3, $4)
-         RETURNING id, domain, wp_base_url, gsc_property, ga_property_id, created_at, updated_at`,
-        [v.domain, v.wp_base_url, v.gsc_property, v.ga_property_id]
+        `INSERT INTO seo_sites (domain, wp_base_url, gsc_property, ga_property_id, wp_auteur) VALUES ($1, $2, $3, $4, $5)
+         RETURNING id, domain, wp_base_url, gsc_property, ga_property_id, wp_auteur, created_at, updated_at`,
+        [v.domain, v.wp_base_url, v.gsc_property, v.ga_property_id, v.wp_auteur]
       );
       res.status(201).json(r.rows[0]);
     } catch (e) {
@@ -219,9 +222,9 @@ const seoController = {
     if (v.error) return res.status(400).json({ message: v.error });
     try {
       const r = await db.pool.query(
-        `UPDATE seo_sites SET domain = $1, wp_base_url = $2, gsc_property = $3, ga_property_id = $4, updated_at = NOW()
-          WHERE id = $5 RETURNING id, domain, wp_base_url, gsc_property, ga_property_id, created_at, updated_at`,
-        [v.domain, v.wp_base_url, v.gsc_property, v.ga_property_id, id]
+        `UPDATE seo_sites SET domain = $1, wp_base_url = $2, gsc_property = $3, ga_property_id = $4, wp_auteur = $5, updated_at = NOW()
+          WHERE id = $6 RETURNING id, domain, wp_base_url, gsc_property, ga_property_id, wp_auteur, created_at, updated_at`,
+        [v.domain, v.wp_base_url, v.gsc_property, v.ga_property_id, v.wp_auteur, id]
       );
       if (r.rows.length === 0) return res.status(404).json({ message: 'Site introuvable' });
       res.json(r.rows[0]);

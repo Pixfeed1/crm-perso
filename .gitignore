@@ -33,3 +33,4 @@ config/database.js
 *.key
 # Diffuseur : rendus envoyés (originaux privés, fichiers temporaires)
 backend/uploads/diffuseur/
+backend/uploads/wp-depots/

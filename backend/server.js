@@ -101,6 +101,11 @@ app.use(cookieParser());
 // Route publique serveur-à-serveur, sans authMiddleware.
 app.use('/api/maintenance-billing', require('./routes/maintenanceBillingRoutes'));
 
+// Brouillons WordPress préparés par Claude : envoi public par lien à usage unique (multipart, avant
+// express.json) et routes réservées au serveur MCP (secret partagé). Voir routes/wpBrouillonRoutes.js.
+app.use('/api/wp-depot', require('./routes/wpBrouillonRoutes').depot);
+app.use('/api/wp-brouillon', require('./routes/wpBrouillonRoutes').mcp);
+
 // Limite relevee : les pieces jointes des emails transitent en base64 dans le JSON
 // (jusqu'a 15 Mo cote client, +33 % d'encodage). Avec la limite par defaut de 100 ko,
 // tout envoi avec une PJ un peu lourde echouait en 413 sans message exploitable.

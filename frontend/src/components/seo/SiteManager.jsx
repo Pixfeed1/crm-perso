@@ -12,7 +12,7 @@ import { FiX, FiPlus, FiEdit3, FiTrash2, FiCheck, FiGlobe, FiAlertTriangle } fro
 import { seoAPI } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
 
-const EMPTY = { domain: '', wp_base_url: '', gsc_property: '', ga_property_id: '' };
+const EMPTY = { domain: '', wp_base_url: '', gsc_property: '', ga_property_id: '', wp_auteur: '' };
 
 const Field = ({ label, hint, ...props }) => (
   <label className="block">
@@ -42,7 +42,7 @@ const SiteManager = ({ sites, onClose, onChange }) => {
     } catch (e) { toast.error(e.message || 'Ajout impossible'); } finally { setBusy(false); }
   };
 
-  const startEdit = (s) => { setEditing(s.id); setEditForm({ domain: s.domain, wp_base_url: s.wp_base_url || '', gsc_property: s.gsc_property || '', ga_property_id: s.ga_property_id || '' }); };
+  const startEdit = (s) => { setEditing(s.id); setEditForm({ domain: s.domain, wp_base_url: s.wp_base_url || '', gsc_property: s.gsc_property || '', ga_property_id: s.ga_property_id || '', wp_auteur: s.wp_auteur || '' }); };
   const saveEdit = async () => {
     setBusy(true);
     try {
@@ -92,6 +92,7 @@ const SiteManager = ({ sites, onClose, onChange }) => {
                     <Field label="URL WordPress" value={editForm.wp_base_url} onChange={(e) => setEditForm({ ...editForm, wp_base_url: e.target.value })} />
                     <Field label="Propriété Search Console" value={editForm.gsc_property} onChange={(e) => setEditForm({ ...editForm, gsc_property: e.target.value })} />
                     <Field label="Propriété Google Analytics 4 (ID)" placeholder="123456789" value={editForm.ga_property_id} onChange={(e) => setEditForm({ ...editForm, ga_property_id: e.target.value })} hint="Analytics > Admin > Paramètres de la propriété > ID de propriété" />
+                    <Field label="Auteur des articles préparés par Claude (identifiant WordPress)" placeholder="maetel" value={editForm.wp_auteur} onChange={(e) => setEditForm({ ...editForm, wp_auteur: e.target.value })} hint="le compte qui signe les articles du site ; jamais le compte d'accès API" />
                   </div>
                   <div className="flex gap-2 justify-end">
                     <button onClick={() => setEditing(null)} className="px-3 py-1.5 text-sm border border-border rounded-lg text-text-primary hover:bg-surface-strong">Annuler</button>
@@ -136,6 +137,7 @@ const SiteManager = ({ sites, onClose, onChange }) => {
             <Field label="URL WordPress" placeholder={`https://${form.domain || 'exemple.fr'}`} value={form.wp_base_url} onChange={(e) => setForm({ ...form, wp_base_url: e.target.value })} hint="vide = https://domaine" />
             <Field label="Propriété Search Console" placeholder={`sc-domain:${form.domain || 'exemple.fr'}`} value={form.gsc_property} onChange={(e) => setForm({ ...form, gsc_property: e.target.value })} hint="vide = sc-domain:domaine" />
             <Field label="Propriété Google Analytics 4 (ID)" placeholder="123456789" value={form.ga_property_id} onChange={(e) => setForm({ ...form, ga_property_id: e.target.value })} hint="facultatif · Analytics > Admin > Paramètres de la propriété > ID" />
+            <Field label="Auteur des articles préparés par Claude (identifiant WordPress)" placeholder="maetel" value={form.wp_auteur} onChange={(e) => setForm({ ...form, wp_auteur: e.target.value })} hint="facultatif · le compte qui signe les articles du site" />
           </div>
           <div className="flex items-center justify-between gap-2">
             <p className="text-[11px] text-text-muted">Le site doit exposer l'API REST WordPress et le snippet SEO de functions.php (voir seo_worker/README.md). Puis lancer un crawl.</p>

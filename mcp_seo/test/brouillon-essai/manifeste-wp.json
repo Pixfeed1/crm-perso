@@ -1,0 +1,29 @@
+{
+  "site_id": 15,
+  "type": "post",
+  "mode": "nouveau",
+  "slug": "essai-brouillon-prepare-par-claude",
+  "titre": "Essai : brouillon préparé par Claude (à supprimer)",
+  "contenu": "contenu.html",
+  "champs": {
+    "excerpt": "Brouillon d'essai de l'outil prepare_draft : galerie, colonnes, boutons, médias et intégrations.",
+    "comment_status": "closed"
+  },
+  "yoast": {
+    "titre": "Essai de brouillon préparé par Claude",
+    "meta": "Brouillon d'essai de prepare_draft : galerie, colonnes, boutons, vidéo, audio, PDF et intégrations YouTube et Vimeo.",
+    "phrase_cle": "essai brouillon claude",
+    "noindex": true,
+    "og_titre": "Essai de brouillon préparé par Claude",
+    "og_image": "images/vue-1.jpg"
+  },
+  "fichiers": [
+    { "fichier": "images/vue-1.jpg", "alt": "Dégradé bleu, première vue d'essai", "legende": "Première vue", "titre": "Vue d'essai 1", "description": "Image générée pour l'essai de prepare_draft." },
+    { "fichier": "images/vue-2.jpg", "alt": "Dégradé rose, deuxième vue d'essai", "legende": "Deuxième vue", "titre": "Vue d'essai 2" },
+    { "fichier": "images/vue-3.jpg", "alt": "Dégradé vert, troisième vue d'essai", "legende": "Troisième vue", "titre": "Vue d'essai 3" },
+    { "fichier": "media/demo.mp4", "titre": "Vidéo d'essai", "description": "Mire de deux secondes." },
+    { "fichier": "media/son.mp3", "titre": "Son d'essai" },
+    { "fichier": "docs/fiche.pdf", "titre": "Fiche d'essai" }
+  ],
+  "image_a_la_une": "images/vue-1.jpg"
+}
