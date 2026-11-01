@@ -12,6 +12,10 @@ const MU = 'publication-site.php';
 const sha256 = (s) => crypto.createHash('sha256').update(String(s)).digest('hex');
 const echapperRe = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const echapperHtml = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+// titres rendus par WordPress (get_the_title) : entités HTML décodées (&rsquo;, &#8217;, &amp;…)
+const ENTITES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: '\u00a0', rsquo: '\u2019', lsquo: '\u2018', rdquo: '\u201d', ldquo: '\u201c', laquo: '\u00ab', raquo: '\u00bb', hellip: '\u2026', ndash: '\u2013', mdash: '\u2014' };
+const decoder = (s) => String(s == null ? '' : s).replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (t, e) => (e[0] === '#' ? String.fromCodePoint(e[1].toLowerCase() === 'x' ? parseInt(e.slice(2), 16) : Number(e.slice(1))) : ENTITES[e.toLowerCase()] ?? t));
+const titres = (liste) => (liste || []).map((c) => ({ ...c, titre: decoder(c.titre) }));
 const sansWww = (h) => String(h || '').toLowerCase().replace(/^www\./, '');
 
 // ---------------------------------------------------------------------------------------------- communs
@@ -188,6 +192,7 @@ async function repointerLiens(db, { site_id: siteId, ancienne_url: ancienne, nou
   const motifs = [...new Set([chem, encodeURI(chem), slug].filter((x) => x.length >= 4))];
   let trouve;
   try { trouve = await wp('outils-site/v1/chercher', { methode: 'POST', corps: { motifs } }); } catch (e) { bloque('recherche', routeAbsente(e, siteId), e.code); return fin(); }
+  trouve.contenus = titres(trouve.contenus);
   if (trouve.tronque) avert('recherche', 'plus de 500 contenus trouvés : seuls les 500 premiers sont traités');
   const re = motifAdresse(chemin, ctx.hote);
   const ancresParCle = new Map(Object.entries(ancres || {}).map(([u, a]) => [cle(u, base), { url: u, ancre: String(a), vue: false }]));
@@ -311,7 +316,7 @@ async function poserEtiquettes(db, { site_id: siteId, urls = [], ajouter = [], r
     return ids.map((x) => noms.get(x) || `#${x}`);
   };
   r.contenus = [];
-  for (const c of res.contenus || []) {
+  for (const c of titres(res.contenus)) {
     const ligne = { url: c.url, id: c.id || undefined, type: c.type, titre: c.titre };
     r.contenus.push(ligne);
     if (!c.id) { bloque('contenus', `${c.url} : aucun contenu à cette adresse`); continue; }
@@ -378,7 +383,7 @@ async function modifierMedia(db, { site_id: siteId, media, simulation = true, ..
   const corps = {};
   for (const k of voulus) {
     const v = String(valeurs[k]);
-    r.champs[k] = { avant: avant[k], apres: v, change: v !== avant[k] };
+    r.champs[k] = { avant: avant[k] === '' ? '(vide)' : avant[k], apres: v, change: v !== avant[k] };
     if (v !== avant[k]) corps[CHAMPS_MEDIA[k]] = v;
   }
   if (!Object.keys(corps).length) action({ quoi: 'rien à faire', detail: 'valeurs déjà en place' });
@@ -391,7 +396,7 @@ async function modifierMedia(db, { site_id: siteId, media, simulation = true, ..
       const t = await wp('outils-site/v1/chercher', { methode: 'POST', corps: { motifs } });
       const reBase = m.base ? new RegExp(`/${echapperRe(m.base)}(?:-\\d+x\\d+|-scaled)?\\.[a-z0-9]+`, 'i') : null;
       r.insertions = [];
-      for (const c of t.contenus || []) {
+      for (const c of titres(t.contenus)) {
         const alts = [];
         for (const [img] of c.contenu.matchAll(/<img\b[^>]*>/gi)) {
           const cls = /\bclass\s*=\s*"([^"]*)"/i.exec(img), src = /\bsrc\s*=\s*"([^"]*)"/i.exec(img);
@@ -424,4 +429,4 @@ async function modifierMedia(db, { site_id: siteId, media, simulation = true, ..
   } catch (e) { bloque('écriture', e.message, e.code || 'ecriture'); return fin(); }
 }
 
-module.exports = { repointerLiens, poserEtiquettes, modifierMedia, motifAdresse, remplacerAdresses, changerAncres, affichageDate, cle, sonder };
+module.exports = { decoder, repointerLiens, poserEtiquettes, modifierMedia, motifAdresse, remplacerAdresses, changerAncres, affichageDate, cle, sonder };

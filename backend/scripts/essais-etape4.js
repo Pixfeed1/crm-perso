@@ -15,7 +15,7 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 const { Pool } = require('pg');
 const { client } = require('../services/wpBrouillon/wp');
-const { sonder } = require('../services/wpBrouillon/apresPublication');
+const { sonder, motifAdresse } = require('../services/wpBrouillon/apresPublication');
 
 const pool = new Pool({ user: process.env.DB_USER || 'postgres', host: process.env.DB_HOST || 'localhost', database: process.env.DB_NAME || 'mcrm_dev', password: process.env.DB_PASSWORD || 'postgres', port: process.env.DB_PORT || 5432 });
 const DOSSIER_PX = process.argv[2] || path.join(os.homedir(), 'pixfeed.net');
@@ -127,7 +127,7 @@ async function surveillance(s) {
     // les trois outils en écriture réelle
     const rlp = rapports.pixfeed_repointer_liens = await mcp.repointerLiens(15, ancienB, B2.link, { [A.link]: 'nouvelle ancre essai' }, false);
     const contA = (await px.wp(`wp/v2/posts/${A.id}`, { params: { context: 'edit', _fields: 'content,modified_gmt' } })).content.raw;
-    console.log(`   repointer_liens (réel) : ${ligne(rlp)} ; A contient l'ancienne adresse : ${contA.includes(new URL(ancienB).pathname.replace(/\/$/, '')) ? 'OUI (problème)' : 'non'} ; nouvelle ancre : ${contA.includes('>nouvelle ancre essai</a>') ? 'oui' : 'NON'}`);
+    console.log(`   repointer_liens (réel) : ${ligne(rlp)} ; A contient l'ancienne adresse : ${motifAdresse(new URL(ancienB).pathname, new URL(ancienB).hostname.replace(/^www\./, '')).test(contA) ? 'OUI (problème)' : 'non'} ; nouvelle ancre : ${contA.includes('>nouvelle ancre essai</a>') ? 'oui' : 'NON'}`);
     const pep = rapports.pixfeed_poser_etiquettes = await mcp.poserEtiquettes(15, [A.link], [tag.id], [], false);
     const pep2 = await mcp.poserEtiquettes(15, [A.link], [], [tag.id], false);
     console.log(`   poser_etiquettes (réel, « ${tag.name} » ajoutée puis retirée) : ${ligne(pep)} / ${ligne(pep2)} ; date de modification : ${(pep.contenus[0] || {}).date_modification || '?'}`);
