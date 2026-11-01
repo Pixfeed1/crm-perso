@@ -32,6 +32,7 @@ before(async () => {
         const dims = q.dimensions.map((d) => d.name), mets = q.metrics.map((m) => m.name);
         const v = (n) => mets.map((m) => ({ sessions: n, totalUsers: n - 1, activeUsers: n - 1, engagementRate: 0.5, userEngagementDuration: 30 * (n - 1), screenPageViews: 2 * n }[m]));
         if (dims[0] === 'hostName') return rep(dims, mets, [{ d: ['jurojin.net'], m: v(90) }, { d: ['jurojin-net.translate.goog'], m: v(3) }, { d: ['copie-louche.xyz'], m: v(5) }]);
+        if (dims[0] === 'pageReferrer' && process.env.GA_FAUX_VIDE) return { dimensionHeaders: dims.map((name) => ({ name })), metricHeaders: mets.map((name) => ({ name })), totals: [{ dimensionValues: [{ value: 'RESERVED_TOTAL' }] }] };
         if (dims[0] === 'browser') return rep(dims, mets, [{ d: ['Chrome', 'Windows', 'desktop'], m: v(40) }, { d: ['(not set)', 'Linux', 'desktop'], m: v(12) }]);
         return rep(dims, mets, [{ d: dims.map((x) => `${x}-a`), m: v(20) }, { d: dims.map((x) => `${x}-b`), m: v(10) }]);
       });
@@ -70,6 +71,12 @@ test('provenance GA4 : canal Direct sur 7 jours, sections, trafic parasite, jeto
     const t = await provenance(pool, { site_id: 2, days: 28 });
     assert.ok(t.referents && t.pages_referentes && t.direct_navigateurs);
     assert.equal(recu.jetons, 1);
+    // section vide renvoyée sans lignes et avec un total sans valeurs : pas de plantage
+    process.env.GA_FAUX_VIDE = '1';
+    try {
+      const v = await provenance(pool, { site_id: 2, days: 1 });
+      assert.equal(v.pages_referentes.total_valeurs, 0); assert.deepEqual(v.pages_referentes.items, []);
+    } finally { delete process.env.GA_FAUX_VIDE; }
     // propriété absente
     await pool.query("UPDATE seo_sites SET ga_property_id = NULL WHERE id = 2");
     await assert.rejects(provenance(pool, { site_id: 2 }), /propriété GA4 non renseignée/);

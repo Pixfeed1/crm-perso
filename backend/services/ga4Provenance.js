@@ -41,8 +41,10 @@ const non = (f) => ({ notExpression: f });
 /** Ligne GA4 -> objet lisible : dimensions nommées, sessions, utilisateurs, taux et durée moyenne d'engagement. */
 function ligne(dimNoms, row, metNoms) {
   const o = {};
-  dimNoms.forEach((n, i) => { o[n] = row.dimensionValues[i].value; });
-  const m = Object.fromEntries(metNoms.map((n, i) => [n, Number(row.metricValues[i].value)]));
+  const dv = row.dimensionValues || [], mv = row.metricValues || [];
+  dimNoms.forEach((n, i) => { o[n] = dv[i] ? dv[i].value : undefined; });
+  // une section vide (aucune ligne) peut revenir avec un total sans valeurs : on lit 0 plutôt que de planter
+  const m = Object.fromEntries(metNoms.map((n, i) => [n, Number(mv[i] && mv[i].value) || 0]));
   if (m.sessions !== undefined) o.sessions = m.sessions;
   if (m.totalUsers !== undefined) o.utilisateurs = m.totalUsers;
   if (m.screenPageViews !== undefined) o.pages_vues = m.screenPageViews;
@@ -56,7 +58,7 @@ function section(rep, renommer, limite) {
   const dimNoms = (rep.dimensionHeaders || []).map((d) => renommer[d.name] || d.name);
   const metNoms = (rep.metricHeaders || []).map((m) => m.name);
   const items = (rep.rows || []).map((r) => ligne(dimNoms, r, metNoms));
-  const tot = rep.totals && rep.totals[0] ? ligne([], rep.totals[0], metNoms) : undefined;
+  const tot = items.length && rep.totals && rep.totals[0] ? ligne([], rep.totals[0], metNoms) : undefined;
   return { total_valeurs: Number(rep.rowCount || items.length), affichees: Math.min(items.length, limite), ...(tot ? { total: tot } : {}), items: items.slice(0, limite) };
 }
 

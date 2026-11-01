@@ -77,7 +77,11 @@ mcp.post('/ga4-provenance', async (req, res) => {
   try {
     const b = req.body;
     res.json(await provenance(req.app.locals.db.pool, { site_id: Number(b.site_id), days: b.days, canal: b.canal || undefined, limit: b.limit }));
-  } catch (e) { repondre(res, e); }
+  } catch (e) {
+    // erreur exacte renvoyée (aucun secret dans ces messages) et pile écrite dans le journal du serveur
+    if (!e.status) console.error('[ga4-provenance]', e.stack);
+    res.status(e.status || 502).json({ message: `provenance GA4 : ${e.message}` });
+  }
 });
 mcp.post('/media', async (req, res) => {
   try {
