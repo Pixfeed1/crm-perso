@@ -56,10 +56,10 @@ before(async () => {
       res.writeHead(200, { 'Content-Type': 'text/html', 'X-Litespeed-Cache': 'hit', 'X-Robots-Tag': 'max-image-preview:large' });
       return res.end(`<html><head><title>Motion capture pour Blender - JurojiNet</title><meta name="description" content="Les outils de mocap."><link rel="canonical" href="${base}/article/"><meta name="robots" content="index, follow"></head><body><nav><a href="/">Accueil</a><a href="/blog/">Blog</a></nav><main><h1>Motion capture pour Blender</h1><p>…</p>
         <div class="article-body"><p><strong>À lire aussi</strong> <a href="/rigging/">Introduction au Rigging</a></p><p>Voir <a href="/a/">a</a>, <a href="/b/">b</a>, <a href="/c/">c</a>.</p></div>
-        <article class="post category-arts-numerique"><section class="pf-related"><h2>Articles similaires</h2>
+        <article class="post category-arts-numerique"><section class="pf-related term-sidebar__block"><h2>Articles similaires</h2><div class="term-sidebar__list">
           <div class="card"><a href="/zbrush/"><noscript><img src="z.jpg" alt=""></noscript></a><a href="/arts-numerique/" class="post-cat">Arts Numérique</a><h3><a href="/zbrush/">ZBrush, un pilier</a></h3></div>
           <a href="/akeytsu/" class="card"><time>14.03.2025</time> <span class="cat">3D</span><h3>Akeytsu</h3><span class="cta">Lire ↗︎</span></a>
-          <a href="/cascadeur/"><img alt="Cascadeur"></a><a href="/akeytsu/">doublon</a></section></article></main></body></html>
+          <a href="/cascadeur/"><img alt="Cascadeur"></a><a href="/akeytsu/">doublon</a></div></section></article></main></body></html>
         <!-- This website is like a Rocket, isn't it? Performance optimized by WP Rocket. Debug: cached@1761900000 -->`);
     }
     res.writeHead(404); res.end('nope');

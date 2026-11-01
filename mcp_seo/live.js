@@ -177,7 +177,7 @@ function ancreDe(a) {
 
 // le lien ou un parent DANS le bloc porte une classe de catégorie/étiquette (cat, category, tag, term…) ;
 // on s'arrête au bloc : <article class="category-…"> autour ne doit rien écarter
-const RE_ETIQ = /(^|[-_])(cat|cats|category|categories|tag|tags|term|terms|badge)([-_]|$)/i;
+const RE_ETIQ = /(^|[-_])(cat|cats|category|categories|tag|tags|badge)([-_](links?|label|name|list))?$/i;
 function etiquette(a, bloc) {
   for (let x = a; x && x !== bloc && x.tagName; x = x.parentNode) {
     if ((x.getAttribute('class') || '').split(/\s+/).some((c) => RE_ETIQ.test(c))) return true;
