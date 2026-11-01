@@ -82,7 +82,10 @@ export function accesWordPress(siteId) {
     } catch { /* fichier absent : signalé plus bas */ }
   }
   if (!user || !pass) return { erreur: `accès WordPress non configuré pour le site ${siteId} : ${cle('USER')} et ${cle('PASSWORD')} absents de backend/.env` };
-  return { auth: 'Basic ' + Buffer.from(`${user}:${String(pass).replace(/\s+/g, '')}`).toString('base64') };
+  // un mot de passe d'application n'a que des lettres et des chiffres (WordPress ignore le reste) ; on retire
+  // aussi les codes invisibles qu'un terminal ajoute parfois autour d'un collage (ESC[200~ … ESC[201~)
+  const propre = String(pass).replace(/\x1b\[[0-9;]*~?/g, '').replace(/\[20[01]~/g, '').replace(/[^A-Za-z0-9]/g, '');
+  return { auth: 'Basic ' + Buffer.from(`${String(user).replace(/\x1b\[[0-9;]*~?/g, '').trim()}:${propre}`).toString('base64') };
 }
 
 function clientWp(base, auth) {

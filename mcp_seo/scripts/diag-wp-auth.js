@@ -3,6 +3,8 @@
 import 'dotenv/config';
 import { pool } from '../db.js';
 import { accesWordPress } from '../live.js';
+import fs from 'node:fs';
+import dotenv from 'dotenv';
 
 const essai = async (url, auth) => {
   try {
@@ -30,5 +32,11 @@ for (const id of process.argv.slice(2).map(Number)) {
   console.log(`  5. users/me, bon identifiant, faux mdp   : ${await essai(`${base}/wp-json/wp/v2/users/me`, basic(user, 'aaaa bbbb cccc dddd eeee ffff'))}`);
   console.log(`  6. users/me, identifiant inexistant      : ${await essai(`${base}/wp-json/wp/v2/users/me`, basic('diagnostic-crm', 'aaaa bbbb cccc dddd eeee ffff'))}`);
   console.log(`  identifiant enregistré : ${user.includes('@') ? 'une adresse e-mail' : 'un identifiant'} de ${user.length} caractères`);
+  // forme du mot de passe enregistré (jamais affiché) : 24 lettres/chiffres attendus
+  let brut = process.env[`WP_API_PASSWORD_${id}`];
+  if (!brut) { try { brut = dotenv.parse(fs.readFileSync(process.env.MCP_BACKEND_ENV || '../backend/.env'))[`WP_API_PASSWORD_${id}`]; } catch { /* */ } }
+  brut = String(brut || '');
+  const utiles = Buffer.from(acces.auth.slice(6), 'base64').toString().split(':').slice(1).join(':').length;
+  console.log(`  mot de passe enregistré : ${utiles} caractères utiles (24 attendus)${/\x1b|\[20[01]~/.test(brut) ? ', codes de collage parasites présents (retirés automatiquement)' : ''}${/[^A-Za-z0-9 ]/.test(brut.replace(/\x1b\[[0-9;]*~?/g, '')) ? ', caractères inattendus' : ''}`);
 }
 await pool.end();
