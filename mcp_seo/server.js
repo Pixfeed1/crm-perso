@@ -27,7 +27,7 @@ import { getLivePage } from './live.js';
 import { getPageDossier } from './dossier.js';
 import { checkUrls, MAX_URLS } from './checks.js';
 import { getSiteResources } from './ressources.js';
-import { demanderDepot, prepareDraft, repointerLiens, poserEtiquettes, modifierMedia, poserLien } from './brouillon.js';
+import { demanderDepot, prepareDraft, repointerLiens, poserEtiquettes, modifierMedia, poserLien, provenanceGa4 } from './brouillon.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -197,9 +197,13 @@ function buildServer() {
 
   server.tool(
     'get_traffic',
-    "Trafic Google Analytics 4 du site (sessions, utilisateurs, pages vues, taux d'engagement, part organique), par canal d'acquisition et par page, avec les clics et la position Search Console en regard. Pour savoir ce que les visiteurs FONT une fois arrivés : une page classée à faible engagement est un problème de contenu.",
-    { site_id: z.number().int(), days: z.number().int().optional(), limit: z.number().int().optional() },
-    async ({ site_id, days, limit }) => ok(await tools.getTraffic(pool, site_id, days ?? 28, limit ?? 50))
+    "Trafic Google Analytics 4 du site (sessions, utilisateurs, pages vues, taux d'engagement, part organique), par canal d'acquisition et par page, avec les clics et la position Search Console en regard. Pour savoir ce que les visiteurs FONT une fois arrivés : une page classée à faible engagement est un problème de contenu.\nBloc « provenance » (GA4 en direct) : d'où vient le trafic : source / support (sessions, utilisateurs, taux et durée moyenne d'engagement), sites référents et pages d'arrivée, pages référentes, pays, appareils, navigateurs du canal Direct, noms d'hôte (trafic parasite signalé).\ncanal (Direct, Organic Search, Referral, Organic Social, Email, Unassigned…) : détaille un seul canal. Lecture seule.",
+    { site_id: z.number().int(), days: z.number().int().optional(), limit: z.number().int().optional(), canal: z.string().optional() },
+    async ({ site_id, days, limit, canal }) => {
+      const prov = await provenanceGa4(site_id, days ?? 28, canal, Math.min(limit ?? 25, 100));
+      if (canal) return compactJson({ fetched_at: new Date().toISOString(), site_id, ...prov });
+      return compactJson({ fetched_at: new Date().toISOString(), ...(await tools.getTraffic(pool, site_id, days ?? 28, limit ?? 50)), provenance: prov });
+    }
   );
 
   server.tool(

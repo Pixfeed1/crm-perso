@@ -68,3 +68,9 @@ export const modifierMedia = (siteId, media, champs = {}, simulation = true) =>
   retouche('media', { site_id: siteId, media, ...champs, simulation });
 export const poserLien = (siteId, url, texte, cible, simulation = true) =>
   retouche('lien', { site_id: siteId, url, texte, cible, simulation });
+
+// provenance du trafic GA4 (lecture seule, en direct, par le backend qui détient l'accès Google)
+export async function provenanceGa4(siteId, days = 28, canal, limit = 25) {
+  const j = await backend('ga4-provenance', { site_id: siteId, days, canal, limit }, 90 * 1000);
+  return j.erreur ? { erreur: j.erreur } : j;
+}

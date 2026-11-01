@@ -10,6 +10,7 @@ const multer = require('multer');
 const depots = require('../services/wpBrouillon/depot');
 const { preparer } = require('../services/wpBrouillon/preparer');
 const apres = require('../services/wpBrouillon/apresPublication');
+const { provenance } = require('../services/ga4Provenance');
 
 const envoi = multer({
   dest: path.join(os.tmpdir(), 'wp-depot-envois'),
@@ -69,6 +70,13 @@ mcp.post('/lien', async (req, res) => {
   try {
     const b = req.body;
     res.json(await apres.poserLien(req.app.locals.db, { site_id: Number(b.site_id), url: b.url, texte: b.texte, cible: b.cible, simulation: simul(b) }));
+  } catch (e) { repondre(res, e); }
+});
+// provenance du trafic (GA4 en direct, lecture seule) : le backend détient l'accès Google, le serveur MCP non
+mcp.post('/ga4-provenance', async (req, res) => {
+  try {
+    const b = req.body;
+    res.json(await provenance(req.app.locals.db.pool, { site_id: Number(b.site_id), days: b.days, canal: b.canal || undefined, limit: b.limit }));
   } catch (e) { repondre(res, e); }
 });
 mcp.post('/media', async (req, res) => {
