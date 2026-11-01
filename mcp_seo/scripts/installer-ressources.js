@@ -39,6 +39,6 @@ try {
     console.log(`${base} : vérification ratée (accueil ${accueil}, sans identification ${anonyme}, avec ${r.status} ${j.code || ''}) : ${ancien === null ? 'fichier retiré' : 'ancienne version remise'}.`);
     process.exit(1);
   }
-  console.log(`${base} : OK, route en place (${j.shortcodes.length} shortcodes, ${(j.icones && j.icones.noms || []).length} icônes repérées ; refusée sans identification : ${anonyme}).`);
+  console.log(`${base} : OK, route en place (${j.shortcodes.length} shortcodes, ${j.icones && j.icones.rendu ? Object.keys(j.icones.correspondances || {}).length + ' noms d\'icônes [spec]' : 'pas de [spec]'} ; refusée sans identification : ${anonyme}).`);
   console.log(`  fichier : ${cible} (pour la retirer : rm "${cible}")`);
 } catch (e) { remettre(); console.log(`${base} : ${e.message} : ${ancien === null ? 'fichier retiré' : 'ancienne version remise'}.`); process.exit(1); }
