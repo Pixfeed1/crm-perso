@@ -184,6 +184,8 @@ async function lundi(deps) {
 
 async function mois(deps) {
   const r = await calculerEtPublier(deps, { motif: "relevé mensuel", rafraichirMesures: true });
+  // sans clé Claude, la proposition mensuelle est sautée : le relevé et la publication restent faits
+  if (!config.anthropicKey) return { ...r, proposition: null, note: "Proposition du mois sautée : CONFIGURATEUR_ANTHROPIC_API_KEY absente du .env." };
   const selection = await selectionActive(deps.db);
   const mesures = blender.associer(selection, await dernieresMesures(deps.db)).scores;
   const offresParId = {};
