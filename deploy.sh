@@ -172,6 +172,8 @@ deps() {
   if touche "$dossier/package.json"; then raison="dependances modifiees"
   elif [[ ! -d "$dossier/node_modules" ]]; then raison="node_modules absent"
   elif [[ -n "$binaire" && ! -x "$dossier/node_modules/.bin/$binaire" ]]; then raison="$binaire introuvable dans node_modules"
+  # une dependance declaree mais absente (deploy precedent qui ne l'a pas installee) : npm ls echoue
+  elif ! ( cd "$dossier" && npm ls --depth=0 >/dev/null 2>&1 ); then raison="dependance manquante dans node_modules"
   fi
   if [[ -n "$raison" ]]; then
     gris "   $raison -> npm install"
@@ -204,7 +206,8 @@ fi
 
 titre "4. Serveur MCP"
 if touche "mcp_seo/"; then
-  redemarrer crm-mcp-seo
+  # sans ses dependances, le serveur MCP ne demarre plus (tous les outils SEO de Claude tombent)
+  deps mcp_seo && redemarrer crm-mcp-seo
 else
   gris "   inchangé"
 fi
