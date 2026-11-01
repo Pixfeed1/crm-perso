@@ -117,3 +117,39 @@ curl -s https://mcp-seo.crm.pixfeed.net/mcp \
   (`seo_onpage_issues.data.excerpt`, ~2000 car.). Nécessite **un crawl** après déploiement
   pour être peuplé.
 - Aucune donnée Ahrefs (volume/difficulté/CPC/trafic) : indisponible, non exposée.
+
+## Lecture en direct : `get_live_page(site_id, url)`
+
+Lit une page **au moment de l'appel**, en lecture seule, et renvoie un JSON compact où chaque
+bloc indique sa source :
+
+- `wordpress` (API REST, `context=edit`) : id, type (articles, pages, CPT), statut, slug, lien,
+  titre, dates, catégories, étiquettes et autres taxonomies, image à la une, et `yoast`
+  (phrase-clé, titre SEO, méta, noindex lus via le snippet `register_rest_field` du
+  `functions.php`, voir `seo_worker/README.md`, plus le titre, la canonique et les robots
+  calculés par Yoast) ;
+- `contenu` : contenu brut (shortcodes compris) structuré : titres H1-H4, paragraphes, liens
+  (interne/externe, rel), images (alt, légende, dimensions), shortcodes employés, nombre de mots ;
+- `page_publique` : demandée avec un paramètre unique `crm_live=…` pour passer le cache :
+  code HTTP, redirections, title, méta, canonique, robots, X-Robots-Tag, H1, bloc
+  « Articles similaires » (détecté par son titre, sinon par une classe `related`/`similaire`) ;
+  `cache.servi_par_le_cache` signale si un cache a quand même répondu ;
+- `liens_entrants` : contenus publiés dont le contenu brut pointe vers la page, avec les ancres
+  (menus, widgets, blocs du thème et shortcodes non couverts : la sortie le dit).
+
+Une source en échec est signalée dans son bloc (`erreur` : source, code, message).
+
+**Accès** : un utilisateur WordPress dédié (rôle Éditeur) et son mot de passe d'application,
+dans `backend/.env`, par site (le numéro est le `site_id` du CRM) :
+
+```
+WP_API_USER_2=…       WP_API_PASSWORD_2=…      # jurojin.net
+WP_API_USER_15=…      WP_API_PASSWORD_15=…     # pixfeed.net
+```
+
+Seules ces clés sont lues dans `backend/.env` ; elles ne sortent jamais (ni réponse, ni journal),
+et ne sont envoyées qu'à l'adresse WordPress du site (`seo_sites.wp_base_url`, sinon le domaine).
+Une adresse d'un autre domaine que le site est refusée.
+
+Essai hors MCP, depuis `mcp_seo/` : `node scripts/tester-live.js 2 https://jurojin.net/… 15 https://pixfeed.net/…`
+(résumé + taille en Ko ; sortie complète dans `/tmp/live-N.json`). Tests : `node --test test/live.test.js`.

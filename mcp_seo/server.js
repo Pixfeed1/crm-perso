@@ -14,6 +14,7 @@ import { z } from 'zod';
 import { pool } from './db.js';
 import * as tools from './tools.js';
 import * as bing from './bing.js';
+import { getLivePage } from './live.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -291,6 +292,14 @@ function buildServer() {
     "État de l'outreach d'une campagne backlinks : emails de demande de lien envoyés (depuis le Gmail perso), ouvertures/clics trackés, réponses, et nombre de relances dues.",
     { campaign_id: z.number().int() },
     async ({ campaign_id }) => ok(await tools.getLinkOutreachStatus(pool, campaign_id))
+  );
+
+  server.tool(
+    'get_live_page',
+    "Lit une page EN DIRECT (lecture seule) : fiche WordPress et champs Yoast, contenu brut structuré (titres, paragraphes, liens, images, shortcodes),\npage publique hors cache (code, redirections, title, meta, canonique, robots, H1, Articles similaires) et liens internes entrants. Chaque bloc indique sa source.",
+    { site_id: z.number().int(), url: z.string() },
+    // JSON compact (sans indentation) : la sortie est déjà dense
+    async ({ site_id, url }) => ({ content: [{ type: 'text', text: JSON.stringify(await getLivePage(pool, site_id, url)) }] })
   );
 
   return server;
