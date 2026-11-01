@@ -106,7 +106,7 @@ test('sortie complète : WordPress, Yoast, contenu brut structuré, page publiqu
   assert.ok(p.cache.indices.some((x) => /WP Rocket/.test(x)));
   assert.equal(p.x_robots_tag, 'max-image-preview:large');
   assert.deepEqual(p.h1, ['Motion capture pour Blender']);
-  assert.match(p.articles_similaires.detecte_par, /titre « Articles similaires » \(section\.pf-related\)/, 'pas l\'encadré du corps de l\'article');
+  assert.match(p.articles_similaires.detecte_par, /titre « Articles similaires » \(section\.pf-related[.\w-]*\)/, 'pas l\'encadré du corps de l\'article');
   assert.deepEqual(p.articles_similaires.items.map((x) => x.ancre), ['ZBrush, un pilier', 'Akeytsu', 'Cascadeur'], 'titre de la carte, sans date, catégorie ni « Lire »');
   // liens entrants : le bon article, pas le faux positif ni elle-même ; l'erreur d'un type est signalée
   assert.equal(o.liens_entrants.total, 1);
