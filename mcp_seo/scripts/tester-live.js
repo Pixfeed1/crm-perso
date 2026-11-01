@@ -32,6 +32,8 @@ for (let i = 0; i < args.length; i += 2) {
   if (w.erreur) console.log(`WordPress : ERREUR ${w.erreur.code} ${w.erreur.message}`);
   else {
     console.log(`WordPress : #${w.id} ${w.type} (${w.type_nom}) ${w.statut}, trouvé par ${w.trouve_par}`);
+    console.log(`  utilisateur API : #${w.utilisateur_api?.id ?? '?'} (${(w.utilisateur_api?.roles || []).join(', ') || 'rôle ?'})${w.note ? ' ; NOTE : ' + w.note : ''}`);
+    if (/RENDU/.test(c.source || '')) console.log(`  contenu : ${c.source}`);
     console.log(`  titre : ${w.titre}`);
     console.log(`  publié ${w.publie_le}, modifié ${w.modifie_le}`);
     console.log(`  catégories : ${(w.categories || []).map((x) => x.nom || x.id).join(', ') || '-'} ; étiquettes : ${(w.etiquettes || []).map((x) => x.nom || x.id).join(', ') || '-'}${w.taxonomies ? ' ; autres : ' + Object.keys(w.taxonomies).join(', ') : ''}`);

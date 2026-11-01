@@ -5,7 +5,7 @@ import http from 'node:http';
 
 const USER = 'editeur-crm', PASS = 'abcd efgh ijkl mnop';
 const AUTH = 'Basic ' + Buffer.from(`${USER}:${PASS.replace(/\s+/g, '')}`).toString('base64');
-let srv, base, vus = [];
+let srv, base, vus = [], retireAuth = false;
 
 const RAW = `<!-- wp:heading --><h2>Les meilleurs outils</h2><!-- /wp:heading -->
 <!-- wp:paragraph --><p>Pour la <a href="/glossaire-3d/motion-capture/">motion capture</a> dans Blender, voir <a href="https://rokoko.com/" rel="nofollow noopener">Rokoko</a>.</p><!-- /wp:paragraph -->
@@ -27,8 +27,15 @@ before(async () => {
     vus.push({ path: u.pathname, auth: req.headers.authorization || null, q: Object.fromEntries(u.searchParams) });
     const json = (code, body, h = {}) => { res.writeHead(code, { 'Content-Type': 'application/json', ...h }); res.end(JSON.stringify(body)); };
     if (u.pathname.startsWith('/wp-json/')) {
-      if (req.headers.authorization !== AUTH) return json(401, { code: 'rest_not_logged_in', message: 'Vous n&rsquo;êtes pas connecté.' });
+      const auth = retireAuth ? undefined : req.headers.authorization;      // serveur web qui retire l'en-tête
       const p = u.pathname.replace('/wp-json/wp/v2/', '');
+      if (!auth && u.searchParams.get('context') === 'edit') return json(401, { code: 'rest_not_logged_in', message: 'Vous n&rsquo;êtes pas connecté.' });
+      if (auth && auth !== AUTH) return json(401, { code: 'incorrect_password', message: 'Le mot de passe fourni est incorrect.' });
+      if (p === 'users/me') return json(200, { id: 5, roles: ['editor'] });
+      if (p === 'types' && u.searchParams.get('context') === 'edit') return json(403, { code: 'rest_cannot_view', message: 'Pas le droit de modifier les modèles.' });
+      // le glossaire a des droits à part : l'Éditeur ne peut pas le modifier, seulement le lire
+      if (p.startsWith('glossaire-3d') && u.searchParams.get('context') === 'edit') return json(403, { code: 'rest_forbidden_context', message: 'Pas le droit de modifier.' });
+      if (p === 'glossaire-3d' && u.searchParams.get('slug') === 'add-on') return json(200, [{ id: 77, status: 'publish', slug: 'add-on', link: `${base}/glossaire-3d/add-on/`, type: 'glossaire', title: { rendered: 'Add-on' }, content: { rendered: '<p>Un add-on étend un logiciel. <a href="/article/">Exemple</a></p>' } }]);
       if (p === 'types') return json(200, { post: { slug: 'post', rest_base: 'posts', name: 'Articles' }, page: { slug: 'page', rest_base: 'pages', name: 'Pages' }, attachment: { slug: 'attachment', rest_base: 'media' }, glossaire: { slug: 'glossaire', rest_base: 'glossaire-3d', name: 'Glossaire' } });
       if (p === 'posts' && u.searchParams.get('slug') === 'article') return json(200, [wpItem()]);
       if (p === 'posts/42' && u.searchParams.get('_fields') === 'yoast_head_json') return json(200, { yoast_head_json: { title: 'Motion capture pour Blender - JurojiNet', canonical: `${base}/article/`, robots: { index: 'index', follow: 'follow' } } });
@@ -47,7 +54,10 @@ before(async () => {
     if (u.pathname === '/article/') {
       res.writeHead(200, { 'Content-Type': 'text/html', 'X-Litespeed-Cache': 'hit', 'X-Robots-Tag': 'max-image-preview:large' });
       return res.end(`<html><head><title>Motion capture pour Blender - JurojiNet</title><meta name="description" content="Les outils de mocap."><link rel="canonical" href="${base}/article/"><meta name="robots" content="index, follow"></head><body><nav><a href="/">Accueil</a><a href="/blog/">Blog</a></nav><main><h1>Motion capture pour Blender</h1><p>…</p>
-        <section class="jn-similaires"><h3>Articles similaires</h3><a href="/akeytsu/">Akeytsu</a><a href="/cascadeur/"><img alt="Cascadeur"></a><a href="/akeytsu/">doublon</a></section></main></body></html>
+        <div class="article-body"><p><strong>À lire aussi</strong> <a href="/rigging/">Introduction au Rigging</a></p><p>Voir <a href="/a/">a</a>, <a href="/b/">b</a>, <a href="/c/">c</a>.</p></div>
+        <section class="pf-related"><h2>Articles similaires</h2>
+          <a href="/akeytsu/" class="card"><time>14.03.2025</time> <span class="cat">3D</span><h3>Akeytsu</h3><span class="cta">Lire ↗︎</span></a>
+          <a href="/cascadeur/"><img alt="Cascadeur"></a><a href="/akeytsu/">doublon</a></section></main></body></html>
         <!-- This website is like a Rocket, isn't it? Performance optimized by WP Rocket. Debug: cached@1761900000 -->`);
     }
     res.writeHead(404); res.end('nope');
@@ -94,13 +104,15 @@ test('sortie complète : WordPress, Yoast, contenu brut structuré, page publiqu
   assert.ok(p.cache.indices.some((x) => /WP Rocket/.test(x)));
   assert.equal(p.x_robots_tag, 'max-image-preview:large');
   assert.deepEqual(p.h1, ['Motion capture pour Blender']);
-  assert.match(p.articles_similaires.detecte_par, /Articles similaires/);
-  assert.deepEqual(p.articles_similaires.items.map((x) => x.ancre), ['Akeytsu', 'Cascadeur']);
+  assert.match(p.articles_similaires.detecte_par, /titre « Articles similaires » \(section\.pf-related\)/, 'pas l\'encadré du corps de l\'article');
+  assert.deepEqual(p.articles_similaires.items.map((x) => x.ancre), ['Akeytsu', 'Cascadeur'], 'titre de la carte, sans date, catégorie ni « Lire »');
   // liens entrants : le bon article, pas le faux positif ni elle-même ; l'erreur d'un type est signalée
   assert.equal(o.liens_entrants.total, 1);
   assert.deepEqual(o.liens_entrants.items[0].ancres, ['notre guide mocap', 'encore']);
   assert.ok(o.liens_entrants.erreurs.some((e) => e.code === 500 && /glossaire-3d/.test(e.source)));
   assert.match(o.liens_entrants.non_couvert, /menus, widgets/);
+  assert.deepEqual(o.wordpress.utilisateur_api, { id: 5, roles: ['editor'] });
+  assert.ok(!vus.some((v) => v.path.endsWith('/types') && v.q.context === 'edit'), 'liste des types sans context=edit');
   // l'accès ne part que vers l'API, jamais vers la page publique
   assert.ok(vus.filter((v) => !v.path.startsWith('/wp-json/')).every((v) => v.auth === null));
   assert.ok(vus.filter((v) => !v.path.startsWith('/wp-json/')).every((v) => /^crm_live$/.test(Object.keys(v.q)[0])), 'paramètre anti-cache unique');
@@ -119,7 +131,13 @@ test('erreurs claires : accès refusé, accès absent, adresse hors du site', as
   process.env.WP_API_PASSWORD_2 = 'mauvais';
   let o = await getLivePage(pool(), 2, `${base}/article/`);
   assert.equal(o.wordpress.erreur.code, 401);
-  assert.match(o.wordpress.erreur.message, /rest_not_logged_in : Vous n’êtes pas connecté/);
+  assert.match(o.wordpress.erreur.message, /mot de passe d'application refusé.*incorrect_password/);
+  process.env.WP_API_PASSWORD_2 = PASS;
+  retireAuth = true;
+  o = await getLivePage(pool(), 2, `${base}/article/`);
+  assert.match(o.wordpress.erreur.message, /aucun identifiant.*\.htaccess.*HTTP_AUTHORIZATION/);
+  retireAuth = false;
+  process.env.WP_API_PASSWORD_2 = 'mauvais';
   assert.equal(o.page_publique.code_http, 200, 'la page publique reste lue');
   assert.ok(!JSON.stringify(o).includes('mauvais'));
   delete process.env.WP_API_USER_2; delete process.env.WP_API_PASSWORD_2;
@@ -129,4 +147,14 @@ test('erreurs claires : accès refusé, accès absent, adresse hors du site', as
   o = await getLivePage(pool(), 2, 'https://exemple.com/article/');
   assert.match(o.erreur, /n'appartient pas au site 2/);
   process.env.WP_API_USER_2 = USER; process.env.WP_API_PASSWORD_2 = PASS;
+});
+
+test('type que l\'Éditeur ne peut pas modifier : lu en lecture publique, et la sortie le dit', async () => {
+  const { getLivePage } = await import('../live.js');
+  const o = await getLivePage(pool(), 2, `${base}/glossaire-3d/add-on/`);
+  assert.equal(o.wordpress.id, 77);
+  assert.equal(o.wordpress.type, 'glossaire');
+  assert.match(o.wordpress.note, /lecture publique/);
+  assert.match(o.contenu.source, /contenu RENDU/);
+  assert.equal(o.contenu.liens.internes, 1);
 });

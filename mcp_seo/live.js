@@ -154,7 +154,26 @@ export function structurerContenu(raw, baseSite) {
 }
 
 // ---------- page publique ----------
-const RE_SIMILAIRES = /articles?\s+(similaires|li[ée]s|connexes)|[àa]\s+lire\s+aussi|vous\s+aimerez\s+aussi|sur\s+le\s+m[êe]me\s+(th[èe]me|sujet)|dans\s+la\s+m[êe]me\s+cat[ée]gorie/i;
+// titre EXACT d'un bloc de suggestions (un encadré « À lire aussi : X » dans le texte ne compte pas)
+const RE_SIMILAIRES = /^(articles?|contenus?|guides?)\s+(similaires|li[ée]s|connexes|associ[ée]s)\s*:?$|^[àa]\s+lire\s+aussi\s*:?$|^vous\s+aimerez\s+aussi\s*:?$|^sur\s+le\s+m[êe]me\s+(th[èe]me|sujet)\s*:?$|^dans\s+la\s+m[êe]me\s+cat[ée]gorie\s*:?$|^pour\s+aller\s+plus\s+loin\s*:?$/i;
+// le corps de l'article : ses encadrés et liens ne sont pas le bloc du thème
+const CORPS = '.entry-content,.article-body,.post-content,.wp-block-post-content,.single-content';
+const dansCorps = (n) => !!(n && n.closest && n.closest(CORPS));   // closest inclut l'élément lui-même
+const decrire = (n) => `${n.tagName.toLowerCase()}${n.getAttribute('class') ? '.' + n.getAttribute('class').trim().split(/\s+/).join('.') : ''}`;
+
+/** Ancre d'une carte : son titre s'il y en a un, sinon le texte sans date, catégorie ni « Lire ». */
+function ancreDe(a) {
+  const titre = a.querySelector('h2,h3,h4,h5,h6,[class*="title"],[class*="titre"]');
+  if (titre && txt(titre.text)) return txt(titre.text);
+  let t = txt(a.text);
+  for (const el of a.querySelectorAll('time,[class*="date"],[class*="meta"],[class*="cat"],[class*="cta"],[class*="more"],[class*="read"]')) {
+    const x = txt(el.text);
+    if (x) t = txt(t.replace(x, ' '));
+  }
+  t = t.replace(/\s*(Lire( la suite)?|En savoir plus)\s*[↗→›»]*\s*︎?$/i, '').trim();
+  const img = a.querySelector('img');
+  return t || a.getAttribute('title') || (img && img.getAttribute('alt')) || '';
+}
 
 export function blocSimilaires(doc, baseUrl) {
   const liensDe = (node) => {
@@ -164,31 +183,30 @@ export function blocSimilaires(doc, baseUrl) {
       const n = normaliser(href, baseUrl);
       if (!n || vus.has(n) || href.startsWith('#')) continue;
       vus.add(n);
-      const img = a.querySelector('img');
-      out.push({ href, ancre: txt(a.text) || a.getAttribute('title') || (img && img.getAttribute('alt')) || '' });
+      out.push({ href, ancre: ancreDe(a) });
     }
     return out;
   };
-  // 1. un titre de bloc explicite (« Articles similaires », « À lire aussi »…)
-  for (const h of doc.querySelectorAll('h2,h3,h4,h5,h6,.widget-title,.related-title,strong,p,span,div')) {
+  // 1. un titre de bloc exact (« Articles similaires », « Articles liés », « À lire aussi »…), hors du corps de l'article
+  for (const h of doc.querySelectorAll('h2,h3,h4,h5,h6,.widget-title,[class*="title"],[class*="titre"],strong,span,p,div')) {
     const t = txt(h.text);
-    if (t.length > 60 || !RE_SIMILAIRES.test(t)) continue;
-    if (h.querySelectorAll('a').length > 1) continue;      // c'est déjà un conteneur, pas un titre
+    if (t.length > 40 || !RE_SIMILAIRES.test(t) || h.querySelector('a') || dansCorps(h)) continue;
     let node = h.parentNode;
     for (let i = 0; node && i < 4; i++, node = node.parentNode) {
-      if (!node.tagName || /^(BODY|MAIN|HTML)$/.test(node.tagName)) break;
+      if (!node.tagName || /^(BODY|MAIN|HTML|ARTICLE)$/.test(node.tagName) || dansCorps(node)) break;
       const l = liensDe(node);
-      if (l.length >= 2) return { detecte_par: `titre « ${t} » (${node.tagName.toLowerCase()}${node.getAttribute('class') ? '.' + node.getAttribute('class').trim().split(/\s+/).join('.') : ''})`, ...plafonne(l, MAX.related) };
+      if (l.length >= 2) return { detecte_par: `titre « ${t} » (${decrire(node)})`, ...plafonne(l, MAX.related) };
     }
   }
-  // 2. une classe ou un id de bloc lié
+  // 2. un bloc dont la classe ou l'id le désigne, hors du corps de l'article
   for (const sel of ['[class*="related"]', '[id*="related"]', '[class*="similaire"]', '[class*="similar"]']) {
     for (const node of doc.querySelectorAll(sel)) {
+      if (dansCorps(node)) continue;
       const l = liensDe(node);
-      if (l.length >= 2) return { detecte_par: `sélecteur ${sel} (${node.tagName.toLowerCase()}.${(node.getAttribute('class') || node.getAttribute('id') || '').trim().split(/\s+/).join('.')})`, ...plafonne(l, MAX.related) };
+      if (l.length >= 2) return { detecte_par: `sélecteur ${sel} (${decrire(node)})`, ...plafonne(l, MAX.related) };
     }
   }
-  return { detecte_par: 'aucun bloc « Articles similaires » trouvé dans la page', total: 0 };
+  return { detecte_par: "aucun bloc « Articles similaires » trouvé hors du corps de l'article", total: 0 };
 }
 
 async function lirePublique(url) {
@@ -242,9 +260,28 @@ async function lirePublique(url) {
   };
 }
 
+// ---------- identité : WordPress reconnaît-il l'utilisateur dédié ? ----------
+const HTACCESS = "RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]";
+async function verifierAcces(wp) {
+  const r = await wp('users/me', { context: 'edit', _fields: 'id,roles' });
+  if (r.ok) {
+    const me = await r.json();
+    return { utilisateur: { id: me.id, roles: me.roles } };
+  }
+  const e = await erreurHttp(r, SRC.wp + ' /users/me');
+  if (/^rest_not_logged_in/.test(e.message)) {
+    e.message = "WordPress n'a reçu aucun identifiant : l'en-tête Authorization est retiré avant WordPress (cas courant avec LiteSpeed/Apache). "
+      + `Ajouter dans le .htaccess du site, juste avant « # BEGIN WordPress » : RewriteEngine On puis ${HTACCESS}`;
+  } else if (/incorrect_password|invalid_username|invalid_email|application_password/.test(e.message)) {
+    e.message = `identifiant ou mot de passe d'application refusé par WordPress (${e.message})`;
+  }
+  throw e;
+}
+
 // ---------- résolution de l'adresse vers le contenu WordPress ----------
 async function typesWp(wp) {
-  const r = await wp('types', { context: 'edit' });
+  // pas de context=edit : WordPress l'exige pour TOUS les types (modèles du thème compris), ce qu'un Éditeur n'a pas
+  const r = await wp('types');
   if (!r.ok) throw await erreurHttp(r, SRC.wp + ' /types');
   const j = await r.json();
   return Object.values(j).filter((t) => t.rest_base && !TYPES_EXCLUS.has(t.slug)).map((t) => ({ slug: t.slug, rest_base: t.rest_base, nom: t.name }));
@@ -259,19 +296,27 @@ async function trouverContenu(pool, wp, types, siteId, url) {
          AND lower(rtrim(regexp_replace(url, '^https?://(www\\.)?', ''), '/')) = $2 LIMIT 1`, [siteId, cible.replace(/\/$/, '')]);
     const t = rows[0] && types.find((x) => x.slug === rows[0].type || x.rest_base === rows[0].type);
     if (t) {
-      const r = await wp(`${t.rest_base}/${rows[0].wp_id}`, { context: 'edit', _embed: 'wp:term,wp:featuredmedia' });
-      if (r.ok) { const it = await r.json(); if (normaliser(it.link) === cible) return { it, type: t, trouve_par: `${SRC.base} puis API REST` }; }
+      for (const context of ['edit', 'view']) {
+        const r = await wp(`${t.rest_base}/${rows[0].wp_id}`, { context, _embed: 'wp:term,wp:featuredmedia' });
+        if (r.ok) { const it = await r.json(); if (normaliser(it.link) === cible) return { it, type: t, context, trouve_par: `${SRC.base} puis API REST` }; break; }
+        if (r.status !== 401 && r.status !== 403) break;
+      }
     }
   } catch { /* base indisponible : on cherche directement dans WordPress */ }
   // 2. par le slug, dans tous les types de contenu, tous statuts
   const slug = decodeURI(new URL(url).pathname).replace(/\/+$/, '').split('/').pop();
   if (!slug) return null;
   const essais = await Promise.all(types.map(async (t) => {
-    const r = await wp(t.rest_base, { slug, status: 'any', context: 'edit', _embed: 'wp:term,wp:featuredmedia', per_page: 20 });
-    if (!r.ok) return null;
-    const liste = await r.json();
-    const it = Array.isArray(liste) && liste.find((x) => normaliser(x.link) === cible);
-    return it ? { it, type: t, trouve_par: 'API REST (slug)' } : null;
+    // tous statuts en édition ; si l'Éditeur n'a pas les droits sur ce type, contenus publiés en lecture publique
+    for (const [context, status] of [['edit', 'any'], ['view', 'publish']]) {
+      const r = await wp(t.rest_base, { slug, status, context, _embed: 'wp:term,wp:featuredmedia', per_page: 20 });
+      if (r.status === 401 || r.status === 403) continue;
+      if (!r.ok) return null;
+      const liste = await r.json();
+      const it = Array.isArray(liste) && liste.find((x) => normaliser(x.link) === cible);
+      return it ? { it, type: t, context, trouve_par: 'API REST (slug)' } : null;
+    }
+    return null;
   }));
   return essais.find(Boolean) || null;
 }
@@ -338,7 +383,9 @@ async function liensEntrants(wp, types, it, base) {
     for (let page = 1; page <= 3; page++) {
       let r;
       try {
-        r = await wp(t.rest_base, { search: chemin, search_columns: 'post_content', status: 'publish', context: 'edit', per_page: 100, page, _fields: 'id,link,title,content' });
+        const q = { search: chemin, search_columns: 'post_content', status: 'publish', per_page: 100, page, _fields: 'id,link,title,content' };
+        r = await wp(t.rest_base, { ...q, context: 'edit' });
+        if (r.status === 401 || r.status === 403) r = await wp(t.rest_base, q);   // type non modifiable : contenu rendu
       } catch (e) { erreurs.push(erreurReseau(e, `${SRC.inbound} (${t.rest_base})`)); return; }
       if (r.status === 400) return;                          // au-delà de la dernière page
       if (!r.ok) { erreurs.push(await erreurHttp(r, `${SRC.inbound} (${t.rest_base})`)); return; }
@@ -346,7 +393,7 @@ async function liensEntrants(wp, types, it, base) {
       for (const p of liste) {
         if (p.id === it.id) continue;
         const ancres = [];
-        for (const a of parseHtml(autop((p.content && p.content.raw) || '')).querySelectorAll('a[href]')) {
+        for (const a of parseHtml(autop((p.content && (p.content.raw ?? p.content.rendered)) || '')).querySelectorAll('a[href]')) {
           if (normaliser(a.getAttribute('href'), base) === cible) ancres.push(txt(a.text) || '(lien sans texte)');
         }
         if (ancres.length) trouves.push({ url: p.link, titre: decode((p.title && (p.title.raw ?? p.title.rendered)) || ''), type: t.slug, ancres });
@@ -384,15 +431,21 @@ export async function getLivePage(pool, siteId, url) {
   } else {
     const wp = clientWp(base, acces.auth);
     try {
+      const ident = await verifierAcces(wp);
       const types = await typesWp(wp);
       const trouve = await trouverContenu(pool, wp, types, siteId, url);
       if (!trouve) {
         sortie.wordpress = { source: SRC.wp, erreur: { source: SRC.wp, code: 404, message: "aucun contenu WordPress (tous types, tous statuts) n'a cette adresse" } };
       } else {
-        const { it, type, trouve_par } = trouve;
+        const { it, type, trouve_par, context } = trouve;
         const [yoast, entrants] = await Promise.all([champsYoast(wp, type, it), liensEntrants(wp, types, it, base)]);
-        sortie.wordpress = { ...ficheWordPress(it, type, trouve_par), yoast };
-        sortie.contenu = { source: SRC.content, ...structurerContenu((it.content && it.content.raw) || '', base) };
+        sortie.wordpress = { ...ficheWordPress(it, type, trouve_par), utilisateur_api: ident.utilisateur, yoast };
+        const brut = it.content && typeof it.content.raw === 'string';
+        sortie.contenu = {
+          source: brut ? SRC.content : "API REST WordPress : contenu RENDU (context=view), l'utilisateur dédié n'a pas le droit de modifier ce type : shortcodes déjà exécutés, absents de la liste",
+          ...structurerContenu(brut ? it.content.raw : ((it.content && it.content.rendered) || ''), base),
+        };
+        if (context === 'view') sortie.wordpress.note = "lu en lecture publique : l'utilisateur dédié n'a pas le droit de modifier ce type de contenu";
         sortie.liens_entrants = entrants;
       }
     } catch (e) {
