@@ -89,7 +89,7 @@ function clientWp(base, auth) {
   return async (chemin, params = {}) => {
     const u = new URL(`${base}/wp-json/wp/v2/${chemin}`);
     for (const [k, v] of Object.entries(params)) u.searchParams.set(k, v);
-    return requete(u, { headers: { Authorization: auth, Accept: 'application/json' } });
+    return requete(u, { headers: { ...(auth ? { Authorization: auth } : {}), Accept: 'application/json' } });
   };
 }
 
@@ -452,32 +452,43 @@ export async function getLivePage(pool, siteId, url) {
   // la page publique se lit pendant que WordPress répond
   const publique = lirePublique(url).catch((e) => ({ source: SRC.public, erreur: erreurReseau(e, SRC.public) }));
 
+  // accès de l'utilisateur dédié ; s'il est refusé, on continue en LECTURE PUBLIQUE et on le dit
   const acces = accesWordPress(siteId);
-  if (acces.erreur) {
-    sortie.wordpress = { source: SRC.wp, erreur: { source: SRC.wp, code: 'config', message: acces.erreur } };
-  } else {
-    const wp = clientWp(base, acces.auth);
-    try {
-      const ident = await verifierAcces(wp, base);
-      const types = await typesWp(wp);
-      const trouve = await trouverContenu(pool, wp, types, siteId, url);
-      if (!trouve) {
-        sortie.wordpress = { source: SRC.wp, erreur: { source: SRC.wp, code: 404, message: "aucun contenu WordPress (tous types, tous statuts) n'a cette adresse" } };
-      } else {
-        const { it, type, trouve_par, context } = trouve;
-        const [yoast, entrants] = await Promise.all([champsYoast(wp, type, it), liensEntrants(wp, types, it, base)]);
-        sortie.wordpress = { ...ficheWordPress(it, type, trouve_par), utilisateur_api: ident.utilisateur, yoast };
-        const brut = it.content && typeof it.content.raw === 'string';
-        sortie.contenu = {
-          source: brut ? SRC.content : "API REST WordPress : contenu RENDU (context=view), l'utilisateur dédié n'a pas le droit de modifier ce type : shortcodes déjà exécutés, absents de la liste",
-          ...structurerContenu(brut ? it.content.raw : ((it.content && it.content.rendered) || ''), base),
-        };
-        if (context === 'view') sortie.wordpress.note = "lu en lecture publique : l'utilisateur dédié n'a pas le droit de modifier ce type de contenu";
-        sortie.liens_entrants = entrants;
-      }
-    } catch (e) {
-      sortie.wordpress = { source: SRC.wp, erreur: e && e.code !== undefined && e.source ? e : erreurReseau(e, SRC.wp) };
+  let wp = clientWp(base, null);
+  let ident = null;
+  let accesRefuse = null;
+  if (acces.erreur) accesRefuse = { source: SRC.wp, code: 'config', message: acces.erreur };
+  else {
+    try { ident = await verifierAcces(clientWp(base, acces.auth), base); wp = clientWp(base, acces.auth); }
+    catch (e) { accesRefuse = e && e.source ? e : erreurReseau(e, SRC.wp); }
+  }
+  const PUBLIC = 'lecture publique (anonyme) : contenus publiés seulement, contenu rendu (shortcodes déjà exécutés), aucun brouillon';
+  try {
+    const types = await typesWp(wp);
+    const trouve = await trouverContenu(pool, wp, types, siteId, url);
+    if (!trouve) {
+      sortie.wordpress = { source: SRC.wp, erreur: { source: SRC.wp, code: 404, message: accesRefuse ? "aucun contenu PUBLIÉ n'a cette adresse (brouillons invisibles : accès refusé)" : "aucun contenu WordPress (tous types, tous statuts) n'a cette adresse" } };
+    } else {
+      const { it, type, trouve_par, context } = trouve;
+      const [yoast, entrants] = await Promise.all([champsYoast(wp, type, it), liensEntrants(wp, types, it, base)]);
+      sortie.wordpress = { ...ficheWordPress(it, type, trouve_par), utilisateur_api: ident && ident.utilisateur, yoast };
+      const brut = it.content && typeof it.content.raw === 'string';
+      sortie.contenu = {
+        source: brut ? SRC.content
+          : accesRefuse ? 'API REST WordPress : contenu RENDU, lecture publique (accès refusé, voir wordpress.acces) : shortcodes déjà exécutés, absents de la liste'
+          : "API REST WordPress : contenu RENDU (context=view), l'utilisateur dédié n'a pas le droit de modifier ce type : shortcodes déjà exécutés, absents de la liste",
+        ...structurerContenu(brut ? it.content.raw : ((it.content && it.content.rendered) || ''), base),
+      };
+      if (context === 'view' && !accesRefuse) sortie.wordpress.note = "lu en lecture publique : l'utilisateur dédié n'a pas le droit de modifier ce type de contenu";
+      sortie.liens_entrants = entrants;
     }
+  } catch (e) {
+    sortie.wordpress = { source: SRC.wp, erreur: e && e.code !== undefined && e.source ? e : erreurReseau(e, SRC.wp) };
+  }
+  if (accesRefuse) {
+    const w = sortie.wordpress || {};
+    // l'accès refusé passe en tête du bloc : on ne le découvre pas après coup
+    sortie.wordpress = { acces: { erreur: accesRefuse, mode: PUBLIC }, ...w, ...(w.erreur ? {} : { source: 'API REST WordPress (lecture publique, anonyme)' }) };
   }
   sortie.page_publique = await publique;
 

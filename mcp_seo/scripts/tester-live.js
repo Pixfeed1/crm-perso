@@ -32,12 +32,14 @@ for (let i = 0; i < args.length; i += 2) {
     const nom = url.replace(/^https?:\/\/(www\.)?/, '').slice(0, 45);
     console.log(ko
       ? `ERREUR  ${nom} : ${o.erreur || (w.erreur ? 'WordPress ' + w.erreur.code + ' ' + String(w.erreur.message).slice(0, 260) : 'page publique ' + p.erreur.code)}`
-      : `OK      ${nom} : ${(Buffer.byteLength(json) / 1024).toFixed(1)} Ko, ${w.type} #${w.id}, ${c.mots} mots, phrase-clé « ${y.phrase_cle ?? '?'} », ${p.articles_similaires?.total ?? 0} similaires, ${e.total ?? 0} liens entrants`);
+      : `${w.acces ? 'PUBLIC ' : 'OK     '} ${nom} : ${(Buffer.byteLength(json) / 1024).toFixed(1)} Ko, ${w.type} #${w.id}, ${c.mots} mots, phrase-clé « ${y.phrase_cle ?? '?'} », ${p.articles_similaires?.total ?? 0} similaires, ${e.total ?? 0} liens entrants`);
+    if (w.acces && !ko) console.log(`        (accès refusé : ${String(w.acces.erreur.message).slice(0, 120)})`);
     continue;
   }
   console.log(`\n=== ${url}`);
   console.log(`sortie : ${(Buffer.byteLength(json) / 1024).toFixed(1)} Ko, ${((Date.now() - t0) / 1000).toFixed(1)} s, complète dans ${fichier}`);
   if (o.erreur) { console.log(`ERREUR : ${o.erreur}`); continue; }
+  if (w.acces) console.log(`WordPress : ACCÈS REFUSÉ ${w.acces.erreur.code} ${w.acces.erreur.message}\n  -> ${w.acces.mode}`);
   if (w.erreur) console.log(`WordPress : ERREUR ${w.erreur.code} ${w.erreur.message}`);
   else {
     console.log(`WordPress : #${w.id} ${w.type} (${w.type_nom}) ${w.statut}, trouvé par ${w.trouve_par}`);

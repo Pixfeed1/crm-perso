@@ -132,15 +132,20 @@ test('erreurs claires : accès refusé, accès absent, adresse hors du site', as
   const { getLivePage } = await import('../live.js');
   process.env.WP_API_PASSWORD_2 = 'mauvais';
   let o = await getLivePage(pool(), 2, `${base}/article/`);
-  assert.equal(o.wordpress.erreur.code, 401);
-  assert.match(o.wordpress.erreur.message, /mot de passe d'application refusé.*incorrect_password/);
+  assert.equal(o.wordpress.acces.erreur.code, 401);
+  assert.match(o.wordpress.acces.erreur.message, /mot de passe d'application refusé.*incorrect_password/);
+  // accès refusé : la lecture continue en public, et la sortie le dit en tête du bloc
+  assert.equal(Object.keys(o.wordpress)[0], 'acces');
+  assert.match(o.wordpress.acces.mode, /lecture publique/);
+  assert.equal(o.wordpress.id, 42);
+  assert.match(o.wordpress.source, /lecture publique/);
   process.env.WP_API_PASSWORD_2 = PASS;
   retireAuth = true;
   o = await getLivePage(pool(), 2, `${base}/article/`);
-  assert.match(o.wordpress.erreur.message, /ne reconnaît pas l'utilisateur dédié.*diag-wp-auth/);
+  assert.match(o.wordpress.acces.erreur.message, /ne reconnaît pas l'utilisateur dédié.*diag-wp-auth/);
   appPasswordsActifs = false;
   o = await getLivePage(pool(), 2, `${base}/article/`);
-  assert.match(o.wordpress.erreur.message, /DÉSACTIVÉS.*Wordfence/);
+  assert.match(o.wordpress.acces.erreur.message, /DÉSACTIVÉS.*Wordfence/);
   appPasswordsActifs = true;
   retireAuth = false;
   process.env.WP_API_PASSWORD_2 = 'mauvais';
@@ -149,7 +154,8 @@ test('erreurs claires : accès refusé, accès absent, adresse hors du site', as
   delete process.env.WP_API_USER_2; delete process.env.WP_API_PASSWORD_2;
   process.env.MCP_BACKEND_ENV = '/nonexistent';
   o = await getLivePage(pool(), 2, `${base}/article/`);
-  assert.match(o.wordpress.erreur.message, /WP_API_USER_2 et WP_API_PASSWORD_2 absents/);
+  assert.match(o.wordpress.acces.erreur.message, /WP_API_USER_2 et WP_API_PASSWORD_2 absents/);
+  assert.equal(o.wordpress.id, 42, 'sans accès configuré : lecture publique quand même');
   o = await getLivePage(pool(), 2, 'https://exemple.com/article/');
   assert.match(o.erreur, /n'appartient pas au site 2/);
   process.env.WP_API_USER_2 = USER; process.env.WP_API_PASSWORD_2 = PASS;
