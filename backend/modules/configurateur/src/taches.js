@@ -238,6 +238,9 @@ async function validerTelleQuelle(deps, validePar = "Marc") {
 }
 
 function appliquer(sel, changements, decisions) {
+  // tout est vérifié AVANT d'appliquer quoi que ce soit : un changement mal formé ne doit jamais faire planter le calcul
+  const refuses = changements.map((c, i) => (decisions[i] ? [c, ia.raisonInvalide(c, sel)] : null)).filter((x) => x && x[1]);
+  if (refuses.length) throw Object.assign(new Error(`validation refusée, changement(s) mal formé(s) : ${refuses.map(([c, r]) => `${c.type} « ${c.id} » (${r})`).join(" ; ")}. Rien n'est publié : refuser ce(s) changement(s) ou relancer « Proposition du mois ».`), { status: 400 });
   changements.forEach((c, i) => {
     if (!decisions[i]) return;
     const comp = sel.composants[c.id], d = c.detail || {};

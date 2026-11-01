@@ -48,6 +48,56 @@ function ficheValide(c) {
     && c.modeles.every(m => m && (m.modele || m.inclus_dans)) && c.caracteristiques && typeof c.caracteristiques === "object");
 }
 
+/** Format exact de « detail » pour chaque type de changement : ce que la validation sait appliquer. */
+const FORMATS = {
+  ajout: '{"composant": {fiche complète}}',
+  retrait: '{} (id d\'un composant existant)',
+  modele: '{"rang": 0, "remplacer": true, "modele": {"modele": "nom exact du modèle", "correspondance": {"motifs": [...], "exclure": [...]}}} (rang 0 = modèle retenu, 1+ = réserves ; remplacer=false insère)',
+  ean: '{"rang": 0, "ean": "EAN à 13 chiffres" ou ["…", "…"]}',
+  asin: '{"rang": 0, "asin": "B0XXXXXXXX"}',
+  pourquoi: '{"texte": "nouvelle ligne pourquoi"}',
+  caracteristiques: '{"cle": valeur, …} (clés existantes du composant : longueur, tdp, alim_recommandee, connecteur…)',
+};
+
+/** Raison du refus d'un changement, ou null s'il est applicable tel quel à la sélection. */
+function raisonInvalide(c, selection) {
+  if (!c || !c.type || !c.id) return "type ou id manquant";
+  if (!FORMATS[c.type]) return `type « ${c.type} » inconnu`;
+  const d = c.detail || {};
+  const comp = selection && selection.composants && selection.composants[c.id];
+  if (c.type === "ajout") {
+    if (comp) return "ce composant existe déjà";
+    return ficheValide(d.composant) ? null : "fiche du composant incomplète";
+  }
+  if (!comp) return `composant « ${c.id} » absent de la sélection`;
+  const rang = d.rang === undefined ? 0 : d.rang;
+  const rangOk = Number.isInteger(rang) && rang >= 0;
+  switch (c.type) {
+    case "retrait": return null;
+    case "pourquoi": return typeof d.texte === "string" && d.texte.trim() ? null : "texte manquant";
+    case "modele":
+      if (!rangOk || rang > (comp.modeles || []).length) return "rang invalide";
+      if (!d.modele || typeof d.modele !== "object" || !d.modele.modele) return "modèle manquant (detail.modele.modele)";
+      if (!d.modele.correspondance || !Array.isArray(d.modele.correspondance.motifs) || !d.modele.correspondance.motifs.length) return "motifs de correspondance manquants (detail.modele.correspondance.motifs)";
+      return null;
+    case "ean": {
+      if (!rangOk || !(comp.modeles || [])[rang]) return "rang invalide";
+      const eans = [].concat(d.ean || []);
+      return eans.length && eans.every(e => /^\d{13}$/.test(String(e))) ? null : "EAN à 13 chiffres attendu";
+    }
+    case "asin":
+      if (!rangOk || !(comp.modeles || [])[rang]) return "rang invalide";
+      return /^[A-Z0-9]{10}$/.test(String(d.asin || "")) ? null : "ASIN à 10 caractères attendu";
+    case "caracteristiques": {
+      const cles = Object.keys(d);
+      if (!cles.length) return "aucune caractéristique";
+      const inconnues = cles.filter(k => !(k in (comp.caracteristiques || {})));
+      return inconnues.length ? `caractéristique(s) inconnue(s) : ${inconnues.join(", ")}` : null;
+    }
+  }
+  return null;
+}
+
 /** Proposition mensuelle : nouveautés, sorties de gamme, modèles à changer, EAN et ASIN manquants.
     Renvoie un objet { resume, changements:[…], diagnostic } que l'écran du CRM présente à Marc. Rien n'est appliqué sans sa validation. */
 async function proposerSelection(selection, { mesures, offresParId, alertes }) {
@@ -60,7 +110,8 @@ async function proposerSelection(selection, { mesures, offresParId, alertes }) {
     `Sélection actuelle (avec prix relevés et scores Blender Open Data) :\n${JSON.stringify(resumeSel)}\n\n` +
     `Alertes du mois : ${JSON.stringify(alertes || [])}\n\n` +
     `Format EXACT d'une fiche de composant, un exemple réel par catégorie :\n${JSON.stringify(exemples)}\n\n` +
-    `Pour un changement de type « ajout » : "id" = "<categorie>-<court en minuscules>" (ex. "gpu-5050"), et "detail": {"composant": {fiche complète au même format que l'exemple de sa catégorie}}. ` +
+    `Format EXACT de "detail" selon le type (tout autre format sera écarté) :\n${Object.entries(FORMATS).map(([t, f]) => `- ${t} : ${f}`).join("\n")}\n` +
+    `Pour un « ajout » : "id" = "<categorie>-<court en minuscules>" (ex. "gpu-5050"), et la fiche au même format que l'exemple de sa catégorie. ` +
     `Champs obligatoires : categorie, puce, court, caracteristiques (mêmes clés que l'exemple), modeles (au moins un, avec "modele" et "correspondance": {"motifs": [...], "exclure": [...]}), pourquoi, prix_exemple (prix constaté en euros). ` +
     `Pour une carte graphique ou un processeur, "blender": {"type", "nom"} avec le nom exact du périphérique dans Blender Open Data s'il y figure, sinon omets "blender". Un ajout incomplet sera écarté.\n\n` +
     `Vérifie : nouvelles cartes graphiques ou processeurs sortis ou annoncés en France, modèles retirés ou introuvables, ` +
@@ -99,11 +150,12 @@ Chaque changement doit citer au moins une source consultée. N'invente ni prix, 
   const ecartes = [];
   prop.changements = prop.changements.filter(c => {
     if (!(c.id && c.type && Array.isArray(c.sources) && c.sources.length)) return false;
-    if (c.type === "ajout" && !ficheValide(c.detail && c.detail.composant)) { ecartes.push(c.id); return false; }
+    const raison = raisonInvalide(c, selection);
+    if (raison) { ecartes.push(`${c.type} ${c.id} (${raison})`); return false; }
     return true;
   });
   const notes = [];
-  if (ecartes.length) notes.push(`ajout écarté, fiche incomplète : ${ecartes.join(", ")}`);
+  if (ecartes.length) notes.push(`changement(s) écarté(s), format invalide : ${ecartes.join(" ; ")}`);
   const erreurs = [...new Set(diagnostic.erreurs_recherche)];
   notes.push(`recherches web : ${diagnostic.recherches} sur ${config.rechercheMax}${diagnostic.sans_resultat ? `, dont ${diagnostic.sans_resultat} sans résultat` : ""}${erreurs.length ? `, erreur(s) renvoyée(s) par l'API : ${erreurs.join(", ")}` : ""}`);
   prop.resume = `${prop.resume || ""} [${notes.join(" ; ")}]`.trim();
@@ -111,4 +163,4 @@ Chaque changement doit citer au moins une source consultée. N'invente ni prix, 
   return prop;
 }
 
-module.exports = { redigerPourquoi, proposerSelection, ficheValide, STYLE };
+module.exports = { redigerPourquoi, proposerSelection, ficheValide, raisonInvalide, FORMATS, STYLE };

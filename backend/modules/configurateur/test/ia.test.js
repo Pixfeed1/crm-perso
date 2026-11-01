@@ -31,7 +31,7 @@ test("ligne « pourquoi » : modèle léger, tiret cadratin retiré, refus signa
 test("proposition mensuelle : Sonnet 5.5, recherche web actuelle limitée aux domaines, repli serveur, sources exigées", async () => {
   const ia = require("../src/ia");
   recues = [];
-  reponses = [msg('Voici : {"resume":"Rien de neuf","changements":[{"type":"asin","id":"gpu-a","detail":{"asin":"B0X"},"raison":"r","sources":["https://amazon.fr/x"]},{"type":"ajout","id":"gpu-b","detail":{},"raison":"sans source","sources":[]}]}')];
+  reponses = [msg('Voici : {"resume":"Rien de neuf","changements":[{"type":"asin","id":"gpu-a","detail":{"asin":"B0ABCDEFGH"},"raison":"r","sources":["https://amazon.fr/x"]},{"type":"ajout","id":"gpu-b","detail":{},"raison":"sans source","sources":[]}]}')];
   const p = await ia.proposerSelection({ composants: { "gpu-a": { puce: "A", modeles: [{ modele: "M" }] } } }, { mesures: {}, offresParId: {}, alertes: [] });
   assert.equal(p.changements.length, 1, "un changement sans source est écarté");
   const r = recues[0];
@@ -58,8 +58,23 @@ test("proposition : ajout sans fiche complète écarté, pause de l'API reprise,
   assert.equal(recues[1].body.messages.at(-1).role, "assistant", "la réponse suspendue est renvoyée telle quelle");
   assert.match(recues[0].body.messages[0].content, /Format EXACT d'une fiche/);
   assert.deepEqual(p.changements.map((c) => c.id), ["gpu-5050"], "l'ajout sans fiche est écarté");
-  assert.match(p.resume, /ajout écarté, fiche incomplète : gpu-vide/);
+  assert.match(p.resume, /changement\(s\) écarté\(s\), format invalide : ajout gpu-vide \(fiche du composant incomplète\)/);
   assert.match(p.resume, /recherches web : 1 sur 25, erreur\(s\) renvoyée\(s\) par l.API : too_many_requests/);
   assert.equal(ia.ficheValide(fiche), true);
   assert.equal(ia.ficheValide(undefined), false);
+});
+
+test("formats de changement : chaque type vérifié avant d'être proposé ou appliqué", () => {
+  const ia = require("../src/ia");
+  const sel = { composants: { "gpu-5060": { categorie: "gpu", puce: "RTX 5060", court: "RTX 5060", caracteristiques: { longueur: 250, tdp: 145 }, modeles: [{ modele: "M", correspondance: { motifs: ["RTX 5060"] } }] } } };
+  const r = (c) => ia.raisonInvalide(c, sel);
+  assert.equal(r({ type: "modele", id: "gpu-5060", detail: { rang: 0, nouveau: { nom: "X" } } }), "modèle manquant (detail.modele.modele)", "le bug du mois : modèle sous un autre nom");
+  assert.match(r({ type: "modele", id: "gpu-5060", detail: { rang: 0, modele: { modele: "X" } } }), /motifs de correspondance manquants/);
+  assert.equal(r({ type: "modele", id: "gpu-5060", detail: { rang: 0, remplacer: true, modele: { modele: "X", correspondance: { motifs: ["RTX 5060", "X"] } } } }), null);
+  assert.match(r({ type: "ean", id: "gpu-5060", detail: { ean: "123" } }), /13 chiffres/);
+  assert.equal(r({ type: "ean", id: "gpu-5060", detail: { ean: "4895106760123" } }), null);
+  assert.match(r({ type: "asin", id: "gpu-5060", detail: { rang: 3, asin: "B0ABCDEFGH" } }), /rang invalide/);
+  assert.match(r({ type: "caracteristiques", id: "gpu-5060", detail: { poids: 1 } }), /inconnue\(s\) : poids/);
+  assert.match(r({ type: "pourquoi", id: "gpu-9999", detail: { texte: "x" } }), /absent de la sélection/);
+  assert.match(r({ type: "renommer", id: "gpu-5060", detail: {} }), /type « renommer » inconnu/);
 });

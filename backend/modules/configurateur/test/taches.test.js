@@ -109,7 +109,14 @@ test("tâches et validation sur base réelle", opts, async t => {
       [{ resume: "test", changements: [{ type: "ajout", id: "gpu-5050", detail: {}, sources: ["x"] }] }])).rows[0].id;
     const e = await finir(taches.demarrer(deps, "valider", [p, { 0: true }, "Marc"]));
     assert.equal(e.statut, "echouee");
-    assert.match(e.erreur, /ajout « gpu-5050 » refusé : la proposition ne contient pas la fiche complète/);
+    assert.match(e.erreur, /validation refusée, changement\(s\) mal formé\(s\) : ajout « gpu-5050 » \(fiche du composant incomplète\)/);
+    // le bug du mois : un changement de modèle dont le modèle est rangé sous un autre nom
+    const p2 = (await db.query("INSERT INTO cfg_propositions (contenu) VALUES ($1) RETURNING id",
+      [{ resume: "test", changements: [{ type: "modele", id: "gpu-5070", detail: { rang: 0, nouveau: { nom: "X" } }, sources: ["x"] }] }])).rows[0].id;
+    const e2 = await finir(taches.demarrer(deps, "valider", [p2, { 0: true }, "Marc"]));
+    assert.equal(e2.statut, "echouee");
+    assert.match(e2.erreur, /modele « gpu-5070 » \(modèle manquant/);
+    assert.equal(fs.readFileSync(fichier, "utf8"), avantFichier);
     assert.deepEqual((await db.query("SELECT id, version FROM cfg_selections WHERE statut = 'validee'")).rows, avantSel);
     assert.equal((await db.query("SELECT statut FROM cfg_propositions WHERE id = $1", [p])).rows[0].statut, "en_attente");
     assert.equal(fs.readFileSync(fichier, "utf8"), avantFichier);
