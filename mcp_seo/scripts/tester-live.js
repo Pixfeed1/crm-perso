@@ -7,7 +7,8 @@ import fs from 'node:fs';
 import { pool } from '../db.js';
 import { getLivePage } from '../live.js';
 
-const args = process.argv.slice(2);
+const court = process.argv.includes('--court');   // une ligne par adresse
+const args = process.argv.slice(2).filter((a) => a !== '--court');
 if (args.length < 2 || args.length % 2) { console.error('Usage : node scripts/tester-live.js <site_id> <url> [<site_id> <url> …]'); process.exit(1); }
 const premiers = (l, n = 3) => (l || []).slice(0, n).join(' | ');
 
@@ -26,6 +27,14 @@ for (let i = 0; i < args.length; i += 2) {
   const fichier = `/tmp/live-${i / 2 + 1}.json`;
   fs.writeFileSync(fichier, json);
   const w = o.wordpress || {}, y = w.yoast || {}, c = o.contenu || {}, p = o.page_publique || {}, e = o.liens_entrants || {};
+  if (court) {
+    const ko = o.erreur || w.erreur || p.erreur;
+    const nom = url.replace(/^https?:\/\/(www\.)?/, '').slice(0, 45);
+    console.log(ko
+      ? `ERREUR  ${nom} : ${o.erreur || (w.erreur ? 'WordPress ' + w.erreur.code + ' ' + String(w.erreur.message).slice(0, 70) : 'page publique ' + p.erreur.code)}`
+      : `OK      ${nom} : ${(Buffer.byteLength(json) / 1024).toFixed(1)} Ko, ${w.type} #${w.id}, ${c.mots} mots, phrase-clé « ${y.phrase_cle ?? '?'} », ${p.articles_similaires?.total ?? 0} similaires, ${e.total ?? 0} liens entrants`);
+    continue;
+  }
   console.log(`\n=== ${url}`);
   console.log(`sortie : ${(Buffer.byteLength(json) / 1024).toFixed(1)} Ko, ${((Date.now() - t0) / 1000).toFixed(1)} s, complète dans ${fichier}`);
   if (o.erreur) { console.log(`ERREUR : ${o.erreur}`); continue; }
