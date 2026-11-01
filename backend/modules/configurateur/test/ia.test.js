@@ -39,7 +39,7 @@ test("proposition mensuelle : Sonnet 5.5, recherche web actuelle limitée aux do
   assert.equal(r.body.fallbacks, "default");
   assert.match(String(r.headers["anthropic-beta"]), /server-side-fallback-2026-07-01/);
   assert.equal(r.body.tools[0].type, "web_search_20260209");
-  assert.equal(r.body.tools[0].max_uses, 10);
+  assert.equal(r.body.tools[0].max_uses, 25);
   assert.ok(r.body.tools[0].allowed_domains.includes("opendata.blender.org"));
   reponses = [msg('{"resume":"coupé', "max_tokens")];
   await assert.rejects(ia.proposerSelection({ composants: {} }, { mesures: {}, offresParId: {}, alertes: [] }), /réponse coupée/);
@@ -59,7 +59,7 @@ test("proposition : ajout sans fiche complète écarté, pause de l'API reprise,
   assert.match(recues[0].body.messages[0].content, /Format EXACT d'une fiche/);
   assert.deepEqual(p.changements.map((c) => c.id), ["gpu-5050"], "l'ajout sans fiche est écarté");
   assert.match(p.resume, /ajout écarté, fiche incomplète : gpu-vide/);
-  assert.match(p.resume, /recherches web : 1, erreur\(s\) renvoyée\(s\) par l'API : too_many_requests/);
+  assert.match(p.resume, /recherches web : 1 sur 25, erreur\(s\) renvoyée\(s\) par l.API : too_many_requests/);
   assert.equal(ia.ficheValide(fiche), true);
   assert.equal(ia.ficheValide(undefined), false);
 });

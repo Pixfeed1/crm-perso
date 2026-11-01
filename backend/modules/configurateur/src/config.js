@@ -21,8 +21,14 @@ module.exports = {
   modeleHebdo: env("CONFIGURATEUR_MODELE_HEBDO", "claude-haiku-5-5"),
   modeleMensuel: env("CONFIGURATEUR_MODELE_MENSUEL", "claude-sonnet-5-5"),
   // Sites que la recherche web de l'agent a le droit de consulter (restriction par appel, pas pour toute l'organisation)
+  // Marchands (prix, stock, EAN, ASIN), fabricants (longueur, connecteur, alimentation recommandée), fiches techniques et annonces.
   domainesRecherche: ["opendata.blender.org", "pugetsystems.com", "nvidia.com", "amd.com", "intel.com", "techpowerup.com",
-    "materiel.net", "grosbill.com", "alternate.fr", "rueducommerce.fr", "cybertek.fr", "cdiscount.com", "fnac.com", "amazon.fr"],
+    "materiel.net", "grosbill.com", "alternate.fr", "rueducommerce.fr", "cybertek.fr", "cdiscount.com", "fnac.com", "amazon.fr",
+    "ldlc.com", "topachat.com", "geizhals.eu", "geizhals.de", "videocardz.com",
+    "pny.com", "msi.com", "asus.com", "gigabyte.com", "zotac.com", "gainward.com", "palit.com", "inno3d.com",
+    "sapphiretech.com", "powercolor.com", "xfxforce.com", "asrock.com", "corsair.com", "bequiet.com", "noctua.at",
+    "seasonic.com", "kingston.com", "crucial.fr", "samsung.com", "westerndigital.com", "gskill.com"],
+  rechercheMax: 25,   // recherches web par proposition mensuelle (10 $ les 1 000 recherches)
 
   // Flux Awin retenus (numéros de flux de la liste feedList). On ajoute les spécialistes quand ils acceptent.
   fluxAwin: [

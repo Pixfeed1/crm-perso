@@ -68,7 +68,7 @@ async function proposerSelection(selection, { mesures, offresParId, alertes }) {
     `Propose les changements utiles, et seulement ceux-là.` }];
   // Repli serveur activé (« fallbacks: default ») : si Sonnet décline, l'API rejoue la demande sur un autre modèle.
   // pause_turn : l'API suspend un tour long (recherches web) ; on renvoie la réponse telle quelle pour qu'il continue.
-  const diagnostic = { recherches: 0, erreurs_recherche: [], reprises: 0 };
+  const diagnostic = { recherches: 0, sans_resultat: 0, requetes: [], erreurs_recherche: [], reprises: 0 };
   let r;
   for (let tour = 0; tour < 6; tour++) {
     r = await api().beta.messages.create({
@@ -78,12 +78,13 @@ async function proposerSelection(selection, { mesures, offresParId, alertes }) {
 Tu prépares la proposition mensuelle de sélection du configurateur PC. Tu ne décides rien : tu proposes, Marc valide.
 Réponds UNIQUEMENT par un objet JSON valide : {"resume": "…", "changements": [{"type": "ajout|retrait|modele|ean|asin|pourquoi|caracteristiques", "id": "…", "detail": {…}, "raison": "…", "sources": ["url", …]}]}.
 Chaque changement doit citer au moins une source consultée. N'invente ni prix, ni caractéristique, ni EAN.`,
-      tools: [{ type: "web_search_20260209", name: "web_search", max_uses: 10, allowed_domains: config.domainesRecherche }],
+      tools: [{ type: "web_search_20260209", name: "web_search", max_uses: config.rechercheMax, allowed_domains: config.domainesRecherche }],
       messages,
     });
     for (const b of r.content || []) {
-      if (b.type === "server_tool_use" && b.name === "web_search") diagnostic.recherches++;
+      if (b.type === "server_tool_use" && b.name === "web_search") { diagnostic.recherches++; if (b.input && b.input.query) diagnostic.requetes.push(b.input.query); }
       if (b.type === "web_search_tool_result" && b.content && b.content.type === "web_search_tool_result_error") diagnostic.erreurs_recherche.push(b.content.error_code);
+      else if (b.type === "web_search_tool_result" && Array.isArray(b.content) && !b.content.length) diagnostic.sans_resultat++;
     }
     if (r.stop_reason !== "pause_turn") break;
     diagnostic.reprises++;
@@ -104,7 +105,7 @@ Chaque changement doit citer au moins une source consultée. N'invente ni prix, 
   const notes = [];
   if (ecartes.length) notes.push(`ajout écarté, fiche incomplète : ${ecartes.join(", ")}`);
   const erreurs = [...new Set(diagnostic.erreurs_recherche)];
-  notes.push(`recherches web : ${diagnostic.recherches}${erreurs.length ? `, erreur(s) renvoyée(s) par l'API : ${erreurs.join(", ")}` : ""}`);
+  notes.push(`recherches web : ${diagnostic.recherches} sur ${config.rechercheMax}${diagnostic.sans_resultat ? `, dont ${diagnostic.sans_resultat} sans résultat` : ""}${erreurs.length ? `, erreur(s) renvoyée(s) par l'API : ${erreurs.join(", ")}` : ""}`);
   prop.resume = `${prop.resume || ""} [${notes.join(" ; ")}]`.trim();
   prop.diagnostic = { ...diagnostic, erreurs_recherche: erreurs, ajouts_ecartes: ecartes };
   return prop;
