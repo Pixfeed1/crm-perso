@@ -1280,6 +1280,7 @@ export const maintenanceContractsAPI = {
   downloadConditions: (id) => apiRequestRaw(`/maintenance-contracts/${id}/conditions/pdf`),
   // Mail de bienvenue : aperçu { recipient, subject, html, documents, sentAt, sentTo }, puis envoi
   welcomePreview: (id) => apiRequest(`/maintenance-contracts/${id}/welcome`),
+  welcomePdf: async (id) => (await apiRequestRaw(`/maintenance-contracts/${id}/welcome/pdf`)).blob(),
   sendWelcome: (id) => apiRequest(`/maintenance-contracts/${id}/welcome`, 'POST')
 };
 
@@ -1304,6 +1305,7 @@ export const subscriptionsAPI = {
   resumeBilling: (id) => apiRequest(`/subscriptions/${id}/billing/resume`, 'POST'),
   // Mail de bienvenue : aperçu, puis envoi
   welcomePreview: (id) => apiRequest(`/subscriptions/${id}/welcome`),
+  welcomePdf: async (id) => (await apiRequestRaw(`/subscriptions/${id}/welcome/pdf`)).blob(),
   sendWelcome: (id) => apiRequest(`/subscriptions/${id}/welcome`, 'POST')
 };
 

@@ -28,12 +28,12 @@ function fausseBase(row) {
 
 const contrat = () => ({
   id: 7, plan: 'essentiel', site_url: 'https://exemple.fr', monthly_amount: '49.00', billing_day: 5,
-  report_frequency: 'mensuel', client_name: 'Boulangerie Martin', client_email: 'contact@exemple.fr',
+  report_frequency: 'mensuel', billing_status: 'active', client_name: 'Boulangerie Martin', client_email: 'contact@exemple.fr',
   welcome_sent_at: null, welcome_sent_to: null
 });
 const abo = (premier) => ({
   id: 3, label: 'Hébergement et suivi', amount_eur: '120.00', billing_interval: 'year', interval_count: 1,
-  first_billing: premier, client_name: 'Atelier Dupont', client_email: 'atelier@exemple.fr',
+  first_billing: premier, billing_status: 'active', client_name: 'Atelier Dupont', client_email: 'atelier@exemple.fr',
   welcome_sent_at: null, welcome_sent_to: null
 });
 
@@ -98,6 +98,20 @@ test('aperçu : destinataire, objet, corps et dernier envoi, sans rien envoyer',
   assert.match(a.html, /Atelier Dupont/);
   assert.deepEqual(a.documents, ['les conditions de votre abonnement']);
   assert.equal(a.sentTo, 'atelier@exemple.fr');
+  assert.equal(a.fichier, 'Conditions_Abonnement.pdf');
+  assert.equal(a.souscrit, true);
+  assert.equal(envois.length, 0);
+});
+
+test('client pas encore souscrit : aperçu possible, envoi manuel refusé (le mail partira tout seul)', async () => {
+  for (const statut of ['none', 'pending', null]) {
+    const db = fausseBase({ ...contrat(), billing_status: statut });
+    const a = await bienvenue.apercu(db, 'maintenance_contracts', 7);
+    assert.equal(a.souscrit, false);
+    assert.match(a.note, /partira tout seul/);
+    assert.match(a.fichier, /^Conditions_Maintenance_.*\.pdf$/);
+    await assert.rejects(bienvenue.envoyer(db, 'maintenance_contracts', 7), (e) => e.status === 400 && /pas encore souscrit/.test(e.message));
+  }
   assert.equal(envois.length, 0);
 });
 

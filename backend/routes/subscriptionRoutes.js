@@ -34,6 +34,7 @@ router.post('/:id/billing/resume', subscriptionController.resumeBilling);
 // Mail de bienvenue : aperçu, puis envoi (ou renvoi) depuis la carte de l'abonnement
 const bienvenue = require('../services/bienvenueService').routes('subscriptions');
 router.get('/:id/welcome', bienvenue.apercu);
+router.get('/:id/welcome/pdf', bienvenue.pdf);
 router.post('/:id/welcome', bienvenue.envoyer);
 
 // DELETE /api/subscriptions/:id - supprimer

@@ -50,6 +50,7 @@ router.post('/:id/billing/resume', contractController.resumeBilling);
 // Mail de bienvenue : aperçu, puis envoi (ou renvoi) depuis la fiche du contrat
 const bienvenue = require('../services/bienvenueService').routes('maintenance_contracts');
 router.get('/:id/welcome', bienvenue.apercu);
+router.get('/:id/welcome/pdf', bienvenue.pdf);
 router.post('/:id/welcome', bienvenue.envoyer);
 
 // DELETE /api/maintenance-contracts/:id - Supprimer un contrat

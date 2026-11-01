@@ -462,24 +462,27 @@ const MaintenanceDetails = ({ contract, onDelete, onRefresh, onEdit, onGenerateR
           </div>
         )}
 
-        {/* Mail de bienvenue : part tout seul à la souscription, renvoyable ici */}
-        {['active', 'past_due', 'canceling'].includes(contract.billing_status) && (
-          <div className="mt-1 mb-3 flex flex-wrap items-center justify-between gap-2 bg-surface-muted/40 rounded-lg px-3 py-2">
-            <span className="text-sm text-text-secondary flex items-center gap-2">
-              <FiMail size={14} className={contract.welcome_sent_at ? 'text-emerald-400' : 'text-amber-400'} />
-              {contract.welcome_sent_at
-                ? `Mail de bienvenue envoyé le ${formatEnvoi(contract.welcome_sent_at)}${contract.welcome_sent_to ? ` à ${contract.welcome_sent_to}` : ''}`
-                : 'Mail de bienvenue pas encore envoyé'}
-            </span>
-            <button
-              type="button"
-              onClick={() => setWelcomeOpen(true)}
-              className="px-3 py-1.5 bg-surface-strong/50 hover:bg-surface-strong text-text-primary rounded-lg text-sm flex items-center gap-1"
-            >
-              <FiEye size={14} /> {contract.welcome_sent_at ? 'Voir / renvoyer' : 'Voir et envoyer'}
-            </button>
-          </div>
-        )}
+        {/* Mail de bienvenue : prévisualisable à tout moment, part tout seul à la souscription, renvoyable ensuite */}
+        {(() => {
+          const souscrit = ['active', 'past_due', 'canceling'].includes(contract.billing_status);
+          return (
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2 bg-surface-muted/40 rounded-lg px-3 py-2">
+              <span className="text-sm text-text-secondary flex items-center gap-2">
+                <FiMail size={14} className={contract.welcome_sent_at ? 'text-emerald-400' : souscrit ? 'text-amber-400' : 'text-text-muted'} />
+                {contract.welcome_sent_at
+                  ? `Mail de bienvenue envoyé le ${formatEnvoi(contract.welcome_sent_at)}${contract.welcome_sent_to ? ` à ${contract.welcome_sent_to}` : ''}`
+                  : souscrit ? 'Mail de bienvenue pas encore envoyé' : 'Mail de bienvenue : partira tout seul à la souscription'}
+              </span>
+              <button
+                type="button"
+                onClick={() => setWelcomeOpen(true)}
+                className="px-3 py-1.5 bg-surface-strong/50 hover:bg-surface-strong text-text-primary rounded-lg text-sm flex items-center gap-1"
+              >
+                <FiEye size={14} /> {!souscrit ? 'Prévisualiser' : contract.welcome_sent_at ? 'Voir / renvoyer' : 'Voir et envoyer'}
+              </button>
+            </div>
+          );
+        })()}
 
         {/* Arrêter le prélèvement (actif ou impayé) */}
         {(contract.billing_status === 'active' || contract.billing_status === 'past_due') && (

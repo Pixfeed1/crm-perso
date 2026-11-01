@@ -1,7 +1,8 @@
-// Mail de bienvenue (souscription confirmée) : aperçu du mail tel que le client le reçoit, puis envoi ou renvoi.
-// api : { welcomePreview(id), sendWelcome(id) } (abonnements ou contrats de maintenance).
+// Mail de bienvenue (souscription confirmée) : aperçu du mail tel que le client le reçoit, pièce jointe comprise,
+// puis envoi ou renvoi. Avant la souscription : aperçu seul (le mail partira tout seul à la souscription).
+// api : { welcomePreview(id), welcomePdf(id), sendWelcome(id) } (abonnements ou contrats de maintenance).
 import React, { useEffect, useState } from 'react';
-import { FiSend, FiLoader, FiX, FiPaperclip, FiMail } from 'react-icons/fi';
+import { FiSend, FiLoader, FiX, FiPaperclip, FiMail, FiExternalLink } from 'react-icons/fi';
 import Modal from './Modal';
 import { useToast } from '../../hooks/useToast';
 
@@ -11,6 +12,17 @@ const WelcomeEmailModal = ({ isOpen, onClose, api, id, onSent }) => {
   const { toast } = useToast();
   const [ap, setAp] = useState(null);
   const [envoi, setEnvoi] = useState(false);
+  const [pdfLoading, setPdfLoading] = useState(false);
+
+  // la pièce jointe telle qu'elle partira, ouverte dans un nouvel onglet
+  const ouvrirPdf = async () => {
+    setPdfLoading(true);
+    try {
+      const url = URL.createObjectURL(await api.welcomePdf(id));
+      window.open(url, '_blank');
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch (e) { toast.error(e.message || 'Pièce jointe impossible à ouvrir'); } finally { setPdfLoading(false); }
+  };
 
   useEffect(() => {
     if (!isOpen || !id) return;
@@ -41,21 +53,31 @@ const WelcomeEmailModal = ({ isOpen, onClose, api, id, onSent }) => {
             <div className="text-sm space-y-1">
               <div><span className="text-text-muted">À : </span><span className="text-text-primary">{ap.recipient || <span className="text-danger-text">aucune adresse sur la fiche client</span>}</span></div>
               <div><span className="text-text-muted">Objet : </span><span className="text-text-primary font-medium">{ap.subject}</span></div>
-              {ap.documents && ap.documents.length > 0 && (
-                <div className="flex items-center gap-1.5 text-text-muted"><FiPaperclip size={13} /> Pièce jointe : {ap.documents.join(', ')} (PDF)</div>
+              {ap.fichier && (
+                <div className="flex items-center gap-1.5 text-text-muted">
+                  <FiPaperclip size={13} /> Pièce jointe :
+                  <button type="button" onClick={ouvrirPdf} disabled={pdfLoading}
+                    className="text-accent hover:underline disabled:opacity-50 inline-flex items-center gap-1">
+                    {ap.fichier} {pdfLoading ? <FiLoader size={12} className="animate-spin" /> : <FiExternalLink size={12} />}
+                  </button>
+                </div>
               )}
-              <div className="text-text-muted">
-                {ap.sentAt ? `Déjà envoyé le ${formatEnvoi(ap.sentAt)}${ap.sentTo ? ` à ${ap.sentTo}` : ''}.` : "Pas encore envoyé : il part tout seul quand le client termine sa souscription."}
+              <div className={ap.souscrit ? 'text-text-muted' : 'text-amber-400'}>
+                {ap.sentAt
+                  ? `Déjà envoyé le ${formatEnvoi(ap.sentAt)}${ap.sentTo ? ` à ${ap.sentTo}` : ''}.`
+                  : ap.souscrit ? "Pas encore envoyé." : ap.note}
               </div>
             </div>
             <iframe title="Aperçu du mail de bienvenue" srcDoc={`<!doctype html><meta charset="utf-8"><body style="margin:16px;background:#fff">${ap.html}</body>`}
               className="w-full h-[420px] rounded-lg border border-border bg-white" sandbox="" />
             <div className="flex justify-end gap-2 pt-1">
               <button onClick={onClose} className="px-3 py-2 rounded-lg bg-surface-strong text-text-primary text-sm hover:bg-border-strong">Fermer</button>
-              <button onClick={envoyer} disabled={envoi || !ap.hasEmail}
-                className="px-3 py-2 rounded-lg bg-accent text-white text-sm hover:bg-accent-hover disabled:opacity-50 flex items-center gap-1.5">
-                {envoi ? <FiLoader size={14} className="animate-spin" /> : <FiSend size={14} />} {ap.sentAt ? 'Renvoyer' : 'Envoyer'}
-              </button>
+              {ap.souscrit && (
+                <button onClick={envoyer} disabled={envoi || !ap.hasEmail}
+                  className="px-3 py-2 rounded-lg bg-accent text-white text-sm hover:bg-accent-hover disabled:opacity-50 flex items-center gap-1.5">
+                  {envoi ? <FiLoader size={14} className="animate-spin" /> : <FiSend size={14} />} {ap.sentAt ? 'Renvoyer' : 'Envoyer'}
+                </button>
+              )}
             </div>
           </div>
         )}

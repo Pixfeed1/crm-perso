@@ -5,6 +5,9 @@ const emailService = require('./emailService');
 const conditionsService = require('./conditionsService');
 
 const TABLES = ['subscriptions', 'maintenance_contracts'];
+// Souscription faite (prélèvement en place) : le mail dit « le prélèvement est en place », il ne part qu'à ce moment-là.
+const SOUSCRIT = ['active', 'past_due', 'canceling'];
+const PAS_ENCORE = "Le client n'a pas encore souscrit : le mail partira tout seul quand il aura terminé sa souscription.";
 
 const eur = (n) => new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(Number(n) || 0);
 const dateFr = (iso) => {
@@ -61,21 +64,26 @@ function contenu(table, row) {
   };
 }
 
+function nomFichier(table, row) {
+  return table === 'subscriptions' ? 'Conditions_Abonnement.pdf' : `Conditions_Maintenance_${conditionsService.maintenanceConditions(row.plan).label}.pdf`;
+}
+
+async function pdfConditions(table, row) {
+  if (table === 'subscriptions') {
+    return conditionsService.renderConditionsPdf('abonnement', {
+      label: row.label, price: eur(row.amount_eur), period: `/ ${periode(row.billing_interval, row.interval_count).replace(/^par /, '')}`,
+      first_billing: dateFr(row.first_billing), date: new Date().toLocaleDateString('fr-FR'), client_name: row.client_name || '',
+      intro: row.cond_intro || '', included: row.cond_included || '', excluded: row.cond_excluded || '', modalites: row.cond_modalites || ''
+    });
+  }
+  return conditionsService.renderConditionsPdf(conditionsService.maintenanceConditions(row.plan).type, {
+    client_name: row.client_name || '', site_url: row.site_url || '', price: eur(row.monthly_amount), date: new Date().toLocaleDateString('fr-FR')
+  });
+}
+
 async function piecesJointes(table, row) {
   try {
-    if (table === 'subscriptions') {
-      const pdf = await conditionsService.renderConditionsPdf('abonnement', {
-        label: row.label, price: eur(row.amount_eur), period: `/ ${periode(row.billing_interval, row.interval_count).replace(/^par /, '')}`,
-        first_billing: dateFr(row.first_billing), date: new Date().toLocaleDateString('fr-FR'), client_name: row.client_name || '',
-        intro: row.cond_intro || '', included: row.cond_included || '', excluded: row.cond_excluded || '', modalites: row.cond_modalites || ''
-      });
-      return [{ filename: 'Conditions_Abonnement.pdf', content: Buffer.from(pdf), contentType: 'application/pdf' }];
-    }
-    const { type, label } = conditionsService.maintenanceConditions(row.plan);
-    const pdf = await conditionsService.renderConditionsPdf(type, {
-      client_name: row.client_name || '', site_url: row.site_url || '', price: eur(row.monthly_amount), date: new Date().toLocaleDateString('fr-FR')
-    });
-    return [{ filename: `Conditions_Maintenance_${label}.pdf`, content: Buffer.from(pdf), contentType: 'application/pdf' }];
+    return [{ filename: nomFichier(table, row), content: Buffer.from(await pdfConditions(table, row)), contentType: 'application/pdf' }];
   } catch (e) {
     console.error('[Bienvenue] conditions non jointes :', e.message);
     return [];
@@ -90,7 +98,8 @@ async function apercu(db, table, id) {
   const mail = emailService.buildWelcomeEmail({ clientName: row.client_name, signature, ...c });
   return {
     recipient: row.client_email || null, hasEmail: !!row.client_email, subject: mail.subject, html: mail.html,
-    documents: c.documents, sentAt: row.welcome_sent_at || null, sentTo: row.welcome_sent_to || null
+    documents: c.documents, fichier: nomFichier(table, row), sentAt: row.welcome_sent_at || null, sentTo: row.welcome_sent_to || null,
+    souscrit: SOUSCRIT.includes(row.billing_status), note: SOUSCRIT.includes(row.billing_status) ? null : PAS_ENCORE
   };
 }
 
@@ -101,6 +110,7 @@ async function apercu(db, table, id) {
 async function envoyer(db, table, id, { auto = false } = {}) {
   const row = await charger(db, table, id);
   if (auto && row.welcome_sent_at) return { skipped: 'deja_envoye' };
+  if (!auto && !SOUSCRIT.includes(row.billing_status)) throw Object.assign(new Error(PAS_ENCORE), { status: 400 });
   if (!row.client_email) {
     if (auto) return { skipped: 'sans_email' };
     throw Object.assign(new Error("La fiche client n'a pas d'adresse email."), { status: 400 });
@@ -126,6 +136,17 @@ function routes(table) {
       try { res.json({ success: true, ...(await envoyer(req.app.locals.db, table, req.params.id)) }); } catch (e) {
         if (!e.status) console.error('[Bienvenue] envoi :', e.message);
         res.status(e.status || 500).json({ message: e.status ? e.message : "Envoi du mail de bienvenue impossible" });
+      }
+    },
+    // la pièce jointe telle qu'elle partira (conditions en PDF), pour la relire avant l'envoi
+    pdf: async (req, res) => {
+      try {
+        const row = await charger(req.app.locals.db, table, req.params.id);
+        const pdf = Buffer.from(await pdfConditions(table, row));
+        res.set({ 'Content-Type': 'application/pdf', 'Content-Disposition': `inline; filename="${nomFichier(table, row)}"` }).send(pdf);
+      } catch (e) {
+        if (!e.status) console.error('[Bienvenue] pièce jointe :', e.message);
+        res.status(e.status || 500).json({ message: e.status ? e.message : 'Pièce jointe impossible à générer' });
       }
     }
   };
