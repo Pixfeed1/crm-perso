@@ -55,14 +55,15 @@ console.log(`   taille : ${ko(c)} Ko ; résumé ${JSON.stringify(c.resume)}`);
 
 for (const id of [2, 15]) {
   console.log(`\n== 3. get_site_resources (site ${id})`);
-  const r = await getSiteResources(pool, id); ecrire(`ressources-${id}`, r);
+  const r = await getSiteResources(pool, id, ['puzzle', 'lock', 'clock']); ecrire(`ressources-${id}`, r);
   const n = (b) => (b && b.erreur ? `ERREUR ${b.erreur.code} ${b.erreur.message}` : b ? `${b.total ?? (b.note || 0)}` : '-');
   console.log(`   catégories ${n(r.categories)} ; étiquettes ${n(r.etiquettes)} ; glossaire ${n(r.glossaire)} ; shortcodes ${n(r.shortcodes)}`);
-  if (r.icones_spec) {
-    const noms = r.icones_spec.noms || [];
-    console.log(`   icônes [spec] : ${noms.length} repérées (${(r.icones_spec.sources || []).map((s) => s.ou).join(' ; ') || r.icones_spec.note || '-'})`);
-    console.log(`   puzzle : ${noms.includes('puzzle') ? 'OUI' : 'non'} ; lock : ${noms.includes('lock') ? 'OUI' : 'non'} ; clock : ${noms.includes('clock') ? 'OUI' : 'non'}`);
-  }
+  const i = r.icones_spec || {};
+  if (i.rendu) {
+    console.log(`   icônes [spec] : rendu par ${i.rendu.fonction} (${i.rendu.fichier} l. ${i.rendu.ligne}) ; ${Object.keys(i.correspondances || {}).length} noms dans la table ; nom inconnu : ${i.nom_inconnu}`);
+    if (i.sprite) console.log(`   sprite : ${i.sprite.fichier}, ${i.sprite.symboles} symboles`);
+    for (const v of i.verification || []) console.log(`   ${v.icon.padEnd(7)} -> ${v.etat}${v.symbole ? ' (symbole « ' + v.symbole + ' »)' : ''}`);
+  } else console.log(`   icônes [spec] : ${i.note || (r.shortcodes && r.shortcodes.erreur ? 'route en erreur' : '-')}`);
   console.log(`   taille : ${ko(r)} Ko`);
 }
 await pool.end();

@@ -30,7 +30,7 @@ async function bloc(source, fn) {
   catch (e) { return { source, erreur: e && e.source ? e : { source, code: (e && e.code) || 'erreur', message: txt(e && e.message) } }; }
 }
 
-export async function getSiteResources(pool, siteId) {
+export async function getSiteResources(pool, siteId, icones = []) {
   const sortie = { fetched_at: new Date().toISOString(), site_id: siteId };
   const { rows } = await pool.query('SELECT domain, wp_base_url FROM seo_sites WHERE id = $1', [siteId]);
   if (!rows[0]) return { ...sortie, erreur: `site ${siteId} inconnu du CRM (voir list_sites)` };
@@ -56,7 +56,8 @@ export async function getSiteResources(pool, siteId) {
     (async () => {
       if (acces.erreur) return { source: SRC.route, erreur: { source: SRC.route, code: 'config', message: acces.erreur } };
       try {
-        const r = await requete(`${base}/wp-json/outils-site/v1/ressources`, { headers: { Authorization: acces.auth, Accept: 'application/json' } });
+        const q = (icones || []).map((n) => String(n).trim()).filter(Boolean).slice(0, 50);
+        const r = await requete(`${base}/wp-json/outils-site/v1/ressources${q.length ? `?icones=${encodeURIComponent(q.join(','))}` : ''}`, { headers: { Authorization: acces.auth, Accept: 'application/json' } });
         if (r.status === 404) return { source: SRC.route, erreur: { source: SRC.route, code: 404, message: 'route non installée sur ce site : node scripts/installer-ressources.js <site_id> <dossier> (dans mcp_seo/)' } };
         if (!r.ok) return { source: SRC.route, erreur: await erreurHttp(r, SRC.route) };
         return { source: SRC.route, ...(await r.json()) };
@@ -68,6 +69,6 @@ export async function getSiteResources(pool, siteId) {
     source: route.source, releve_le: route.releve_le, theme: route.theme,
     ...plafonne((route.shortcodes || []).map((s) => ({ tag: s.tag, origine: s.nom ? `${s.origine} ${s.nom}` : s.origine, fichier: s.fichier, ligne: s.ligne })), 500),
   };
-  const icones = route.erreur ? undefined : { source: route.source, releve_le: route.releve_le, ...(route.icones || {}) };
-  return compact({ ...sortie, categories, etiquettes, glossaire, shortcodes, icones_spec: icones });
+  const iconesSpec = route.erreur ? undefined : { source: route.source, releve_le: route.releve_le, ...(route.icones || {}) };
+  return compact({ ...sortie, categories, etiquettes, glossaire, shortcodes, icones_spec: iconesSpec });
 }

@@ -26,7 +26,8 @@ before(async () => {
       if (!auth) return json(401, { code: 'rest_forbidden', message: 'Désolé…' });
       return json(200, { releve_le: '2026-11-01T12:00:00+00:00', theme: { actif: 'jurojinet', parent: 'generatepress' },
         shortcodes: [{ tag: 'spec', origine: 'theme', nom: 'jurojinet', fichier: 'jurojinet/inc/spec.php', ligne: 7 }, { tag: 'jn_table_products', origine: 'theme', nom: 'jurojinet', fichier: 'jurojinet/inc/tables.php', ligne: 3 }],
-        icones: { shortcode_spec: { origine: 'theme', fichier: 'jurojinet/inc/spec.php', ligne: 7 }, sources: [{ ou: 'tableau nom => <svg> : jurojinet/inc/spec.php', noms: ['clock', 'lock', 'puzzle'] }], noms: ['clock', 'lock', 'puzzle'] } });
+        icones: { shortcode_spec: { origine: 'theme', fichier: 'jurojinet/inc/spec.php', ligne: 7 }, rendu: { fonction: 'jn_spec_icon' }, nom_inconnu: "remplacé par l'icône par défaut « info »", correspondances: { default: 'info', lock: 'lock' },
+          verification: (u.searchParams.get('icones') || '').split(',').filter(Boolean).map((n) => ({ icon: n, symbole: n === 'lock' ? 'lock' : 'info', etat: n === 'lock' ? 'affichée' : "inconnu de [spec] : remplacé par l'icône par défaut" })) } });
     }
     if (u.pathname.startsWith('/wp-json/wp/v2/')) {
       const p = u.pathname.slice('/wp-json/wp/v2/'.length);
@@ -158,13 +159,13 @@ test('check_urls : une adresse qui ne répond pas est coupée après le délai',
 
 test('get_site_resources : catégories (paginées), étiquettes, glossaire, shortcodes, icônes', opts, async () => {
   const { getSiteResources } = await import('../ressources.js');
-  const o = await getSiteResources(pool, 2);
+  const o = await getSiteResources(pool, 2, ['puzzle', 'lock', 'clock']);
   assert.deepEqual(o.categories.items.map((c) => c.nom), ['Logiciels & outils', 'Blender']);
   assert.equal(o.categories.items[1].parent, 3);
   assert.equal(o.etiquettes.items[0].slug, 'mocap');
   assert.deepEqual(o.glossaire.items.map((g) => g.slug), ['add-on', 'rig']);
   assert.equal(o.shortcodes.items.find((s) => s.tag === 'spec').origine, 'theme jurojinet');
-  assert.deepEqual(['puzzle', 'lock', 'clock'].map((n) => o.icones_spec.noms.includes(n)), [true, true, true]);
+  assert.deepEqual(o.icones_spec.verification.map((v) => [v.icon, v.etat === 'affichée']), [['puzzle', false], ['lock', true], ['clock', false]], 'la vérification demandée est transmise et renvoyée');
   delete process.env.WP_API_PASSWORD_2; process.env.MCP_BACKEND_ENV = '/nonexistent';
   const sans = await getSiteResources(pool, 2);
   assert.equal(sans.shortcodes.erreur.code, 'config', 'sans accès : la route est signalée en erreur');
