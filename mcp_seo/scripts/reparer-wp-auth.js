@@ -16,13 +16,30 @@ if (!siteId || !dossier) { console.error('Usage : node scripts/reparer-wp-auth.j
 const MU = `<?php
 /**
  * Plugin Name: Identification API (mots de passe d'application)
- * Description: Les adresses /wp-json/ sont reconnues comme des appels d'API dès le début du chargement : les mots de passe d'application fonctionnent même si une extension lit l'utilisateur courant trop tôt. Supprimer ce fichier pour revenir en arrière.
+ * Description: Les appels à l'API REST (/wp-json/) sont reconnus dès le début du chargement : les mots de passe d'application fonctionnent même si une extension lit l'utilisateur courant trop tôt. Aucun autre chemin n'est concerné. Supprimer ce fichier pour revenir en arrière.
  */
 defined( 'ABSPATH' ) || exit;
 add_filter( 'application_password_is_api_request', function ( $est_api ) {
-	if ( $est_api ) { return true; }
-	$uri = isset( $_SERVER['REQUEST_URI'] ) ? (string) $_SERVER['REQUEST_URI'] : '';
-	return false !== strpos( $uri, '/wp-json/' ) || isset( $_GET['rest_route'] );
+	if ( $est_api ) {
+		return true;
+	}
+	// 1. La requête passe par le point d'entrée du site (index.php à la racine), comme toute requête REST :
+	//    wp-admin, admin-ajax.php, wp-login.php, xmlrpc.php… sont exclus, quel que soit leur chemin.
+	$script = isset( $_SERVER['SCRIPT_FILENAME'] ) ? realpath( (string) $_SERVER['SCRIPT_FILENAME'] ) : false;
+	if ( ! $script || realpath( ABSPATH . 'index.php' ) !== $script ) {
+		return false;
+	}
+	// 2. C'est le CHEMIN qui commence par /wp-json/ (jamais un paramètre), sans détour « .. » ni encodage.
+	$uri    = isset( $_SERVER['REQUEST_URI'] ) ? (string) $_SERVER['REQUEST_URI'] : '';
+	$chemin = (string) parse_url( $uri, PHP_URL_PATH );
+	if ( false !== strpos( $chemin, '..' ) || false !== stripos( $chemin, '%2e' ) ) {
+		return false;
+	}
+	if ( 0 === strpos( $chemin, '/wp-json/' ) ) {
+		return true;
+	}
+	// 3. Forme sans réécriture (?rest_route=…) : seulement à la racine du site.
+	return isset( $_GET['rest_route'] ) && in_array( $chemin, array( '/', '/index.php' ), true );
 } );
 `;
 
@@ -40,6 +57,18 @@ const moi = async () => {
   return r.ok ? { ok: true, txt: `utilisateur #${j.id} (${(j.roles || []).join(', ')})` } : { ok: false, code: j.code || '', txt: `${r.status} ${j.code || ''}` };
 };
 const accueil = async () => (await fetch(`${base}/?crm_live=${Date.now()}`)).status;
+
+// mise à jour d'un fichier déjà posé (ancienne version) : remplacé, puis vérifié ; ancienne version remise si l'accès casse
+const fichierPose = path.join(dossier, 'wp-content', 'mu-plugins', 'identification-api.php');
+if (fs.existsSync(fichierPose) && fs.readFileSync(fichierPose, 'utf8') !== MU) {
+  const ancien = fs.readFileSync(fichierPose, 'utf8');
+  fs.writeFileSync(fichierPose, MU);
+  const ap = await moi();
+  if (ap.ok) { console.log(`${base} : fichier mis à jour (version qui ne vaut que pour /wp-json/), l'accès fonctionne (${ap.txt}).`); process.exit(0); }
+  fs.writeFileSync(fichierPose, ancien);
+  console.log(`${base} : la nouvelle version casse l'accès (${ap.txt}) : ancienne version remise, à examiner.`);
+  process.exit(1);
+}
 
 const avant = await moi();
 if (avant.ok) { console.log(`${base} : OK, l'accès fonctionne déjà (${avant.txt}). Rien à faire.`); process.exit(0); }

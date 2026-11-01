@@ -24,7 +24,9 @@ for (let i = 0; i < args.length; i += 2) {
   const t0 = Date.now();
   const o = await getLivePage(pool, siteId, url);
   const json = JSON.stringify(o);
-  const fichier = `/tmp/live-${i / 2 + 1}.json`;
+  const dossierSortie = process.env.LIVE_OUT || '/tmp';
+  fs.mkdirSync(dossierSortie, { recursive: true });
+  const fichier = `${dossierSortie}/live-${i / 2 + 1}.json`;
   fs.writeFileSync(fichier, json);
   const w = o.wordpress || {}, y = w.yoast || {}, c = o.contenu || {}, p = o.page_publique || {}, e = o.liens_entrants || {};
   if (court) {
