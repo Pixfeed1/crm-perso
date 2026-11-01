@@ -15,7 +15,7 @@ const SELECT_WITH_CLIENT = `
          s.billing_status, s.billing_cancel_at,
          s.cond_intro, s.cond_included, s.cond_excluded, s.cond_modalites, s.created_at,
          to_char(s.first_billing_date, 'YYYY-MM-DD') AS first_billing_date,
-         s.link_sent_at, s.link_sent_to,
+         s.link_sent_at, s.link_sent_to, s.welcome_sent_at, s.welcome_sent_to,
          c.name AS client_name, c.email AS client_email
   FROM subscriptions s
   LEFT JOIN crm_clients c ON s.client_id = c.id

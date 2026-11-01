@@ -738,6 +738,42 @@ class EmailService {
     };
   }
 
+  /**
+   * Mail de bienvenue, envoyé quand la souscription est confirmée (prélèvement en place).
+   * Récapitulatif (formule, montant, prélèvement), ce qui se passe ensuite, documents joints.
+   * suite : phrases « ce qui se passe ensuite », propres au type (maintenance ou abonnement).
+   */
+  buildWelcomeEmail({ clientName, label, montant, prelevement, site = '', suite = [], documents = [], signature }) {
+    const emailSignature = signature || this.getDefaultSignature();
+    const e = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const lignes = [['Formule', label], site ? ['Site', site] : null, ['Montant', montant], ['Prélèvement', prelevement]].filter(Boolean);
+    const tableau = lignes.map(([k, v]) =>
+      `<tr><td style="padding:6px 16px 6px 0;color:#6b7280;white-space:nowrap;vertical-align:top;">${e(k)}</td><td style="padding:6px 0;color:#111827;font-weight:600;">${e(v)}</td></tr>`).join('');
+    const html = `
+      <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.6;color:#374151;">
+        <p style="margin:0 0 14px 0;">Bonjour${clientName ? ` <strong>${e(clientName)}</strong>` : ''},</p>
+        <p style="margin:0 0 14px 0;">Merci pour votre confiance : votre souscription est bien enregistrée et le prélèvement est en place.</p>
+        <table role="presentation" width="100%" style="width:100%;border-collapse:collapse;margin:0 0 18px 0;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;">
+          <tr><td style="padding:12px 16px;"><table role="presentation" style="border-collapse:collapse;">${tableau}</table></td></tr>
+        </table>
+        ${suite.length ? `<p style="margin:0 0 6px 0;font-weight:600;color:#111827;">La suite</p>
+        <ul style="margin:0 0 16px 0;padding-left:20px;">${suite.map((t) => `<li style="margin:0 0 4px 0;">${e(t)}</li>`).join('')}</ul>` : ''}
+        ${documents.length ? `<p style="margin:0 0 16px 0;">Vous trouverez en pièce jointe ${documents.map(e).join(' et ')}.</p>` : ''}
+        <p style="margin:0 0 18px 0;">Pour toute question ou demande, il suffit de répondre à ce mail.</p>
+        ${emailSignature}
+      </div>
+    `;
+    const text = [
+      `Bonjour${clientName ? ` ${clientName}` : ''},`, '',
+      'Merci pour votre confiance : votre souscription est bien enregistrée et le prélèvement est en place.', '',
+      ...lignes.map(([k, v]) => `${k} : ${v}`), '',
+      ...(suite.length ? ['La suite :', ...suite.map((t) => `- ${t}`), ''] : []),
+      ...(documents.length ? [`Vous trouverez en pièce jointe ${documents.join(' et ')}.`, ''] : []),
+      'Pour toute question ou demande, il suffit de répondre à ce mail.'
+    ].join('\n');
+    return { subject: `Bienvenue : votre ${label ? `« ${label} »` : 'abonnement'} est en place`, html, text };
+  }
+
   async sendSubscriptionLink({ to, clientName, url, label, signature, message = '', attachments = [], firstBilling = '' }) {
     const { subject, html, text } = this.buildSubscriptionLinkEmail({ clientName, url, label, signature, message, firstBilling });
     return await this.sendEmail({ to, subject, html, text, attachments });

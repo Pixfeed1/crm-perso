@@ -1116,6 +1116,8 @@ const DATABASE_SCHEMA = {
       plugins_count: 'INTEGER DEFAULT 0',
       notes: 'TEXT',
       contrat_infos: 'JSONB',                 // champs du contrat PDF (raison sociale, représentant, devis…)
+      welcome_sent_at: 'TIMESTAMP',           // mail de bienvenue (souscription confirmée) : date du dernier envoi
+      welcome_sent_to: 'VARCHAR(255)',        // et adresse
       created_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP',
       updated_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'
     },
@@ -1147,6 +1149,8 @@ const DATABASE_SCHEMA = {
       cond_modalites: 'TEXT', // conditions PDF : modalités (Clé : valeur par ligne)
       link_sent_at: 'TIMESTAMP', // date du dernier envoi du lien de paiement par email
       link_sent_to: 'VARCHAR(255)', // adresse à laquelle le lien a été envoyé
+      welcome_sent_at: 'TIMESTAMP', // mail de bienvenue (souscription confirmée) : date du dernier envoi
+      welcome_sent_to: 'VARCHAR(255)', // et adresse
       created_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP',
       updated_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'
     },
@@ -1789,6 +1793,11 @@ async function ensureSubscriptionColumns(client) {
   // Date du premier prélèvement (optionnelle) : le mandat est signé tout de suite, Stripe
   // ne facture qu'à cette date puis à chaque date anniversaire (billing_cycle_anchor).
   await client.query('ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS first_billing_date DATE;');
+  // Mail de bienvenue envoyé à la souscription (automatique, ou renvoyé depuis la fiche)
+  for (const t of ['subscriptions', 'maintenance_contracts']) {
+    await client.query(`ALTER TABLE ${t} ADD COLUMN IF NOT EXISTS welcome_sent_at TIMESTAMP;`);
+    await client.query(`ALTER TABLE ${t} ADD COLUMN IF NOT EXISTS welcome_sent_to VARCHAR(255);`);
+  }
   await client.query('CREATE UNIQUE INDEX IF NOT EXISTS idx_subscriptions_pay_token ON subscriptions(billing_pay_token);');
   console.log('  ✓ Colonnes abonnements vérifiées');
 }

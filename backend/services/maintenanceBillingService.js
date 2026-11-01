@@ -442,6 +442,10 @@ async function applyStripeEvent(db, event) {
         [obj.subscription || null, row.id]
       );
       console.log(`[Billing] checkout.session.completed -> ${tag} actif (sub ${obj.subscription || 'n/a'})`);
+      // Mail de bienvenue au client, une seule fois (sans bloquer la réponse à Stripe). Chargé ici : évite un require circulaire.
+      require('./bienvenueService').envoyer(db, table, row.id, { auto: true })
+        .then((r) => { if (r && r.sentTo) console.log(`[Billing] mail de bienvenue envoyé (${tag}) à ${r.sentTo}`); })
+        .catch((e) => console.error(`[Billing] mail de bienvenue non envoyé (${tag}) :`, e.message));
       break;
     }
 

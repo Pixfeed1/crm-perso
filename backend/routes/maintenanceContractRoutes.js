@@ -47,6 +47,11 @@ router.post('/:id/billing/cancel', contractController.cancelBilling);
 // POST /api/maintenance-contracts/:id/billing/resume - Réactiver l'abonnement (annule la résiliation programmée)
 router.post('/:id/billing/resume', contractController.resumeBilling);
 
+// Mail de bienvenue : aperçu, puis envoi (ou renvoi) depuis la fiche du contrat
+const bienvenue = require('../services/bienvenueService').routes('maintenance_contracts');
+router.get('/:id/welcome', bienvenue.apercu);
+router.post('/:id/welcome', bienvenue.envoyer);
+
 // DELETE /api/maintenance-contracts/:id - Supprimer un contrat
 router.delete('/:id', contractController.deleteContract);
 

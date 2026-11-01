@@ -7,11 +7,12 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   FiRepeat, FiPlus, FiTrash2, FiSend, FiCopy, FiCheck, FiLink,
-  FiUser, FiX, FiSlash, FiRotateCcw, FiEdit2, FiEye, FiAlertTriangle, FiCalendar
+  FiUser, FiX, FiSlash, FiRotateCcw, FiEdit2, FiEye, FiAlertTriangle, FiCalendar, FiMail
 } from 'react-icons/fi';
 import { subscriptionsAPI, clientsAPI } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
 import BillingLinkEmailModal from '../billing/BillingLinkEmailModal';
+import WelcomeEmailModal, { formatEnvoi } from '../common/WelcomeEmailModal';
 
 // Modalités par défaut, adaptées à la périodicité (même esprit que les docs maintenance).
 const formatFirstBilling = (iso) => {
@@ -86,6 +87,7 @@ const SubscriptionsTab = () => {
 
   // Email d'envoi du lien
   const [emailTarget, setEmailTarget] = useState(null);
+  const [welcomeId, setWelcomeId] = useState(null);       // mail de bienvenue : aperçu puis envoi
 
   // Prévisualisation (lecture seule) de ce que reçoit le client
   const [previewTarget, setPreviewTarget] = useState(null);
@@ -390,6 +392,12 @@ const SubscriptionsTab = () => {
                         Lien envoyé le {formatSentAt(sub.link_sent_at)}{sub.link_sent_to ? ` à ${sub.link_sent_to}` : ''}
                       </p>
                     )}
+                    {sub.welcome_sent_at && (
+                      <p className="text-text-muted text-xs mt-1 flex items-center gap-1.5">
+                        <FiMail size={11} className="text-text-muted" />
+                        Bienvenue envoyée le {formatEnvoi(sub.welcome_sent_at)}{sub.welcome_sent_to ? ` à ${sub.welcome_sent_to}` : ''}
+                      </p>
+                    )}
                   </div>
 
                   <div className="flex flex-wrap gap-2">
@@ -431,6 +439,17 @@ const SubscriptionsTab = () => {
                     >
                       <FiSend size={16} />
                     </motion.button>
+                    {['active', 'past_due', 'canceling'].includes(sub.billing_status) && (
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => setWelcomeId(sub.id)}
+                        className="p-2 bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-300 rounded-lg transition-colors"
+                        title={sub.welcome_sent_at ? 'Mail de bienvenue (voir ou renvoyer)' : 'Envoyer le mail de bienvenue'}
+                      >
+                        <FiMail size={16} />
+                      </motion.button>
+                    )}
                     {(sub.billing_status === 'active' || sub.billing_status === 'past_due') && (
                       <motion.button
                         whileHover={{ scale: 1.05 }}
@@ -892,6 +911,7 @@ const SubscriptionsTab = () => {
         )}
       </AnimatePresence>
 
+      <WelcomeEmailModal isOpen={!!welcomeId} onClose={() => setWelcomeId(null)} api={subscriptionsAPI} id={welcomeId} onSent={fetchSubscriptions} />
       <BillingLinkEmailModal
         isOpen={!!emailTarget}
         onClose={() => setEmailTarget(null)}

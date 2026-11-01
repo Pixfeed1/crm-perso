@@ -1277,7 +1277,10 @@ export const maintenanceContractsAPI = {
   getContrat: (id) => apiRequest(`/maintenance-contracts/${id}/contrat`),
   saveContrat: (id, data) => apiRequest(`/maintenance-contracts/${id}/contrat`, 'PUT', data),
   downloadContrat: (id) => apiRequestRaw(`/maintenance-contracts/${id}/contrat/pdf`),
-  downloadConditions: (id) => apiRequestRaw(`/maintenance-contracts/${id}/conditions/pdf`)
+  downloadConditions: (id) => apiRequestRaw(`/maintenance-contracts/${id}/conditions/pdf`),
+  // Mail de bienvenue : aperçu { recipient, subject, html, documents, sentAt, sentTo }, puis envoi
+  welcomePreview: (id) => apiRequest(`/maintenance-contracts/${id}/welcome`),
+  sendWelcome: (id) => apiRequest(`/maintenance-contracts/${id}/welcome`, 'POST')
 };
 
 // API pour les abonnements libres (facturation récurrente Stripe)
@@ -1298,7 +1301,10 @@ export const subscriptionsAPI = {
   // Résilier (immediate=true -> immédiat, sinon fin de période)
   cancelBilling: (id, immediate = false) => apiRequest(`/subscriptions/${id}/billing/cancel`, 'POST', { immediate }),
   // Réactiver
-  resumeBilling: (id) => apiRequest(`/subscriptions/${id}/billing/resume`, 'POST')
+  resumeBilling: (id) => apiRequest(`/subscriptions/${id}/billing/resume`, 'POST'),
+  // Mail de bienvenue : aperçu, puis envoi
+  welcomePreview: (id) => apiRequest(`/subscriptions/${id}/welcome`),
+  sendWelcome: (id) => apiRequest(`/subscriptions/${id}/welcome`, 'POST')
 };
 
 // API pour le suivi des prises de contact (interactions leads + clients)

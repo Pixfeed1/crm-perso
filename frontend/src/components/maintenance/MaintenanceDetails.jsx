@@ -1,7 +1,7 @@
 // src/components/maintenance/MaintenanceDetails.jsx
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { FiEdit2, FiTrash2, FiGlobe, FiUser, FiExternalLink, FiFileText, FiPlus, FiSend, FiEye, FiDownload, FiCreditCard, FiCopy, FiXCircle, FiRotateCcw } from 'react-icons/fi';
+import { FiEdit2, FiTrash2, FiGlobe, FiUser, FiExternalLink, FiFileText, FiPlus, FiSend, FiEye, FiDownload, FiCreditCard, FiCopy, FiXCircle, FiRotateCcw, FiMail } from 'react-icons/fi';
 import { formatDate, formatAmount } from '../../utils/formatters';
 import { maintenanceReportsAPI, maintenanceContractsAPI } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
@@ -10,6 +10,7 @@ import Modal from '../common/Modal';
 import ConfirmModal from '../common/ConfirmModal';
 import BillingLinkEmailModal from '../billing/BillingLinkEmailModal';
 import ContratModal, { telecharger } from './ContratModal';
+import WelcomeEmailModal, { formatEnvoi } from '../common/WelcomeEmailModal';
 
 const MaintenanceDetails = ({ contract, onDelete, onRefresh, onEdit, onGenerateReport }) => {
   const { toast } = useToast();
@@ -27,6 +28,7 @@ const MaintenanceDetails = ({ contract, onDelete, onRefresh, onEdit, onGenerateR
   const [cancelLoading, setCancelLoading] = useState(false);
   const [resumeLoading, setResumeLoading] = useState(false);
   const [freqSaving, setFreqSaving] = useState(false);
+  const [welcomeOpen, setWelcomeOpen] = useState(false);
 
   // Change la périodicité du rapport depuis la fiche, sans passer par le
   // formulaire complet. « aucun » coupe les rappels : le rapport reste
@@ -460,6 +462,25 @@ const MaintenanceDetails = ({ contract, onDelete, onRefresh, onEdit, onGenerateR
           </div>
         )}
 
+        {/* Mail de bienvenue : part tout seul à la souscription, renvoyable ici */}
+        {['active', 'past_due', 'canceling'].includes(contract.billing_status) && (
+          <div className="mt-1 mb-3 flex flex-wrap items-center justify-between gap-2 bg-surface-muted/40 rounded-lg px-3 py-2">
+            <span className="text-sm text-text-secondary flex items-center gap-2">
+              <FiMail size={14} className={contract.welcome_sent_at ? 'text-emerald-400' : 'text-amber-400'} />
+              {contract.welcome_sent_at
+                ? `Mail de bienvenue envoyé le ${formatEnvoi(contract.welcome_sent_at)}${contract.welcome_sent_to ? ` à ${contract.welcome_sent_to}` : ''}`
+                : 'Mail de bienvenue pas encore envoyé'}
+            </span>
+            <button
+              type="button"
+              onClick={() => setWelcomeOpen(true)}
+              className="px-3 py-1.5 bg-surface-strong/50 hover:bg-surface-strong text-text-primary rounded-lg text-sm flex items-center gap-1"
+            >
+              <FiEye size={14} /> {contract.welcome_sent_at ? 'Voir / renvoyer' : 'Voir et envoyer'}
+            </button>
+          </div>
+        )}
+
         {/* Arrêter le prélèvement (actif ou impayé) */}
         {(contract.billing_status === 'active' || contract.billing_status === 'past_due') && (
           <div className="mt-3">
@@ -655,6 +676,14 @@ const MaintenanceDetails = ({ contract, onDelete, onRefresh, onEdit, onGenerateR
 
       {/* Confirmation de suppression de rapport */}
       <ConfirmModal {...confirmState.config} isOpen={confirmState.isOpen} />
+
+      <WelcomeEmailModal
+        isOpen={welcomeOpen}
+        onClose={() => setWelcomeOpen(false)}
+        api={maintenanceContractsAPI}
+        id={contract.id}
+        onSent={onRefresh}
+      />
 
       <BillingLinkEmailModal
         isOpen={billingEmailOpen}

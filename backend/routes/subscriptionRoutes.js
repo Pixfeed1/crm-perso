@@ -31,6 +31,11 @@ router.post('/:id/billing/cancel', subscriptionController.cancelBilling);
 // POST /api/subscriptions/:id/billing/resume - réactiver
 router.post('/:id/billing/resume', subscriptionController.resumeBilling);
 
+// Mail de bienvenue : aperçu, puis envoi (ou renvoi) depuis la carte de l'abonnement
+const bienvenue = require('../services/bienvenueService').routes('subscriptions');
+router.get('/:id/welcome', bienvenue.apercu);
+router.post('/:id/welcome', bienvenue.envoyer);
+
 // DELETE /api/subscriptions/:id - supprimer
 router.delete('/:id', subscriptionController.deleteSubscription);
 
