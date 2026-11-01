@@ -1,11 +1,14 @@
 // prepare_draft : prépare un brouillon WordPress complet à partir d'un dépôt (manifeste-wp.json + contenu
 // en blocs + fichiers). Ne publie jamais. simulation=true : tous les contrôles, aucune écriture.
+// Relecture complète d'abord (relecture.js) : faits vérifiés sur le web, langue, cohérence ; corrections sûres
+// appliquées au texte, le reste signalé (rapport « relecture »). relecture=false pour s'en passer explicitement.
 // Seul ce module (backend) écrit dans WordPress, avec l'utilisateur dédié du site (rôle Éditeur).
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const depots = require('./depot');
 const { client } = require('./wp');
+const { relire } = require('./relecture');
 
 const LIMITE_TITRE_SEO = 60;
 const LIMITE_META = 135;
@@ -26,7 +29,7 @@ function mimeDe(nom, types) {
   return null;
 }
 
-async function preparer(db, { depot, simulation = true, creer_etiquettes = false } = {}) {
+async function preparer(db, { depot, simulation = true, creer_etiquettes = false, relecture = true } = {}) {
   const r = { fetched_at: new Date().toISOString(), depot, simulation, actions: [], avertissements: [], erreurs: [] };
   const bloque = (source, message, code = 'bloquant') => r.erreurs.push({ source, code, message });
   const avert = (source, message) => r.avertissements.push({ source, message });
@@ -125,6 +128,26 @@ async function preparer(db, { depot, simulation = true, creer_etiquettes = false
     }
   }
 
+  // ---- relecture complète (un Claude indépendant) : avant tous les contrôles, qui portent sur le texte corrigé ----
+  let contenuRelu = null;
+  const titreDepose = m.titre;                                                   // repère stable du brouillon, avant relecture
+  if (!relecture) avert('relecture', 'relecture désactivée pour cet appel (relecture=false) : faits et langue non vérifiés');
+  else if (r.erreurs.length) avert('relecture', 'relecture non lancée tant que les erreurs ci-dessous ne sont pas corrigées');
+  else if (m.contenu) {
+    try {
+      const y = m.yoast || {};
+      const res = await relire({ domaine: s[0].domain, dossier: d.dossier, champs: { titre: m.titre, titre_seo: y.titre, meta: y.meta, contenu: fs.readFileSync(fichierDepot(m.contenu), 'utf8') } });
+      contenuRelu = res.champs.contenu;
+      m.titre = res.champs.titre; r.titre = m.titre;
+      if (m.yoast && y.titre !== undefined) m.yoast.titre = res.champs.titre_seo;
+      if (m.yoast && y.meta !== undefined) m.yoast.meta = res.champs.meta;
+      r.relecture = res.rapport;
+      action({ quoi: 'relecture', corrections: res.rapport.corrections_appliquees.length, signalements: (res.rapport.signalements || []).length });
+      if (res.rapport.signalements) avert('relecture', `${res.rapport.signalements.length} point(s) signalé(s) sans correction (style, structure, cohérence…) : voir relecture.signalements`);
+      if (res.rapport.corrections_non_appliquees) avert('relecture', `${res.rapport.corrections_non_appliquees.length} correction(s) proposée(s) mais non appliquée(s) : voir relecture.corrections_non_appliquees`);
+    } catch (e) { bloque('relecture', `relecture impossible : ${e.message} (relancer, ou relecture=false pour préparer sans relecture)`, e.code || 'relecture'); }
+  }
+
   // ---- Yoast ----
   const yoast = {};
   for (const [k, v] of Object.entries(m.yoast || {})) {
@@ -170,7 +193,7 @@ async function preparer(db, { depot, simulation = true, creer_etiquettes = false
 
   // ---- contenu : marqueurs, puis vérification par le site (blocs, shortcodes, intégrations, images) ----
   let contenu = '';
-  try { contenu = fs.readFileSync(fichierDepot(m.contenu), 'utf8'); } catch (e) { bloque('contenu', `${m.contenu} : ${e.message}`); }
+  try { contenu = contenuRelu !== null ? contenuRelu : fs.readFileSync(fichierDepot(m.contenu), 'utf8'); } catch (e) { bloque('contenu', `${m.contenu} : ${e.message}`); }
   const marqueurs = [...contenu.matchAll(RE_MARQUEUR)];
   for (const mk of marqueurs) if (!fichiers.has(norm(mk[1]))) bloque('marqueurs', `${mk[0]} : fichier non déclaré dans « fichiers »`);
   const restes = (contenu.replace(RE_MARQUEUR, '').match(/\{\{media:[^}]*\}\}/g) || []);
@@ -203,7 +226,7 @@ async function preparer(db, { depot, simulation = true, creer_etiquettes = false
   }
 
   // ---- cible : même brouillon d'un appel à l'autre ; slug libre ----
-  const repere = mode === 'mise_a_jour' ? String(m.url_origine).replace(/[?#].*$/, '').replace(/\/+$/, '') : (m.slug || m.titre);
+  const repere = mode === 'mise_a_jour' ? String(m.url_origine).replace(/[?#].*$/, '').replace(/\/+$/, '') : (m.slug || titreDepose);
   const cle = sha256(`${d.site_id}|${t.type}|${mode}|${repere}`);
   let cibleId = null, original = null;
   const { rows: j } = await db.pool.query(

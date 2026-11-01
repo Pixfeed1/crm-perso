@@ -20,6 +20,11 @@ const AUTH = 'Basic ' + Buffer.from('lecture-seo:abcdefghijklmnopqrstuvwx').toSt
 
 const depots = require('../services/wpBrouillon/depot');
 const { preparer } = require('../services/wpBrouillon/preparer');
+const relecture = require('../services/wpBrouillon/relecture');
+// relecteur factice par défaut : aucune correction (les tests de la relecture le remplacent)
+let appelsRelecture = 0;
+const relecteurVide = async () => { appelsRelecture++; return { corrections: [], signalements: [], affirmations: { relevees: 0 }, resume: 'rien à corriger' }; };
+relecture.definirAppel(relecteurVide);
 
 // ---- fausse instance WordPress ----
 const W = { posts: new Map(), media: new Map(), sha: new Map(), tags: new Map([[7, 'Blender']]), ecritures: 0, prochain: 100, limite: 2 * 1024 * 1024 };
@@ -205,5 +210,73 @@ test('mise à jour en simulation : copie de travail prévue, rien écrit', opts,
     assert.ok(r.actions.some((a) => /copie de travail de #50/.test(a.quoi)));
     assert.equal(W.ecritures, avant);
     assert.equal(W.posts.get(50).content.raw, '<p>ancien</p>');
+  });
+});
+
+test('relecture : règles d\'application (unique, hors balises, source exigée pour un fait, champ présent)', () => {
+  const champs = { titre: 'Le guide 2025', titre_seo: undefined, meta: 'Une méta.', contenu: '<!-- wp:paragraph --><p>Blender 3.6 gère le mocap. Le guide 2025 est complet.</p><!-- /wp:paragraph --><p class="guide">x</p>' };
+  const { champs: c, appliquees, non_appliquees: non } = relecture.appliquer(champs, [
+    { type: 'fait', champ: 'contenu', avant: 'Blender 3.6', apres: 'Blender 4.2', source: 'https://www.blender.org/download/releases/4-2/' },
+    { type: 'fait', champ: 'contenu', avant: 'gère le mocap', apres: 'gère tout', source: '' },
+    { type: 'langue', champ: 'titre', avant: '2025', apres: '2026' },
+    { type: 'langue', champ: 'contenu', avant: 'guide', apres: 'Guide' },
+    { type: 'langue', champ: 'contenu', avant: 'wp:paragraph', apres: 'wp:heading' },
+    { type: 'langue', champ: 'titre_seo', avant: 'x', apres: 'y' },
+    { type: 'retrait', champ: 'contenu', avant: 'complet.</p>', apres: 'complet.' },
+    { type: 'langue', champ: 'meta', avant: 'Une méta.', apres: 'Une méta corrigée.' },
+  ]);
+  assert.deepEqual(appliquees.map((x) => x.avant), ['Blender 3.6', '2025', 'Une méta.']);
+  assert.equal(c.contenu.includes('Blender 4.2 gère le mocap'), true);
+  assert.equal(c.titre, 'Le guide 2026'); assert.equal(c.meta, 'Une méta corrigée.');
+  const pourquoi = Object.fromEntries(non.map((x) => [x.avant, x.pourquoi]));
+  assert.match(pourquoi['gère le mocap'], /sans source/);
+  assert.match(pourquoi.guide, /2 fois/);
+  assert.match(pourquoi['wp:paragraph'], /balise|présent/);
+  assert.match(pourquoi.x, /champ absent/);
+  assert.match(pourquoi['complet.</p>'], /balise/);
+});
+
+test('relecture dans prepare_draft : corrections appliquées au brouillon, une seule relecture, échec bloquant, désactivable', opts, async () => {
+  await avecBase(async (db) => {
+    let appels = 0;
+    relecture.definirAppel(async ({ champs }) => {
+      appels++;
+      assert.ok(champs.contenu.includes('prepare_draft') && champs.titre_seo === 'Essai de brouillon préparé par Claude');
+      return {
+        corrections: [
+          { type: 'langue', champ: 'contenu', avant: 'il sera supprimé après vérification', apres: 'il sera supprimé après la vérification' },
+          { type: 'retrait', champ: 'contenu', avant: 'Il montre chaque type de bloc demandé ; ', apres: '', raison: 'invérifiable' },
+          { type: 'coherence', champ: 'titre_seo', avant: 'Essai de brouillon', apres: 'Essai du brouillon' },
+          { type: 'fait', champ: 'meta', avant: 'galerie', apres: 'galerie photo', source: 'https://exemple.org/source' },
+        ],
+        signalements: [{ type: 'style', extrait: 'Galerie', remarque: 'titre court' }],
+        affirmations: { relevees: 3, confirmees: 1, corrigees: 1, retirees: 1 }, resume: 'deux corrections', modele: 'faux',
+      };
+    });
+    try {
+      const d = await nouveauDepot(db, { 'manifeste-wp.json': { ...manifeste(), slug: 'essai-relecture' } });
+      const sim = await preparer(db, { depot: d.depot, simulation: true });
+      assert.deepEqual(sim.erreurs, [], JSON.stringify(sim.erreurs));
+      assert.equal(sim.relecture.corrections_appliquees.length, 4);
+      assert.equal(sim.relecture.signalements.length, 1);
+      assert.ok(sim.avertissements.some((a) => a.source === 'relecture'));
+      const ec = await preparer(db, { depot: d.depot, simulation: false });
+      assert.equal(appels, 1, 'la simulation et l\'écriture partagent la même relecture');
+      assert.equal(ec.relecture.reprise_du_resultat_precedent, true);
+      const post = W.posts.get(ec.id);
+      assert.ok(post.content.includes('il sera supprimé après la vérification'));
+      assert.ok(!post.content.includes('Il montre chaque type de bloc demandé'));
+      assert.equal(post.outils_yoast.titre, 'Essai du brouillon préparé par Claude');
+      assert.match(post.outils_yoast.meta, /galerie photo/);
+      // échec du relecteur : bloqué, rien écrit ; relecture=false : préparé avec un avertissement
+      relecture.definirAppel(async () => { throw new Error('API indisponible'); });
+      const d2 = await nouveauDepot(db, { 'manifeste-wp.json': { ...manifeste(), slug: 'essai-relecture-2' }, 'contenu.html': fs.readFileSync(path.join(ESSAI, 'contenu.html'), 'utf8') + '\n<!-- wp:paragraph --><p>Autre.</p><!-- /wp:paragraph -->' });
+      const avant = W.ecritures;
+      const ko = await preparer(db, { depot: d2.depot, simulation: false });
+      assert.equal(ko.statut, 'bloqué'); assert.match(ko.erreurs[0].message, /relecture impossible : API indisponible/);
+      assert.equal(W.ecritures, avant);
+      const sans = await preparer(db, { depot: d2.depot, simulation: true, relecture: false });
+      assert.deepEqual(sans.erreurs, []); assert.ok(sans.avertissements.some((a) => /relecture désactivée/.test(a.message)));
+    } finally { relecture.definirAppel(relecteurVide); }
   });
 });

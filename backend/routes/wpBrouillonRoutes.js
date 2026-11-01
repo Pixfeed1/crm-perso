@@ -47,7 +47,7 @@ mcp.post('/depot', async (req, res) => {
 mcp.post('/preparer', async (req, res) => {
   try {
     res.json(await preparer(req.app.locals.db, {
-      depot: Number(req.body.depot), simulation: req.body.simulation !== false, creer_etiquettes: req.body.creer_etiquettes === true,
+      depot: Number(req.body.depot), simulation: req.body.simulation !== false, creer_etiquettes: req.body.creer_etiquettes === true, relecture: req.body.relecture !== false,
     }));
   } catch (e) { repondre(res, e); }
 });

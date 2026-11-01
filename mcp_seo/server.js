@@ -349,9 +349,9 @@ function buildServer() {
 
   server.tool(
     'prepare_draft',
-    "Prépare un brouillon WordPress complet depuis un dépôt (jamais publié) : contrôles (blocs, shortcodes, taxonomies, alt, marqueurs {{media:…}}, Yoast 60/135, slug, fichiers),\nmédias sans doublon, brouillon ou copie de travail en mise à jour. simulation=true par défaut (aucune écriture) ; un second appel reprend le même brouillon.",
-    { depot: z.number().int(), simulation: z.boolean().optional(), creer_etiquettes: z.boolean().optional() },
-    async ({ depot, simulation, creer_etiquettes }) => compactJson(await prepareDraft(depot, simulation ?? true, creer_etiquettes ?? false))
+    "Prépare un brouillon WordPress complet depuis un dépôt (jamais publié). D'abord une RELECTURE COMPLÈTE par un Claude indépendant : faits vérifiés sur le web (corrigés avec source, ou retirés s'ils sont introuvables), langue, cohérence ; style et structure seulement signalés ; rapport « relecture » (avant → après, sources).\nPuis les contrôles (blocs, shortcodes, taxonomies, alt, marqueurs {{media:…}}, Yoast 60/135, slug, fichiers), médias sans doublon, brouillon ou copie de travail en mise à jour.\nsimulation=true par défaut (aucune écriture) ; la relecture n'est faite qu'une fois par contenu (la simulation et l'écriture partagent ses corrections) ; relecture=false pour s'en passer explicitement ; un second appel reprend le même brouillon.",
+    { depot: z.number().int(), simulation: z.boolean().optional(), creer_etiquettes: z.boolean().optional(), relecture: z.boolean().optional() },
+    async ({ depot, simulation, creer_etiquettes, relecture }) => compactJson(await prepareDraft(depot, simulation ?? true, creer_etiquettes ?? false, relecture ?? true))
   );
 
   server.tool(
