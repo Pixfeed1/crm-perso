@@ -1,4 +1,5 @@
-// D'où vient le trafic d'un site (GA4, API Data, EN DIRECT, lecture seule) : sources et supports, sites
+// D'où vient le trafic d'un site (GA4, API Data, EN DIRECT, lecture seule) : visites engagées (vrais visiteurs) par
+// jour et par canal, robots probables, sources et supports, sites
 // référents et pages d'arrivée, pays, appareils, navigateurs du canal Direct, noms d'hôte (trafic parasite).
 // Accès : la connexion Google du CRM (seo_oauth_tokens, scope analytics.readonly), propriété seo_sites.ga_property_id.
 // Le jeton ne sort jamais de ce module : ni réponse, ni journal.
@@ -33,7 +34,7 @@ async function jetonAcces(pool) {
   return jeton.valeur;
 }
 
-const METRIQUES = ['sessions', 'totalUsers', 'activeUsers', 'engagementRate', 'userEngagementDuration'];
+const METRIQUES = ['sessions', 'engagedSessions', 'totalUsers', 'activeUsers', 'engagementRate', 'userEngagementDuration'];
 const filtre = (champ, valeur, type = 'EXACT') => ({ filter: { fieldName: champ, stringFilter: { matchType: type, value: valeur, caseSensitive: false } } });
 const et = (...f) => { const l = f.filter(Boolean); return !l.length ? undefined : l.length === 1 ? l[0] : { andGroup: { expressions: l } }; };
 const non = (f) => ({ notExpression: f });
@@ -46,6 +47,7 @@ function ligne(dimNoms, row, metNoms) {
   // une section vide (aucune ligne) peut revenir avec un total sans valeurs : on lit 0 plutôt que de planter
   const m = Object.fromEntries(metNoms.map((n, i) => [n, Number(mv[i] && mv[i].value) || 0]));
   if (m.sessions !== undefined) o.sessions = m.sessions;
+  if (m.engagedSessions !== undefined) o.visites_engagees = m.engagedSessions;
   if (m.totalUsers !== undefined) o.utilisateurs = m.totalUsers;
   if (m.screenPageViews !== undefined) o.pages_vues = m.screenPageViews;
   if (m.engagementRate !== undefined) o.taux_engagement_pct = Math.round(m.engagementRate * 1000) / 10;
@@ -69,7 +71,7 @@ const NOMS = {
 };
 
 /**
- * provenance(pool, { site_id, days, canal, limit }) : un appel = 2 requêtes groupées à l'API Data.
+ * provenance(pool, { site_id, days, canal, limit }) : un appel = 3 requêtes groupées à l'API Data.
  * canal (Direct, Organic Search, Referral…) : tout le détail est restreint à ce canal.
  */
 async function provenance(pool, { site_id: siteId, days = 28, canal, limit = 25 } = {}) {
@@ -85,7 +87,7 @@ async function provenance(pool, { site_id: siteId, days = 28, canal, limit = 25 
   const memeCanal = (c) => !canal || String(canal).toLowerCase() === c.toLowerCase();
   const req = (dims, f, extra = {}) => ({
     dateRanges: [periode], dimensions: dims.map((name) => ({ name })), metrics: (extra.metriques || METRIQUES).map((name) => ({ name })),
-    dimensionFilter: f, orderBys: [{ metric: { metricName: extra.tri || 'sessions' }, desc: true }], limit, metricAggregations: ['TOTAL'],
+    dimensionFilter: f, orderBys: extra.ordre || [{ metric: { metricName: extra.tri || 'sessions' }, desc: true }], limit: extra.limite || limit, metricAggregations: ['TOTAL'],
   });
   const lots = [
     [
@@ -100,6 +102,10 @@ async function provenance(pool, { site_id: siteId, days = 28, canal, limit = 25 
       memeCanal('Direct') && ['direct_navigateurs', req(['browser', 'operatingSystem', 'deviceCategory'], et(fCanal, filtre('sessionDefaultChannelGroup', 'Direct')))],
       ['hotes', req(['hostName'], fCanal, { metriques: ['sessions', 'screenPageViews'] })],
       ['pages_arrivee', req(['landingPagePlusQueryString'], fCanal)],
+      ['robots', req(['country', 'browser', 'operatingSystem'], fCanal, { metriques: ['sessions', 'engagedSessions', 'activeUsers', 'userEngagementDuration'], limite: 50 })],
+    ],
+    [
+      ['par_jour', req(['date', 'sessionDefaultChannelGroup'], fCanal, { metriques: ['sessions', 'engagedSessions', 'totalUsers'], limite: 5000, ordre: [{ dimension: { dimensionName: 'date' }, desc: true }] })],
     ],
   ].map((l) => l.filter(Boolean));
 
@@ -116,8 +122,35 @@ async function provenance(pool, { site_id: siteId, days = 28, canal, limit = 25 
   }
 
   const s = (n) => section(reps[n], NOMS, limit);
+  // visites engagées (> 10 s, 2 pages ou conversion) : la mesure des vrais visiteurs ; un robot qui charge une page et
+  // repart n'est jamais engagé. Jour par jour, puis par canal.
+  const jours = new Map();
+  for (const r of (reps.par_jour && reps.par_jour.rows) || []) {
+    const [d, c] = (r.dimensionValues || []).map((x) => x.value);
+    const [se, en, ut] = (r.metricValues || []).map((x) => Number(x.value) || 0);
+    const date = /^\d{8}$/.test(d) ? `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6)}` : d;
+    const j = jours.get(date) || { date, sessions: 0, visites_engagees: 0, par_canal: {} };
+    j.sessions += se; j.visites_engagees += en;
+    j.par_canal[c] = { sessions: se, visites_engagees: en, utilisateurs: ut };
+    jours.set(date, j);
+  }
+  const parJour = [...jours.values()].sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 92)
+    .map((j) => ({ ...j, part_engagee_pct: j.sessions ? Math.round(1000 * j.visites_engagees / j.sessions) / 10 : 0 }));
+  // robots probables : un pays + navigateur + système qui pèse et n'est jamais engagé, durée nulle
+  const robSec = section(reps.robots, NOMS, 50);
+  const totalSessions = robSec && robSec.total ? robSec.total.sessions : 0;
+  const robots = robSec ? robSec.items.filter((x) => x.sessions >= Math.max(5, totalSessions * 0.01) && x.visites_engagees <= x.sessions * 0.02 && (x.duree_moyenne_engagement_s || 0) < 1) : [];
+  const tc = reps.canaux && reps.canaux.totals && reps.canaux.totals[0] ? ligne([], reps.canaux.totals[0], reps.canaux.metricHeaders.map((m) => m.name)) : null;
+  const visiteurs = tc ? {
+    sessions_brutes: tc.sessions,
+    visites_engagees: tc.visites_engagees,
+    part_engagee_pct: tc.sessions ? Math.round(1000 * tc.visites_engagees / tc.sessions) / 10 : 0,
+    robots_probables: robots.length ? { sessions: robots.reduce((t, x) => t + x.sessions, 0), groupes: robots.map((x) => ({ pays: x.pays, navigateur: x.navigateur, systeme: x.systeme, sessions: x.sessions })) } : 'aucun groupe repéré',
+    lecture: "visites_engagees = estimation basse et sûre des vrais visiteurs (un lecteur parti en moins de 10 s sur une seule page n'y est pas) ; robots_probables = groupes pays + navigateur + système sans aucune visite engagée et à 0 s : à exclure de toute lecture de l'engagement",
+  } : undefined;
   const out = {
     source: `Google Analytics 4, API Data, en direct (propriété ${prop})`,
+    visiteurs, par_jour: parJour.length ? parJour : undefined,
     periode: { jours: days, du: `il y a ${days} jours`, au: 'hier (journées complètes)' },
     canal: canal || undefined,
     canaux: s('canaux'), sources: s('sources'),

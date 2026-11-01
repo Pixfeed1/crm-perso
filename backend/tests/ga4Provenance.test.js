@@ -30,9 +30,11 @@ before(async () => {
       recu.lots.push(b.requests);
       const reports = b.requests.map((q) => {
         const dims = q.dimensions.map((d) => d.name), mets = q.metrics.map((m) => m.name);
-        const v = (n) => mets.map((m) => ({ sessions: n, totalUsers: n - 1, activeUsers: n - 1, engagementRate: 0.5, userEngagementDuration: 30 * (n - 1), screenPageViews: 2 * n }[m]));
+        const v = (n) => mets.map((m) => ({ sessions: n, engagedSessions: Math.floor(n / 2), totalUsers: n - 1, activeUsers: n - 1, engagementRate: 0.5, userEngagementDuration: 30 * (n - 1), screenPageViews: 2 * n }[m]));
         if (dims[0] === 'hostName') return rep(dims, mets, [{ d: ['jurojin.net'], m: v(90) }, { d: ['jurojin-net.translate.goog'], m: v(3) }, { d: ['copie-louche.xyz'], m: v(5) }]);
         if (dims[0] === 'pageReferrer' && process.env.GA_FAUX_VIDE) return { dimensionHeaders: dims.map((name) => ({ name })), metricHeaders: mets.map((name) => ({ name })), totals: [{ dimensionValues: [{ value: 'RESERVED_TOTAL' }] }] };
+        if (dims[0] === 'country' && dims[1] === 'browser') return rep(dims, mets, [{ d: ['Germany', '(not set)', '(not set)'], m: mets.map((x) => ({ sessions: 87, engagedSessions: 0, activeUsers: 87, userEngagementDuration: 0 }[x])) }, { d: ['France', 'Chrome', 'Windows'], m: mets.map((x) => ({ sessions: 20, engagedSessions: 16, activeUsers: 19, userEngagementDuration: 1500 }[x])) }]);
+        if (dims[0] === 'date') return rep(dims, mets, [{ d: ['20261031', 'Direct'], m: mets.map((x) => ({ sessions: 111, engagedSessions: 8, totalUsers: 110 }[x])) }, { d: ['20261031', 'Organic Search'], m: mets.map((x) => ({ sessions: 20, engagedSessions: 16, totalUsers: 19 }[x])) }, { d: ['20261030', 'Direct'], m: mets.map((x) => ({ sessions: 50, engagedSessions: 5, totalUsers: 50 }[x])) }]);
         if (dims[0] === 'browser') return rep(dims, mets, [{ d: ['Chrome', 'Windows', 'desktop'], m: v(40) }, { d: ['(not set)', 'Linux', 'desktop'], m: v(12) }]);
         return rep(dims, mets, [{ d: dims.map((x) => `${x}-a`), m: v(20) }, { d: dims.map((x) => `${x}-b`), m: v(10) }]);
       });
@@ -67,6 +69,12 @@ test('provenance GA4 : canal Direct sur 7 jours, sections, trafic parasite, jeto
     assert.deepEqual(r.hotes.items.map((h) => h.statut.split(' ')[0]), ['site', 'Google', 'PARASITE']);
     assert.deepEqual(r.trafic_parasite, { hotes: ['copie-louche.xyz'], sessions: 5 });
     assert.ok(!JSON.stringify(r).includes('JETON-SECRET'));
+    // visiteurs engagés : total, jour par jour et par canal, robots probables
+    assert.equal(r.visiteurs.sessions_brutes, 30); assert.equal(r.visiteurs.visites_engagees, 15);
+    assert.deepEqual(r.par_jour.map((j) => [j.date, j.sessions, j.visites_engagees]), [['2026-10-31', 131, 24], ['2026-10-30', 50, 5]]);
+    assert.deepEqual(r.par_jour[0].par_canal['Organic Search'], { sessions: 20, visites_engagees: 16, utilisateurs: 19 });
+    assert.equal(r.par_jour[0].part_engagee_pct, 18.3);
+    assert.deepEqual(r.visiteurs.robots_probables, { sessions: 87, groupes: [{ pays: 'Germany', navigateur: '(not set)', systeme: '(not set)', sessions: 87 }] });
     // sans canal : sections Referral présentes ; jeton réutilisé
     const t = await provenance(pool, { site_id: 2, days: 28 });
     assert.ok(t.referents && t.pages_referentes && t.direct_navigateurs);
