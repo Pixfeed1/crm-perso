@@ -21,7 +21,7 @@ for (const k of ['indexation', 'sitemap', 'search_console', 'mots_cles', 'cannib
   const resume = b.erreur ? `ERREUR ${b.erreur.code} ${b.erreur.message}` : ({
     indexation: `${b.verdict || b.note || '?'} ${b.couverture ? '(' + b.couverture + ')' : ''}`,
     sitemap: b.present ? `présente (${b.fichier}, lastmod ${b.lastmod})` : 'absente',
-    search_console: b.total_web ? `${b.total_web.impressions} impressions, ${b.total_web.clics} clics, position ${b.total_web.position} ; ${b.requetes ? b.requetes.total : 0} requêtes` : 'aucune donnée',
+    search_console: b.total_web_requetes ? `${b.total_web_requetes.impressions} impressions (requêtes, France), ${(b.total_web_page || {}).impressions ?? "?"} (page, tous pays), ${b.total_web_requetes.clics} clics, position ${b.total_web_requetes.position} ; ${b.requetes ? b.requetes.total : 0} requêtes` : 'aucune donnée',
     mots_cles: b.items ? b.items.map((m) => `${m.requete} = ${m.impressions_bing ?? '?'}`).slice(0, 3).join(' ; ') : b.note || '',
     cannibalisation: `${b.requetes_partagees ? b.requetes_partagees.total : 0} requête(s) partagée(s) ; phrase-clé « ${b.phrase_cle} »${b.phrase_cle_partagee_avec ? ' partagée avec ' + b.phrase_cle_partagee_avec.length + ' page(s)' : ''}`,
     liens_entrants_crawl: `${b.entrants ? b.entrants.total : 0} lien(s) entrant(s) au crawl`,
@@ -55,7 +55,7 @@ console.log(`   taille : ${ko(c)} Ko ; résumé ${JSON.stringify(c.resume)}`);
 
 for (const id of [2, 15]) {
   console.log(`\n== 3. get_site_resources (site ${id})`);
-  const r = await getSiteResources(pool, id, ['puzzle', 'lock', 'clock']); ecrire(`ressources-${id}`, r);
+  const r = await getSiteResources(pool, id, { icones: ['puzzle', 'lock', 'clock'], sections: ['categories', 'etiquettes', 'glossaire', 'shortcodes', 'icones', 'redaction'] }); ecrire(`ressources-${id}`, r);
   const n = (b) => (b && b.erreur ? `ERREUR ${b.erreur.code} ${b.erreur.message}` : b ? `${b.total ?? (b.note || 0)}` : '-');
   console.log(`   catégories ${n(r.categories)} ; étiquettes ${n(r.etiquettes)} ; glossaire ${n(r.glossaire)} ; shortcodes ${n(r.shortcodes)}`);
   const i = r.icones_spec || {};

@@ -55,7 +55,7 @@ async function verifierUne(url) {
       title: doc && doc.querySelector('title') ? decode(doc.querySelector('title').text) : undefined,
       canonique: attr('link[rel="canonical"]', 'href'),
       noindex: /noindex/i.test(robots) ? true : undefined,
-      _classes: classes, _shortlink: attr('link[rel="shortlink"]', 'href'),
+      _classes: classes, _classesWp: classes, _shortlink: attr('link[rel="shortlink"]', 'href'),
     };
   } catch (e) {
     return { erreur: { source: 'requête directe', code: e.name === 'AbortError' ? 'timeout' : (e.cause && e.cause.code) || 'réseau', message: e.name === 'AbortError' ? `pas de réponse en ${DELAI_MS / 1000} s` : txt(e.message) }, redirections: sauts.length ? sauts : undefined };
@@ -130,17 +130,30 @@ export async function checkUrls(pool, siteId, urls) {
       const { id, type } = idTypeDepuisPage(v);
       if (!id) { v.wordpress = v.code === 404 ? { note: "aucun contenu publié à cette adresse" } : { note: "pas un contenu WordPress (archive, accueil, fichier…)" }; return; }
       v.wordpress = { id, type: type || undefined };
-      const t = types.find((x) => x.slug === type) || (type ? null : types.find((x) => x.slug === 'post'));
-      if (!wp || !t) return;
-      try {
-        let r = await wp(`${t.rest_base}/${id}`, { context: 'edit', _fields: 'id,status,type' });
-        if (r.status === 401 || r.status === 403) r = await wp(`${t.rest_base}/${id}`, { _fields: 'id,status,type' });
-        if (r.ok) { const j = await r.json(); v.wordpress.statut = j.status; v.wordpress.type = j.type || v.wordpress.type; }
-        else v.wordpress.erreur = await erreurHttp(r, 'API REST WordPress');
-      } catch (e) { v.wordpress.erreur = { source: 'API REST WordPress', code: 'réseau', message: txt(e.message) }; }
+      if (!wp || !types.length) return;
+      // type lu dans les classes du <body> : « <type>-template-… » (posé par WordPress pour chaque type), puis « single-<type> »
+      const classes = v._classesWp || [];
+      const lus = types.filter((x) => classes.some((k) => k.startsWith(`${x.slug}-template-`) || k === `single-${x.slug}`) || x.slug === type);
+      const candidats = [...lus.filter((x) => x.slug !== 'post'), ...lus.filter((x) => x.slug === 'post'), ...types.filter((x) => !lus.includes(x))];
+      let derniere = null;
+      for (const t of candidats) {
+        try {
+          let r = await wp(`${t.rest_base}/${id}`, { context: 'edit', _fields: 'id,status,type' });
+          if (r.status === 401 || r.status === 403) r = await wp(`${t.rest_base}/${id}`, { _fields: 'id,status,type' });
+          if (r.ok) {
+            const j = await r.json();
+            v.wordpress.statut = j.status; v.wordpress.type = j.type || t.slug; v.wordpress.route = `wp/v2/${t.rest_base}`;
+            if (!lus.includes(t)) v.wordpress.note = 'type absent des classes de la page, trouvé en interrogeant les types un par un';
+            derniere = null; break;
+          }
+          derniere = await erreurHttp(r, `API REST WordPress (wp/v2/${t.rest_base})`);
+          if (lus.includes(t) && r.status !== 404) break;                       // vraie erreur sur le bon type : on ne cherche pas plus loin
+        } catch (e) { derniere = { source: 'API REST WordPress', code: 'réseau', message: txt(e.message) }; break; }
+      }
+      if (derniere) v.wordpress.erreur = derniere;
     });
   }
-  for (const v of verifs) { delete v._classes; delete v._shortlink; if (!v.interne) delete v.interne; }
+  for (const v of verifs) { delete v._classes; delete v._classesWp; delete v._shortlink; if (!v.interne) delete v.interne; }
 
   const resume = {
     ok: verifs.filter((v) => v.code >= 200 && v.code < 300 && !(v.redirections || []).length).length,

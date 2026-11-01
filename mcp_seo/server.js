@@ -324,10 +324,12 @@ function buildServer() {
 
   server.tool(
     'get_site_resources',
-    "Ce qu'il faut connaître d'un site pour écrire : catégories et étiquettes (id, slug, parent, nombre de contenus), termes du glossaire,\nshortcodes déclarés par le thème et les extensions (origine, fichier), icônes de [spec icon=\"\"] (table du thème, sprite) ; icones=[…] dit pour chaque nom s'il s'affiche ou s'il est remplacé.",
-    { site_id: z.number().int(), icones: z.array(z.string()).max(50).optional() },
-    async ({ site_id, icones }) => compactJson(await getSiteResources(pool, site_id, icones ?? []))
+    "Ce qu'il faut connaître d'un site pour écrire, par sections : categories, glossaire, shortcodes, icones ([spec] : table du thème, sprite ; icones=[…] vérifie des noms), redaction (types et champs, noms des blocs, compositions, fichiers acceptés).\nÉtiquettes seulement sur demande (sections=[\"etiquettes\"] ou etiquettes_recherche=\"nom\") ; blocs=[\"core/image\", …] donne les attributs de ces blocs.",
+    { site_id: z.number().int(), sections: z.array(z.enum(['categories', 'etiquettes', 'glossaire', 'shortcodes', 'icones', 'redaction'])).optional(),
+      etiquettes_recherche: z.string().optional(), blocs: z.array(z.string()).max(50).optional(), icones: z.array(z.string()).max(50).optional() },
+    async ({ site_id, sections, etiquettes_recherche, blocs, icones }) => compactJson(await getSiteResources(pool, site_id, { sections, etiquettes_recherche, blocs: blocs ?? [], icones: icones ?? [] }))
   );
+
 
   server.tool(
     'demander_depot',

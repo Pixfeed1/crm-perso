@@ -7,7 +7,20 @@
 // (seo_backlinks), plus les bornes de dates de Search Console.
 import * as tools from './tools.js';
 import * as bing from './bing.js';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import dotenv from 'dotenv';
 import { plafonne, compact, txt } from './live.js';
+
+// Filtre pays du relevé des requêtes (réglage GSC_COUNTRY du worker, « fra » par défaut, vide = monde).
+function paysRequetes() {
+  try {
+    const env = dotenv.parse(fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'seo_worker', '.env')));
+    if ('GSC_COUNTRY' in env) return String(env.GSC_COUNTRY).trim().toLowerCase();
+  } catch { /* pas de .env : valeur par défaut du worker */ }
+  return 'fra';
+}
 
 const MAX = { requetes: 50, autres_pages: 5, liens: 100, backlinks: 15, volumes: 8 };
 const jour = (d) => (d ? new Date(d).toISOString().slice(0, 10) : undefined);
@@ -61,19 +74,26 @@ export async function getPageDossier(pool, siteId, url, days = 90) {
       const ctx = await tools.getPositionContext(pool, siteId, url, days);           // get_position_context
       const kw = await tools.getPageKeywords(pool, siteId, url, days, 'web');       // get_page_keywords
       const web = (ctx.par_type_de_recherche || []).find((t) => t.search_type === 'web');
+      const pays = paysRequetes();
+      const filtre = pays ? `pays ${pays} seulement (réglage GSC_COUNTRY du worker)` : 'tous pays';
+      // total de la page : la ventilation par appareil couvre tout le trafic web de la page (tous pays, requêtes masquées comprises)
+      const app = ctx.appareil || [];
+      const totPage = app.length ? app.reduce((a, x) => ({ impressions: a.impressions + x.impressions, clics: a.clics + x.clics, pond: a.pond + (x.position || 0) * x.impressions }), { impressions: 0, clics: 0, pond: 0 }) : null;
       return {
         periode: periode && { ...periode, donnees_depuis: jour(b[0].premier_jour_page) },
-        total_web: web && { impressions: web.impressions, clics: web.clicks, position: arrondi(web.position) },
-        par_type_de_recherche: (ctx.par_type_de_recherche || []).filter((t) => t.search_type !== 'web')
-          .map((t) => ({ type: t.search_type, impressions: t.impressions, clics: t.clicks, position: arrondi(t.position) })),
-        pays: plafonne(ctx.pays || [], 8),
-        appareils: ctx.appareil,
-        note_pays: 'pays et appareils connus au niveau de la page (le CRM ne les a pas par requête)',
-        requetes: plafonne(kw.map((k) => ({
+        total_web_requetes: web && { impressions: web.impressions, clics: web.clicks, position: arrondi(web.position),
+          couverture: `recherche web, ${filtre}, requêtes visibles seulement (Google masque les requêtes rares)` },
+        total_web_page: totPage && { impressions: totPage.impressions, clics: totPage.clics, position: totPage.impressions ? arrondi(totPage.pond / totPage.impressions) : undefined,
+          couverture: 'recherche web, tous pays, toutes requêtes (masquées comprises) : somme des appareils' },
+        par_type_de_recherche: { couverture: `images et Discover, ${filtre}`, items: (ctx.par_type_de_recherche || []).filter((t) => t.search_type !== 'web')
+          .map((t) => ({ type: t.search_type, impressions: t.impressions, clics: t.clicks, position: arrondi(t.position) })) },
+        pays: { couverture: 'recherche web, tous pays, toutes requêtes', ...plafonne(ctx.pays || [], 8) },
+        appareils: { couverture: 'recherche web, tous pays, toutes requêtes', items: app },
+        requetes: { couverture: `recherche web, ${filtre}`, ...plafonne(kw.map((k) => ({
           requete: k.query, impressions: k.impressions, clics: k.clicks, position: arrondi(k.position),
           ...(k.representative ? {} : { position_non_representative: true }),
-        })), MAX.requetes),
-        note: "les totaux des requêtes ne recoupent pas toujours le total de la page : Google masque les requêtes rares",
+        })), MAX.requetes) },
+        note: 'total_web_requetes et total_web_page diffèrent normalement : filtre pays et requêtes masquées',
       };
     }),
     bloc('Search Console (requêtes partagées) et Yoast (phrase-clé au dernier crawl)', async () => {
@@ -94,6 +114,7 @@ export async function getPageDossier(pool, siteId, url, days = 90) {
       const conflit = kw && (conflits.details || []).find((c) => c.kw === String(kw).trim().toLowerCase());
       return {
         periode: periode && { debut: jour(new Date(fin.getTime() - (Math.min(days, 90) - 1) * 86400000)), fin: periode.fin },
+        couverture: `recherche web, ${paysRequetes() ? 'pays ' + paysRequetes() + ' seulement' : 'tous pays'}, requêtes d'au moins 5 impressions par page`,
         requetes_partagees: plafonne(requetes, 30),
         phrase_cle: kw || '(vide au dernier crawl)',
         phrase_cle_partagee_avec: conflit ? conflit.pages.filter((p) => !memePage(p.url, url)).map((p) => ({ url: p.url, titre: p.title, type: p.type })) : undefined,
@@ -136,11 +157,23 @@ export async function getPageDossier(pool, siteId, url, days = 90) {
       const lies = r.redirections.filter((x) => memePage(x.from_url, url) || memePage(x.final_url, url)
         || (Array.isArray(x.chain) && x.chain.some((c) => memePage(c.url, url))));
       return {
-        items: lies.map((x) => ({
-          de: x.from_url, vers: x.final_url, code_final: x.final_status, sauts: x.hops,
-          vers_accueil: x.to_home || undefined, releve_le: jour(x.updated_at),
-          sens: memePage(x.from_url, url) ? 'cette adresse redirige' : 'redirige vers cette adresse',
-        })),
+        // le CRM enregistre les adresses sans barre finale : l'adresse brute est reprise de la chaîne de sauts
+        items: lies.map((x) => {
+          const chaine = Array.isArray(x.chain) ? x.chain : [];
+          const de = (chaine[0] && chaine[0].url) || x.from_url;
+          let vers = x.final_url, nature;
+          if (vers && memePage(de, vers)) {
+            const avecBarre = /\/$/.test(new URL(de).pathname);
+            vers = avecBarre ? de.replace(/\/+$/, '') : `${de.replace(/[?#].*$/, '')}/`;
+            nature = avecBarre ? 'même page : retrait de la barre finale' : 'même page : ajout de la barre finale';
+          } else if (vers && de.replace(/^https?:\/\/(www\.)?/, '') === vers.replace(/^https?:\/\/(www\.)?/, '')) nature = 'même page : changement de protocole ou de www';
+          return {
+            de, vers, nature, code_final: x.final_status, sauts: x.hops,
+            chaine: chaine.length > 1 ? chaine.map((c) => `${c.status} ${c.url}`) : undefined,
+            vers_accueil: x.to_home || undefined, releve_le: jour(x.updated_at),
+            sens: memePage(x.from_url, url) ? 'cette adresse redirige' : 'redirige vers cette adresse',
+          };
+        }),
         note: lies.length ? undefined : 'aucune redirection connue du CRM pour cette adresse',
       };
     }),
