@@ -175,17 +175,33 @@ function ancreDe(a) {
   return t || a.getAttribute('title') || (img && img.getAttribute('alt')) || '';
 }
 
+// le lien ou un parent DANS le bloc porte une classe de catégorie/étiquette (cat, category, tag, term…) ;
+// on s'arrête au bloc : <article class="category-…"> autour ne doit rien écarter
+const RE_ETIQ = /(^|[-_])(cat|cats|category|categories|tag|tags|term|terms|badge)([-_]|$)/i;
+function etiquette(a, bloc) {
+  for (let x = a; x && x !== bloc && x.tagName; x = x.parentNode) {
+    if ((x.getAttribute('class') || '').split(/\s+/).some((c) => RE_ETIQ.test(c))) return true;
+  }
+  return false;
+}
+
 export function blocSimilaires(doc, baseUrl) {
   const liensDe = (node) => {
-    const vus = new Set(); const out = [];
+    const parAdresse = new Map();
     for (const a of node.querySelectorAll('a[href]')) {
       const href = a.getAttribute('href');
       const n = normaliser(href, baseUrl);
-      if (!n || vus.has(n) || href.startsWith('#')) continue;
-      vus.add(n);
-      out.push({ href, ancre: ancreDe(a) });
+      if (!n || href.startsWith('#')) continue;
+      // étiquette de catégorie ou de tag dans une carte : pas un article suggéré
+      if (/\b(category|tag)\b/i.test(a.getAttribute('rel') || '') || etiquette(a, node)) continue;
+      const ancre = ancreDe(a);
+      const avant = parAdresse.get(n);
+      // une carte a souvent deux liens (image puis titre) : on garde l'ancre texte
+      if (!avant) parAdresse.set(n, { href, ancre });
+      else if ((!avant.ancre || avant.image) && ancre && !a.querySelector('img')) parAdresse.set(n, { href, ancre });
+      if (!avant && a.querySelector('img') && !txt(a.text)) parAdresse.get(n).image = true;
     }
-    return out;
+    return [...parAdresse.values()].map(({ href, ancre }) => ({ href, ancre }));
   };
   // 1. un titre de bloc exact (« Articles similaires », « Articles liés », « À lire aussi »…), hors du corps de l'article
   for (const h of doc.querySelectorAll('h2,h3,h4,h5,h6,.widget-title,[class*="title"],[class*="titre"],strong,span,p,div')) {
@@ -227,7 +243,7 @@ async function lirePublique(url) {
     break;
   }
   const html = await r.text();
-  const doc = parseHtml(html, { comment: true });
+  const doc = parseHtml(html.replace(/<noscript\b[\s\S]*?<\/noscript>/gi, ''), { comment: true });
   const meta = (sel, attr = 'content') => { const el = doc.querySelector(sel); return el ? txt(el.getAttribute(attr)) : null; };
 
   // le cache a-t-il quand même servi la page ?
