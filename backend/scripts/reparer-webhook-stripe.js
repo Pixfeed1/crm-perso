@@ -5,7 +5,7 @@
    DÉSACTIVÉE (pas supprimée : réactivable chez Stripe). Aucune clé n'est affichée.
 
    Usage, depuis backend/ :
-     node scripts/reparer-webhook-stripe.js            répare
+     node scripts/reparer-webhook-stripe.js            répare (sans effet si déjà réparé ces 7 derniers jours, sauf --forcer)
      node scripts/reparer-webhook-stripe.js --tester   après redémarrage du CRM : envoie une notification
                                                        de test signée avec la clé de .env, doit répondre 200 */
 const fs = require('fs');
@@ -33,6 +33,14 @@ async function reparer() {
   const stripe = require('../config/stripe').getStripe();
   const anciennes = (await stripe.webhookEndpoints.list({ limit: 100 })).data.filter((e) => e.url === URL_CRM);
   const modele = anciennes.find((e) => e.status === 'enabled') || anciennes[0];
+
+  // déjà réparé récemment : on ne recrée pas une adresse à chaque lancement (la clé de .env est la bonne)
+  const recente = anciennes.find((e) => e.status === 'enabled' && e.description === 'CRM PixFeed (prélèvements)' && Date.now() / 1000 - e.created < 7 * 86400);
+  if (recente && !process.argv.includes('--forcer')) {
+    console.log(`Déjà réparé : l'adresse ${recente.id} a été créée par ce script il y a moins de 7 jours.`);
+    console.log('Pour vérifier : node scripts/reparer-webhook-stripe.js --tester   (pour recréer quand même : --forcer)');
+    return;
+  }
 
   const nouvelle = await stripe.webhookEndpoints.create({
     url: URL_CRM,
