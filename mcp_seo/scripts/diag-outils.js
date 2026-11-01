@@ -13,7 +13,7 @@ const ATTENDUS = ['get_live_page', 'get_page_dossier', 'check_urls', 'get_site_r
 
 // outils déclarés dans le code déployé (server.js), pour comparer
 const code = fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'server.js'), 'utf8');
-const dansLeCode = [...code.matchAll(/server\.tool\(\s*'([a-z_]+)'/g)].map((m) => m[1]);
+const dansLeCode = [...code.matchAll(/server\.tool\(\s*['"`]([a-z_]+)['"`]/g)].map((m) => m[1]);
 
 async function liste(url) {
   const appel = async (id, method, params = {}) => {
