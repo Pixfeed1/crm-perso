@@ -7,6 +7,8 @@ const env = (k, d) => (process.env[k] !== undefined && process.env[k] !== "" ? p
 module.exports = {
   // Secrets et chemins (backend/.env)
   anthropicKey: env("CONFIGURATEUR_ANTHROPIC_API_KEY"),
+  // clé d'API non rattachée à un espace de travail (sk-ant-usr-…) : l'API exige l'identifiant de l'espace à utiliser
+  anthropicWorkspace: env("CONFIGURATEUR_ANTHROPIC_WORKSPACE_ID"),
   awinFeedListUrl: env("AWIN_FEEDLIST_URL"),               // l'adresse « …/feedList » du compte 614905
   amazonTag: env("AMAZON_PARTNER_TAG"),                    // identifiant partenaire, ex. « xxxx-21 »
   dossierPublication: env("CONFIGURATEUR_DOSSIER", path.join(process.env.HOME || "", "public_html/wp-content/uploads/configurateur")),

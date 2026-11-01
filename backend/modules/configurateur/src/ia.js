@@ -6,7 +6,7 @@ const config = require("./config");
 let client = null;
 function api() {
   if (!config.anthropicKey) throw new Error("CONFIGURATEUR_ANTHROPIC_API_KEY absente du .env");
-  if (!client) { const Anthropic = require("@anthropic-ai/sdk"); client = new (Anthropic.default || Anthropic)({ apiKey: config.anthropicKey }); }
+  if (!client) { const Anthropic = require("@anthropic-ai/sdk"); client = new (Anthropic.default || Anthropic)({ apiKey: config.anthropicKey, ...(config.anthropicWorkspace ? { defaultHeaders: { "anthropic-workspace-id": config.anthropicWorkspace } } : {}) }); }
   return client;
 }
 

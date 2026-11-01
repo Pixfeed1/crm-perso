@@ -10,8 +10,21 @@ const d = (x) => (x ? new Date(x).toLocaleString("fr-FR", { timeZone: "Europe/Pa
 const un = async (sql) => (await pool.query(sql).catch(() => ({ rows: [] }))).rows[0] || {};
 
 (async () => {
+  // clé Claude : essayée pour de vrai (liste des modèles, gratuite), jamais affichée
   const cle = process.env.CONFIGURATEUR_ANTHROPIC_API_KEY || "";
-  console.log(`1. Clé Claude          : ${!cle ? "ABSENTE (la proposition mensuelle est sautée)" : cle.startsWith("sk-ant-api03-") ? "présente, bon format" : "présente mais format inattendu (une clé d'API commence par sk-ant-api03-)"}`);
+  const espace = process.env.CONFIGURATEUR_ANTHROPIC_WORKSPACE_ID || "";
+  let etatCle = "ABSENTE (la proposition mensuelle est sautée)";
+  if (cle) {
+    try {
+      const r = await fetch("https://api.anthropic.com/v1/models", { headers: { "x-api-key": cle, "anthropic-version": "2023-06-01", ...(espace ? { "anthropic-workspace-id": espace } : {}) } });
+      const j = await r.json().catch(() => ({}));
+      const msg = (j.error && j.error.message) || "";
+      etatCle = r.ok ? "présente et ACCEPTÉE par l'API"
+        : /workspace/i.test(msg) ? `présente, mais il manque l'identifiant d'espace de travail (CONFIGURATEUR_ANTHROPIC_WORKSPACE_ID)${espace ? " ou il est faux" : ""}`
+        : `présente mais REFUSÉE par l'API (HTTP ${r.status}${msg ? " : " + msg.slice(0, 120) : ""})`;
+    } catch (e) { etatCle = `présente, API injoignable (${e.message})`; }
+  }
+  console.log(`1. Clé Claude          : ${etatCle}`);
 
   const nuit = await un("SELECT fin, statut FROM cfg_taches WHERE nom = 'nuit' ORDER BY debut DESC LIMIT 1");
   const offre = await un("SELECT max(releve_le) AS dernier, count(DISTINCT composant)::int AS composants FROM cfg_offres WHERE releve_le > now() - interval '2 days'");
