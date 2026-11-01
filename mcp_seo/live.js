@@ -278,7 +278,7 @@ async function lirePublique(url) {
 
 // ---------- identité : WordPress reconnaît-il l'utilisateur dédié ? ----------
 const HTACCESS = "RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]";
-async function verifierAcces(wp) {
+async function verifierAcces(wp, base) {
   const r = await wp('users/me', { context: 'edit', _fields: 'id,roles' });
   if (r.ok) {
     const me = await r.json();
@@ -286,8 +286,19 @@ async function verifierAcces(wp) {
   }
   const e = await erreurHttp(r, SRC.wp + ' /users/me');
   if (/^rest_not_logged_in/.test(e.message)) {
-    e.message = "WordPress n'a reçu aucun identifiant : l'en-tête Authorization est retiré avant WordPress (cas courant avec LiteSpeed/Apache). "
-      + `Ajouter dans le .htaccess du site, juste avant « # BEGIN WordPress » : RewriteEngine On puis ${HTACCESS}`;
+    // WordPress annonce dans /wp-json/ les modes de connexion qu'il accepte : sans « application-passwords »,
+    // les mots de passe d'application sont désactivés (extension de sécurité, ou HTTPS non détecté)
+    let actifs = null;
+    try {
+      const r2 = await requete(`${base}/wp-json/?_fields=authentication`, { headers: { Accept: 'application/json' } });
+      if (r2.ok) actifs = !!((await r2.json()).authentication || {})['application-passwords'];
+    } catch { /* index illisible : on ne conclut pas */ }
+    e.message = actifs === false
+      ? "mots de passe d'application DÉSACTIVÉS sur ce site : WordPress ignore l'identification. Cause habituelle : une extension de sécurité "
+        + "(Wordfence > Login Security > Réglages > « Disable WordPress application passwords », Solid Security, Perfmatters, WP Hide…), "
+        + "ou HTTPS non détecté par WordPress."
+      : "en-tête d'identification non reçu par WordPress (mots de passe d'application pourtant actifs) : le serveur web le retire. "
+        + `Vérifier dans le .htaccess, avant « # BEGIN WordPress » : ${HTACCESS} (ou SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1)`;
   } else if (/incorrect_password|invalid_username|invalid_email|application_password/.test(e.message)) {
     e.message = `identifiant ou mot de passe d'application refusé par WordPress (${e.message})`;
   }
@@ -447,7 +458,7 @@ export async function getLivePage(pool, siteId, url) {
   } else {
     const wp = clientWp(base, acces.auth);
     try {
-      const ident = await verifierAcces(wp);
+      const ident = await verifierAcces(wp, base);
       const types = await typesWp(wp);
       const trouve = await trouverContenu(pool, wp, types, siteId, url);
       if (!trouve) {

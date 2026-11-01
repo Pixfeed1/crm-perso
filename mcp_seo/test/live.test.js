@@ -5,7 +5,7 @@ import http from 'node:http';
 
 const USER = 'editeur-crm', PASS = 'abcd efgh ijkl mnop';
 const AUTH = 'Basic ' + Buffer.from(`${USER}:${PASS.replace(/\s+/g, '')}`).toString('base64');
-let srv, base, vus = [], retireAuth = false;
+let srv, base, vus = [], retireAuth = false, appPasswordsActifs = true;
 
 const RAW = `<!-- wp:heading --><h2>Les meilleurs outils</h2><!-- /wp:heading -->
 <!-- wp:paragraph --><p>Pour la <a href="/glossaire-3d/motion-capture/">motion capture</a> dans Blender, voir <a href="https://rokoko.com/" rel="nofollow noopener">Rokoko</a>.</p><!-- /wp:paragraph -->
@@ -26,6 +26,7 @@ before(async () => {
     const u = new URL(req.url, 'http://x');
     vus.push({ path: u.pathname, auth: req.headers.authorization || null, q: Object.fromEntries(u.searchParams) });
     const json = (code, body, h = {}) => { res.writeHead(code, { 'Content-Type': 'application/json', ...h }); res.end(JSON.stringify(body)); };
+    if (u.pathname === '/wp-json/') return json(200, { authentication: appPasswordsActifs ? { 'application-passwords': { endpoints: {} } } : [] });
     if (u.pathname.startsWith('/wp-json/')) {
       const auth = retireAuth ? undefined : req.headers.authorization;      // serveur web qui retire l'en-tête
       const p = u.pathname.replace('/wp-json/wp/v2/', '');
@@ -136,7 +137,11 @@ test('erreurs claires : accès refusé, accès absent, adresse hors du site', as
   process.env.WP_API_PASSWORD_2 = PASS;
   retireAuth = true;
   o = await getLivePage(pool(), 2, `${base}/article/`);
-  assert.match(o.wordpress.erreur.message, /aucun identifiant.*\.htaccess.*HTTP_AUTHORIZATION/);
+  assert.match(o.wordpress.erreur.message, /non reçu par WordPress.*HTTP_AUTHORIZATION/);
+  appPasswordsActifs = false;
+  o = await getLivePage(pool(), 2, `${base}/article/`);
+  assert.match(o.wordpress.erreur.message, /DÉSACTIVÉS.*Wordfence/);
+  appPasswordsActifs = true;
   retireAuth = false;
   process.env.WP_API_PASSWORD_2 = 'mauvais';
   assert.equal(o.page_publique.code_http, 200, 'la page publique reste lue');

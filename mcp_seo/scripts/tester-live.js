@@ -31,7 +31,7 @@ for (let i = 0; i < args.length; i += 2) {
     const ko = o.erreur || w.erreur || p.erreur;
     const nom = url.replace(/^https?:\/\/(www\.)?/, '').slice(0, 45);
     console.log(ko
-      ? `ERREUR  ${nom} : ${o.erreur || (w.erreur ? 'WordPress ' + w.erreur.code + ' ' + String(w.erreur.message).slice(0, 70) : 'page publique ' + p.erreur.code)}`
+      ? `ERREUR  ${nom} : ${o.erreur || (w.erreur ? 'WordPress ' + w.erreur.code + ' ' + String(w.erreur.message).slice(0, 260) : 'page publique ' + p.erreur.code)}`
       : `OK      ${nom} : ${(Buffer.byteLength(json) / 1024).toFixed(1)} Ko, ${w.type} #${w.id}, ${c.mots} mots, phrase-clé « ${y.phrase_cle ?? '?'} », ${p.articles_similaires?.total ?? 0} similaires, ${e.total ?? 0} liens entrants`);
     continue;
   }
