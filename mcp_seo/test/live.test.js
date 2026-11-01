@@ -137,7 +137,7 @@ test('erreurs claires : accès refusé, accès absent, adresse hors du site', as
   process.env.WP_API_PASSWORD_2 = PASS;
   retireAuth = true;
   o = await getLivePage(pool(), 2, `${base}/article/`);
-  assert.match(o.wordpress.erreur.message, /non reçu par WordPress.*HTTP_AUTHORIZATION/);
+  assert.match(o.wordpress.erreur.message, /ne reconnaît pas l'utilisateur dédié.*diag-wp-auth/);
   appPasswordsActifs = false;
   o = await getLivePage(pool(), 2, `${base}/article/`);
   assert.match(o.wordpress.erreur.message, /DÉSACTIVÉS.*Wordfence/);

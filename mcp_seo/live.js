@@ -297,8 +297,8 @@ async function verifierAcces(wp, base) {
       ? "mots de passe d'application DÉSACTIVÉS sur ce site : WordPress ignore l'identification. Cause habituelle : une extension de sécurité "
         + "(Wordfence > Login Security > Réglages > « Disable WordPress application passwords », Solid Security, Perfmatters, WP Hide…), "
         + "ou HTTPS non détecté par WordPress."
-      : "en-tête d'identification non reçu par WordPress (mots de passe d'application pourtant actifs) : le serveur web le retire. "
-        + `Vérifier dans le .htaccess, avant « # BEGIN WordPress » : ${HTACCESS} (ou SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1)`;
+      : "WordPress ne reconnaît pas l'utilisateur dédié : soit l'en-tête d'identification ne lui parvient pas (serveur web), "
+        + "soit les identifiants sont refusés et une extension de sécurité masque le motif. Diagnostic : node scripts/diag-wp-auth.js <site_id> (dans mcp_seo/).";
   } else if (/incorrect_password|invalid_username|invalid_email|application_password/.test(e.message)) {
     e.message = `identifiant ou mot de passe d'application refusé par WordPress (${e.message})`;
   }
