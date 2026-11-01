@@ -44,3 +44,22 @@ test("proposition mensuelle : Sonnet 5.5, recherche web actuelle limitée aux do
   reponses = [msg('{"resume":"coupé', "max_tokens")];
   await assert.rejects(ia.proposerSelection({ composants: {} }, { mesures: {}, offresParId: {}, alertes: [] }), /réponse coupée/);
 });
+
+test("proposition : ajout sans fiche complète écarté, pause de l'API reprise, erreurs de recherche signalées", async () => {
+  const ia = require("../src/ia");
+  recues = [];
+  const fiche = { categorie: "gpu", puce: "Nvidia RTX 5050 8 Go", court: "RTX 5050", caracteristiques: { vram: 8 }, modeles: [{ modele: "X", correspondance: { motifs: ["RTX 5050"] } }], pourquoi: "p", prix_exemple: 260 };
+  reponses = [
+    msg(null, "pause_turn", { content: [{ type: "server_tool_use", id: "s1", name: "web_search", input: { query: "rtx 5050" } }, { type: "web_search_tool_result", tool_use_id: "s1", content: { type: "web_search_tool_result_error", error_code: "too_many_requests" } }] }),
+    msg('{"resume":"Un ajout","changements":[{"type":"ajout","id":"gpu-5050","detail":{"composant":' + JSON.stringify(fiche) + '},"raison":"r","sources":["https://nvidia.com/x"]},{"type":"ajout","id":"gpu-vide","detail":{},"raison":"r","sources":["https://nvidia.com/y"]}]}'),
+  ];
+  const p = await ia.proposerSelection({ composants: { "gpu-5060": { categorie: "gpu", puce: "RTX 5060", court: "RTX 5060", caracteristiques: { vram: 8 }, modeles: [{ modele: "M" }] } } }, { mesures: {}, offresParId: {}, alertes: [] });
+  assert.equal(recues.length, 2, "la pause est reprise par un second appel");
+  assert.equal(recues[1].body.messages.at(-1).role, "assistant", "la réponse suspendue est renvoyée telle quelle");
+  assert.match(recues[0].body.messages[0].content, /Format EXACT d'une fiche/);
+  assert.deepEqual(p.changements.map((c) => c.id), ["gpu-5050"], "l'ajout sans fiche est écarté");
+  assert.match(p.resume, /ajout écarté, fiche incomplète : gpu-vide/);
+  assert.match(p.resume, /recherches web : 1, erreur\(s\) renvoyée\(s\) par l'API : too_many_requests/);
+  assert.equal(ia.ficheValide(fiche), true);
+  assert.equal(ia.ficheValide(undefined), false);
+});

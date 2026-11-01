@@ -102,6 +102,19 @@ test("tâches et validation sur base réelle", opts, async t => {
     assert.equal(JSON.parse(fs.readFileSync(fichier, "utf8")).composants["gpu-5070"].pourquoi, "Nouveau.");
   });
 
+  await t.test("un ajout sans fiche complète est refusé clairement : rien n'est publié ni changé", async () => {
+    const avantSel = (await db.query("SELECT id, version FROM cfg_selections WHERE statut = 'validee'")).rows;
+    const avantFichier = fs.readFileSync(fichier, "utf8");
+    const p = (await db.query("INSERT INTO cfg_propositions (contenu) VALUES ($1) RETURNING id",
+      [{ resume: "test", changements: [{ type: "ajout", id: "gpu-5050", detail: {}, sources: ["x"] }] }])).rows[0].id;
+    const e = await finir(taches.demarrer(deps, "valider", [p, { 0: true }, "Marc"]));
+    assert.equal(e.statut, "echouee");
+    assert.match(e.erreur, /ajout « gpu-5050 » refusé : la proposition ne contient pas la fiche complète/);
+    assert.deepEqual((await db.query("SELECT id, version FROM cfg_selections WHERE statut = 'validee'")).rows, avantSel);
+    assert.equal((await db.query("SELECT statut FROM cfg_propositions WHERE id = $1", [p])).rows[0].statut, "en_attente");
+    assert.equal(fs.readFileSync(fichier, "utf8"), avantFichier);
+  });
+
   await t.test("verrou partagé : si un autre processus tient le verrou, la demande est refusée", async () => {
     const autre = await db.connect();
     await autre.query("SELECT pg_advisory_lock($1)", [taches.CLE_VERROU]);

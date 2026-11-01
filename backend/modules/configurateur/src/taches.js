@@ -242,7 +242,10 @@ function appliquer(sel, changements, decisions) {
     if (!decisions[i]) return;
     const comp = sel.composants[c.id], d = c.detail || {};
     switch (c.type) {
-      case "ajout": sel.composants[c.id] = d.composant; break;
+      case "ajout":
+        // une fiche incomplète ferait planter le calcul : refus clair, rien n'est publié
+        if (!ia.ficheValide(d.composant)) throw Object.assign(new Error(`ajout « ${c.id} » refusé : la proposition ne contient pas la fiche complète du composant (catégorie, puce, caractéristiques, modèles). Refuser ce changement ou relancer « Proposition du mois ».`), { status: 400 });
+        sel.composants[c.id] = d.composant; break;
       case "retrait": delete sel.composants[c.id]; break;
       case "pourquoi": if (comp) comp.pourquoi = d.texte; break;
       case "ean": if (comp?.modeles?.[d.rang || 0]) { const m = comp.modeles[d.rang || 0]; m.correspondance = m.correspondance || {}; m.correspondance.ean = [...new Set([...(m.correspondance.ean || []), ...[].concat(d.ean)])]; } break;
