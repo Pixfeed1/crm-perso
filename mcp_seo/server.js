@@ -12,6 +12,15 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { z } from 'zod';
 import { pool } from './db.js';
+
+// Liste tolérante : accepte aussi une chaîne (« a,b » ou '["a","b"]'), pour un client qui aurait gardé
+// une ancienne fiche de l'outil et enverrait le paramètre en texte.
+const liste = (item) => z.preprocess((v) => {
+  if (typeof v !== 'string') return v;
+  const t = v.trim();
+  if (t.startsWith('[')) { try { return JSON.parse(t); } catch { /* texte simple */ } }
+  return t ? t.split(',').map((x) => x.trim()).filter(Boolean) : [];
+}, item);
 import * as tools from './tools.js';
 import * as bing from './bing.js';
 import { getLivePage } from './live.js';
@@ -318,15 +327,15 @@ function buildServer() {
   server.tool(
     'check_urls',
     `Vérifie en direct jusqu'à ${MAX_URLS} adresses, internes ou externes : code HTTP, adresse finale après redirections, title.\nPour les internes en plus : id, type et statut WordPress, canonique, noindex, état d'indexation connu du CRM avec sa date.`,
-    { site_id: z.number().int(), urls: z.array(z.string()).max(MAX_URLS) },
+    { site_id: z.number().int(), urls: liste(z.array(z.string()).max(MAX_URLS)) },
     async ({ site_id, urls }) => compactJson(await checkUrls(pool, site_id, urls))
   );
 
   server.tool(
     'get_site_resources',
     "Ce qu'il faut connaître d'un site pour écrire, par sections : categories, glossaire, shortcodes, icones ([spec] : table du thème, sprite ; icones=[…] vérifie des noms), redaction (types et champs, noms des blocs, compositions, fichiers acceptés).\nÉtiquettes seulement sur demande (sections=[\"etiquettes\"] ou etiquettes_recherche=\"nom\") ; blocs=[\"core/image\", …] donne les attributs de ces blocs.",
-    { site_id: z.number().int(), sections: z.array(z.enum(['categories', 'etiquettes', 'glossaire', 'shortcodes', 'icones', 'redaction'])).optional(),
-      etiquettes_recherche: z.string().optional(), blocs: z.array(z.string()).max(50).optional(), icones: z.array(z.string()).max(50).optional() },
+    { site_id: z.number().int(), sections: liste(z.array(z.enum(['categories', 'etiquettes', 'glossaire', 'shortcodes', 'icones', 'redaction']))).optional(),
+      etiquettes_recherche: z.string().optional(), blocs: liste(z.array(z.string()).max(50)).optional(), icones: liste(z.array(z.string()).max(50)).optional() },
     async ({ site_id, sections, etiquettes_recherche, blocs, icones }) => compactJson(await getSiteResources(pool, site_id, { sections, etiquettes_recherche, blocs: blocs ?? [], icones: icones ?? [] }))
   );
 
