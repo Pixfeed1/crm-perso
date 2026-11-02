@@ -2,13 +2,13 @@
 // a écrit vérifie les faits sur le web, la langue et la cohérence. Les corrections sûres sont appliquées au texte
 // (faits contredits par une source, affirmations introuvables retirées, fautes de langue) ; le style, la structure et
 // les choix éditoriaux sont seulement signalés. Rien n'est publié : le résultat va dans un brouillon que Marc relit.
-// Clé : ANTHROPIC_API_KEY (backend/.env). Modèle : RELECTURE_MODELE. Recherches web : RELECTURE_RECHERCHES (20).
+// Clé : ANTHROPIC_API_KEY (backend/.env). Modèle : RELECTURE_MODELE. Recherches web : RELECTURE_RECHERCHES (50).
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
 const MODELE = () => process.env.RELECTURE_MODELE || 'claude-opus-5-5';
-const RECHERCHES = () => Number(process.env.RELECTURE_RECHERCHES) || 20;
+const RECHERCHES = () => Number(process.env.RELECTURE_RECHERCHES) || 50;
 const CHAMPS = ['contenu', 'titre', 'titre_seo', 'meta'];
 const TYPES_CORRECTION = ['fait', 'retrait', 'langue', 'coherence'];
 
@@ -27,6 +27,9 @@ Tu reçois le titre, le titre SEO, la méta description et le contenu HTML (bloc
    - Contredite par une source : correction de type "fait", avec l'URL de la source dans "source".
    - Introuvable ou douteuse : correction de type "retrait" : reformule le passage SANS le détail douteux, sans rien ajouter. Explique dans "raison" ce que tu n'as pas pu confirmer.
    N'introduis JAMAIS une information qui ne vient pas d'une source que tu cites.
+   Procédures et réglages (noms exacts des menus et des options, étapes, autorisations demandées par une appli, comportement d'un mode) : vérifie-les dans l'aide officielle de l'éditeur (Apple, Google, Microsoft, éditeur de l'appli…), c'est là que se cachent les erreurs.
+   Ordre : commence par les affirmations à risque (procédures, réglages, autorisations, chiffres, compatibilités, prix, dates), puis le reste.
+   Si tes recherches ne suffisent pas pour tout vérifier, NE déclare PAS confirmé ce que tu n'as pas vérifié : liste-le dans "non_verifiees".
 2. LANGUE. Fautes d'orthographe, de grammaire, d'accord, de conjugaison, de typographie française : correction de type "langue". Ne touche ni au style ni au ton.
 3. COHÉRENCE. Le titre, le titre SEO, la méta et l'introduction annoncent ce que l'article contient ; pas de contradiction d'une section à l'autre ; pas d'expérience revendiquée (« nous avons testé ») que rien ne montre. Correction de type "coherence" seulement si elle est évidente et sûre ; sinon signalement.
 4. STYLE, STRUCTURE, CHOIX ÉDITORIAUX : signalement seulement, jamais de correction.
@@ -41,7 +44,8 @@ Règles de chaque correction :
 Réponds UNIQUEMENT par un objet JSON valide, sans texte autour :
 {"corrections":[{"type":"fait|retrait|langue|coherence","champ":"contenu|titre|titre_seo|meta","avant":"…","apres":"…","raison":"…","source":"https://… ou vide"}],
  "signalements":[{"type":"style|structure|coherence|fait|autre","extrait":"…","remarque":"…"}],
- "affirmations":{"relevees":0,"confirmees":0,"corrigees":0,"retirees":0},
+ "non_verifiees":[{"extrait":"…","raison":"quota de recherches atteint, ou aucune source trouvée"}],
+ "affirmations":{"relevees":0,"confirmees":0,"corrigees":0,"retirees":0,"non_verifiees":0},
  "resume":"deux phrases au plus"}`;
 
 /** Appel réel : recherche web, reprise des tours suspendus (pause_turn). Remplaçable dans les tests. */
@@ -128,7 +132,13 @@ async function relire({ domaine, champs, dossier }) {
     if (fichier) fs.writeFileSync(fichier, JSON.stringify(brut));
   }
   const { champs: corriges, appliquees, non_appliquees: nonAppliquees } = appliquer(champs, brut.corrections);
+  const erreurs = (brut.diagnostic && brut.diagnostic.erreurs_recherche) || [];
+  const nonVerifiees = Array.isArray(brut.non_verifiees) ? brut.non_verifiees : [];
+  const quota = erreurs.includes('max_uses_exceeded');
   const rapport = {
+    complete: !quota && !nonVerifiees.length,
+    quota_atteint: quota ? `les ${RECHERCHES()} recherches web autorisées ont toutes servi (RELECTURE_RECHERCHES dans backend/.env)` : undefined,
+    non_verifiees: nonVerifiees.length ? nonVerifiees : undefined,
     modele: brut.modele || MODELE(),
     reprise_du_resultat_precedent: reprise || undefined,
     resume: brut.resume,

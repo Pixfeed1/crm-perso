@@ -143,6 +143,7 @@ async function preparer(db, { depot, simulation = true, creer_etiquettes = false
       if (m.yoast && y.meta !== undefined) m.yoast.meta = res.champs.meta;
       r.relecture = res.rapport;
       action({ quoi: 'relecture', corrections: res.rapport.corrections_appliquees.length, signalements: (res.rapport.signalements || []).length });
+      if (!res.rapport.complete) avert('relecture', `relecture INCOMPLÈTE${res.rapport.quota_atteint ? ` : ${res.rapport.quota_atteint}` : ''}${res.rapport.non_verifiees ? ` ; ${res.rapport.non_verifiees.length} affirmation(s) non vérifiée(s) : voir relecture.non_verifiees` : ''}`);
       if (res.rapport.signalements) avert('relecture', `${res.rapport.signalements.length} point(s) signalé(s) sans correction (style, structure, cohérence…) : voir relecture.signalements`);
       if (res.rapport.corrections_non_appliquees) avert('relecture', `${res.rapport.corrections_non_appliquees.length} correction(s) proposée(s) mais non appliquée(s) : voir relecture.corrections_non_appliquees`);
     } catch (e) { bloque('relecture', `relecture impossible : ${e.message} (relancer, ou relecture=false pour préparer sans relecture)`, e.code || 'relecture'); }
