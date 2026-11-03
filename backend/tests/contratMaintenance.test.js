@@ -13,7 +13,7 @@ const notesLofloral = [
   "Adresse : Rue du Grand Verger, La Côte d'Aime, 73210 La Plagne Tarentaise"
 ].join('\n');
 const contrat = { plan: 'Professionnel', site_name: 'LOFLORAL', site_url: 'https://lofloral.fr', monthly_amount: '300.00', contract_start_date: '2026-10-27', billing_day: 27, hosting_provider: 'Inconnu, à demander' };
-const company = { company_name: 'PixFeed', siret: '85239373500018', address: '1 rue des Morillons', postal_code: '95130', city: 'Franconville' };
+const company = { company_name: 'PixFeed', siret: '85239373500026', address: '1 rue des Morillons', postal_code: '95130', city: 'Franconville' };
 
 test('préremplissage depuis les notes de la fiche client', () => {
   const p = K.prefill(contrat, { name: 'LOFLORAL', notes: notesLofloral });
@@ -31,7 +31,7 @@ test('Professionnel : texte complet, valeurs remplies, aucune variable brute', (
   const html = K.renderHtml(contrat, infos, company);
   assert.doesNotMatch(html, /\{\{|undefined|null|NaN/);
   assert.match(html, /Formule Professionnel/);
-  assert.match(html, /<strong>PixFeed, Entreprise individuelle, SIRET 852 393 735 00018, 1 rue des Morillons, 95130 Franconville<\/strong>/);
+  assert.match(html, /<strong>PixFeed, Entreprise individuelle, SIRET 852 393 735 00026, 1 rue des Morillons, 95130 Franconville<\/strong>/);
   assert.match(html, /hébergé chez <span class="blank">/, 'hébergeur inconnu : ligne à compléter');
   assert.match(html, /<strong>LOFLORAL PROVENCE<\/strong>, SARL unipersonnelle/);
   assert.match(html, /représentée par Patricia Dalmas, gérante/);
@@ -76,7 +76,7 @@ test('routes : préremplissage depuis la fiche, enregistrement sur le contrat, r
       await pool.query(`CREATE TABLE ${name} (${cols})`);
     };
     for (const t of ['crm_clients', 'maintenance_contracts', 'company_settings', 'settings']) await mk(t);
-    await pool.query("INSERT INTO company_settings (company_name, siret, address, postal_code, city) VALUES ('PixFeed', '85239373500018', '1 rue des Morillons', '95130', 'Franconville')");
+    await pool.query("INSERT INTO company_settings (company_name, siret, address, postal_code, city) VALUES ('PixFeed', '85239373500026', '1 rue des Morillons', '95130', 'Franconville')");
     const cl = (await pool.query('INSERT INTO crm_clients (name, email, notes) VALUES ($1, $2, $3) RETURNING id', ['LOFLORAL', 'lofloral73@gmail.com', notesLofloral])).rows[0].id;
     const mc = (await pool.query("INSERT INTO maintenance_contracts (client_id, site_name, site_url, plan, monthly_amount, contract_start_date, billing_day) VALUES ($1, 'LOFLORAL', 'https://lofloral.fr', 'Professionnel', 300, '2026-10-27', 27) RETURNING id", [cl])).rows[0].id;
     const ctrl = require('../controllers/maintenanceContractController');

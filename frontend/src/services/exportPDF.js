@@ -1,11 +1,31 @@
 // src/services/exportPDF.js
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
+import { settingsAPI } from './settingsAPI';
+
+// Coordonnées de l'entreprise : celles des Paramètres du CRM (jamais de valeurs d'exemple sur un document).
+let entreprise = null;
+async function coordonnees() {
+  if (entreprise) return entreprise;
+  try { entreprise = await settingsAPI.getSettings(); } catch { entreprise = {}; }
+  return entreprise || {};
+}
+function blocEntreprise(doc, c) {
+  const siret = String(c.siret || '').replace(/\D/g, '');
+  const lignes = [
+    c.company_name,
+    c.address,
+    [c.postal_code, c.city].filter(Boolean).join(' '),
+    siret ? `SIRET : ${siret.length === 14 ? `${siret.slice(0, 3)} ${siret.slice(3, 6)} ${siret.slice(6, 9)} ${siret.slice(9)}` : c.siret}` : null,
+  ].filter(Boolean);
+  lignes.forEach((l, i) => doc.text(String(l), 20, 51 + 5 * i));
+}
 
 /**
  * Export d'un devis en PDF
  */
-export const exportQuoteToPDF = (quote) => {
+export const exportQuoteToPDF = async (quote) => {
+  const c = await coordonnees();
   const doc = new jsPDF();
 
   // Titre
@@ -22,13 +42,10 @@ export const exportQuoteToPDF = (quote) => {
   doc.setFontSize(10);
   doc.setTextColor(0, 0, 0);
   doc.setFont(undefined, 'bold');
-  doc.text('VOTRE ENTREPRISE', 20, 45);
+  doc.text('ÉMETTEUR', 20, 45);
   doc.setFont(undefined, 'normal');
   doc.setFontSize(9);
-  doc.text('Nom de votre entreprise', 20, 51);
-  doc.text('Adresse', 20, 56);
-  doc.text('Code postal Ville', 20, 61);
-  doc.text('SIRET: 123 456 789 00012', 20, 66);
+  blocEntreprise(doc, c);
 
   // Informations client (à droite)
   doc.setFontSize(10);
@@ -170,7 +187,8 @@ export const exportQuoteToPDF = (quote) => {
 /**
  * Export d'une facture en PDF
  */
-export const exportInvoiceToPDF = (invoice) => {
+export const exportInvoiceToPDF = async (invoice) => {
+  const c = await coordonnees();
   const doc = new jsPDF();
 
   // Titre
@@ -187,13 +205,10 @@ export const exportInvoiceToPDF = (invoice) => {
   doc.setFontSize(10);
   doc.setTextColor(0, 0, 0);
   doc.setFont(undefined, 'bold');
-  doc.text('VOTRE ENTREPRISE', 20, 45);
+  doc.text('ÉMETTEUR', 20, 45);
   doc.setFont(undefined, 'normal');
   doc.setFontSize(9);
-  doc.text('Nom de votre entreprise', 20, 51);
-  doc.text('Adresse', 20, 56);
-  doc.text('Code postal Ville', 20, 61);
-  doc.text('SIRET: 123 456 789 00012', 20, 66);
+  blocEntreprise(doc, c);
 
   // Informations client (à droite)
   doc.setFontSize(10);
