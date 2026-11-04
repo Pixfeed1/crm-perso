@@ -1,5 +1,11 @@
 // backend/services/pdfService.js
+const fs = require('fs');
+const path = require('path');
 const puppeteer = require('puppeteer-core');
+
+// Profil Chrome FIXE, réutilisé à chaque démarrage : sans lui, Chrome crée un profil neuf dans /tmp à chaque
+// lancement, jamais supprimé quand le CRM redémarre (déploiement) : /tmp finissait plein.
+const PROFIL = process.env.PDF_CHROME_PROFILE || path.join(__dirname, '..', '.cache', 'chrome-pdf');
 const reportTemplate = require('./reportTemplate');
 const documentTemplate = require('./documentTemplate');
 
@@ -52,9 +58,13 @@ class PDFService {
     }
 
     try {
+      fs.mkdirSync(PROFIL, { recursive: true });
+      // verrous laissés par un Chrome arrêté brutalement (redémarrage du CRM) : sinon le nouveau refuse de démarrer
+      for (const f of ['SingletonLock', 'SingletonSocket', 'SingletonCookie']) { try { fs.rmSync(path.join(PROFIL, f), { force: true }); } catch { /* absent */ } }
       this.browser = await puppeteer.launch({
         executablePath: chromePath,
         headless: 'new',
+        userDataDir: PROFIL,
         args: [
           '--no-sandbox',
           '--disable-setuid-sandbox',

@@ -34,3 +34,7 @@ config/database.js
 # Diffuseur : rendus envoyés (originaux privés, fichiers temporaires)
 backend/uploads/diffuseur/
 backend/uploads/wp-depots/
+
+# Fichiers temporaires et profil Chrome du CRM
+backend/tmp/
+backend/.cache/

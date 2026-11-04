@@ -8,6 +8,23 @@ const path = require('path');
 const dotenv = require('dotenv');
 const cookieParser = require('cookie-parser');
 const fs = require('fs');
+
+// Fichiers temporaires du CRM (réanalyses, envois de dépôts, PDF) dans son propre dossier, sur la grande partition,
+// et non dans le petit /tmp partagé du serveur (4 Go : plein, il bloque tout avec ENOSPC). Hérité par les scripts
+// lancés (analyseur Python…). Au démarrage, ce qui y traîne depuis plus d'un jour est supprimé (ce dossier seulement).
+{
+  const tmp = process.env.CRM_TMPDIR || path.join(__dirname, 'tmp');
+  try {
+    fs.mkdirSync(tmp, { recursive: true });
+    process.env.TMPDIR = tmp;
+    const limite = Date.now() - 24 * 3600 * 1000;
+    for (const f of fs.readdirSync(tmp)) {
+      const p = path.join(tmp, f);
+      try { if (fs.statSync(p).mtimeMs < limite) fs.rmSync(p, { recursive: true, force: true }); } catch { /* déjà parti */ }
+    }
+  } catch (e) { console.warn('[tmp] dossier temporaire du CRM :', e.message); }
+}
+
 const db = require('./config/pgConfig'); // Changé pour utiliser PostgreSQL
 const { autoInitDatabase } = require('./scripts/autoInitDatabase');
 const scheduledEmailWorker = require('./services/scheduledEmailWorker');
