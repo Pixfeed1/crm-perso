@@ -12,7 +12,7 @@ const { detectNoCode } = require('../utils/nocodePlatforms');
 const { decodeHtml } = require('../utils/decodeHtml');
 const { isAntibotTitle } = require('../utils/antibotTitle');
 const sireneEnrich = require('../services/sireneEnrich');
-const { problemesLisibles } = require('../utils/crawlAngles');
+const { problemesLisibles, anglesClasses } = require('../utils/crawlAngles');
 const identiteService = require('../services/identiteService');
 const { prospectScore, auditFlags, promotionBlocker, departmentFromPostalCode, descriptionAbsurde, nomMalOrthographie } = require('../utils/prospectScore');
 
@@ -270,43 +270,17 @@ async function rescoreJob(db, jobId, ids = null) {
 // opts : { statusVal, userNote, source, sourceLine, extraNotes }
 async function createLeadFromResult(db, r, opts = {}) {
   const anneeCourante = new Date().getFullYear();
-  // Angles d'approche détectés gratuitement (audit) -> arguments concrets pour l'email.
-  const angles = [
-    r.mentions_legales === false ? '• Pas de mentions légales (obligation légale LCEN)' : null,
-    r.mobile_ok === false ? '• Site non responsive (mauvais affichage mobile)' : null,
-    (r.ssl_expire_jours != null && r.ssl_expire_jours < 30)
-      ? `• Certificat SSL expire dans ${r.ssl_expire_jours} j` : null,
-    r.ssl_ok === false ? '• Certificat SSL invalide/absent' : null,
-    r.https_final === false ? '• Site servi en HTTP (« Non sécurisé » affiché au visiteur)' : null,
-    (r.noindex === true || r.robots_bloque === true) ? `• INVISIBLE SUR GOOGLE (${r.noindex ? 'balise noindex' : 'robots.txt bloque tout'})` : null,
-    (Number(r.http_status) >= 500) ? `• Site en erreur serveur (${r.http_status})` : null,
-    ([404, 410].includes(Number(r.http_status))) ? "• Page d'accueil introuvable (404) : le site répond mais n'affiche rien" : null,
-    (r.cgv === false && (r.site_type === 'commerce' || r.ecommerce_actif)) ? '• Pas de conditions générales de vente (obligatoires pour vendre en ligne)' : null,
-    (r.retractation === false && (r.site_type === 'commerce' || r.ecommerce_actif)) ? '• Aucune information sur le droit de rétractation (Code de la consommation)' : null,
-    r.contenu_mixte === true ? '• Contenu mixte : cadenas cassé, éléments bloqués par le navigateur' : null,
-    r.mentions_404 === true ? '• Le lien « mentions légales » mène à une page en erreur' : null,
-    r.sitemap === 'vide' ? '• Sitemap.xml vide (Google n\'a aucune liste des pages)' : null,
-    r.urls_reecrites === false ? '• Adresses non réécrites (index.php?id_category=…) : aucun mot dans les URL' : null,
-    descriptionAbsurde(r) ? `• Description Google absurde : « ${String(r.meta_desc_txt).slice(0, 80)} »` : null,
-    nomMalOrthographie(r) ? `• Nom de l'entreprise mal écrit dans le titre : « ${nomMalOrthographie(r).titre} » au lieu de « ${nomMalOrthographie(r).attendu} »` : null,
-    r.spf === false ? '• Pas de SPF (emails à risque de finir en spam)' : null,
-    r.dmarc === false ? '• Pas de DMARC (domaine usurpable)' : null,
-    r.rgpd_confidentialite === false ? '• Pas de politique de confidentialité (RGPD)' : null,
-    r.cookie_banner === false ? '• Pas de bandeau cookies (CNIL)' : null,
-    r.meta_desc === false ? '• Meta description manquante (SEO)' : null,
-    r.h1_present === false ? '• Pas de balise H1 (SEO)' : null,
-    r.analytics === false ? "• Aucune mesure d'audience installée" : null,
-    r.serveur_php ? `• Version serveur exposée : ${r.serveur_php}` : null,
-    (r.copyright_annee && r.copyright_annee < anneeCourante - 1)
-      ? `• Copyright figé à ${r.copyright_annee} (site qui semble peu maintenu)` : null
-  ].filter(Boolean);
+  // Constats de l'audit, en deux listes : vérifiés (citables) et indices (à vérifier avant d'en parler).
+  const { verifies, indices } = anglesClasses(r);
+  void anneeCourante;
   const notes = [
     opts.userNote || null,
-    r.raison_sociale ? `Raison sociale : ${r.raison_sociale}${r.siren ? ` (SIREN ${r.siren})` : ''}` : null,
-    r.gerant ? `Dirigeant : ${r.gerant}` : null,
+    r.raison_sociale ? `Raison sociale : ${r.raison_sociale}${r.siren ? ` (SIREN ${r.siren})` : ''}${r.sirene_match === 'certain' ? '' : ' (rapprochée par le nom, NON vérifiée : ne pas l\'utiliser dans un email)'}` : null,
+    r.gerant ? `Dirigeant : ${r.gerant}${r.sirene_match === 'certain' ? '' : ' (non vérifié : ne pas l\'utiliser dans un email)'}` : null,
     r.prestataire ? `Prestataire crédité sur le site : ${r.prestataire} (site laissé en l'état malgré un prestataire : angle « votre agence ne maintient plus »)` : null,
     r.platform ? `Plateforme : ${r.platform}${r.platform_version ? ` (${r.platform_version})` : ''}` : null,
-    angles.length ? `Angles d'approche détectés :\n${angles.join('\n')}` : null,
+    verifies.length ? `Constats vérifiés (au ${r.analyse_le ? new Date(r.analyse_le).toLocaleDateString('fr-FR') : 'jour de l\'analyse'}) :\n${verifies.map((x) => `• ${x}`).join('\n')}` : null,
+    indices.length ? `Indices, à vérifier avant d'en parler :\n${indices.map((x) => `• ${x}`).join('\n')}` : null,
     r.final_url ? `URL : ${r.final_url}` : null,
     ...(opts.extraNotes || []),
     `Source : ${opts.sourceLine || 'Crawl Common Crawl'}`

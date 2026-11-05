@@ -20,50 +20,69 @@ function isObsoleteVersion(platform, version) {
   return false;
 }
 
-// Phrases lisibles à partir d'une ligne crawl_results.
-function problemesLisibles(r) {
-  const annee = new Date().getFullYear();
-  const out = [];
-  const shop = r.site_type === 'commerce' || r.ecommerce_actif === true || ['PrestaShop', 'WooCommerce', 'Shopify'].includes(r.platform);
-  // Les arguments les plus forts d'abord : ce qui coûte des ventes ou expose à une sanction.
-  if (r.noindex === true) out.push("La page d'accueil demande à Google de ne PAS l'indexer (balise noindex) : la boutique est invisible dans les résultats de recherche, personne ne peut la trouver.");
-  else if (r.robots_bloque === true) out.push("Le fichier robots.txt interdit à Google de parcourir le site : la boutique n'apparaît pas dans les résultats de recherche.");
-  if ([404, 410].includes(Number(r.http_status))) out.push("La page d'accueil renvoie une erreur 404 : le domaine répond mais n'affiche plus de site, les visiteurs et Google tombent dans le vide.");
-  if (Number(r.http_status) >= 500) out.push(`Le site renvoie une erreur serveur (${r.http_status}) : les visiteurs tombent sur une page d'erreur au lieu de la boutique.`);
-  if (r.cgv === false && shop) out.push("Aucune condition générale de vente n'est proposée, alors qu'elles sont obligatoires pour vendre en ligne (Code de la consommation) : en cas de litige ou de contrôle, la boutique est en faute.");
-  if (r.retractation === false && shop) out.push("Le droit de rétractation de 14 jours n'est pas mentionné : c'est une obligation d'information, et son absence prolonge le délai de rétractation à 12 mois.");
-  if (r.contenu_mixte === true) out.push("Des images ou scripts sont chargés en HTTP sur une page HTTPS : le cadenas disparaît et le navigateur bloque une partie de la page.");
-  if (r.mentions_404 === true) out.push("Le lien « mentions légales » mène à une page en erreur : la mention existe dans le menu mais pas la page.");
+// Constats d'une ligne crawl_results, en deux listes :
+// - verifies : mesuré sur le site (ou dans le DNS) à la date de l'analyse, citable tel quel ;
+// - indices  : déduit, déclaratif ou cherché seulement sur l'accueil : à vérifier avant d'en parler,
+//   formulé prudemment. Un indice n'est jamais présenté comme un fait (règle du document d'audit).
+function anglesClasses(r) {
   const { descriptionAbsurde, nomMalOrthographie } = require('./prospectScore');
-  const nmo = nomMalOrthographie(r);
-  if (nmo) out.push(`Le titre du site, celui qui s'affiche dans Google et dans l'onglet du navigateur, écrit « ${nmo.titre} » alors que l'entreprise s'appelle « ${nmo.attendu} » : le nom est mal orthographié sur toutes les pages.`);
-  if (r.sitemap === 'vide') out.push("Le fichier sitemap.xml existe mais il est vide : Google n'a aucune liste des pages du site, les nouveautés mettent des semaines à être vues.");
-  if (r.urls_reecrites === false) out.push("Les adresses des pages sont du type index.php?id_category=102 : aucun mot dedans, ni le produit ni la ville, donc aucune chance sur les recherches locales.");
-  if (descriptionAbsurde(r)) out.push(`Le texte qui s'affiche sous le nom du site dans Google est « ${String(r.meta_desc_txt).slice(0, 90)} » : ce n'est pas une description, personne ne clique là-dessus.`);
-  if (r.mentions_legales === false) out.push("Le site n'a pas de page de mentions légales, alors que c'est une obligation légale en France.");
-  if (r.mobile_ok === false) out.push("Le site n'est pas adapté aux mobiles : il s'affiche mal sur téléphone (la majorité des visiteurs aujourd'hui).");
-  if (r.ssl_expire_jours != null && r.ssl_expire_jours < 30) {
-    out.push(r.ssl_expire_jours < 0
-      ? "Le certificat de sécurité (HTTPS) a expiré : les visiteurs voient une alerte rouge en arrivant sur le site."
-      : `Le certificat de sécurité (HTTPS) expire dans ${r.ssl_expire_jours} jours ; ensuite les visiteurs verront une alerte de sécurité.`);
-  } else if (r.ssl_ok === false) {
-    out.push("Le site n'a pas de certificat de sécurité valide (le cadenas HTTPS), ce qui fait fuir les visiteurs et pénalise le référencement Google.");
+  const { versionPlateforme } = require('./plateforme');
+  const annee = new Date().getFullYear();
+  const v = [], ind = [];
+  const shop = r.ecommerce_actif === true;
+  const dateConnue = !!r.analyse_le;
+  const status = Number(r.http_status);
+  // Ce qui coûte des ventes d'abord.
+  if (r.noindex === true) v.push("La page d'accueil demande à Google de ne pas l'indexer (balise noindex) : elle n'apparaît pas dans les résultats de recherche.");
+  else if (r.robots_bloque === true) v.push("Le fichier robots.txt interdit à Google de parcourir le site : il n'apparaît pas dans les résultats de recherche.");
+  if (status === 404 || status === 410 || status >= 500) {
+    const quoi = status >= 500 ? `une erreur serveur (${status})` : 'une erreur 404 (page introuvable)';
+    if (r.panne_confirmee === true) v.push(`La page d'accueil renvoie ${quoi}, constatée à deux reprises à au moins une heure d'écart.`);
+    else ind.push(`La page d'accueil a renvoyé ${quoi} lors d'une seule mesure : peut-être passager, à confirmer.`);
   }
-  if (r.https_final === false) out.push("Le site s'affiche en HTTP, sans le cadenas : le navigateur indique « Non sécurisé » aux visiteurs, ce qui fait fuir sur une boutique.");
-  if (r.spf === false) out.push("Le domaine n'a pas de configuration SPF : les emails envoyés depuis cette adresse risquent d'atterrir dans les spams des clients.");
-  if (r.dmarc === false) out.push("Le domaine n'est pas protégé par DMARC : il peut être usurpé pour envoyer de faux emails en son nom.");
-  if (r.rgpd_confidentialite === false) out.push("Il manque une politique de confidentialité, obligatoire avec le RGPD.");
-  if (r.cookie_banner === false) out.push("Il n'y a pas de bandeau de consentement aux cookies (demandé par la CNIL).");
-  if (isObsoleteVersion(r.platform, r.platform_version)) out.push(`Le site tourne sur une version de ${r.platform} qui n'est plus maintenue${/drupal/i.test(r.platform || '') && /\b7\b/.test(r.platform_version || '') ? ' (Drupal 7, fin de vie en janvier 2025)' : ''} : c'est un risque de sécurité et de bugs.`);
-  if (r.meta_desc === false || r.h1_present === false) out.push("Des éléments SEO de base manquent (description ou titre principal), ce qui limite la visibilité sur Google.");
-  if (r.analytics === false) out.push("Aucun outil de mesure d'audience n'est installé : impossible de savoir combien de visiteurs viennent, ni d'où.");
+  if (r.ssl_expire_jours != null && r.ssl_expire_jours < 0) v.push("Le certificat de sécurité (HTTPS) a expiré : les visiteurs voient une alerte en arrivant sur le site.");
+  else if (r.ssl_ok === false) v.push("Le site n'a pas de certificat de sécurité valide pour son adresse : le navigateur affiche un avertissement en HTTPS.");
+  else if (r.ssl_expire_jours != null && r.ssl_expire_jours < 30) ind.push(`Le certificat de sécurité expire dans ${r.ssl_expire_jours} jours ; il est souvent renouvelé automatiquement.`);
+  if (r.https_final === false) {
+    if (dateConnue) v.push("Le site s'affiche en HTTP, sans le cadenas : le navigateur indique « Non sécurisé ».");
+    else ind.push("Une ancienne analyse (sans date) a vu le site en HTTP : à réanalyser avant d'en parler.");
+  }
+  if (r.contenu_mixte === true) v.push("Des images ou scripts sont chargés en HTTP sur une page HTTPS : le cadenas disparaît sur ces pages.");
+  if (r.mentions_404 === true) v.push("Le lien « mentions légales » mène à une page en erreur.");
+  const nmo = nomMalOrthographie(r);
+  if (nmo) v.push(`Le titre du site écrit « ${nmo.titre} » alors que l'entreprise s'appelle « ${nmo.attendu} » (identité certaine).`);
+  if (descriptionAbsurde(r)) v.push(`Dans Google, le texte affiché sous le nom du site est « ${String(r.meta_desc_txt).slice(0, 90)} » : ce n'est pas une description.`);
+  if (/^(prestashop|wordpress|woocommerce|accueil|home|bienvenue|welcome|untitled|sans titre|mon site|my site|site en construction|coming soon|index|boutique en ligne|ma boutique|shop)$/i.test(String(r.title || '').trim())) v.push(`Le titre de la page d'accueil est resté celui de l'installation (« ${String(r.title).trim()} »).`);
+  if (r.mobile_ok === false) v.push("La page d'accueil n'a pas de réglage d'affichage mobile (balise viewport absente) : elle s'affiche en petit sur téléphone.");
+  if (r.urls_reecrites === false) v.push("Les adresses des pages sont du type index.php?id_category=102, sans aucun mot.");
+  if (r.spf === false) v.push("Le domaine n'a pas d'enregistrement SPF : les emails envoyés depuis son adresse risquent de finir en spam.");
+  if (r.dmarc === false) v.push("Le domaine n'a pas d'enregistrement DMARC.");
+  if (r.copyright_annee && r.copyright_annee < annee - 1) v.push(`Le pied de page affiche encore © ${r.copyright_annee}.`);
+  // Indices : déduits, déclaratifs, ou cherchés sur l'accueil seulement.
+  if (r.sitemap === 'vide') ind.push("Le fichier sitemap.xml lu semble vide ; un autre sitemap peut exister à une autre adresse : à vérifier.");
+  if (r.mentions_legales === false) ind.push("Aucun lien vers des mentions légales n'a été trouvé sur la page d'accueil : la page peut exister ailleurs.");
+  if (r.cgv === false && shop) ind.push("Aucune condition générale de vente n'a été trouvée depuis l'accueil : à vérifier dans le menu ou le tunnel de commande.");
+  if (r.retractation === false && shop) ind.push("Le droit de rétractation n'a pas été trouvé (accueil et CGV) : à vérifier.");
+  if (r.rgpd_confidentialite === false) ind.push("Aucune politique de confidentialité repérée sur l'accueil.");
+  if (r.cookie_banner === false) ind.push("Aucun bandeau de consentement aux cookies repéré (il peut se charger après coup).");
+  if (r.analytics === false) ind.push("Aucun outil de mesure d'audience repéré.");
+  if (r.meta_desc === false || r.h1_present === false) ind.push("Description ou titre principal (H1) absent de la page d'accueil (SEO de base).");
+  if (isObsoleteVersion(r.platform, r.platform_version)) {
+    const ver = versionPlateforme(r);
+    if (ver.niveau === 'confirmée') v.push(`Le site déclare tourner sur ${ver.version}, une version que son éditeur ne maintient plus.`);
+    else ind.push(`Les fichiers du site ressemblent à ceux de ${ver.version || r.platform} (version déduite, pas déclarée) : à confirmer avant d'en parler.`);
+  }
   const eolMatch = /PHP\s*(\d+\.\d+)/i.exec(String(r.serveur_php || ''));
   const PHP_EOL = { '5.6': '2018', '7.0': '2019', '7.1': '2019', '7.2': '2020', '7.3': '2021', '7.4': '2022', '8.0': '2023', '8.1': '2025' };
-  if (eolMatch && (PHP_EOL[eolMatch[1]] || parseFloat(eolMatch[1]) < 5.6)) out.push(`Le site tourne sur PHP ${eolMatch[1]}, qui ne reçoit plus aucun correctif de sécurité depuis ${PHP_EOL[eolMatch[1]] || '2018'} : une faille découverte aujourd'hui ne sera jamais corrigée.`);
-  else if (r.serveur_php) out.push(`La version du serveur (${r.serveur_php}) est visible publiquement et n'est plus à jour (surface d'attaque connue).`);
-  if (/^(prestashop|wordpress|woocommerce|accueil|home|bienvenue|welcome|untitled|sans titre|mon site|my site|site en construction|coming soon|index|boutique en ligne|ma boutique|shop)$/i.test(String(r.title || '').trim())) out.push("Le titre de la page d'accueil est resté celui de l'installation (« " + String(r.title).trim() + " ») : invisible sur Google et peu rassurant pour un client.");
-  if (r.copyright_annee && r.copyright_annee < annee - 1) out.push(`Le pied de page affiche encore © ${r.copyright_annee}, ce qui donne l'impression d'un site peu suivi.`);
-  return out;
+  if (eolMatch && (PHP_EOL[eolMatch[1]] || parseFloat(eolMatch[1]) < 5.6)) ind.push(`D'après l'entête que renvoie le serveur, le site tournerait sur PHP ${eolMatch[1]} (plus de correctifs depuis ${PHP_EOL[eolMatch[1]] || '2018'}) : déclaratif, à confirmer avec l'hébergeur.`);
+  else if (r.serveur_php) ind.push(`Le serveur annonce sa version (${r.serveur_php}) dans ses entêtes.`);
+  return { verifies: v, indices: ind };
 }
 
-module.exports = { isObsoleteVersion, problemesLisibles };
+// Liste unique (compatibilité) : constats vérifiés, puis indices préfixés « À vérifier : ».
+function problemesLisibles(r) {
+  const { verifies, indices } = anglesClasses(r);
+  return [...verifies, ...indices.map((x) => `À vérifier : ${x}`)];
+}
+
+module.exports = { isObsoleteVersion, problemesLisibles, anglesClasses };

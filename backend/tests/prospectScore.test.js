@@ -77,3 +77,18 @@ test('versions : une version déduite n\'est jamais affirmée ; la plateforme n\
   const declare = buildProofEmail({ ...base, platform_version: 'PrestaShop 1.6.1.24', signals: 'var static_token | themes/default-bootstrap' }, {});
   assert.match(declare.body, /PrestaShop/);
 });
+
+test('angles : indices jamais présentés comme des faits (sitemap, version déduite, panne vue une fois, PHP déclaré)', () => {
+  const { anglesClasses, problemesLisibles } = require('../utils/crawlAngles');
+  const r = { platform: 'PrestaShop', platform_version: 'PrestaShop 1.6 (déduit)', sitemap: 'vide', http_status: 503, serveur_php: 'PHP/5.6.40', mentions_legales: false, analyse_le: new Date().toISOString() };
+  const { verifies, indices } = anglesClasses(r);
+  assert.equal(verifies.length, 0, JSON.stringify(verifies));
+  assert.ok(indices.some((x) => /sitemap.*semble vide/.test(x)));
+  assert.ok(indices.some((x) => /ressemblent à ceux de PrestaShop 1\.6 \(version déduite/.test(x)));
+  assert.ok(indices.some((x) => /une seule mesure/.test(x)));
+  assert.ok(indices.some((x) => /D'après l'entête/.test(x)));
+  assert.ok(problemesLisibles(r).every((x) => /^À vérifier : /.test(x)));
+  const confirme = anglesClasses({ ...r, panne_confirmee: true, platform_version: 'PrestaShop 1.6.1.24' });
+  assert.ok(confirme.verifies.some((x) => /deux reprises/.test(x)));
+  assert.ok(confirme.verifies.some((x) => /déclare tourner sur PrestaShop 1\.6\.1\.24/.test(x)));
+});
