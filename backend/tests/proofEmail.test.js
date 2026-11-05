@@ -10,11 +10,11 @@ test('Equip\'Tout : la preuve retenue est le nom mal orthographié, avec le nom 
   const d = buildProofEmail(r, {});
   assert.equal(d.ok, true);
   assert.equal(d.preuve, 'nom_mal_orthographie');
-  assert.match(d.subject, /mal orthographié/);
+  assert.equal(d.subject, "Le nom de Equip'Tout dans Google");
   assert.match(d.body, /Bonjour Maxime Lambin,/);
   assert.match(d.body, /« Equit Tout », alors que votre société s'appelle Equip'Tout\./);
-  assert.match(d.body, /En consultant Equip'Tout,/);
-  assert.match(d.body, /pixfeed\.net\/maintenance/);
+  assert.match(d.body, /Est-ce que vous l'aviez remarqué \?\n\nBonne journée,$/);
+  assert.doesNotMatch(d.body, /pixfeed|je dirige|développeur/i, 'Pixfeed est dans la signature, pas dans le texte');
   assert.equal(d.detail.signal, 'nom_mal_orthographie');
   assert.match(d.detail.identite, /Identité certaine/);
   assert.doesNotMatch(d.body, /rien de grave|si jamais ça vous intéresse/i);
@@ -34,7 +34,7 @@ test('gérant douteux (SIRENE) : pas de nom dans la salutation ; contexte techni
   const d = buildProofEmail(r, {});
   assert.equal(d.preuve, 'http_non_securise');
   assert.match(d.body, /^Bonjour,\n/);
-  assert.match(d.body, /En consultant Gourmands d'Antan,/);
+  assert.match(d.body, /^Bonjour,\n\nEn ouvrant gourmandsdantan\.fr, le navigateur affiche « Non sécurisé »/);
   // PHP : un indice déclaré par le serveur. Plus dans le corps de l'email, seulement dans la trace.
   assert.doesNotMatch(d.body, /PHP/);
   assert.match(d.detail.contexte, /PHP déclaré par l'entête/);
@@ -65,7 +65,7 @@ test('salutation : premier prénom + nom en casse de nom, jamais l\'état civil 
   // Certificat valide mais site qui renvoie vers http : la preuve le dit tel quel.
   const redir = buildProofEmail({ domain: 'agrigom.fr', title: 'AGRIGOM', https_final: false, ssl_ok: true, final_url: 'http://www.agrigom.fr/', http_status: 200, platform: 'PrestaShop', analyse_le: '2026-10-21T15:03:02Z' }, {});
   assert.match(redir.body, /En tapant https:\/\/agrigom\.fr.*renvoyé vers http:\/\/www\.agrigom\.fr/);
-  assert.match(redir.body, /réglage de redirection/);
+  assert.match(redir.body, /le certificat existe mais n'est pas utilisé/);
 });
 
 test('identité non certaine (même « sûre » par le nom, cas WEB-TENNIS) : ni nom, ni ville, ni raison sociale dans l\'email', () => {
@@ -91,10 +91,10 @@ test('portées sobres : aucune affirmation sur Google ou les clients qu\'on ne p
     assert.ok(d.detail.brut, r.domain);
   }
   const expire = buildProofEmail(cas[0], {});
-  assert.match(expire.body, /En consultant b\.fr,/);
+  assert.match(expire.body, /^Bonjour,\n\nLe certificat de sécurité de b\.fr a expiré/);
   assert.equal(expire.detail.analyse_le, '2026-10-20T08:00:00Z');
   assert.match(expire.body, /expiré depuis 12 jours/);
-  assert.match(expire.body, /Si le renouvellement est déjà programmé/);
+  assert.match(expire.body, /Le renouvellement est-il déjà prévu de votre côté \?/);
   const inval = buildProofEmail(cas[1], {});
   assert.match(inval.body, /certificat valable pour un autre nom/);
   // Copyright ancien et sitemap vide ne sont plus des motifs d'email.
@@ -104,17 +104,24 @@ test('portées sobres : aucune affirmation sur Google ou les clients qu\'on ne p
 
 test('entreprise individuelle : la boutique est l\'enseigne, jamais le nom de la personne', () => {
   const base = { domain: 'creasence.fr', platform: 'PrestaShop', ecommerce_actif: true, http_status: '200', title: 'Creasence – Bougies artisanales', sirene_match: 'certain', gerant_nom: 'PERNET', gerant_prenom: 'AMANDINE' };
-  const ligne = (r) => P.buildMaintenanceEmail(r, {}).body.split('\n')[4];
-  assert.equal(ligne({ ...base, raison_sociale: 'AMANDINE PERNET (CREASENCE)' }), 'J\'ai découvert votre boutique Creasence.');
-  assert.equal(ligne({ ...base, raison_sociale: 'PERNET AMANDINE' }), 'J\'ai découvert votre boutique Creasence.'); // pas d'enseigne : titre du site
-  assert.equal(P.buildMaintenanceEmail({ ...base, raison_sociale: 'AMANDINE PERNET (CREASENCE)' }, {}).subject, 'Suivi technique de Creasence');
-  assert.equal(ligne({ ...base, raison_sociale: 'AGRIGOM SAS', gerant_nom: 'SAVARY', gerant_prenom: 'FRANCK', title: 'Accueil - AGRIGOM SAS' }), 'J\'ai découvert votre boutique Agrigom.'); // société : raison sociale conservée
+  const ligne = (r) => P.buildMaintenanceEmail(r, {}).body.split('\n')[2];
+  assert.equal(ligne({ ...base, raison_sociale: 'AMANDINE PERNET (CREASENCE)' }), 'J\'ai découvert votre boutique en ligne Creasence.');
+  assert.equal(ligne({ ...base, raison_sociale: 'PERNET AMANDINE' }), 'J\'ai découvert votre boutique en ligne Creasence.'); // pas d'enseigne : titre du site
+  assert.equal(P.buildMaintenanceEmail({ ...base, raison_sociale: 'AMANDINE PERNET (CREASENCE)' }, {}).subject, 'Votre boutique Creasence');
+  assert.equal(ligne({ ...base, raison_sociale: 'AGRIGOM SAS', gerant_nom: 'SAVARY', gerant_prenom: 'FRANCK', title: 'Accueil - AGRIGOM SAS' }), 'J\'ai découvert votre boutique en ligne Agrigom.'); // société : raison sociale conservée
+  // plateforme confirmée (plusieurs marqueurs) : nommée, et l'objet la reprend
+  const conf = P.buildMaintenanceEmail({ ...base, signals: 'var prestashop | /modules/ps_', raison_sociale: 'AMANDINE PERNET (CREASENCE)' }, {});
+  assert.equal(conf.body.split('\n')[2], 'J\'ai découvert votre boutique en ligne Creasence, qui fonctionne sous PrestaShop.');
+  assert.equal(conf.subject, 'Votre boutique PrestaShop');
+  assert.match(conf.body, /Est-ce que vous gérez cette partie technique vous-même, ou est-ce que vous vous faites accompagner \?\n\nBonne journée,$/);
 });
 
 test('1000 Hz : un PrestaShop qui présente des prestations est « votre site », pas « votre boutique »', () => {
   const r = { domain: '1000hz.fr', platform: 'PrestaShop', ecommerce_actif: false, http_status: 200, title: '1000 Hz – Prise de son, location, formation' };
   const m = P.buildMaintenanceEmail(r, {});
-  assert.match(m.body, /votre site 1000 Hz/);
+  assert.match(m.body, /J'ai découvert le site de 1000 Hz\./);
+  assert.match(m.body, /Qui s'occupe aujourd'hui de son suivi technique : vous-même, ou un prestataire \?/);
+  assert.equal(m.subject, 'Le site de 1000 Hz');
   assert.doesNotMatch(m.body, /votre boutique/);
 });
 

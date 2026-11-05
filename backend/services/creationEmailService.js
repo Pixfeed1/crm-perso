@@ -6,8 +6,8 @@
 // facile. Assemblé sans LLM, comme l'email par la preuve.
 const { joliNom } = require('./proofEmailService');
 
-// Présentation : la même phrase que l'email par la preuve (une seule source).
-const { presentation } = require('./proofEmailService');
+// Même structure que les autres emails (lot 3) : constat, pourquoi ça le concerne, une question.
+const { assembler } = require('./proofEmailService');
 
 function nomEntreprise(signal, lead) {
   // Nom de l'entreprise seulement si le rapprochement est sûr (« probable » peut désigner une autre société).
@@ -41,19 +41,14 @@ function buildCreationEmail(signal, lead) {
   const contexte = recente
     ? `Je vois que ${nom || 'votre entreprise'} vient de se lancer, et que le nom de domaine a été réservé il y a quelques jours : ${constat}.`
     : `Je vois que le nom de domaine ${domaine} vient d'être réservé${nom ? ` pour ${nom}` : ''} : ${constat}.`;
-  const body = [
+  // Même structure que les autres emails : constat, pourquoi ça le concerne, une question.
+  const body = assembler([
     salutation(s),
-    '',
-    presentation(),
-    '',
     contexte,
-    '',
-    "Si le site n'est pas encore confié à quelqu'un, je peux vous proposer une première version simple, propre et trouvable sur Google, avec un devis clair.",
-    '',
-    'Avez-vous déjà prévu quelque chose pour ce site ?',
-    '',
-    'Bonne journée à vous,'
-  ].join('\n');
+    "Tant que le site n'est pas en ligne, ceux qui tapent cette adresse ne trouvent rien.",
+    'Avez-vous déjà prévu quelqu\'un pour réaliser le site ?',
+    'Bonne journée,'
+  ]);
   const subject = nom ? `Le site de ${nom}` : `Votre site sur ${domaine}`;
   return { ok: true, subject, body, mode: 'creation' };
 }

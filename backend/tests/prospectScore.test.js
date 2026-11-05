@@ -73,9 +73,13 @@ test('versions : une version déduite n\'est jamais affirmée ; la plateforme n\
   const base = { domain: 'x.fr', title: 'X', platform: 'PrestaShop', http_status: 200, https_final: false, final_url: 'http://x.fr/', analyse_le: new Date().toISOString(), version_obsolete: true };
   const deduit = buildProofEmail({ ...base, platform_version: 'PrestaShop 1.6 (déduit)', signals: 'prestashop-' }, {});
   assert.doesNotMatch(deduit.body, /PrestaShop 1\.6|tourne sur/);
-  assert.doesNotMatch(deduit.body, /boutiques PrestaShop/, 'plateforme seulement déduite : pas nommée');
+  const P2 = require('../services/proofEmailService');
+  const mDeduit = P2.buildMaintenanceEmail({ ...base, https_final: true, ecommerce_actif: true, signals: 'prestashop-' }, {});
+  assert.doesNotMatch(mDeduit.body, /PrestaShop/, 'plateforme seulement déduite : pas nommée');
+  const mConf = P2.buildMaintenanceEmail({ ...base, https_final: true, ecommerce_actif: true, signals: 'var prestashop | /modules/ps_' }, {});
+  assert.match(mConf.body, /qui fonctionne sous PrestaShop/);
   const declare = buildProofEmail({ ...base, platform_version: 'PrestaShop 1.6.1.24', signals: 'var static_token | themes/default-bootstrap' }, {});
-  assert.match(declare.body, /PrestaShop/);
+  assert.doesNotMatch(declare.body, /PHP|tourne sur/, 'la version reste dans la trace, pas dans le corps');
 });
 
 test('angles : indices jamais présentés comme des faits (sitemap, version déduite, panne vue une fois, PHP déclaré)', () => {

@@ -7,7 +7,8 @@ const assert = require('node:assert/strict');
 const cold = require('../services/coldEmailService');
 const { buildProofEmail, FORMULES_INTERDITES } = require('../services/proofEmailService');
 
-const PRESENTATION = /Je suis Marc, développeur web indépendant et je dirige PixFeed, spécialisé dans la maintenance et le dépannage de sites professionnels\./;
+// Lot 3 : plus aucune présentation de l'expéditeur dans le texte (Pixfeed est dans la signature).
+const PRESENTATION = /développeur web indépendant|je dirige|pixfeed\.net/i;
 const fake = (reponses) => { let i = 0; return async () => JSON.stringify(reponses[Math.min(i++, reponses.length - 1)]); };
 const mots = (t) => t.split(/\s+/).filter(Boolean).length;
 
@@ -22,12 +23,11 @@ test('la présentation vient du code, jamais du modèle : une paraphrase du mod�
   const ok = await cold.draftColdEmail({ row, lead: {} }, {
     callModel: fake([{ subject: 'Votre boutique en ligne', motif: "En ouvrant agrigom.fr, on arrive sur la version http du site, sans cadenas." }])
   });
-  assert.match(ok.body, PRESENTATION);
-  assert.match(ok.body, /^Bonjour,\n\nJe suis Marc/);
-  assert.match(ok.body, /pixfeed\.net\/maintenance/);
-  assert.match(ok.body, /disposez déjà d'un prestataire/);
+  assert.doesNotMatch(ok.body, PRESENTATION);
+  assert.match(ok.body, /^Bonjour,\n\nEn ouvrant agrigom\.fr/);
+  assert.match(ok.body, /\?\n\nBonne journée,$/);
   assert.doesNotMatch(ok.body, /Si vous ne souhaitez plus être contacté/);
-  assert.match(ok.body, /Bonne journée à vous,$/);
+  assert.match(ok.body, /Bonne journée,$/);
   assert.doesNotMatch(ok.body, FORMULES_INTERDITES);
   assert.doesNotMatch(ok.body, /structure/);
 });
@@ -48,7 +48,7 @@ test('sans preuve : le modèle ne reçoit aucun indice, et tout sujet technique 
   });
   assert.equal(appels, 2);
   assert.doesNotMatch(d.body, /21|PHP|certificat|alerte|obsol/i);
-  assert.match(d.body, PRESENTATION);
+  assert.doesNotMatch(d.body, PRESENTATION);
   assert.equal(cold.validerTexte('Votre certificat expire dans 21 jours.', false), 'sujet technique sans preuve');
   assert.equal(cold.validerTexte('Je ne vous relancerai pas dix fois.', true), 'formule interdite');
   assert.equal(cold.validerTexte("J'ai découvert votre boutique de produits locaux.", false), null);
@@ -71,12 +71,12 @@ test('validation : dix prospects différents, dix emails corrects dans les deux 
   for (const r of prospects) {
     const d = buildProofEmail(r, {});
     assert.equal(d.ok, true, r.domain);
-    assert.match(d.body, PRESENTATION, r.domain);
+    assert.doesNotMatch(d.body, PRESENTATION, r.domain);
     assert.doesNotMatch(d.body, FORMULES_INTERDITES, r.domain);
     assert.doesNotMatch(d.body, /PHP|structure/, r.domain);
     assert.ok(mots(d.body) <= 150, `${r.domain} : ${mots(d.body)} mots`);
     const c = await cold.draftColdEmail({ row: r, lead: {} }, { callModel: fake([{ subject: 'Votre boutique', motif: 'En consultant votre boutique, j\'ai relevé le point suivant, que vous connaissez peut-être déjà.' }]) });
-    assert.match(c.body, PRESENTATION, r.domain);
+    assert.doesNotMatch(c.body, PRESENTATION, r.domain);
     assert.doesNotMatch(c.body, FORMULES_INTERDITES, r.domain);
   }
   // Et les cas sans preuve refusent (mode preuve) ou restent neutres (Claude libre).

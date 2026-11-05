@@ -50,14 +50,14 @@ function stripDashes(text) {
 function buildSystemPrompt(ton) {
   return [
     'Tu aides un développeur web indépendant à rédiger un PREMIER email à un commerçant ou artisan.',
-    'Tu n\'écris PAS l\'email entier. Le code assemble la présentation, la proposition et la fin.',
+    'Tu n\'écris PAS l\'email entier. Le code assemble la salutation, la question et la fin.',
     'Tu écris UNIQUEMENT :',
     '  - "motif" : 1 à 3 phrases courtes. Si des PREUVES sont fournies, reformule-en une (au plus deux)',
     '    telles quelles, sans rien ajouter ni déduire. Si AUCUNE preuve n\'est fournie, écris une observation',
     '    neutre sur la boutique (ce qu\'elle vend, d\'après son nom et sa technologie), SANS mentionner le',
     '    moindre défaut, risque, version, certificat ou réglage.',
     '  - "subject" : un objet d\'email court et factuel, sans point d\'exclamation.',
-    'Le code ajoute ensuite la proposition de maintenance et la question : n\'en écris aucune.',
+    'Le code ajoute ensuite UNE question : n\'en écris aucune. Ne parle jamais de toi ni de tes services.',
     TONS[ton] || TONS.humain,
     'Vouvoiement. Français. Aucun tiret (—, –, ou « - » de ponctuation) : virgules et points seulement.',
     'INTERDIT : alarmisme, leçon, culpabilisation, flatterie, superlatifs, emojis, toute conséquence non',
@@ -126,17 +126,12 @@ function validerTexte(texte, avecPreuves) {
 // Assemblage déterministe : mêmes briques que l'email par la preuve.
 function assembleColdEmail({ row, lead, motif }) {
   const r = row || { domain: (lead && (lead.company || lead.website)) || '', platform: lead && lead.platform };
-  return [
-    proof.salutation(r, lead),
-    '',
-    proof.presentation(),
-    '',
-    stripDashes(motif).trim(),
-    '',
-    proof.conclusion(r), // proposition, question, lien : mêmes phrases que l'email par la preuve
-    '',
-    'Bonne journée à vous,'
-  ].join('\n');
+  // Même structure que l'email par la preuve : constat (écrit par le modèle) puis la question de la
+  // preuve citée, ou celle du suivi technique s'il n'y en a pas. Pixfeed est dans la signature.
+  const flags = require('../utils/prospectScore').auditFlags(r);
+  const k = proof.PREUVES_ORDRE.find((x) => flags.some((f) => f.key === x) && !(!r.analyse_le && proof.PREUVES_HTTPS.has(x)));
+  const question = k ? proof.CATALOGUE[k](r).question : proof.questionSuivi(r);
+  return proof.assembler([proof.salutation(r, lead), stripDashes(motif).trim(), question, 'Bonne journée,']);
 }
 
 async function callAnthropic(system, userPrompt) {

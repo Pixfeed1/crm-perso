@@ -19,7 +19,7 @@ test('AGRIGOM : certificat valide mais site renvoyé en http -> preuve exacte, d
   const d = buildProofEmail(r, {});
   assert.equal(d.preuve, 'http_non_securise');
   assert.match(d.body, /^Bonjour Franck Savary,/);
-  assert.match(d.body, /En consultant Agrigom, j'ai relevé/);
+  assert.match(d.body, /^Bonjour Franck Savary,\n\nEn tapant https:\/\/agrigom\.fr/);
   assert.doesNotMatch(d.body, /21\/10\/2026/); // la date reste dans la trace, pas dans l'email
   assert.equal(d.detail.analyse_le, '2026-10-21T14:21:31Z');
   assert.match(d.body, /renvoyé vers http:\/\/www\.agrigom\.fr/);
@@ -33,7 +33,7 @@ test('Atelier du Sucre : deux candidats SIRENE à égalité -> aucune personnali
     http_status: 200, platform: 'PrestaShop', sirene_match: 'probable', raison_sociale: "L'ATELIER SUCRE", gerant: 'X Y', ville: 'MANOSQUE', code_postal: '04100', analyse_le: '2026-10-21T15:03:02Z' };
   const d = buildProofEmail(r, {});
   assert.match(d.body, /^Bonjour,\n/);
-  assert.match(d.body, /En consultant Atelier du sucre,/);
+  assert.match(d.body, /atelierdusucre\.fr/);
   assert.doesNotMatch(d.body, /Manosque|MANOSQUE|X Y|ATELIER SUCRE/);
 });
 
@@ -61,11 +61,11 @@ test('faux sitemap vide : une page HTML en 200 est « absent » côté crawler ;
   assert.ok(vide.indices.includes('sitemap vide'));
 });
 
-test('ton : aucune formule interdite, 90 à 150 mots, structure présentation / motif / proposition / question / refus, sur TOUTES les preuves', () => {
+test('ton : aucune formule interdite, 35 à 90 mots, structure constat / portée / question, sur TOUTES les preuves', () => {
   const base = { domain: 'exemple.fr', title: 'Boutique Exemple', http_status: 200, platform: 'PrestaShop', ssl_ok: true, https_final: true, analyse_le: '2026-10-21T10:00:00Z' };
   const cas = {
-    accueil_404: { http_status: 404, panne_confirmee: true },
-    erreur_serveur: { http_status: 503, panne_confirmee: true },
+    accueil_404: { http_status: 404, panne_confirmee: true, panne_vue_le: '2026-10-21T08:00:00Z' },
+    erreur_serveur: { http_status: 503, panne_confirmee: true, panne_vue_le: '2026-10-21T08:00:00Z' },
     invisible_google: { noindex: true },
     nom_mal_orthographie: { title: 'Exemle Boutique', sirene_match: 'certain', raison_sociale: 'EXEMPLE BOUTIQUE', gerant_nom: 'DURAND', gerant_prenom: 'PAUL', ville: 'LYON', code_postal: '69001', code_postal_site: '69001' },
     http_non_securise: { https_final: false, final_url: 'http://exemple.fr/' },
@@ -83,14 +83,16 @@ test('ton : aucune formule interdite, 90 à 150 mots, structure présentation / 
     assert.doesNotMatch(d.body, FORMULES_INTERDITES, key);
     assert.doesNotMatch(d.subject, FORMULES_INTERDITES, key);
     const n = mots(d.body);
-    assert.ok(n >= 90 && n <= 150, `${key} : ${n} mots`);
-    assert.match(d.body, /développeur web indépendant et je dirige PixFeed, spécialisé dans la maintenance et le dépannage de sites professionnels\./);
-    assert.match(d.body, /maintenance/);
-    assert.match(d.body, /disposez déjà d'un prestataire pour assurer ce suivi/);
+    assert.ok(n >= 35 && n <= 90, `${key} : ${n} mots`);
+    // Centré sur le prospect : aucune présentation de l'expéditeur, aucune liste de prestations, aucun lien.
+    assert.doesNotMatch(d.body, /développeur|je dirige|PixFeed|pixfeed\.net|prestataire pour assurer|J'interviens/i, key);
     assert.doesNotMatch(d.body, /Si personne n'assure|en parcourant|\d{2}\/\d{2}\/\d{4}/);
     assert.doesNotMatch(d.body, /Si vous ne souhaitez plus être contacté/);
-    assert.match(d.body, /Bonne journée à vous,$/);
-    assert.doesNotMatch(d.body, /\btu\b|\bton\b|\btes\b/i);
+    assert.doesNotMatch(d.body, /vous appeler|vous appelle|un appel|appel téléphonique|téléphoner|échanger par téléphone|rappeler/i, `${key} : jamais d'annonce d'appel`);
+    // Une seule question, juste avant la fin.
+    assert.equal((d.body.match(/\?/g) || []).length, 1, key);
+    assert.match(d.body, /\?\n\nBonne journée,$/, key);
+    assert.doesNotMatch(d.body, /(?<!\p{L})(tu|ton|tes)(?!\p{L})/iu);
   }
   const lyon = buildProofEmail({ ...base, ...cas.nom_mal_orthographie }, {});
   assert.match(lyon.body, /^Bonjour Paul Durand,/);
@@ -102,21 +104,21 @@ test('ton : aucune formule interdite, 90 à 150 mots, structure présentation / 
 test('email création (signaux) et consigne Claude libre : mêmes règles de ton', () => {
   const c = buildCreationEmail({ domain: 'dupont-plomberie.fr', match_confidence: 'sur', company_name: 'DUPONT PLOMBERIE', dirigeant: 'JEAN DUPONT', city: 'Bourg-en-Bresse', website_status: 'parking', company_created_at: new Date(Date.now() - 12 * 86400000) }, { company: 'dupont-plomberie.fr' });
   assert.doesNotMatch(c.body, FORMULES_INTERDITES);
-  assert.match(c.body, /développeur web indépendant/);
+  assert.doesNotMatch(c.body, /développeur|je dirige|PixFeed|une première version/i);
+  assert.match(c.body, /Avez-vous déjà prévu quelqu'un pour réaliser le site \?\n\nBonne journée,$/);
   assert.doesNotMatch(c.body, /Si vous ne souhaitez plus être contacté/);
   assert.ok(mots(c.body) <= 125, String(mots(c.body)));
   const prompt = buildSystemPrompt('humain');
   for (const phrase of ['je ne vous relancerai pas', 'un simple oui suffit', "sauté aux yeux", "de l'intérieur", 'rien de grave', 'à mon compte']) {
     assert.ok(prompt.toLowerCase().includes(phrase.toLowerCase()), `interdit listé dans la consigne : ${phrase}`);
   }
-  // Le modèle n'écrit plus l'email entier : présentation, proposition, refus discret et fin sont
-  // assemblés par le code (assembleColdEmail), donc présents quoi qu'il réponde.
+  // Le modèle n'écrit que le constat : salutation, question et fin sont assemblées par le code
+  // (assembleColdEmail), sans présentation ni lien.
   const { assembleColdEmail } = require('../services/coldEmailService');
   const corps = assembleColdEmail({ row: { domain: 'x.fr', platform: 'PrestaShop' }, lead: {}, motif: 'Constat.', question: 'Question ?' });
-  assert.match(corps, /développeur web indépendant et je dirige PixFeed, spécialisé dans la maintenance et le dépannage de sites professionnels\./);
+  assert.doesNotMatch(corps, /développeur|je dirige|PixFeed|pixfeed\.net/i);
   assert.doesNotMatch(corps, /Si vous ne souhaitez plus être contacté/);
-  assert.match(corps, /pixfeed\.net\/maintenance/);
-  assert.match(corps, /Bonne journée à vous,$/);
+  assert.match(corps, /^Bonjour,\n\nConstat\.\n\n.*\?\n\nBonne journée,$/);
 });
 
 test('modèles d\'email du menu « Modèle » : même présentation, aucune formule interdite', () => {
@@ -139,9 +141,9 @@ test('Batterie4moto : mesure HTTPS de l\'ancien crawl non confirmée -> pas d\'a
   assert.match(d.raison, /ancien crawl, non confirmé/);
   assert.ok(d.maintenance && d.maintenance.ok);
   assert.doesNotMatch(d.maintenance.body, /HTTP|cadenas|certificat|imposer|Non sécurisé/);
-  assert.match(d.maintenance.body, /développeur web indépendant et je dirige PixFeed/);
-  assert.match(d.maintenance.body, /J'ai découvert votre boutique Batterie4moto\./);
-  assert.match(d.maintenance.body, /disposez déjà d'un prestataire/);
+  assert.doesNotMatch(d.maintenance.body, /développeur|je dirige|PixFeed/i);
+  assert.match(d.maintenance.body, /J'ai découvert votre boutique en ligne Batterie4moto\./);
+  assert.match(d.maintenance.body, /Est-ce que vous gérez cette partie technique vous-même/);
   assert.doesNotMatch(d.maintenance.body, /en parcourant|\d{2}\/\d{2}\/\d{4}/);
   assert.doesNotMatch(d.maintenance.body, FORMULES_INTERDITES);
   // Crawl frais : https://www a répondu en strict -> aucune preuve HTTPS, boutique saine.
@@ -160,8 +162,9 @@ test('Batterie4moto : mesure HTTPS de l\'ancien crawl non confirmée -> pas d\'a
   // Atelier du Sucre : idem, servi en HTTP confirmé par le crawl frais.
   const atelier = typedResult({ domain: 'atelierdusucre.fr', title: 'Atelier du sucre, la boutique en ligne', http_status: '200', final_url: 'http://www.atelierdusucre.fr/fr/', https_final: 'non', ssl_ok: 'oui', platform: 'PrestaShop', analyse_le: '2026-10-21T16:00:00+00:00' });
   assert.equal(buildProofEmail(atelier, {}).preuve, 'http_non_securise');
-  // Sans technologie identifiée : pas de bascule maintenance, refus simple.
-  assert.equal(buildMaintenanceEmail({ domain: 'x.fr', http_status: 200, platform: 'Inconnu' }, {}).ok, false);
+  // Toujours un premier email, même sans technologie identifiée (règle validée) ; jamais si le site n'est pas en ligne.
+  assert.equal(buildMaintenanceEmail({ domain: 'x.fr', http_status: 200, platform: 'Inconnu' }, {}).ok, true);
+  assert.equal(buildMaintenanceEmail({ domain: 'x.fr', http_status: 500, platform: 'PrestaShop' }, {}).ok, false);
 });
 
 test('Batterie4moto (crawl frais) : certificat d\'hébergeur présenté sur les deux variantes https -> preuve nommant le certificat, pas de « il suffit »', () => {
@@ -177,7 +180,7 @@ test('Batterie4moto (crawl frais) : certificat d\'hébergeur présenté sur les 
   // Sans colonne ssl_hote (ancienne ligne), l'adresse est lue dans la trace des variantes.
   const sansHote = buildProofEmail({ ...r, ssl_hote: null }, {});
   assert.match(sansHote.body, /En tapant https:\/\/www\.batterie4moto\.fr/);
-  assert.match(d.body, /ne s'ouvre donc qu'en HTTP, sans cadenas/);
+  assert.match(d.body, /ne s'ouvre donc qu'en HTTP, sans le cadenas/);
   assert.doesNotMatch(d.body, /imposer|Dans la plupart des cas/);
   assert.match(d.detail.brut, /variantes : https:\/\/batterie4moto\.fr -> erreur: ConnectError: \| https:\/\/www\.batterie4moto\.fr -> TLS/);
   assert.ok(mots(d.body) <= 155, String(mots(d.body)));

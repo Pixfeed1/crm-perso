@@ -91,7 +91,7 @@ test('parcours complet : préparer, relire, programmer, hooks du worker, pause a
     assert.equal(prep.ajoutes, 4); assert.equal(prep.pret, 1); assert.equal(prep.a_verifier, 1); assert.equal(prep.exclu, 2);
     const full = await S.getCampaignFull(db, c.id);
     const byLead = Object.fromEntries(full.items.map((i) => [i.lead_id, i]));
-    assert.equal(byLead[l1].statut, 'pret'); assert.equal(byLead[l1].mode, 'preuve'); assert.match(byLead[l1].body, /développeur web indépendant et je dirige PixFeed/); assert.equal(byLead[l1].preuve_signal, 'http_non_securise');
+    assert.equal(byLead[l1].statut, 'pret'); assert.equal(byLead[l1].mode, 'preuve'); assert.doesNotMatch(byLead[l1].body, /développeur web indépendant|je dirige PixFeed/); assert.match(byLead[l1].body, /\?\n\nBonne journée,$/); assert.equal(byLead[l1].preuve_signal, 'http_non_securise');
     assert.equal(byLead[l2].statut, 'a_verifier'); assert.match(byLead[l2].raison, /ancien crawl/); assert.equal(byLead[l2].mode, 'maintenance'); // repli sans alerte
     assert.match(byLead[l3].raison, /définitivement/);
     assert.match(byLead[l4].raison, /20 jours/);

@@ -102,14 +102,15 @@ test('échéances J+7/15/30/60/90 depuis la création du domaine', () => {
   assert.equal(S.nextCheckDate('2026-06-01', now), null);
 });
 
-test('email création : présentation, constat vrai, question, sortie ; nom remis en casse', () => {
+test('email création : constat vrai, portée, question ; nom remis en casse ; aucune présentation', () => {
   const e = buildCreationEmail({ domain: 'dupont-plomberie.fr', match_confidence: 'sur', company_name: 'DUPONT PLOMBERIE SARL', dirigeant: 'Jean Dupont', city: 'Bourg-en-Bresse', website_status: 'parking', company_created_at: J(12) }, { company: 'dupont-plomberie.fr' });
   assert.equal(e.subject, 'Le site de Dupont Plomberie');
   // jamais de nom de personne dans un email de création : l'identité vient d'un rapprochement par le nom
   assert.match(e.body, /^Bonjour,\n/); assert.doesNotMatch(e.body, /Jean Dupont/);
   assert.match(e.body, /Dupont Plomberie vient de se lancer/);
   assert.match(e.body, /page d'attente de l'hébergeur/);
-  assert.match(e.body, /Bonne journée à vous,$/);
+  assert.match(e.body, /Avez-vous déjà prévu quelqu'un pour réaliser le site \?\n\nBonne journée,$/);
+  assert.doesNotMatch(e.body, /développeur|je dirige|PixFeed/i);
   assert.doesNotMatch(e.body, /SARL/);
   const anonyme = buildCreationEmail({ domain: 'x-y.fr', website_status: 'sans_dns' }, { company: 'x-y.fr', name: 'x-y.fr' });
   assert.match(anonyme.body, /^Bonjour,/);

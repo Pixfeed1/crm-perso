@@ -4,6 +4,12 @@
 // en dix secondes sur son propre site, une conséquence dans SON activité, au plus un élément
 // de contexte technique mesuré. Rien d'autre.
 //
+// Structure (lot 3, validée par Marc) : centré sur le prospect, pas sur Pixfeed.
+//   Bonjour[ Prénom Nom], / constat (son site, ce qu'on y voit) / pourquoi ça le concerne, en une
+//   phrase / UNE question adaptée à la situation / Bonne journée,
+// Pas de présentation de l'expéditeur ni de liste de prestations : Pixfeed apparaît dans la
+// signature (Paramètres), ajoutée à l'envoi. L'email n'annonce jamais d'appel. 60 à 90 mots.
+//
 // Règle absolue : sans preuve, pas d'email. Un prospect grillé par un message générique ne
 // se rattrape pas. Les signaux du crawler sont donc classés :
 //   - PREUVE : constaté et visible (site en erreur, servi en HTTP, titre par défaut, robots
@@ -45,26 +51,34 @@ function joliNom(raw) {
 // ouvrant son site), la portée (ce que ça change, une phrase, rien qu'on ne puisse démontrer)
 // et le signal brut (traçabilité). Pas d'alarme, pas de leçon : un prestataire qui a vu quelque
 // chose et le dit simplement.
-const quand = () => ''; // la date de constat est portée par l'intro du motif (motif()), une seule fois
+const quand = () => ''; // la date de constat reste dans la traçabilité (detail), pas dans l'email
+const deuxMesures = (r) => (r.panne_vue_le ? ' ; je l\'ai constatée à deux reprises, à plus d\'une heure d\'intervalle' : '');
+const tracePanne = (r) => `HTTP ${r.http_status}${r.panne_vue_le ? ` · panne vue le ${new Date(r.panne_vue_le).toLocaleString('fr-FR', { timeZone: 'Europe/Paris' })}, toujours là le ${new Date(r.analyse_le || Date.now()).toLocaleString('fr-FR', { timeZone: 'Europe/Paris' })}` : ''}`;
+const DEJA_REPERE = 'Est-ce un point que vous aviez déjà repéré ?';
+// Pour chaque preuve : objet (court, sur le prospect), constat (un fait que le gérant vérifie en
+// ouvrant son site), portée (pourquoi ça le concerne, rien qu'on ne puisse démontrer), question.
 const CATALOGUE = {
   accueil_404: (r) => ({
-    sujet: `votre page d'accueil renvoie une erreur 404`,
-    preuve: `En ouvrant ${site(r)}${quand(r)}, la page d'accueil renvoie une erreur 404 : le domaine répond, mais aucun site ne s'affiche.`,
-    consequence: `Si c'est volontaire ou déjà en cours de votre côté, ce message est sans objet.`,
-    brut: `HTTP ${r.http_status}${r.panne_vue_le ? ` · panne vue le ${new Date(r.panne_vue_le).toLocaleString('fr-FR', { timeZone: 'Europe/Paris' })}, toujours là le ${new Date(r.analyse_le || Date.now()).toLocaleString('fr-FR', { timeZone: 'Europe/Paris' })}` : ''}`
+    sujet: `Votre page d'accueil`,
+    preuve: `En ouvrant ${site(r)}, la page d'accueil affiche une erreur 404 : le domaine répond, mais aucune page ne s'affiche${deuxMesures(r)}.`,
+    consequence: `Tant qu'elle dure, les visiteurs qui arrivent sur votre adresse ne voient rien.`,
+    question: `Êtes-vous déjà au courant de ce problème ?`,
+    brut: tracePanne(r)
   }),
   erreur_serveur: (r) => ({
-    sujet: `votre site affiche une erreur ${r.http_status}`,
-    preuve: `En ouvrant ${site(r)}${quand(r)}, le serveur renvoie une erreur ${r.http_status} au lieu de la boutique.`,
-    consequence: `C'est peut-être passager et déjà traité ; si ce n'est pas le cas, je préférais vous le signaler.`,
-    brut: `HTTP ${r.http_status}${r.panne_vue_le ? ` · panne vue le ${new Date(r.panne_vue_le).toLocaleString('fr-FR', { timeZone: 'Europe/Paris' })}, toujours là le ${new Date(r.analyse_le || Date.now()).toLocaleString('fr-FR', { timeZone: 'Europe/Paris' })}` : ''}`
+    sujet: `Erreur sur votre site`,
+    preuve: `En ouvrant ${site(r)}, une erreur serveur (${r.http_status}) s'affiche au lieu de la page d'accueil${deuxMesures(r)}.`,
+    consequence: `Tant qu'elle dure, les visiteurs ne voient aucune page.`,
+    question: `Êtes-vous déjà au courant de ce problème ?`,
+    brut: tracePanne(r)
   }),
   invisible_google: (r) => ({
-    sujet: `votre site demande à Google de ne pas l'indexer`,
+    sujet: `Votre site et Google`,
     preuve: r.noindex
-      ? `La page d'accueil de ${site(r)} porte une balise « noindex », qui demande à Google de ne pas l'indexer.`
-      : `Le fichier robots.txt de ${site(r)} interdit à Google de parcourir le site (Disallow: /).`,
-    consequence: `C'est un réglage de mise en construction souvent oublié ; tant qu'il est là, ces pages restent hors de Google.`,
+      ? `La page d'accueil de ${site(r)} contient une balise « noindex », qui demande à Google de ne pas l'afficher dans ses résultats.`
+      : `Le fichier robots.txt de ${site(r)} demande à Google de ne parcourir aucune page du site.`,
+    consequence: `C'est un réglage de mise en construction souvent oublié : tant qu'il reste en place, ces pages ne peuvent pas apparaître dans Google.`,
+    question: `Est-ce un réglage voulu de votre côté ?`,
     brut: r.noindex ? 'meta robots noindex sur la page d\'accueil' : 'robots.txt : Disallow: / pour tous les robots ou Googlebot'
   }),
   http_non_securise: (r) => {
@@ -73,63 +87,66 @@ const CATALOGUE = {
     // Certificat refusé : on dit lequel est présenté quand on le sait (certificat d'hébergeur
     // par défaut, type « preview.infomaniak.website »). Vérifiable en cliquant sur le cadenas.
     const mauvaisCert = r.ssl_ok === false;
-    // Adresse où le certificat a été refusé : celle qu'on donne au gérant à taper. Colonne
-    // ssl_hote, sinon la première variante « TLS » de la trace, sinon le domaine nu.
     const hoteTls = r.ssl_hote || ((String(r.https_variantes || '').match(/https:\/\/([^\s]+?) -> TLS/) || [])[1]) || site(r);
-    const sujetCert = mauvaisCert && r.ssl_sujet ? ` : le certificat présenté est au nom de « ${r.ssl_sujet} », celui de l'hébergeur, pas de votre boutique` : (mauvaisCert && r.ssl_erreur ? ` (${r.ssl_erreur})` : '');
+    const sujetCert = mauvaisCert && r.ssl_sujet ? ` : le certificat présenté est au nom de « ${r.ssl_sujet} », celui de l'hébergeur` : (mauvaisCert && r.ssl_erreur ? ` (${r.ssl_erreur})` : '');
     const typeS = typeSite(r);
     return {
-      sujet: `« Non sécurisé » s'affiche sur ${site(r)}`,
+      sujet: `Le cadenas de votre ${typeS}`,
       preuve: redirige
         ? `En tapant https://${site(r)}, on est renvoyé vers ${finale} : le certificat existe mais n'est pas utilisé, et le navigateur affiche « Non sécurisé ».`
         : mauvaisCert
-          ? `En tapant https://${hoteTls}, le navigateur affiche un avertissement${sujetCert}. La ${typeS} ne s'ouvre donc qu'en HTTP, sans cadenas.`
-          : `${site(r)} s'ouvre en HTTP, sans cadenas${quand(r)} : le navigateur affiche « Non sécurisé » à côté de l'adresse.`,
-      consequence: redirige
-        ? `Le certificat étant en place, c'est un réglage de redirection, pas une refonte.`
-        : mauvaisCert
-          ? `Un certificat à votre nom règle les deux points ; je peux le voir avec votre hébergeur.`
-          : `La correction dépend de votre hébergement et de votre certificat ; je peux la regarder avec vous.`,
+          ? `En tapant https://${hoteTls}, le navigateur affiche un avertissement${sujetCert}. Votre ${typeS} ne s'ouvre donc qu'en HTTP, sans le cadenas.`
+          : `En ouvrant ${site(r)}, le navigateur affiche « Non sécurisé » à côté de l'adresse : votre ${typeS} s'ouvre en HTTP, sans le cadenas.`,
+      consequence: typeS === 'boutique'
+        ? `Sur une page où vos clients saisissent leur adresse et paient, ce message suffit à en faire repartir certains.`
+        : `C'est le premier message que voient vos visiteurs en arrivant sur le site.`,
+      question: DEJA_REPERE,
       brut: `${redirige ? `https accepté puis redirigé vers ${r.final_url} (servi en HTTP)` : `URL finale ${r.final_url || 'http://' + site(r)} servie en HTTP`}${r.https_variantes ? ` · variantes : ${r.https_variantes}` : ''}`
     };
   },
   ssl_expire: (r) => ({
-    sujet: `le certificat de ${site(r)} a expiré`,
-    preuve: `Le certificat de sécurité de ${site(r)} est expiré${r.ssl_expire_jours != null ? ` depuis ${Math.abs(r.ssl_expire_jours)} jour${Math.abs(r.ssl_expire_jours) > 1 ? 's' : ''}` : ''}${quand(r)} : le navigateur affiche un avertissement avant d'atteindre le site.`,
-    consequence: `Si le renouvellement est déjà programmé, ce message est sans objet ; sinon, c'est une intervention courte.`,
+    sujet: `Le certificat de ${site(r)}`,
+    preuve: `Le certificat de sécurité de ${site(r)} a expiré${r.ssl_expire_jours != null ? ` depuis ${Math.abs(r.ssl_expire_jours)} jour${Math.abs(r.ssl_expire_jours) > 1 ? 's' : ''}` : ''} : le navigateur affiche un avertissement avant d'ouvrir le site.`,
+    consequence: `Vos visiteurs doivent passer cet avertissement pour atteindre vos pages.`,
+    question: `Le renouvellement est-il déjà prévu de votre côté ?`,
     brut: `certificat : ${r.ssl_expire_jours} jour(s) (négatif = expiré)`
   }),
   ssl_invalide: (r) => ({
-    sujet: `avertissement de sécurité sur ${site(r)}`,
-    preuve: `En ouvrant https://${r.ssl_hote || site(r)}${quand(r)}, le navigateur affiche un avertissement de sécurité : ${r.ssl_sujet ? `le certificat présenté est au nom de « ${r.ssl_sujet} », pas de votre boutique` : (r.ssl_erreur ? r.ssl_erreur : 'le certificat n\'est pas valide pour cette adresse')}.`,
-    consequence: `Souvent, seule l'adresse sans « www » est concernée, et cela se règle côté hébergement.`,
+    sujet: `Avertissement de sécurité sur ${site(r)}`,
+    preuve: `En ouvrant https://${r.ssl_hote || site(r)}, le navigateur affiche un avertissement de sécurité : ${r.ssl_sujet ? `le certificat présenté est au nom de « ${r.ssl_sujet} », pas de votre site` : (r.ssl_erreur ? r.ssl_erreur : 'le certificat n\'est pas valide pour cette adresse')}.`,
+    consequence: `Souvent, une seule des deux adresses (avec ou sans « www ») est concernée.`,
+    question: DEJA_REPERE,
     brut: `${r.ssl_erreur || 'erreur TLS à la connexion'}${r.https_variantes ? ` · variantes : ${r.https_variantes}` : ''}`
   }),
   titre_defaut: (r) => ({
-    sujet: `votre site s'appelle « ${String(r.title || '').trim()} » dans Google`,
+    sujet: `Votre ${typeSite(r)} dans Google`,
     preuve: `Le titre de la page d'accueil de ${site(r)}, celui qui s'affiche dans Google et dans l'onglet du navigateur, est encore « ${String(r.title || '').trim()} ».`,
-    consequence: `Votre ${typeSite(r)} apparaît donc sous ce nom dans Google, sans ce que vous proposez ; c'est un réglage rapide.`,
+    consequence: `C'est le nom sous lequel votre ${typeSite(r)} apparaît dans les résultats de recherche.`,
+    question: `Est-ce que vous saviez que c'était ce nom qui apparaissait ?`,
     brut: `<title> = « ${String(r.title || '').trim()} »`
   }),
   mentions_404: (r) => ({
-    sujet: `le lien « mentions légales » de ${site(r)} ne mène nulle part`,
-    preuve: `Le lien « mentions légales » en pied de page de ${site(r)} mène à une page en erreur${quand(r)}.`,
-    consequence: `Ces mentions étant obligatoires sur un site marchand, c'est à remettre en place, et c'est rapide.`,
+    sujet: `Le lien « mentions légales » de ${site(r)}`,
+    preuve: `Le lien « mentions légales » en bas des pages de ${site(r)} mène à une page en erreur.`,
+    consequence: `Ces mentions sont obligatoires sur un site professionnel.`,
+    question: DEJA_REPERE,
     brut: 'lien mentions légales -> réponse 4xx/5xx'
   }),
   mobile: (r) => ({
-    sujet: `${site(r)} sur téléphone`,
-    preuve: `Ouvert sur un téléphone${quand(r)}, ${site(r)} s'affiche comme sur un écran d'ordinateur, en petit : la page n'a pas de réglage d'affichage mobile.`,
-    consequence: `Une bonne partie des visites se fait aujourd'hui sur téléphone ; c'est en général un réglage du thème.`,
+    sujet: `${site(r).charAt(0).toUpperCase() + site(r).slice(1)} sur téléphone`,
+    preuve: `Ouvert sur un téléphone, ${site(r)} s'affiche comme sur un écran d'ordinateur, en tout petit : la page n'a pas de réglage d'affichage mobile.`,
+    consequence: `Une bonne partie des visites se fait aujourd'hui depuis un téléphone.`,
+    question: `Est-ce que vous aviez remarqué l'affichage sur téléphone ?`,
     brut: 'aucune balise meta viewport sur la page d\'accueil'
   }),
   nom_mal_orthographie: (r) => {
     const n0 = nomMalOrthographie(r) || { titre: r.title, attendu: r.raison_sociale || site(r) };
     const n = { ...n0, attendu: joliNom(n0.attendu) };
     return {
-      sujet: `le nom de votre société est mal orthographié sur votre site`,
+      sujet: `Le nom de ${n.attendu} dans Google`,
       preuve: `Le titre de vos pages, dans Google et dans l'onglet du navigateur, indique « ${n.titre} », alors que votre société s'appelle ${n.attendu}.`,
-      consequence: `C'est la première chose qu'un client voit de vous ; la correction prend quelques minutes.`,
+      consequence: `C'est souvent la première chose qu'un client lit de vous.`,
+      question: `Est-ce que vous l'aviez remarqué ?`,
       brut: `titre « ${n.titre} » / nom de référence « ${n0.attendu} »`
     };
   }
@@ -219,13 +236,6 @@ function nomBoutique(r) {
   return segs[0];
 }
 
-// Spécialité annoncée, selon la technologie du site : c'est ce qui rend la présentation crédible.
-function specialite(r) {
-  const p = String(r.platform || '').toLowerCase();
-  if (p.includes('prestashop')) return 'la maintenance de boutiques PrestaShop';
-  if (p.includes('woocommerce') || p.includes('wordpress')) return 'la maintenance de sites WordPress et WooCommerce';
-  return 'la maintenance de sites et de boutiques en ligne';
-}
 const typeSite = (r) => {
   const p = String(r.platform || '').toLowerCase();
   // « Boutique » seulement si le site vend vraiment (prix et panier visibles) : un PrestaShop qui
@@ -251,61 +261,44 @@ function villeConfirmee(r) {
   const cpSiege = String(r.code_postal || '').trim();
   return cpSite && cpSiege && cpSite === cpSiege ? joliVille(r.ville) : '';
 }
-// Présentation unique, validée, identique dans tous les modes (preuve, création, Claude libre).
-// Partagée via module.exports pour qu'aucun générateur n'en dérive.
-function presentation() {
-  const prenom = (process.env.OUTREACH_SENDER_NAME || '').trim();
-  const entreprise = (process.env.OUTREACH_SENDER_COMPANY || 'PixFeed').trim();
-  return `Je suis ${prenom ? `${prenom}, ` : ''}développeur web indépendant et je dirige ${entreprise}, spécialisé dans la maintenance et le dépannage de sites professionnels.`;
-}
-
-// Motif de contact : factuel, sans formule qui juge ou qui flatte.
-function motif(r, c) {
+// Email SANS défaut constaté (toujours un premier email, règle validée) : son site d'abord, pourquoi
+// le suivi technique le concerne, une question. Aucune alerte, aucun défaut évoqué.
+function ouverture(r) {
   const nom = nomBoutique(r) || site(r);
-  // La date de l'analyse n'intéresse pas le commerçant : elle reste dans la trace (detail).
-  return `En consultant ${nom}, j'ai relevé un point à vous signaler. ${c.preuve} ${c.consequence}`;
+  const p = String(r.platform || '');
+  const plateforme = /prestashop|woocommerce|wordpress/i.test(p) && niveauPlateforme(r) === 'confirmée' ? p : '';
+  return typeSite(r) === 'boutique'
+    ? `J'ai découvert votre boutique en ligne ${nom}${plateforme ? `, qui fonctionne sous ${plateforme}` : ''}.`
+    : `J'ai découvert le site de ${nom}.`;
 }
-
-// Proposition, question, lien : formulation validée (Bijoux Carbassou). Pas de « si personne
-// n'assure », pas de pression. Le refus discret et la fin sont ajoutés par l'assembleur.
-function conclusion(r) {
-  const url = (process.env.OUTREACH_OFFER_URL || 'https://pixfeed.net/maintenance/').trim();
-  const p = String((r && r.platform) || '');
-  // La plateforme n'est nommée que si elle est confirmée (le site la déclare, ou plusieurs marqueurs concordent).
-  const techno = /prestashop|woocommerce|wordpress/i.test(p) && niveauPlateforme(r || {}) === 'confirmée' ? ` ${p}` : '';
-  const type = typeSite(r || {});
-  return [
-    `J'interviens notamment sur la maintenance des ${type}s${techno} : mises à jour, sauvegardes, sécurité et résolution d'incidents techniques.`,
-    '',
-    `Je souhaitais savoir si vous disposez déjà d'un prestataire pour assurer ce suivi, ou si un accompagnement ponctuel ou régulier pourrait vous être utile.`,
-    '',
-    `Vous pouvez consulter mes prestations ici : ${url}`
-  ].join('\n');
+function portee(r) {
+  const p = String(r.platform || '');
+  const plateforme = /prestashop|woocommerce|wordpress/i.test(p) && niveauPlateforme(r) === 'confirmée';
+  return typeSite(r) === 'boutique'
+    ? `${plateforme ? 'Sur ce type de site' : 'Sur une boutique en ligne'}, les mises à jour et les évolutions techniques demandent un suivi régulier, surtout quand il faut aussi gérer les commandes et les produits.`
+    : `Un site comme le vôtre sert souvent de première impression pour vos clients : il vaut mieux qu'il reste à jour et qu'il fonctionne sans accroc.`;
 }
+function questionSuivi(r) {
+  return typeSite(r) === 'boutique'
+    ? `Est-ce que vous gérez cette partie technique vous-même, ou est-ce que vous vous faites accompagner ?`
+    : `Qui s'occupe aujourd'hui de son suivi technique : vous-même, ou un prestataire ?`;
+}
+const FIN = 'Bonne journée,';
+const assembler = (lignes) => lignes.filter((x) => x !== null && x !== undefined).join('\n\n').replace(/\n\n(Bonne journée,)$/, '\n\n$1');
 
 /**
- * Email de maintenance sobre : aucune alerte technique. Utilisé quand aucune preuve n'est
- * confirmée mais que la boutique est identifiée (PrestaShop, WooCommerce, WordPress) et en ligne.
+ * Email sans défaut constaté : site en ligne (pas parqué, pas derrière un antirobot).
  * @returns {{ ok: boolean, subject?, body?, raison? }}
  */
 function buildMaintenanceEmail(r, lead) {
-  const p = String(r.platform || '');
-  const identifiee = /prestashop|woocommerce|wordpress/i.test(p);
   const enLigne = Number(r.http_status) >= 200 && Number(r.http_status) < 400 && !r.parked && !r.protected;
-  if (!identifiee || !enLigne) return { ok: false, raison: identifiee ? 'site pas en ligne au moment de l\'analyse' : 'technologie non identifiée' };
+  if (!enLigne) return { ok: false, raison: 'site pas en ligne au moment de l\'analyse' };
   const nom = nomBoutique(r) || site(r);
-  const body = [
-    salutation(r, lead),
-    '',
-    presentation(),
-    '',
-    `J'ai découvert votre ${typeSite(r)} ${nom}.`,
-    '',
-    conclusion(r),
-    '',
-    'Bonne journée à vous,'
-  ].join('\n');
-  return { ok: true, subject: `Suivi technique de ${nom}`, body, mode: 'maintenance' };
+  const p = String(r.platform || '');
+  const plateforme = /prestashop|woocommerce|wordpress/i.test(p) && niveauPlateforme(r) === 'confirmée' ? p : '';
+  const body = assembler([salutation(r, lead), ouverture(r), portee(r), questionSuivi(r), FIN]);
+  const subject = typeSite(r) === 'boutique' ? (plateforme ? `Votre boutique ${plateforme}` : `Votre boutique ${nom}`) : `Le site de ${nom}`;
+  return { ok: true, subject, body, mode: 'maintenance' };
 }
 
 /**
@@ -346,17 +339,7 @@ function buildProofEmail(r, lead) {
   // Le contexte technique (PHP déclaré, version CMS déduite) ne va PLUS dans l'email : ce sont
   // des indices, ils restent dans le bloc de traçabilité pour la relecture.
   const contexte = contexteTechnique(r, flags);
-  const body = [
-    salutation(r, lead),
-    '',
-    presentation(r),
-    '',
-    motif(r, c),
-    '',
-    conclusion(r),
-    '',
-    'Bonne journée à vous,'
-  ].join('\n');
+  const body = assembler([salutation(r, lead), c.preuve, c.consequence, c.question, FIN]);
   // Traçabilité : ce qui a été mesuré, où, quand, avec quel degré de confiance. Affiché sous
   // l'email pour que la relecture humaine puisse vérifier avant d'envoyer.
   const detail = {
@@ -370,7 +353,7 @@ function buildProofEmail(r, lead) {
   };
   return {
     ok: true,
-    subject: c.sujet.charAt(0).toUpperCase() + c.sujet.slice(1),
+    subject: c.sujet,
     body,
     preuve: key,
     preuves: preuvesTrouvees,
@@ -379,4 +362,4 @@ function buildProofEmail(r, lead) {
   };
 }
 
-module.exports = { buildProofEmail, buildMaintenanceEmail, PREUVES_ORDRE, PREUVES_HTTPS, CATALOGUE, presentation, conclusion, nomBoutique, typeSite, joliNom, joliVille, nomCourt, salutation, FORMULES_INTERDITES };
+module.exports = { buildProofEmail, buildMaintenanceEmail, PREUVES_ORDRE, PREUVES_HTTPS, CATALOGUE, ouverture, portee, questionSuivi, assembler, nomBoutique, typeSite, joliNom, joliVille, nomCourt, salutation, FORMULES_INTERDITES };
