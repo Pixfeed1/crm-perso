@@ -29,6 +29,7 @@ export const CHANNELS = [
   { key: 'appel', label: 'Appel' },
   { key: 'email', label: 'Email' },
   { key: 'sms', label: 'SMS' },
+  { key: 'linkedin', label: 'LinkedIn' },
   { key: 'autre', label: 'Autre' }
 ];
 

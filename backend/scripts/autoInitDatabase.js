@@ -73,7 +73,7 @@ const DATABASE_SCHEMA = {
       result: 'TEXT',
       relation_status: 'VARCHAR(20)', // statut de relation appliqué lors de cet échange (historique)
       next_followup_date: 'DATE',
-      next_followup_channel: 'VARCHAR(20)', // canal de la prochaine relance : appel|email|sms|autre
+      next_followup_channel: 'VARCHAR(20)', // canal de la prochaine relance : appel|email|sms|linkedin|autre
       followup_done: 'BOOLEAN DEFAULT FALSE',
       created_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'
     },

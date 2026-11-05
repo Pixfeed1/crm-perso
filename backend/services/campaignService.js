@@ -8,6 +8,7 @@
 // Garde-fous : aucun envoi sans validation ligne par ligne ; exclusions revérifiées au moment
 // de chaque envoi (hook du worker) ; pas de relance automatique ; opposition définitive ; mode
 // test vers des adresses à soi. Tout en db.pool.query.
+const { aujourdhuiParis, ajouterJoursOuvres } = require('../utils/joursOuvres');
 const scheduledEmailModel = require('../models/scheduledEmailModel');
 const optout = require('./optout');
 const smtpErrors = require('../utils/smtpErrors');
@@ -92,7 +93,13 @@ async function stats(db, id) {
 
 // ─── Création ───────────────────────────────────────────────────────────────
 const MODES = ['preuve', 'maintenance', 'modele'];
-async function createCampaign(db, { nom, mode = 'preuve', from_account = 'pro', par_jour = 15, heure_debut = 9, heure_fin = 18, espacement_min = 20, jours_ouvres = true, template_id = null, signature_id = null, bcc = null, relance_jours = null, relance_canal = 'email' } = {}) {
+// Tâche de relance créée par défaut après chaque email réellement parti : un RAPPEL pour Marc dans le
+// Suivi, jamais un envoi automatique. Délai en jours ouvrés (week-ends et fériés exclus). Désactivable
+// par campagne (relance_jours = null).
+const RELANCE_DEFAUT = { jours: 5, canal: 'appel' };
+const CANAUX_RELANCE = ['appel', 'email', 'sms', 'linkedin', 'autre'];
+
+async function createCampaign(db, { nom, mode = 'preuve', from_account = 'pro', par_jour = 15, heure_debut = 9, heure_fin = 18, espacement_min = 20, jours_ouvres = true, template_id = null, signature_id = null, bcc = null, relance_jours = RELANCE_DEFAUT.jours, relance_canal = RELANCE_DEFAUT.canal } = {}) {
   const n = String(nom || '').trim() || `Campagne du ${new Date().toLocaleDateString('fr-FR')}`;
   const m = MODES.includes(mode) ? mode : 'preuve';
   if (m === 'modele' && !template_id) throw Object.assign(new Error('Mode modèle : choisissez un modèle du menu.'), { status: 400 });
@@ -100,7 +107,7 @@ async function createCampaign(db, { nom, mode = 'preuve', from_account = 'pro', 
     `INSERT INTO campaigns (nom, mode, from_account, par_jour, heure_debut, heure_fin, espacement_min, jours_ouvres, template_id, signature_id, bcc, relance_jours, relance_canal)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *`,
     [n, m, from_account === 'gmail' ? 'gmail' : 'pro', Math.max(1, Math.min(100, par_jour | 0 || 15)), heure_debut | 0, heure_fin | 0, Math.max(1, espacement_min | 0 || 20), !!jours_ouvres,
-     template_id || null, signature_id || null, (bcc || '').trim() || null, relance_jours ? Math.max(1, relance_jours | 0) : null, ['email', 'appel', 'sms', 'autre'].includes(relance_canal) ? relance_canal : 'email']
+     template_id || null, signature_id || null, (bcc || '').trim() || null, relance_jours ? Math.max(1, relance_jours | 0) : null, CANAUX_RELANCE.includes(relance_canal) ? relance_canal : RELANCE_DEFAUT.canal]
   );
   return r.rows[0];
 }
@@ -108,6 +115,7 @@ async function createCampaign(db, { nom, mode = 'preuve', from_account = 'pro', 
 async function updateCampaign(db, id, fields) {
   const allowed = ['nom', 'mode', 'from_account', 'par_jour', 'heure_debut', 'heure_fin', 'espacement_min', 'jours_ouvres', 'test_mode', 'test_emails', 'template_id', 'signature_id', 'bcc', 'relance_jours', 'relance_canal'];
   if (fields && fields.relance_jours === '' ) fields.relance_jours = null;
+  if (fields && fields.relance_canal !== undefined && !CANAUX_RELANCE.includes(fields.relance_canal)) delete fields.relance_canal;
   const keys = Object.keys(fields || {}).filter((k) => allowed.includes(k));
   if (!keys.length) return getCampaign(db, id);
   const set = keys.map((k, i) => `${k} = $${i + 1}`).join(', ');
@@ -521,15 +529,21 @@ async function beforeSend(db, email) {
 async function afterSent(db, email) {
   if (!email.campaign_id) return;
   if (email.campaign_item_id) await db.pool.query("UPDATE campaign_items SET statut = 'envoye', sent_at = NOW(), updated_at = NOW() WHERE id = $1 AND statut = 'programme'", [email.campaign_item_id]);
-  // Relance : seulement si la campagne le demande (désactivé par défaut). Relance MANUELLE
-  // (relance_step NULL : hors cascade automatique), visible dans le Suivi, fermée par une réponse.
-  const c = (await db.pool.query('SELECT relance_jours, relance_canal, test_mode FROM campaigns WHERE id = $1', [email.campaign_id])).rows[0];
+  // Tâche de relance (si la campagne en demande une, ce qui est le cas par défaut) : un rappel dans le
+  // Suivi à J+N jours OUVRÉS, jamais un envoi. relance_step NULL : hors cascade automatique ; fermée par
+  // une réponse ou une opposition. Pas de doublon : une fiche qui a déjà une relance ouverte la garde.
+  const c = (await db.pool.query('SELECT nom, relance_jours, relance_canal, test_mode FROM campaigns WHERE id = $1', [email.campaign_id])).rows[0];
   if (c && c.relance_jours && !c.test_mode && email.related_type === 'lead' && email.related_id) {
-    await db.pool.query(
-      `INSERT INTO interactions (contact_type, contact_id, type, date, notes, next_followup_date, next_followup_channel, followup_done)
-       VALUES ('lead', $1, 'note', NOW(), $2, CURRENT_DATE + $3::int, $4, FALSE)`,
-      [email.related_id, `Relance prévue par la campagne #${email.campaign_id} (J+${c.relance_jours}).`, c.relance_jours, c.relance_canal || 'email']
-    ).catch((e) => console.error('[Campagnes] relance :', e.message));
+    const ouverte = (await db.pool.query(
+      `SELECT 1 FROM interactions WHERE contact_type = 'lead' AND contact_id = $1 AND followup_done = FALSE AND next_followup_date IS NOT NULL LIMIT 1`, [email.related_id])).rows[0];
+    if (!ouverte) {
+      const echeance = ajouterJoursOuvres(aujourdhuiParis(), c.relance_jours);
+      await db.pool.query(
+        `INSERT INTO interactions (contact_type, contact_id, type, date, notes, next_followup_date, next_followup_channel, followup_done)
+         VALUES ('lead', $1, 'note', NOW(), $2, $3::date, $4, FALSE)`,
+        [email.related_id, `Relance prévue par la campagne « ${c.nom || '#' + email.campaign_id} » (J+${c.relance_jours} jours ouvrés après l'envoi).`, echeance, c.relance_canal || RELANCE_DEFAUT.canal]
+      ).catch((e) => console.error('[Campagnes] relance :', e.message));
+    }
   }
   await db.pool.query('UPDATE campaigns SET echecs_consecutifs = 0, updated_at = NOW() WHERE id = $1', [email.campaign_id]);
   // Plus rien en attente : campagne terminée.
@@ -588,6 +602,7 @@ async function checkSender(emailService, seoOutreach) {
 }
 
 module.exports = {
+  RELANCE_DEFAUT, CANAUX_RELANCE,
   listCampaigns, getCampaign, getCampaignFull, stats, createCampaign, updateCampaign, addLeads, addFromCrawl,
   updateItem, reanalyzeItem, reprendreItem, reprendreMany, validateMany, schedule, pause, resume, stop, removeCampaign, remplirModele,
   beforeSend, afterSent, afterFailed, afterCancelled, checkSender, controles, generer, ECHECS_PAUSE

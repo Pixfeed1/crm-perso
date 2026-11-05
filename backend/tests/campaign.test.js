@@ -220,13 +220,15 @@ test('options de la fiche reprises en campagne : modèle du menu rempli, relance
     await S.schedule(db, c.id, {});
     const se = (await pool.query('SELECT * FROM scheduled_emails WHERE campaign_id = $1', [c.id])).rows[0];
     assert.match(se.body_html, /<p>campagne<\/p>/); assert.equal(se.bcc_email, 'copie@pixfeed.net');
-    // Relance J+7 (appel) créée APRÈS l'envoi seulement, et seulement parce que la campagne le demande.
+    // Relance J+7 (appel) créée APRÈS l'envoi seulement, parce que la campagne le demande.
     assert.equal((await pool.query('SELECT COUNT(*)::int AS n FROM interactions')).rows[0].n, 0);
     await pool.query("UPDATE scheduled_emails SET status = 'sent', sent_at = NOW() WHERE id = $1", [se.id]);
     await S.afterSent(db, se);
     const rel = (await pool.query('SELECT * FROM interactions WHERE contact_id = $1', [lead])).rows;
     assert.equal(rel.length, 1); assert.equal(rel[0].next_followup_channel, 'appel'); assert.equal(rel[0].relance_step, null);
-    assert.equal(Math.round((new Date(rel[0].next_followup_date) - new Date(new Date().toISOString().slice(0, 10))) / 86400000), 7);
+    // J+7 en jours OUVRÉS (week-ends et fériés exclus)
+    const { ajouterJoursOuvres, aujourdhuiParis } = require('../utils/joursOuvres');
+    assert.equal(new Date(rel[0].next_followup_date).toLocaleDateString('en-CA'), ajouterJoursOuvres(aujourdhuiParis(), 7));
 
     // Réanalyse d'une ligne « ancien crawl » : mesures fraîches injectées -> preuve confirmée -> ligne prête.
     const vieux = await insertCrawlResult(db, job.rows[0].id, typedResult({ domain: 'vieux.fr', platform: 'PrestaShop', http_status: '200', final_url: 'http://vieux.fr/', https_final: 'non', ssl_ok: 'non', title: 'Vieux', email: 'c@vieux.fr' }));

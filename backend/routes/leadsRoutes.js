@@ -179,7 +179,7 @@ router.post('/:id/send-email', async (req, res) => {
   if (await optout.isOptedOut(db, to)) {
     return res.status(409).json({ message: 'Ce contact s\'est désinscrit — envoi bloqué (RGPD).' });
   }
-  const channels = ['appel', 'email', 'sms', 'autre'];
+  const channels = ['appel', 'email', 'sms', 'linkedin', 'autre'];
   const followupChannel = next_followup_date && channels.includes(next_followup_channel) ? next_followup_channel : null;
   try {
     // Signature : celle fournie, sinon TOUJOURS la signature par défaut des Paramètres.

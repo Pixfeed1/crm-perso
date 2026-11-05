@@ -349,7 +349,7 @@ const CampaignView = ({ id, onBack }) => {
             <h4 className="text-sm font-semibold text-text-primary flex items-center gap-2"><FiSend size={14} /> Programmer les envois validés ({counts.valide || 0})</h4>
             <button onClick={() => setShowSettings((v) => !v)} className="text-xs text-accent hover:underline">{showSettings ? 'Masquer les réglages' : 'Réglages de cadence'}</button>
           </div>
-          <div className="text-xs text-text-muted mt-1">{campaign.par_jour} par jour, de {campaign.heure_debut} h à {campaign.heure_fin} h, espacés d'au moins {campaign.espacement_min} min{campaign.jours_ouvres ? ', jours ouvrés' : ''} · compte {campaign.from_account} · mode {campaign.mode} · signature {campaign.signature_id ? `#${campaign.signature_id}` : 'par défaut'}{campaign.bcc ? ` · Cci ${campaign.bcc}` : ''} · relance {campaign.relance_jours ? `J+${campaign.relance_jours} (${campaign.relance_canal})` : 'aucune'}</div>
+          <div className="text-xs text-text-muted mt-1">{campaign.par_jour} par jour, de {campaign.heure_debut} h à {campaign.heure_fin} h, espacés d'au moins {campaign.espacement_min} min{campaign.jours_ouvres ? ', jours ouvrés' : ''} · compte {campaign.from_account} · mode {campaign.mode} · signature {campaign.signature_id ? `#${campaign.signature_id}` : 'par défaut'}{campaign.bcc ? ` · Cci ${campaign.bcc}` : ''} · relance {campaign.relance_jours ? `J+${campaign.relance_jours} ouvrés (${campaign.relance_canal})` : 'aucune'}</div>
           {showSettings && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
               {[['par_jour', 'Par jour', 1, 100], ['heure_debut', 'Début (h)', 0, 23], ['heure_fin', 'Fin (h)', 1, 24], ['espacement_min', 'Espacement (min)', 1, 240]].map(([k, l, min, max]) => (
@@ -391,15 +391,15 @@ const CampaignView = ({ id, onBack }) => {
                   className="w-full px-2 py-1.5 bg-surface-muted border border-border rounded-lg text-text-primary text-sm focus:outline-none focus:border-accent" />
               </div>
               <div>
-                <label className="block text-xs text-text-secondary mb-1">Relance (manuelle, dans le Suivi)</label>
-                <select defaultValue={campaign.relance_jours || ''} onChange={(e) => saveSettings({ relance_jours: e.target.value ? parseInt(e.target.value, 10) : null })} className="w-full px-2 py-1.5 bg-surface-muted border border-border rounded-lg text-text-primary text-sm" title="Désactivée par défaut. Si activée, une relance à faire apparaît dans le Suivi J+N après chaque envoi ; une réponse la ferme.">
-                  <option value="">Aucune</option><option value="3">J+3</option><option value="7">J+7</option><option value="14">J+14</option>
+                <label className="block text-xs text-text-secondary mb-1">Tâche de relance (dans le Suivi)</label>
+                <select defaultValue={campaign.relance_jours || ''} onChange={(e) => saveSettings({ relance_jours: e.target.value ? parseInt(e.target.value, 10) : null })} className="w-full px-2 py-1.5 bg-surface-muted border border-border rounded-lg text-text-primary text-sm" title="Après chaque email réellement parti, une relance à faire apparaît dans le Suivi, J+N jours ouvrés plus tard (week-ends et fériés exclus). C'est un rappel : rien n'est envoyé tout seul. Une réponse ou une opposition la ferme ; une fiche qui a déjà une relance ouverte n'en reçoit pas de seconde.">
+                  <option value="">Aucune</option><option value="3">J+3 ouvrés</option><option value="5">J+5 ouvrés</option><option value="7">J+7 ouvrés</option><option value="10">J+10 ouvrés</option><option value="14">J+14 ouvrés</option>
                 </select>
               </div>
               <div>
                 <label className="block text-xs text-text-secondary mb-1">Canal de relance</label>
-                <select defaultValue={campaign.relance_canal || 'email'} onChange={(e) => saveSettings({ relance_canal: e.target.value })} className="w-full px-2 py-1.5 bg-surface-muted border border-border rounded-lg text-text-primary text-sm">
-                  <option value="email">Email</option><option value="appel">Appel</option><option value="sms">SMS</option>
+                <select defaultValue={campaign.relance_canal || 'appel'} onChange={(e) => saveSettings({ relance_canal: e.target.value })} className="w-full px-2 py-1.5 bg-surface-muted border border-border rounded-lg text-text-primary text-sm">
+                  <option value="appel">Appel</option><option value="email">Email</option><option value="sms">SMS</option><option value="linkedin">LinkedIn</option>
                 </select>
               </div>
             </div>
@@ -461,7 +461,7 @@ const CampaignView = ({ id, onBack }) => {
           {visibles.map((it) => <ItemRow key={it.id} item={it} campaign={campaign} selected={selected.has(it.id)} onToggle={(iid) => setSelected((p) => { const n = new Set(p); if (n.has(iid)) n.delete(iid); else n.add(iid); return n; })} onChange={changeItem} onReanalyze={reanalyzeItem} onReprendre={reprendreItem} />)}
         </div>
       )}
-      <p className="text-xs text-text-muted mt-4 flex items-center gap-1"><FiCheck size={12} /> Chaque email est généré par les règles validées : présentation PixFeed, preuve vérifiée ou maintenance sans alerte, refus discret. Aucune relance automatique n'est créée.</p>
+      <p className="text-xs text-text-muted mt-4 flex items-center gap-1"><FiCheck size={12} /> Chaque email est généré par les règles validées : présentation PixFeed, preuve vérifiée ou maintenance sans alerte, refus discret. Après chaque envoi, une tâche de relance (par défaut un appel à J+5 jours ouvrés) apparaît dans le Suivi ; aucun email de relance ne part tout seul.</p>
       <p className="text-xs text-text-muted mt-1 flex items-center gap-1"><FiXCircle size={12} /> Une ligne exclue ne part jamais : désinscrit, sollicité depuis moins de 90 jours, autre campagne active, fiche fermée, site bloqué par le crawl. Une ligne exclue faute d'adresse se reprend en saisissant l'adresse ; un échec se réessaie après « Programmer ».</p>
     </div>
   );

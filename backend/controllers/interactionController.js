@@ -53,7 +53,7 @@ const VALID_TYPES = ['email', 'appel', 'sms', 'note', 'rdv'];
 const VALID_CONTACT_TYPES = ['lead', 'client'];
 const VALID_REACHED = ['joint', 'pas_reponse', 'message'];
 const VALID_STATUS = ['nouveau', 'a_contacter', 'contacte', 'en_discussion', 'devis_envoye', 'gagne', 'perdu', 'pas_business'];
-const VALID_CHANNELS = ['appel', 'email', 'sms', 'autre'];
+const VALID_CHANNELS = ['appel', 'email', 'sms', 'linkedin', 'autre'];
 
 const interactionController = {
   /**
