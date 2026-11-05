@@ -14,6 +14,7 @@
 // Aucun appel à un modèle : le texte est assemblé à partir des mesures, mot pour mot.
 // L'humain relit et modifie avant l'envoi ; la signature (Paramètres) est ajoutée à l'envoi.
 
+const { niveauPlateforme, versionPlateforme } = require('../utils/plateforme');
 const { auditFlags, phpEol, nomMalOrthographie } = require('../utils/prospectScore');
 
 // Ordre de conviction des preuves : ce qui coûte des ventes ou fait honte d'abord.
@@ -141,8 +142,9 @@ function contexteTechnique(r, flags) {
   // La version PHP vient d'une entête envoyée par le serveur (X-Powered-By) : une déclaration,
   // pas une mesure. On la rapporte comme telle, jamais comme une faille certaine.
   if (eol) return `D'après l'entête que renvoie votre serveur, le site tournerait sur PHP ${eol.branch} ; si c'est bien la version en place, elle ne reçoit plus de correctifs de sécurité depuis ${eol.eol.slice(0, 4)}, ce que votre hébergeur pourra confirmer.`;
-  if (keys.has('version_obsolete') && r.platform_version) {
-    const v = String(r.platform_version).replace(/\s*\(déduit\)/i, '');
+  // Une version DÉDUITE (fichiers du site) n'est qu'un indice : jamais affirmée dans un email.
+  if (keys.has('version_obsolete') && r.platform_version && versionPlateforme(r).niveau === 'confirmée') {
+    const v = versionPlateforme(r).version;
     const fin = /prestashop 1\.[56]/i.test(v) ? ' (plus maintenu depuis 2019)' : /drupal 7/i.test(v) ? ' (fin de vie en janvier 2025)' : '';
     return `Le site tourne sur ${v}${fin}, une version qui n'est plus mise à jour par son éditeur.`;
   }
@@ -267,7 +269,8 @@ function motif(r, c) {
 function conclusion(r) {
   const url = (process.env.OUTREACH_OFFER_URL || 'https://pixfeed.net/maintenance/').trim();
   const p = String((r && r.platform) || '');
-  const techno = /prestashop|woocommerce|wordpress/i.test(p) ? ` ${p}` : '';
+  // La plateforme n'est nommée que si elle est confirmée (le site la déclare, ou plusieurs marqueurs concordent).
+  const techno = /prestashop|woocommerce|wordpress/i.test(p) && niveauPlateforme(r || {}) === 'confirmée' ? ` ${p}` : '';
   const type = typeSite(r || {});
   return [
     `J'interviens notamment sur la maintenance des ${type}s${techno} : mises à jour, sauvegardes, sécurité et résolution d'incidents techniques.`,

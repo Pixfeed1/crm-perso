@@ -61,3 +61,19 @@ test('panne vue une seule fois : indice « à confirmer », jamais une preuve', 
   assert.ok(deux.includes('erreur_serveur'));
   assert.ok(p.auditFlags({ http_status: 404 }).some((f) => f.key === 'panne_a_confirmer'));
 });
+
+test('versions : une version déduite n\'est jamais affirmée ; la plateforme n\'est nommée que confirmée', () => {
+  const P = require('../utils/plateforme');
+  assert.equal(P.niveauPlateforme({ platform: 'PrestaShop', signals: 'var prestashop | /modules/ps_' }), 'confirmée');
+  assert.equal(P.niveauPlateforme({ platform: 'PrestaShop', signals: 'prestashop-' }), 'déduite');
+  assert.equal(P.niveauPlateforme({ platform: 'WordPress', signals: 'header:link=/wp-json/' }), 'confirmée');
+  assert.equal(P.versionPlateforme({ platform_version: 'PrestaShop 1.6 (déduit)' }).niveau, 'déduite');
+  assert.equal(P.versionPlateforme({ platform_version: 'WordPress 6.4' }).niveau, 'confirmée');
+  const { buildProofEmail } = require('../services/proofEmailService');
+  const base = { domain: 'x.fr', title: 'X', platform: 'PrestaShop', http_status: 200, https_final: false, final_url: 'http://x.fr/', analyse_le: new Date().toISOString(), version_obsolete: true };
+  const deduit = buildProofEmail({ ...base, platform_version: 'PrestaShop 1.6 (déduit)', signals: 'prestashop-' }, {});
+  assert.doesNotMatch(deduit.body, /PrestaShop 1\.6|tourne sur/);
+  assert.doesNotMatch(deduit.body, /boutiques PrestaShop/, 'plateforme seulement déduite : pas nommée');
+  const declare = buildProofEmail({ ...base, platform_version: 'PrestaShop 1.6.1.24', signals: 'var static_token | themes/default-bootstrap' }, {});
+  assert.match(declare.body, /PrestaShop/);
+});

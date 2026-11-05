@@ -90,7 +90,7 @@ async function reanalyzeLead(db, leadId, deps = {}) {
     preuves: flags.filter((f) => PREUVE_KEYS.has(f.key)).map((f) => f.label),
     indices: flags.filter((f) => !PREUVE_KEYS.has(f.key)).map((f) => f.label),
     sirene: sireneInfo,
-    crawl_audit: fresh // la fiche se met à jour sans rechargement
+    crawl_audit: require('../utils/plateforme').annoter(fresh) // la fiche se met à jour sans rechargement
   };
 }
 

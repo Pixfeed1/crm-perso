@@ -263,7 +263,7 @@ router.post('/:id/identite', async (req, res) => {
     const b = req.body || {};
     const out = await require('../services/identiteService').corriger(db, lead.crawl_result_id, { siren: b.siren, aucune: b.aucune === true });
     const crawl_audit = (await db.pool.query('SELECT * FROM crawl_results WHERE id = $1', [lead.crawl_result_id])).rows[0];
-    res.json({ ...out, crawl_audit });
+    res.json({ ...out, crawl_audit: require('../utils/plateforme').annoter(crawl_audit) });
   } catch (e) {
     res.status(e.status || 500).json({ message: e.status ? e.message : `Correction impossible : ${e.message}` });
   }

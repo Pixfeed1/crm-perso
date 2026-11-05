@@ -411,7 +411,10 @@ const LeadDetails = ({ lead, autoCompose = false, onUpdate, onDelete, onAddConta
                   Analyse du site
                   {audit && audit.platform && audit.platform !== 'Inconnu' && (
                     <span className="text-xs font-normal text-text-muted">
-                      · {audit.platform}{audit.platform_version ? ` ${audit.platform_version.replace(/^\S+\s/, 'v')}` : ''}
+                      · {audit.platform}{audit.plateforme_niveau === 'déduite' ? ' (déduite)' : ''}{audit.platform_version ? ` ${audit.platform_version.replace(/\s*\(d[ée]duit\)/i, '').replace(/^\S+\s/, 'v')}` : ''}
+                      {audit.version_niveau && audit.version_niveau !== 'inconnue' && (
+                        <span title={audit.version_source || ''} className={audit.version_niveau === 'confirmée' ? '' : 'text-warning-text'}> (version {audit.version_niveau}{audit.analyse_le ? `, ${new Date(audit.analyse_le).toLocaleDateString('fr-FR')}` : ''})</span>
+                      )}
                     </span>
                   )}
                 </h3>
