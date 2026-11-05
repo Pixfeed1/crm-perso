@@ -20,6 +20,7 @@ router.post('/:id/items/reprendre', ctrl.reprendreMany);
 router.patch('/:id/items/:itemId', ctrl.updateItem);
 router.post('/:id/items/:itemId/reanalyze', ctrl.reanalyzeItem);
 router.post('/:id/items/:itemId/reprendre', ctrl.reprendreItem);
+router.post('/:id/reanalyser', ctrl.reanalyser);
 router.post('/:id/schedule', ctrl.schedule);
 router.post('/:id/pause', ctrl.pause);
 router.post('/:id/resume', ctrl.resume);

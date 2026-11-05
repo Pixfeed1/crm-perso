@@ -318,13 +318,18 @@ const DATABASE_SCHEMA = {
       signature_id: 'INTEGER',
       template_id: 'INTEGER',                    // mode 'modele' : modèle du menu rempli par prospect
       bcc: 'TEXT',
-      relance_jours: 'INTEGER',                  // null = aucune relance ; sinon relance prévue J+N après l'envoi
-      relance_canal: "VARCHAR(10) DEFAULT 'email'",
+      relance_jours: 'INTEGER',                  // null = aucune ; sinon tâche de relance J+N jours ouvrés après l'envoi (5 par défaut)
+      relance_canal: "VARCHAR(10) DEFAULT 'email'", // appel par défaut à la création
       statut: "VARCHAR(20) DEFAULT 'brouillon'", // brouillon | en_cours | pause | arretee | terminee
       test_mode: 'BOOLEAN DEFAULT FALSE',        // les envois partent vers test_emails, pas vers les prospects
       test_emails: 'TEXT',
       message: 'TEXT',                           // dernier événement (pause auto après échecs, arrêt…)
       echecs_consecutifs: 'INTEGER DEFAULT 0',
+      // Réanalyse des sites à la préparation : l'email ne cite que ce qui est constaté ce jour-là.
+      reanalyse_statut: 'VARCHAR(12)',          // en_cours | termine
+      reanalyse_faits: 'INTEGER DEFAULT 0',
+      reanalyse_total: 'INTEGER DEFAULT 0',
+      reanalyse_le: 'TIMESTAMP',
       started_at: 'TIMESTAMP',
       stopped_at: 'TIMESTAMP',
       created_at: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP',

@@ -21,19 +21,21 @@ module.exports = {
   addLeads: async (req, res) => {
     const ids = ints(req.body?.lead_ids);
     if (!ids.length) return res.status(400).json({ message: 'Aucun prospect sélectionné' });
-    try { res.json(await service.addLeads(req.app.locals.db, req.params.id, ids)); } catch (e) { fail(res, e, 'ajout prospects'); }
+    try { const out = await service.addLeads(req.app.locals.db, req.params.id, ids); if (out.ajoutes) service.lancerReanalyse(req.app.locals.db, req.params.id); res.json({ ...out, reanalyse: out.ajoutes ? 'lancée' : null }); } catch (e) { fail(res, e, 'ajout prospects'); }
   },
   // POST /:id/items/from-crawl { job_id, result_ids }
   addFromCrawl: async (req, res) => {
     const ids = ints(req.body?.result_ids); const jobId = parseInt(req.body?.job_id, 10);
     if (!ids.length || Number.isNaN(jobId)) return res.status(400).json({ message: 'Crawl ou sélection manquants' });
-    try { res.json(await service.addFromCrawl(req.app.locals.db, req.params.id, jobId, ids)); } catch (e) { fail(res, e, 'ajout crawl'); }
+    try { const out = await service.addFromCrawl(req.app.locals.db, req.params.id, jobId, ids); if (out.ajoutes) service.lancerReanalyse(req.app.locals.db, req.params.id); res.json({ ...out, reanalyse: out.ajoutes ? 'lancée' : null }); } catch (e) { fail(res, e, 'ajout crawl'); }
   },
   // PATCH /:id/items/:itemId { subject?, body?, statut?, raison?, mode? }
   updateItem: async (req, res) => {
     try { res.json(await service.updateItem(req.app.locals.db, req.params.id, req.params.itemId, req.body || {})); } catch (e) { fail(res, e, 'ligne'); }
   },
   // POST /:id/items/:itemId/reanalyze -> mesures du jour, SIRENE, email régénéré, ligne reclassée
+  // POST /:id/reanalyser -> réanalyse en arrière-plan des lignes prêtes, à vérifier ou validées
+  reanalyser: async (req, res) => { try { service.lancerReanalyse(req.app.locals.db, req.params.id); res.json({ reanalyse: 'lancée' }); } catch (e) { fail(res, e, 'réanalyse'); } },
   reanalyzeItem: async (req, res) => {
     try { res.json(await service.reanalyzeItem(req.app.locals.db, req.params.id, req.params.itemId)); } catch (e) { fail(res, e, 'réanalyse'); }
   },

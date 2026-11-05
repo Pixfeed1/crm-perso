@@ -243,9 +243,10 @@ const CampaignView = ({ id, onBack }) => {
   useEffect(() => { load(); }, [load]);
   // Suivi en direct tant que des envois sont programmés.
   useEffect(() => {
-    const live = data && data.campaign && ['en_cours', 'pause'].includes(data.campaign.statut) && (data.stats.par_statut.programme || 0) > 0;
+    const reanalyse = data && data.campaign && data.campaign.reanalyse_statut === 'en_cours';
+    const live = reanalyse || (data && data.campaign && ['en_cours', 'pause'].includes(data.campaign.statut) && (data.stats.par_statut.programme || 0) > 0);
     if (!live) { if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; } return undefined; }
-    pollRef.current = setInterval(load, 20000);
+    pollRef.current = setInterval(load, reanalyse ? 5000 : 20000);
     return () => { if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; } };
   }, [data, load]);
 
@@ -343,10 +344,21 @@ const CampaignView = ({ id, onBack }) => {
       </div>
 
       {/* Étape 3 : programmer */}
+      {campaign.reanalyse_statut === 'en_cours' && (
+        <div className="rounded-2xl border border-info-text/20 bg-info-bg text-info-text px-4 py-3 mb-5 text-sm flex items-center gap-2">
+          <FiLoader className="animate-spin" /> Réanalyse des sites : {campaign.reanalyse_faits || 0} / {campaign.reanalyse_total || 0}. Les emails se mettent à jour avec les mesures du jour ; la programmation sera possible à la fin.
+        </div>
+      )}
       {['brouillon', 'en_cours', 'pause'].includes(campaign.statut) && (
         <div className="bg-surface border border-border rounded-2xl p-5 mb-5">
           <div className="flex items-start justify-between gap-3 flex-wrap">
             <h4 className="text-sm font-semibold text-text-primary flex items-center gap-2"><FiSend size={14} /> Programmer les envois validés ({counts.valide || 0})</h4>
+            {campaign.reanalyse_statut !== 'en_cours' && (
+              <button onClick={async () => { try { await campagnesAPI.reanalyser(id); toast.success('Réanalyse des sites lancée'); load(); } catch (e) { toast.error(e.message || 'Réanalyse impossible'); } }}
+                className="text-xs text-accent hover:underline flex items-center gap-1" title="Réanalyse les sites des lignes prêtes, à vérifier ou validées dont l'analyse a plus de 12 heures, puis régénère leurs emails. Une ligne validée dont le texte change repasse à relire.">
+                <FiRefreshCw size={12} /> Réanalyser les sites{campaign.reanalyse_le ? ` (dernière : ${new Date(campaign.reanalyse_le).toLocaleDateString('fr-FR')})` : ''}
+              </button>
+            )}
             <button onClick={() => setShowSettings((v) => !v)} className="text-xs text-accent hover:underline">{showSettings ? 'Masquer les réglages' : 'Réglages de cadence'}</button>
           </div>
           <div className="text-xs text-text-muted mt-1">{campaign.par_jour} par jour, de {campaign.heure_debut} h à {campaign.heure_fin} h, espacés d'au moins {campaign.espacement_min} min{campaign.jours_ouvres ? ', jours ouvrés' : ''} · compte {campaign.from_account} · mode {campaign.mode} · signature {campaign.signature_id ? `#${campaign.signature_id}` : 'par défaut'}{campaign.bcc ? ` · Cci ${campaign.bcc}` : ''} · relance {campaign.relance_jours ? `J+${campaign.relance_jours} ouvrés (${campaign.relance_canal})` : 'aucune'}</div>
@@ -411,7 +423,7 @@ const CampaignView = ({ id, onBack }) => {
             </label>
             <label className="flex items-center gap-2 text-sm text-text-secondary"><input type="checkbox" checked={testMode} onChange={(e) => setTestMode(e.target.checked)} /> Mode test (vers mes adresses)</label>
             {testMode && <input value={testEmails} onChange={(e) => setTestEmails(e.target.value)} placeholder="moi@exemple.fr, autre@exemple.fr" className="px-3 py-1.5 bg-surface-muted border border-border rounded-lg text-text-primary text-sm focus:outline-none focus:border-accent min-w-[260px]" />}
-            <button onClick={programmer} disabled={!!working || !(counts.valide || 0)} className={`px-4 py-2 rounded-lg text-white text-sm font-medium flex items-center gap-1.5 disabled:opacity-50 ${testMode ? 'bg-warning-text' : 'bg-accent hover:bg-accent-hover'}`}>
+            <button onClick={programmer} disabled={!!working || !(counts.valide || 0) || campaign.reanalyse_statut === 'en_cours'} className={`px-4 py-2 rounded-lg text-white text-sm font-medium flex items-center gap-1.5 disabled:opacity-50 ${testMode ? 'bg-warning-text' : 'bg-accent hover:bg-accent-hover'}`}>
               <FiSend size={14} /> {working === 'schedule' ? 'Programmation…' : testMode ? `Programmer ${counts.valide || 0} test(s)` : `Programmer ${counts.valide || 0} envoi(s) réel(s)`}
             </button>
           </div>

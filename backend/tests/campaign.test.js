@@ -76,7 +76,7 @@ test('parcours complet : préparer, relire, programmer, hooks du worker, pause a
 
     // Quatre prospects : preuve fraîche, ancien crawl, désinscrit, déjà sollicité récemment.
     const job = await pool.query("INSERT INTO crawl_jobs (techno, nb_sites, statut) VALUES ('prestashop', 4, 'done') RETURNING id");
-    const frais = await insertCrawlResult(db, job.rows[0].id, typedResult({ domain: 'agrigom.fr', platform: 'PrestaShop', http_status: '200', final_url: 'http://www.agrigom.fr/', https_final: 'non', ssl_ok: 'oui', title: 'Accueil - AGRIGOM SAS', email: 'contact@agrigom.fr', analyse_le: '2026-10-21T14:21:31+00:00' }));
+    const frais = await insertCrawlResult(db, job.rows[0].id, typedResult({ domain: 'agrigom.fr', platform: 'PrestaShop', http_status: '200', final_url: 'http://www.agrigom.fr/', https_final: 'non', ssl_ok: 'oui', title: 'Accueil - AGRIGOM SAS', email: 'contact@agrigom.fr', analyse_le: new Date().toISOString() }));
     const ancien = await insertCrawlResult(db, job.rows[0].id, typedResult({ domain: 'batterie4moto.fr', platform: 'PrestaShop', http_status: '200', final_url: 'http://batterie4moto.fr/', https_final: 'non', ssl_ok: 'non', title: 'Batterie4moto', email: 'contact@batterie4moto.fr' }));
     const l1 = (await pool.query("INSERT INTO leads (name, company, email, crawl_result_id) VALUES ('AGRIGOM', 'agrigom.fr', 'contact@agrigom.fr', $1) RETURNING id", [frais])).rows[0].id;
     const l2 = (await pool.query("INSERT INTO leads (name, company, email, crawl_result_id) VALUES ('Batterie4moto', 'batterie4moto.fr', 'contact@batterie4moto.fr', $1) RETURNING id", [ancien])).rows[0].id;
@@ -127,6 +127,13 @@ test('parcours complet : préparer, relire, programmer, hooks du worker, pause a
     assert.equal(prep2.a_verifier, 1);
     // Validation en lot d'une ligne « à vérifier » (décision humaine), programmation réelle.
     const it2 = items2.find((i) => i.lead_id === l2);
+    await S.validateMany(db, c2.id, [it2.id]);
+    // Ancien crawl sans date : la programmation refuse (analyse de plus de 7 jours), ligne à vérifier.
+    const refus = await S.schedule(db, c2.id, {});
+    assert.equal(refus.programmes, 0); assert.match(refus.ignores[0].raison, /plus de 7 jours/);
+    assert.equal((await pool.query('SELECT statut FROM campaign_items WHERE id = $1', [it2.id])).rows[0].statut, 'a_verifier');
+    // Site réanalysé (mesures du jour), ligne revalidée : elle part.
+    await pool.query('UPDATE crawl_results SET analyse_le = NOW() WHERE id = (SELECT crawl_result_id FROM campaign_items WHERE id = $1)', [it2.id]);
     await S.validateMany(db, c2.id, [it2.id]);
     const sch = await S.schedule(db, c2.id, {});
     assert.equal(sch.programmes, 1);
@@ -200,7 +207,7 @@ test('options de la fiche reprises en campagne : modèle du menu rempli, relance
     process.env.OUTREACH_SENDER_NAME = 'Marc';
     const tpl = (await pool.query("INSERT INTO email_templates (name, category, subject, body) VALUES ('Perso', 'contact', 'Un mot sur {site}', '{prenom},\n\nJe suis {expediteur} et je dirige {entreprise}.\n\n{constat}\n\nÀ bientôt,') RETURNING id")).rows[0].id;
     const job = await pool.query("INSERT INTO crawl_jobs (techno, nb_sites, statut) VALUES ('prestashop', 1, 'done') RETURNING id");
-    const rid = await insertCrawlResult(db, job.rows[0].id, typedResult({ domain: 'agrigom.fr', platform: 'PrestaShop', http_status: '200', final_url: 'http://www.agrigom.fr/', https_final: 'non', ssl_ok: 'oui', title: 'Accueil - AGRIGOM SAS', email: 'contact@agrigom.fr', analyse_le: '2026-10-21T14:21:31+00:00' }));
+    const rid = await insertCrawlResult(db, job.rows[0].id, typedResult({ domain: 'agrigom.fr', platform: 'PrestaShop', http_status: '200', final_url: 'http://www.agrigom.fr/', https_final: 'non', ssl_ok: 'oui', title: 'Accueil - AGRIGOM SAS', email: 'contact@agrigom.fr', analyse_le: new Date().toISOString() }));
     await pool.query("UPDATE crawl_results SET sirene_match = 'certain', raison_sociale = 'AGRIGOM', gerant_nom = 'SAVARY', gerant_prenom = 'FRANCK' WHERE id = $1", [rid]);
     const lead = (await pool.query("INSERT INTO leads (name, company, email, crawl_result_id) VALUES ('AGRIGOM', 'agrigom.fr', 'contact@agrigom.fr', $1) RETURNING id", [rid])).rows[0].id;
 
@@ -237,7 +244,7 @@ test('options de la fiche reprises en campagne : modèle du menu rempli, relance
     await S.addLeads(db, c2.id, [l2]);
     let it2 = (await S.getCampaignFull(db, c2.id)).items[0];
     assert.equal(it2.statut, 'a_verifier'); assert.match(it2.raison, /ancien crawl/);
-    const detect = async () => [{ domain: 'vieux.fr', platform: 'PrestaShop', http_status: '200', final_url: 'http://www.vieux.fr/', https_final: 'non', ssl_ok: 'oui', title: 'Vieux', email: 'c@vieux.fr', analyse_le: '2026-10-21T16:00:00+00:00' }];
+    const detect = async () => [{ domain: 'vieux.fr', platform: 'PrestaShop', http_status: '200', final_url: 'http://www.vieux.fr/', https_final: 'non', ssl_ok: 'oui', title: 'Vieux', email: 'c@vieux.fr', analyse_le: new Date().toISOString() }];
     const r = await S.reanalyzeItem(db, c2.id, it2.id, { detect, sirene: async () => ({ found: false }) });
     assert.equal(r.item.statut, 'pret'); assert.equal(r.item.preuve_signal, 'http_non_securise'); assert.ok(r.item.preuve_date);
     // Régénération « maintenance » d'une ligne validée : elle repasse en prêt à valider.
@@ -262,7 +269,7 @@ test('reprise : adresse saisie sur une ligne exclue, exclus repris en lot, éche
     await pool.query("INSERT INTO email_signatures (content, is_default) VALUES ('<p>Marc</p>', TRUE)");
     process.env.OUTREACH_SENDER_NAME = 'Marc';
     const job = await pool.query("INSERT INTO crawl_jobs (techno, nb_sites, statut) VALUES ('prestashop', 3, 'done') RETURNING id");
-    const mk = (domain) => insertCrawlResult(db, job.rows[0].id, typedResult({ domain, platform: 'PrestaShop', http_status: '200', final_url: `http://www.${domain}/`, https_final: 'non', ssl_ok: 'oui', title: domain, analyse_le: '2026-10-21T14:21:31+00:00' }));
+    const mk = (domain) => insertCrawlResult(db, job.rows[0].id, typedResult({ domain, platform: 'PrestaShop', http_status: '200', final_url: `http://www.${domain}/`, https_final: 'non', ssl_ok: 'oui', title: domain, analyse_le: new Date().toISOString() }));
     const r1 = await mk('sansmail.fr'); const r2 = await mk('plustard.fr'); const r3 = await mk('echec.fr');
     const l1 = (await pool.query("INSERT INTO leads (name, company, crawl_result_id) VALUES ('Sans mail', 'sansmail.fr', $1) RETURNING id", [r1])).rows[0].id;
     const l2 = (await pool.query("INSERT INTO leads (name, company, crawl_result_id) VALUES ('Plus tard', 'plustard.fr', $1) RETURNING id", [r2])).rows[0].id;
@@ -302,5 +309,50 @@ test('reprise : adresse saisie sur une ligne exclue, exclus repris en lot, éche
     assert.equal(again.programmes, 1);
     // Réessayer en lot sur une campagne sans échec : rien à faire.
     assert.equal((await S.reprendreMany(db, c.id, 'echecs')).repris, 0);
+  });
+});
+
+test('réanalyse de campagne à la préparation : mesures du jour, progression, validé gardé si texte inchangé ; analyse périmée bloquée à l\'envoi', { skip: !hasDb() && 'TEST_DATABASE_URL absent' }, async () => {
+  await withSchema('campagne_reanalyse', async ({ pool }) => {
+    const db = { pool };
+    const S = require('../services/campaignService');
+    const { typedResult, insertCrawlResult } = require('../controllers/crawlController');
+    for (const t of ['crawl_jobs', 'crawl_results', 'campaigns', 'campaign_items', 'scheduled_emails']) await createFromSchema(pool, t);
+    await pool.query('CREATE TABLE crawl_seen_domains (domain TEXT PRIMARY KEY, source VARCHAR(20), first_seen TIMESTAMP DEFAULT NOW())');
+    await pool.query(`CREATE TABLE leads (id SERIAL PRIMARY KEY, name TEXT, company TEXT, website TEXT, email TEXT, relation_status TEXT DEFAULT 'nouveau', status TEXT, crawl_result_id INTEGER, platform TEXT, angles TEXT, score INTEGER, notes TEXT, updated_at TIMESTAMP)`);
+    await pool.query(`CREATE TABLE interactions (id SERIAL PRIMARY KEY, contact_type VARCHAR(10), contact_id INT, type TEXT, reached TEXT, date TIMESTAMP DEFAULT NOW(), notes TEXT, next_followup_date DATE, next_followup_channel TEXT, followup_done BOOLEAN DEFAULT FALSE, relance_step INT)`);
+    await pool.query('CREATE TABLE email_optout (email TEXT PRIMARY KEY, source TEXT)');
+    await pool.query('CREATE TABLE email_log (id SERIAL PRIMARY KEY, to_email TEXT, source VARCHAR(40), created_at TIMESTAMP DEFAULT NOW())');
+    await pool.query('CREATE TABLE email_signatures (id SERIAL PRIMARY KEY, content TEXT, is_default BOOLEAN DEFAULT FALSE)');
+    const job = await pool.query("INSERT INTO crawl_jobs (techno, nb_sites, statut) VALUES ('prestashop', 2, 'done') RETURNING id");
+    const leads = [];
+    for (const d of ['un.fr', 'deux.fr']) {
+      const rid = await insertCrawlResult(db, job.rows[0].id, typedResult({ domain: d, platform: 'PrestaShop', http_status: '200', final_url: `http://www.${d}/`, https_final: 'non', ssl_ok: 'oui', title: d, email: `c@${d}`, analyse_le: '2026-10-01T10:00:00Z' }));
+      leads.push((await pool.query('INSERT INTO leads (name, company, email, crawl_result_id) VALUES ($1, $1, $2, $3) RETURNING id', [d, `c@${d}`, rid])).rows[0].id);
+    }
+    const c = await S.createCampaign(db, { nom: 'Réanalyse auto' });
+    await S.addLeads(db, c.id, leads);
+    // un.fr toujours en http ; deux.fr passé en https depuis : la preuve disparaît
+    const detect = async ([d]) => [{ domain: d, platform: 'PrestaShop', http_status: '200', final_url: d === 'un.fr' ? 'http://www.un.fr/' : 'https://www.deux.fr/', https_final: d === 'un.fr' ? 'non' : 'oui', ssl_ok: 'oui', title: d, email: `c@${d}`, analyse_le: new Date().toISOString() }];
+    const out = await S.reanalyserCampagne(db, c.id, { deps: { detect, sirene: async () => ({ found: false }) } });
+    assert.equal(out.total, 2);
+    const camp = await S.getCampaign(db, c.id);
+    assert.equal(camp.reanalyse_statut, 'termine'); assert.equal(camp.reanalyse_faits, 2);
+    const items = (await S.getCampaignFull(db, c.id)).items;
+    const un = items.find((i) => i.domain === 'un.fr'), deux = items.find((i) => i.domain === 'deux.fr');
+    assert.equal(un.preuve_signal, 'http_non_securise'); assert.ok(un.preuve_date);
+    assert.notEqual(deux.preuve_signal, 'http_non_securise', 'défaut corrigé depuis : plus cité');
+    // programmation impossible pendant une réanalyse
+    await pool.query("UPDATE campaigns SET reanalyse_statut = 'en_cours', updated_at = NOW() WHERE id = $1", [c.id]);
+    await assert.rejects(S.schedule(db, c.id, {}), /Réanalyse des sites en cours/);
+    await pool.query("UPDATE campaigns SET reanalyse_statut = 'termine' WHERE id = $1", [c.id]);
+    // ligne validée, programmée, mais l'analyse a 8 jours au moment de l'envoi : annulée, à vérifier
+    await S.validateMany(db, c.id, [un.id]);
+    await S.schedule(db, c.id, {});
+    const se = (await pool.query('SELECT * FROM scheduled_emails WHERE campaign_item_id = $1', [un.id])).rows[0];
+    await pool.query("UPDATE crawl_results SET analyse_le = NOW() - interval '8 days' WHERE id = $1", [un.crawl_result_id]);
+    const v = await S.beforeSend(db, se);
+    assert.equal(v.action, 'cancel'); assert.match(v.raison, /plus de 7 jours/);
+    assert.equal((await pool.query('SELECT statut FROM campaign_items WHERE id = $1', [un.id])).rows[0].statut, 'a_verifier');
   });
 });

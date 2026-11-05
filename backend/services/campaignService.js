@@ -331,6 +331,9 @@ async function reanalyzeItem(db, campaignId, itemId, deps = {}) {
   const email = generer(campaign, row, lead, await templateFor(db, campaign));
   const ctl = await controles(db, lead, campaignId, { ignoreSelf: item.id });
   const cls = classifyItem({ lead, row, controles: ctl, email });
+  // Une ligne déjà validée dont le texte n'a pas changé reste validée ; s'il a changé, il faut la relire.
+  if (item.statut === 'valide' && cls.statut === 'pret' && email.ok && email.body === item.body && email.subject === item.subject) cls.statut = 'valide';
+  else if (item.statut === 'valide' && cls.statut === 'pret') cls.raison = 'texte changé par la réanalyse du site : à relire avant de valider';
   const detail = email.ok ? email.detail : null;
   await db.pool.query(
     `UPDATE campaign_items SET crawl_result_id = $2, to_email = COALESCE($3, to_email), statut = $4, raison = $5, mode = $6, subject = $7, body = $8,
@@ -339,6 +342,48 @@ async function reanalyzeItem(db, campaignId, itemId, deps = {}) {
      detail ? detail.signal : null, detail ? detail.brut : null, detail ? detail.url_controlee : null, detail && detail.analyse_le ? detail.analyse_le : null, detail ? detail.identite : null]
   );
   return { item: (await db.pool.query('SELECT * FROM campaign_items WHERE id = $1', [item.id])).rows[0], analyse: out };
+}
+
+// ─── Réanalyse de la campagne à la préparation ──────────────────────────────
+// Chaque site est réanalysé (mesures du jour, SIREN lu sur le site), l'email régénéré et la ligne
+// reclassée : l'email ne cite que ce qui est constaté ce jour-là. En arrière-plan, quelques sites à la
+// fois ; la programmation attend la fin. Au moment d'envoyer, une analyse de plus de 7 jours renvoie la
+// ligne en « à vérifier ».
+const AGE_MAX_JOURS = 7;
+const ageJours = (d) => (d ? (Date.now() - new Date(d).getTime()) / 86400000 : Infinity);
+
+async function reanalyserCampagne(db, campaignId, { deps = {}, concurrence = 4 } = {}) {
+  const c = await getCampaign(db, campaignId);
+  if (c.reanalyse_statut === 'en_cours' && ageJours(c.updated_at) < 1 / 48) return { deja: true };
+  const { rows: items } = await db.pool.query(
+    `SELECT i.id FROM campaign_items i LEFT JOIN crawl_results r ON r.id = i.crawl_result_id
+      WHERE i.campaign_id = $1 AND i.statut IN ('pret', 'a_verifier', 'valide') AND i.lead_id IS NOT NULL
+        AND (r.analyse_le IS NULL OR r.analyse_le < NOW() - interval '12 hours')
+      ORDER BY i.id`, [campaignId]);
+  await db.pool.query("UPDATE campaigns SET reanalyse_statut = 'en_cours', reanalyse_total = $2, reanalyse_faits = 0, updated_at = NOW() WHERE id = $1", [campaignId, items.length]);
+  let i = 0, erreurs = 0;
+  await Promise.all(Array.from({ length: Math.min(concurrence, items.length) }, async () => {
+    while (i < items.length) {
+      const it = items[i++];
+      try { await reanalyzeItem(db, campaignId, it.id, deps); }
+      catch (e) {
+        erreurs++;
+        await db.pool.query("UPDATE campaign_items SET statut = CASE WHEN statut IN ('pret', 'valide') THEN 'a_verifier' ELSE statut END, raison = $2, updated_at = NOW() WHERE id = $1",
+          [it.id, `réanalyse du site impossible (${String(e.message).slice(0, 120)}) : vérifier le site avant d'envoyer`]).catch(() => {});
+      }
+      await db.pool.query('UPDATE campaigns SET reanalyse_faits = reanalyse_faits + 1, updated_at = NOW() WHERE id = $1', [campaignId]);
+    }
+  }));
+  await db.pool.query("UPDATE campaigns SET reanalyse_statut = 'termine', reanalyse_le = NOW(), updated_at = NOW() WHERE id = $1", [campaignId]);
+  return { total: items.length, erreurs };
+}
+
+/** Lance la réanalyse sans l'attendre (appelée après l'ajout de prospects). */
+function lancerReanalyse(db, campaignId, opts = {}) {
+  reanalyserCampagne(db, campaignId, opts).catch(async (e) => {
+    console.error('[Campagnes] réanalyse :', e.message);
+    await db.pool.query("UPDATE campaigns SET reanalyse_statut = 'termine', updated_at = NOW() WHERE id = $1", [campaignId]).catch(() => {});
+  });
 }
 
 // ─── Reprise : exclus sans adresse, échecs, arrêts ──────────────────────────
@@ -439,6 +484,7 @@ async function schedule(db, campaignId, { test = false, test_emails = '', debut 
     if (d > depart) depart = new Date(d.getTime() - 2 * 60000); // planSlots ajoute 2 min de marge
   }
   if (['arretee', 'terminee'].includes(campaign.statut)) throw Object.assign(new Error('Campagne arrêtée : créez-en une nouvelle.'), { status: 409 });
+  if (campaign.reanalyse_statut === 'en_cours') throw Object.assign(new Error(`Réanalyse des sites en cours (${campaign.reanalyse_faits || 0}/${campaign.reanalyse_total || 0}) : les emails se mettent à jour, programmez à la fin.`), { status: 409 });
   const tests = String(test_emails || campaign.test_emails || '').split(/[\s,;]+/).map((x) => x.trim()).filter((x) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(x));
   if (test && tests.length === 0) throw Object.assign(new Error('Mode test : indiquez au moins une adresse de test.'), { status: 400 });
   const { rows: items } = await db.pool.query("SELECT * FROM campaign_items WHERE campaign_id = $1 AND statut = 'valide' ORDER BY id", [campaignId]);
@@ -450,6 +496,15 @@ async function schedule(db, campaignId, { test = false, test_emails = '', debut 
     // Recontrôle au moment de programmer (la préparation peut dater).
     const lead = (await db.pool.query('SELECT * FROM leads WHERE id = $1', [item.lead_id])).rows[0];
     if (!lead) { ignores.push({ id: item.id, raison: 'fiche supprimée' }); continue; }
+    // Analyse du site trop ancienne : l'email pourrait citer un défaut corrigé depuis.
+    if (!test && item.crawl_result_id) {
+      const an = (await db.pool.query('SELECT analyse_le FROM crawl_results WHERE id = $1', [item.crawl_result_id])).rows[0];
+      if (ageJours(an && an.analyse_le) > AGE_MAX_JOURS) {
+        const raison = `analyse du site de plus de ${AGE_MAX_JOURS} jours : réanalyser puis relire avant d'envoyer`;
+        await db.pool.query("UPDATE campaign_items SET statut = 'a_verifier', raison = $2, updated_at = NOW() WHERE id = $1", [item.id, raison]);
+        ignores.push({ id: item.id, raison }); continue;
+      }
+    }
     const ctl = await controles(db, lead, campaignId, { ignoreSelf: item.id });
     if (!test && (ctl.optout || (ctl.dejaSollicite != null && ctl.dejaSollicite < 90) || ctl.autreCampagne)) {
       const raison = ctl.optout ? 'désinscrit ou opposition' : ctl.autreCampagne ? 'déjà dans une autre campagne active' : `déjà sollicité il y a ${ctl.dejaSollicite} jours`;
@@ -518,6 +573,14 @@ async function beforeSend(db, email) {
   if (item && item.statut !== 'programme') return { action: 'cancel', raison: `ligne ${item.statut}` };
   if (!c.test_mode) {
     if (await optout.isOptedOut(db, email.to_email)) return { action: 'cancel', raison: 'destinataire désinscrit ou opposé' };
+    if (item && item.crawl_result_id) {
+      const an = (await db.pool.query('SELECT analyse_le FROM crawl_results WHERE id = $1', [item.crawl_result_id])).rows[0];
+      if (ageJours(an && an.analyse_le) > AGE_MAX_JOURS) {
+        const raison = `au moment de l'envoi, l'analyse du site avait plus de ${AGE_MAX_JOURS} jours : réanalyser puis relire`;
+        await db.pool.query("UPDATE campaign_items SET statut = 'a_verifier', raison = $2, updated_at = NOW() WHERE id = $1", [item.id, raison]);
+        return { action: 'cancel', raison };
+      }
+    }
     if (item && item.lead_id) {
       const lead = (await db.pool.query('SELECT relation_status FROM leads WHERE id = $1', [item.lead_id])).rows[0];
       if (lead && ['gagne', 'perdu', 'pas_business', 'en_discussion'].includes(lead.relation_status)) return { action: 'cancel', raison: `fiche ${lead.relation_status} : le prospect a répondu ou est fermé` };
@@ -602,7 +665,7 @@ async function checkSender(emailService, seoOutreach) {
 }
 
 module.exports = {
-  RELANCE_DEFAUT, CANAUX_RELANCE,
+  RELANCE_DEFAUT, CANAUX_RELANCE, AGE_MAX_JOURS, reanalyserCampagne, lancerReanalyse,
   listCampaigns, getCampaign, getCampaignFull, stats, createCampaign, updateCampaign, addLeads, addFromCrawl,
   updateItem, reanalyzeItem, reprendreItem, reprendreMany, validateMany, schedule, pause, resume, stop, removeCampaign, remplirModele,
   beforeSend, afterSent, afterFailed, afterCancelled, checkSender, controles, generer, ECHECS_PAUSE
