@@ -133,7 +133,7 @@ test('modèles d\'email du menu « Modèle » : même présentation, aucune form
 test('Batterie4moto : mesure HTTPS de l\'ancien crawl non confirmée -> pas d\'alerte, email de maintenance sobre ; crawl frais sur www -> rien à signaler', () => {
   const { buildMaintenanceEmail } = require('../services/proofEmailService');
   // Ancien crawl (sans analyse_le) : « servi en HTTP » n'est pas une preuve.
-  const ancien = { domain: 'batterie4moto.fr', title: 'Batterie4moto', https_final: false, ssl_ok: false, final_url: 'http://batterie4moto.fr/', http_status: 200, platform: 'PrestaShop' };
+  const ancien = { domain: 'batterie4moto.fr', title: 'Batterie4moto', https_final: false, ssl_ok: false, final_url: 'http://batterie4moto.fr/', http_status: 200, platform: 'PrestaShop', ecommerce_actif: true };
   const d = buildProofEmail(ancien, {});
   assert.equal(d.ok, false);
   assert.match(d.raison, /ancien crawl, non confirmé/);

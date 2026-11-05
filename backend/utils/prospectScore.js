@@ -181,15 +181,34 @@ function disqualifyReason(r) {
   if (p === 'Magento') return 'Magento (grosse structure)';
   if (p === 'Shopify') return 'Shopify (hors techno)';
   if (r.site_type === 'collectivite') return null;
-  if (r.site_type === 'asso') return 'association / sans budget';
+  // Association : plus exclue d'office (une association peut avoir un budget) ; elle passe avec
+  // l'étiquette « à juger » (associationAJuger) et arrive « à vérifier » en campagne.
   if (r.site_type === 'agence') return 'agence (concurrent)';
   const dom = r.domain || '';
   const hay = `${r.title || ''} ${dom}`;
   if (COLLECTIVITE_RE.test(hay)) return null;
-  if (/\.org(\/|$|\b)/i.test(dom) || /\.asso\.fr/i.test(dom)) return 'association / sans budget';
-  if (ASSO_RE.test(hay)) return 'association / sans budget';
   if (AGENCE_RE.test(hay)) return 'agence (concurrent)';
   return null;
+}
+
+/** Association (ou structure apparentée) : à juger par Marc, ni exclue ni traitée comme un commerce. */
+function associationAJuger(r) {
+  if (!r || r.site_type === 'collectivite') return false;
+  const dom = String(r.domain || '');
+  const hay = `${r.title || ''} ${dom}`;
+  if (COLLECTIVITE_RE.test(hay)) return false;
+  return r.site_type === 'asso' || /\.org(\/|$|\b)/i.test(dom) || /\.asso\.fr/i.test(dom) || ASSO_RE.test(hay);
+}
+
+/** Catégorie lisible du site : ce qui décide « votre boutique » ou « votre site » dans un email. */
+function categorieSite(r) {
+  if (!r) return null;
+  if (r.is_nocode || NOCODE_NAMES.includes(r.platform)) return 'plateforme fermée (no-code)';
+  if (r.site_type === 'collectivite') return 'collectivité';
+  if (r.site_type === 'agence') return 'agence';
+  if (associationAJuger(r)) return 'association (à juger)';
+  if (r.ecommerce_actif === true) return 'boutique en ligne (prix et panier visibles)';
+  return 'vitrine / prestations';
 }
 
 // Bloquants à la promotion en prospect (au-delà du simple masquage) : on ne prospecte pas
@@ -220,4 +239,4 @@ const PREUVE_KEYS = new Set(['accueil_404', 'erreur_serveur', 'invisible_google'
   'ssl_invalide', 'nom_mal_orthographie', 'titre_defaut', 'mentions_404', 'mobile']);
 const niveauFlag = (key) => (PREUVE_KEYS.has(key) ? 'preuve' : 'indice');
 
-module.exports = { auditFlags, prospectScore, disqualifyReason, promotionBlocker, departmentFromPostalCode, phpEol, niveauFlag, PREUVE_KEYS, NOCODE_NAMES, descriptionAbsurde, nomMalOrthographie, grandeEntreprise, GRANDES_MARQUES };
+module.exports = { associationAJuger, categorieSite, auditFlags, prospectScore, disqualifyReason, promotionBlocker, departmentFromPostalCode, phpEol, niveauFlag, PREUVE_KEYS, NOCODE_NAMES, descriptionAbsurde, nomMalOrthographie, grandeEntreprise, GRANDES_MARQUES };

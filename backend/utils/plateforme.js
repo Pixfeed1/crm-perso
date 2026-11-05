@@ -33,7 +33,7 @@ function versionPlateforme(r) {
 function annoter(r) {
   if (!r) return r;
   const v = versionPlateforme(r);
-  return { ...r, plateforme_niveau: niveauPlateforme(r), version_niveau: v.niveau, version_source: v.source };
+  return { ...r, plateforme_niveau: niveauPlateforme(r), version_niveau: v.niveau, version_source: v.source, categorie_site: require('./prospectScore').categorieSite(r) };
 }
 
 module.exports = { niveauPlateforme, versionPlateforme, annoter };

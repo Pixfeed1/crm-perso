@@ -228,8 +228,10 @@ function specialite(r) {
 }
 const typeSite = (r) => {
   const p = String(r.platform || '').toLowerCase();
-  if (p.includes('prestashop') || p.includes('woocommerce') || r.site_type === 'commerce' || r.ecommerce_actif) return 'boutique';
-  return 'site';
+  // « Boutique » seulement si le site vend vraiment (prix et panier visibles) : un PrestaShop qui
+  // présente des prestations (cas 1000 Hz) est un site, pas une boutique. Dans le doute : « site ».
+  void p;
+  return r.ecommerce_actif === true ? 'boutique' : 'site';
 };
 
 // « CREVECŒUR-SUR-L'ESCAUT » -> « Crèvecœur-sur-l'Escaut » : casse d'un nom de commune

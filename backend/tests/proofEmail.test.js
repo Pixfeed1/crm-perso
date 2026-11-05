@@ -103,10 +103,27 @@ test('portées sobres : aucune affirmation sur Google ou les clients qu\'on ne p
 });
 
 test('entreprise individuelle : la boutique est l\'enseigne, jamais le nom de la personne', () => {
-  const base = { domain: 'creasence.fr', platform: 'PrestaShop', http_status: '200', title: 'Creasence – Bougies artisanales', sirene_match: 'certain', gerant_nom: 'PERNET', gerant_prenom: 'AMANDINE' };
+  const base = { domain: 'creasence.fr', platform: 'PrestaShop', ecommerce_actif: true, http_status: '200', title: 'Creasence – Bougies artisanales', sirene_match: 'certain', gerant_nom: 'PERNET', gerant_prenom: 'AMANDINE' };
   const ligne = (r) => P.buildMaintenanceEmail(r, {}).body.split('\n')[4];
   assert.equal(ligne({ ...base, raison_sociale: 'AMANDINE PERNET (CREASENCE)' }), 'J\'ai découvert votre boutique Creasence.');
   assert.equal(ligne({ ...base, raison_sociale: 'PERNET AMANDINE' }), 'J\'ai découvert votre boutique Creasence.'); // pas d'enseigne : titre du site
   assert.equal(P.buildMaintenanceEmail({ ...base, raison_sociale: 'AMANDINE PERNET (CREASENCE)' }, {}).subject, 'Suivi technique de Creasence');
   assert.equal(ligne({ ...base, raison_sociale: 'AGRIGOM SAS', gerant_nom: 'SAVARY', gerant_prenom: 'FRANCK', title: 'Accueil - AGRIGOM SAS' }), 'J\'ai découvert votre boutique Agrigom.'); // société : raison sociale conservée
+});
+
+test('1000 Hz : un PrestaShop qui présente des prestations est « votre site », pas « votre boutique »', () => {
+  const r = { domain: '1000hz.fr', platform: 'PrestaShop', ecommerce_actif: false, http_status: 200, title: '1000 Hz – Prise de son, location, formation' };
+  const m = P.buildMaintenanceEmail(r, {});
+  assert.match(m.body, /votre site 1000 Hz/);
+  assert.doesNotMatch(m.body, /votre boutique/);
+});
+
+test('association : plus exclue d\'office, « à vérifier » en campagne', () => {
+  const { classifyItem } = require('../utils/campaignRules');
+  const { disqualifyReason, categorieSite } = require('../utils/prospectScore');
+  const row = { domain: 'lesamisdetheophile.org', title: 'Les Amis de Théophile - association', analyse_le: new Date().toISOString(), http_status: 200 };
+  assert.equal(disqualifyReason(row), null);
+  assert.equal(categorieSite(row), 'association (à juger)');
+  const cls = classifyItem({ lead: { email: 'contact@lesamisdetheophile.org' }, row, controles: {}, email: { ok: true, mode: 'maintenance' } });
+  assert.equal(cls.statut, 'a_verifier'); assert.match(cls.raison, /association/);
 });

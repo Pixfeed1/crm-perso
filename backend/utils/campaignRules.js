@@ -8,7 +8,7 @@
 //    ouvrés), en heure de Paris.
 // Testé dans tests/campaign.test.js.
 
-const { promotionBlocker } = require('./prospectScore');
+const { promotionBlocker, associationAJuger } = require('./prospectScore');
 
 const FERMES = new Set(['gagne', 'perdu', 'pas_business', 'client']);
 
@@ -42,6 +42,7 @@ function classifyItem({ lead, row, controles = {}, email }) {
   if (domaine && emailDomain && !emailDomain.endsWith(domaine) && !domaine.endsWith(emailDomain) && !/gmail|orange|wanadoo|free|hotmail|outlook|yahoo|laposte|sfr|bbox|icloud|protonmail/.test(emailDomain)) {
     return { statut: 'a_verifier', raison: `adresse d'un autre domaine (${emailDomain})` };
   }
+  if (associationAJuger(row)) return { statut: 'a_verifier', raison: 'association : à toi de juger (budget et pertinence à vérifier)' };
   if (row.sirene_match === 'probable' || row.sirene_match === 'douteux') return { statut: 'a_verifier', raison: `identité SIRENE ${row.sirene_match} : relire le nom de la boutique` };
   if (email.mode === 'maintenance') return { statut: 'pret', raison: 'aucune preuve : email de maintenance sans alerte' };
   return { statut: 'pret', raison: null };

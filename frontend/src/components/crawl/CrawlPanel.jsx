@@ -147,16 +147,22 @@ const disqualifyReason = (r) => {
   // Collectivité : cible à part entière (budget d'investissement, marché public).
   // On la laisse passer AVANT tout test « asso », sinon une mairie serait écartée.
   if (r.site_type === 'collectivite') return null;
-  if (r.site_type === 'asso') return 'association / sans budget'; // niveau 2 (crawler)
+  // Association : plus écartée d'office (budget possible) ; étiquetée « à juger » (estAssociation).
   if (r.site_type === 'agence') return 'agence (concurrent)';
   // Repli mots-clés sur les crawls déjà faits (sans site_type) : titre + domaine.
   const dom = r.domain || '';
   if (COLLECTIVITE_RE.test(`${r.title || ''} ${dom}`)) return null;
-  if (/\.org(\/|$|\b)/i.test(dom) || /\.asso\.fr/i.test(dom)) return 'association / sans budget';
   const hay = `${r.title || ''} ${dom}`;
-  if (ASSO_RE.test(hay)) return 'association / sans budget';
   if (AGENCE_RE.test(hay)) return 'agence (concurrent)';
   return null; // doute -> prospect
+};
+// Association : à juger (ni écartée, ni traitée comme un commerce).
+const estAssociation = (r) => {
+  if (r.site_type === 'collectivite') return false;
+  const dom = r.domain || '';
+  const hay = `${r.title || ''} ${dom}`;
+  if (COLLECTIVITE_RE.test(hay)) return false;
+  return r.site_type === 'asso' || /\.org(\/|$|\b)/i.test(dom) || /\.asso\.fr/i.test(dom) || ASSO_RE.test(hay);
 };
 
 // Score de priorité (0-100) : croise les signaux d'un prospect chaud.
@@ -702,6 +708,9 @@ const CrawlPanel = () => {
                             <div className="text-xs text-text-muted" title="Agence créditée en pied de page (« Réalisé par »)">
                               🏷 réalisé par <a href={`https://${r.prestataire}`} target="_blank" rel="noopener noreferrer" className="hover:text-accent">{r.prestataire}</a>
                             </div>
+                          )}
+                          {estAssociation(r) && (
+                            <span className="ml-1 text-xs px-1.5 py-0.5 rounded-full bg-warning-bg text-warning-text" title="Association : budget et pertinence à juger (plus écartée d'office)">association : à juger</span>
                           )}
                           {qualView !== 'prospects' && disqualifyReason(r) && (
                             <span className="ml-1 text-xs px-1.5 py-0.5 rounded-full bg-danger-bg text-danger-text" title="Écarté du pré-tri : probablement hors cible">
