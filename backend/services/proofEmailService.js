@@ -50,13 +50,13 @@ const CATALOGUE = {
     sujet: `votre page d'accueil renvoie une erreur 404`,
     preuve: `En ouvrant ${site(r)}${quand(r)}, la page d'accueil renvoie une erreur 404 : le domaine répond, mais aucun site ne s'affiche.`,
     consequence: `Si c'est volontaire ou déjà en cours de votre côté, ce message est sans objet.`,
-    brut: `HTTP ${r.http_status}`
+    brut: `HTTP ${r.http_status}${r.panne_vue_le ? ` · panne vue le ${new Date(r.panne_vue_le).toLocaleString('fr-FR', { timeZone: 'Europe/Paris' })}, toujours là le ${new Date(r.analyse_le || Date.now()).toLocaleString('fr-FR', { timeZone: 'Europe/Paris' })}` : ''}`
   }),
   erreur_serveur: (r) => ({
     sujet: `votre site affiche une erreur ${r.http_status}`,
     preuve: `En ouvrant ${site(r)}${quand(r)}, le serveur renvoie une erreur ${r.http_status} au lieu de la boutique.`,
     consequence: `C'est peut-être passager et déjà traité ; si ce n'est pas le cas, je préférais vous le signaler.`,
-    brut: `HTTP ${r.http_status}`
+    brut: `HTTP ${r.http_status}${r.panne_vue_le ? ` · panne vue le ${new Date(r.panne_vue_le).toLocaleString('fr-FR', { timeZone: 'Europe/Paris' })}, toujours là le ${new Date(r.analyse_le || Date.now()).toLocaleString('fr-FR', { timeZone: 'Europe/Paris' })}` : ''}`
   }),
   invisible_google: (r) => ({
     sujet: `votre site demande à Google de ne pas l'indexer`,

@@ -604,6 +604,8 @@ const DATABASE_SCHEMA = {
       siren_note: 'TEXT',             // plusieurs numéros (ambigu) ou numéros écartés (hébergeur, agence)
       identite_source: 'TEXT',        // d'où vient l'identité retenue (SIREN lu sur le site, nom, saisie manuelle)
       identite_manuelle: 'BOOLEAN DEFAULT FALSE', // corrigée à la main : jamais écrasée par une réanalyse
+      panne_vue_le: 'TIMESTAMP',      // première mesure en panne (erreur 5xx, accueil 404) de la série en cours
+      panne_confirmee: 'BOOLEAN DEFAULT FALSE', // panne revue à au moins une heure d'écart : seule une panne confirmée est une preuve
       php_source: 'VARCHAR(20)',    // X-Powered-By | Server : d'où vient serveur_php
       analyse_le: 'TIMESTAMP',      // horodatage de l'analyse par le crawler
       raison_sociale: 'TEXT', // raison sociale légale (enrichissement SIRENE)

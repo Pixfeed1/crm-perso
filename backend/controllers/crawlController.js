@@ -185,6 +185,18 @@ const RESULT_COLUMNS = ['domain', 'platform', 'signals', 'http_status', 'final_u
   'noindex', 'robots_bloque', 'cgv', 'retractation', 'contenu_mixte', 'mentions_404', 'prestataire',
   'meta_desc_txt', 'urls_reecrites', 'sitemap', 'ssl_erreur', 'ssl_sujet', 'ssl_hote', 'https_variantes', 'sitemap_detail', 'code_postal_site', 'php_source', 'analyse_le', 'siren_site', 'siren_source', 'siren_note'];
 
+// Panne = page d'accueil en erreur serveur (5xx) ou introuvable (404, 410). Une seule mesure peut
+// tomber sur une coupure passagère : la panne n'est « confirmée » (et ne devient une preuve) que
+// revue à au moins une heure d'écart. Un refus opposé au robot (401, 403, 429) n'est jamais une panne.
+const estPanne = (r) => { const s = Number(r && r.http_status); return s >= 500 || s === 404 || s === 410; };
+const UNE_HEURE = 3600 * 1000;
+async function suivrePanne(db, id, nouveau, ancien = null) {
+  if (!estPanne(nouveau)) { await db.pool.query('UPDATE crawl_results SET panne_vue_le = NULL, panne_confirmee = FALSE WHERE id = $1', [id]); return; }
+  const maintenant = nouveau.analyse_le ? new Date(nouveau.analyse_le) : new Date();
+  const debut = (ancien && estPanne(ancien) && (ancien.panne_vue_le || ancien.analyse_le)) ? new Date(ancien.panne_vue_le || ancien.analyse_le) : maintenant;
+  await db.pool.query('UPDATE crawl_results SET panne_vue_le = $2, panne_confirmee = $3 WHERE id = $1', [id, debut, maintenant - debut >= UNE_HEURE]);
+}
+
 // Insère un résultat typé dans crawl_results (+ mémoire crawl_seen_domains). Renvoie l'id.
 async function insertCrawlResult(db, jobId, r) {
   const norm = normalizeDomain(r.domain);
@@ -195,15 +207,18 @@ async function insertCrawlResult(db, jobId, r) {
     `INSERT INTO crawl_results (${cols.join(', ')}) VALUES (${cols.map((_, i) => `$${i + 1}`).join(', ')}) RETURNING id`,
     vals
   );
+  if (estPanne(r)) await suivrePanne(db, ins.rows[0].id, r).catch(() => {});
   return ins.rows[0].id;
 }
 
 // Met à jour une ligne existante avec un résultat typé frais (réanalyse depuis la fiche prospect).
 // Les colonnes d'enrichissement SIRENE et added_as_prospect ne sont pas touchées ici.
 async function updateCrawlResult(db, id, r) {
+  const ancien = (await db.pool.query('SELECT http_status, analyse_le, panne_vue_le FROM crawl_results WHERE id = $1', [id])).rows[0] || null;
   const cols = RESULT_COLUMNS.filter((c) => c !== 'domain');
   const set = cols.map((c, i) => `${c} = $${i + 1}`).join(', ');
   await db.pool.query(`UPDATE crawl_results SET ${set} WHERE id = $${cols.length + 1}`, [...cols.map((c) => (r[c] === undefined ? null : r[c])), id]);
+  await suivrePanne(db, id, r, ancien).catch(() => {});
 }
 
 // Ingestion du CSV de l'outil (colonnes : domain, platform, signals, http_status, final_url, title, error, …)

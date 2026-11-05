@@ -62,7 +62,7 @@ test('validation : dix prospects différents, dix emails corrects dans les deux 
     { domain: 'equiptout.fr', title: 'Equit Tout', sirene_match: 'certain', raison_sociale: "EQUIP'TOUT", gerant: 'Maxime Lambin' },
     { domain: 'a.fr', title: 'PrestaShop' },
     { domain: 'b.fr', title: 'Boutique B', noindex: true },
-    { domain: 'c.fr', title: 'Boutique C', http_status: 503 },
+    { domain: 'c.fr', title: 'Boutique C', http_status: 503, panne_confirmee: true },
     { domain: 'd.fr', title: 'Boutique D', mentions_404: true },
     { domain: 'e.fr', title: 'Boutique E', mobile_ok: false },
     { domain: 'f.fr', title: 'Boutique F', ssl_ok: false, ssl_erreur: 'certificat expiré' },

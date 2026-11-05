@@ -64,8 +64,8 @@ test('faux sitemap vide : une page HTML en 200 est « absent » côté crawler ;
 test('ton : aucune formule interdite, 90 à 150 mots, structure présentation / motif / proposition / question / refus, sur TOUTES les preuves', () => {
   const base = { domain: 'exemple.fr', title: 'Boutique Exemple', http_status: 200, platform: 'PrestaShop', ssl_ok: true, https_final: true, analyse_le: '2026-10-21T10:00:00Z' };
   const cas = {
-    accueil_404: { http_status: 404 },
-    erreur_serveur: { http_status: 503 },
+    accueil_404: { http_status: 404, panne_confirmee: true },
+    erreur_serveur: { http_status: 503, panne_confirmee: true },
     invisible_google: { noindex: true },
     nom_mal_orthographie: { title: 'Exemle Boutique', sirene_match: 'certain', raison_sociale: 'EXEMPLE BOUTIQUE', gerant_nom: 'DURAND', gerant_prenom: 'PAUL', ville: 'LYON', code_postal: '69001', code_postal_site: '69001' },
     http_non_securise: { https_final: false, final_url: 'http://exemple.fr/' },

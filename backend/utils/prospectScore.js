@@ -143,8 +143,10 @@ function auditFlags(r) {
   if (eol) f.push({ key: 'php_obsolete', label: `PHP ${eol.branch} sans correctifs depuis ${eol.eol.slice(0, 4)}`, poids: 12 });
   else if (r.serveur_php) f.push({ key: 'serveur_expose', label: `serveur exposé (${r.serveur_php})`, poids: 5 });
   // Site en panne (erreur serveur 5xx) : le problème le plus visible qui soit.
-  if (Number(r.http_status) >= 500) f.push({ key: 'erreur_serveur', label: `site en erreur (${r.http_status})`, poids: 15 });
-  if ([404, 410].includes(Number(r.http_status))) f.push({ key: 'accueil_404', label: 'accueil introuvable (404)', poids: 15 });
+  // Panne : preuve seulement si revue à au moins une heure d'écart (panne_confirmee) ; sinon indice.
+  const panne = Number(r.http_status) >= 500 ? 'erreur_serveur' : [404, 410].includes(Number(r.http_status)) ? 'accueil_404' : null;
+  if (panne && r.panne_confirmee === true) f.push({ key: panne, label: panne === 'erreur_serveur' ? `site en erreur (${r.http_status}), confirmé` : 'accueil introuvable (404), confirmé', poids: 15 });
+  else if (panne) f.push({ key: 'panne_a_confirmer', label: `erreur ${r.http_status} constatée une seule fois (à confirmer)`, poids: 8 });
   // Titre jamais personnalisé (« PrestaShop », « WordPress », « Accueil ») : site laissé tel quel.
   if (DEFAULT_TITLE_RE.test(String(r.title || '').trim())) f.push({ key: 'titre_defaut', label: 'titre par défaut', poids: 5 });
   const annee = new Date().getFullYear();

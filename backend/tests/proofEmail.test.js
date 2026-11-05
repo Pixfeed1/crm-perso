@@ -41,7 +41,7 @@ test('gérant douteux (SIRENE) : pas de nom dans la salutation ; contexte techni
 });
 
 test('ordre des preuves : la panne passe avant tout le reste', () => {
-  const d = buildProofEmail({ domain: 'x.fr', http_status: 503, title: 'PrestaShop', https_final: false }, {});
+  const d = buildProofEmail({ domain: 'x.fr', http_status: 503, panne_confirmee: true, title: 'PrestaShop', https_final: false }, {});
   assert.equal(d.preuve, 'erreur_serveur');
   assert.equal(PREUVES_ORDRE[0], 'accueil_404');
 });

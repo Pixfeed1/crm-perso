@@ -26,7 +26,7 @@ test('pas de faux positif sur un nom correct ni sur une description saine', () =
 test('PHP en fin de support daté, servi en HTTP, site en erreur', () => {
   assert.deepEqual(p.phpEol('PHP 7.0.33'), { branch: '7.0', eol: '2019-01' });
   assert.equal(p.phpEol('PHP 8.4.19'), null);
-  const keys = p.auditFlags({ https_final: false, http_status: 503, serveur_php: 'PHP 5.6' }).map((f) => f.key);
+  const keys = p.auditFlags({ https_final: false, http_status: 503, panne_confirmee: true, serveur_php: 'PHP 5.6' }).map((f) => f.key);
   assert.ok(keys.includes('http_non_securise') && keys.includes('erreur_serveur') && keys.includes('php_obsolete'));
 });
 
@@ -51,4 +51,13 @@ test('département depuis le code postal (Corse, DOM)', () => {
   assert.equal(p.departmentFromPostalCode('20600'), '2B');
   assert.equal(p.departmentFromPostalCode('97400'), '974');
   assert.equal(p.departmentFromPostalCode('abc'), null);
+});
+
+test('panne vue une seule fois : indice « à confirmer », jamais une preuve', () => {
+  const p = require('../utils/prospectScore');
+  const une = p.auditFlags({ http_status: 503 }).map((f) => f.key);
+  assert.ok(une.includes('panne_a_confirmer')); assert.ok(!une.includes('erreur_serveur'));
+  const deux = p.auditFlags({ http_status: 503, panne_confirmee: true }).map((f) => f.key);
+  assert.ok(deux.includes('erreur_serveur'));
+  assert.ok(p.auditFlags({ http_status: 404 }).some((f) => f.key === 'panne_a_confirmer'));
 });

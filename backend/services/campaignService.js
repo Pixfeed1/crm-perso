@@ -358,7 +358,8 @@ async function reanalyserCampagne(db, campaignId, { deps = {}, concurrence = 4 }
   const { rows: items } = await db.pool.query(
     `SELECT i.id FROM campaign_items i LEFT JOIN crawl_results r ON r.id = i.crawl_result_id
       WHERE i.campaign_id = $1 AND i.statut IN ('pret', 'a_verifier', 'valide') AND i.lead_id IS NOT NULL
-        AND (r.analyse_le IS NULL OR r.analyse_le < NOW() - interval '12 hours')
+        AND (r.analyse_le IS NULL OR r.analyse_le < NOW() - interval '12 hours'
+             OR (r.panne_vue_le IS NOT NULL AND r.panne_confirmee IS NOT TRUE AND r.analyse_le < NOW() - interval '1 hour'))
       ORDER BY i.id`, [campaignId]);
   await db.pool.query("UPDATE campaigns SET reanalyse_statut = 'en_cours', reanalyse_total = $2, reanalyse_faits = 0, updated_at = NOW() WHERE id = $1", [campaignId, items.length]);
   let i = 0, erreurs = 0;
@@ -487,7 +488,8 @@ async function schedule(db, campaignId, { test = false, test_emails = '', debut 
   if (campaign.reanalyse_statut === 'en_cours') throw Object.assign(new Error(`Réanalyse des sites en cours (${campaign.reanalyse_faits || 0}/${campaign.reanalyse_total || 0}) : les emails se mettent à jour, programmez à la fin.`), { status: 409 });
   const tests = String(test_emails || campaign.test_emails || '').split(/[\s,;]+/).map((x) => x.trim()).filter((x) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(x));
   if (test && tests.length === 0) throw Object.assign(new Error('Mode test : indiquez au moins une adresse de test.'), { status: 400 });
-  const { rows: items } = await db.pool.query("SELECT * FROM campaign_items WHERE campaign_id = $1 AND statut = 'valide' ORDER BY id", [campaignId]);
+  // Pannes confirmées en tête de file : un site en panne perd des ventes tout de suite.
+  const { rows: items } = await db.pool.query("SELECT * FROM campaign_items WHERE campaign_id = $1 AND statut = 'valide' ORDER BY CASE WHEN preuve_signal IN ('erreur_serveur', 'accueil_404') THEN 0 ELSE 1 END, id", [campaignId]);
   if (!items.length) return { programmes: 0, ignores: [], premier: null, dernier: null };
   const signature = await signaturePour(db, campaign);
   const slots = planSlots(items.length * (test ? tests.length : 1), campaign, depart);
