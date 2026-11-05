@@ -72,7 +72,7 @@ function anglesClasses(r) {
     if (ver.niveau === 'confirmée') v.push(`Le site déclare tourner sur ${ver.version}, une version que son éditeur ne maintient plus.`);
     else ind.push(`Les fichiers du site ressemblent à ceux de ${ver.version || r.platform} (version déduite, pas déclarée) : à confirmer avant d'en parler.`);
   }
-  const eolMatch = /PHP\s*(\d+\.\d+)/i.exec(String(r.serveur_php || ''));
+  const eolMatch = /PHP[\s/]*(\d+\.\d+)/i.exec(String(r.serveur_php || ''));
   const PHP_EOL = { '5.6': '2018', '7.0': '2019', '7.1': '2019', '7.2': '2020', '7.3': '2021', '7.4': '2022', '8.0': '2023', '8.1': '2025' };
   if (eolMatch && (PHP_EOL[eolMatch[1]] || parseFloat(eolMatch[1]) < 5.6)) ind.push(`D'après l'entête que renvoie le serveur, le site tournerait sur PHP ${eolMatch[1]} (plus de correctifs depuis ${PHP_EOL[eolMatch[1]] || '2018'}) : déclaratif, à confirmer avec l'hébergeur.`);
   else if (r.serveur_php) ind.push(`Le serveur annonce sa version (${r.serveur_php}) dans ses entêtes.`);

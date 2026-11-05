@@ -43,7 +43,7 @@ const DEFAULT_TITLE_RE = /^(prestashop|wordpress|woocommerce|accueil|home|bienve
 // aucun correctif : ce n'est pas un détail technique, c'est un site qu'on ne peut plus réparer.
 const PHP_EOL = { '5.6': '2018-12', '7.0': '2019-01', '7.1': '2019-12', '7.2': '2020-11', '7.3': '2021-12', '7.4': '2022-11', '8.0': '2023-11', '8.1': '2025-12', '8.2': '2026-12', '8.3': '2027-12', '8.4': '2028-12' };
 function phpEol(serveurPhp) {
-  const m = /PHP\s*(\d+\.\d+)/i.exec(String(serveurPhp || ''));
+  const m = /PHP[\s/]*(\d+\.\d+)/i.exec(String(serveurPhp || '')); // « PHP 5.6.40 » (crawler) ou « PHP/5.6.40 » (entête brute)
   if (!m) return null;
   const branch = m[1];
   const eol = PHP_EOL[branch] || (parseFloat(branch) < 5.6 ? '2018-12' : null);
