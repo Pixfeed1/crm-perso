@@ -353,6 +353,70 @@ def extract_postal_code(html: str) -> str:
     return max(counts.items(), key=lambda kv: kv[1])[0]
 
 
+# SIREN / SIRET de l'EXPLOITANT, lu sur le site (pied de page, mentions légales) : la seule preuve
+# directe de qui exploite le site. Les numéros de l'hébergeur (OVH, o2switch…) et de l'agence qui
+# a fait le site sont écartés d'après ce qui les précède. Clé de Luhn vérifiée.
+_SIREN_NUM_RE = re.compile(r"(?<![\d])(\d{3})[\s. ]?(\d{3})[\s. ]?(\d{3})(?:[\s. ]?(\d{5}))?(?![\d])")
+_SIREN_CLE_RE = re.compile(r"(siren|siret|r\.?\s?c\.?\s?s\.?|registre du commerce|immatricul|tva|identification|n°\s*d'?entreprise)", re.IGNORECASE)
+_HEBERGEUR_RE = re.compile(r"(h[ée]berg|hosting|hosted by)", re.IGNORECASE)
+_PRESTATAIRE_RE = re.compile(r"(r[ée]alis[ée]|con[çc]u|conception|cr[ée]ation du site|d[ée]velopp[ée] par|agence web|webdesign)", re.IGNORECASE)
+_EDITEUR_RE = re.compile(r"([ée]dit[ée]?(?:eur|é par| par)|propri[ée]taire|responsable de (?:la )?publication|directeur de (?:la )?publication|raison sociale|soci[ée]t[ée]|entreprise|exploit|si[èe]ge)", re.IGNORECASE)
+# SIREN d'hébergeurs français courants (toujours écartés, même sans le mot « hébergeur » à côté).
+_SIREN_HEBERGEURS = {"424761419", "510909807", "431303775", "423093459", "433115904", "450453881"}
+
+
+def _luhn_ok(num: str) -> bool:
+    total = 0
+    for i, c in enumerate(reversed(num)):
+        d = int(c)
+        if i % 2 == 1:
+            d *= 2
+            if d > 9:
+                d -= 9
+        total += d
+    return total % 10 == 0
+
+
+def extract_siren(html: str) -> dict:
+    """{'siren': '123456789' ou '', 'contexte': extrait, 'ecartes': [...], 'note': ''}.
+    Un seul SIREN d'exploitant retenu ; plusieurs numéros différents -> aucun (ambigu)."""
+    import html as _h
+    text = re.sub(r"<(script|style)\b[\s\S]*?</\1>", " ", html or "", flags=re.IGNORECASE)
+    text = _h.unescape(re.sub(r"<[^>]+>", " ", text))
+    text = re.sub(r"\s+", " ", text)
+    retenus: dict[str, str] = {}
+    ecartes: list[str] = []
+    for m in _SIREN_NUM_RE.finditer(text):
+        avant = text[max(0, m.start() - 60):m.start()]
+        cle = list(_SIREN_CLE_RE.finditer(avant))
+        if not cle:
+            continue                                        # un numéro sans « SIREN / RCS / TVA » devant : téléphone, prix…
+        siren = m.group(1) + m.group(2) + m.group(3)
+        # Le SIREN (9 premiers chiffres) désigne l'entreprise : un établissement (5 derniers) mal
+        # recopié sur le site ne change pas qui l'exploite.
+        if not _luhn_ok(siren):
+            continue
+        contexte = text[max(0, m.start() - 80):m.end() + 10].strip()
+        # Qui est désigné ? Le dernier repère avant le numéro (sur 250 caractères) l'emporte.
+        zone = text[max(0, m.start() - 250):m.start()]
+        def dernier(rx):
+            pos = [x.start() for x in rx.finditer(zone)]
+            return pos[-1] if pos else -1
+        h, p, e = dernier(_HEBERGEUR_RE), dernier(_PRESTATAIRE_RE), dernier(_EDITEUR_RE)
+        if siren in _SIREN_HEBERGEURS or (h > e and h >= p and h >= 0):
+            ecartes.append(f"{siren} (hébergeur)")
+            continue
+        if p > e and p >= 0:
+            ecartes.append(f"{siren} (prestataire du site)")
+            continue
+        retenus.setdefault(siren, contexte)
+    if len(retenus) == 1:
+        siren, ctx = next(iter(retenus.items()))
+        return {"siren": siren, "contexte": ctx[:160], "ecartes": ecartes, "note": ""}
+    note = f"plusieurs numéros lus : {', '.join(retenus)}" if len(retenus) > 1 else ""
+    return {"siren": "", "contexte": "", "ecartes": ecartes, "note": note}
+
+
 def _now_iso() -> str:
     from datetime import datetime, timezone
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
@@ -656,6 +720,9 @@ CSV_FIELDS = [
     "sitemap_detail",    # « https://x.fr/sitemap.xml -> 200 text/html (page HTML) » etc.
     "code_postal_site",  # code postal lu sur la page (recoupement SIRENE)
     "php_source",        # d'où vient serveur_php : X-Powered-By | Server | vide
+    "siren_site",        # SIREN de l'exploitant lu sur le site (accueil ou mentions légales), clé vérifiée
+    "siren_source",      # page et extrait où il a été lu
+    "siren_note",        # plusieurs numéros (ambigu) ou numéros écartés (hébergeur, agence)
     "analyse_le",        # horodatage ISO de l'analyse
     "error",
 ]
@@ -890,21 +957,48 @@ async def check_retractation_on_cgv(client, base_url, html) -> str:
         return ""
 
 
-async def check_mentions_link(client, base_url, html) -> str:
-    """Le lien « mentions légales » mène-t-il quelque part ? oui = cassé (4xx/5xx), non = ok,
-    '' = pas de lien à vérifier."""
+async def check_mentions_link(client, base_url, html) -> tuple:
+    """Le lien « mentions légales » mène-t-il quelque part ? (oui = cassé (4xx/5xx), non = ok,
+    '' = pas de lien à vérifier ; contenu de la page ; son adresse)."""
     m = _MENTIONS_LINK_RE.search(html)
     if not m:
-        return ""
+        return "", "", ""
     href = m.group(1).strip()
     if href.lower().startswith(("mailto:", "javascript:", "tel:")):
-        return ""
+        return "", "", ""
     try:
         from urllib.parse import urljoin
-        r = await client.get(urljoin(base_url, href))
-        return "oui" if r.status_code >= 400 else "non"
+        url = urljoin(base_url, href)
+        r = await client.get(url)
+        return ("oui" if r.status_code >= 400 else "non"), (r.text or "" if r.status_code < 400 else ""), str(r.url)
     except Exception:
-        return ""
+        return "", "", ""
+
+
+async def find_siren(client, base_url, home_html, mentions_html, mentions_url) -> dict:
+    """SIREN de l'exploitant : pied de page de l'accueil, puis mentions légales (lien trouvé, sinon
+    les adresses habituelles). {'siren', 'source', 'note'}."""
+    vus = []
+    for html, ou in ((home_html, f"accueil {base_url}"), (mentions_html, f"mentions légales {mentions_url}")):
+        if not html:
+            continue
+        x = extract_siren(html)
+        if x["siren"]:
+            return {"siren": x["siren"], "source": f"{ou} : « {x['contexte']} »", "note": ""}
+        vus.append(x["note"] or (f"écartés : {', '.join(x['ecartes'])}" if x["ecartes"] else ""))
+    if not mentions_html:
+        for path in ("/mentions-legales", "/mentions-legales/", "/content/2-mentions-legales"):
+            try:
+                r = await client.get(base_url.rstrip("/") + path)
+                if r.status_code == 200 and r.text:
+                    x = extract_siren(r.text)
+                    if x["siren"]:
+                        return {"siren": x["siren"], "source": f"mentions légales {r.url} : « {x['contexte']} »", "note": ""}
+                    vus.append(x["note"] or (f"écartés : {', '.join(x['ecartes'])}" if x["ecartes"] else ""))
+                    break
+            except Exception:
+                continue
+    return {"siren": "", "source": "", "note": " ; ".join(v for v in vus if v)}
 
 
 async def find_email_on_contact(client, base_url, domain):
@@ -1075,7 +1169,7 @@ async def detect_one(domain: str, sem, timeout: float, clients: dict, retries: i
                 # robots.txt (boutique bloquée pour Google) et cible du lien mentions légales.
                 if not protected and r.status_code < 400:
                     site["robots_bloque"], robots_sitemaps = await check_robots_blocked(client, str(r.url))
-                    site["mentions_404"], retract_cgv, (site["sitemap"], site["sitemap_detail"]) = await asyncio.gather(
+                    (site["mentions_404"], mentions_html, mentions_url), retract_cgv, (site["sitemap"], site["sitemap_detail"]) = await asyncio.gather(
                         check_mentions_link(client, str(r.url), html),
                         check_retractation_on_cgv(client, str(r.url), html) if site.get("retractation") == "non" else asyncio.sleep(0, result=None),
                         check_sitemap(client, str(r.url), robots_sitemaps),
@@ -1087,8 +1181,12 @@ async def detect_one(domain: str, sem, timeout: float, clients: dict, retries: i
                             site["retractation"] = "oui"
                         elif retract_cgv == "" and site.get("cgv") == "oui":
                             site["retractation"] = ""
+                    # Exploitant du site : SIREN lu sur l'accueil ou les mentions légales.
+                    sid = await find_siren(client, str(r.url), html, mentions_html, mentions_url)
+                    site["siren_site"], site["siren_source"], site["siren_note"] = sid["siren"], sid["source"][:300], sid["note"][:200]
                 else:
                     site["robots_bloque"], site["mentions_404"], site["sitemap"], site["sitemap_detail"] = "", "", "", ""
+                    site["siren_site"], site["siren_source"], site["siren_note"] = "", "", ""
                 # DNS et handshake TLS sont indépendants -> en parallèle (2 attentes -> 1).
                 # L'expiration TLS est lue dès qu'un certificat a répondu (candidat https),
                 # même si le site redirige ensuite vers http : le certificat existe, il n'est

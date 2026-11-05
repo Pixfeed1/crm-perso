@@ -97,6 +97,29 @@ function matchScore(company, { domain = '', title = '', code_postal_site = '' } 
   return score;
 }
 
+// Clé de Luhn d'un SIREN (9 chiffres).
+function sirenValide(s) {
+  const d = String(s || '').replace(/\D/g, '');
+  if (d.length !== 9) return false;
+  let t = 0;
+  for (let i = 0; i < 9; i++) { let x = Number(d[8 - i]); if (i % 2 === 1) { x *= 2; if (x > 9) x -= 9; } t += x; }
+  return t % 10 === 0;
+}
+
+/** Entreprise désignée par son SIREN (lu sur le site ou saisi) : identité CERTAINE. */
+async function parSiren(siren) {
+  const s = String(siren || '').replace(/\D/g, '');
+  if (!sirenValide(s)) return { found: false, error: 'SIREN invalide' };
+  try {
+    const res = await axios.get(API, { params: { q: s, per_page: 5, page: 1 }, timeout: 8000 });
+    const c = (res.data?.results || []).find((x) => x.siren === s);
+    if (!c) return { found: false, error: 'SIREN introuvable dans l\'annuaire des entreprises' };
+    return { ...parseCompany(c), match: 'certain', match_score: 100, etat: c.etat_administratif || null };
+  } catch (e) {
+    return { found: false, error: e.message };
+  }
+}
+
 // Sûr / probable / douteux à partir du meilleur score ET de l'écart avec le second : deux
 // candidats aussi bons l'un que l'autre, c'est une ambiguïté, pas une certitude.
 function confidence(best, second) {
@@ -107,10 +130,19 @@ function confidence(best, second) {
 
 /**
  * Enrichissement avec contrôle de correspondance.
- * @param {object} p { query, domain?, title?, code_postal_site? }
- * @returns {{ found, match: 'sur'|'probable'|'douteux', match_score, ...parseCompany }}
+ * Le SIREN lu sur le site (mentions légales, pied de page) fait foi : identité « certain ». Sans lui,
+ * rapprochement par le nom (sûr / probable / douteux), qui ne sert jamais à nommer quelqu'un dans un email.
+ * @param {object} p { query, domain?, title?, code_postal_site?, siren_site? }
+ * @returns {{ found, match: 'certain'|'sur'|'probable'|'douteux', match_score, source, ...parseCompany }}
  */
-async function enrichMatch({ query, domain = '', title = '', code_postal_site = '' }) {
+async function enrichMatch({ query, domain = '', title = '', code_postal_site = '', siren_site = '' }) {
+  if (sirenValide(siren_site)) {
+    const c = await parSiren(siren_site);
+    if (c.found) return { ...c, source: 'SIREN lu sur le site' };
+    // SIREN lu mais introuvable (radié, faute de frappe…) : rapprochement par le nom, avec la remarque.
+    const nom = await enrichMatch({ query, domain, title, code_postal_site });
+    return { ...nom, remarque: `SIREN ${siren_site} lu sur le site : ${c.error}` };
+  }
   const q = (query || '').trim();
   if (!q) return { found: false };
   try {
@@ -140,7 +172,7 @@ async function enrichMatch({ query, domain = '', title = '', code_postal_site = 
     const best = scored[0].c; const bestScore = scored[0].sc;
     const second = scored[1] ? scored[1].sc : null;
     const match = confidence(bestScore, second);
-    return { ...parseCompany(best), match, match_score: bestScore, match_second: second };
+    return { ...parseCompany(best), match, match_score: bestScore, match_second: second, source: `rapprochement par le nom (score ${bestScore})` };
   } catch (e) {
     return { found: false, error: e.message };
   }
@@ -160,4 +192,4 @@ async function enrich(query) {
   }
 }
 
-module.exports = { enrich, enrichMatch, parseCompany, matchScore, confidence };
+module.exports = { enrich, enrichMatch, parSiren, sirenValide, parseCompany, matchScore, confidence };

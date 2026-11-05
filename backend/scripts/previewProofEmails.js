@@ -42,7 +42,7 @@ for (const raw of rows) {
   if (sireneEnrich) {
     // Même logique que le bouton « Enrichir SIRENE » du panneau Crawl, avec le code postal du site.
     const title = (decodeHtml(r.title) || '').trim();
-    const data = await sireneEnrich.enrichMatch({ query: title || r.domain.replace(/^www\./, '').split('.')[0], domain: r.domain, title, code_postal_site: r.code_postal_site || '' });
+    const data = await sireneEnrich.enrichMatch({ query: title || r.domain.replace(/^www\./, '').split('.')[0], domain: r.domain, title, code_postal_site: r.code_postal_site || '', siren_site: r.siren_site || '' });
     if (data.found) {
       r.sirene_match = data.match;
       if (data.match !== 'douteux') Object.assign(r, { raison_sociale: data.raison_sociale, gerant: data.dirigeant, gerant_nom: data.dirigeant_nom, gerant_prenom: data.dirigeant_prenom, ville: data.ville, code_postal: data.code_postal, siren: data.siren, naf_label: data.naf_label });

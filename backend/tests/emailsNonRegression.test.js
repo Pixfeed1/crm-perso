@@ -13,7 +13,7 @@ const mots = (t) => t.split(/\s+/).filter(Boolean).length;
 
 test('AGRIGOM : certificat valide mais site renvoyé en http -> preuve exacte, dirigeant en casse, ville non citée sans code postal du site', () => {
   const r = { domain: 'agrigom.fr', title: 'Accueil - AGRIGOM SAS', https_final: false, ssl_ok: true, final_url: 'http://www.agrigom.fr/', http_status: 200,
-    platform: 'PrestaShop', platform_version: 'PrestaShop 1.6 (déduit)', sirene_match: 'sur', raison_sociale: 'AGRIGOM (AGRIGOM)', gerant: 'FRANCK SAVARY',
+    platform: 'PrestaShop', platform_version: 'PrestaShop 1.6 (déduit)', sirene_match: 'certain', raison_sociale: 'AGRIGOM (AGRIGOM)', gerant: 'FRANCK SAVARY',
     gerant_nom: 'SAVARY', gerant_prenom: 'FRANCK', ville: "CREVECŒUR-SUR-L'ESCAUT", code_postal: '59258', code_postal_site: null,
     serveur_php: 'PHP 5.6', php_source: 'X-Powered-By', mobile_ok: false, analyse_le: '2026-10-21T14:21:31Z' };
   const d = buildProofEmail(r, {});
@@ -67,7 +67,7 @@ test('ton : aucune formule interdite, 90 à 150 mots, structure présentation / 
     accueil_404: { http_status: 404 },
     erreur_serveur: { http_status: 503 },
     invisible_google: { noindex: true },
-    nom_mal_orthographie: { title: 'Exemle Boutique', sirene_match: 'sur', raison_sociale: 'EXEMPLE BOUTIQUE', gerant_nom: 'DURAND', gerant_prenom: 'PAUL', ville: 'LYON', code_postal: '69001', code_postal_site: '69001' },
+    nom_mal_orthographie: { title: 'Exemle Boutique', sirene_match: 'certain', raison_sociale: 'EXEMPLE BOUTIQUE', gerant_nom: 'DURAND', gerant_prenom: 'PAUL', ville: 'LYON', code_postal: '69001', code_postal_site: '69001' },
     http_non_securise: { https_final: false, final_url: 'http://exemple.fr/' },
     ssl_expire: { ssl_expire_jours: -12 },
     ssl_invalide: { ssl_ok: false, ssl_erreur: 'certificat valable pour un autre nom' },

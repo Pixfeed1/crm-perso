@@ -4,23 +4,21 @@
 // domaine réservé il y a quelques jours, entreprise souvent toute récente. Il n'y a rien à
 // prouver (pas de site), donc pas de leçon : une observation vraie, une question, une sortie
 // facile. Assemblé sans LLM, comme l'email par la preuve.
-const { joliNom, nomCourt } = require('./proofEmailService');
+const { joliNom } = require('./proofEmailService');
 
 // Présentation : la même phrase que l'email par la preuve (une seule source).
 const { presentation } = require('./proofEmailService');
 
 function nomEntreprise(signal, lead) {
-  const raw = (signal && (signal.match_confidence === 'sur' || signal.match_confidence === 'probable') && signal.company_name)
+  // Nom de l'entreprise seulement si le rapprochement est sûr (« probable » peut désigner une autre société).
+  const raw = (signal && signal.match_confidence === 'sur' && signal.company_name)
     || (lead && lead.name && lead.name !== lead.company ? lead.name : '');
   return raw ? joliNom(raw) : '';
 }
 
-function salutation(signal) {
-  const sur = signal && signal.match_confidence === 'sur' && signal.dirigeant;
-  if (sur) {
-    const court = nomCourt({ gerant: signal.dirigeant, gerant_nom: signal.dirigeant_nom, gerant_prenom: signal.dirigeant_prenom });
-    return court ? `Bonjour ${court},` : 'Bonjour,';
-  }
+// Jamais de nom de personne : l'identité d'un nouveau domaine vient d'un rapprochement par le nom, pas
+// d'un SIREN lu sur le site. Sans certitude, « Bonjour, » tout court (règle validée par Marc).
+function salutation() {
   return 'Bonjour,';
 }
 

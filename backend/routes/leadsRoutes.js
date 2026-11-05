@@ -251,6 +251,24 @@ router.post('/:id/reanalyze', async (req, res) => {
   }
 });
 
+// POST /api/leads/:id/identite { siren } | { aucune: true } -> corrige à la main l'exploitant du site :
+// un SIREN (identité certaine, nom du dirigeant utilisable dans l'email) ou « aucune identité » (email
+// sans nom). Jamais écrasé par une réanalyse.
+router.post('/:id/identite', async (req, res) => {
+  const db = req.app.locals.db;
+  try {
+    const lead = (await db.pool.query('SELECT crawl_result_id FROM leads WHERE id = $1', [req.params.id])).rows[0];
+    if (!lead) return res.status(404).json({ message: 'Fiche introuvable' });
+    if (!lead.crawl_result_id) return res.status(409).json({ message: "Pas d'analyse du site pour cette fiche : lancez d'abord « Réanalyser le site »." });
+    const b = req.body || {};
+    const out = await require('../services/identiteService').corriger(db, lead.crawl_result_id, { siren: b.siren, aucune: b.aucune === true });
+    const crawl_audit = (await db.pool.query('SELECT * FROM crawl_results WHERE id = $1', [lead.crawl_result_id])).rows[0];
+    res.json({ ...out, crawl_audit });
+  } catch (e) {
+    res.status(e.status || 500).json({ message: e.status ? e.message : `Correction impossible : ${e.message}` });
+  }
+});
+
 // POST /api/leads/:id/draft-email { mode?: 'preuve' | 'claude', ton? }
 // - 'preuve' (défaut) : email assemblé mot pour mot à partir des mesures du crawl : UNE preuve
 //   vérifiable en dix secondes, sa conséquence métier, au plus un contexte technique. Sans
@@ -278,7 +296,7 @@ router.post('/:id/draft-email', async (req, res) => {
         // Pas de preuve confirmée mais boutique identifiée et en ligne : email de maintenance
         // sobre, sans alerte technique. La raison du refus de preuve reste visible.
         if (draft.maintenance && draft.maintenance.ok) {
-          return res.json({ subject: draft.maintenance.subject, body: draft.maintenance.body, preuve: null, preuves: [], indices: draft.indices, mode: 'maintenance', raison_preuve: draft.raison, detail: { signal: 'aucune preuve', brut: draft.raison, url_controlee: row.final_url || `https://${row.domain}`, analyse_le: row.analyse_le || null, confiance: 'email sans alerte technique', identite: row.sirene_match === 'sur' ? `SIRENE sûre : ${row.raison_sociale || ''}` : 'pas de personnalisation', contexte: null }, problemes });
+          return res.json({ subject: draft.maintenance.subject, body: draft.maintenance.body, preuve: null, preuves: [], indices: draft.indices, mode: 'maintenance', raison_preuve: draft.raison, detail: { signal: 'aucune preuve', brut: draft.raison, url_controlee: row.final_url || `https://${row.domain}`, analyse_le: row.analyse_le || null, confiance: 'email sans alerte technique', identite: row.sirene_match === 'certain' ? `identité certaine : ${row.raison_sociale || ''}` : 'aucun nom dans l\'email', contexte: null }, problemes });
         }
         return res.status(422).json({ message: draft.raison, indices: draft.indices, sans_preuve: true });
       }

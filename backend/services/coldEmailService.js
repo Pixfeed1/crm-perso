@@ -87,7 +87,7 @@ function buildUserPrompt(row, lead) {
     `- Boutique : ${nom}`,
     `- Site : ${r.domain || '—'}`,
     r.platform && r.platform !== 'Inconnu' ? `- Technologie : ${r.platform}` : null,
-    r.naf_label && r.sirene_match === 'sur' ? `- Activité : ${r.naf_label}` : null,
+    r.naf_label && r.sirene_match === 'certain' ? `- Activité : ${r.naf_label}` : null,
     '',
     preuves.length
       ? `PREUVES VÉRIFIÉES (reformule-en une, au plus deux, sans rien ajouter) :\n${preuves.map((p) => `- ${p}`).join('\n')}`

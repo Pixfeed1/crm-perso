@@ -5,7 +5,7 @@ const P = require('../services/proofEmailService');
 const { buildProofEmail, PREUVES_ORDRE, nomCourt } = P;
 
 test('Equip\'Tout : la preuve retenue est le nom mal orthographié, avec le nom en casse lisible', () => {
-  const r = { domain: 'www.equiptout.fr', title: 'Equit Tout', raison_sociale: "EQUIP'TOUT", sirene_match: 'sur', gerant: 'Maxime Lambin',
+  const r = { domain: 'www.equiptout.fr', title: 'Equit Tout', raison_sociale: "EQUIP'TOUT", sirene_match: 'certain', gerant: 'Maxime Lambin',
     platform: 'PrestaShop', platform_version: 'PrestaShop 1.5 (déduit)', urls_reecrites: false, sitemap: 'vide', http_status: 200 };
   const d = buildProofEmail(r, {});
   assert.equal(d.ok, true);
@@ -16,7 +16,7 @@ test('Equip\'Tout : la preuve retenue est le nom mal orthographié, avec le nom 
   assert.match(d.body, /En consultant Equip'Tout,/);
   assert.match(d.body, /pixfeed\.net\/maintenance/);
   assert.equal(d.detail.signal, 'nom_mal_orthographie');
-  assert.match(d.detail.identite, /SIRENE sûre/);
+  assert.match(d.detail.identite, /Identité certaine/);
   assert.doesNotMatch(d.body, /rien de grave|si jamais ça vous intéresse/i);
 });
 
@@ -49,7 +49,7 @@ test('ordre des preuves : la panne passe avant tout le reste', () => {
 test('salutation : premier prénom + nom en casse de nom, jamais l\'état civil complet en capitales', () => {
   assert.equal(nomCourt({ gerant: 'LUDOVIC MARCEL ROBERT AUGUSTE BAUDRY' }), 'Ludovic Baudry');
   assert.equal(nomCourt({ gerant: 'LUDOVIC MARCEL BAUDRY', gerant_nom: 'DE LA CRUZ', gerant_prenom: 'MARCOS' }), 'Marcos De La Cruz');
-  const r = { domain: 'a.fr', title: 'A', https_final: false, http_status: 200, analyse_le: '2026-10-21T15:03:02Z', sirene_match: 'sur', gerant: 'LUDOVIC MARCEL ROBERT AUGUSTE BAUDRY', raison_sociale: 'A SARL', ville: 'OYONNAX', code_postal: '01100', code_postal_site: '01100', platform: 'PrestaShop' };
+  const r = { domain: 'a.fr', title: 'A', https_final: false, http_status: 200, analyse_le: '2026-10-21T15:03:02Z', sirene_match: 'certain', gerant: 'LUDOVIC MARCEL ROBERT AUGUSTE BAUDRY', raison_sociale: 'A SARL', ville: 'OYONNAX', code_postal: '01100', code_postal_site: '01100', platform: 'PrestaShop' };
   const d = buildProofEmail(r, {});
   assert.match(d.body, /^Bonjour Ludovic Baudry,/);
   // La ville n'est jamais dans le corps (présentation unique) ; la trace dit si elle est confirmée.
@@ -68,13 +68,13 @@ test('salutation : premier prénom + nom en casse de nom, jamais l\'état civil 
   assert.match(redir.body, /réglage de redirection/);
 });
 
-test('correspondance SIRENE probable ou douteuse : ni nom, ni ville, ni raison sociale dans l\'email', () => {
-  for (const m of ['probable', 'douteux', null]) {
+test('identité non certaine (même « sûre » par le nom, cas WEB-TENNIS) : ni nom, ni ville, ni raison sociale dans l\'email', () => {
+  for (const m of ['sur', 'probable', 'douteux', null]) {
     const r = { domain: 'uneaffairedefilles.fr', title: 'Une Affaire de Filles - Boutique', https_final: false, http_status: 200, analyse_le: '2026-10-21T15:03:02Z', sirene_match: m, gerant: 'JEANNE DUPONT', raison_sociale: 'UNE AFFAIRE DE FILLES', ville: 'Paris', platform: 'PrestaShop' };
     const d = buildProofEmail(r, {});
     assert.match(d.body, /^Bonjour,\n/);
     assert.doesNotMatch(d.body, /Paris|Dupont/);
-    assert.match(d.detail.identite, /pas de personnalisation/);
+    assert.match(d.detail.identite, /aucun nom dans l'email/);
   }
 });
 
@@ -103,7 +103,7 @@ test('portées sobres : aucune affirmation sur Google ou les clients qu\'on ne p
 });
 
 test('entreprise individuelle : la boutique est l\'enseigne, jamais le nom de la personne', () => {
-  const base = { domain: 'creasence.fr', platform: 'PrestaShop', http_status: '200', title: 'Creasence – Bougies artisanales', sirene_match: 'sur', gerant_nom: 'PERNET', gerant_prenom: 'AMANDINE' };
+  const base = { domain: 'creasence.fr', platform: 'PrestaShop', http_status: '200', title: 'Creasence – Bougies artisanales', sirene_match: 'certain', gerant_nom: 'PERNET', gerant_prenom: 'AMANDINE' };
   const ligne = (r) => P.buildMaintenanceEmail(r, {}).body.split('\n')[4];
   assert.equal(ligne({ ...base, raison_sociale: 'AMANDINE PERNET (CREASENCE)' }), 'J\'ai découvert votre boutique Creasence.');
   assert.equal(ligne({ ...base, raison_sociale: 'PERNET AMANDINE' }), 'J\'ai découvert votre boutique Creasence.'); // pas d'enseigne : titre du site

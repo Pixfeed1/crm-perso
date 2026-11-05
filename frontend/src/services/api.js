@@ -274,6 +274,7 @@ export const leadsAPI = {
   // Rédaction d'un email de prospection par Claude (à partir des problèmes détectés).
   draftEmail: (id, opts = {}) => apiRequest(`/leads/${id}/draft-email`, 'POST', opts),
   reanalyze: (id) => apiRequest(`/leads/${id}/reanalyze`, 'POST', {}),
+  setIdentite: (id, body) => apiRequest(`/leads/${id}/identite`, 'POST', body),
   getById: (id) => {
     console.log(`Appel API: récupération du lead ID ${id}`);
     return apiRequest(`/leads/${id}`);

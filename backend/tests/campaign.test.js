@@ -11,7 +11,7 @@ const parisHour = (d) => parseInt(new Intl.DateTimeFormat('fr-FR', { timeZone: '
 
 test('classement : exclusions dures, puis « à vérifier », puis prêt', () => {
   const lead = { id: 1, email: 'contact@agrigom.fr', relation_status: 'nouveau', company: 'agrigom.fr' };
-  const row = { domain: 'agrigom.fr', analyse_le: '2026-10-21T10:00:00Z', sirene_match: 'sur', http_status: 200 };
+  const row = { domain: 'agrigom.fr', analyse_le: '2026-10-21T10:00:00Z', sirene_match: 'certain', http_status: 200 };
   const ok = { ok: true, mode: 'preuve' };
   assert.deepEqual(R.classifyItem({ lead, row, controles: {}, email: ok }), { statut: 'pret', raison: null });
   assert.equal(R.classifyItem({ lead: { ...lead, email: '' }, row, controles: {}, email: ok }).statut, 'exclu');
@@ -201,7 +201,7 @@ test('options de la fiche reprises en campagne : modèle du menu rempli, relance
     const tpl = (await pool.query("INSERT INTO email_templates (name, category, subject, body) VALUES ('Perso', 'contact', 'Un mot sur {site}', '{prenom},\n\nJe suis {expediteur} et je dirige {entreprise}.\n\n{constat}\n\nÀ bientôt,') RETURNING id")).rows[0].id;
     const job = await pool.query("INSERT INTO crawl_jobs (techno, nb_sites, statut) VALUES ('prestashop', 1, 'done') RETURNING id");
     const rid = await insertCrawlResult(db, job.rows[0].id, typedResult({ domain: 'agrigom.fr', platform: 'PrestaShop', http_status: '200', final_url: 'http://www.agrigom.fr/', https_final: 'non', ssl_ok: 'oui', title: 'Accueil - AGRIGOM SAS', email: 'contact@agrigom.fr', analyse_le: '2026-10-21T14:21:31+00:00' }));
-    await pool.query("UPDATE crawl_results SET sirene_match = 'sur', raison_sociale = 'AGRIGOM', gerant_nom = 'SAVARY', gerant_prenom = 'FRANCK' WHERE id = $1", [rid]);
+    await pool.query("UPDATE crawl_results SET sirene_match = 'certain', raison_sociale = 'AGRIGOM', gerant_nom = 'SAVARY', gerant_prenom = 'FRANCK' WHERE id = $1", [rid]);
     const lead = (await pool.query("INSERT INTO leads (name, company, email, crawl_result_id) VALUES ('AGRIGOM', 'agrigom.fr', 'contact@agrigom.fr', $1) RETURNING id", [rid])).rows[0].id;
 
     // Mode modèle : variables remplies, civilité sûre, constat = preuve retenue.

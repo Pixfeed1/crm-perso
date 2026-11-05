@@ -89,7 +89,7 @@ function nomMalOrthographie(r) {
   const title = fold(r.title);
   if (!title) return null;
   const sources = [];
-  if (r.sirene_match === 'sur' && r.raison_sociale) sources.push(String(r.raison_sociale)); // référence seulement si la correspondance est sûre
+  if (r.sirene_match === 'certain' && r.raison_sociale) sources.push(String(r.raison_sociale)); // référence seulement si l'identité est certaine (SIREN lu sur le site)
   const root = String(r.domain || '').toLowerCase().replace(/^www\./, '').split('.')[0];
   if (root && root.includes('-')) sources.push(root.replace(/-/g, ' '));
   const titleTokens = title.split(' ').filter((w) => w.length >= 4);

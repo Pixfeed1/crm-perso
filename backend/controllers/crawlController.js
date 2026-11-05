@@ -13,6 +13,7 @@ const { decodeHtml } = require('../utils/decodeHtml');
 const { isAntibotTitle } = require('../utils/antibotTitle');
 const sireneEnrich = require('../services/sireneEnrich');
 const { problemesLisibles } = require('../utils/crawlAngles');
+const identiteService = require('../services/identiteService');
 const { prospectScore, auditFlags, promotionBlocker, departmentFromPostalCode, descriptionAbsurde, nomMalOrthographie } = require('../utils/prospectScore');
 
 // L'interpréteur Python et le script sont réglés dans ccProspectorRunner (partagés avec les
@@ -171,7 +172,8 @@ function typedResult(o) {
     meta_desc_txt: cell('meta_desc_txt'), urls_reecrites: boolCell('urls_reecrites'), sitemap: cell('sitemap'),
     // Traçabilité (colonnes récentes du crawler ; null sur les anciens CSV).
     ssl_erreur: cell('ssl_erreur'), ssl_sujet: cell('ssl_sujet'), ssl_hote: cell('ssl_hote'), https_variantes: cell('https_variantes'), sitemap_detail: cell('sitemap_detail'), code_postal_site: cell('code_postal_site'),
-    php_source: cell('php_source'), analyse_le: cell('analyse_le')
+    php_source: cell('php_source'), analyse_le: cell('analyse_le'),
+    siren_site: (cell('siren_site') || '').replace(/\D/g, '').slice(0, 9) || null, siren_source: cell('siren_source'), siren_note: cell('siren_note')
   };
 }
 
@@ -181,7 +183,7 @@ const RESULT_COLUMNS = ['domain', 'platform', 'signals', 'http_status', 'final_u
   'analytics', 'poids_ko', 'copyright_annee', 'serveur_php', 'spf', 'dmarc', 'ssl_expire_jours',
   'site_type', 'ecommerce_actif', 'https_final',
   'noindex', 'robots_bloque', 'cgv', 'retractation', 'contenu_mixte', 'mentions_404', 'prestataire',
-  'meta_desc_txt', 'urls_reecrites', 'sitemap', 'ssl_erreur', 'ssl_sujet', 'ssl_hote', 'https_variantes', 'sitemap_detail', 'code_postal_site', 'php_source', 'analyse_le'];
+  'meta_desc_txt', 'urls_reecrites', 'sitemap', 'ssl_erreur', 'ssl_sujet', 'ssl_hote', 'https_variantes', 'sitemap_detail', 'code_postal_site', 'php_source', 'analyse_le', 'siren_site', 'siren_source', 'siren_note'];
 
 // Insère un résultat typé dans crawl_results (+ mémoire crawl_seen_domains). Renvoie l'id.
 async function insertCrawlResult(db, jobId, r) {
@@ -542,35 +544,13 @@ crawlController.enrichResults = async (req, res) => {
     ? req.body.result_ids.map((v) => parseInt(v, 10)).filter((v) => !Number.isNaN(v)) : [];
   if (ids.length === 0) return res.status(400).json({ message: 'Aucun résultat sélectionné' });
   try {
-    const { rows } = await db.pool.query(
-      'SELECT id, domain, title, code_postal_site FROM crawl_results WHERE job_id = $1 AND id = ANY($2::int[])',
-      [parseInt(id, 10), ids]
-    );
+    const { rows } = await db.pool.query('SELECT id FROM crawl_results WHERE job_id = $1 AND id = ANY($2::int[])', [parseInt(id, 10), ids]);
     let enriched = 0; let douteux = 0;
     for (const r of rows) {
-      // Requête : le titre de la home (souvent la vraie enseigne), repli sur la racine du domaine.
-      const title = (decodeHtml(r.title) || '').trim();
-      const query = title || normalizeDomain(r.domain).split('.')[0];
-      const data = await sireneEnrich.enrichMatch({ query, domain: r.domain, title, code_postal_site: r.code_postal_site || '' });
-      if (data.found) {
-        // Douteux : rien de commun entre l'entreprise et le site. On garde la trace (sirene_match)
-        // mais on n'écrit ni dirigeant ni SIREN, pour ne pas envoyer un « Bonjour M. X » faux.
-        const ok = data.match !== 'douteux';
-        await db.pool.query(
-          `UPDATE crawl_results SET sirene_match = $1,
-             raison_sociale = CASE WHEN $2 THEN $3 ELSE raison_sociale END,
-             gerant = CASE WHEN $2 THEN $4 ELSE gerant END,
-             siren = CASE WHEN $2 THEN $5 ELSE siren END,
-             naf = CASE WHEN $2 THEN $6 ELSE naf END, naf_label = CASE WHEN $2 THEN $7 ELSE naf_label END,
-             effectif = CASE WHEN $2 THEN $8 ELSE effectif END, adresse = CASE WHEN $2 THEN $9 ELSE adresse END,
-             code_postal = CASE WHEN $2 THEN $10 ELSE code_postal END, ville = CASE WHEN $2 THEN $11 ELSE ville END,
-             gerant_nom = CASE WHEN $2 THEN $13 ELSE gerant_nom END, gerant_prenom = CASE WHEN $2 THEN $14 ELSE gerant_prenom END
-           WHERE id = $12`,
-          [data.match, ok, data.raison_sociale, data.dirigeant, data.siren, data.naf, data.naf_label,
-           data.effectif, data.adresse, data.code_postal, data.ville, r.id, data.dirigeant_nom, data.dirigeant_prenom]
-        );
-        if (ok) enriched++; else douteux++;
-      }
+      // SIREN lu sur le site d'abord (identité certaine), sinon rapprochement par le nom ; une identité
+      // corrigée à la main est laissée telle quelle.
+      const info = await identiteService.identifier(db, r.id);
+      if (info.match === 'douteux') douteux++; else if (info.match !== 'aucun') enriched++;
     }
     await rescoreJob(db, parseInt(id, 10), ids);
     res.json({ enriched, douteux, total: rows.length });

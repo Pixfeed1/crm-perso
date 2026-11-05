@@ -74,6 +74,19 @@ const LeadDetails = ({ lead, autoCompose = false, onUpdate, onDelete, onAddConta
     }
   };
   const domaineFiche = (lead.website || lead.company || '').replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0];
+  // Identité de l'exploitant : corrigeable à la main (SIREN, ou « aucune » = email sans nom).
+  const [identiteEdit, setIdentiteEdit] = useState(false);
+  const [sirenSaisi, setSirenSaisi] = useState('');
+  const corrigerIdentite = async (body) => {
+    try {
+      const r = await leadsAPI.setIdentite(lead.id, body);
+      setAudit(r.crawl_audit || audit);
+      setIdentiteEdit(false); setSirenSaisi('');
+      toast.success(body.aucune ? 'Identité retirée : les emails commenceront par « Bonjour, »' : `Identité certaine : ${r.raison_sociale || 'entreprise trouvée'}`);
+    } catch (e) {
+      toast.error(e.message || 'Correction impossible');
+    }
+  };
 
   // Format de la date
   const formatDate = (dateString) => {
@@ -414,10 +427,31 @@ const LeadDetails = ({ lead, autoCompose = false, onUpdate, onDelete, onAddConta
                     ? `Analysé le ${formatDate(audit.analyse_le)} · ${domaineFiche}`
                     : <span className="text-warning-text flex items-center gap-1"><FiAlertCircle size={12} /> Mesures de l'ancien crawl, date inconnue : réanalyse avant d'écrire.</span>)
                   : `Jamais analysé · ${domaineFiche}`}
-                {audit && audit.sirene_match && (
-                  <span> · SIRENE {audit.sirene_match}{audit.sirene_match === 'sur' && audit.raison_sociale ? ` : ${audit.raison_sociale}` : ''}</span>
-                )}
               </div>
+              {audit && (
+                <div className="text-xs mb-2 text-text-secondary">
+                  {audit.sirene_match === 'certain'
+                    ? <span className="text-success-text">Identité certaine : {audit.raison_sociale || '?'}{audit.gerant ? ` (${audit.gerant})` : ''}</span>
+                    : audit.sirene_match === 'aucune'
+                      ? <span>Aucune identité : les emails commencent par « Bonjour, »</span>
+                      : audit.sirene_match
+                        ? <span>Identité rapprochée par le nom ({audit.sirene_match}){audit.raison_sociale ? ` : ${audit.raison_sociale}` : ''}, <strong>non utilisée dans l'email</strong> (« Bonjour, »)</span>
+                        : <span>Identité inconnue : les emails commencent par « Bonjour, »</span>}
+                  {audit.identite_source && <span className="text-text-muted"> · {audit.identite_source}</span>}
+                  {audit.siren_note && <span className="text-warning-text"> · {audit.siren_note}</span>}
+                  <button onClick={() => setIdentiteEdit((v) => !v)} className="ml-2 underline text-accent hover:text-accent-hover">Corriger</button>
+                  {identiteEdit && (
+                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                      <input value={sirenSaisi} onChange={(e) => setSirenSaisi(e.target.value)} placeholder="SIREN (9 chiffres, lu dans les mentions légales)"
+                        className="px-2 py-1 bg-surface-muted border border-border rounded-lg text-text-primary text-xs w-64 focus:outline-none focus:border-accent" />
+                      <button onClick={() => corrigerIdentite({ siren: sirenSaisi })} disabled={sirenSaisi.replace(/\D/g, '').length !== 9}
+                        className="px-2 py-1 rounded-lg bg-accent text-white text-xs disabled:opacity-50">Valider le SIREN</button>
+                      <button onClick={() => corrigerIdentite({ aucune: true })} className="px-2 py-1 rounded-lg bg-surface-strong text-text-primary text-xs">Aucune identité</button>
+                      <span className="text-text-muted">Votre correction ne sera jamais écrasée par une réanalyse.</span>
+                    </div>
+                  )}
+                </div>
+              )}
               {reanalyse && (
                 <div className="text-xs rounded-lg border border-border bg-surface-muted/60 text-text-secondary px-3 py-2 mb-2">
                   Preuves : {reanalyse.preuves.length ? reanalyse.preuves.join(', ') : 'aucune'} · Indices : {reanalyse.indices.length ? reanalyse.indices.join(', ') : 'aucun'}

@@ -594,6 +594,11 @@ const DATABASE_SCHEMA = {
       ssl_hote: 'TEXT',             // hôte (nu ou www) sur lequel le certificat a été refusé
       sitemap_detail: 'TEXT',       // URL(s) contrôlée(s) et réponse(s) du sitemap
       code_postal_site: 'VARCHAR(5)', // code postal lu sur la page (recoupement SIRENE)
+      siren_site: 'VARCHAR(9)',       // SIREN de l'exploitant LU SUR LE SITE (accueil ou mentions légales) : fait foi
+      siren_source: 'TEXT',           // page et extrait où il a été lu
+      siren_note: 'TEXT',             // plusieurs numéros (ambigu) ou numéros écartés (hébergeur, agence)
+      identite_source: 'TEXT',        // d'où vient l'identité retenue (SIREN lu sur le site, nom, saisie manuelle)
+      identite_manuelle: 'BOOLEAN DEFAULT FALSE', // corrigée à la main : jamais écrasée par une réanalyse
       php_source: 'VARCHAR(20)',    // X-Powered-By | Server : d'où vient serveur_php
       analyse_le: 'TIMESTAMP',      // horodatage de l'analyse par le crawler
       raison_sociale: 'TEXT', // raison sociale légale (enrichissement SIRENE)
@@ -645,7 +650,7 @@ const DATABASE_SCHEMA = {
       adresse: 'TEXT',
       code_postal: 'VARCHAR(10)',
       ville: 'TEXT',
-      sirene_match: 'VARCHAR(10)',    // sur | probable | douteux : confiance de l'association site <-> entreprise
+      sirene_match: 'VARCHAR(10)',    // certain (SIREN lu sur le site ou saisi) | sur | probable | douteux (par le nom) | aucune
       // Score de priorité PERSISTÉ (backend/utils/prospectScore.js), calculé à l'ingestion et à l'enrichissement.
       score: 'INTEGER'
     },

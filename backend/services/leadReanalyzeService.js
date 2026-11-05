@@ -8,6 +8,7 @@
 // Ne touche ni aux notes du prospect, ni à ses interactions, ni à l'envoi.
 const { runDetect } = require('./ccProspectorRunner');
 const sireneEnrich = require('./sireneEnrich');
+const identiteService = require('./identiteService');
 const crawl = require('../controllers/crawlController');
 const { normalizeDomain } = require('../utils/csvParse');
 const { auditFlags, prospectScore, PREUVE_KEYS } = require('../utils/prospectScore');
@@ -60,31 +61,11 @@ async function reanalyzeLead(db, leadId, deps = {}) {
     await db.pool.query('UPDATE leads SET crawl_result_id = $1 WHERE id = $2', [resultId, leadId]);
   }
 
-  // Correspondance SIRENE, avec le code postal du site : sûre / probable / douteuse.
+  // Identité : SIREN lu sur le site d'abord (certaine), sinon rapprochement par le nom (avec le code
+  // postal du site) ; une identité corrigée à la main n'est jamais écrasée.
   let sireneInfo = null;
   try {
-    const title = (decodeHtml(typed.title) || '').trim();
-    const data = await sirene({ query: title || domain.split('.')[0], domain, title, code_postal_site: typed.code_postal_site || '' });
-    if (data && data.found) {
-      const ok = data.match !== 'douteux';
-      await db.pool.query(
-        `UPDATE crawl_results SET sirene_match = $1,
-           raison_sociale = CASE WHEN $2 THEN $3 ELSE raison_sociale END,
-           gerant = CASE WHEN $2 THEN $4 ELSE gerant END,
-           gerant_nom = CASE WHEN $2 THEN $5 ELSE gerant_nom END,
-           gerant_prenom = CASE WHEN $2 THEN $6 ELSE gerant_prenom END,
-           siren = CASE WHEN $2 THEN $7 ELSE siren END,
-           naf = CASE WHEN $2 THEN $8 ELSE naf END, naf_label = CASE WHEN $2 THEN $9 ELSE naf_label END,
-           effectif = CASE WHEN $2 THEN $10 ELSE effectif END, adresse = CASE WHEN $2 THEN $11 ELSE adresse END,
-           code_postal = CASE WHEN $2 THEN $12 ELSE code_postal END, ville = CASE WHEN $2 THEN $13 ELSE ville END
-         WHERE id = $14`,
-        [data.match, ok, data.raison_sociale, data.dirigeant, data.dirigeant_nom, data.dirigeant_prenom, data.siren, data.naf, data.naf_label,
-         data.effectif, data.adresse, data.code_postal, data.ville, resultId]
-      );
-      sireneInfo = { match: data.match, raison_sociale: ok ? data.raison_sociale : null, ville: ok ? data.ville : null, score: data.match_score };
-    } else {
-      sireneInfo = { match: 'aucun' };
-    }
+    sireneInfo = await identiteService.identifier(db, resultId, { sirene });
   } catch (e) {
     console.error('[Réanalyse] SIRENE', domain, e.message);
     sireneInfo = { match: 'erreur', erreur: e.message };

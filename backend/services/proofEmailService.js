@@ -158,7 +158,10 @@ const FORMULES_INTERDITES = /relancerai pas|un simple « ?oui ?»|simple oui|sau
 // Correspondance SIRENE jugée sûre : seule base pour personnaliser (nom, dirigeant, ville).
 // « probable » ou « douteux » -> aucune personnalisation : un prénom ou une ville faux, et le
 // destinataire sait immédiatement que c'est automatique.
-const matchSur = (r) => !!(r && r.sirene_match === 'sur');
+// Identité CERTAINE seulement (SIREN lu sur le site ou saisi à la main) pour nommer qui que ce soit dans
+// un email : dirigeant, raison sociale, ville. Un rapprochement par le nom, même « sûr », peut désigner
+// une autre entreprise au nom voisin (cas WEB-TENNIS) : il ne sert qu'au tri, jamais au texte.
+const matchSur = (r) => !!(r && r.sirene_match === 'certain');
 
 // Civilité : on ne devine jamais le genre. Premier prénom + nom en casse de nom si la
 // correspondance est sûre, sinon « Bonjour, ». Jamais l'état civil complet en capitales.
@@ -357,7 +360,7 @@ function buildProofEmail(r, lead) {
     url_controlee: r.final_url || `https://${site(r)}`,
     analyse_le: r.analyse_le || null,
     confiance: 'constatée par le crawler',
-    identite: matchSur(r) ? `SIRENE sûre : ${joliNom(r.raison_sociale || '')}${r.ville ? ` (${joliVille(r.ville)}${villeConfirmee(r) ? ', confirmée par le code postal du site' : ', ville non confirmée par le site : non citée'})` : ''}` : (r.sirene_match ? `SIRENE ${r.sirene_match} : pas de personnalisation` : 'pas de correspondance SIRENE : pas de personnalisation'),
+    identite: matchSur(r) ? `Identité certaine (${r.identite_source || 'SIREN lu sur le site'}) : ${joliNom(r.raison_sociale || '')}${r.ville ? ` (${joliVille(r.ville)}${villeConfirmee(r) ? ', confirmée par le code postal du site' : ', ville non confirmée par le site : non citée'})` : ''}` : (r.sirene_match ? `identité ${r.sirene_match === 'sur' ? 'rapprochée par le nom seulement' : r.sirene_match} : aucun nom dans l'email (« Bonjour, »)` : 'aucune identité : aucun nom dans l\'email (« Bonjour, »)'),
     contexte: contexte ? (phpEol(r.serveur_php) ? `PHP déclaré par l'entête ${r.php_source || 'X-Powered-By'} : ${r.serveur_php}` : contexte) : null
   };
   return {

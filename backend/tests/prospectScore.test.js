@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const p = require('../utils/prospectScore');
 
 test('les preuves visibles sont détectées et classées preuve', () => {
-  const r = { domain: 'www.equiptout.fr', title: 'Equit Tout', raison_sociale: "EQUIP'TOUT", sirene_match: 'sur',
+  const r = { domain: 'www.equiptout.fr', title: 'Equit Tout', raison_sociale: "EQUIP'TOUT", sirene_match: 'certain',
     platform: 'PrestaShop', platform_version: 'PrestaShop 1.5 (déduit)', https_final: true, ssl_ok: true, mobile_ok: true,
     meta_desc_txt: 'ZI de la Fontaine 59310 ORCHIES Fax 03 20 71 00 00', urls_reecrites: false, sitemap: 'vide', http_status: 200 };
   const keys = p.auditFlags(r).map((f) => f.key);
@@ -17,7 +17,7 @@ test('les preuves visibles sont détectées et classées preuve', () => {
 });
 
 test('pas de faux positif sur un nom correct ni sur une description saine', () => {
-  assert.equal(p.nomMalOrthographie({ domain: 'lorchidee.fr', title: 'lorchidee.fr', raison_sociale: 'L ORCHIDEE SARL', sirene_match: 'sur' }), null);
+  assert.equal(p.nomMalOrthographie({ domain: 'lorchidee.fr', title: 'lorchidee.fr', raison_sociale: 'L ORCHIDEE SARL', sirene_match: 'certain' }), null);
   assert.equal(p.nomMalOrthographie({ domain: 'marchal-bodin.fr', title: 'Marchal Bodin quincaillerie' }), null);
   assert.equal(p.descriptionAbsurde({ meta_desc_txt: 'Quincaillerie professionnelle à Bordeaux, livraison en 48 h, plus de 20 000 références.' }), false);
   assert.equal(p.descriptionAbsurde({ meta_desc_txt: 'contact@x.fr' }), true);

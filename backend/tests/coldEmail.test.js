@@ -57,9 +57,9 @@ test('sans preuve : le modèle ne reçoit aucun indice, et tout sujet technique 
 test('validation : dix prospects différents, dix emails corrects dans les deux modes', async () => {
   const base = { http_status: 200, platform: 'PrestaShop', ssl_ok: true, https_final: true, analyse_le: '2026-10-21T10:00:00Z' };
   const prospects = [
-    { domain: 'agrigom.fr', title: 'Accueil - AGRIGOM SAS', https_final: false, final_url: 'http://www.agrigom.fr/', sirene_match: 'sur', raison_sociale: 'AGRIGOM', gerant_nom: 'SAVARY', gerant_prenom: 'FRANCK' },
+    { domain: 'agrigom.fr', title: 'Accueil - AGRIGOM SAS', https_final: false, final_url: 'http://www.agrigom.fr/', sirene_match: 'certain', raison_sociale: 'AGRIGOM', gerant_nom: 'SAVARY', gerant_prenom: 'FRANCK' },
     { domain: 'atelierdusucre.fr', title: 'Atelier du sucre, la boutique en ligne', https_final: false, final_url: 'http://www.atelierdusucre.fr/fr/', sirene_match: 'probable', gerant: 'X Y', ville: 'MANOSQUE' },
-    { domain: 'equiptout.fr', title: 'Equit Tout', sirene_match: 'sur', raison_sociale: "EQUIP'TOUT", gerant: 'Maxime Lambin' },
+    { domain: 'equiptout.fr', title: 'Equit Tout', sirene_match: 'certain', raison_sociale: "EQUIP'TOUT", gerant: 'Maxime Lambin' },
     { domain: 'a.fr', title: 'PrestaShop' },
     { domain: 'b.fr', title: 'Boutique B', noindex: true },
     { domain: 'c.fr', title: 'Boutique C', http_status: 503 },
