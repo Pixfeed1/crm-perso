@@ -40,6 +40,6 @@ try {
     process.exit(1);
   }
   const surv = (x) => (!x.active ? 'Redirection absente ou inactive' : `Redirection ${x.version || ''}, surveillance des permaliens : ${x.surveillance && x.surveillance.active ? `oui (${x.surveillance.types.join(', ')} ; groupe « ${x.surveillance.groupe && x.surveillance.groupe.nom} »)` : 'NON'}`);
-  const detail = nom === 'publication-site.php' ? surv(j) : nom === 'redaction-site.php' ? `${(j.types || []).length} types, ${(j.blocs || []).length} blocs, limite d'envoi ${Math.round((j.limite_envoi || 0) / 1048576)} Mo, Rewrite & Republish : ${j.rewrite_republish ? 'oui' : 'non'}` : `${(j.shortcodes || []).length} shortcodes`;
+  const detail = nom === 'publication-site.php' ? surv(j) : nom === 'redaction-site.php' ? `${(j.types || []).length} types, ${(j.blocs || []).length} blocs, limite d'envoi ${Math.round((j.limite_envoi || 0) / 1048576)} Mo, Rewrite & Republish : ${j.rewrite_republish ? 'oui' : 'non'}, plateformes « Où regarder » : ${j.plateformes && (j.plateformes.types || []).length ? j.plateformes.types.map((x) => `${x.type} (${x.fiches_avec_liens} fiche${x.fiches_avec_liens > 1 ? 's' : ''} avec adresses)`).join(', ') : 'aucune'}` : `${(j.shortcodes || []).length} shortcodes`;
   console.log(`${base} : OK, ${nom} ${ancien === nouveau ? 'déjà à jour' : ancien === null ? 'posé' : 'mis à jour'} (${detail} ; sans identification : ${anonyme}).`);
 } catch (e) { remettre(); console.log(`${base} : ${e.message} : ${ancien === null ? 'fichier retiré' : 'ancienne version remise'}.`); process.exit(1); }
