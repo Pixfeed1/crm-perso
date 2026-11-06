@@ -103,6 +103,8 @@ async function relever(db, { client = null, jours = 30 } = {}) {
   const { simpleParser } = require('mailparser');
   const imap = client || new ImapFlow(acces());
   const out = { configuree: true, lus: 0, retenus: 0, par_type: {}, erreurs: [] };
+  // Une erreur de connexion émise après coup ne doit jamais arrêter le CRM.
+  if (imap.on) imap.on('error', (e) => console.error('[Boîte] connexion :', e.message));
   await imap.connect();
   try {
     const lock = await imap.getMailboxLock(dossier, { readOnly: true });
@@ -166,13 +168,14 @@ function start(db) {
     if (enCours) return; enCours = true;
     try {
       const r = await relever(db);
-      if (r.retenus) console.log(`[Boîte] ${r.retenus} message(s) de prospects : ${JSON.stringify(r.par_type)}`);
+      console.log(`[Boîte] relevé : ${r.lus} message(s) lu(s), ${r.retenus} de prospects${r.retenus ? ` ${JSON.stringify(r.par_type)}` : ''}.`);
       if (r.erreurs.length) console.error('[Boîte]', r.erreurs.slice(0, 3).join(' | '));
     } catch (e) { console.error('[Boîte] relevé :', e.message); } finally { enCours = false; }
   };
   if (job) job.stop();
   job = cron.schedule('*/15 * * * *', tour);
   setTimeout(tour, 90 * 1000);
+  console.log(`[Boîte] lecture activée (${process.env.IMAP_HOST}) : premier relevé dans 90 s, puis toutes les 15 min.`);
 }
 
 module.exports = { acces, configuree, rattacher, traiter, relever, lister, confirmer, start };
