@@ -258,6 +258,18 @@ export const emailHistoryAPI = {
   getById: (id) => apiRequest(`/emails/${id}`),
 };
 
+// Affaires (lot 5) : plusieurs par entreprise, prochaine action obligatoire, devis rattachables.
+export const affairesAPI = {
+  referentiel: () => apiRequest('/affaires/referentiel'),
+  list: (params) => apiRequest(`/affaires?${new URLSearchParams(params).toString()}`),
+  create: (body) => apiRequest('/affaires', 'POST', body),
+  update: (id, body) => apiRequest(`/affaires/${id}`, 'PUT', body),
+  remove: (id) => apiRequest(`/affaires/${id}`, 'DELETE'),
+  devisDisponibles: (id) => apiRequest(`/affaires/${id}/devis-disponibles`),
+  rattacherDevis: (id, quoteId) => apiRequest(`/affaires/${id}/devis`, 'POST', { quote_id: quoteId }),
+  detacherDevis: (id, quoteId) => apiRequest(`/affaires/${id}/devis/${quoteId}`, 'DELETE')
+};
+
 export const leadsAPI = {
   getAll: () => {
     console.log('Appel API: récupération de tous les leads');

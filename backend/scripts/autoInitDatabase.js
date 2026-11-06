@@ -2000,6 +2000,35 @@ async function ensureInteractionsColumns(client) {
   `);
   await client.query('CREATE INDEX IF NOT EXISTS idx_prospect_refus_lead ON prospect_refus (lead_id) WHERE retire_le IS NULL;');
   await client.query('CREATE INDEX IF NOT EXISTS idx_prospect_refus_domaine ON prospect_refus (domaine) WHERE retire_le IS NULL;');
+  // Affaires (lot 5) : plusieurs par entreprise, rattachées à un prospect et/ou à un client.
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS affaires (
+      id SERIAL PRIMARY KEY,
+      lead_id INTEGER,
+      client_id INTEGER,
+      titre TEXT NOT NULL,
+      type_besoin VARCHAR(20) NOT NULL DEFAULT 'maintenance',
+      montant_ponctuel NUMERIC,
+      montant_mensuel NUMERIC,
+      etape VARCHAR(20) NOT NULL DEFAULT 'decouverte',
+      accord VARCHAR(10),
+      motif VARCHAR(30),
+      motif_detail TEXT,
+      recontacter_le DATE,
+      prochaine_action_date DATE,
+      prochaine_action_canal VARCHAR(20),
+      prochaine_action_note TEXT,
+      campagne_id INTEGER,
+      relance_interaction_id INTEGER,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW(),
+      cloturee_le TIMESTAMPTZ
+    );
+  `);
+  await client.query('CREATE INDEX IF NOT EXISTS idx_affaires_lead ON affaires (lead_id);');
+  await client.query('CREATE INDEX IF NOT EXISTS idx_affaires_client ON affaires (client_id);');
+  await client.query('ALTER TABLE interactions ADD COLUMN IF NOT EXISTS affaire_id INTEGER;');
+  await client.query('ALTER TABLE quotes ADD COLUMN IF NOT EXISTS affaire_id INTEGER;');
   // Liste mensuelle « à supprimer » (lot 4) : prospects sans contact depuis 3 ans, supprimés seulement
   // après validation de Marc. Les lignes supprimées ne gardent que le domaine et les dates.
   await client.query(`

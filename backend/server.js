@@ -220,6 +220,7 @@ app.use('/api/interventions', require('./routes/interventionRoutes'));
 app.use('/api/interactions', require('./routes/interactionRoutes'));
 app.use('/api/portefeuille/crawl', require('./routes/crawlRoutes'));
 app.use('/api/portefeuille/signaux', require('./routes/domainSignalRoutes')); // nouveaux domaines .fr (AFNIC)
+app.use('/api/affaires', require('./routes/affairesRoutes')); // affaires (lot 5) : plusieurs par entreprise
 app.use('/api/campagnes', require('./routes/campaignRoutes')); // campagnes de prospection (préparer, relire, programmer)
 app.use('/api/diffuseur', require('./routes/diffuseurRoutes')); // diffusion des créations 3D (préparation, validation, exports, dépôt Bluesky)
 // Configurateur PC de jurojin.net : ses routes (/api/configurateur) sont branchées dans cet emplacement

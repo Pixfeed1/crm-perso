@@ -11,6 +11,7 @@ import EmailModal from './EmailModal';
 import QuickQuoteModal from './QuickQuoteModal';
 import QuickInvoiceModal from './QuickInvoiceModal';
 import ContactFollowup from '../common/ContactFollowup';
+import AffairesPanel from '../common/AffairesPanel';
 import { formatLongDate, formatValue } from '../../utils/formatters';
 
 const ClientDetails = ({ client, onUpdate, onDelete, onClose }) => {
@@ -344,6 +345,9 @@ const ClientDetails = ({ client, onUpdate, onDelete, onClose }) => {
 
       {/* Suivi des prises de contact */}
       <ContactFollowup contactType="client" contactId={client.id} phone={client.phone} onEmail={client.email ? () => setIsEmailModalOpen(true) : undefined} />
+
+      {/* Affaires du client (et de son ancien prospect) */}
+      <AffairesPanel clientId={client.id} />
 
       {/* Modal de demande d'avis */}
       <ReviewRequestModal
