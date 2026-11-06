@@ -1429,6 +1429,10 @@ export const configurateurAPI = {
 
 export const campagnesAPI = {
   list: () => apiRequest('/campagnes'),
+  // Boîte d'envoi (lot 7) : réponses, rebonds, refus à confirmer.
+  boite: () => apiRequest('/campagnes/boite'),
+  releverBoite: () => apiRequest('/campagnes/boite/relever', 'POST', {}),
+  confirmerBoite: (id, decision) => apiRequest(`/campagnes/boite/${id}/confirmer`, 'POST', { decision }),
   create: (payload) => apiRequest('/campagnes', 'POST', payload),
   get: (id) => apiRequest(`/campagnes/${id}`),
   update: (id, payload) => apiRequest(`/campagnes/${id}`, 'PATCH', payload),

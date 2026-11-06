@@ -8,6 +8,12 @@ const authMiddleware = require('../middleware/authMiddleware');
 router.use(authMiddleware);
 
 router.get('/sender-check', ctrl.senderCheck); // avant /:id
+// Boîte d'envoi (lot 7) : réponses et rebonds lus en lecture seule, refus soumis à confirmation.
+const boite = require('../services/boiteService');
+const okBoite = (fn) => async (req, res) => { try { res.json(await fn(req.app.locals.db, req)); } catch (e) { res.status(e.status || 500).json({ message: e.status ? e.message : `Boîte d'envoi : ${e.message}` }); } };
+router.get('/boite', okBoite((db) => boite.lister(db)));
+router.post('/boite/relever', okBoite((db) => boite.relever(db)));
+router.post('/boite/:id/confirmer', okBoite((db, req) => boite.confirmer(db, req.params.id, (req.body || {}).decision)));
 router.get('/', ctrl.list);
 router.post('/', ctrl.create);
 router.get('/:id', ctrl.get);

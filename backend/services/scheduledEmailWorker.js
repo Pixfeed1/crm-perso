@@ -142,6 +142,8 @@ class ScheduledEmailWorker {
       const token = await emailTracking.createTracking(this.db, {
         contact_id: trackContactId, to_email: email.to_email, subject: email.subject
       });
+      // Email de campagne : rattaché à sa campagne pour l'entonnoir (lot 7).
+      if (token && email.campaign_id) await this.db.pool.query('UPDATE email_tracking SET campaign_id = $2 WHERE token = $1', [token, email.campaign_id]).catch(() => {});
       // Pied de page RGPD + en-tête List-Unsubscribe (prospection uniquement).
       const rgpdFooter = isProspect ? optout.footerHtml(email.to_email) : '';
       const rgpdHeaders = isProspect ? optout.listUnsubHeader(email.to_email) : null;

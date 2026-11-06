@@ -1962,6 +1962,36 @@ async function ensureInteractionsColumns(client) {
     );
   `);
   await client.query('CREATE INDEX IF NOT EXISTS idx_email_clics_tracking ON email_clics (tracking_id, clique_le);');
+  // Lot 7 : email suivi rattaché à sa campagne (entonnoir), lecture de la boîte d'envoi.
+  await client.query('ALTER TABLE email_tracking ADD COLUMN IF NOT EXISTS campaign_id INTEGER;');
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS boite_messages (
+      id SERIAL PRIMARY KEY,
+      dossier VARCHAR(100),
+      uid INTEGER,
+      message_id TEXT UNIQUE,
+      recu_le TIMESTAMPTZ,
+      de TEXT,
+      adresse TEXT,
+      sujet TEXT,
+      extrait TEXT,
+      type VARCHAR(20),
+      raison TEXT,
+      lead_id INTEGER,
+      campaign_item_id INTEGER,
+      statut VARCHAR(20),
+      decide_le TIMESTAMPTZ,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS boite_etat (
+      dossier VARCHAR(100) PRIMARY KEY,
+      uid_validity TEXT,
+      dernier_uid BIGINT DEFAULT 0,
+      releve_le TIMESTAMPTZ
+    );
+  `);
 
   // Journal CENTRAL des emails sortants. email_tracking ne couvrait que la
   // prospection, et les envois differes non rattaches a un prospect

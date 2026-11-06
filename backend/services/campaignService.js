@@ -55,7 +55,8 @@ async function getCampaignFull(db, id) {
      ORDER BY CASE i.statut WHEN 'pret' THEN 0 WHEN 'a_verifier' THEN 1 WHEN 'valide' THEN 2 WHEN 'programme' THEN 3 WHEN 'envoye' THEN 4 ELSE 5 END, i.id`,
     [id]
   );
-  return { campaign, items, stats: await stats(db, id) };
+  const entonnoir = await require('./entonnoirService').entonnoir(db, id).catch((e) => { console.error('[Campagnes] entonnoir :', e.message); return null; });
+  return { campaign, items, stats: await stats(db, id), entonnoir };
 }
 
 // Statistiques prioritaires : réponses, rendez-vous, contrats. Les clics en dernier (plus d'ouvertures).
@@ -88,7 +89,7 @@ async function stats(db, id) {
     echecs: (byStatut.echec || 0) + (byStatut.rebond || 0),
     oppositions: byStatut.oppose || 0,
     clics,
-    note: 'Réponses, rebonds et oppositions différés ne sont pas détectés automatiquement : à marquer à la main sur la ligne.'
+    note: "Réponses et rebonds : lus dans la boîte d'envoi si elle est configurée (IMAP), sinon à marquer à la main sur la ligne. Les refus sont toujours soumis à confirmation."
   };
 }
 

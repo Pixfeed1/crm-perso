@@ -11,6 +11,8 @@ import { FiSend, FiPlus, FiTrash2, FiArrowLeft, FiCheck, FiCheckCircle, FiAlertT
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { campagnesAPI, emailTemplatesAPI, emailSignaturesAPI } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
+import EntonnoirCampagne from './EntonnoirCampagne';
+import BoitePanel from './BoitePanel';
 
 const STATUT_CAMPAGNE = {
   brouillon: { cls: 'bg-neutral-bg text-neutral-text', label: 'Brouillon' },
@@ -63,7 +65,7 @@ const CampaignList = ({ onOpen }) => {
             <h3 className="text-sm font-semibold text-text-primary flex items-center gap-2"><FiSend size={15} /> Campagnes de prospection</h3>
             <p className="text-xs text-text-muted mt-1 max-w-2xl">
               Prépare depuis le Crawl ou la liste des Prospects, relis chaque email, valide, puis programme à cadence lente.
-              Rien ne part sans ta validation. Les réponses, rebonds et oppositions différés ne sont pas détectés automatiquement : ils se marquent à la main sur la ligne.
+              Rien ne part sans ta validation. Les réponses et les rebonds sont lus dans la boîte d'envoi quand elle est configurée ; les refus te sont toujours soumis.
             </p>
           </div>
           {creating ? (
@@ -77,6 +79,7 @@ const CampaignList = ({ onOpen }) => {
           )}
         </div>
       </div>
+      <BoitePanel />
       {list.length === 0 ? (
         <div className="text-center py-12 bg-surface/30 rounded-lg border border-border">
           <FiSend className="w-12 h-12 mx-auto text-text-muted mb-3" />
@@ -447,6 +450,8 @@ const CampaignView = ({ id, onBack }) => {
           )}
         </div>
       )}
+
+      <EntonnoirCampagne entonnoir={data.entonnoir} />
 
       {/* Étapes 1 et 2 : lignes classées, relecture */}
       <div className="flex flex-wrap items-center gap-2 mb-3">

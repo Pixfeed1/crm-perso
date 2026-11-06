@@ -349,6 +349,8 @@ async function startServer() {
   maintenanceReminderWorker.start(); // Tous les jours à 9h00
   // Liste « à supprimer » : préparée le 1er du mois, jamais appliquée sans validation.
   require('./services/purgeService').start(app.locals.db);
+  // Boîte d'envoi : réponses et rebonds relevés toutes les 15 min (si IMAP_* est réglé dans .env).
+  require('./services/boiteService').start(app.locals.db);
   // Prélèvements : les fiches restées « en attente » sont relues chez Stripe (webhook manqué)
   require('./services/maintenanceBillingService').startSyncEnAttente(app.locals.db);
 

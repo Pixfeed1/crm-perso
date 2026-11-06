@@ -192,7 +192,7 @@ test('parcours complet : préparer, relire, programmer, hooks du worker, pause a
     await assert.rejects(S.schedule(db, c4.id, { debut: 'pas une date' }), /invalide/);
     // Statistiques : réponses et contrats avant les ouvertures.
     const st = await S.stats(db, c.id);
-    assert.equal(st.envoyes, 1); assert.match(st.note, /pas détectés automatiquement/);
+    assert.equal(st.envoyes, 1); assert.match(st.note, /lus dans la boîte d'envoi.*refus sont toujours soumis/);
   });
 });
 
