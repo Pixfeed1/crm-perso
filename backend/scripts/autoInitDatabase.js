@@ -2028,6 +2028,30 @@ async function ensureInteractionsColumns(client) {
     );
   `);
   await client.query('ALTER TABLE leads ADD COLUMN IF NOT EXISTS purge_garder_jusqu_au DATE;');
+  // Lot 5 : statut unique. L'ancien statut Kanban est archivé ici par scripts/migrer-statuts.js
+  // (simulation par défaut, --appliquer pour écrire) : rien n'est perdu.
+  await client.query('ALTER TABLE leads ADD COLUMN IF NOT EXISTS ancien_statut_kanban VARCHAR(50);');
+  await client.query('ALTER TABLE leads ADD COLUMN IF NOT EXISTS statuts_fusionnes_le TIMESTAMPTZ;');
+  // Archive de l'ancien statut Kanban AVANT que la synchro ci-dessous ne le réécrive (copie seule,
+  // rien n'est modifié ; une fois archivé, on n'y touche plus).
+  await client.query('UPDATE leads SET ancien_statut_kanban = status WHERE ancien_statut_kanban IS NULL AND status IS NOT NULL;');
+  // Le statut historique `status` suit désormais relation_status, quel que soit le code qui le modifie
+  // (campagnes, refus, Suivi, conversion en client).
+  await client.query(`
+    CREATE OR REPLACE FUNCTION leads_status_depuis_relation() RETURNS trigger AS $$
+    BEGIN
+      IF NEW.relation_status IS NOT NULL AND (TG_OP = 'INSERT' OR NEW.relation_status IS DISTINCT FROM OLD.relation_status) THEN
+        NEW.status := CASE NEW.relation_status
+          WHEN 'nouveau' THEN 'nouveau' WHEN 'a_contacter' THEN 'nouveau' WHEN 'contacte' THEN 'contacte'
+          WHEN 'en_discussion' THEN 'contacte' WHEN 'devis_envoye' THEN 'négociation' WHEN 'gagne' THEN 'client'
+          WHEN 'perdu' THEN 'perdu' WHEN 'pas_business' THEN 'pas_business' ELSE NEW.status END;
+      END IF;
+      IF TG_OP = 'INSERT' AND NEW.ancien_statut_kanban IS NULL THEN NEW.ancien_statut_kanban := NEW.status; END IF;
+      RETURN NEW;
+    END $$ LANGUAGE plpgsql;
+  `);
+  await client.query('DROP TRIGGER IF EXISTS trg_leads_status_depuis_relation ON leads;');
+  await client.query('CREATE TRIGGER trg_leads_status_depuis_relation BEFORE INSERT OR UPDATE OF relation_status ON leads FOR EACH ROW EXECUTE FUNCTION leads_status_depuis_relation();');
   // Plateforme (techno du site) sur les contacts, pour le filtre plateforme du cockpit Suivi.
   await client.query('ALTER TABLE leads ADD COLUMN IF NOT EXISTS platform VARCHAR(50);');
   await client.query('ALTER TABLE crm_clients ADD COLUMN IF NOT EXISTS platform VARCHAR(50);');

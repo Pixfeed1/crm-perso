@@ -16,6 +16,15 @@ export const RELATION_STATUSES = [
 export const statusMeta = (key) =>
   RELATION_STATUSES.find((s) => s.key === key) || RELATION_STATUSES[0];
 
+// Statut unique d'une fiche (lot 5) : relation_status ; à défaut, l'ancien statut Kanban converti.
+const LEGACY_TO_RELATION = {
+  new: 'nouveau', nouveau: 'nouveau', contacted: 'contacte', contacte: 'contacte',
+  prospect: 'en_discussion', proposal: 'en_discussion', qualified: 'en_discussion', 'qualifié': 'en_discussion',
+  negotiation: 'devis_envoye', 'négociation': 'devis_envoye', won: 'gagne', client: 'gagne',
+  lost: 'perdu', perdu: 'perdu', pas_business: 'pas_business'
+};
+export const relationOf = (lead) => (lead && (lead.relation_status || LEGACY_TO_RELATION[lead.status])) || 'nouveau';
+
 export const REACHED_OPTIONS = [
   { key: 'joint', label: 'Joint', verb: 'joint' },
   { key: 'pas_reponse', label: 'Pas de réponse', verb: 'pas de réponse' },

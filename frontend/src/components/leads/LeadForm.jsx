@@ -5,6 +5,7 @@ import { FiBriefcase, FiUser } from 'react-icons/fi';
 import CompanyAutocomplete from '../common/CompanyAutocomplete';
 import TemplateSelector from '../common/TemplateSelector';
 import { templateCategories } from '../../services/templates';
+import { RELATION_STATUSES, relationOf } from '../../utils/relationStatus';
 
 const LeadForm = ({ lead = {}, onSave, onCancel }) => {
   // État du formulaire avec valeurs par défaut ou existantes
@@ -12,7 +13,7 @@ const LeadForm = ({ lead = {}, onSave, onCancel }) => {
     name: lead.name || '',
     company: lead.company || '',
     type: lead.type || 'company',
-    status: lead.status || 'nouveau',
+    relation_status: relationOf(lead),
     source: lead.source || '',
     facebook_url: lead.facebook_url || '',
     instagram_url: lead.instagram_url || '',
@@ -23,15 +24,8 @@ const LeadForm = ({ lead = {}, onSave, onCancel }) => {
   const [submitting, setSubmitting] = useState(false);
 
   // Options de statut
-  const statusOptions = [
-    { value: 'nouveau', label: 'Nouveau' },
-    { value: 'contacte', label: 'Contacté' },
-    { value: 'prospect', label: 'Prospect' },
-    { value: 'qualifié', label: 'Qualifié' },
-    { value: 'négociation', label: 'Négociation' },
-    { value: 'client', label: 'Client' },
-    { value: 'perdu', label: 'Perdu' }
-  ];
+  // Statut unique (le même que le Suivi, les campagnes et le Kanban).
+  const statusOptions = RELATION_STATUSES.map((s) => ({ value: s.key, label: s.label }));
 
   // Options de source
   const sourceOptions = [
@@ -205,13 +199,13 @@ const LeadForm = ({ lead = {}, onSave, onCancel }) => {
 
           {/* Statut */}
           <div>
-            <label htmlFor="status" className="block text-xs sm:text-sm font-medium text-text-secondary mb-1">
+            <label htmlFor="relation_status" className="block text-xs sm:text-sm font-medium text-text-secondary mb-1">
               Statut
             </label>
             <select
-              id="status"
-              name="status"
-              value={formData.status}
+              id="relation_status"
+              name="relation_status"
+              value={formData.relation_status}
               onChange={handleInputChange}
               className="w-full bg-surface/50 border border-border rounded-lg px-3 py-2 sm:px-4 sm:py-2 text-text-primary text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
             >

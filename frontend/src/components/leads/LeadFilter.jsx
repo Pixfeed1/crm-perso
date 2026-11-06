@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiSearch, FiX, FiFilter, FiArrowUp, FiArrowDown } from 'react-icons/fi';
+import { RELATION_STATUSES } from '../../utils/relationStatus';
 
 const LeadFilter = ({ filters, setFilters, onSort, sortField, sortDirection, isKanbanView = false, leads = [] }) => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -15,13 +16,7 @@ const LeadFilter = ({ filters, setFilters, onSort, sortField, sortDirection, isK
   // Options de statut (alignées avec LeadForm = valeurs réellement stockées)
   const statusOptions = [
     { value: 'all', label: 'Tous les statuts' },
-    { value: 'nouveau', label: 'Nouveau' },
-    { value: 'contacte', label: 'Contacté' },
-    { value: 'prospect', label: 'Prospect' },
-    { value: 'qualifié', label: 'Qualifié' },
-    { value: 'négociation', label: 'Négociation' },
-    { value: 'client', label: 'Client' },
-    { value: 'perdu', label: 'Perdu' }
+    ...RELATION_STATUSES.map((s) => ({ value: s.key, label: s.label }))
   ];
 
   // Options de type

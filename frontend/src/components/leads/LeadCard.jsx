@@ -2,49 +2,9 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { FiMapPin } from 'react-icons/fi';
+import { statusMeta, relationOf } from '../../utils/relationStatus';
 
 const LeadCard = ({ lead, isSelected, onClick }) => {
-  // Configuration des couleurs de statut
-  const statusConfig = {
-    nouveau: {
-      bg: 'bg-blue-500/20',
-      text: 'text-blue-300',
-      border: 'border-blue-500/30'
-    },
-    prospect: {
-      bg: 'bg-purple-500/20',
-      text: 'text-purple-300',
-      border: 'border-purple-500/30'
-    },
-    qualifié: {
-      bg: 'bg-emerald-500/20',
-      text: 'text-emerald-300',
-      border: 'border-emerald-500/30'
-    },
-    négociation: {
-      bg: 'bg-amber-500/20',
-      text: 'text-amber-300',
-      border: 'border-amber-500/30'
-    },
-    client: {
-      bg: 'bg-teal-500/20',
-      text: 'text-teal-300',
-      border: 'border-teal-500/30'
-    },
-    perdu: {
-      bg: 'bg-rose-500/20',
-      text: 'text-rose-300',
-      border: 'border-rose-500/30'
-    }
-  };
-
-  // Valeurs par défaut si le statut n'est pas configuré
-  const statusStyle = statusConfig[lead.status] || {
-    bg: 'bg-gray-500/20',
-    text: 'text-text-secondary',
-    border: 'border-gray-500/30'
-  };
-
   // Format de la date
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -75,8 +35,8 @@ const LeadCard = ({ lead, isSelected, onClick }) => {
       <div className="relative z-10">
         {/* En-tête avec type et date */}
         <div className="flex justify-between items-start mb-2">
-          <div className={`text-xs px-2 py-1 rounded-full ${statusStyle.bg} ${statusStyle.text} font-medium`}>
-            {lead.status.charAt(0).toUpperCase() + lead.status.slice(1)}
+          <div className={`text-xs px-2 py-1 rounded-full font-medium ${statusMeta(relationOf(lead)).cls}`}>
+            {statusMeta(relationOf(lead)).label}
           </div>
           <div className="text-xs text-text-muted">
             {formatDate(lead.created_at)}

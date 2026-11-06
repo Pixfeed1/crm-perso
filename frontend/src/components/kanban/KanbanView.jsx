@@ -1,27 +1,17 @@
 // src/components/kanban/KanbanView.jsx
 //
-// Vue Kanban des prospects. Colonnes = les VRAIS statuts du CRM (français, ceux de
-// LeadForm/LeadFilter/imports). Le drag & drop délègue la mise à jour au parent
+// Vue Kanban des prospects. Colonnes = le statut de relation unique (Suivi, campagnes, fiche). Le drag & drop délègue la mise à jour au parent
 // (onLeadUpdate -> API + état + toasts), un seul appel API. Charte : tokens de thème.
 import React, { useState, useEffect, useCallback } from 'react';
-import { FiUser, FiBriefcase, FiFileText, FiMessageCircle, FiCheckCircle, FiXCircle, FiTrendingUp } from 'react-icons/fi';
+import { FiUser, FiBriefcase, FiFileText, FiMessageCircle, FiCheckCircle, FiXCircle, FiTrendingUp, FiSlash } from 'react-icons/fi';
+import { RELATION_STATUSES, relationOf } from '../../utils/relationStatus';
 import KanbanColumn from './KanbanColumn';
 import KanbanCard from './KanbanCard';
 import { leadsAPI } from '../../services/api';
 
-// Anciens statuts anglais (code d'origine) -> statuts réels, pour ne perdre aucun lead.
-const LEGACY_STATUS = { new: 'nouveau', contacted: 'contacte', proposal: 'qualifié', negotiation: 'négociation', won: 'client', lost: 'perdu' };
-const normStatus = (s) => LEGACY_STATUS[s] || s;
-
-const COLUMNS = [
-  { id: 'nouveau', title: 'Nouveau', Icon: FiUser, chip: 'bg-neutral-bg text-neutral-text' },
-  { id: 'contacte', title: 'Contacté', Icon: FiMessageCircle, chip: 'bg-info-bg text-info-text' },
-  { id: 'prospect', title: 'Prospect', Icon: FiTrendingUp, chip: 'bg-accent/15 text-accent' },
-  { id: 'qualifié', title: 'Qualifié', Icon: FiBriefcase, chip: 'bg-warning-bg text-warning-text' },
-  { id: 'négociation', title: 'Négociation', Icon: FiFileText, chip: 'bg-warning-bg text-warning-text' },
-  { id: 'client', title: 'Client', Icon: FiCheckCircle, chip: 'bg-success-bg text-success-text' },
-  { id: 'perdu', title: 'Perdu', Icon: FiXCircle, chip: 'bg-danger-bg text-danger-text' }
-];
+// Lot 5 : une seule colonne par statut de relation (celui du Suivi et des campagnes).
+const ICONS = { nouveau: FiUser, a_contacter: FiUser, contacte: FiMessageCircle, en_discussion: FiTrendingUp, devis_envoye: FiFileText, gagne: FiCheckCircle, perdu: FiXCircle, pas_business: FiSlash };
+const COLUMNS = RELATION_STATUSES.map((s) => ({ id: s.key, title: s.label, Icon: ICONS[s.key] || FiBriefcase, chip: s.cls }));
 
 const KanbanView = ({ leads, onLeadUpdate, onLeadClick }) => {
   const [draggedLead, setDraggedLead] = useState(null);
@@ -40,20 +30,20 @@ const KanbanView = ({ leads, onLeadUpdate, onLeadClick }) => {
 
   // Organiser les leads par statut (statuts anglais résiduels ramenés vers les français).
   const leadsByStatus = COLUMNS.reduce((acc, column) => {
-    acc[column.id] = leads.filter((lead) => normStatus(lead.status) === column.id);
+    acc[column.id] = leads.filter((lead) => relationOf(lead) === column.id);
     return acc;
   }, {});
 
   const handleDragOver = (e) => e.preventDefault(); // nécessaire pour autoriser le drop
 
   const handleDrop = async (newStatus) => {
-    if (!draggedLead || normStatus(draggedLead.status) === newStatus) {
+    if (!draggedLead || relationOf(draggedLead) === newStatus) {
       setDraggedLead(null);
       return;
     }
     try {
       // Le parent fait l'appel API + met à jour l'état + affiche le toast d'erreur.
-      await onLeadUpdate(draggedLead.id, { status: newStatus });
+      await onLeadUpdate(draggedLead.id, { relation_status: newStatus });
       fetchStats();
     } catch (error) {
       // Déjà signalé par le parent (toast) : on annule juste le drop.
@@ -106,7 +96,7 @@ const KanbanView = ({ leads, onLeadUpdate, onLeadClick }) => {
               count={leadsByStatus[column.id].length}
               onDragOver={handleDragOver}
               onDrop={() => handleDrop(column.id)}
-              isDropTarget={!!draggedLead && normStatus(draggedLead.status) !== column.id}
+              isDropTarget={!!draggedLead && relationOf(draggedLead) !== column.id}
             >
               {leadsByStatus[column.id].map((lead) => (
                 <KanbanCard

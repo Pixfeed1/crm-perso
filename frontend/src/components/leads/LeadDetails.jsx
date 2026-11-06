@@ -1,7 +1,7 @@
 // src/components/leads/LeadDetails.jsx
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiStar, FiEye, FiCheckCircle, FiMessageCircle, FiAward, FiXCircle, FiHelpCircle, FiClipboard, FiBriefcase, FiUser, FiFileText, FiUsers, FiEdit2, FiTrash2, FiUserCheck, FiRefreshCw, FiAlertCircle } from 'react-icons/fi';
+import { FiEye, FiCheckCircle, FiXCircle, FiClipboard, FiBriefcase, FiUser, FiFileText, FiUsers, FiEdit2, FiTrash2, FiUserCheck, FiRefreshCw, FiAlertCircle } from 'react-icons/fi';
 import { leadsAPI, clientsAPI } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
 import { useConfirm } from '../../hooks/useConfirm';
@@ -12,6 +12,7 @@ import ContactForm from './ContactForm';
 import ContactFollowup from '../common/ContactFollowup';
 import ProspectEmails from './ProspectEmails';
 import RefusProspection from './RefusProspection';
+import { RELATION_STATUSES, statusMeta, relationOf } from '../../utils/relationStatus';
 import LeadForm from './LeadForm';
 import ConfirmModal from '../common/ConfirmModal';
 
@@ -100,57 +101,11 @@ const LeadDetails = ({ lead, autoCompose = false, onUpdate, onDelete, onAddConta
   };
 
   // Configuration des couleurs de statut
-  const statusConfig = {
-    nouveau: {
-      bg: 'bg-blue-500/20',
-      text: 'text-blue-300',
-      border: 'border-blue-500/30',
-      icon: <FiStar />
-    },
-    prospect: {
-      bg: 'bg-purple-500/20',
-      text: 'text-purple-300',
-      border: 'border-purple-500/30',
-      icon: <FiEye />
-    },
-    qualifié: {
-      bg: 'bg-emerald-500/20',
-      text: 'text-emerald-300',
-      border: 'border-emerald-500/30',
-      icon: <FiCheckCircle />
-    },
-    négociation: {
-      bg: 'bg-amber-500/20',
-      text: 'text-amber-300',
-      border: 'border-amber-500/30',
-      icon: <FiMessageCircle />
-    },
-    client: {
-      bg: 'bg-teal-500/20',
-      text: 'text-teal-300',
-      border: 'border-teal-500/30',
-      icon: <FiAward />
-    },
-    perdu: {
-      bg: 'bg-rose-500/20',
-      text: 'text-rose-300',
-      border: 'border-rose-500/30',
-      icon: <FiXCircle />
-    }
-  };
-
-  // Valeurs par défaut si le statut n'est pas configuré
-  const statusStyle = statusConfig[lead.status] || {
-    bg: 'bg-gray-500/20',
-    text: 'text-text-secondary',
-    border: 'border-gray-500/30',
-    icon: <FiHelpCircle />
-  };
   
   // Mise à jour du statut du lead
   const handleStatusChange = async (newStatus) => {
     try {
-      await onUpdate(lead.id, { status: newStatus });
+      await onUpdate(lead.id, { relation_status: newStatus });
     } catch (error) {
       console.error('Erreur lors de la mise à jour du statut:', error);
     }
@@ -304,7 +259,7 @@ const LeadDetails = ({ lead, autoCompose = false, onUpdate, onDelete, onAddConta
 
         <div className="flex space-x-2 flex-shrink-0">
           {/* Bouton "Convertir en client" - masqué si le lead est déjà client/gagné ou perdu */}
-          {!['client', 'won', 'perdu', 'lost'].includes(lead.status) && lead.relation_status !== 'gagne' && (
+          {!['gagne', 'perdu', 'pas_business'].includes(relationOf(lead)) && !['client', 'won'].includes(lead.status) && (
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -361,25 +316,23 @@ const LeadDetails = ({ lead, autoCompose = false, onUpdate, onDelete, onAddConta
 
               <div className="relative group">
                 <button
-                  className={`flex items-center px-2 sm:px-3 py-1 rounded-full ${statusStyle.bg} ${statusStyle.text} border ${statusStyle.border} text-xs sm:text-sm font-medium`}
+                  className={`flex items-center px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium ${statusMeta(relationOf(lead)).cls}`}
                 >
-                  <span className="mr-1 text-xs sm:text-sm text-text-primary">{statusStyle.icon}</span>
-                  {lead.status.charAt(0).toUpperCase() + lead.status.slice(1)}
+                  {statusMeta(relationOf(lead)).label}
                   <span className="ml-1">▼</span>
                 </button>
 
                 {/* Menu déroulant pour changer le statut */}
                 <div className="absolute right-0 mt-2 w-40 sm:w-48 bg-surface-muted border border-border rounded-lg shadow-lg z-50 overflow-hidden opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300">
-                  {Object.keys(statusConfig).map(status => (
+                  {RELATION_STATUSES.map(({ key, label }) => (
                     <button
-                      key={status}
+                      key={key}
                       className={`w-full text-left px-4 py-2 text-sm hover:bg-surface flex items-center ${
-                        lead.status === status ? 'bg-surface' : ''
+                        relationOf(lead) === key ? 'bg-surface' : ''
                       }`}
-                      onClick={() => handleStatusChange(status)}
+                      onClick={() => handleStatusChange(key)}
                     >
-                      <span className="mr-2">{statusConfig[status].icon}</span>
-                      {status.charAt(0).toUpperCase() + status.slice(1)}
+                      {label}
                     </button>
                   ))}
                 </div>

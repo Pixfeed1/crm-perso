@@ -428,13 +428,14 @@ const checkContactExists = (db, contactId, leadId) => {
  */
 const getKanbanStats = (db) => {
   return new Promise((resolve, reject) => {
+    // Lot 5 : calculées sur le statut unique (relation_status, celui du Suivi et du Kanban).
     const query = `
       SELECT
-        status,
+        COALESCE(relation_status, 'nouveau') AS status,
         COUNT(*) as count,
-        SUM(CASE WHEN budget IS NOT NULL THEN budget ELSE 0 END) as total_budget
+        0 as total_budget
       FROM leads
-      GROUP BY status
+      GROUP BY COALESCE(relation_status, 'nouveau')
     `;
 
     db.all(query, [], (err, stats) => {
@@ -442,41 +443,21 @@ const getKanbanStats = (db) => {
         return reject(err);
       }
 
-      const statsByStatus = {
-        new: { count: 0, total_budget: 0 },
-        contacted: { count: 0, total_budget: 0 },
-        proposal: { count: 0, total_budget: 0 },
-        negotiation: { count: 0, total_budget: 0 },
-        won: { count: 0, total_budget: 0 },
-        lost: { count: 0, total_budget: 0 }
-      };
-
+      const statsByStatus = {};
+      for (const k of ['nouveau', 'a_contacter', 'contacte', 'en_discussion', 'devis_envoye', 'gagne', 'perdu', 'pas_business']) statsByStatus[k] = { count: 0, total_budget: 0 };
       stats.forEach(stat => {
         if (statsByStatus[stat.status]) {
-          statsByStatus[stat.status] = {
-            count: parseInt(stat.count),
-            total_budget: parseFloat(stat.total_budget) || 0
-          };
+          statsByStatus[stat.status] = { count: parseInt(stat.count), total_budget: parseFloat(stat.total_budget) || 0 };
         }
       });
 
+      const n = (k) => statsByStatus[k].count;
       const totalLeads = stats.reduce((sum, stat) => sum + parseInt(stat.count), 0);
       const totalBudget = stats.reduce((sum, stat) => sum + (parseFloat(stat.total_budget) || 0), 0);
-
-      const activeLeads = statsByStatus.new.count +
-                          statsByStatus.contacted.count +
-                          statsByStatus.proposal.count +
-                          statsByStatus.negotiation.count;
-
-      const closedLeads = statsByStatus.won.count + statsByStatus.lost.count;
-
-      const winRate = closedLeads > 0
-        ? Math.round((statsByStatus.won.count / closedLeads) * 100)
-        : 0;
-
-      const conversionRate = totalLeads > 0
-        ? Math.round((statsByStatus.won.count / totalLeads) * 100)
-        : 0;
+      const activeLeads = n('nouveau') + n('a_contacter') + n('contacte') + n('en_discussion') + n('devis_envoye');
+      const closedLeads = n('gagne') + n('perdu');
+      const winRate = closedLeads > 0 ? Math.round((n('gagne') / closedLeads) * 100) : 0;
+      const conversionRate = totalLeads > 0 ? Math.round((n('gagne') / totalLeads) * 100) : 0;
 
       resolve({
         by_status: statsByStatus,

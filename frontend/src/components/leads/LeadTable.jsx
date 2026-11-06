@@ -2,6 +2,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { FiBriefcase, FiUser, FiMail, FiPhone } from 'react-icons/fi';
+import { statusMeta, relationOf } from '../../utils/relationStatus';
 
 const LeadTable = ({ leads, selectedLead, onSelectLead, checked = null, onToggleCheck = null, onToggleAll = null }) => {
   const statusConfig = {
@@ -63,9 +64,9 @@ const LeadTable = ({ leads, selectedLead, onSelectLead, checked = null, onToggle
                 <td className="px-4 py-4">
                   <div className="flex items-center gap-3">
                     <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                      lead.status === 'won'
+                      relationOf(lead) === 'gagne'
                         ? 'bg-green-500/20 text-green-400'
-                        : lead.status === 'lost'
+                        : relationOf(lead) === 'perdu'
                         ? 'bg-red-500/20 text-red-400'
                         : 'bg-indigo-500/20 text-indigo-400'
                     }`}>
@@ -125,10 +126,8 @@ const LeadTable = ({ leads, selectedLead, onSelectLead, checked = null, onToggle
 
                 {/* Statut */}
                 <td className="px-4 py-4">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${
-                    statusConfig[lead.status]?.color || 'bg-gray-500/20 text-text-secondary border-gray-500/30'
-                  }`}>
-                    {statusConfig[lead.status]?.label || lead.status}
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusMeta(relationOf(lead)).cls}`}>
+                    {statusMeta(relationOf(lead)).label}
                   </span>
                 </td>
               </motion.tr>

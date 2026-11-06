@@ -25,7 +25,7 @@ function emailAccounts() {
 const { problemesLisibles } = require('../utils/crawlAngles');
 const proofEmail = require('../services/proofEmailService');
 const creationEmail = require('../services/creationEmailService');
-const { statusForRelation, relationForStatus } = require('../utils/leadStatusSync');
+const { statusForRelation, relationForStatus, RELATIONS } = require('../utils/leadStatusSync');
 
 // Date du jour + N jours au format YYYY-MM-DD (pour la relance automatique).
 function inDays(n) {
@@ -413,10 +413,13 @@ router.get('/:id', async (req, res) => {
 // Créer un nouveau lead
 router.post('/', async (req, res) => {
   const db = req.app.locals.db;
-  const { name, company, type, status, source, notes, email, phone, facebook_url, instagram_url, score, tags, assigned_to } = req.body;
+  const { name, company, type, source, notes, email, phone, facebook_url, instagram_url, score, tags, assigned_to } = req.body;
+  // Statut unique : relation_status ; l'ancien `status` en est déduit (ou l'inverse pour les anciens appels).
+  const relation_status = RELATIONS.includes(req.body.relation_status) ? req.body.relation_status : (relationForStatus(req.body.status) || 'nouveau');
+  const status = statusForRelation(relation_status) || req.body.status || 'nouveau';
 
-  if (!name || !status) {
-    return res.status(400).json({ message: 'Nom et statut sont requis' });
+  if (!name) {
+    return res.status(400).json({ message: 'Le nom est requis' });
   }
 
   try {
@@ -436,6 +439,10 @@ router.post('/', async (req, res) => {
       assigned_to
     });
 
+    if (lead && lead.id) {
+      await db.pool.query('UPDATE leads SET relation_status = $1 WHERE id = $2', [relation_status, lead.id]).catch(() => {});
+      lead.relation_status = relation_status;
+    }
     res.status(201).json(lead);
   } catch (error) {
     console.error('Erreur lors de la création du lead:', error);
@@ -498,6 +505,9 @@ router.put('/:id', async (req, res) => {
   const db = req.app.locals.db;
   const { id } = req.params;
   const { name, company, type, status, source, notes, email, phone, facebook_url, instagram_url, relation_status } = req.body;
+  if (relation_status !== undefined && relation_status !== null && !RELATIONS.includes(relation_status)) {
+    return res.status(400).json({ message: `Statut inconnu (${RELATIONS.join(', ')})` });
+  }
 
   try {
     // Vérifier si le lead existe

@@ -22,6 +22,7 @@ import PurgeBanner from '../components/leads/PurgeBanner';
 import EmptyState from '../components/common/EmptyState';
 import ConfirmModal from '../components/common/ConfirmModal';
 import QuickEmail from '../components/common/QuickEmail';
+import { relationOf } from '../utils/relationStatus';
 
 const Leads = () => {
   const { toast } = useToast();
@@ -101,12 +102,12 @@ const Leads = () => {
     // Comptage par statut
     const byStatus = {};
     leadsData.forEach(lead => {
-      const status = lead.status || 'unknown';
+      const status = relationOf(lead);
       byStatus[status] = (byStatus[status] || 0) + 1;
     });
 
     // Taux de conversion (leads won / total leads)
-    const wonLeads = byStatus['won'] || 0;
+    const wonLeads = byStatus.gagne || 0;
     const conversionRate = total > 0 ? Math.round((wonLeads / total) * 100) : 0;
 
     setStats({
@@ -128,8 +129,8 @@ const Leads = () => {
       // Filtre par statut
       // "all" = tous les leads ACTIFS (exclut les leads perdus, archivés)
       const statusMatch = filters.status === 'all'
-        ? lead.status !== 'perdu'
-        : lead.status === filters.status;
+        ? relationOf(lead) !== 'perdu'
+        : relationOf(lead) === filters.status;
 
       // Filtre par type
       const typeMatch = filters.type === 'all' || lead.type === filters.type;
