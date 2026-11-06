@@ -346,6 +346,8 @@ async function startServer() {
   // Initialiser et démarrer le worker de rappel maintenance
   maintenanceReminderWorker.initialize(app.locals.db);
   maintenanceReminderWorker.start(); // Tous les jours à 9h00
+  // Liste « à supprimer » : préparée le 1er du mois, jamais appliquée sans validation.
+  require('./services/purgeService').start(app.locals.db);
   // Prélèvements : les fiches restées « en attente » sont relues chez Stripe (webhook manqué)
   require('./services/maintenanceBillingService').startSyncEnAttente(app.locals.db);
 

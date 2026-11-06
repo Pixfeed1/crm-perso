@@ -376,6 +376,21 @@ router.get('/', async (req, res) => {
 // secteur / source / angle. AVANT '/:id' pour ne pas être capturé par le paramètre.
 router.get('/targeting-stats', require('../controllers/leadTargetingController').getStats);
 
+// Liste mensuelle « à supprimer » (prospects sans contact depuis 3 ans). Rien n'est supprimé sans
+// POST /purge/:id/valider { supprimer: [lead_id…] } ; les lignes non cochées sont gardées un an.
+router.get('/purge', async (req, res) => {
+  try { res.json(await require('../services/purgeService').courante(req.app.locals.db)); }
+  catch (e) { res.status(500).json({ message: `Liste à supprimer illisible : ${e.message}` }); }
+});
+router.post('/purge/recalculer', async (req, res) => {
+  try { res.json(await require('../services/purgeService').proposer(req.app.locals.db, { recalculer: true })); }
+  catch (e) { res.status(500).json({ message: `Calcul impossible : ${e.message}` }); }
+});
+router.post('/purge/:id/valider', async (req, res) => {
+  try { res.json(await require('../services/purgeService').valider(req.app.locals.db, req.params.id, { supprimer: (req.body || {}).supprimer || [] })); }
+  catch (e) { res.status(e.status || 500).json({ message: e.status ? e.message : `Validation impossible : ${e.message}` }); }
+});
+
 // Obtenir un lead spécifique
 router.get('/:id', async (req, res) => {
   const db = req.app.locals.db;

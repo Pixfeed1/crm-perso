@@ -275,6 +275,10 @@ export const leadsAPI = {
   draftEmail: (id, opts = {}) => apiRequest(`/leads/${id}/draft-email`, 'POST', opts),
   reanalyze: (id) => apiRequest(`/leads/${id}/reanalyze`, 'POST', {}),
   setIdentite: (id, body) => apiRequest(`/leads/${id}/identite`, 'POST', body),
+  // Liste mensuelle « à supprimer » (sans contact depuis 3 ans), validée à la main.
+  getPurge: () => apiRequest('/leads/purge'),
+  recalculerPurge: () => apiRequest('/leads/purge/recalculer', 'POST', {}),
+  validerPurge: (id, supprimer) => apiRequest(`/leads/purge/${id}/valider`, 'POST', { supprimer }),
   // Refus de prospection par canal (ne plus écrire / ne plus appeler / refus total).
   getRefus: (id) => apiRequest(`/leads/${id}/refus`),
   addRefus: (id, body) => apiRequest(`/leads/${id}/refus`, 'POST', body),

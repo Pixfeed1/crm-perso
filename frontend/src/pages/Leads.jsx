@@ -18,6 +18,7 @@ import KanbanView from '../components/kanban/KanbanView';
 import ProspectionPanel from '../components/leads/ProspectionPanel';
 import OutreachPanel from '../components/leads/OutreachPanel';
 import TargetingStats from '../components/leads/TargetingStats';
+import PurgeBanner from '../components/leads/PurgeBanner';
 import EmptyState from '../components/common/EmptyState';
 import ConfirmModal from '../components/common/ConfirmModal';
 import QuickEmail from '../components/common/QuickEmail';
@@ -727,6 +728,8 @@ const Leads = () => {
         )}
 
         {/* Vue Prospection */}
+        <PurgeBanner onDone={async () => { try { const ls = await leadsAPI.getAll(); setLeads(ls); setFilteredLeads(ls); calculateStats(ls); } catch { /* liste rechargée au prochain affichage */ } }} />
+
         {view === 'prospection' ? (
           <ProspectionPanel
             onNavigate={setView}

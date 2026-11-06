@@ -2000,6 +2000,34 @@ async function ensureInteractionsColumns(client) {
   `);
   await client.query('CREATE INDEX IF NOT EXISTS idx_prospect_refus_lead ON prospect_refus (lead_id) WHERE retire_le IS NULL;');
   await client.query('CREATE INDEX IF NOT EXISTS idx_prospect_refus_domaine ON prospect_refus (domaine) WHERE retire_le IS NULL;');
+  // Liste mensuelle « à supprimer » (lot 4) : prospects sans contact depuis 3 ans, supprimés seulement
+  // après validation de Marc. Les lignes supprimées ne gardent que le domaine et les dates.
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS purge_propositions (
+      id SERIAL PRIMARY KEY,
+      mois CHAR(7) UNIQUE NOT NULL,
+      statut VARCHAR(20) DEFAULT 'a_valider',
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      calculee_le TIMESTAMPTZ,
+      traitee_le TIMESTAMPTZ,
+      supprimes INTEGER DEFAULT 0,
+      gardes INTEGER DEFAULT 0
+    );
+  `);
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS purge_lignes (
+      id SERIAL PRIMARY KEY,
+      proposition_id INTEGER REFERENCES purge_propositions(id) ON DELETE CASCADE,
+      lead_id INTEGER,
+      nom TEXT,
+      domaine TEXT,
+      email TEXT,
+      dernier_contact TIMESTAMPTZ,
+      decision VARCHAR(20),
+      decide_le TIMESTAMPTZ
+    );
+  `);
+  await client.query('ALTER TABLE leads ADD COLUMN IF NOT EXISTS purge_garder_jusqu_au DATE;');
   // Plateforme (techno du site) sur les contacts, pour le filtre plateforme du cockpit Suivi.
   await client.query('ALTER TABLE leads ADD COLUMN IF NOT EXISTS platform VARCHAR(50);');
   await client.query('ALTER TABLE crm_clients ADD COLUMN IF NOT EXISTS platform VARCHAR(50);');
