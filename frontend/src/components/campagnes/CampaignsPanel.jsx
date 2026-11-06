@@ -13,6 +13,7 @@ import { campagnesAPI, emailTemplatesAPI, emailSignaturesAPI } from '../../servi
 import { useToast } from '../../hooks/useToast';
 import EntonnoirCampagne from './EntonnoirCampagne';
 import BoitePanel from './BoitePanel';
+import AbTestPanel from './AbTestPanel';
 
 const STATUT_CAMPAGNE = {
   brouillon: { cls: 'bg-neutral-bg text-neutral-text', label: 'Brouillon' },
@@ -143,6 +144,7 @@ const ItemRow = ({ item, campaign, selected, onToggle, onChange, onReanalyze, on
             <span className="text-xs text-text-muted">{item.domain}{item.to_email ? ` · ${item.to_email}` : ''}</span>
             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${b.cls}`}>{b.label}</span>
             {item.mode && <span className="text-xs px-2 py-0.5 rounded-full bg-neutral-bg text-neutral-text">{item.mode}</span>}
+            {item.variante && <span className="text-xs px-2 py-0.5 rounded-full bg-accent/15 text-accent" title="Version du test A/B de la question finale">version {item.variante}</span>}
           </div>
           {item.raison && <div className={`text-xs mt-0.5 ${item.statut === 'a_verifier' ? 'text-warning-text' : 'text-text-muted'}`}>{item.raison}</div>}
           {item.preuve_signal && (
@@ -452,6 +454,8 @@ const CampaignView = ({ id, onBack }) => {
       )}
 
       <EntonnoirCampagne entonnoir={data.entonnoir} />
+      <AbTestPanel campaign={campaign} ab={data.ab} onChange={load}
+        verrouille={items.some((i) => i.sent_at || ['programme', 'envoye', 'repondu', 'rebond', 'oppose'].includes(i.statut))} />
 
       {/* Étapes 1 et 2 : lignes classées, relecture */}
       <div className="flex flex-wrap items-center gap-2 mb-3">

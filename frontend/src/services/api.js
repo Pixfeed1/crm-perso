@@ -1433,6 +1433,9 @@ export const campagnesAPI = {
   boite: () => apiRequest('/campagnes/boite'),
   releverBoite: () => apiRequest('/campagnes/boite/relever', 'POST', {}),
   confirmerBoite: (id, decision) => apiRequest(`/campagnes/boite/${id}/confirmer`, 'POST', { decision }),
+  // Test A/B de la question finale.
+  abPropositions: () => apiRequest('/campagnes/ab/propositions'),
+  setAb: (id, ab) => apiRequest(`/campagnes/${id}/ab`, 'PUT', { ab }),
   create: (payload) => apiRequest('/campagnes', 'POST', payload),
   get: (id) => apiRequest(`/campagnes/${id}`),
   update: (id, payload) => apiRequest(`/campagnes/${id}`, 'PATCH', payload),

@@ -325,6 +325,7 @@ const DATABASE_SCHEMA = {
       test_emails: 'TEXT',
       message: 'TEXT',                           // dernier événement (pause auto après échecs, arrêt…)
       echecs_consecutifs: 'INTEGER DEFAULT 0',
+      ab_question: 'JSONB',                      // test A/B de la question finale : { preuve, maintenance } (formulations B)
       // Réanalyse des sites à la préparation : l'email ne cite que ce qui est constaté ce jour-là.
       reanalyse_statut: 'VARCHAR(12)',          // en_cours | termine
       reanalyse_faits: 'INTEGER DEFAULT 0',
@@ -357,6 +358,8 @@ const DATABASE_SCHEMA = {
       preuve_url: 'TEXT',
       preuve_date: 'TIMESTAMP',
       identite: 'TEXT',
+      variante: 'CHAR(1)',                       // test A/B : A ou B (null = hors test)
+      question_a: 'TEXT',                        // question d'origine d'une ligne en version B
       scheduled_email_id: 'INTEGER',
       scheduled_at: 'TIMESTAMP',
       sent_at: 'TIMESTAMP',
@@ -1964,6 +1967,10 @@ async function ensureInteractionsColumns(client) {
   await client.query('CREATE INDEX IF NOT EXISTS idx_email_clics_tracking ON email_clics (tracking_id, clique_le);');
   // Lot 7 : email suivi rattaché à sa campagne (entonnoir), lecture de la boîte d'envoi.
   await client.query('ALTER TABLE email_tracking ADD COLUMN IF NOT EXISTS campaign_id INTEGER;');
+  // Test A/B de la question finale : réglage de la campagne, version et question d'origine par ligne.
+  await client.query('ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS ab_question JSONB;');
+  await client.query('ALTER TABLE campaign_items ADD COLUMN IF NOT EXISTS variante CHAR(1);');
+  await client.query('ALTER TABLE campaign_items ADD COLUMN IF NOT EXISTS question_a TEXT;');
   await client.query(`
     CREATE TABLE IF NOT EXISTS boite_messages (
       id SERIAL PRIMARY KEY,
