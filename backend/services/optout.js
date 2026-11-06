@@ -32,11 +32,13 @@ function unsubUrl(email) {
 }
 
 // Vrai si l'adresse s'est désinscrite (à vérifier AVANT tout envoi de prospection).
+// Inclut les refus « toute l'entreprise » : une adresse @domaine bloqué est refusée (lot 4).
 async function isOptedOut(db, email) {
   try {
     const r = await db.pool.query('SELECT 1 FROM email_optout WHERE email = $1 LIMIT 1', [norm(email)]);
-    return r.rows.length > 0;
+    if (r.rows.length > 0) return true;
   } catch { return false; }
+  return require('./refusService').domaineBloquePourEmail(db, norm(email)).catch(() => false);
 }
 
 async function addOptout(db, email, source = 'lien') {

@@ -117,6 +117,7 @@ const ItemRow = ({ item, campaign, selected, onToggle, onChange, onReanalyze, on
   const [reanalyzing, setReanalyzing] = useState(false);
   const [adresse, setAdresse] = useState('');
   const [reprise, setReprise] = useState(false);
+  const [opposition, setOpposition] = useState(null); // { entreprise } pendant la confirmation
   const sansAdresse = item.statut === 'exclu' && /^aucune adresse/i.test(item.raison || '');
   const reprendre = async (to_email) => { setReprise(true); try { await onReprendre(item.id, to_email); setAdresse(''); } finally { setReprise(false); } };
   const [open, setOpen] = useState(false);
@@ -179,7 +180,17 @@ const ItemRow = ({ item, campaign, selected, onToggle, onChange, onReanalyze, on
               <button onClick={() => act({ statut: 'rebond' })} className="px-2 py-1 text-xs rounded-lg bg-danger-bg text-danger-text hover:opacity-80" title="Email revenu en erreur : adresse bloquée">Rebond</button>
             </>
           )}
-          {['envoye', 'programme', 'repondu', 'valide', 'pret', 'a_verifier'].includes(item.statut) && <button onClick={() => act({ statut: 'oppose' })} className="px-2 py-1 text-xs rounded-lg bg-surface-strong text-danger-text hover:bg-border-strong" title="Opposition à la prospection : adresse bloquée définitivement, fiche fermée">Opposition</button>}
+          {['envoye', 'programme', 'repondu', 'valide', 'pret', 'a_verifier'].includes(item.statut) && !opposition && <button onClick={() => setOpposition({ entreprise: false })} className="px-2 py-1 text-xs rounded-lg bg-surface-strong text-danger-text hover:bg-border-strong" title="Opposition à la prospection : refus de toute sollicitation, adresse bloquée définitivement, fiche fermée">Opposition</button>}
+          {opposition && (
+            <span className="flex items-center gap-2 text-xs">
+              <label className="flex items-center gap-1 text-text-secondary cursor-pointer" title="Bloque aussi les autres fiches et toutes les adresses du domaine (jamais un webmail)">
+                <input type="checkbox" checked={opposition.entreprise} onChange={(e) => setOpposition({ entreprise: e.target.checked })} className="w-3.5 h-3.5 rounded border-border" />
+                toute l'entreprise{item.domain ? ` (${item.domain})` : ''}
+              </label>
+              <button onClick={() => { act({ statut: 'oppose', entreprise: opposition.entreprise }); setOpposition(null); }} className="px-2 py-1 rounded-lg bg-danger-bg text-danger-text hover:opacity-80">Confirmer l'opposition</button>
+              <button onClick={() => setOpposition(null)} className="px-2 py-1 rounded-lg text-text-muted">Annuler</button>
+            </span>
+          )}
         </div>
       </div>
       <AnimatePresence>

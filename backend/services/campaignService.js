@@ -11,6 +11,7 @@
 const { aujourdhuiParis, ajouterJoursOuvres } = require('../utils/joursOuvres');
 const scheduledEmailModel = require('../models/scheduledEmailModel');
 const optout = require('./optout');
+const refus = require('./refusService');
 const smtpErrors = require('../utils/smtpErrors');
 const proof = require('./proofEmailService');
 const crawl = require('../controllers/crawlController');
@@ -128,6 +129,8 @@ async function controles(db, lead, campaignId, { ignoreSelf = null } = {}) {
   const email = String(lead.email || '').trim();
   const out = { optout: false, dejaSollicite: null, autreCampagne: false, dejaEnvoyeCampagne: false };
   if (email) out.optout = await optout.isOptedOut(db, email);
+  // Refus de prospection « ne plus écrire » / « refus total » sur la fiche ou son entreprise.
+  if (!out.optout && lead.id) out.optout = await refus.bloque(db, lead.id, 'email');
   // Déjà sollicité : dernier email de prospection vers cette fiche ou cette adresse.
   const last = await db.pool.query(
     `SELECT MAX(d) AS d FROM (
@@ -276,7 +279,7 @@ const TRANSITIONS = {
   oppose: ['envoye', 'programme', 'repondu', 'valide', 'pret', 'a_verifier']
 };
 
-async function updateItem(db, campaignId, itemId, { subject, body, statut, raison, mode } = {}) {
+async function updateItem(db, campaignId, itemId, { subject, body, statut, raison, mode, entreprise } = {}) {
   const ir = await db.pool.query('SELECT * FROM campaign_items WHERE id = $1 AND campaign_id = $2', [itemId, campaignId]);
   const item = ir.rows[0];
   if (!item) throw Object.assign(new Error('Ligne introuvable'), { status: 404 });
@@ -311,6 +314,9 @@ async function updateItem(db, campaignId, itemId, { subject, body, statut, raiso
     if (statut === 'valide' && !item.body) throw Object.assign(new Error('Aucun email à valider sur cette ligne'), { status: 422 });
     // Blocages associés aux marquages manuels.
     if (statut === 'oppose' && item.to_email) await optout.addOptout(db, item.to_email, 'opposition');
+    if (statut === 'oppose' && item.lead_id) {
+      await refus.enregistrer(db, item.lead_id, { canal: 'tout', entreprise: entreprise === true, motif: raison || null, source: 'campagne' }).catch((e) => console.error('[Campagnes] refus :', e.message));
+    }
     if (statut === 'rebond' && item.to_email) await optout.addOptout(db, item.to_email, 'rebond');
     if (['repondu', 'rebond', 'oppose'].includes(statut) && item.scheduled_email_id) {
       await scheduledEmailModel.cancelScheduledEmail(db, item.scheduled_email_id).catch(() => {});
@@ -603,6 +609,7 @@ async function beforeSend(db, email) {
       }
     }
     if (item && item.lead_id) {
+      if (await refus.bloque(db, item.lead_id, 'email')) return { action: 'cancel', raison: 'refus de prospection enregistré sur la fiche' };
       const lead = (await db.pool.query('SELECT relation_status FROM leads WHERE id = $1', [item.lead_id])).rows[0];
       if (lead && ['gagne', 'perdu', 'pas_business', 'en_discussion'].includes(lead.relation_status)) return { action: 'cancel', raison: `fiche ${lead.relation_status} : le prospect a répondu ou est fermé` };
     }
@@ -620,7 +627,9 @@ async function afterSent(db, email) {
   if (c && c.relance_jours && !c.test_mode && email.related_type === 'lead' && email.related_id) {
     const ouverte = (await db.pool.query(
       `SELECT 1 FROM interactions WHERE contact_type = 'lead' AND contact_id = $1 AND followup_done = FALSE AND next_followup_date IS NOT NULL LIMIT 1`, [email.related_id])).rows[0];
-    if (!ouverte) {
+    // Pas de tâche sur un canal que le prospect a refusé (« ne plus appeler », refus total…).
+    const refuse = await refus.bloque(db, email.related_id, c.relance_canal || RELANCE_DEFAUT.canal);
+    if (!ouverte && !refuse) {
       const echeance = ajouterJoursOuvres(aujourdhuiParis(), c.relance_jours);
       await db.pool.query(
         `INSERT INTO interactions (contact_type, contact_id, type, date, notes, next_followup_date, next_followup_channel, followup_done)

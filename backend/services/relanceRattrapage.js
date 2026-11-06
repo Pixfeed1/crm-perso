@@ -32,6 +32,7 @@ async function planifier(db, { campagne = null, par_jour = 10, debut = null, can
     if (!r.fiche) { exclure('fiche introuvable'); continue; }
     if (FERMES.includes(r.relation_status)) { exclure(`fiche « ${r.relation_status} »`); continue; }
     if (r.to_email && await optout.isOptedOut(db, r.to_email)) { exclure('adresse désinscrite ou opposée'); continue; }
+    if (await require('./refusService').bloque(db, r.lead_id, canal)) { exclure(`refus de prospection (${canal})`); continue; }
     const ouverte = (await db.pool.query(
       `SELECT next_followup_date FROM interactions WHERE contact_type = 'lead' AND contact_id = $1 AND followup_done = FALSE AND next_followup_date IS NOT NULL ORDER BY next_followup_date LIMIT 1`,
       [r.lead_id])).rows[0];

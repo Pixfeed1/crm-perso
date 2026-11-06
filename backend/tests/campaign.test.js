@@ -72,6 +72,7 @@ test('parcours complet : préparer, relire, programmer, hooks du worker, pause a
     await pool.query('CREATE TABLE email_signatures (id SERIAL PRIMARY KEY, content TEXT, is_default BOOLEAN DEFAULT FALSE)');
     await pool.query("INSERT INTO email_signatures (content, is_default) VALUES ('<p>Marc, PixFeed</p>', TRUE)");
     await pool.query('CREATE TABLE email_tracking (id SERIAL PRIMARY KEY, token TEXT, contact_type TEXT, contact_id INT, to_email TEXT, subject TEXT, opens INT DEFAULT 0)');
+    await pool.query(`CREATE TABLE prospect_refus (id SERIAL PRIMARY KEY, lead_id INTEGER, domaine TEXT, canal VARCHAR(10) NOT NULL, motif TEXT, source VARCHAR(30) DEFAULT 'fiche', created_at TIMESTAMPTZ DEFAULT NOW(), retire_le TIMESTAMPTZ, retire_motif TEXT)`);
     process.env.OUTREACH_SENDER_NAME = 'Marc';
 
     // Quatre prospects : preuve fraîche, ancien crawl, désinscrit, déjà sollicité récemment.
@@ -145,7 +146,11 @@ test('parcours complet : préparer, relire, programmer, hooks du worker, pause a
     assert.equal((await S.beforeSend(db, se2)).action, 'skip');
     await S.resume(db, c2.id);
     assert.equal((await S.beforeSend(db, se2)).action, 'send');
-    await S.updateItem(db, c2.id, it2.id, { statut: 'oppose' });
+    await S.updateItem(db, c2.id, it2.id, { statut: 'oppose', entreprise: true });
+    // Opposition = refus de toute sollicitation ; « toute l'entreprise » bloque tout le domaine.
+    const rf = (await pool.query('SELECT canal, domaine, source FROM prospect_refus WHERE lead_id = $1 ORDER BY id', [l2])).rows;
+    assert.deepEqual(rf.map((x) => [x.canal, x.domaine, x.source]), [['tout', null, 'campagne'], ['tout', 'batterie4moto.fr', 'campagne']]);
+    assert.equal(await require('../services/optout').isOptedOut(db, 'commandes@batterie4moto.fr'), true);
     assert.equal((await pool.query('SELECT status FROM scheduled_emails WHERE id = $1', [se2.id])).rows[0].status, 'cancelled');
     assert.equal((await pool.query("SELECT COUNT(*)::int AS n FROM email_optout WHERE email = 'contact@batterie4moto.fr'")).rows[0].n, 1);
     assert.equal((await pool.query('SELECT relation_status FROM leads WHERE id = $1', [l2])).rows[0].relation_status, 'pas_business');

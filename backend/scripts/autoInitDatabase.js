@@ -1983,6 +1983,23 @@ async function ensureInteractionsColumns(client) {
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
   `);
+  // Refus de prospection par canal (lot 4) : ne plus écrire / ne plus appeler / refus total, pour une
+  // fiche ou tout un domaine d'entreprise. Jamais effacé : un retrait est daté et motivé.
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS prospect_refus (
+      id SERIAL PRIMARY KEY,
+      lead_id INTEGER,
+      domaine TEXT,
+      canal VARCHAR(10) NOT NULL CHECK (canal IN ('email', 'appel', 'tout')),
+      motif TEXT,
+      source VARCHAR(30) DEFAULT 'fiche',
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      retire_le TIMESTAMPTZ,
+      retire_motif TEXT
+    );
+  `);
+  await client.query('CREATE INDEX IF NOT EXISTS idx_prospect_refus_lead ON prospect_refus (lead_id) WHERE retire_le IS NULL;');
+  await client.query('CREATE INDEX IF NOT EXISTS idx_prospect_refus_domaine ON prospect_refus (domaine) WHERE retire_le IS NULL;');
   // Plateforme (techno du site) sur les contacts, pour le filtre plateforme du cockpit Suivi.
   await client.query('ALTER TABLE leads ADD COLUMN IF NOT EXISTS platform VARCHAR(50);');
   await client.query('ALTER TABLE crm_clients ADD COLUMN IF NOT EXISTS platform VARCHAR(50);');

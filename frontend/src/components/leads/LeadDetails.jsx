@@ -11,6 +11,7 @@ import ContactList from './ContactList';
 import ContactForm from './ContactForm';
 import ContactFollowup from '../common/ContactFollowup';
 import ProspectEmails from './ProspectEmails';
+import RefusProspection from './RefusProspection';
 import LeadForm from './LeadForm';
 import ConfirmModal from '../common/ConfirmModal';
 
@@ -577,6 +578,9 @@ const LeadDetails = ({ lead, autoCompose = false, onUpdate, onDelete, onAddConta
           (« Voir tout l'historique »). Remplace l'ancien « Historique des interactions »
           qui lisait une autre table (lead_interactions) et créait un doublon. */}
       <ContactFollowup contactType="lead" contactId={lead.id} phone={lead.phone} />
+
+      {/* Refus de prospection par canal (ne plus écrire / ne plus appeler / refus total) */}
+      <RefusProspection lead={lead} />
 
       {/* Emails : modèle éditable + signature, envoi immédiat ou programmé */}
       <ProspectEmails lead={lead} autoCompose={autoCompose} />

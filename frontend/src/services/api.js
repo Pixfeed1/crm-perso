@@ -275,6 +275,10 @@ export const leadsAPI = {
   draftEmail: (id, opts = {}) => apiRequest(`/leads/${id}/draft-email`, 'POST', opts),
   reanalyze: (id) => apiRequest(`/leads/${id}/reanalyze`, 'POST', {}),
   setIdentite: (id, body) => apiRequest(`/leads/${id}/identite`, 'POST', body),
+  // Refus de prospection par canal (ne plus écrire / ne plus appeler / refus total).
+  getRefus: (id) => apiRequest(`/leads/${id}/refus`),
+  addRefus: (id, body) => apiRequest(`/leads/${id}/refus`, 'POST', body),
+  retirerRefus: (refusId, raison) => apiRequest(`/leads/refus/${refusId}/retirer`, 'POST', { raison }),
   // Modèle du menu rempli côté serveur (identité, constat et portée de la preuve).
   remplirModele: (id, templateId) => apiRequest(`/leads/${id}/remplir-modele`, 'POST', { template_id: templateId }),
   getById: (id) => {

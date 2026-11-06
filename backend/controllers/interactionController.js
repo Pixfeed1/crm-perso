@@ -106,6 +106,14 @@ const interactionController = {
     const statusVal = relation_status && VALID_STATUS.includes(relation_status) ? relation_status : null;
     const channelVal = next_followup_date && next_followup_channel && VALID_CHANNELS.includes(next_followup_channel) ? next_followup_channel : null;
 
+    if (contact_type === 'lead' && next_followup_date) {
+      const refus = require('../services/refusService');
+      const canal = channelVal || 'appel';
+      if (await refus.bloque(db, contact_id, canal).catch(() => false)) {
+        return res.status(409).json({ message: `Relance impossible : refus de prospection enregistré (${canal === 'email' ? 'ne plus écrire' : canal === 'appel' || canal === 'sms' ? 'ne plus appeler' : 'refus de toute sollicitation'}).` });
+      }
+    }
+
     try {
       const { rows } = await db.pool.query(
         `INSERT INTO interactions (contact_type, contact_id, type, reached, date, notes, result, relation_status, next_followup_date, next_followup_channel, followup_done)
@@ -209,7 +217,7 @@ const interactionController = {
           const cr = await db.pool.query('SELECT relation_status FROM leads WHERE id = $1', [it.contact_id]);
           const rel = cr.rows[0] && cr.rows[0].relation_status;
           // On stoppe si le prospect a une issue (gagné/perdu) ou a été écarté / a répondu.
-          const stopped = STOP_CASCADE_STATUSES.includes(rel);
+          const stopped = STOP_CASCADE_STATUSES.includes(rel) || await require('../services/refusService').bloque(db, it.contact_id, 'email').catch(() => false);
           if (!stopped) {
             const nextStep = it.relance_step + 1;                 // 2
             const base = it.date ? new Date(it.date) : new Date(); // date du 1er email
@@ -357,6 +365,16 @@ const interactionController = {
            WHERE followup_done = FALSE AND next_followup_date IS NOT NULL
            ORDER BY contact_type, contact_id, next_followup_date ASC
          ),
+         refus AS (
+           SELECT l.id AS contact_id,
+                  bool_or(r.canal IN ('email', 'tout')) AS refus_email,
+                  bool_or(r.canal IN ('appel', 'tout')) AS refus_appel
+           FROM leads l
+           JOIN prospect_refus r ON r.retire_le IS NULL AND (r.lead_id = l.id OR (r.domaine IS NOT NULL AND (
+                  LOWER(COALESCE(l.email, '')) LIKE '%@' || r.domaine
+               OR regexp_replace(regexp_replace(LOWER(COALESCE(l.website, l.company, '')), '^https?://', ''), '^www\\.', '') ~ ('^' || replace(r.domaine, '.', '\\.') || '(/|$)'))))
+           GROUP BY l.id
+         ),
          mail AS (
            SELECT contact_id,
                   COALESCE(SUM(click_count), 0)::int AS clicks,
@@ -368,11 +386,13 @@ const interactionController = {
                 c.facebook_url, c.instagram_url,
                 n.next_followup, n.next_followup_channel, n.followup_id,
                 l.last_type, l.last_reached, l.last_date, l.last_result,
-                COALESCE(m.clicks, 0) AS email_clicks, m.last_click AS email_last_click
+                COALESCE(m.clicks, 0) AS email_clicks, m.last_click AS email_last_click,
+                COALESCE(rf.refus_email, FALSE) AS refus_email, COALESCE(rf.refus_appel, FALSE) AS refus_appel
          FROM contacts c
          LEFT JOIN last_ex l ON l.contact_type = c.contact_type AND l.contact_id = c.contact_id
          LEFT JOIN next_ex n ON n.contact_type = c.contact_type AND n.contact_id = c.contact_id
          LEFT JOIN mail m ON c.contact_type = 'lead' AND m.contact_id = c.contact_id
+         LEFT JOIN refus rf ON c.contact_type = 'lead' AND rf.contact_id = c.contact_id
          ORDER BY (n.next_followup IS NULL), n.next_followup ASC, l.last_date DESC NULLS LAST, c.contact_name ASC`
       );
 

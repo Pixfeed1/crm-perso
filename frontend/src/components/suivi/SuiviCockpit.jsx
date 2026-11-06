@@ -297,6 +297,12 @@ const SuiviCockpit = () => {
                         <span className={`text-sm font-medium text-text-primary truncate ${isPB ? 'line-through' : ''}`}>{r.contact_name || 'Contact'}</span>
                         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${sm.cls}`}>{sm.label}</span>
                         <span className="text-xs text-text-muted">{r.contact_type === 'lead' ? 'Prospect' : 'Client'}</span>
+                        {(r.refus_email || r.refus_appel) && (
+                          <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-danger-bg text-danger-text"
+                            title="Refus de prospection enregistré sur la fiche ou son entreprise">
+                            {r.refus_email && r.refus_appel ? 'Refus total' : r.refus_appel ? 'Ne plus appeler' : 'Ne plus écrire'}
+                          </span>
+                        )}
                         {r.email_clicks > 0 && (
                           <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-warning-bg text-warning-text"
                             title={`Lien cliqué ${r.email_clicks} fois`}>
@@ -322,7 +328,7 @@ const SuiviCockpit = () => {
                     <button onClick={() => setHistoryTarget({ contact_type: r.contact_type, contact_id: r.contact_id, name: r.contact_name })} className="p-2 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-strong" title="Voir l'historique des échanges"><FiClock size={15} /></button>
                     {!isPB && (
                       <>
-                        <button onClick={() => openLog(r, 'appel')} className="p-2 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-strong" title="Enregistrer un appel"><FiPhone size={15} /></button>
+                        <button onClick={() => openLog(r, 'appel')} className="p-2 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-strong" title={r.refus_appel ? 'Enregistrer un appel reçu (le prospect a refusé les appels : ne pas le rappeler)' : 'Enregistrer un appel'}><FiPhone size={15} className={r.refus_appel ? 'opacity-40' : ''} /></button>
                         <button onClick={() => openLog(r, 'email')} className="p-2 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-strong" title="Enregistrer un email"><FiMail size={15} /></button>
                         <button onClick={() => openLog(r, 'note')} className="p-2 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-strong" title="Ajouter une note"><FiFileText size={15} /></button>
                         {r.contact_type === 'lead' && r.relation_status !== 'en_discussion' && (

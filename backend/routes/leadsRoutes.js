@@ -177,10 +177,17 @@ router.post('/:id/send-email', async (req, res) => {
   const useGmail = from_account === 'gmail' && seoOutreach.isGmailConfigured();
   // RGPD : ne jamais réécrire à une adresse désinscrite.
   if (await optout.isOptedOut(db, to)) {
-    return res.status(409).json({ message: 'Ce contact s\'est désinscrit — envoi bloqué (RGPD).' });
+    return res.status(409).json({ message: 'Ce contact s\'est désinscrit ou a refusé la prospection : envoi bloqué.' });
+  }
+  const refusSvc = require('../services/refusService');
+  if (await refusSvc.bloque(db, id, 'email')) {
+    return res.status(409).json({ message: 'Refus de prospection enregistré sur cette fiche (ne plus écrire) : envoi bloqué.' });
   }
   const channels = ['appel', 'email', 'sms', 'linkedin', 'autre'];
   const followupChannel = next_followup_date && channels.includes(next_followup_channel) ? next_followup_channel : null;
+  if (followupChannel && await refusSvc.bloque(db, id, followupChannel)) {
+    return res.status(409).json({ message: `Relance par ${followupChannel} impossible : refus de prospection enregistré sur cette fiche.` });
+  }
   try {
     // Signature : celle fournie, sinon TOUJOURS la signature par défaut des Paramètres.
     const sig = signature || await defaultSignature(db);
@@ -267,6 +274,29 @@ router.post('/:id/identite', async (req, res) => {
   } catch (e) {
     res.status(e.status || 500).json({ message: e.status ? e.message : `Correction impossible : ${e.message}` });
   }
+});
+
+// Refus de prospection (lot 4).
+// GET  /api/leads/:id/refus                         -> état par canal
+// POST /api/leads/:id/refus { canal, entreprise, motif } -> enregistre (email | appel | tout)
+// POST /api/leads/refus/:refusId/retirer { raison }  -> retire (erreur de saisie, demande du prospect)
+router.get('/:id/refus', async (req, res) => {
+  try {
+    const e = await require('../services/refusService').etat(req.app.locals.db, req.params.id);
+    if (!e) return res.status(404).json({ message: 'Fiche introuvable' });
+    res.json(e);
+  } catch (e) { res.status(500).json({ message: `Lecture des refus impossible : ${e.message}` }); }
+});
+router.post('/:id/refus', async (req, res) => {
+  try {
+    const b = req.body || {};
+    res.json(await require('../services/refusService').enregistrer(req.app.locals.db, req.params.id, { canal: b.canal, entreprise: b.entreprise === true, motif: b.motif, source: 'fiche' }));
+  } catch (e) { res.status(e.status || 500).json({ message: e.status ? e.message : `Refus impossible à enregistrer : ${e.message}` }); }
+});
+router.post('/refus/:refusId/retirer', async (req, res) => {
+  try {
+    res.json(await require('../services/refusService').retirer(req.app.locals.db, req.params.refusId, { raison: (req.body || {}).raison }));
+  } catch (e) { res.status(e.status || 500).json({ message: e.status ? e.message : `Retrait impossible : ${e.message}` }); }
 });
 
 // POST /api/leads/:id/remplir-modele { template_id } : modèle du menu rempli par le serveur
