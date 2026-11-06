@@ -4,7 +4,7 @@
 // « Quand je veux aller vite » : destinataire tapé à la main, choix du compte
 // (serveur pro / Gmail), signature par défaut ajoutée. Options uniformisées avec
 // le reste de l'outil : copie (Cc), copie cachée (Cci), pièces jointes,
-// suivi ouverture/clic, et programmation d'envoi.
+// suivi des clics, et programmation d'envoi.
 //
 // Le bouton « Historique » ouvre l'historique GLOBAL de l'outil : la liste locale
 // précédente ne montrait pas les envois différés une fois partis, et ne permettait
@@ -136,7 +136,7 @@ const QuickEmail = ({ className = '' }) => {
                 <label className="flex items-center gap-2 text-sm text-text-secondary cursor-pointer">
                   <input type="checkbox" checked={track} onChange={(e) => setTrack(e.target.checked)}
                     className="w-4 h-4 rounded border-border" />
-                  Suivre l'ouverture et les clics
+                  Suivre les clics
                 </label>
 
                 <div className="space-y-2">

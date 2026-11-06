@@ -8,7 +8,7 @@
 // listé, filtrable, et surtout : on clique sur une ligne pour RELIRE le message.
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiMail, FiX, FiEye, FiMousePointer, FiPaperclip, FiAlertCircle, FiSearch, FiArrowLeft } from 'react-icons/fi';
+import { FiMail, FiX, FiMousePointer, FiPaperclip, FiAlertCircle, FiSearch, FiArrowLeft } from 'react-icons/fi';
 import DOMPurify from 'dompurify';
 import { emailHistoryAPI } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
@@ -109,12 +109,9 @@ const EmailHistory = ({ open, onClose }) => {
                         </span>
                       ) : (
                         <>
-                          {selected.open_count > 0
-                            ? <span className="text-xs text-success-text flex items-center gap-1"><FiEye size={12} /> ouvert {selected.open_count}×</span>
-                            : <span className="text-xs text-text-muted">non ouvert</span>}
-                          {selected.click_count > 0 && (
-                            <span className="text-xs text-info-text flex items-center gap-1"><FiMousePointer size={12} /> {selected.click_count} clic(s)</span>
-                          )}
+                          {selected.click_count > 0
+                            ? <span className="text-xs text-info-text flex items-center gap-1"><FiMousePointer size={12} /> {selected.click_count} clic(s)</span>
+                            : <span className="text-xs text-text-muted">aucun clic</span>}
                         </>
                       )}
                     </div>
@@ -175,10 +172,9 @@ const EmailHistory = ({ open, onClose }) => {
                               {e.attachments_count > 0 && <FiPaperclip size={12} className="text-text-muted" />}
                               {e.status === 'failed'
                                 ? <span className="text-xs text-danger-text flex items-center gap-1"><FiAlertCircle size={12} /> échec</span>
-                                : e.open_count > 0
-                                  ? <span className="text-xs text-success-text flex items-center gap-1"><FiEye size={12} /> {e.open_count}</span>
-                                  : <span className="text-xs text-text-muted">non ouvert</span>}
-                              {e.click_count > 0 && <span className="text-xs text-info-text flex items-center gap-1"><FiMousePointer size={12} /> {e.click_count}</span>}
+                                : e.click_count > 0
+                                  ? <span className="text-xs text-info-text flex items-center gap-1"><FiMousePointer size={12} /> {e.click_count}</span>
+                                  : null}
                             </span>
                           </div>
                         </button>

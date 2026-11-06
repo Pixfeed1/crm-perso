@@ -8,7 +8,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   FiLink, FiPlus, FiTrash2, FiPlay, FiRefreshCw, FiX, FiLoader, FiCpu,
-  FiSend, FiCheckCircle, FiSlash, FiExternalLink, FiZap, FiEye, FiSearch,
+  FiSend, FiCheckCircle, FiSlash, FiExternalLink, FiZap, FiSearch,
   FiShield, FiAlertTriangle, FiInfo, FiCheck, FiClock, FiMail, FiEdit3, FiUserPlus, FiMessageCircle
 } from 'react-icons/fi';
 import { seoBacklinksAPI } from '../../services/api';
@@ -365,7 +365,7 @@ const BacklinksTab = () => {
                           </a>
                           {t.title && <div className="text-xs text-text-muted truncate max-w-xs">{t.title}</div>}
                           {t.via === 'both' && <span className="text-xs px-1.5 py-0.5 rounded-full bg-success-bg text-success-text ml-1" title="Trouvé par les 2 moteurs (graphe + boule de neige)">×2</span>}
-                          {(t.open_count > 0) && <span className="text-xs px-1.5 py-0.5 rounded-full bg-warning-bg text-warning-text ml-1" title="Email ouvert"><FiEye size={10} className="inline" /> ouvert{t.click_count > 0 ? ' · cliqué' : ''}</span>}
+                          {(t.click_count > 0) && <span className="text-xs px-1.5 py-0.5 rounded-full bg-warning-bg text-warning-text ml-1" title="Lien de l'email cliqué">cliqué</span>}
                           {(t.concurrent || t.concurrent_probable) && (
                             <span className="text-xs px-1.5 py-0.5 rounded-full bg-danger-bg text-danger-text ml-1 inline-flex items-center gap-1" title={t.concurrent_motif || ''}>
                               <FiAlertTriangle size={10} /> {t.concurrent ? 'concurrent' : 'concurrent ?'}

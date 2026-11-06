@@ -322,7 +322,7 @@ const CampaignView = ({ id, onBack }) => {
               {campaign.test_mode && <span className="text-xs px-2 py-0.5 rounded-full bg-warning-bg text-warning-text">mode test</span>}
             </div>
             <div className="text-xs text-text-muted mt-0.5">
-              {stats.total} ligne{stats.total > 1 ? 's' : ''} · <span className="text-text-primary">{stats.envoyes} envoyé{stats.envoyes > 1 ? 's' : ''}</span> · <span className="text-success-text">{stats.reponses} réponse{stats.reponses > 1 ? 's' : ''}</span> · {stats.discussions} en discussion · {stats.rendez_vous} rendez-vous · <span className="text-success-text">{stats.contrats} contrat{stats.contrats > 1 ? 's' : ''}</span> · {stats.echecs} échec{stats.echecs > 1 ? 's' : ''}{stats.ouvertures != null ? ` · ${stats.ouvertures} ouvertures` : ''}
+              {stats.total} ligne{stats.total > 1 ? 's' : ''} · <span className="text-text-primary">{stats.envoyes} envoyé{stats.envoyes > 1 ? 's' : ''}</span> · <span className="text-success-text">{stats.reponses} réponse{stats.reponses > 1 ? 's' : ''}</span> · {stats.discussions} en discussion · {stats.rendez_vous} rendez-vous · <span className="text-success-text">{stats.contrats} contrat{stats.contrats > 1 ? 's' : ''}</span> · {stats.echecs} échec{stats.echecs > 1 ? 's' : ''}{stats.clics != null ? ` · ${stats.clics} clic${stats.clics > 1 ? 's' : ''}` : ''}
             </div>
             {campaign.message && <div className="text-xs text-warning-text mt-0.5 flex items-center gap-1"><FiAlertTriangle size={12} /> {campaign.message}</div>}
           </div>

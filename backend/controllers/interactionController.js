@@ -359,9 +359,8 @@ const interactionController = {
          ),
          mail AS (
            SELECT contact_id,
-                  COALESCE(SUM(open_count), 0)::int AS opens,
                   COALESCE(SUM(click_count), 0)::int AS clicks,
-                  MAX(last_open_at) AS last_open
+                  MAX(last_click_at) AS last_click
            FROM email_tracking WHERE contact_type = 'lead'
            GROUP BY contact_id
          )
@@ -369,7 +368,7 @@ const interactionController = {
                 c.facebook_url, c.instagram_url,
                 n.next_followup, n.next_followup_channel, n.followup_id,
                 l.last_type, l.last_reached, l.last_date, l.last_result,
-                COALESCE(m.opens, 0) AS email_opens, COALESCE(m.clicks, 0) AS email_clicks, m.last_open AS email_last_open
+                COALESCE(m.clicks, 0) AS email_clicks, m.last_click AS email_last_click
          FROM contacts c
          LEFT JOIN last_ex l ON l.contact_type = c.contact_type AND l.contact_id = c.contact_id
          LEFT JOIN next_ex n ON n.contact_type = c.contact_type AND n.contact_id = c.contact_id
@@ -395,7 +394,7 @@ const interactionController = {
           && (today - dayOf(r.last_date)) > 90 * 86400000).length,
         pas_business: rows.filter((r) => r.relation_status === 'pas_business').length,
         // Prospects « chauds » : ont ouvert (ou cliqué) au moins un email de prospection.
-        ouverts: rows.filter((r) => active(r) && (r.email_opens > 0 || r.email_clicks > 0)).length
+        ouverts: rows.filter((r) => active(r) && r.email_clicks > 0).length
       };
 
       res.json({ stats, contacts: rows });

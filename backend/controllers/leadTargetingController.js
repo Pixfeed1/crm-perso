@@ -52,13 +52,12 @@ const leadTargetingController = {
           GROUP BY contact_id
         ),
         mail AS (
-          SELECT contact_id, COUNT(*)::int AS emails, bool_or(open_count > 0) AS ouvert, bool_or(click_count > 0) AS clique
+          SELECT contact_id, COUNT(*)::int AS emails, bool_or(click_count > 0) AS clique
           FROM email_tracking WHERE contact_type = 'lead' GROUP BY contact_id
         ),
         base AS (
           SELECT l.id, l.relation_status, l.score,
                  (c.contact_id IS NOT NULL OR COALESCE(m.emails, 0) > 0) AS contacte,
-                 COALESCE(m.ouvert, FALSE) AS ouvert,
                  COALESCE(m.clique, FALSE) AS clique,
                  (COALESCE(c.repondu_echange, FALSE) OR l.relation_status IN ('en_discussion', 'devis_envoye', 'gagne')) AS repondu,
                  (l.relation_status = 'gagne') AS gagne,
@@ -73,7 +72,6 @@ const leadTargetingController = {
         SELECT groupe,
                COUNT(*)::int AS total,
                COUNT(*) FILTER (WHERE contacte)::int AS contactes,
-               COUNT(*) FILTER (WHERE ouvert)::int AS ouverts,
                COUNT(*) FILTER (WHERE clique)::int AS cliques,
                COUNT(*) FILTER (WHERE repondu)::int AS repondus,
                COUNT(*) FILTER (WHERE gagne)::int AS gagnes,
@@ -86,16 +84,16 @@ const leadTargetingController = {
       const enrich = (r) => ({
         ...r,
         libelle: by === 'angle' ? (ANGLE_LABELS[r.groupe] || r.groupe) : r.groupe,
-        taux_ouverture: pct(r.ouverts, r.contactes),
+        taux_clic: pct(r.cliques, r.contactes),
         taux_reponse: pct(r.repondus, r.contactes),
         taux_gagne: pct(r.gagnes, r.contactes),
         taux_refus: pct(r.refus, r.contactes),
         echantillon_faible: r.contactes < 5
       });
       const total = rows.reduce((acc, r) => {
-        for (const k of ['total', 'contactes', 'ouverts', 'cliques', 'repondus', 'gagnes', 'refus']) acc[k] += r[k];
+        for (const k of ['total', 'contactes', 'cliques', 'repondus', 'gagnes', 'refus']) acc[k] += r[k];
         return acc;
-      }, { groupe: 'Tous', total: 0, contactes: 0, ouverts: 0, cliques: 0, repondus: 0, gagnes: 0, refus: 0, score_moyen: null });
+      }, { groupe: 'Tous', total: 0, contactes: 0, cliques: 0, repondus: 0, gagnes: 0, refus: 0, score_moyen: null });
       res.json({ by, dimensions: Object.keys(DIMENSIONS), rows: rows.map(enrich), global: enrich(total) });
     } catch (error) {
       console.error('[LeadTargeting] stats:', error.message);

@@ -97,7 +97,7 @@ const TargetingStats = () => {
                     <th className="px-3 py-2">{DIMS.find(([k]) => k === by)[1]}</th>
                     <th className="px-3 py-2 text-right">Prospects</th>
                     <th className="px-3 py-2 text-right">Contactés</th>
-                    <th className="px-3 py-2 text-right" title="Au moins un email ouvert">Ouverture</th>
+                    <th className="px-3 py-2 text-right" title="Au moins un lien cliqué dans un email">Clic</th>
                     <th className="px-3 py-2 text-right" title="Joint, a répondu à l'outreach, ou passé en discussion / devis / gagné">Réponse</th>
                     <th className="px-3 py-2 text-right">Gagné</th>
                     <th className="px-3 py-2 text-right" title="Pas de business ou perdu">Refus</th>
@@ -117,7 +117,7 @@ const TargetingStats = () => {
                       </td>
                       <td className="px-3 py-2 text-right text-text-secondary">{r.total}</td>
                       <td className="px-3 py-2 text-right text-text-primary font-medium">{r.contactes}{r.echantillon_faible && <span className="text-text-muted" title="Moins de 5 contactés : taux peu significatifs"> *</span>}</td>
-                      <td className="px-3 py-2 text-right"><Rate value={r.taux_ouverture} weak={r.echantillon_faible} tone="info" /></td>
+                      <td className="px-3 py-2 text-right"><Rate value={r.taux_clic} weak={r.echantillon_faible} tone="info" /></td>
                       <td className="px-3 py-2 text-right"><Rate value={r.taux_reponse} weak={r.echantillon_faible} /></td>
                       <td className="px-3 py-2 text-right"><Rate value={r.taux_gagne} weak={r.echantillon_faible} /></td>
                       <td className="px-3 py-2 text-right"><Rate value={r.taux_refus} weak={r.echantillon_faible} tone="danger" /></td>

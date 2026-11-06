@@ -48,7 +48,7 @@ const lastContactLabel = (r) => {
 const initials = (name) => (name || '?').trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
 
 const COUNTERS = [
-  { key: 'ouverts', label: 'Chauds (ont ouvert)', icon: FiTrendingUp },
+  { key: 'ouverts', label: 'Chauds (ont cliqué)', icon: FiTrendingUp },
   { key: 'relance_today', label: 'À relancer aujourd\'hui', icon: FiBell },
   { key: 'overdue', label: 'En retard', icon: FiAlertTriangle },
   { key: 'dormants', label: 'Dormants (90j+)', icon: FiMoon },
@@ -85,7 +85,7 @@ const matchesFilter = (r, filter) => {
     case 'relance_today': return active && r.next_followup && dayOf(r.next_followup).getTime() === today.getTime();
     case 'overdue': return active && r.next_followup && dayOf(r.next_followup) < today;
     case 'dormants': return isDormant(r, today);
-    case 'ouverts': return active && (r.email_opens > 0 || r.email_clicks > 0);
+    case 'ouverts': return active && r.email_clicks > 0;
     case 'nouveaux': return r.relation_status === 'nouveau';
     case 'contacte': return r.relation_status === 'contacte';
     case 'en_discussion': return r.relation_status === 'en_discussion';
@@ -297,10 +297,10 @@ const SuiviCockpit = () => {
                         <span className={`text-sm font-medium text-text-primary truncate ${isPB ? 'line-through' : ''}`}>{r.contact_name || 'Contact'}</span>
                         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${sm.cls}`}>{sm.label}</span>
                         <span className="text-xs text-text-muted">{r.contact_type === 'lead' ? 'Prospect' : 'Client'}</span>
-                        {r.email_opens > 0 && (
+                        {r.email_clicks > 0 && (
                           <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-warning-bg text-warning-text"
-                            title={`Email ouvert ${r.email_opens} fois${r.email_clicks > 0 ? `, ${r.email_clicks} clic(s)` : ''}`}>
-                            🔥 Ouvert{r.email_opens > 1 ? ` ×${r.email_opens}` : ''}{r.email_clicks > 0 ? ' · cliqué' : ''}
+                            title={`Lien cliqué ${r.email_clicks} fois`}>
+                            🔥 Cliqué{r.email_clicks > 1 ? ` ×${r.email_clicks}` : ''}
                           </span>
                         )}
                       </div>

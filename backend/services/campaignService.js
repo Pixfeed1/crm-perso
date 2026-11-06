@@ -57,7 +57,7 @@ async function getCampaignFull(db, id) {
   return { campaign, items, stats: await stats(db, id) };
 }
 
-// Statistiques prioritaires : réponses, rendez-vous, contrats. Les ouvertures en dernier.
+// Statistiques prioritaires : réponses, rendez-vous, contrats. Les clics en dernier (plus d'ouvertures).
 async function stats(db, id) {
   const counts = (await db.pool.query('SELECT statut, COUNT(*)::int AS n FROM campaign_items WHERE campaign_id = $1 GROUP BY statut', [id])).rows;
   const byStatut = Object.fromEntries(counts.map((c) => [c.statut, c.n]));
@@ -71,10 +71,10 @@ async function stats(db, id) {
      JOIN campaign_items i ON i.lead_id = it.contact_id AND it.contact_type = 'lead'
      WHERE i.campaign_id = $1 AND i.statut IN ('envoye', 'repondu') AND it.type IN ('rdv', 'rendez-vous', 'reunion') AND it.date >= COALESCE(i.sent_at, i.created_at)`, [id]
   ).catch(() => ({ rows: [{ n: 0 }] }))).rows[0].n;
-  const ouvertures = (await db.pool.query(
+  const clics = (await db.pool.query(
     `SELECT COUNT(DISTINCT t.id)::int AS n FROM email_tracking t
      JOIN scheduled_emails s ON s.id IN (SELECT scheduled_email_id FROM campaign_items WHERE campaign_id = $1)
-     WHERE t.to_email = s.to_email AND t.subject = s.subject AND COALESCE(t.opens, t.open_count, 0) > 0`, [id]
+     WHERE t.to_email = s.to_email AND t.subject = s.subject AND COALESCE(t.click_count, 0) > 0`, [id]
   ).catch(() => ({ rows: [{ n: null }] }))).rows[0].n;
   return {
     total: counts.reduce((a, c) => a + c.n, 0),
@@ -86,7 +86,7 @@ async function stats(db, id) {
     contrats,
     echecs: (byStatut.echec || 0) + (byStatut.rebond || 0),
     oppositions: byStatut.oppose || 0,
-    ouvertures,
+    clics,
     note: 'Réponses, rebonds et oppositions différés ne sont pas détectés automatiquement : à marquer à la main sur la ligne.'
   };
 }
