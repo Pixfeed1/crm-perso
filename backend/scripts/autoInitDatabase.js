@@ -1584,21 +1584,22 @@ async function ensureStripeIdempotencyColumns(client) {
  * Seed des 6 modèles d'email par défaut (uniquement si la table est vide ;
  * ils restent éditables/supprimables ensuite).
  */
-// Modèles d'email de prospection (menu « Modèle » de la fiche prospect). Même ton que les
-// générateurs : présentation professionnelle, constat factuel, proposition, question courte.
-// Jamais d'alerte, de « simple oui », de « je n'insiste pas ».
-const PRESENTATION_TEMPLATE = "Je suis {expediteur}, développeur web indépendant et je dirige {entreprise}, spécialisé dans la maintenance et le dépannage de sites professionnels.";
+// Modèles d'email de prospection (menu « Modèle » de la fiche prospect). Mêmes règles que les
+// générateurs (lot 3) : le prospect d'abord (son site ou un constat), une phrase de portée, une
+// seule question. Aucune présentation : PixFeed est dans la signature ajoutée à l'envoi.
+// Jamais d'alerte, de « simple oui », de « je n'insiste pas », jamais d'annonce d'appel.
+const QUESTION_ACCOMPAGNEMENT = "Est-ce que vous gérez cette partie technique vous-même, ou est-ce que vous vous faites accompagner ?";
 const EMAIL_TEMPLATE_SEED = [
   ['Premier contact', 'contact', 'Un point relevé sur {site}',
 `{prenom},
 
-${PRESENTATION_TEMPLATE}
+{constat}
 
-En consultant {site}, j'ai relevé un point à vous signaler : {constat}.
+{portee}
 
-J'interviens notamment sur la maintenance des sites {plateforme} : mises à jour, sauvegardes, sécurité et résolution d'incidents techniques.
+Est-ce un point que vous aviez déjà repéré ?
 
-Je souhaitais savoir si vous disposez déjà d'un prestataire pour assurer ce suivi, ou si un accompagnement ponctuel ou régulier pourrait vous être utile.`],
+Bonne journée,`],
   ['Relance', 'relance', 'Re: Un point relevé sur {site}',
 `{prenom},
 
@@ -1621,26 +1622,26 @@ Merci pour votre retour. Pour cerner vos besoins sur {site}, un échange de quin
 Indiquez-moi le créneau qui vous convient, je m'adapte.
 
 À bientôt,`],
-  ['PrestaShop', 'presta', 'Maintenance de votre boutique PrestaShop',
+  ['PrestaShop', 'presta', 'Votre boutique PrestaShop',
 `{prenom},
 
-${PRESENTATION_TEMPLATE}
+J'ai découvert votre boutique en ligne {site}, qui fonctionne sous PrestaShop.
 
-Les boutiques PrestaShop en version 1.6 ou 1.7 ne reçoivent plus de mises à jour de l'éditeur, ce qui complique la sécurité et la compatibilité des modules avec le temps.
+Les versions 1.6 et 1.7 ne reçoivent plus de mises à jour de l'éditeur, ce qui complique avec le temps la sécurité et la compatibilité des modules.
 
-Je peux vérifier où en est {site} et vous dire ce que cela implique, sans engagement.
+${QUESTION_ACCOMPAGNEMENT}
 
-Est-ce un sujet pour lequel vous disposez déjà d'un prestataire ?`],
-  ['WooCommerce', 'woo', 'Maintenance de votre boutique WooCommerce',
+Bonne journée,`],
+  ['WooCommerce', 'woo', 'Votre boutique WooCommerce',
 `{prenom},
 
-${PRESENTATION_TEMPLATE}
+J'ai découvert votre boutique en ligne {site}, qui fonctionne sous WooCommerce.
 
-Sur une boutique WooCommerce, ce sont le plus souvent WordPress et les extensions laissés sans mise à jour qui finissent par poser problème.
+Sur ce type de boutique, ce sont le plus souvent WordPress et les extensions laissés sans mise à jour qui finissent par poser problème.
 
-Je peux regarder où en est {site} et vous faire un retour, sans engagement.
+${QUESTION_ACCOMPAGNEMENT}
 
-Est-ce un sujet pour lequel vous disposez déjà d'un prestataire ?`]
+Bonne journée,`]
 ];
 // Anciens textes des modèles d'origine : remplacés SEULEMENT s'ils n'ont jamais été modifiés
 // (corps strictement identique au seed d'origine). Un modèle retouché à la main est conservé.
@@ -1687,15 +1688,48 @@ Développeur freelance spécialisé WooCommerce, je m'occupe de la maintenance, 
 Je peux regarder où en est {site} et vous faire un retour, sans engagement. Ça vous intéresse ?`
 };
 
+// Version 2 (présentation « Je suis…, développeur web indépendant… »), remplacée au lot 3.
+const PRESENTATION_V2 = "Je suis {expediteur}, développeur web indépendant et je dirige {entreprise}, spécialisé dans la maintenance et le dépannage de sites professionnels.";
+const EMAIL_TEMPLATE_SEED_V2 = {
+  'Premier contact': `{prenom},
+
+${PRESENTATION_V2}
+
+En consultant {site}, j'ai relevé un point à vous signaler : {constat}.
+
+J'interviens notamment sur la maintenance des sites {plateforme} : mises à jour, sauvegardes, sécurité et résolution d'incidents techniques.
+
+Je souhaitais savoir si vous disposez déjà d'un prestataire pour assurer ce suivi, ou si un accompagnement ponctuel ou régulier pourrait vous être utile.`,
+  'PrestaShop': `{prenom},
+
+${PRESENTATION_V2}
+
+Les boutiques PrestaShop en version 1.6 ou 1.7 ne reçoivent plus de mises à jour de l'éditeur, ce qui complique la sécurité et la compatibilité des modules avec le temps.
+
+Je peux vérifier où en est {site} et vous dire ce que cela implique, sans engagement.
+
+Est-ce un sujet pour lequel vous disposez déjà d'un prestataire ?`,
+  'WooCommerce': `{prenom},
+
+${PRESENTATION_V2}
+
+Sur une boutique WooCommerce, ce sont le plus souvent WordPress et les extensions laissés sans mise à jour qui finissent par poser problème.
+
+Je peux regarder où en est {site} et vous faire un retour, sans engagement.
+
+Est-ce un sujet pour lequel vous disposez déjà d'un prestataire ?`
+};
 async function ensureEmailTemplatesTone(client) {
   let n = 0;
   for (const [name, , subject, body] of EMAIL_TEMPLATE_SEED) {
-    const old = EMAIL_TEMPLATE_SEED_V1[name];
-    if (!old) continue;
-    const r = await client.query('UPDATE email_templates SET subject = $1, body = $2 WHERE name = $3 AND body = $4', [subject, body, name, old]).catch(() => ({ rowCount: 0 }));
-    n += r.rowCount || 0;
+    for (const version of [EMAIL_TEMPLATE_SEED_V1, EMAIL_TEMPLATE_SEED_V2]) {
+      const old = version[name];
+      if (!old || old === body) continue;
+      const r = await client.query('UPDATE email_templates SET subject = $1, body = $2 WHERE name = $3 AND body = $4', [subject, body, name, old]).catch(() => ({ rowCount: 0 }));
+      n += r.rowCount || 0;
+    }
   }
-  if (n) console.log(`  ✓ Modèles d'email : ${n} texte(s) d'origine mis au ton professionnel (les modèles retouchés à la main sont conservés)`);
+  if (n) console.log(`  ✓ Modèles d'email : ${n} texte(s) d'origine mis à jour (les modèles retouchés à la main sont conservés)`);
 }
 
 // Phrase d'opt-out retirée du corps des modèles (demande du 22/10/2026) : le lien de désinscription
@@ -3023,8 +3057,8 @@ async function autoInitDatabase(pool) {
 
     // Seeds emails (modèles + signature par défaut) — seulement si vides
     await ensureEmailTemplatesSeed(client);
-    await ensureEmailTemplatesTone(client);
     await ensureEmailTemplatesNoOptoutSentence(client);
+    await ensureEmailTemplatesTone(client);
     await ensureEmailSignatureSeed(client);
     await ensureSignatureUnsubRemoval(client);
 
@@ -3050,4 +3084,4 @@ async function autoInitDatabase(pool) {
   }
 }
 
-module.exports = { autoInitDatabase, DATABASE_SCHEMA, EMAIL_TEMPLATE_SEED, ensureSeoTables };   // ensureSeoTables : tests du connecteur MCP (schéma réel)
+module.exports = { autoInitDatabase, DATABASE_SCHEMA, EMAIL_TEMPLATE_SEED, EMAIL_TEMPLATE_SEED_V2, ensureEmailTemplatesTone, ensureSeoTables };   // ensureSeoTables : tests du connecteur MCP (schéma réel)

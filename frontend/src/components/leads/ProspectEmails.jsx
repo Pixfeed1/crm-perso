@@ -17,10 +17,10 @@ const nowLocalDT = () => {
   return d.toISOString().slice(0, 16);
 };
 
-const resolveVars = (text, lead, prenomName) => {
+// Repli si le serveur ne répond pas : jamais de nom (l'identité n'est pas vérifiable ici).
+const resolveVars = (text, lead) => {
   if (!text) return '';
-  const source = (prenomName || lead.name || '').trim();
-  const prenom = source.split(/\s+/)[0] || 'Bonjour';
+  const prenom = 'Bonjour';
   const site = lead.company || '';
   const platMatch = lead.notes && lead.notes.match(/Plateforme\s*:\s*([^\n]+)/i);
   const plateforme = (platMatch && platMatch[1].trim()) || lead.tags || '';
@@ -78,12 +78,6 @@ const ProspectEmails = ({ lead, autoCompose = false }) => {
   const [bcc, setBcc] = useState('');
   const [files, setFiles] = useState([]);
 
-  // Nom utilisé pour {prenom} selon le destinataire courant (contact choisi sinon lead).
-  const recipientName = (email) => {
-    const match = recipientOptions.find((r) => r.email.toLowerCase() === (email || '').toLowerCase());
-    return (match && match.name) || lead.name || '';
-  };
-
   const loadScheduled = useCallback(async () => {
     try {
       const data = await scheduledEmailsAPI.getByRelated('lead', lead.id);
@@ -113,21 +107,22 @@ const ProspectEmails = ({ lead, autoCompose = false }) => {
     }
   };
 
-  const applyTemplate = (id, recipientEmail = to) => {
+  const applyTemplate = async (id) => {
     setTemplateId(id);
     if (!id) { setSubject(''); setBody(''); return; }
     const t = templates.find((x) => String(x.id) === String(id));
     if (!t) return;
-    const prenomName = recipientName(recipientEmail);
-    setSubject(resolveVars(t.subject, lead, prenomName));
-    setBody(resolveVars(t.body, lead, prenomName));
+    try {
+      const r = await leadsAPI.remplirModele(lead.id, id);
+      if (!r.ok) { toast.error(r.message); setTemplateId(''); setSubject(''); setBody(''); return; }
+      setSubject(r.subject); setBody(r.body);
+    } catch (error) {
+      setSubject(resolveVars(t.subject, lead));
+      setBody(resolveVars(t.body, lead));
+    }
   };
 
-  // Changement de destinataire : met à jour {prenom} si un modèle est actif.
-  const handleRecipientChange = (email) => {
-    setTo(email);
-    if (templateId) applyTemplate(templateId, email);
-  };
+  const handleRecipientChange = (email) => { setTo(email); };
 
   const signatureContent = () => {
     const s = signatures.find((x) => String(x.id) === String(signatureId));

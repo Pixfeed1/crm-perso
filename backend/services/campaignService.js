@@ -153,17 +153,20 @@ async function controles(db, lead, campaignId, { ignoreSelf = null } = {}) {
 
 // ─── Génération ─────────────────────────────────────────────────────────────
 // Modèle du menu rempli pour ce prospect : {prenom} (civilité sûre ou « Bonjour »), {site},
-// {plateforme}, {constat} (la preuve retenue, sinon vide), {expediteur}, {entreprise}.
+// {plateforme}, {constat} (la preuve retenue, sinon vide), {portee} (pourquoi elle compte),
+// {expediteur}, {entreprise}.
 function remplirModele(texte, row, lead) {
   const r = row || {};
   const salut = proof.salutation(r, lead).replace(/,$/, ''); // « Bonjour Franck Savary » ou « Bonjour »
   const site = (r.domain || lead.company || '').replace(/^www\./, '');
   const plateforme = (r.platform && r.platform !== 'Inconnu') ? r.platform : '';
   const d = row ? proof.buildProofEmail(row, lead) : { ok: false };
-  const constat = d.ok ? proof.CATALOGUE[d.preuve](row).preuve : '';
+  const c = d.ok ? proof.CATALOGUE[d.preuve](row) : null;
+  const constat = c ? c.preuve : '';
+  const portee = c ? (c.consequence || '') : '';
   return String(texte || '')
     .replace(/\{prenom\}/g, salut).replace(/\{site\}/g, site).replace(/\{plateforme\}/g, plateforme)
-    .replace(/\{constat\}/g, constat)
+    .replace(/\{constat\}/g, constat).replace(/\{portee\}/g, portee)
     .replace(/\{expediteur\}/g, (process.env.OUTREACH_SENDER_NAME || '').trim())
     .replace(/\{entreprise\}/g, (process.env.OUTREACH_SENDER_COMPANY || 'PixFeed').trim())
     .replace(/[ \t]+\n/g, '\n');
@@ -193,6 +196,22 @@ async function templateFor(db, campaign) {
   if (campaign.mode !== 'modele' || !campaign.template_id) return null;
   const r = await db.pool.query('SELECT * FROM email_templates WHERE id = $1', [campaign.template_id]).catch(() => ({ rows: [] }));
   return r.rows[0] || null;
+}
+
+// Modèle du menu rempli pour une fiche prospect : mêmes règles qu'en campagne (nom seulement si
+// l'identité est certaine, constat et portée tirés de la preuve retenue). manque = le modèle attend
+// un constat et le site n'en a aucun de vérifié : rien n'est rempli.
+async function remplirPourFiche(db, leadId, templateId) {
+  const lead = (await db.pool.query('SELECT * FROM leads WHERE id = $1', [leadId])).rows[0];
+  if (!lead) { const e = new Error('Fiche introuvable'); e.status = 404; throw e; }
+  const t = (await db.pool.query('SELECT * FROM email_templates WHERE id = $1', [templateId])).rows[0];
+  if (!t) { const e = new Error('Modèle introuvable'); e.status = 404; throw e; }
+  const row = await rowForLead(db, lead);
+  if (/\{(constat|portee)\}/.test(`${t.subject} ${t.body}`) && !/\S/.test(remplirModele('{constat}', row, lead))) {
+    return { ok: false, manque: 'constat', message: `Aucun constat vérifié sur ce site : le modèle « ${t.name} » ne peut pas être utilisé. Choisissez-en un autre, ou « Rédiger » pour un premier email adapté.` };
+  }
+  const body = remplirModele(t.body, row, lead).replace(/\n{3,}/g, '\n\n');
+  return { ok: true, subject: remplirModele(t.subject, row, lead), body };
 }
 
 async function rowForLead(db, lead) {
@@ -669,6 +688,6 @@ async function checkSender(emailService, seoOutreach) {
 module.exports = {
   RELANCE_DEFAUT, CANAUX_RELANCE, AGE_MAX_JOURS, reanalyserCampagne, lancerReanalyse,
   listCampaigns, getCampaign, getCampaignFull, stats, createCampaign, updateCampaign, addLeads, addFromCrawl,
-  updateItem, reanalyzeItem, reprendreItem, reprendreMany, validateMany, schedule, pause, resume, stop, removeCampaign, remplirModele,
+  updateItem, reanalyzeItem, reprendreItem, reprendreMany, validateMany, schedule, pause, resume, stop, removeCampaign, remplirModele, remplirPourFiche,
   beforeSend, afterSent, afterFailed, afterCancelled, checkSender, controles, generer, ECHECS_PAUSE
 };

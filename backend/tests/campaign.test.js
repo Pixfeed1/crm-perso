@@ -222,6 +222,32 @@ test('options de la fiche reprises en campagne : modèle du menu rempli, relance
     assert.match(it.body, /renvoyé vers http:\/\/www\.agrigom\.fr/);
     await assert.rejects(S.createCampaign(db, { nom: 'Sans modèle', mode: 'modele' }), /modèle/);
 
+    // Fiche prospect : le modèle du menu est rempli par le serveur, avec les mêmes règles.
+    const AI = require('../scripts/autoInitDatabase');
+    const seed = Object.fromEntries(AI.EMAIL_TEMPLATE_SEED.map(([n, cat, sub, body]) => [n, { cat, sub, body }]));
+    const ins = async (name, body) => (await pool.query('INSERT INTO email_templates (name, category, subject, body) VALUES ($1, $2, $3, $4) RETURNING id', [name, seed[name].cat, 'ancien sujet', body])).rows[0].id;
+    const pc = await ins('Premier contact', AI.EMAIL_TEMPLATE_SEED_V2['Premier contact']);
+    const presta = await ins('PrestaShop', AI.EMAIL_TEMPLATE_SEED_V2.PrestaShop + '\n\nRetouché par Marc.');
+    await AI.ensureEmailTemplatesTone(pool);
+    const lu = async (id) => (await pool.query('SELECT subject, body FROM email_templates WHERE id = $1', [id])).rows[0];
+    assert.equal((await lu(pc)).body, seed['Premier contact'].body, 'texte d\'origine intact : mis à jour');
+    assert.equal((await lu(pc)).subject, seed['Premier contact'].sub);
+    assert.match((await lu(presta)).body, /Retouché par Marc\.$/, 'texte retouché : conservé');
+    const f = await S.remplirPourFiche(db, lead, pc);
+    assert.equal(f.ok, true);
+    assert.match(f.body, /^Bonjour Franck Savary,\n\nEn tapant https:\/\/agrigom\.fr/);
+    assert.match(f.body, /\?\n\nBonne journée,$/);
+    assert.doesNotMatch(f.body, /\{|développeur/);
+    await pool.query("UPDATE crawl_results SET sirene_match = 'probable' WHERE id = $1", [rid]);
+    assert.match((await S.remplirPourFiche(db, lead, pc)).body, /^Bonjour,\n/, 'identité non certaine : pas de nom');
+    await pool.query("UPDATE crawl_results SET sirene_match = 'certain' WHERE id = $1", [rid]);
+    const sansPreuve = (await pool.query("INSERT INTO leads (name, company, email) VALUES ('X', 'x.fr', 'a@x.fr') RETURNING id")).rows[0].id;
+    const vide = await S.remplirPourFiche(db, sansPreuve, pc);
+    assert.equal(vide.ok, false);
+    assert.match(vide.message, /Aucun constat vérifié/);
+    await pool.query('DELETE FROM email_templates WHERE id IN ($1, $2)', [pc, presta]);
+    await pool.query('DELETE FROM leads WHERE id = $1', [sansPreuve]);
+
     // Programmation : signature choisie et copie cachée appliquées.
     await S.validateMany(db, c.id, [it.id]);
     await S.schedule(db, c.id, {});

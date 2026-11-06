@@ -269,6 +269,16 @@ router.post('/:id/identite', async (req, res) => {
   }
 });
 
+// POST /api/leads/:id/remplir-modele { template_id } : modèle du menu rempli par le serveur
+// ({prenom} selon l'identité, {constat}/{portee} selon la preuve retenue). Rien n'est envoyé.
+router.post('/:id/remplir-modele', async (req, res) => {
+  try {
+    res.json(await require('../services/campaignService').remplirPourFiche(req.app.locals.db, req.params.id, (req.body || {}).template_id));
+  } catch (e) {
+    res.status(e.status || 500).json({ message: e.status ? e.message : `Modèle impossible à remplir : ${e.message}` });
+  }
+});
+
 // POST /api/leads/:id/draft-email { mode?: 'preuve' | 'claude', ton? }
 // - 'preuve' (défaut) : email assemblé mot pour mot à partir des mesures du crawl : UNE preuve
 //   vérifiable en dix secondes, sa conséquence métier, au plus un contexte technique. Sans

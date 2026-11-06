@@ -86,7 +86,7 @@ const EmailTemplatesSettings = () => {
                   className="w-full px-3 py-2 bg-surface-muted border border-border rounded-lg text-text-primary focus:outline-none focus:border-accent" />
               </div>
               <div>
-                <label className="block text-xs text-text-secondary mb-1">Corps <span className="text-text-muted">(variables : {'{prenom}'} {'{site}'} {'{plateforme}'} {'{constat}'})</span></label>
+                <label className="block text-xs text-text-secondary mb-1">Corps <span className="text-text-muted">(variables : {'{prenom}'} {'{site}'} {'{plateforme}'} {'{constat}'} {'{portee}'})</span></label>
                 <textarea value={selected.body || ''} onChange={(e) => setSelected({ ...selected, body: e.target.value })} rows={12}
                   className="w-full px-3 py-2 bg-surface-muted border border-border rounded-lg text-text-primary focus:outline-none focus:border-accent resize-y" />
               </div>

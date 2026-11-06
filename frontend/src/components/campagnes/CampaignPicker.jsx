@@ -80,7 +80,7 @@ const CampaignPicker = ({ count, onConfirm, onClose }) => {
                   <option value="">Choisir…</option>
                   {templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
                 </select>
-                <p className="text-xs text-text-muted mt-1">Variables : {'{prenom}'} (civilité sûre ou « Bonjour »), {'{site}'}, {'{plateforme}'}, {'{constat}'} (preuve retenue), {'{expediteur}'}, {'{entreprise}'}.</p>
+                <p className="text-xs text-text-muted mt-1">Variables : {'{prenom}'} (civilité sûre ou « Bonjour »), {'{site}'}, {'{plateforme}'}, {'{constat}'} (preuve retenue), {'{portee}'} (pourquoi elle compte), {'{expediteur}'}, {'{entreprise}'}.</p>
               </div>
             )}
           </div>

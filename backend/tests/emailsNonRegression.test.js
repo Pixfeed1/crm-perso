@@ -127,9 +127,17 @@ test('modèles d\'email du menu « Modèle » : même présentation, aucune form
     assert.doesNotMatch(subject, FORMULES_INTERDITES, name);
     assert.doesNotMatch(body, /n'insiste pas|faire fuir|perdre quelques visiteurs|failles de sécurité/i, name);
   }
-  const premier = EMAIL_TEMPLATE_SEED.find(([n]) => n === 'Premier contact')[3];
-  assert.match(premier, /développeur web indépendant et je dirige \{entreprise\}, spécialisé dans la maintenance et le dépannage de sites professionnels\./);
-  assert.doesNotMatch(premier, /Si vous ne souhaitez plus être contacté/);
+  // Lot 3 : aucune présentation dans les modèles de premier contact, une seule question avant la fin.
+  for (const name of ['Premier contact', 'PrestaShop', 'WooCommerce']) {
+    const body = EMAIL_TEMPLATE_SEED.find(([n]) => n === name)[3];
+    assert.doesNotMatch(body, /développeur|je dirige|\{entreprise\}|\{expediteur\}|J'interviens|sans engagement/i, name);
+    assert.equal((body.match(/\?/g) || []).length, 1, name);
+    assert.match(body, /\?\n\nBonne journée,$/, name);
+    assert.doesNotMatch(body, /Si vous ne souhaitez plus être contacté/);
+  }
+  // Mise à jour automatique : seulement les textes d'origine intacts (v1 et v2 connus).
+  const { EMAIL_TEMPLATE_SEED_V2 } = require('../scripts/autoInitDatabase');
+  assert.match(EMAIL_TEMPLATE_SEED_V2['Premier contact'], /développeur web indépendant/);
 });
 
 test('Batterie4moto : mesure HTTPS de l\'ancien crawl non confirmée -> pas d\'alerte, email de maintenance sobre ; crawl frais sur www -> rien à signaler', () => {

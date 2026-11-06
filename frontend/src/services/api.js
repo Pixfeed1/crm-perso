@@ -275,6 +275,8 @@ export const leadsAPI = {
   draftEmail: (id, opts = {}) => apiRequest(`/leads/${id}/draft-email`, 'POST', opts),
   reanalyze: (id) => apiRequest(`/leads/${id}/reanalyze`, 'POST', {}),
   setIdentite: (id, body) => apiRequest(`/leads/${id}/identite`, 'POST', body),
+  // Modèle du menu rempli côté serveur (identité, constat et portée de la preuve).
+  remplirModele: (id, templateId) => apiRequest(`/leads/${id}/remplir-modele`, 'POST', { template_id: templateId }),
   getById: (id) => {
     console.log(`Appel API: récupération du lead ID ${id}`);
     return apiRequest(`/leads/${id}`);
