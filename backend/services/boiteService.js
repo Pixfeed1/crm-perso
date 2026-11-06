@@ -2,7 +2,8 @@
 //
 // Lecture de la boîte d'envoi (lot 7), en LECTURE SEULE : la boîte est ouverte en lecture seule (aucun
 // message marqué lu, déplacé ni supprimé). Accès dans backend/.env uniquement :
-//   IMAP_HOST, IMAP_PORT (993), IMAP_USER, IMAP_PASSWORD, IMAP_SECURE (true), IMAP_DOSSIER (INBOX).
+//   IMAP_HOST (obligatoire pour activer), IMAP_PORT (993), IMAP_SECURE (true), IMAP_DOSSIER (INBOX),
+//   IMAP_USER / IMAP_PASSWORD (par défaut : EMAIL_USER / EMAIL_PASSWORD, ceux de l'envoi).
 // Chaque message nouveau (depuis le dernier relevé, au premier passage : 30 derniers jours) est trié
 // (utils/boiteClassement.js) puis rattaché à un prospect contacté :
 //   - rebond définitif : appliqué (ligne de campagne « rebond », adresse bloquée), comme un rebond immédiat ;
@@ -16,7 +17,13 @@
 const { classer } = require('../utils/boiteClassement');
 const optout = require('./optout');
 
-const configuree = () => !!(process.env.IMAP_HOST && process.env.IMAP_USER && process.env.IMAP_PASSWORD);
+// Identifiant et mot de passe : ceux de la lecture (IMAP_*), sinon ceux de l'envoi (EMAIL_*), le cas
+// habituel. La lecture automatique ne démarre que si IMAP_HOST est réglé (choix explicite).
+const acces = (hote = process.env.IMAP_HOST) => ({
+  host: hote, port: Number(process.env.IMAP_PORT || 993), secure: process.env.IMAP_SECURE !== 'false',
+  auth: { user: process.env.IMAP_USER || process.env.EMAIL_USER, pass: process.env.IMAP_PASSWORD || process.env.EMAIL_PASSWORD }, logger: false
+});
+const configuree = () => { const a = acces(); return !!(a.host && a.auth.user && a.auth.pass); };
 
 // Prospect contacté correspondant à une adresse : la ligne de campagne envoyée la plus récente, sinon
 // une fiche (email de la fiche ou d'un contact) qui a reçu un email de prospection.
@@ -88,14 +95,11 @@ async function traiter(db, parsed, { uid = null, dossier = 'INBOX' } = {}) {
 
 // Relevé : messages arrivés depuis le dernier UID vu (dossier ouvert en lecture seule).
 async function relever(db, { client = null, jours = 30 } = {}) {
-  if (!client && !configuree()) return { configuree: false, message: 'Lecture de la boîte non configurée (IMAP_HOST, IMAP_USER, IMAP_PASSWORD dans backend/.env).' };
+  if (!client && !configuree()) return { configuree: false, message: 'Lecture de la boîte non configurée : ajouter IMAP_HOST dans backend/.env (identifiant et mot de passe : ceux de l\'envoi, sauf IMAP_USER / IMAP_PASSWORD).' };
   const dossier = process.env.IMAP_DOSSIER || 'INBOX';
   const { ImapFlow } = require('imapflow');
   const { simpleParser } = require('mailparser');
-  const imap = client || new ImapFlow({
-    host: process.env.IMAP_HOST, port: Number(process.env.IMAP_PORT || 993), secure: process.env.IMAP_SECURE !== 'false',
-    auth: { user: process.env.IMAP_USER, pass: process.env.IMAP_PASSWORD }, logger: false
-  });
+  const imap = client || new ImapFlow(acces());
   const out = { configuree: true, lus: 0, retenus: 0, par_type: {}, erreurs: [] };
   await imap.connect();
   try {
@@ -153,7 +157,7 @@ async function confirmer(db, id, decision) {
 // Relevé automatique toutes les 15 minutes, seulement si la boîte est configurée.
 let job = null;
 function start(db) {
-  if (!configuree()) { console.log('[Boîte] lecture non configurée (IMAP_* absents de .env) : réponses et rebonds à marquer à la main.'); return; }
+  if (!configuree()) { console.log('[Boîte] lecture non configurée (IMAP_HOST absent de .env) : réponses et rebonds à marquer à la main.'); return; }
   const cron = require('node-cron');
   let enCours = false;
   const tour = async () => {
@@ -169,4 +173,4 @@ function start(db) {
   setTimeout(tour, 90 * 1000);
 }
 
-module.exports = { configuree, rattacher, traiter, relever, lister, confirmer, start };
+module.exports = { acces, configuree, rattacher, traiter, relever, lister, confirmer, start };
