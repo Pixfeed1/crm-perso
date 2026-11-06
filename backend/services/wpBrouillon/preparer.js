@@ -94,6 +94,8 @@ async function preparer(db, { depot, simulation = true, creer_etiquettes = false
     if (!tx || !t.taxonomies.includes(tx.taxonomie)) { bloque('taxonomies', `taxonomie « ${nom} » absente du type ${t.type} (${t.taxonomies.join(', ') || 'aucune'})`); continue; }
     const voulus = [...new Set((Array.isArray(ids) ? ids : [ids]).map(Number))];
     if (voulus.some((x) => !Number.isInteger(x) || x <= 0)) { bloque('taxonomies', `${nom} : identifiants numériques existants attendus`); continue; }
+    // Liste vide = tout décocher. Ne pas interroger WordPress : « include= » vide y vaut « tous les termes ».
+    if (!voulus.length) { charge[tx.rest_base] = []; action({ quoi: 'taxonomie', taxonomie: tx.taxonomie, termes: [], vider: true }); continue; }
     try {
       const trouves = await wp(`wp/v2/${tx.rest_base}`, { params: { include: voulus, per_page: 100, _fields: 'id,name' } });
       const absents = voulus.filter((x) => !trouves.some((y) => y.id === x));

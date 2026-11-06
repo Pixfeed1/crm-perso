@@ -44,7 +44,8 @@ function wpFaux(req, res, corps) {
     limite_envoi: W.limite, yoast_actif: true, rewrite_republish: false,
   });
   if (p === 'wp/v2/posts' && req.method === 'OPTIONS') return json(200, { schema: { properties: { title: {}, content: {}, slug: {}, status: {}, author: {}, excerpt: {}, comment_status: {}, categories: {}, tags: {}, featured_media: {}, meta: { properties: {} }, outils_yoast: {} } } });
-  if (p === 'wp/v2/categories') { const ids = String(u.searchParams.get('include') || '').split(',').map(Number); return json(200, ids.filter((i) => [1, 5].includes(i)).map((i) => ({ id: i, name: `Cat ${i}` }))); }
+  // Comme WordPress : « include » vide = filtre ignoré, tous les termes reviennent.
+  if (p === 'wp/v2/categories') { const inc = String(u.searchParams.get('include') || ''); const ids = inc ? inc.split(',').map(Number) : [1, 5]; return json(200, ids.filter((i) => [1, 5].includes(i)).map((i) => ({ id: i, name: `Cat ${i}` }))); }
   if (p === 'wp/v2/tags' && req.method === 'GET') { const q = String(u.searchParams.get('search') || '').toLowerCase(); return json(200, [...W.tags].filter(([, n]) => n.toLowerCase().includes(q)).map(([id, name]) => ({ id, name }))); }
   if (p === 'wp/v2/tags' && req.method === 'POST') { ecrit(); const id = W.prochain++; W.tags.set(id, JSON.parse(corps).name); return json(201, { id }); }
   if (p === 'outils-site/v1/media-empreinte') { const id = W.sha.get(u.searchParams.get('sha')); return json(200, id ? { id, url: W.media.get(id).source_url } : { id: null }); }
@@ -148,6 +149,18 @@ test('simulation : plan complet, aucune écriture dans WordPress', opts, async (
     assert.ok(r.actions.some((a) => a.quoi === 'créer un brouillon'));
     assert.ok(r.blocs['core/gallery'] && r.blocs['core/embed'] === 2);
     assert.ok(r.integrations.every((i) => i.fournisseur !== 'aucun'));
+  });
+});
+
+test('taxonomie vide : les cases sont décochées, aucun terme posé (bug « 34 plateformes »)', opts, async () => {
+  await avecBase(async (db) => {
+    const m = manifeste();
+    m.taxonomies = { category: [] };
+    const d = await nouveauDepot(db, { 'manifeste-wp.json': m });
+    const r = await preparer(db, { depot: d.depot, simulation: true });
+    assert.deepEqual(r.erreurs, []);
+    const a = r.actions.find((x) => x.quoi === 'taxonomie' && x.taxonomie === 'category');
+    assert.deepEqual(a.termes, []); assert.equal(a.vider, true);
   });
 });
 
