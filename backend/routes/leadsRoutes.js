@@ -150,7 +150,7 @@ router.post('/quick-email', async (req, res) => {
 
     // Envoi IMMÉDIAT (+ suivi ouverture/clic optionnel).
     const token = track ? await emailTracking.createTracking(db, { to_email: to, subject }) : null;
-    const finalHtml = token ? emailTracking.wrapHtml(html, token) : html;
+    const finalHtml = token ? await emailTracking.tracer(db, html, token) : html;
     const meta = { source: 'quick', tracking_token: token };
     if (useGmail) await seoOutreach.sendViaGmail({ to, subject, html: finalHtml, text: body, cc, bcc, attachments: atts, ...meta });
     else await emailService.sendEmail({ to, subject, html: finalHtml, text: body, cc, bcc, attachments: atts, ...meta });
@@ -201,7 +201,7 @@ router.post('/:id/send-email', async (req, res) => {
     const unsubHeaders = optout.listUnsubHeader(to);
     // Tracking ouvertures/clics : pixel + réécriture des liens (identique quel que soit l'expéditeur).
     const token = await emailTracking.createTracking(db, { contact_id: id, to_email: to, subject });
-    const trackedHtml = emailTracking.wrapHtml(htmlRgpd, token);
+    const trackedHtml = await emailTracking.tracer(db, htmlRgpd, token);
     const meta = { source: 'prospect', related_type: 'lead', related_id: Number(id) || null, tracking_token: token };
     if (useGmail) await seoOutreach.sendViaGmail({ to, subject, html: trackedHtml, text: body, headers: unsubHeaders, cc, bcc, attachments: atts, ...meta });
     else await emailService.sendEmail({ to, subject, html: trackedHtml, text: body, headers: unsubHeaders, cc, bcc, attachments: atts, ...meta });
@@ -375,6 +375,17 @@ router.get('/', async (req, res) => {
 // Boucle de retour du ciblage : issues de prospection par plateforme / type / département /
 // secteur / source / angle. AVANT '/:id' pour ne pas être capturé par le paramètre.
 router.get('/targeting-stats', require('../controllers/leadTargetingController').getStats);
+
+// « À traiter en priorité » (lot 6) : prospects avec un signal d'intérêt réel, raisons en clair.
+router.get('/priorites', async (req, res) => {
+  try { res.json(await require('../services/prioriteService').lister(req.app.locals.db, { jours: req.query.jours ? Number(req.query.jours) : undefined })); }
+  catch (e) { res.status(500).json({ message: `Priorités illisibles : ${e.message}` }); }
+});
+// Journal des clics d'une fiche (robots compris, marqués « automatique »).
+router.get('/:id/clics', async (req, res) => {
+  try { res.json(await require('../services/prioriteService').journalFiche(req.app.locals.db, req.params.id)); }
+  catch (e) { res.status(500).json({ message: `Journal des clics illisible : ${e.message}` }); }
+});
 
 // Liste mensuelle « à supprimer » (prospects sans contact depuis 3 ans). Rien n'est supprimé sans
 // POST /purge/:id/valider { supprimer: [lead_id…] } ; les lignes non cochées sont gardées un an.

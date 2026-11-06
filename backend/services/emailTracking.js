@@ -38,10 +38,19 @@ function wrapHtml(html, token) {
 
   // Réécriture des liens absolus (http/https) uniquement — on ne touche pas aux mailto:/#.
   out = out.replace(/(<a\b[^>]*\bhref=)(["'])(https?:\/\/[^"']+)\2/gi, (m, pre, q, url) => {
-    const tracked = `${base}/api/track/c/${token}?u=${encodeURIComponent(url)}`;
+    const tracked = `${base}/api/track/c/${token}?u=${encodeURIComponent(url.replace(/&amp;/g, '&'))}`;
     return `${pre}${q}${tracked}${q}`;
   });
   return out;
 }
 
-module.exports = { createTracking, wrapHtml, baseUrl };
+// Réécrit le HTML ET enregistre la liste des liens de l'email : la redirection de clic n'ira que vers
+// eux (pas de redirection ouverte depuis le domaine du CRM).
+async function tracer(db, html, token) {
+  if (!token) return html;
+  const liens = require('../utils/liensEmail').liensDe(html);
+  await db.pool.query('UPDATE email_tracking SET liens = $2 WHERE token = $1', [token, JSON.stringify(liens)]).catch((e) => console.error('[Tracking] liens :', e.message));
+  return wrapHtml(html, token);
+}
+
+module.exports = { createTracking, wrapHtml, tracer, baseUrl };

@@ -1942,6 +1942,26 @@ async function ensureInteractionsColumns(client) {
     );
   `);
   await client.query('CREATE INDEX IF NOT EXISTS idx_email_tracking_contact ON email_tracking(contact_type, contact_id);');
+  // Lot 6 : liens de l'email (seules destinations de redirection permises) et journal des clics.
+  await client.query('ALTER TABLE email_tracking ADD COLUMN IF NOT EXISTS liens JSONB;');
+  // Clics comptés avant le journal (non requalifiables) : gardés tels quels, les nouveaux s'y ajoutent.
+  await client.query('ALTER TABLE email_tracking ADD COLUMN IF NOT EXISTS clics_avant_journal INTEGER;');
+  await client.query('UPDATE email_tracking SET clics_avant_journal = COALESCE(click_count, 0) WHERE clics_avant_journal IS NULL;');
+  await client.query('ALTER TABLE email_tracking ALTER COLUMN clics_avant_journal SET DEFAULT 0;');
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS email_clics (
+      id SERIAL PRIMARY KEY,
+      tracking_id INTEGER REFERENCES email_tracking(id) ON DELETE CASCADE,
+      url TEXT,
+      categorie VARCHAR(20),
+      clique_le TIMESTAMPTZ DEFAULT NOW(),
+      delai_s INTEGER,
+      user_agent VARCHAR(300),
+      automatique BOOLEAN DEFAULT FALSE,
+      raison TEXT
+    );
+  `);
+  await client.query('CREATE INDEX IF NOT EXISTS idx_email_clics_tracking ON email_clics (tracking_id, clique_le);');
 
   // Journal CENTRAL des emails sortants. email_tracking ne couvrait que la
   // prospection, et les envois differes non rattaches a un prospect

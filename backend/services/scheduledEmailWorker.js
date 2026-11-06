@@ -147,7 +147,7 @@ class ScheduledEmailWorker {
       const rgpdHeaders = isProspect ? optout.listUnsubHeader(email.to_email) : null;
 
       // Expéditeur : Gmail perso si demandé ET configuré, sinon serveur pro (SMTP).
-      const trackedHtml = emailTracking.wrapHtml((email.body_html || '') + rgpdFooter, token);
+      const trackedHtml = await emailTracking.tracer(this.db, (email.body_html || '') + rgpdFooter, token);
       if (email.from_account === 'gmail' && seoOutreach.isGmailConfigured()) {
         await seoOutreach.sendViaGmail({
           to: email.to_email, subject: email.subject, html: trackedHtml, text: email.body_text || '',

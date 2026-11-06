@@ -287,6 +287,9 @@ export const leadsAPI = {
   draftEmail: (id, opts = {}) => apiRequest(`/leads/${id}/draft-email`, 'POST', opts),
   reanalyze: (id) => apiRequest(`/leads/${id}/reanalyze`, 'POST', {}),
   setIdentite: (id, body) => apiRequest(`/leads/${id}/identite`, 'POST', body),
+  // Signaux d'intérêt (lot 6) : prospects à traiter en priorité, journal des clics d'une fiche.
+  getPriorites: () => apiRequest('/leads/priorites'),
+  getClics: (id) => apiRequest(`/leads/${id}/clics`),
   // Liste mensuelle « à supprimer » (sans contact depuis 3 ans), validée à la main.
   getPurge: () => apiRequest('/leads/purge'),
   recalculerPurge: () => apiRequest('/leads/purge/recalculer', 'POST', {}),

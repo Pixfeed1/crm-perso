@@ -717,7 +717,7 @@ const ctrl = {
       const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
       const html = `<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#222;"><div style="white-space:pre-wrap;">${esc(body)}</div></div>`;
       const token = await emailTracking.createTracking(db, { contact_type: 'seo', contact_id: t.id, to_email: to, subject });
-      await seoOutreach.sendViaGmail({ to, subject, html: emailTracking.wrapHtml(html, token), text: body });
+      await seoOutreach.sendViaGmail({ to, subject, html: await emailTracking.tracer(db, html, token), text: body });
 
       const followup = new Date(); followup.setDate(followup.getDate() + 7); // netlinking : J+7
       await db.pool.query(

@@ -16,6 +16,7 @@ import { useToast } from '../../hooks/useToast';
 import LogExchangeModal from '../common/LogExchangeModal';
 import InteractionHistoryModal from '../common/InteractionHistoryModal';
 import QuickEmail from '../common/QuickEmail';
+import PrioritesPanel from './PrioritesPanel';
 import { statusMeta, reachedMeta, channelLabel } from '../../utils/relationStatus';
 import { decodeHtml } from '../../utils/decodeHtml';
 
@@ -107,6 +108,10 @@ const SuiviCockpit = () => {
   const [data, setData] = useState({ stats: {}, contacts: [] });
   const [loading, setLoading] = useState(true);
   const [logTarget, setLogTarget] = useState(null);
+  // Vue : « À traiter en priorité » (signaux d'intérêt, lot 6) ou le suivi complet.
+  const [vue, setVue] = useState('suivi');
+  const [nbPriorites, setNbPriorites] = useState(null);
+  const [prioKey, setPrioKey] = useState(0);
   const [historyTarget, setHistoryTarget] = useState(null);
 
   const load = useCallback(async () => {
@@ -222,6 +227,21 @@ const SuiviCockpit = () => {
       <div className="flex justify-end mb-3">
         <QuickEmail />
       </div>
+      {/* Deux vues : à traiter en priorité (signaux d'intérêt) / suivi complet */}
+      <div className="flex gap-2 mb-4">
+        <button onClick={() => setVue('priorites')}
+          className={`px-3 py-1.5 rounded-lg text-sm flex items-center gap-1.5 transition-colors ${vue === 'priorites' ? 'bg-accent text-white' : 'bg-surface-strong text-text-secondary hover:bg-border-strong'}`}>
+          <FiTrendingUp size={14} /> À traiter en priorité{nbPriorites !== null ? ` (${nbPriorites})` : ''}
+        </button>
+        <button onClick={() => setVue('suivi')}
+          className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${vue === 'suivi' ? 'bg-accent text-white' : 'bg-surface-strong text-text-secondary hover:bg-border-strong'}`}>
+          Suivi complet
+        </button>
+      </div>
+      <div className={vue === 'priorites' ? '' : 'hidden'}>
+        <PrioritesPanel key={prioKey} onCount={setNbPriorites} onLog={(x) => openLog(x, 'appel')} />
+      </div>
+      <div className={vue === 'suivi' ? '' : 'hidden'}>
       {/* Bandeau de compteurs cliquables */}
       <div className="grid grid-cols-2 lg:grid-cols-6 gap-2 mb-5">
         {COUNTERS.map((c) => {
@@ -359,10 +379,12 @@ const SuiviCockpit = () => {
         </div>
       )}
 
+      </div>
+
       <LogExchangeModal
         isOpen={!!logTarget}
         onClose={() => setLogTarget(null)}
-        onSaved={load}
+        onSaved={() => { load(); setPrioKey((k) => k + 1); }}
         contactType={logTarget?.contact_type}
         contactId={logTarget?.contact_id}
         contactName={logTarget?.name}
