@@ -208,6 +208,14 @@ en écriture (liste fermée, `edit_post`), copie de travail pour les mises à jo
 Republish de Yoast Duplicate Post s'il est là, sinon copie + bouton « Remplacer l'original » ;
 le nouveau slug est appliqué à la validation, WordPress garde l'ancien en `_wp_old_slug`).
 
+Plateformes « Où regarder » (films, séries, animes) : champ `outils_plateformes`, qui écrit ensemble
+les cases `serie_plateforme` et les adresses lues par le thème (`_film_liens_plateformes`,
+`_serie_liens_plateformes`, `_anime_liens_plateformes`, rangées par numéro de case ; clés surchargeables
+par le filtre `outils_plateformes_cles`). Dans le manifeste : `"plateformes": { "Disney+": "https://…" }`
+remplace toute la liste, `{}` décoche tout. Contrôles : nom = case existante (rien n'est créé), adresse
+http(s) qui répond (404 / 410 / injoignable bloquent ; une plateforme qui refuse les robots est
+signalée), pas de réglage parallèle par `taxonomies`. La simulation montre avant / après.
+
 Auteur des articles : réglage par site dans le CRM (`seo_sites.wp_auteur`), jamais le compte API.
 Journal : `seo_wp_journal` (date, site, contenu, fichiers, avant / après). Un second appel sur le
 même manifeste reprend le même brouillon (clé site + type + mode + slug ou adresse d'origine).

@@ -12,7 +12,7 @@ const { relire } = require('./relecture');
 
 const LIMITE_TITRE_SEO = 60;
 const LIMITE_META = 135;
-const CHAMPS_GERES = ['title', 'content', 'slug', 'author', 'featured_media', 'meta', 'acf', 'outils_yoast'];
+const CHAMPS_GERES = ['title', 'content', 'slug', 'author', 'featured_media', 'meta', 'acf', 'outils_yoast', 'outils_plateformes'];
 const HORS_PORTEE = ['status', 'date', 'date_gmt', 'modified', 'modified_gmt', 'id', 'link', 'guid', 'type', 'generated_slug', 'permalink_template', 'password'];
 const YOAST = ['titre', 'meta', 'phrase_cle', 'canonique', 'noindex', 'og_titre', 'og_description', 'og_image', 'x_titre', 'x_description', 'x_image', 'schema_page', 'schema_article', 'fil_ariane', 'pilier'];
 const RE_MARQUEUR = /\{\{media:([^{}:]+):(id|url)(?::([a-z0-9_-]+))?\}\}/gi;
@@ -21,6 +21,21 @@ const sha256 = (buf) => crypto.createHash('sha256').update(buf).digest('hex');
 // nom de fichier transmis à WordPress : ASCII sans accents ni espaces (le titre du média garde les accents)
 const nomAscii = (f) => path.basename(f).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z0-9._-]+/g, '-').replace(/-+\./g, '.').replace(/^-+|-+$/g, '') || 'fichier';
 const norm = (p) => String(p || '').replace(/\\/g, '/').replace(/^\.\/+/, '');
+const UA_LIENS = 'Mozilla/5.0 (compatible; SEO-LinkCheck/1.0; lecture seule, une requete par adresse)';
+const DELAI_LIEN_MS = 10000;
+
+/** Adresse d'une plateforme : répond-elle ? { code } (redirections suivies) ou { erreur }. */
+async function verifierAdresse(url) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), DELAI_LIEN_MS);
+  try {
+    const r = await fetch(url, { redirect: 'follow', signal: ctrl.signal, headers: { 'User-Agent': UA_LIENS, Accept: 'text/html,*/*;q=0.5' } });
+    r.body && r.body.cancel().catch(() => {});
+    return { code: r.status };
+  } catch (e) {
+    return { erreur: e.name === 'AbortError' ? `pas de réponse en ${DELAI_LIEN_MS / 1000} s` : (e.cause && e.cause.code) || e.message };
+  } finally { clearTimeout(t); }
+}
 
 /** Type MIME d'après l'extension, selon la liste des types acceptés par le site (clés « jpg|jpeg|jpe »). */
 function mimeDe(nom, types) {
@@ -58,7 +73,7 @@ async function preparer(db, { depot, simulation = true, creer_etiquettes = false
   let wp, inv;
   try { wp = client(d.site_id, base); } catch (e) { bloque('accès WordPress', e.message, 'config'); return fin(); }
   try { inv = await wp('outils-site/v1/inventaire'); } catch (e) {
-    bloque('route de rédaction', e.code === 404 ? 'route outils-site/v1/inventaire absente : poser le mu-plugin (node scripts/installer-redaction.js <site_id> <dossier>, dans mcp_seo/)' : e.message, e.code);
+    bloque('route de rédaction', e.code === 404 ? 'route outils-site/v1/inventaire absente : poser le mu-plugin (node scripts/installer-mu.js <site_id> <dossier> redaction-site.php, dans mcp_seo/)' : e.message, e.code);
     return fin();
   }
 
@@ -103,6 +118,47 @@ async function preparer(db, { depot, simulation = true, creer_etiquettes = false
       charge[tx.rest_base] = voulus;
       action({ quoi: 'taxonomie', taxonomie: tx.taxonomie, termes: trouves.map((y) => y.name) });
     } catch (e) { bloque('taxonomies', `${nom} : ${e.message}`); }
+  }
+  // ---- plateformes « Où regarder » (films, séries, animes) : cases et adresses ensemble ----
+  // { "Disney+": "https://…", "Canal+": "" } remplace toute la liste ; {} décoche tout.
+  let plateformesApres = null;
+  if (m.plateformes !== undefined) {
+    const pf = inv.plateformes;
+    const cfg = pf && (pf.types || []).find((x) => x.type === t.type);
+    const txPf = pf && (inv.taxonomies || []).find((x) => x.taxonomie === pf.taxonomie);
+    if (!pf) bloque('plateformes', "le mu-plugin de rédaction du site est trop ancien : le mettre à jour (node scripts/installer-mu.js <site_id> <dossier> redaction-site.php, dans mcp_seo/)");
+    else if (!cfg) bloque('plateformes', `le type ${t.type} n'a pas de plateformes (types : ${(pf.types || []).map((x) => x.type).join(', ') || 'aucun'})`);
+    else if (!m.plateformes || typeof m.plateformes !== 'object' || Array.isArray(m.plateformes)) bloque('plateformes', 'plateformes : objet { "Nom de la plateforme": "adresse" } attendu ({} pour tout décocher)');
+    else if (Object.keys(m.taxonomies || {}).some((k) => k === pf.taxonomie || (txPf && k === txPf.rest_base))) bloque('plateformes', `« ${pf.taxonomie} » se règle par la clé plateformes seulement (cases et adresses ensemble), pas dans taxonomies`);
+    else {
+      plateformesApres = [];
+      const norme = {};
+      const aVerifier = [];
+      for (const [nom, adresse] of Object.entries(m.plateformes)) {
+        const terme = (pf.termes || []).find((x) => x.nom.toLowerCase() === String(nom).toLowerCase() || x.slug === String(nom).toLowerCase());
+        if (!terme) { bloque('plateformes', `plateforme inconnue « ${nom} » : aucune case de ce nom (cases : ${(pf.termes || []).map((x) => x.nom).join(', ')})`); continue; }
+        const url = String(adresse || '').trim();
+        if (url) {
+          let ok = false;
+          try { ok = ['http:', 'https:'].includes(new URL(url).protocol); } catch { ok = false; }
+          if (!ok) { bloque('plateformes', `${terme.nom} : adresse invalide « ${url} »`); continue; }
+          aVerifier.push({ terme, url });
+        } else avert('plateformes', `${terme.nom} : cochée sans adresse, son logo ne s'affichera pas dans « Où regarder »`);
+        norme[terme.nom] = url;
+        plateformesApres.push({ nom: terme.nom, url });
+      }
+      // Chaque adresse doit répondre. 404 / 410 / adresse injoignable : bloquant. Une plateforme qui refuse
+      // les robots (403, 429…) : à vérifier à la main, sans bloquer.
+      await Promise.all(aVerifier.map(async ({ terme, url }) => {
+        const v = await verifierAdresse(url);
+        if (v.code && v.code < 400) return;
+        if (v.code === 404 || v.code === 410) bloque('plateformes', `${terme.nom} : l'adresse répond ${v.code} (page introuvable) : ${url}`);
+        else if (v.erreur && /ENOTFOUND|EAI_AGAIN|ECONNREFUSED/.test(v.erreur)) bloque('plateformes', `${terme.nom} : adresse injoignable (${v.erreur}) : ${url}`);
+        else avert('plateformes', `${terme.nom} : l'adresse n'a pas pu être vérifiée (${v.code ? `réponse ${v.code}` : v.erreur}), à ouvrir à la main : ${url}`);
+      }));
+      if (!cfg.fiches_avec_liens) avert('plateformes', `aucune fiche de type ${t.type} n'a encore d'adresse enregistrée sous ${cfg.cle} : après l'écriture, vérifier sur l'aperçu que « Où regarder » affiche bien les logos`);
+      charge.outils_plateformes = norme;
+    }
   }
   const aCreer = [];
   if ((m.etiquettes_a_creer || []).length) {
@@ -240,7 +296,7 @@ async function preparer(db, { depot, simulation = true, creer_etiquettes = false
   }
   if (mode === 'mise_a_jour' && m.url_origine) {
     const slugOrig = decodeURI(new URL(m.url_origine).pathname).replace(/\/+$/, '').split('/').pop();
-    const liste = await wp(`wp/v2/${rb}`, { params: { slug: slugOrig, status: 'publish', context: 'edit', _fields: 'id,slug,link,title,content,outils_yoast' } }).catch((e) => { bloque('original', e.message); return []; });
+    const liste = await wp(`wp/v2/${rb}`, { params: { slug: slugOrig, status: 'publish', context: 'edit', _fields: 'id,slug,link,title,content,outils_yoast,outils_plateformes' } }).catch((e) => { bloque('original', e.message); return []; });
     original = liste.find((p) => p.link.replace(/\/+$/, '') === String(m.url_origine).replace(/\/+$/, ''));
     if (!original) bloque('original', `aucun contenu publié de type ${t.type} à l'adresse ${m.url_origine}`);
   }
@@ -253,6 +309,13 @@ async function preparer(db, { depot, simulation = true, creer_etiquettes = false
   if (mode === 'nouveau') action({ quoi: cibleId ? `mettre à jour le brouillon #${cibleId}` : 'créer un brouillon', type: t.type, slug: slugVoulu || '(tiré du titre)' });
   else if (original) action({ quoi: cibleId ? `mettre à jour la copie de travail #${cibleId}` : `créer une copie de travail de #${original.id}`, methode: inv.rewrite_republish ? 'Rewrite & Republish (Yoast Duplicate Post)' : "copie de travail + bouton « Remplacer l'original »", nouvelle_adresse: slugVoulu && slugVoulu !== original.slug ? `${slugVoulu} (appliquée à la validation)` : undefined });
   if (Object.keys(yoast).length) action({ quoi: 'champs Yoast', champs: Object.keys(yoast) });
+  if (plateformesApres) {
+    let avantPf = [];
+    if (original) avantPf = original.outils_plateformes || [];
+    else if (cibleId) avantPf = ((await wp(`wp/v2/${rb}/${cibleId}`, { params: { context: 'edit', _fields: 'outils_plateformes' } }).catch(() => ({}))).outils_plateformes) || [];
+    const lib = (l) => (l.length ? l.map((x) => `${x.nom}${x.url ? ` (${x.url})` : ' (sans adresse)'}`) : ['aucune']);
+    action({ quoi: 'plateformes « Où regarder »', avant: lib(avantPf), apres: lib(plateformesApres) });
+  }
 
   r.cle = cle;
   if (r.erreurs.length || simulation) return fin();
@@ -292,11 +355,11 @@ async function preparer(db, { depot, simulation = true, creer_etiquettes = false
 
     let id, methode, avant = null;
     if (mode === 'nouveau') {
-      if (cibleId) avant = await wp(`wp/v2/${rb}/${cibleId}`, { params: { context: 'edit', _fields: 'id,slug,title,content,outils_yoast,featured_media' } });
+      if (cibleId) avant = await wp(`wp/v2/${rb}/${cibleId}`, { params: { context: 'edit', _fields: 'id,slug,title,content,outils_yoast,outils_plateformes,featured_media' } });
       const post = await wp(`wp/v2/${rb}${cibleId ? '/' + cibleId : ''}`, { methode: 'POST', corps: { ...corps, status: 'draft', ...(slugVoulu ? { slug: slugVoulu } : {}) } });
       id = post.id; methode = 'brouillon';
     } else {
-      avant = { id: original.id, slug: original.slug, title: original.title, content: { raw: original.content && original.content.raw }, outils_yoast: original.outils_yoast };
+      avant = { id: original.id, slug: original.slug, title: original.title, content: { raw: original.content && original.content.raw }, outils_yoast: original.outils_yoast, outils_plateformes: original.outils_plateformes };
       let copie = cibleId;
       if (!copie) {
         const c = await wp('outils-site/v1/copie-de-travail', { methode: 'POST', corps: { original: original.id, ...(slugVoulu ? { slug: slugVoulu } : {}) } });
@@ -308,7 +371,7 @@ async function preparer(db, { depot, simulation = true, creer_etiquettes = false
       await wp(`wp/v2/${rb}/${copie}`, { methode: 'POST', corps });
       id = copie;
     }
-    const apres = await wp(`wp/v2/${rb}/${id}`, { params: { context: 'edit', _fields: 'id,status,slug,link,title,outils_yoast,featured_media' } });
+    const apres = await wp(`wp/v2/${rb}/${id}`, { params: { context: 'edit', _fields: 'id,status,slug,link,title,outils_yoast,outils_plateformes,featured_media' } });
     const sortieFichiers = [...fichiers.values()].map((x) => ({ fichier: x.fichier, id: x.id, url: x.url, reutilise: x.reutilise || undefined }));
     const apercu = `${base}/?${t.type === 'page' ? 'page_id' : 'p'}=${id}${['post', 'page'].includes(t.type) ? '' : `&post_type=${t.type}`}&preview=true`;
     await db.pool.query(

@@ -92,7 +92,7 @@ export async function getSiteResources(pool, siteId, options = {}) {
       if (r.status === 404) return { source: SRC.redaction, erreur: { source: SRC.redaction, code: 404, message: 'route de rédaction non installée : node scripts/installer-mu.js <site_id> <dossier> redaction-site.php (dans mcp_seo/)' } };
       if (!r.ok) return { source: SRC.redaction, erreur: await erreurHttp(r, SRC.redaction) };
       const inv = await r.json();
-      const STANDARD = new Set(['date', 'date_gmt', 'guid', 'id', 'link', 'modified', 'modified_gmt', 'slug', 'status', 'type', 'password', 'permalink_template', 'generated_slug', 'title', 'content', 'author', 'featured_media', 'template', 'meta', 'acf', 'outils_yoast', 'class_list']);
+      const STANDARD = new Set(['date', 'date_gmt', 'guid', 'id', 'link', 'modified', 'modified_gmt', 'slug', 'status', 'type', 'password', 'permalink_template', 'generated_slug', 'title', 'content', 'author', 'featured_media', 'template', 'meta', 'acf', 'outils_yoast', 'outils_plateformes', 'class_list']);
       const types = await Promise.all((inv.types || []).map(async (t) => {
         let champs = [], meta = [];
         try {
@@ -123,6 +123,13 @@ export async function getSiteResources(pool, siteId, options = {}) {
         reutilisables: plafonne(inv.reutilisables || [], 200),
         fichiers: { extensions: exts, limite_envoi_mo: inv.limite_envoi ? Math.round(inv.limite_envoi / 104857.6) / 10 : undefined },
         acf_actif: inv.acf_actif, yoast_actif: inv.yoast_actif, rewrite_republish: inv.rewrite_republish,
+        // « Où regarder » des films, séries, animes : cases + adresses, écrites par la clé plateformes du manifeste.
+        plateformes: inv.plateformes && (inv.plateformes.types || []).length ? {
+          taxonomie: inv.plateformes.taxonomie,
+          types: inv.plateformes.types,
+          cases: (inv.plateformes.termes || []).map((x) => x.nom),
+          manifeste: 'prepare_draft : "plateformes": { "Disney+": "https://…" } remplace cases et adresses ensemble ; {} décoche tout ; ne pas utiliser taxonomies pour cette taxonomie',
+        } : undefined,
       };
     } catch (e) { return { source: SRC.redaction, erreur: { source: SRC.redaction, code: 'réseau', message: txt(e.message) } }; }
   })();

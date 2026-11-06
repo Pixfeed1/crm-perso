@@ -33,6 +33,10 @@ const ENREGISTRES = new Set(['core/paragraph', 'core/heading', 'core/gallery', '
 function wpFaux(req, res, corps) {
   const u = new URL(req.url, 'http://x');
   const json = (code, b) => { res.writeHead(code, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(b)); };
+  // Pages publiques des plateformes (vérifiées sans identification).
+  if (u.pathname === '/plateforme/ok') return json(200, {});
+  if (u.pathname === '/plateforme/absente') return json(404, {});
+  if (u.pathname === '/plateforme/robots') return json(403, {});
   if (req.headers.authorization !== AUTH) return json(401, { code: 'rest_not_logged_in', message: 'non' });
   const p = u.pathname.replace('/wp-json/', '');
   const ecrit = () => { W.ecritures++; };
@@ -42,6 +46,7 @@ function wpFaux(req, res, corps) {
     auteurs: [{ id: 1, identifiant: 'marc', nom: 'Marc' }, { id: 9, identifiant: 'lecture-seo', nom: 'Lecture SEO' }],
     types_fichiers: { 'jpg|jpeg|jpe': 'image/jpeg', 'mp4|m4v': 'video/mp4', 'mp3|m4a|m4b': 'audio/mpeg', pdf: 'application/pdf' },
     limite_envoi: W.limite, yoast_actif: true, rewrite_republish: false,
+    plateformes: { taxonomie: 'serie_plateforme', types: [{ type: 'post', cle: '_post_liens_plateformes', fiches_avec_liens: 4 }], termes: [{ id: 3, nom: 'Netflix', slug: 'netflix' }, { id: 7, nom: 'Disney+', slug: 'disney' }, { id: 9, nom: 'Canal+', slug: 'canal' }] },
   });
   if (p === 'wp/v2/posts' && req.method === 'OPTIONS') return json(200, { schema: { properties: { title: {}, content: {}, slug: {}, status: {}, author: {}, excerpt: {}, comment_status: {}, categories: {}, tags: {}, featured_media: {}, meta: { properties: {} }, outils_yoast: {} } } });
   // Comme WordPress : « include » vide = filtre ignoré, tous les termes reviennent.
@@ -149,6 +154,36 @@ test('simulation : plan complet, aucune écriture dans WordPress', opts, async (
     assert.ok(r.actions.some((a) => a.quoi === 'créer un brouillon'));
     assert.ok(r.blocs['core/gallery'] && r.blocs['core/embed'] === 2);
     assert.ok(r.integrations.every((i) => i.fournisseur !== 'aucun'));
+  });
+});
+
+test('plateformes : cases et adresses ensemble, contrôles, avant / après, écriture', opts, async () => {
+  await avecBase(async (db) => {
+    const m = manifeste();
+    m.plateformes = { 'disney+': `${base}/plateforme/ok`, Netflix: `${base}/plateforme/robots`, 'Canal+': '' };
+    let r = await preparer(db, { depot: (await nouveauDepot(db, { 'manifeste-wp.json': m })).depot, simulation: true });
+    assert.deepEqual(r.erreurs, []);
+    const a = r.actions.find((x) => x.quoi === 'plateformes « Où regarder »');
+    assert.deepEqual(a.avant, ['aucune']);
+    assert.deepEqual(a.apres, [`Disney+ (${base}/plateforme/ok)`, `Netflix (${base}/plateforme/robots)`, 'Canal+ (sans adresse)']);
+    const av = r.avertissements.map((x) => x.message).join('\n');
+    assert.match(av, /Netflix : l'adresse n'a pas pu être vérifiée \(réponse 403\)/);
+    assert.match(av, /Canal\+ : cochée sans adresse/);
+    // Bloquants : plateforme inconnue, page introuvable, adresse invalide, double réglage par taxonomies.
+    const m2 = manifeste();
+    m2.plateformes = { 'Prime Video': 'https://x.fr', 'Disney+': `${base}/plateforme/absente`, Netflix: 'ftp://x' };
+    m2.taxonomies = { serie_plateforme: [3] };
+    r = await preparer(db, { depot: (await nouveauDepot(db, { 'manifeste-wp.json': m2 })).depot, simulation: true });
+    assert.match(r.erreurs.map((e) => e.message).join('\n'), /se règle par la clé plateformes seulement/);
+    delete m2.taxonomies;
+    r = await preparer(db, { depot: (await nouveauDepot(db, { 'manifeste-wp.json': m2 })).depot, simulation: true });
+    const err = r.erreurs.map((e) => e.message).join('\n');
+    for (const x of [/plateforme inconnue « Prime Video »/, /Disney\+ : l'adresse répond 404/, /Netflix : adresse invalide/]) assert.match(err, x);
+    // Écriture : le champ outils_plateformes part avec le brouillon.
+    const m3 = manifeste(); m3.plateformes = { 'Disney+': `${base}/plateforme/ok` }; m3.slug = 'essai-plateformes'; m3.titre = 'Essai plateformes';
+    r = await preparer(db, { depot: (await nouveauDepot(db, { 'manifeste-wp.json': m3 })).depot, simulation: false });
+    assert.deepEqual(r.erreurs, []);
+    assert.deepEqual(W.posts.get(r.id).outils_plateformes, { 'Disney+': `${base}/plateforme/ok` });
   });
 });
 

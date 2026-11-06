@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: Rédaction assistée (brouillons)
- * Description: Routes REST réservées aux utilisateurs connectés qui peuvent modifier des contenus : vérification d'un contenu en blocs (blocs, shortcodes, intégrations), médias retrouvés par empreinte SHA-256, inventaire du site (blocs, compositions, types, champs, fichiers acceptés), champs Yoast en écriture (liste fermée, edit_post), copie de travail pour mettre à jour un contenu publié sans toucher la version en ligne avant validation (« Remplacer l'original »). Ne publie jamais. Supprimer ce fichier pour tout retirer.
+ * Description: Routes REST réservées aux utilisateurs connectés qui peuvent modifier des contenus : vérification d'un contenu en blocs (blocs, shortcodes, intégrations), médias retrouvés par empreinte SHA-256, inventaire du site (blocs, compositions, types, champs, fichiers acceptés), champs Yoast en écriture (liste fermée, edit_post), copie de travail pour mettre à jour un contenu publié sans toucher la version en ligne avant validation (« Remplacer l'original »), plateformes « Où regarder » des films, séries et animes (cases et adresses ensemble). Ne publie jamais. Supprimer ce fichier pour tout retirer.
  */
 defined( 'ABSPATH' ) || exit;
 
@@ -28,6 +28,95 @@ function outils_yoast_cles() {
 		'fil_ariane'     => '_yoast_wpseo_bctitle',
 		'pilier'         => '_yoast_wpseo_is_cornerstone',
 	);
+}
+
+/**
+ * Plateformes « Où regarder » (films, séries, animes) : les cases de la taxonomie serie_plateforme
+ * et, par case, l'adresse de la fiche sur la plateforme (métadonnée du thème, rangée par numéro de case :
+ * array( term_id => url )). Une plateforme cochée sans adresse n'affiche pas de logo.
+ * Clé par type, surchargeable par le filtre outils_plateformes_cles.
+ */
+function outils_plateformes_cles() {
+	return apply_filters( 'outils_plateformes_cles', array(
+		'film'  => '_film_liens_plateformes',
+		'serie' => '_serie_liens_plateformes',
+		'anime' => '_anime_liens_plateformes',
+	) );
+}
+const OUTILS_TAXO_PLATEFORME = 'serie_plateforme';
+
+/** Types réellement concernés sur ce site (type existant et relié à la taxonomie). */
+function outils_plateformes_types() {
+	$out = array();
+	if ( ! taxonomy_exists( OUTILS_TAXO_PLATEFORME ) ) {
+		return $out;
+	}
+	foreach ( outils_plateformes_cles() as $type => $cle ) {
+		if ( post_type_exists( $type ) && is_object_in_taxonomy( $type, OUTILS_TAXO_PLATEFORME ) ) {
+			$out[ $type ] = $cle;
+		}
+	}
+	return $out;
+}
+
+/** Lecture : [ { id, nom, slug, url } ] pour un contenu. */
+function outils_plateformes_lire( $post_id, $cle ) {
+	$termes = get_the_terms( $post_id, OUTILS_TAXO_PLATEFORME );
+	$liens  = get_post_meta( $post_id, $cle, true );
+	$liens  = is_array( $liens ) ? $liens : array();
+	$out    = array();
+	if ( $termes && ! is_wp_error( $termes ) ) {
+		foreach ( $termes as $t ) {
+			$out[] = array( 'id' => (int) $t->term_id, 'nom' => $t->name, 'slug' => $t->slug, 'url' => isset( $liens[ $t->term_id ] ) ? (string) $liens[ $t->term_id ] : '' );
+		}
+	}
+	return $out;
+}
+
+/**
+ * Écriture : { "Disney+": "https://…", "Canal+": "" } remplace TOUT (cases et adresses) par cette liste.
+ * {} décoche tout. Une plateforme inconnue (aucune case de ce nom ou de ce slug) est refusée : rien n'est
+ * créé. Une adresse non vide doit être en http(s).
+ */
+function outils_plateformes_ecrire( $post_id, $cle, $valeur ) {
+	if ( ! current_user_can( 'edit_post', $post_id ) ) {
+		return new WP_Error( 'outils_interdit', 'Pas le droit de modifier ce contenu.', array( 'status' => 403 ) );
+	}
+	if ( ! is_array( $valeur ) ) {
+		return new WP_Error( 'outils_plateformes', 'outils_plateformes : objet { "Nom de la plateforme": "adresse" } attendu.', array( 'status' => 400 ) );
+	}
+	$tous = get_terms( array( 'taxonomy' => OUTILS_TAXO_PLATEFORME, 'hide_empty' => false ) );
+	$tous = is_wp_error( $tous ) ? array() : $tous;
+	$ids  = array();
+	$liens = array();
+	foreach ( $valeur as $nom => $url ) {
+		$trouve = null;
+		foreach ( $tous as $t ) {
+			if ( 0 === strcasecmp( $t->name, (string) $nom ) || $t->slug === sanitize_title( (string) $nom ) ) {
+				$trouve = $t;
+				break;
+			}
+		}
+		if ( ! $trouve ) {
+			return new WP_Error( 'outils_plateformes', sprintf( 'Plateforme inconnue « %s » (cases existantes : %s).', $nom, implode( ', ', wp_list_pluck( $tous, 'name' ) ) ), array( 'status' => 400 ) );
+		}
+		$url = trim( (string) $url );
+		if ( '' !== $url && ( ! wp_http_validate_url( $url ) || ! preg_match( '#^https?://#i', $url ) ) ) {
+			return new WP_Error( 'outils_plateformes', sprintf( 'Adresse invalide pour « %s » : %s', $trouve->name, $url ), array( 'status' => 400 ) );
+		}
+		$ids[]                       = (int) $trouve->term_id;
+		$liens[ (int) $trouve->term_id ] = esc_url_raw( $url );
+	}
+	$r = wp_set_object_terms( $post_id, $ids, OUTILS_TAXO_PLATEFORME );
+	if ( is_wp_error( $r ) ) {
+		return $r;
+	}
+	if ( $liens ) {
+		update_post_meta( $post_id, $cle, $liens );
+	} else {
+		delete_post_meta( $post_id, $cle );
+	}
+	return true;
 }
 
 add_action( 'rest_api_init', function () {
@@ -87,6 +176,15 @@ add_action( 'rest_api_init', function () {
 				return true;
 			},
 			'schema'          => array( 'type' => 'object', 'context' => array( 'edit' ) ),
+		) );
+	}
+
+	// Plateformes « Où regarder » : cases serie_plateforme + adresses, lues et écrites ensemble.
+	foreach ( outils_plateformes_types() as $type => $cle ) {
+		register_rest_field( $type, 'outils_plateformes', array(
+			'get_callback'    => function ( $obj ) use ( $cle ) { return outils_plateformes_lire( $obj['id'], $cle ); },
+			'update_callback' => function ( $valeur, $post ) use ( $cle ) { return outils_plateformes_ecrire( $post->ID, $cle, $valeur ); },
+			'schema'          => array( 'type' => array( 'object', 'array' ), 'context' => array( 'view', 'edit' ) ),
 		) );
 	}
 
@@ -230,6 +328,19 @@ function outils_inventaire() {
 	foreach ( get_users( array( 'capability' => 'edit_posts', 'fields' => array( 'ID', 'user_login', 'display_name' ), 'number' => 100 ) ) as $u ) {
 		$auteurs[] = array( 'id' => (int) $u->ID, 'identifiant' => $u->user_login, 'nom' => $u->display_name );
 	}
+	// Plateformes : types concernés, clé de leurs adresses, nombre de fiches qui en ont déjà (repère pour
+	// vérifier la clé), et les cases existantes.
+	global $wpdb;
+	$plateformes = array( 'taxonomie' => OUTILS_TAXO_PLATEFORME, 'types' => array(), 'termes' => array() );
+	foreach ( outils_plateformes_types() as $type => $cle ) {
+		$plateformes['types'][] = array( 'type' => $type, 'cle' => $cle, 'fiches_avec_liens' => (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(DISTINCT post_id) FROM {$wpdb->postmeta} WHERE meta_key = %s", $cle ) ) );
+	}
+	if ( taxonomy_exists( OUTILS_TAXO_PLATEFORME ) ) {
+		$tt = get_terms( array( 'taxonomy' => OUTILS_TAXO_PLATEFORME, 'hide_empty' => false ) );
+		foreach ( is_wp_error( $tt ) ? array() : $tt as $t ) {
+			$plateformes['termes'][] = array( 'id' => (int) $t->term_id, 'nom' => $t->name, 'slug' => $t->slug );
+		}
+	}
 	$dp = class_exists( '\Yoast\WP\Duplicate_Post\Post_Duplicator' ) && method_exists( '\Yoast\WP\Duplicate_Post\Post_Duplicator', 'create_duplicate_for_rewrite_and_republish' );
 	return array(
 		'releve_le'        => gmdate( 'c' ),
@@ -244,6 +355,7 @@ function outils_inventaire() {
 		'acf_actif'        => function_exists( 'acf_get_field_groups' ),
 		'yoast_actif'      => defined( 'WPSEO_VERSION' ),
 		'rewrite_republish' => $dp,
+		'plateformes'      => $plateformes,
 	);
 }
 
