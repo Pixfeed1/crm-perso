@@ -54,7 +54,9 @@ async function appliquerReponse(db, { lead_id: leadId, item }, m) {
     await db.pool.query("UPDATE campaign_items SET statut = 'repondu', raison = $2, updated_at = NOW() WHERE id = $1", [item.id, `Réponse reçue le ${new Date(m.recu_le).toLocaleDateString('fr-FR')} (lue dans la boîte d'envoi)`]);
   }
   if (!leadId) return;
-  await db.pool.query(`UPDATE interactions SET followup_done = TRUE WHERE contact_type = 'lead' AND contact_id = $1 AND followup_done = FALSE AND next_followup_date IS NOT NULL`, [leadId]).catch(() => {});
+  // Seules les relances posées AVANT la réponse sont fermées : une relance programmée après (par exemple
+  // après un appel) reste, même si la réponse n'est lue que plus tard.
+  await db.pool.query(`UPDATE interactions SET followup_done = TRUE WHERE contact_type = 'lead' AND contact_id = $1 AND followup_done = FALSE AND next_followup_date IS NOT NULL AND date <= $2`, [leadId, m.recu_le]).catch(() => {});
   await db.pool.query("UPDATE leads SET relation_status = 'en_discussion', updated_at = NOW() WHERE id = $1 AND COALESCE(relation_status, 'nouveau') IN ('nouveau', 'a_contacter', 'contacte')", [leadId]).catch(() => {});
   await db.pool.query(
     `INSERT INTO interactions (contact_type, contact_id, type, reached, date, notes, followup_done) VALUES ('lead', $1, 'email', 'joint', $2, $3, TRUE)`,

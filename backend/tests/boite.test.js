@@ -47,7 +47,8 @@ test('boîte en base : rattachement, effets, refus soumis, relevé en lecture se
     const b = (await pool.query("INSERT INTO leads (name, company, email) VALUES ('B4M', 'batterie4moto.fr', 'contact@batterie4moto.fr') RETURNING id")).rows[0].id;
     const ia = (await pool.query("INSERT INTO campaign_items (campaign_id, lead_id, to_email, subject, statut, sent_at) VALUES (1, $1, 'contact@agrigom.fr', 'Le cadenas de votre boutique', 'envoye', NOW() - interval '1 day') RETURNING id", [a])).rows[0].id;
     const ib = (await pool.query("INSERT INTO campaign_items (campaign_id, lead_id, to_email, subject, statut, sent_at) VALUES (1, $1, 'contact@batterie4moto.fr', 'Votre boutique', 'envoye', NOW() - interval '1 day') RETURNING id", [b])).rows[0].id;
-    await pool.query("INSERT INTO interactions (contact_type, contact_id, type, notes, next_followup_date, next_followup_channel) VALUES ('lead', $1, 'note', 'relance', CURRENT_DATE + 5, 'appel')", [a]);
+    // Relance posée par la campagne le 4/11, avant la réponse du 5/11 : elle sera fermée par la réponse.
+    await pool.query("INSERT INTO interactions (contact_type, contact_id, type, date, notes, next_followup_date, next_followup_channel) VALUES ('lead', $1, 'note', '2026-11-04T10:00:00+01:00', 'relance', CURRENT_DATE + 5, 'appel')", [a]);
 
     // Fausse boîte IMAP : vérifie qu'on l'ouvre en lecture seule.
     const msgs = [DSN, PLEINE, ABSENT, REFUS, brut({ From: 'inconnu@ailleurs.fr', Subject: 'Pub', 'Message-ID': '<p@x>', Date: 'Wed, 05 Nov 2026 10:00:00 +0100' }, 'Achetez')].map((s, i) => ({ uid: i + 1, source: Buffer.from(s) }));
@@ -69,7 +70,10 @@ test('boîte en base : rattachement, effets, refus soumis, relevé en lecture se
     assert.equal((await pool.query("SELECT COUNT(*)::int AS n FROM email_optout WHERE email = 'contact@agrigom.fr'")).rows[0].n, 0);
     assert.equal((await pool.query('SELECT COUNT(*)::int AS n FROM boite_messages')).rows[0].n, 2, 'messages étrangers non conservés');
     // Second relevé : reprend après le dernier UID, rien en double.
+    // Relance posée APRÈS la date de la réponse (5/11 12 h) : elle doit rester ouverte.
+    await pool.query("INSERT INTO interactions (contact_type, contact_id, type, date, notes, next_followup_date, next_followup_channel) VALUES ('lead', $1, 'note', '2026-11-06T09:00:00+01:00', 'rappel après appel', CURRENT_DATE + 3, 'appel')", [a]);
     r = await B.relever(db, { client: faux([...msgs, { uid: 6, source: Buffer.from(REPONSE) }]) });
+    assert.equal((await pool.query("SELECT followup_done FROM interactions WHERE notes = 'rappel après appel'")).rows[0].followup_done, false, 'relance postérieure à la réponse gardée');
     assert.equal(r.lus, 1); assert.deepEqual(r.par_type, { reponse: 1 });
     // Décision de Marc sur le refus.
     const l = await B.lister(db);

@@ -65,7 +65,8 @@ function classer(p) {
     const code = /status:\s*([245])\.\d{1,3}\.\d{1,3}/i.exec(brut) || /\b([45])\.\d\.\d{1,3}\b/.exec(brut) || /\b([45])\d\d[ -]/.exec(brut);
     const echec = fr ? fr[1].toLowerCase() : (brut.match(RE_EMAIL) || []).map((x) => x.toLowerCase()).find((x) => !/mailer-daemon|postmaster|bounce/.test(x)) || null;
     const temporaire = code ? code[1] === '4' : /boîte (aux lettres )?pleine|mailbox (is )?full|over quota|temporar|réessa|retry/i.test(brut);
-    return { type: temporaire ? 'rebond_temporaire' : 'rebond', de, adresse: echec, sujet, extrait: brut.slice(0, 400), raison: code ? `code ${code[0].trim()}` : 'avis de non-remise' };
+    const numero = code ? (/([245]\.\d{1,3}\.\d{1,3})/.exec(code[0]) || [code[0].trim()])[0] : null;
+    return { type: temporaire ? 'rebond_temporaire' : 'rebond', de, adresse: echec, sujet, extrait: brut.slice(0, 400), raison: numero ? `code ${numero}` : 'avis de non-remise' };
   }
   const auto = /auto-(replied|generated|notified)/i.test(entete(p, 'auto-submitted')) || entete(p, 'x-autoreply') || entete(p, 'x-autorespond')
     || /auto_reply|bulk|junk/i.test(entete(p, 'precedence')) || AUTO_SUJET.test(sujet);
