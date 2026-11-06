@@ -507,5 +507,5 @@ export async function getLivePage(pool, siteId, url) {
 
 // Utilitaires communs aux outils de lecture (dossier.js, checks.js, ressources.js) : mêmes conventions
 // de sortie (compacte, listes { total, affiches, items }, erreurs { source, code, message }).
-export { plafonne, txt, decode, compact, hoteNu, requete, erreurHttp, erreurReseau, clientWp, typesWp };
+export { plafonne, txt, decode, compact, hoteNu, requete, erreurHttp, erreurReseau, clientWp, typesWp, verifierAcces, trouverContenu };
 // accesWordPress est exporté plus haut

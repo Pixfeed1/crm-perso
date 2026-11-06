@@ -29,7 +29,7 @@ relecture.definirAppel(relecteurVide);
 // ---- fausse instance WordPress ----
 const W = { posts: new Map(), media: new Map(), sha: new Map(), tags: new Map([[7, 'Blender']]), ecritures: 0, prochain: 100, limite: 2 * 1024 * 1024 };
 let srv, base;
-const ENREGISTRES = new Set(['core/paragraph', 'core/heading', 'core/gallery', 'core/image', 'core/columns', 'core/column', 'core/buttons', 'core/button', 'core/video', 'core/audio', 'core/file', 'core/embed']);
+const ENREGISTRES = new Set(['core/paragraph', 'core/heading', 'core/gallery', 'core/image', 'core/columns', 'core/column', 'core/buttons', 'core/button', 'core/video', 'core/audio', 'core/file', 'core/embed', 'core/shortcode', 'core/separator']);
 function wpFaux(req, res, corps) {
   const u = new URL(req.url, 'http://x');
   const json = (code, b) => { res.writeHead(code, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(b)); };
@@ -258,6 +258,42 @@ test('mise à jour en simulation : copie de travail prévue, rien écrit', opts,
     assert.ok(r.actions.some((a) => /copie de travail de #50/.test(a.quoi)));
     assert.equal(W.ecritures, avant);
     assert.equal(W.posts.get(50).content.raw, '<p>ancien</p>');
+  });
+});
+
+test('mise à jour par remplacements : contenu actuel, empreinte, occurrences, blocs et codes courts, copie de travail sans Rewrite & Republish', opts, async () => {
+  await avecBase(async (db) => {
+    const R = require('../services/wpBrouillon/remplacements');
+    const BASE = '<!-- wp:paragraph -->\n<p>Une ancienne phrase sur la maintenance.</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:shortcode -->\n[pf_encart type="info"]Tarif : 50 €/mois[/pf_encart]\n<!-- /wp:shortcode -->\n\n<!-- wp:paragraph -->\n<p>Deux fois : maintenance.</p>\n<!-- /wp:paragraph -->';
+    W.posts.set(60, { id: 60, status: 'publish', slug: 'page-remplacements', link: `${base}/page-remplacements/`, modified_gmt: '2026-11-01T10:00:00', title: { raw: 'Maintenance' }, content: { raw: BASE } });
+    const sha = R.sha256(BASE);
+    const manif = (extra) => { const m = manifeste(); delete m.contenu; delete m.image_a_la_une; m.fichiers = []; m.yoast = { phrase_cle: 'maintenance' }; m.mode = 'mise_a_jour'; m.url_origine = `${base}/page-remplacements/`; m.slug = 'page-remplacements'; m.base_sha256 = sha; return Object.assign(m, extra); };
+    const essai = async (extra, simulation = true) => preparer(db, { depot: (await nouveauDepot(db, { 'manifeste-wp.json': manif(extra) })).depot, simulation });
+    const avant = W.ecritures;
+    let r = await essai({ remplacements: [{ avant: 'Une ancienne phrase', apres: 'Une phrase à jour' }, { avant: '50 €/mois', apres: '55 €/mois' }] });
+    assert.deepEqual(r.erreurs, [], JSON.stringify(r.erreurs));
+    const rem = r.actions.filter((a) => /^remplacement n°/.test(a.quoi));
+    assert.equal(rem.length, 2);
+    assert.match(rem[0].avant, /Une ancienne phrase sur la maintenance/); assert.match(rem[0].apres, /Une phrase à jour sur la maintenance/);
+    assert.ok(r.actions.some((a) => a.quoi === 'contenu de départ' && a.sha256 === sha));
+    assert.ok(r.actions.some((a) => /copie de travail de #60/.test(a.quoi) && /Remplacer l'original/.test(a.methode)), 'sans Rewrite & Republish : copie + bouton');
+    assert.equal(W.ecritures, avant, 'simulation : rien écrit');
+    // Refus : empreinte changée, nombre d'occurrences faux, code court ou bloc cassé, mauvais mode, contenu + remplacements.
+    const msg = async (extra) => (await essai(extra)).erreurs.map((e) => e.message).join('\n');
+    assert.match(await msg({ base_sha256: 'a'.repeat(64), remplacements: [{ avant: 'x', apres: 'y' }] }), /la page a changé depuis la lecture/);
+    assert.match(await msg({ remplacements: [{ avant: 'maintenance', apres: 'suivi' }] }), /figure 2 fois dans le contenu, 1 annoncée/);
+    assert.equal((await essai({ remplacements: [{ avant: 'maintenance', apres: 'suivi', occurrences: 2 }] })).erreurs.length, 0);
+    assert.match(await msg({ remplacements: [{ avant: '[/pf_encart]', apres: '' }] }), /code court \[pf_encart\] : 1 ouverture\(s\) pour 0 fermeture/);
+    assert.match(await msg({ remplacements: [{ avant: '<!-- /wp:shortcode -->', apres: '' }] }), /blocs déséquilibrés/);
+    assert.match(await msg({ remplacements: [{ avant: 'introuvable', apres: 'x' }] }), /figure 0 fois/);
+    assert.match(await msg({ mode: 'nouveau', remplacements: [{ avant: 'x', apres: 'y' }] }), /seulement en mode mise_a_jour/);
+    assert.match(await msg({ contenu: 'contenu.html', remplacements: [{ avant: 'x', apres: 'y' }] }), /contenu ou remplacements, pas les deux/);
+    // Écriture : copie de travail avec le contenu remplacé, original intact.
+    r = await essai({ remplacements: [{ avant: 'Une ancienne phrase', apres: 'Une phrase à jour' }] }, false);
+    assert.deepEqual(r.erreurs, [], JSON.stringify(r.erreurs));
+    assert.equal(r.methode, 'copie_outils');
+    assert.equal(W.posts.get(r.id).content, BASE.replace('Une ancienne phrase', 'Une phrase à jour'));
+    assert.equal(W.posts.get(60).content.raw, BASE, "l'original n'est pas touché avant « Remplacer l'original »");
   });
 });
 

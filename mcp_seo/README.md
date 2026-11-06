@@ -208,6 +208,15 @@ en écriture (liste fermée, `edit_post`), copie de travail pour les mises à jo
 Republish de Yoast Duplicate Post s'il est là, sinon copie + bouton « Remplacer l'original » ;
 le nouveau slug est appliqué à la validation, WordPress garde l'ancien en `_wp_old_slug`).
 
+Mise à jour par remplacements : `get_contenu_brut(site_id, url | id)` lit la page telle que WordPress la
+stocke (title.raw, excerpt.raw, content.raw au caractère près, nombre de blocs, codes courts, sha256 ;
+morceaux `debut` / `longueur` pour les longs contenus). Puis, en `mise_a_jour`, le manifeste donne
+`"base_sha256"` et `"remplacements": [{ "avant", "apres", "occurrences" }]` au lieu de `contenu` : le CRM part
+du content.raw actuel, refuse si l'empreinte a changé, si un « avant » n'apparaît pas exactement le nombre de
+fois annoncé, ou si les blocs ou un code court à fermeture se déséquilibrent ; la simulation montre un
+extrait avant / après de chaque remplacement. Essai réel : `node scripts/essai-mise-a-jour.js <site_id> <url>`
+(dans `backend/`, remplacement neutre ; `--ecrire` crée la copie de travail, `--nettoyer <id>` la supprime).
+
 Plateformes « Où regarder » (films, séries, animes) : champ `outils_plateformes`, qui écrit ensemble
 les cases `serie_plateforme` et les adresses lues par le thème (`_film_liens_plateformes`,
 `_serie_liens_plateformes`, `_anime_liens_plateformes`, rangées par numéro de case ; clés surchargeables

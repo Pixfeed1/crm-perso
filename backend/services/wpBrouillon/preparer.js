@@ -9,6 +9,7 @@ const crypto = require('crypto');
 const depots = require('./depot');
 const { client } = require('./wp');
 const { relire } = require('./relecture');
+const R = require('./remplacements');
 
 const LIMITE_TITRE_SEO = 60;
 const LIMITE_META = 135;
@@ -62,7 +63,11 @@ async function preparer(db, { depot, simulation = true, creer_etiquettes = false
   if (!['nouveau', 'mise_a_jour'].includes(mode)) bloque('manifeste', `mode « ${m.mode} » : nouveau ou mise_a_jour attendu`);
   if (mode === 'mise_a_jour' && !m.url_origine) bloque('manifeste', 'url_origine obligatoire en mise à jour');
   if (!m.titre) bloque('manifeste', 'titre manquant');
-  if (!m.contenu) bloque('manifeste', 'contenu manquant (fichier HTML en blocs)');
+  const parRemplacements = m.remplacements !== undefined;
+  if (parRemplacements && mode !== 'mise_a_jour') bloque('manifeste', 'remplacements : seulement en mode mise_a_jour (sur une page publiée)');
+  if (parRemplacements && m.contenu) bloque('manifeste', 'contenu ou remplacements, pas les deux');
+  if (parRemplacements) for (const e of R.validerManifeste(m)) bloque('remplacements', e);
+  if (!m.contenu && !parRemplacements) bloque('manifeste', 'contenu manquant (fichier HTML en blocs, ou remplacements en mise à jour)');
   if (m.statut || m.status || m.date) bloque('manifeste', 'statut et date de publication hors de portée : toujours un brouillon');
   r.mode = mode; r.titre = m.titre;
 
@@ -87,6 +92,35 @@ async function preparer(db, { depot, simulation = true, creer_etiquettes = false
     const rs = await wp(`wp/v2/${rb}`, { methode: 'OPTIONS', brut: true });
     schema = ((await rs.json()).schema || {}).properties || {};
   } catch (e) { bloque('schéma REST', e.message); return fin(); }
+
+  // ---- remplacements (mise à jour) : on part du content.raw actuel de la page publiée ----
+  let contenuRemplace = null;
+  if (parRemplacements && !r.erreurs.length && m.url_origine) {
+    try {
+      const slugOrig = decodeURI(new URL(m.url_origine).pathname).replace(/\/+$/, '').split('/').pop();
+      const liste = await wp(`wp/v2/${rb}`, { params: { slug: slugOrig, status: 'publish', context: 'edit', _fields: 'id,link,modified_gmt,content' } });
+      const orig = liste.find((x) => x.link.replace(/\/+$/, '') === String(m.url_origine).replace(/\/+$/, ''));
+      const base = orig && orig.content && typeof orig.content.raw === 'string' ? orig.content.raw : null;
+      if (base === null) bloque('remplacements', `contenu brut de ${m.url_origine} illisible (page publiée de type ${t.type} introuvable)`);
+      else {
+        const empreinte = R.sha256(base);
+        if (empreinte !== String(m.base_sha256).toLowerCase()) {
+          bloque('remplacements', `la page a changé depuis la lecture : empreinte actuelle ${empreinte} (modifiée le ${orig.modified_gmt} GMT), base_sha256 annoncée ${m.base_sha256}. Relire avec get_contenu_brut et refaire les remplacements.`);
+        } else {
+          const res = R.appliquer(base, m.remplacements);
+          res.erreurs.forEach((e) => bloque('remplacements', e));
+          if (!res.erreurs.length) {
+            R.controler(base, res.texte).forEach((e) => bloque('remplacements', e));
+            contenuRemplace = res.texte;
+            action({ quoi: 'contenu de départ', source: `content.raw actuel de #${orig.id}`, sha256: empreinte, longueur: Array.from(base).length });
+            for (const x of res.rapport) action({ quoi: `remplacement n° ${x.n}`, occurrences: x.occurrences, avant: x.avant, apres: x.apres });
+            action({ quoi: 'contenu obtenu', longueur: Array.from(res.texte).length, sha256: R.sha256(res.texte) });
+          }
+        }
+      }
+    } catch (e) { bloque('remplacements', `lecture du contenu actuel impossible : ${e.message}`); }
+  }
+  const lireContenu = () => (contenuRemplace !== null ? contenuRemplace : fs.readFileSync(fichierDepot(m.contenu), 'utf8'));
 
   // ---- auteur : le compte qui signe les articles, jamais l'utilisateur d'accès ----
   const login = s[0].wp_auteur;
@@ -191,10 +225,10 @@ async function preparer(db, { depot, simulation = true, creer_etiquettes = false
   const titreDepose = m.titre;                                                   // repère stable du brouillon, avant relecture
   if (!relecture) avert('relecture', 'relecture désactivée pour cet appel (relecture=false) : faits et langue non vérifiés');
   else if (r.erreurs.length) avert('relecture', 'relecture non lancée tant que les erreurs ci-dessous ne sont pas corrigées');
-  else if (m.contenu) {
+  else if (m.contenu || contenuRemplace !== null) {
     try {
       const y = m.yoast || {};
-      const res = await relire({ domaine: s[0].domain, dossier: d.dossier, champs: { titre: m.titre, titre_seo: y.titre, meta: y.meta, contenu: fs.readFileSync(fichierDepot(m.contenu), 'utf8') } });
+      const res = await relire({ domaine: s[0].domain, dossier: d.dossier, champs: { titre: m.titre, titre_seo: y.titre, meta: y.meta, contenu: lireContenu() } });
       contenuRelu = res.champs.contenu;
       m.titre = res.champs.titre; r.titre = m.titre;
       if (m.yoast && y.titre !== undefined) m.yoast.titre = res.champs.titre_seo;
@@ -252,7 +286,7 @@ async function preparer(db, { depot, simulation = true, creer_etiquettes = false
 
   // ---- contenu : marqueurs, puis vérification par le site (blocs, shortcodes, intégrations, images) ----
   let contenu = '';
-  try { contenu = contenuRelu !== null ? contenuRelu : fs.readFileSync(fichierDepot(m.contenu), 'utf8'); } catch (e) { bloque('contenu', `${m.contenu} : ${e.message}`); }
+  try { contenu = contenuRelu !== null ? contenuRelu : (parRemplacements && contenuRemplace === null ? '' : lireContenu()); } catch (e) { bloque('contenu', `${m.contenu} : ${e.message}`); }
   const marqueurs = [...contenu.matchAll(RE_MARQUEUR)];
   for (const mk of marqueurs) if (!fichiers.has(norm(mk[1]))) bloque('marqueurs', `${mk[0]} : fichier non déclaré dans « fichiers »`);
   const restes = (contenu.replace(RE_MARQUEUR, '').match(/\{\{media:[^}]*\}\}/g) || []);

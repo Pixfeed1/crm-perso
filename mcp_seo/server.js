@@ -24,6 +24,7 @@ const liste = (item) => z.preprocess((v) => {
 import * as tools from './tools.js';
 import * as bing from './bing.js';
 import { getLivePage } from './live.js';
+import { getContenuBrut } from './contenu.js';
 import { getPageDossier } from './dossier.js';
 import { checkUrls, MAX_URLS } from './checks.js';
 import { getSiteResources } from './ressources.js';
@@ -322,6 +323,13 @@ function buildServer() {
   const compactJson = (data) => ({ content: [{ type: 'text', text: JSON.stringify(data) }] });
 
   server.tool(
+    'get_contenu_brut',
+    "LECTURE SEULE. La page telle que WordPress la STOCKE (API REST, context=edit), au caractère près : id, type, statut, slug, date de modification (GMT),\ntitle.raw, excerpt.raw et content.raw (commentaires de blocs Gutenberg, codes courts et HTML compris, sans rendu ni nettoyage), longueur, nombre de blocs, codes courts\net empreinte sha256 de content.raw (à reprendre dans base_sha256 de prepare_draft pour remplacer des passages). Par url, ou par id (type facultatif).\nContenu long : découpage en morceaux (debut, longueur en caractères ; morceau.suite indique le suivant). Tous types, tous sites. Aucune écriture.",
+    { site_id: z.number().int(), url: z.string().optional(), id: z.number().int().optional(), type: z.string().optional(), debut: z.number().int().min(0).optional(), longueur: z.number().int().min(1).optional() },
+    async ({ site_id, url, id, type, debut, longueur }) => compactJson(await getContenuBrut(pool, site_id, { url, id, type, debut, longueur }))
+  );
+
+  server.tool(
     'get_page_dossier',
     "Tout ce que le CRM sait d'une page, chaque bloc daté et sourcé : indexation et sitemap, Search Console (totaux, requêtes, pays), volumes Bing,\ncannibalisation (requêtes et phrase-clé), liens entrants du crawl, backlinks (ancre, dofollow), redirections. Données du CRM, pas de lecture du site.",
     { site_id: z.number().int(), url: z.string(), days: z.number().int().optional() },
@@ -353,7 +361,7 @@ function buildServer() {
 
   server.tool(
     'prepare_draft',
-    "Prépare un brouillon WordPress complet depuis un dépôt (jamais publié). D'abord une RELECTURE COMPLÈTE par un Claude indépendant : faits vérifiés sur le web (corrigés avec source, ou retirés s'ils sont introuvables), langue, cohérence ; style et structure seulement signalés ; rapport « relecture » (avant → après, sources).\nPuis les contrôles (blocs, shortcodes, taxonomies, alt, marqueurs {{media:…}}, Yoast 60/135, slug, fichiers), médias sans doublon, brouillon ou copie de travail en mise à jour.\nFilms, séries, animes : \"plateformes\": { \"Disney+\": \"https://…\" } dans le manifeste remplace ensemble les cases serie_plateforme et les adresses du bloc « Où regarder » ({} décoche tout ; noms = cases existantes, voir get_site_resources ; chaque adresse est vérifiée).\nsimulation=true par défaut (aucune écriture) ; la relecture n'est faite qu'une fois par contenu (la simulation et l'écriture partagent ses corrections) ; relecture=false pour s'en passer explicitement ; un second appel reprend le même brouillon.",
+    "Prépare un brouillon WordPress complet depuis un dépôt (jamais publié). D'abord une RELECTURE COMPLÈTE par un Claude indépendant : faits vérifiés sur le web (corrigés avec source, ou retirés s'ils sont introuvables), langue, cohérence ; style et structure seulement signalés ; rapport « relecture » (avant → après, sources).\nPuis les contrôles (blocs, shortcodes, taxonomies, alt, marqueurs {{media:…}}, Yoast 60/135, slug, fichiers), médias sans doublon, brouillon ou copie de travail en mise à jour.\nMise à jour sans renvoyer tout le contenu : mode mise_a_jour + \"base_sha256\" (empreinte lue par get_contenu_brut) + \"remplacements\": [{ \"avant\": \"…\", \"apres\": \"…\", \"occurrences\": 1 }] : appliqués dans l'ordre sur le content.raw actuel ; refus si la page a changé, si un « avant » n'apparaît pas exactement le nombre de fois annoncé, ou si un bloc ou un code court se retrouve déséquilibré ; la simulation montre un extrait avant / après de chaque remplacement.\nFilms, séries, animes : \"plateformes\": { \"Disney+\": \"https://…\" } dans le manifeste remplace ensemble les cases serie_plateforme et les adresses du bloc « Où regarder » ({} décoche tout ; noms = cases existantes, voir get_site_resources ; chaque adresse est vérifiée).\nsimulation=true par défaut (aucune écriture) ; la relecture n'est faite qu'une fois par contenu (la simulation et l'écriture partagent ses corrections) ; relecture=false pour s'en passer explicitement ; un second appel reprend le même brouillon.",
     { depot: z.number().int(), simulation: z.boolean().optional(), creer_etiquettes: z.boolean().optional(), relecture: z.boolean().optional() },
     async ({ depot, simulation, creer_etiquettes, relecture }) => compactJson(await prepareDraft(depot, simulation ?? true, creer_etiquettes ?? false, relecture ?? true))
   );
