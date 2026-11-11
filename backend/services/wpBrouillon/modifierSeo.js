@@ -118,7 +118,9 @@ async function modifierSeo(db, { site_id: siteId, url = null, id = null, titre_s
   r.apres_prevu = Object.fromEntries(changes.map((k) => [k, apres[k]]));
   for (const k of changes) action({ quoi: `modifier ${k}`, avant: r.avant[k] || '(vide)', apres: apres[k] || '(vide : retiré)', longueur: longueur(apres[k]) });
   for (const k of ['titre_seo', 'meta_description']) if (changes.includes(k) && !apres[k]) avert(k, `${k} vidé : Yoast reprendra sa valeur par défaut (modèle du type de contenu)`);
-  r.date_modification = { wordpress: `passera de ${avant.modified_gmt} (GMT) à la date de l'écriture ; la date de publication (${avant.date_gmt} GMT) ne change pas` };
+  r.date_modification = { wordpress: ['publish', 'future', 'private'].includes(avant.status)
+    ? `passera de ${avant.modified_gmt} (GMT) à la date de l'écriture ; la date de publication (${avant.date_gmt} GMT) ne change pas`
+    : `passera de ${avant.modified_gmt} (GMT) à la date de l'écriture ; contenu ${avant.status} : pas encore de date de publication fixée (WordPress la recale à chaque enregistrement)` };
   if (publique.lu) {
     const aff = ap.affichageDate(publique.html);
     r.date_modification.page = aff.mention_visible ? `date de mise à jour visible (« ${aff.mention_visible} ») : elle changera à l'écran` : 'pas de date de mise à jour visible dans le texte de la page';
@@ -141,7 +143,9 @@ async function modifierSeo(db, { site_id: siteId, url = null, id = null, titre_s
     const shaApres = sha256(relu.content && relu.content.raw);
     r.contenu = { sha256_avant: r.avant.contenu_sha256, sha256_apres: shaApres, identique: shaApres === r.avant.contenu_sha256 };
     if (!r.contenu.identique) bloque('vérification', 'le contenu a changé pendant l\'écriture (empreinte différente) : vérifier la page', 'controle');
-    for (const [k, lib] of [['slug', 'slug'], ['status', 'statut'], ['date_gmt', 'date de publication']]) if (relu[k] !== avant[k]) bloque('vérification', `${lib} changé : ${avant[k]} -> ${relu[k]}`, 'controle');
+    // Un brouillon n'a pas encore de date de publication fixée : WordPress la recale à chaque enregistrement.
+    const dateFixee = ['publish', 'future', 'private'].includes(avant.status);
+    for (const [k, lib] of [['slug', 'slug'], ['status', 'statut'], ...(dateFixee ? [['date_gmt', 'date de publication']] : [])]) if (relu[k] !== avant[k]) bloque('vérification', `${lib} changé : ${avant[k]} -> ${relu[k]}`, 'controle');
     // Valeurs enregistrées.
     const enreg = { titre: relu.title && relu.title.raw, titre_seo: yr.titre || '', meta_description: yr.meta || '', phrase_cle: yr.phrase_cle || '' };
     for (const k of changes) if (String(enreg[k]).trim() !== String(apres[k]).trim()) bloque('vérification', `${k} enregistré « ${enreg[k]} » au lieu de « ${apres[k]} » (nettoyage du site ?)`, 'controle');

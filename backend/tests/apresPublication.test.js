@@ -109,6 +109,7 @@ function wpFaux(req, res, corps) {
       if (b.title !== undefined) x.titre = b.title;
       if (b.outils_yoast) { x.yoast = { ...(x.yoast || {}) }; for (const [k, v] of Object.entries(b.outils_yoast)) { if (v === '') delete x.yoast[k]; else x.yoast[k] = v; } }
       x.modifie = '2026-11-01T12:00:00';
+      if (x.status === 'draft') x.publie = x.modifie;                       // comme WordPress : date d'un brouillon non fixée
     }
     const ya = yoastAffiche(x);
     return json(200, { id: x.id, type: x.type, status: x.status, slug: x.slug, link: lien(x), date_gmt: x.publie || '2026-01-01T09:00:00', title: { raw: x.titre },
