@@ -208,6 +208,13 @@ en écriture (liste fermée, `edit_post`), copie de travail pour les mises à jo
 Republish de Yoast Duplicate Post s'il est là, sinon copie + bouton « Remplacer l'original » ;
 le nouveau slug est appliqué à la validation, WordPress garde l'ancien en `_wp_old_slug`).
 
+Netlinking multi-site (jurojin.net) : `envoyer_mail_outreach`, `verifier_deja_contacte`, `lister_outreach`,
+`marquer_reponse`, `ajouter_cibles`. Ils appellent les MÊMES routes que l'onglet SEO (`/api/seo/outreach/*`,
+secret partagé) : toutes les règles sont dans le CRM (un destinataire, pas de champ de fusion, domaine jamais
+contacté tous sites confondus — ancien envoi Gmail compris —, relances encadrées dans le même fil, oppositions,
+plafond quotidien et délai aléatoire par site). Expéditeur et signature du site réglés dans `backend/.env` et
+`backend/config/signatures/`, aucun suivi de clic ni lien vers le CRM dans les mails. Simulation par défaut.
+
 Titre SEO, méta, phrase clé et titre WordPress : `modifier_seo(site_id, url | id, titre_seo?, meta_description?,
 phrase_cle?, titre?, simulation=true)`. Tous les types qui exposent le champ `outils_yoast` du mu-plugin de
 rédaction (pages, articles, portfolio, guides… ; `get_site_resources` l'indique par type : `yoast_api`), y

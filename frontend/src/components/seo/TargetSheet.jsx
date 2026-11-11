@@ -12,6 +12,7 @@ import { motion } from 'framer-motion';
 import { FiX, FiRefreshCw, FiLoader, FiTrash2, FiPlus, FiExternalLink, FiCheck, FiSlash, FiAlertTriangle, FiSave } from 'react-icons/fi';
 import { seoBacklinksAPI } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
+import OutreachHistorique from './OutreachHistorique';
 
 const EMPLACEMENTS = [
   ['article', "Corps d'article"], ['sources', 'Bloc sources / références'], ['blogroll', 'Blogroll / barre latérale'],
@@ -33,7 +34,7 @@ const Spinner = ({ size = 14 }) => (
 
 const inputCls = 'w-full px-3 py-2 bg-surface-muted border border-border rounded-lg text-text-primary text-sm placeholder-text-muted focus:outline-none focus:border-accent';
 
-const TargetSheet = ({ targetId, onClose, onChanged }) => {
+const TargetSheet = ({ targetId, onClose, onChanged, outreachSite = null, onRelancer, versionOutreach }) => {
   const { toast } = useToast();
   const [t, setT] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -275,6 +276,8 @@ const TargetSheet = ({ targetId, onClose, onChanged }) => {
                 <textarea value={form.notes} onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))} rows={3} className={`${inputCls} resize-y`} />
               </div>
             </section>
+
+            {outreachSite && <OutreachHistorique targetId={targetId} onRelancer={onRelancer} version={versionOutreach} />}
 
             <div className="flex justify-end gap-2 pt-2 border-t border-border">
               <button onClick={onClose} className="px-4 py-2 rounded-lg text-text-secondary hover:bg-surface-strong text-sm">Fermer</button>

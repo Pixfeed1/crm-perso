@@ -1065,7 +1065,7 @@ const Seo = () => {
               <AuthorityTab siteId={siteId} onLaunch={requestLaunch} job={job} jobActive={!!jobActive} />
             ) : tab === 'backlinks' ? (
               /* Campagnes backlinks (niches, découverte, scoring, outreach Gmail) */
-              <BacklinksTab />
+              <BacklinksTab siteId={siteId} />
             ) : (
               /* Suivi de positions (rank tracker) — composant dédié */
               <PositionsTab siteId={siteId} gscConnected={gscConnected} />

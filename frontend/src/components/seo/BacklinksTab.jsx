@@ -11,9 +11,10 @@ import {
   FiSend, FiCheckCircle, FiSlash, FiExternalLink, FiZap, FiSearch,
   FiShield, FiAlertTriangle, FiInfo, FiCheck, FiClock, FiMail, FiEdit3, FiUserPlus, FiMessageCircle
 } from 'react-icons/fi';
-import { seoBacklinksAPI } from '../../services/api';
+import { seoBacklinksAPI, outreachAPI } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
 import TargetSheet from './TargetSheet';
+import OutreachAccueil from './OutreachAccueil';
 
 // Icône de la porte d'entrée (comment on contacte le site).
 const PORTE_ICON = {
@@ -36,7 +37,7 @@ const STATUT_BADGE = {
   ecarte: { cls: 'bg-neutral-bg text-neutral-text', label: 'Écarté' }
 };
 
-const BacklinksTab = () => {
+const BacklinksTab = ({ siteId = null }) => {
   const { toast } = useToast();
   const [niches, setNiches] = useState([]);
   const [status, setStatus] = useState(null); // config gmail/opr/crux/graph + job en cours
@@ -58,10 +59,20 @@ const BacklinksTab = () => {
   const [sendTo, setSendTo] = useState('');
   const [angle, setAngle] = useState('');
   const [sending, setSending] = useState(false);
+  // Netlinking multi-site : sites à expéditeur réglé (jurojin.net). Pour eux, envoi par l'endpoint unique
+  // (règles côté serveur : doublons, relances, cadence) ; l'ancien envoi Gmail reste pour les autres.
+  const [outreachSites, setOutreachSites] = useState([]);
+  const [outreachSite, setOutreachSite] = useState(null);   // site de l'envoi en cours (null = ancien envoi Gmail)
+  const [relanceDe, setRelanceDe] = useState(null);
+  const [apercu, setApercu] = useState(null);               // contrôles passés en simulation
+  const [refusEnvoi, setRefusEnvoi] = useState(null);       // { message, precedents, prochain_envoi_le }
+  const [versionOut, setVersionOut] = useState(0);
+  const [sheetSite, setSheetSite] = useState(null);
 
   const load = useCallback(async () => {
     try {
       const [n, s] = await Promise.all([seoBacklinksAPI.listNiches(), seoBacklinksAPI.status()]);
+      outreachAPI.config().then((c) => setOutreachSites((c && c.sites) || [])).catch(() => setOutreachSites([]));
       setNiches(Array.isArray(n) ? n : []);
       setStatus(s);
       return { niches: n, status: s };
@@ -161,10 +172,26 @@ const BacklinksTab = () => {
     } catch (e) { toast.error('Mise à jour impossible'); }
   };
 
+  const expediteurDe = (sid) => outreachSites.find((x) => x.site_id === Number(sid)) || null;
+  const siteNiche = activeNiche && expediteurDe(activeNiche.site_id) ? activeNiche.site_id : null;
+  const expediteurCourant = expediteurDe(siteId);
+  const fermerEnvoi = () => { setOutreachTarget(null); setRelanceDe(null); setApercu(null); setRefusEnvoi(null); };
+
   const openOutreach = (t) => {
-    setOutreachTarget(t); setDraft(null); setAngle('');
+    setOutreachTarget(t); setDraft(null); setAngle(''); setRelanceDe(null); setApercu(null); setRefusEnvoi(null);
+    setOutreachSite(siteNiche);
     setSendTo(t.contact_email || '');
     generateDraft(t, '');
+  };
+
+  // Relance : même fil (relance_de), message pré-rempli à compléter ; c'est le serveur qui l'autorise ou non.
+  const relancer = (m) => {
+    setSheetId(null);
+    const objet = /^re\s*:/i.test(m.objet) ? m.objet : `Re: ${m.objet}`;
+    setOutreachTarget({ id: m.target_id, domain: m.domaine, contact_email: m.destinataire });
+    setOutreachSite(m.site); setRelanceDe(m.id); setApercu(null); setRefusEnvoi(null); setAngle('');
+    setSendTo(m.destinataire);
+    setDraft({ subject: objet, body: `Bonjour,\n\nJe me permets de revenir vers vous au sujet de mon message du ${new Date(m.envoye_le).toLocaleDateString('fr-FR')}.\n\n` });
   };
 
   const generateDraft = async (t, angleVal) => {
@@ -177,8 +204,29 @@ const BacklinksTab = () => {
     } finally { setDrafting(false); }
   };
 
+  // Envoi par l'endpoint unique : d'abord la vérification (simulation), puis l'envoi réel.
+  const sendOutreach = async () => {
+    setSending(true); setRefusEnvoi(null);
+    const corpsAppel = { site_id: outreachSite, target_id: outreachTarget.id, destinataire: sendTo.trim(), objet: draft.subject, corps: draft.body, ...(relanceDe ? { relance_de: relanceDe } : {}) };
+    try {
+      if (!apercu) {
+        const r = await outreachAPI.send({ ...corpsAppel, simulation: true });
+        setApercu(r);
+      } else {
+        const r = await outreachAPI.send({ ...corpsAppel, simulation: false });
+        toast.success(`Envoyé depuis ${expediteurDe(outreachSite).expediteur} : relance prévue le ${new Date(r.relance_prevue_le).toLocaleDateString('fr-FR')}`);
+        fermerEnvoi(); setVersionOut((v) => v + 1);
+        if (activeNiche) loadTargets(activeNiche.id);
+      }
+    } catch (e) {
+      setApercu(null);
+      setRefusEnvoi({ message: e.message || "Envoi refusé", precedents: (e.data && e.data.precedents) || null });
+    } finally { setSending(false); }
+  };
+
   const send = async () => {
     if (!outreachTarget || !draft || !sendTo.trim()) { toast.error('Destinataire requis'); return; }
+    if (outreachSite) return sendOutreach();
     setSending(true);
     try {
       const r = await seoBacklinksAPI.sendEmail(outreachTarget.id, { to: sendTo.trim(), subject: draft.subject, body: draft.body });
@@ -194,6 +242,10 @@ const BacklinksTab = () => {
 
   return (
     <div className="space-y-4">
+      {expediteurCourant && (
+        <OutreachAccueil siteId={siteId} expediteur={expediteurCourant.expediteur} version={versionOut}
+          onOuvrir={(id) => { setSheetSite(siteId); setSheetId(id); }} onRelancer={relancer} />
+      )}
       {/* Bandeau config */}
       {cfgWarn && (
         <div className="bg-warning-bg text-warning-text border border-warning-text/30 rounded-lg p-3 text-sm">
@@ -438,7 +490,8 @@ const BacklinksTab = () => {
       {/* Fiche cible : rel par emplacement, porte d'entrée, concurrent */}
       <AnimatePresence>
         {sheetId && (
-          <TargetSheet targetId={sheetId} onClose={() => setSheetId(null)} onChanged={() => { if (activeNiche) { loadTargets(activeNiche.id); load(); } }} />
+          <TargetSheet targetId={sheetId} onClose={() => { setSheetId(null); setSheetSite(null); }} onChanged={() => { if (activeNiche) { loadTargets(activeNiche.id); load(); } }}
+            outreachSite={sheetSite || siteNiche} onRelancer={relancer} versionOutreach={versionOut} />
         )}
       </AnimatePresence>
 
@@ -447,16 +500,16 @@ const BacklinksTab = () => {
         {outreachTarget && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[10000] flex items-center justify-center p-4"
-            onClick={() => setOutreachTarget(null)}>
+            onClick={fermerEnvoi}>
             <motion.div initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 20 }}
               className="panel-bg border border-border rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}>
               <div className="flex justify-between items-center px-6 py-4 border-b border-border">
-                <h2 className="text-lg font-bold text-text-primary flex items-center gap-2"><FiCpu size={18} /> Demande de lien — {outreachTarget.domain}</h2>
-                <button onClick={() => setOutreachTarget(null)} className="text-text-muted hover:text-text-primary"><FiX size={20} /></button>
+                <h2 className="text-lg font-bold text-text-primary flex items-center gap-2"><FiCpu size={18} /> {relanceDe ? 'Relance' : 'Demande de lien'} — {outreachTarget.domain}</h2>
+                <button onClick={fermerEnvoi} className="text-text-muted hover:text-text-primary"><FiX size={20} /></button>
               </div>
               <div className="p-6 space-y-4">
-                <div className="flex gap-2 items-end">
+                {!relanceDe && <div className="flex gap-2 items-end">
                   <div className="flex-1">
                     <label className="block text-xs text-text-muted mb-1">Angle (optionnel — ex : « j'ai adoré leur tuto sur X »)</label>
                     <input value={angle} onChange={(e) => setAngle(e.target.value)}
@@ -466,7 +519,7 @@ const BacklinksTab = () => {
                     className="px-3 py-2 rounded-lg bg-surface-strong hover:bg-border-strong text-text-primary text-sm flex items-center gap-1.5 disabled:opacity-50">
                     {drafting ? <Spinner /> : <FiRefreshCw size={14} />} Régénérer
                   </button>
-                </div>
+                </div>}
 
                 {drafting ? (
                   <div className="flex items-center gap-2 text-text-secondary text-sm py-8 justify-center"><Spinner size={18} /> Claude rédige…</div>
@@ -474,28 +527,39 @@ const BacklinksTab = () => {
                   <>
                     <div>
                       <label className="block text-sm text-text-secondary mb-1">Destinataire</label>
-                      <input type="email" value={sendTo} onChange={(e) => setSendTo(e.target.value)} placeholder="contact@site.fr"
+                      <input type="email" value={sendTo} onChange={(e) => { setSendTo(e.target.value); setApercu(null); }} placeholder="contact@site.fr"
                         className="w-full px-3 py-2 bg-surface-muted border border-border rounded-lg text-text-primary focus:outline-none focus:border-accent" />
                       {!outreachTarget.contact_email && <p className="text-xs text-warning-text mt-1">Pas d'email détecté — lance « Vérif live » ou cherche-le sur le site.</p>}
                     </div>
                     <div>
                       <label className="block text-sm text-text-secondary mb-1">Objet</label>
-                      <input value={draft.subject} onChange={(e) => setDraft((d) => ({ ...d, subject: e.target.value }))}
+                      <input value={draft.subject} onChange={(e) => { setDraft((d) => ({ ...d, subject: e.target.value })); setApercu(null); }}
                         className="w-full px-3 py-2 bg-surface-muted border border-border rounded-lg text-text-primary focus:outline-none focus:border-accent" />
                     </div>
                     <div>
-                      <label className="block text-sm text-text-secondary mb-1">Message (à relire — envoyé depuis TON Gmail)</label>
-                      <textarea value={draft.body} onChange={(e) => setDraft((d) => ({ ...d, body: e.target.value }))} rows={10}
+                      <label className="block text-sm text-text-secondary mb-1">Message (à relire — envoyé depuis {outreachSite ? `${expediteurDe(outreachSite).expediteur}, signature ajoutée à l'envoi` : 'TON Gmail'})</label>
+                      <textarea value={draft.body} onChange={(e) => { setDraft((d) => ({ ...d, body: e.target.value })); setApercu(null); }} rows={10}
                         className="w-full px-3 py-2 bg-surface-muted border border-border rounded-lg text-text-primary focus:outline-none focus:border-accent resize-y" />
                     </div>
                   </>
                 ) : null}
+                {outreachSite && apercu && (
+                  <div className="rounded-lg border border-success-text/30 bg-success-bg/40 p-3 text-xs text-text-secondary space-y-0.5">
+                    {(apercu.controles || []).map((c, i) => <div key={i}>✓ {c.texte}</div>)}
+                  </div>
+                )}
+                {outreachSite && refusEnvoi && (
+                  <div className="rounded-lg border border-danger-text/30 bg-danger-bg/40 p-3 text-sm text-danger-text">
+                    {refusEnvoi.message}
+                    {refusEnvoi.precedents && <ul className="mt-1 text-xs text-text-secondary">{refusEnvoi.precedents.map((x, i) => <li key={i}>{new Date(x.envoye_le).toLocaleDateString('fr-FR')} · « {x.objet} » · {x.statut} · {x.origine}</li>)}</ul>}
+                  </div>
+                )}
               </div>
               <div className="flex gap-3 px-6 py-4 border-t border-border">
-                <button onClick={() => setOutreachTarget(null)} className="flex-1 px-4 py-2.5 border-2 border-border text-text-primary hover:bg-surface-strong rounded-lg font-medium">Annuler</button>
+                <button onClick={fermerEnvoi} className="flex-1 px-4 py-2.5 border-2 border-border text-text-primary hover:bg-surface-strong rounded-lg font-medium">Annuler</button>
                 <button onClick={send} disabled={sending || drafting || !draft || !sendTo.trim()}
                   className="flex-1 px-4 py-2.5 bg-accent hover:bg-accent-hover text-white rounded-lg font-medium disabled:opacity-50 flex items-center justify-center gap-2">
-                  <FiSend size={16} /> {sending ? 'Envoi…' : 'Envoyer via Gmail'}
+                  <FiSend size={16} /> {sending ? 'Envoi…' : outreachSite ? (apercu ? `Envoyer depuis ${expediteurDe(outreachSite).expediteur}` : 'Vérifier avant envoi') : 'Envoyer via Gmail'}
                 </button>
               </div>
             </motion.div>

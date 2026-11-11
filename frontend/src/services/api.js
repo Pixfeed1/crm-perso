@@ -623,6 +623,15 @@ export const revenuesAPI = {
 
 // ===== SEO (lecture seule : données produites par le worker Python seo_worker) =====
 // Module Backlinks (suite SEO) — pipeline séparé du CRM client, envoi via Gmail perso.
+// Netlinking multi-site (jurojin.net…) : un seul endpoint d'envoi, toutes les règles côté serveur.
+export const outreachAPI = {
+  config: () => apiRequest('/seo/outreach/config'),
+  send: (data) => apiRequest('/seo/outreach/send', 'POST', data),
+  mails: (params = {}) => apiRequest(`/seo/outreach/mails?${new URLSearchParams(Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== ''))).toString()}`),
+  sansReponse: (site) => apiRequest(`/seo/outreach/sans-reponse?site=${site}`),
+  reponse: (data) => apiRequest('/seo/outreach/reponse', 'POST', data)
+};
+
 export const seoBacklinksAPI = {
   status: () => apiRequest('/seo/backlinks/status'),
   listNiches: () => apiRequest('/seo/backlinks/niches'),
