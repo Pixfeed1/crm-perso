@@ -94,17 +94,18 @@ export async function getSiteResources(pool, siteId, options = {}) {
       const inv = await r.json();
       const STANDARD = new Set(['date', 'date_gmt', 'guid', 'id', 'link', 'modified', 'modified_gmt', 'slug', 'status', 'type', 'password', 'permalink_template', 'generated_slug', 'title', 'content', 'author', 'featured_media', 'template', 'meta', 'acf', 'outils_yoast', 'outils_plateformes', 'class_list']);
       const types = await Promise.all((inv.types || []).map(async (t) => {
-        let champs = [], meta = [];
+        let champs = [], meta = [], yoastApi = null;
         try {
           const o = await requete(`${base}/wp-json/wp/v2/${t.rest_base}`, { method: 'OPTIONS', headers: { Authorization: acces.auth, Accept: 'application/json' } });
           const props = ((await o.json()).schema || {}).properties || {};
           champs = Object.keys(props).filter((k) => !STANDARD.has(k) && !t.taxonomies.some((x) => x === k || (inv.taxonomies || []).some((y) => y.taxonomie === x && y.rest_base === k)));
           meta = Object.keys((props.meta && props.meta.properties) || {});
+          yoastApi = props.outils_yoast ? 'outils_yoast (titre SEO, méta, phrase clé… : prepare_draft, modifier_seo)' : null;
         } catch { /* type sans schéma lisible */ }
         return {
           type: t.type, rest_base: t.rest_base, nom: t.nom, hierarchique: t.hierarchique || undefined, supports: t.supports,
           taxonomies: t.taxonomies.map((x) => { const y = (inv.taxonomies || []).find((z) => z.taxonomie === x); return y ? `${x} (${y.rest_base})` : x; }),
-          modeles: t.modeles, champs_rest: champs, meta, acf: t.acf,
+          modeles: t.modeles, champs_rest: champs, meta, acf: t.acf, yoast_api: yoastApi || undefined,
         };
       }));
       const exts = Object.keys(inv.types_fichiers || {}).flatMap((k) => k.split('|'));

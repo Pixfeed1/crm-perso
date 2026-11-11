@@ -28,7 +28,7 @@ import { getContenuBrut } from './contenu.js';
 import { getPageDossier } from './dossier.js';
 import { checkUrls, MAX_URLS } from './checks.js';
 import { getSiteResources } from './ressources.js';
-import { demanderDepot, prepareDraft, repointerLiens, poserEtiquettes, modifierMedia, poserLien, provenanceGa4 } from './brouillon.js';
+import { demanderDepot, prepareDraft, repointerLiens, poserEtiquettes, modifierMedia, poserLien, modifierSeo, provenanceGa4 } from './brouillon.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -371,6 +371,13 @@ function buildServer() {
     "Remplace une adresse du site par une autre dans le contenu brut de TOUS les contenus publiés (tous types), sous toutes ses formes (absolue, relative, avec ou sans barre finale).\nancres = { adresse_de_page: nouveau_texte } change aussi le texte du lien sur ces pages. Rapport page par page (avant/après autour de chaque lien), métadonnées et réglages qui la contiennent (signalés, jamais modifiés), effet sur la date de modification affichée.\nsimulation=true par défaut (rien écrit) ; jamais de publication ni de suppression.",
     { site_id: z.number().int(), ancienne_url: z.string(), nouvelle_url: z.string(), ancres: z.record(z.string()).optional(), simulation: z.boolean().optional() },
     async ({ site_id, ancienne_url, nouvelle_url, ancres, simulation }) => compactJson(await repointerLiens(site_id, ancienne_url, nouvelle_url, ancres ?? {}, simulation ?? true))
+  );
+
+  server.tool(
+    'modifier_seo',
+    "Modifie le titre SEO, la méta description, la phrase clé Yoast et/ou le titre WordPress d'un contenu (page, article, portfolio, guide…), par url ou id, sans jamais toucher au contenu, au slug, au statut ni à la date de publication.\nLit d'abord l'état actuel (titre, champs Yoast, ce que Yoast calcule et ce qu'affiche la page publique hors cache : title, meta description, og:title). Limites Yoast : titre SEO 60 caractères, méta 135.\nAprès écriture : empreinte du contenu identique, puis relecture de la page publique (indexable Yoast reconstruit) ; rapport avant/après, date de modification, journal.\nsimulation=true par défaut (rien écrit) ; refus si le type n'expose pas les champs Yoast.",
+    { site_id: z.number().int(), url: z.string().optional(), id: z.number().int().optional(), titre_seo: z.string().optional(), meta_description: z.string().optional(), phrase_cle: z.string().optional(), titre: z.string().optional(), simulation: z.boolean().optional() },
+    async ({ site_id, url, id, titre_seo, meta_description, phrase_cle, titre, simulation }) => compactJson(await modifierSeo(site_id, { url, id }, { titre_seo, meta_description, phrase_cle, titre }, simulation ?? true))
   );
 
   server.tool(

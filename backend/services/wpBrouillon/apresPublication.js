@@ -563,4 +563,5 @@ async function poserLien(db, { site_id: siteId, url, texte, cible, simulation = 
   return fin();
 }
 
-module.exports = { poserLien, occurrencesTexte, decoder, repointerLiens, poserEtiquettes, modifierMedia, motifAdresse, remplacerAdresses, changerAncres, affichageDate, cle, sonder };
+module.exports = { poserLien, occurrencesTexte, decoder, repointerLiens, poserEtiquettes, modifierMedia, motifAdresse, remplacerAdresses, changerAncres, affichageDate, cle, sonder,
+  nouveauRapport, contexte, adresseDuSite, routeAbsente, journaliser, pagePublique };

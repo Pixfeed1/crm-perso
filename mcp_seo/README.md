@@ -208,6 +208,16 @@ en écriture (liste fermée, `edit_post`), copie de travail pour les mises à jo
 Republish de Yoast Duplicate Post s'il est là, sinon copie + bouton « Remplacer l'original » ;
 le nouveau slug est appliqué à la validation, WordPress garde l'ancien en `_wp_old_slug`).
 
+Titre SEO, méta, phrase clé et titre WordPress : `modifier_seo(site_id, url | id, titre_seo?, meta_description?,
+phrase_cle?, titre?, simulation=true)`. Tous les types qui exposent le champ `outils_yoast` du mu-plugin de
+rédaction (pages, articles, portfolio, guides… ; `get_site_resources` l'indique par type : `yoast_api`), y
+compris les pages construites par un modèle du thème, au contenu vide. Lit l'état (titre, champs Yoast,
+`yoast_head_json`, page publique hors cache : title, meta description, og:title), limites 60 / 135, écrit
+seulement `title` et `outils_yoast`, vérifie que content.raw (sha256), slug, statut et date de publication
+n'ont pas bougé, puis relit l'affichage (le mu-plugin reconstruit l'indexable Yoast après l'écriture).
+Essai réel sans toucher aux vraies pages : `node scripts/essai-modifier-seo.js 15` (simulation sur /decouvrir/)
+et `--brouillon` (écriture sur une page brouillon d'essai, mise ensuite à la corbeille).
+
 Mise à jour par remplacements : `get_contenu_brut(site_id, url | id)` lit la page telle que WordPress la
 stocke (title.raw, excerpt.raw, content.raw au caractère près, nombre de blocs, codes courts, sha256 ;
 morceaux `debut` / `longueur` pour les longs contenus). Puis, en `mise_a_jour`, le manifeste donne

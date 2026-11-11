@@ -66,6 +66,8 @@ export const poserEtiquettes = (siteId, urls, ajouter = [], retirer = [], simula
   retouche('etiquettes', { site_id: siteId, urls, ajouter, retirer, simulation });
 export const modifierMedia = (siteId, media, champs = {}, simulation = true) =>
   retouche('media', { site_id: siteId, media, ...champs, simulation });
+export const modifierSeo = (siteId, cible = {}, champs = {}, simulation = true) =>
+  retouche('seo', { site_id: siteId, ...cible, ...champs, simulation });
 export const poserLien = (siteId, url, texte, cible, simulation = true) =>
   retouche('lien', { site_id: siteId, url, texte, cible, simulation });
 

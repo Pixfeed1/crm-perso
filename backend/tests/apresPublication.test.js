@@ -31,6 +31,9 @@ function etatInitial() {
       [14, { id: 14, type: 'post', status: 'publish', slug: 'brouteurs', titre: 'Les brouteurs', modifie: '2026-04-01T10:00:00', tags: [],
         contenu: '<!-- wp:heading --><h2 class="wp-block-heading">Sur un site de rencontre</h2><!-- /wp:heading -->\n<!-- wp:paragraph --><p>Le brouteur vous aborde sur un site de rencontre, puis passe sur WhatsApp.</p><!-- /wp:paragraph -->\n<!-- wp:paragraph --><p>Voir <a href="/guide/">un site de rencontre sûr</a> et les sites de rencontres.</p><!-- /wp:paragraph -->' }],
       [15, { id: 15, type: 'post', status: 'publish', slug: 'badoo', titre: 'Badoo', modifie: '2026-04-02T10:00:00', tags: [], contenu: '<p>Badoo.</p>' }],
+      [160042, { id: 160042, type: 'page', status: 'publish', slug: 'decouvrir', titre: 'Découvrir', modifie: '2026-05-01T10:00:00', publie: '2026-01-15T09:00:00', tags: [], contenu: '',
+        yoast: { titre: 'Découvrir - Pixfeed', meta: 'Ancienne méta.', phrase_cle: '' } }],
+      [70, { id: 70, type: 'page', status: 'draft', slug: 'essai-seo', titre: 'Essai SEO', modifie: '2026-05-02T10:00:00', publie: '2026-05-02T10:00:00', tags: [], contenu: '', yoast: {} }],
       [13, { id: 13, type: 'post', status: 'publish', slug: 'avec-image', titre: 'Avec image', modifie: '2026-03-02T10:00:00', tags: [],
         contenu: `<!-- wp:image {"id":500} --><figure class="wp-block-image"><img src="${h()}/wp-content/uploads/2026/01/capture-blender-1024x576.jpg" alt="Ancien alt" class="wp-image-500"/></figure><!-- /wp:image -->` }],
     ]),
@@ -38,6 +41,9 @@ function etatInitial() {
   };
 }
 const TYPES = { post: 'posts', page: 'pages', guide: 'guides' };
+// Ce que Yoast affiche (indexable) : titre SEO sinon « titre - Pixfeed » ; W.indexFige simule un indexable pas reconstruit.
+const yoastAffiche = (x) => { const y = (W.indexFige && W.indexFige[x.id]) || x.yoast || {}; const t = y.titre || `${x.titre} - Pixfeed`; return { title: t, description: y.meta || '', og_title: y.og_titre || t }; };
+const esc = (t) => String(t).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 const lien = (p) => `${base}/${p.type === 'guide' ? 'guide-achat/' : ''}${p.slug}/`;
 
 function wpFaux(req, res, corps) {
@@ -49,12 +55,19 @@ function wpFaux(req, res, corps) {
     if (u.pathname === NOUV || u.pathname === ANC) { res.writeHead(200, { 'Content-Type': 'text/html' }); return res.end('<html><body>page</body></html>'); }
     const p = [...W.posts.values()].find((x) => new URL(lien(x)).pathname === u.pathname);
     if (!p) { res.writeHead(404); return res.end(); }
+    if (p.status !== 'publish') { res.writeHead(404); return res.end(); }
+    const ya = yoastAffiche(p);
     res.writeHead(200, { 'Content-Type': 'text/html' });
-    return res.end(`<html><head><meta property="article:modified_time" content="x"></head><body><p>${p.id === 10 ? 'Mis à jour le 12 janvier 2026' : 'texte'}</p></body></html>`);
+    return res.end(`<html><head><title>${esc(ya.title)}</title><meta name="description" content="${esc(ya.description)}" /><meta property="og:title" content="${esc(ya.og_title)}" /><meta property="article:modified_time" content="x"></head><body><p>${p.id === 10 ? 'Mis à jour le 12 janvier 2026' : 'texte'}</p></body></html>`);
   }
   if (req.headers.authorization !== AUTH) return json(401, { code: 'rest_not_logged_in', message: 'non' });
   const p = u.pathname.replace('/wp-json/', '');
   const b = corps ? JSON.parse(corps) : {};
+  if (p === 'outils-site/v1/inventaire') return json(200, { types: [{ type: 'post', rest_base: 'posts' }, { type: 'page', rest_base: 'pages' }, { type: 'guide', rest_base: 'guides' }] });
+  if (req.method === 'OPTIONS' && /^wp\/v2\/(posts|pages|guides)$/.test(p)) {
+    const avecYoast = p !== 'wp/v2/guides';                                           // guides : mu-plugin absent (type non exposé)
+    return json(200, { schema: { properties: { title: {}, content: {}, ...(avecYoast ? { outils_yoast: {} } : {}) } } });
+  }
   if (p === 'outils-site/v1/chercher') {
     const motifs = b.motifs || [];
     const contenus = [...W.posts.values()].filter((x) => x.status === 'publish' && motifs.some((m) => x.contenu.includes(m)))
@@ -88,8 +101,18 @@ function wpFaux(req, res, corps) {
   let m = /^wp\/v2\/(posts|pages|guides)\/(\d+)$/.exec(p);
   if (m) {
     const x = W.posts.get(Number(m[2]));
-    if (req.method === 'POST') { W.ecritures++; x.contenu = b.content; x.modifie = '2026-11-01T12:00:00'; }
-    return json(200, { id: x.id, status: x.status, content: { raw: x.contenu }, modified_gmt: x.modifie });
+    if (!x) return json(404, { code: 'rest_post_invalid_id', message: 'Identifiant invalide' });
+    if (TYPES[x.type] !== m[1]) return json(404, { code: 'rest_post_invalid_id', message: 'Identifiant invalide' });
+    if (req.method === 'POST') {
+      W.ecritures++;
+      if (b.content !== undefined) x.contenu = b.content;
+      if (b.title !== undefined) x.titre = b.title;
+      if (b.outils_yoast) { x.yoast = { ...(x.yoast || {}) }; for (const [k, v] of Object.entries(b.outils_yoast)) { if (v === '') delete x.yoast[k]; else x.yoast[k] = v; } }
+      x.modifie = '2026-11-01T12:00:00';
+    }
+    const ya = yoastAffiche(x);
+    return json(200, { id: x.id, type: x.type, status: x.status, slug: x.slug, link: lien(x), date_gmt: x.publie || '2026-01-01T09:00:00', title: { raw: x.titre },
+      content: { raw: x.contenu }, modified_gmt: x.modifie, outils_yoast: x.yoast || {}, yoast_head_json: { title: ya.title, description: ya.description, og_title: ya.og_title } });
   }
   m = /^wp\/v2\/media\/(\d+)$/.exec(p);
   if (m) {
@@ -245,5 +268,56 @@ test('poser_lien : passage unique du texte visible, refus motivés, écriture li
     assert.deepEqual(rows.map((x) => Number(x.post_id)), [14]);
     const encore = await ap.poserLien(db, { site_id: 15, url: page, texte: 'un site de rencontre', cible, simulation: false });
     assert.ok(encore.erreurs.some((e) => /pointe déjà/.test(e.message)));
+  });
+});
+
+test('modifier_seo : état lu, limites, champs seulement, contenu intact, affichage vérifié, refus clairs', opts, async () => {
+  await avecBase(async (db) => {
+    const S = require('../services/wpBrouillon/modifierSeo');
+    const decouvrir = `${base}/decouvrir/`;
+    // Simulation sur la page « découvrir » (contenu vide, modèle du thème) : état actuel et plan, rien écrit.
+    let r = await S.modifierSeo(db, { site_id: 15, url: decouvrir, titre_seo: 'Découvrir Pixfeed : agence web à Franconville', meta_description: 'Qui sommes-nous, comment nous travaillons.' });
+    assert.deepEqual(r.erreurs, [], JSON.stringify(r.erreurs));
+    assert.equal(r.statut, 'simulation : rien écrit');
+    assert.equal(r.page.id, 160042); assert.equal(r.page.type, 'page');
+    assert.equal(r.avant.titre_seo, 'Découvrir - Pixfeed');
+    assert.deepEqual(r.avant.page_publique, { title: 'Découvrir - Pixfeed', meta_description: 'Ancienne méta.', og_title: 'Découvrir - Pixfeed' });
+    assert.equal(r.avant.contenu_longueur, 0);
+    assert.deepEqual(r.actions.map((a) => a.quoi), ['modifier titre_seo', 'modifier meta_description']);
+    assert.match(r.date_modification.wordpress, /date de publication .* ne change pas/);
+    assert.equal(W.ecritures, 0);
+    // Par id aussi.
+    assert.equal((await S.modifierSeo(db, { site_id: 15, id: 160042, phrase_cle: 'agence web franconville' })).page.id, 160042);
+    // Refus : longueurs, rien à changer, type sans champs Yoast, adresse étrangère.
+    const err = async (args) => (await S.modifierSeo(db, { site_id: 15, ...args })).erreurs.map((e) => e.message).join('\n');
+    assert.match(await err({ url: decouvrir, titre_seo: 'x'.repeat(61) }), /titre SEO de 61 caractères \(60 au plus\)/);
+    assert.match(await err({ url: decouvrir, meta_description: 'y'.repeat(136) }), /méta de 136 caractères \(135 au plus\)/);
+    assert.match(await err({ url: decouvrir, titre_seo: 'Découvrir - Pixfeed' }), /rien à changer/);
+    assert.match(await err({ url: `${base}/guide-achat/comparatif/`, titre_seo: 'Comparatif' }), /n'expose pas les champs Yoast/);
+    assert.match(await err({ url: 'https://ailleurs.example/x/', titre_seo: 'x' }), /n'est pas une adresse/);
+    assert.match(await err({ url: decouvrir }), /rien à modifier/);
+
+    // Écriture sur un brouillon d'essai : seuls le titre et les champs Yoast changent ; contrôle sur ce que Yoast calcule.
+    const avant70 = { ...W.posts.get(70) };
+    r = await S.modifierSeo(db, { site_id: 15, id: 70, titre_seo: 'Essai : titre SEO', meta_description: 'Essai de méta.', phrase_cle: 'essai', titre: 'Essai SEO (renommé)', simulation: false });
+    assert.deepEqual(r.erreurs, [], JSON.stringify(r.erreurs));
+    assert.equal(r.statut, 'écrit');
+    assert.equal(r.contenu.identique, true);
+    const x = W.posts.get(70);
+    assert.deepEqual([x.titre, x.yoast.titre, x.yoast.meta, x.yoast.phrase_cle, x.status, x.slug, x.contenu], ['Essai SEO (renommé)', 'Essai : titre SEO', 'Essai de méta.', 'essai', avant70.status, avant70.slug, avant70.contenu]);
+    assert.ok(r.controle_yoast.every((c) => c.ok));
+    assert.deepEqual(r.modifie_le, { avant: '2026-05-02T10:00:00', apres: '2026-11-01T12:00:00' });
+    const j = (await db.pool.query("SELECT mode, post_id FROM seo_wp_journal WHERE mode = 'seo'")).rows;
+    assert.deepEqual(j.map((x) => [x.mode, Number(x.post_id)]), [['seo', 70]]);
+
+    // Page publiée dont l'indexable Yoast ne suit pas : écrit, mais l'écart d'affichage est signalé.
+    W.indexFige = { 160042: { ...W.posts.get(160042).yoast } };
+    r = await S.modifierSeo(db, { site_id: 15, url: decouvrir, titre_seo: 'Nouveau titre', simulation: false });
+    assert.equal(r.statut, 'écrit en partie');
+    assert.match(r.erreurs.map((e) => e.message).join('\n'), /affiche title « Découvrir - Pixfeed » au lieu de « Nouveau titre »/);
+    W.indexFige = null;
+    r = await S.modifierSeo(db, { site_id: 15, url: decouvrir, meta_description: 'Nouvelle méta.', simulation: false });
+    assert.equal(r.statut, 'écrit');
+    assert.deepEqual(r.page_publique.controle.map((c) => [c.champ, c.ok]), [['meta_description', true]]);
   });
 });

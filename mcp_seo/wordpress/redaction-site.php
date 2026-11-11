@@ -119,6 +119,27 @@ function outils_plateformes_ecrire( $post_id, $cle, $valeur ) {
 	return true;
 }
 
+/**
+ * Yoast affiche titre, méta et og:title depuis ses « indexables ». Par l'API REST, WordPress enregistre
+ * d'abord le contenu (Yoast reconstruit alors l'indexable avec les ANCIENNES valeurs), puis les champs
+ * additionnels : on reconstruit donc l'indexable après avoir écrit les champs Yoast. Sans Yoast, rien.
+ */
+function outils_yoast_reindexer( $post_id ) {
+	clean_post_cache( $post_id );
+	if ( ! function_exists( 'YoastSEO' ) ) {
+		return;
+	}
+	try {
+		$classes = YoastSEO()->classes;
+		$depot   = $classes->get( \Yoast\WP\SEO\Repositories\Indexable_Repository::class );
+		$builder = $classes->get( \Yoast\WP\SEO\Builders\Indexable_Builder::class );
+		$indexable = $depot->find_by_id_and_type( $post_id, 'post', false );
+		$builder->build_for_id_and_type( $post_id, 'post', $indexable );
+	} catch ( Throwable $e ) {
+		// Version de Yoast sans ces classes : la balise sera mise à jour à la prochaine sauvegarde.
+	}
+}
+
 add_action( 'rest_api_init', function () {
 	$peut_rediger = function () { return current_user_can( 'edit_posts' ); };
 
@@ -173,6 +194,7 @@ add_action( 'rest_api_init', function () {
 						update_post_meta( $post->ID, $cles[ $nom ], $v );
 					}
 				}
+				outils_yoast_reindexer( $post->ID );
 				return true;
 			},
 			'schema'          => array( 'type' => 'object', 'context' => array( 'edit' ) ),

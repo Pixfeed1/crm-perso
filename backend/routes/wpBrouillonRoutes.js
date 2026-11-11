@@ -66,6 +66,13 @@ mcp.post('/etiquettes', async (req, res) => {
     res.json(await apres.poserEtiquettes(req.app.locals.db, { site_id: Number(b.site_id), urls: b.urls || [], ajouter: b.ajouter || [], retirer: b.retirer || [], simulation: simul(b) }));
   } catch (e) { repondre(res, e); }
 });
+mcp.post('/seo', async (req, res) => {
+  try {
+    const b = req.body;
+    res.json(await require('../services/wpBrouillon/modifierSeo').modifierSeo(req.app.locals.db, { site_id: Number(b.site_id), url: b.url || null, id: b.id || null,
+      titre_seo: b.titre_seo, meta_description: b.meta_description, phrase_cle: b.phrase_cle, titre: b.titre, simulation: simul(b) }));
+  } catch (e) { repondre(res, e); }
+});
 mcp.post('/lien', async (req, res) => {
   try {
     const b = req.body;
