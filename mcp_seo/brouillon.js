@@ -71,6 +71,27 @@ export const modifierSeo = (siteId, cible = {}, champs = {}, simulation = true) 
 export const poserLien = (siteId, url, texte, cible, simulation = true) =>
   retouche('lien', { site_id: siteId, url, texte, cible, simulation });
 
+// ---- netlinking multi-site : MÊMES routes que l'onglet SEO (/api/seo/outreach), toutes les règles côté CRM ----
+async function outreach(chemin, corps) {
+  const s = secret();
+  if (s.length < 32) return { erreur: { source: 'configuration', code: 'config', message: 'OUTILS_MCP_SECRET absent de backend/.env' } };
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 120000);
+  try {
+    const r = await fetch(`${BACKEND}/api/seo/outreach/${chemin}`, { method: 'POST', signal: ctrl.signal, headers: { 'Content-Type': 'application/json', 'X-Outils-Secret': s }, body: JSON.stringify(corps) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) return { refus: true, code: r.status, message: j.message || r.statusText, ...(j.precedents ? { precedents: j.precedents } : {}), ...(j.prochain_envoi_le ? { prochain_envoi_le: j.prochain_envoi_le } : {}) };
+    return compact(j);
+  } catch (e) {
+    return { erreur: { source: 'backend du CRM', code: e.name === 'AbortError' ? 'timeout' : 'réseau', message: txt(e.message) } };
+  } finally { clearTimeout(t); }
+}
+export const envoyerMailOutreach = (a) => outreach('send', a);
+export const verifierDejaContacte = (a) => outreach('verifier', a);
+export const listerOutreach = (a) => outreach('mails', a);
+export const marquerReponse = (a) => outreach('reponse', a);
+export const ajouterCibles = (a) => outreach('cibles', a);
+
 // provenance du trafic GA4 (lecture seule, en direct, par le backend qui détient l'accès Google)
 export async function provenanceGa4(siteId, days = 28, canal, limit = 25) {
   const j = await backend('ga4-provenance', { site_id: siteId, days, canal, limit }, 90 * 1000);

@@ -38,3 +38,6 @@ backend/uploads/wp-depots/
 # Fichiers temporaires et profil Chrome du CRM
 backend/tmp/
 backend/.cache/
+
+# Signatures des expéditeurs de netlinking (copiées depuis Roundcube, propres au serveur)
+backend/config/signatures/*.html

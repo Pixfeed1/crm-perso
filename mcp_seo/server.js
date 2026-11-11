@@ -28,7 +28,7 @@ import { getContenuBrut } from './contenu.js';
 import { getPageDossier } from './dossier.js';
 import { checkUrls, MAX_URLS } from './checks.js';
 import { getSiteResources } from './ressources.js';
-import { demanderDepot, prepareDraft, repointerLiens, poserEtiquettes, modifierMedia, poserLien, modifierSeo, provenanceGa4 } from './brouillon.js';
+import { demanderDepot, prepareDraft, repointerLiens, poserEtiquettes, modifierMedia, poserLien, modifierSeo, provenanceGa4, envoyerMailOutreach, verifierDejaContacte, listerOutreach, marquerReponse, ajouterCibles } from './brouillon.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -371,6 +371,38 @@ function buildServer() {
     "Remplace une adresse du site par une autre dans le contenu brut de TOUS les contenus publiés (tous types), sous toutes ses formes (absolue, relative, avec ou sans barre finale).\nancres = { adresse_de_page: nouveau_texte } change aussi le texte du lien sur ces pages. Rapport page par page (avant/après autour de chaque lien), métadonnées et réglages qui la contiennent (signalés, jamais modifiés), effet sur la date de modification affichée.\nsimulation=true par défaut (rien écrit) ; jamais de publication ni de suppression.",
     { site_id: z.number().int(), ancienne_url: z.string(), nouvelle_url: z.string(), ancres: z.record(z.string()).optional(), simulation: z.boolean().optional() },
     async ({ site_id, ancienne_url, nouvelle_url, ancres, simulation }) => compactJson(await repointerLiens(site_id, ancienne_url, nouvelle_url, ancres ?? {}, simulation ?? true))
+  );
+
+  // ---- netlinking (jurojin.net…) : mêmes routes que l'onglet SEO, toutes les règles côté CRM ----
+  server.tool(
+    'envoyer_mail_outreach',
+    "ÉCRITURE (envoi d'un mail) : demande de lien à UNE cible, depuis l'expéditeur du site (jurojin.net : contact@jurojin.net, signature ajoutée par le CRM, aucun suivi de clic).\nUn destinataire, un objet et un corps écrits pour cette cible (pas de champ de fusion). Refus si le domaine a déjà reçu un mail (tous sites et campagnes, ancien envoi compris : date, objet, statut renvoyés),\nsauf relance (relance_de = id du mail précédent ; 2 relances au plus, 7 jours après le dernier mail, jamais après une réponse) ; refus si opposition, plafond du jour atteint ou délai depuis le dernier envoi\npas écoulé (prochain envoi possible renvoyé). simulation=true par défaut : contrôles et aperçu, rien envoyé. Après envoi : relance prévue à J+10, cible « contacte ».",
+    { site_id: z.number().int(), target_id: z.number().int(), destinataire: z.string(), objet: z.string(), corps: z.string(), relance_de: z.number().int().optional(), simulation: z.boolean().optional() },
+    async (a) => compactJson(await envoyerMailOutreach({ ...a, simulation: a.simulation ?? true }))
+  );
+  server.tool(
+    'verifier_deja_contacte',
+    'Lecture seule. Un domaine (forme courte : blog.exemple.fr = exemple.fr) ou une adresse a-t-il déjà reçu un mail de netlinking ? Tous sites, toutes campagnes, ancien envoi Gmail compris : date, objet, statut, site.',
+    { domaine: z.string().optional(), adresse: z.string().optional() },
+    async (a) => compactJson(await verifierDejaContacte(a))
+  );
+  server.tool(
+    'lister_outreach',
+    "Lecture seule. Mails de netlinking envoyés par le CRM : filtres site, campagne (niche), statut (envoye, relance, repondu, abandonne), relances_dues=true (relance prévue passée, sans suite), target_id.",
+    { site: z.number().int().optional(), campagne: z.number().int().optional(), statut: z.string().optional(), relances_dues: z.boolean().optional(), target_id: z.number().int().optional() },
+    async (a) => compactJson(await listerOutreach(a))
+  );
+  server.tool(
+    'marquer_reponse',
+    "ÉCRITURE (CRM seulement). Réponse reçue d'une cible : nature positif, negatif, payant, refus, ou abandon (pas de réponse, on arrête). Le dernier mail du fil passe « repondu » (ou « abandonne »), les relances s'arrêtent ; refus ou négatif : cible « refus ».",
+    { target_id: z.number().int(), nature: z.enum(['positif', 'negatif', 'payant', 'refus', 'abandon']), date: z.string().optional() },
+    async (a) => compactJson(await marquerReponse(a))
+  );
+  server.tool(
+    'ajouter_cibles',
+    "ÉCRITURE (CRM seulement) : ajoute des cibles de netlinking dans une niche du site (domaine, url, terrain, rel, porte, statut, note). Crée les manquantes, ignore les domaines déjà présents dans les niches du site, signale ceux connus ailleurs. simulation=true par défaut.",
+    { site_id: z.number().int(), niche_id: z.number().int(), cibles: z.array(z.object({ domaine: z.string(), url: z.string().optional(), terrain: z.string().optional(), rel: z.string().optional(), porte: z.string().optional(), statut: z.string().optional(), note: z.string().optional() })).min(1).max(500), simulation: z.boolean().optional() },
+    async (a) => compactJson(await ajouterCibles({ site: a.site_id, niche_id: a.niche_id, cibles: a.cibles, simulation: a.simulation ?? true }))
   );
 
   server.tool(

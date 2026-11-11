@@ -2479,8 +2479,54 @@ async function ensureCrawlNoCodeBackfill(client) {
  * Python seo_worker ; le Node ne fait que lire ces tables.
  * Toutes les tables liées : FK (site_id) -> seo_sites(id) ON DELETE CASCADE.
  */
+// Netlinking multi-site (jurojin.net…) : historique des mails partis par l'endpoint unique
+// /api/seo/outreach/send, cadence par site, niche rattachée à un site. pixfeed.net garde son envoi existant.
+async function ensureOutreachTables(client) {
+  await client.query('ALTER TABLE IF EXISTS seo_niches ADD COLUMN IF NOT EXISTS site_id INTEGER;');
+  // Niches existantes : rattachées au site dont le domaine est leur « site à faire linker ».
+  await client.query(`
+    DO $$ BEGIN
+      IF to_regclass('seo_niches') IS NOT NULL AND to_regclass('seo_sites') IS NOT NULL THEN
+        UPDATE seo_niches n SET site_id = s.id FROM seo_sites s
+         WHERE n.site_id IS NULL AND n.site_cible IS NOT NULL
+           AND regexp_replace(regexp_replace(lower(trim(n.site_cible)), '^https?://', ''), '^www\\.|/.*$', '', 'g') = regexp_replace(lower(s.domain), '^www\\.', '');
+      END IF;
+    END $$;`);
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS outreach_mails (
+      id SERIAL PRIMARY KEY,
+      site INTEGER NOT NULL,
+      campaign_id INTEGER,
+      target_id INTEGER,
+      domaine TEXT NOT NULL,
+      destinataire TEXT NOT NULL,
+      objet TEXT NOT NULL,
+      corps TEXT NOT NULL,
+      envoye_le TIMESTAMPTZ,
+      message_id TEXT,
+      statut VARCHAR(12) NOT NULL DEFAULT 'envoi',
+      reponse_le TIMESTAMPTZ,
+      reponse_nature VARCHAR(20),
+      relance_prevue_le DATE,
+      relance_de INTEGER REFERENCES outreach_mails(id),
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+  await client.query('CREATE INDEX IF NOT EXISTS idx_outreach_mails_site_domaine ON outreach_mails (site, domaine);');
+  await client.query('CREATE INDEX IF NOT EXISTS idx_outreach_mails_domaine ON outreach_mails (domaine);');
+  await client.query('CREATE INDEX IF NOT EXISTS idx_outreach_mails_target ON outreach_mails (target_id);');
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS outreach_etat (
+      site INTEGER PRIMARY KEY,
+      prochain_envoi_le TIMESTAMPTZ
+    );
+  `);
+}
+
 async function ensureSeoTables(client) {
   console.log('[AutoInit] Vérification des tables SEO...');
+
+  await ensureOutreachTables(client);
 
   await client.query(`
     CREATE TABLE IF NOT EXISTS seo_sites (
@@ -3239,4 +3285,4 @@ async function autoInitDatabase(pool) {
   }
 }
 
-module.exports = { autoInitDatabase, DATABASE_SCHEMA, EMAIL_TEMPLATE_SEED, EMAIL_TEMPLATE_SEED_V2, ensureEmailTemplatesTone, ensureSeoTables };   // ensureSeoTables : tests du connecteur MCP (schéma réel)
+module.exports = { ensureOutreachTables, autoInitDatabase, DATABASE_SCHEMA, EMAIL_TEMPLATE_SEED, EMAIL_TEMPLATE_SEED_V2, ensureEmailTemplatesTone, ensureSeoTables };   // ensureSeoTables : tests du connecteur MCP (schéma réel)
