@@ -10,7 +10,7 @@ const FAMILLES = { preuve: 'Emails « par la preuve » (après un constat)', mai
 const pc = (x) => (x === null || x === undefined ? '—' : `${String(x).replace('.', ',')} %`);
 
 export default function AbTestPanel({ campaign, ab, verrouille, onChange }) {
-  const toast = useToast();
+  const { toast } = useToast();
   const [props, setProps] = useState(null);
   const [choix, setChoix] = useState({ preuve: '', maintenance: '' });
   const [edition, setEdition] = useState(false);

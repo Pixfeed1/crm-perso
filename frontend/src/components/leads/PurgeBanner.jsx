@@ -11,7 +11,7 @@ const MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 
 const libelleMois = (m) => { const [a, n] = String(m || '').split('-'); return n ? `${MOIS[Number(n) - 1]} ${a}` : m; };
 
 export default function PurgeBanner({ onDone }) {
-  const toast = useToast();
+  const { toast } = useToast();
   const [liste, setListe] = useState(null);
   const [ouvert, setOuvert] = useState(false);
   const [coches, setCoches] = useState(new Set());

@@ -15,7 +15,7 @@ const TYPES = {
 const fmt = (d) => (d ? new Date(d).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '');
 
 export default function BoitePanel() {
-  const toast = useToast();
+  const { toast } = useToast();
   const [data, setData] = useState(null);
   const [ouvert, setOuvert] = useState(false);
   const [busy, setBusy] = useState(false);

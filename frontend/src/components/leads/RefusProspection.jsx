@@ -15,7 +15,7 @@ const fmt = (d) => (d ? new Date(d).toLocaleDateString('fr-FR') : '');
 const SOURCES = { lien: 'désinscrit par le lien', rebond: 'adresse en erreur (rebond)', opposition: 'opposition', refus: 'refus de prospection' };
 
 export default function RefusProspection({ lead, onChange }) {
-  const toast = useToast();
+  const { toast } = useToast();
   const [etat, setEtat] = useState(null);
   const [choix, setChoix] = useState(null);
   const [entreprise, setEntreprise] = useState(false);

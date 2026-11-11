@@ -94,7 +94,7 @@ function Formulaire({ ref_, campagnes, initial, onSave, onCancel, busy }) {
 }
 
 function Devis({ affaire, onChange }) {
-  const toast = useToast();
+  const { toast } = useToast();
   const [liste, setListe] = useState(null);
   const ouvrir = async () => { try { setListe(await affairesAPI.devisDisponibles(affaire.id)); } catch (e) { toast.error(e.message); } };
   const rattacher = async (qid) => { try { onChange(await affairesAPI.rattacherDevis(affaire.id, qid)); setListe(null); } catch (e) { toast.error(e.message); } };
@@ -121,7 +121,7 @@ function Devis({ affaire, onChange }) {
 }
 
 export default function AffairesPanel({ leadId = null, clientId = null }) {
-  const toast = useToast();
+  const { toast } = useToast();
   const [ref_, setRef] = useState(null);
   const [affaires, setAffaires] = useState([]);
   const [campagnes, setCampagnes] = useState([]);
