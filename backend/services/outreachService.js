@@ -4,8 +4,8 @@
 // Contrôles, tous bloquants :
 //   - site avec un expéditeur réglé (services/outreachSite.js), cible rattachée à une niche de ce site ;
 //     sans target_id, un domaine seul suffit : la fiche cible est reprise si le domaine (forme courte) est
-//     déjà dans une niche du site, sinon créée à l'envoi réel dans la niche « Hors campagne » du site
-//     (créée elle aussi si besoin) ; en simulation, rien n'est créé ;
+//     déjà dans une niche du site, sinon créée à l'envoi réel dans la niche niche_nom du site, ou à défaut
+//     « Hors campagne » (créée elle aussi si besoin) ; en simulation, rien n'est créé ;
 //   - un seul destinataire, une adresse valide ; objet et corps fournis à l'appel, sans champ de fusion ;
 //   - domaine (forme courte) jamais contacté, toutes campagnes et tous sites confondus, y compris par
 //     l'ancien envoi de pixfeed.net (lecture seule de seo_link_outreach) ; sinon refus avec date, objet et
@@ -104,6 +104,8 @@ async function envoyerMail(db, b = {}) {
   let aCreer = null; // { domaine, url } : fiche à créer dans « Hors campagne » à l'envoi réel
   const domaineDemande = b.domaine ? domaineCourt(b.domaine) : null;
   if (b.domaine && !domaineDemande) throw err(400, `domaine illisible (${b.domaine})`);
+  const nomNiche = b.niche_nom ? String(b.niche_nom).trim() : HORS_CAMPAGNE;
+  if (!nomNiche || nomNiche.length > 120) throw err(400, 'niche_nom : 1 à 120 caractères');
   if (b.target_id) {
     t = (await db.pool.query('SELECT t.*, n.site_id AS niche_site, n.name AS niche FROM seo_link_targets t JOIN seo_niches n ON n.id = t.niche_id WHERE t.id = $1', [b.target_id])).rows[0];
     if (!t) throw err(404, `cible ${b.target_id} introuvable`);
@@ -111,7 +113,7 @@ async function envoyerMail(db, b = {}) {
   } else if (domaineDemande) {
     t = await cibleDuDomaine(db.pool, siteId, domaineDemande);
     if (!t) aCreer = { domaine: domaineDemande, url: /^https?:\/\//i.test(String(b.domaine).trim()) ? String(b.domaine).trim() : null };
-  } else throw err(400, 'indiquer la cible : target_id, ou domaine seul (fiche créée dans « Hors campagne »)');
+  } else throw err(400, 'indiquer la cible : target_id, ou domaine seul (fiche créée dans la campagne niche_nom, à défaut « Hors campagne »)');
   let domaine;
   if (t) {
     if (Number(t.niche_site) !== siteId) throw err(409, `la cible ${t.domain} appartient à la niche « ${t.niche} », qui n'est pas rattachée à ce site`);
@@ -119,12 +121,13 @@ async function envoyerMail(db, b = {}) {
     domaine = domaineCourt(t.domain);
     if (!domaine) throw err(400, `domaine de la cible illisible (${t.domain})`);
     out.cible = { id: t.id, domaine, niche: t.niche, campaign_id: t.niche_id };
-    ok(`cible ${domaine} (niche « ${t.niche} »${b.target_id ? '' : ', fiche existante reprise'})`);
+    const autre = b.niche_nom && t.niche.trim().toLowerCase() !== nomNiche.toLowerCase();
+    ok(`cible ${domaine} (niche « ${t.niche} »${b.target_id ? '' : ', fiche existante reprise'}${autre ? `, pas déplacée vers « ${nomNiche} »` : ''})`);
   } else {
     domaine = aCreer.domaine;
-    const hc = await nicheParNom(db.pool, siteId, HORS_CAMPAGNE);
-    out.cible = { id: null, domaine, niche: HORS_CAMPAGNE, campaign_id: hc ? hc.id : null, a_creer: true };
-    ok(`cible ${domaine} : pas encore de fiche sur ce site, créée à l'envoi dans la niche « ${HORS_CAMPAGNE} »${hc ? '' : ' (créée elle aussi)'}`);
+    const hc = await nicheParNom(db.pool, siteId, nomNiche);
+    out.cible = { id: null, domaine, niche: hc ? hc.name : nomNiche, campaign_id: hc ? hc.id : null, a_creer: true };
+    ok(`cible ${domaine} : pas encore de fiche sur ce site, créée à l'envoi dans la niche « ${hc ? hc.name : nomNiche} »${hc ? '' : ' (créée elle aussi)'}`);
   }
 
   // Oppositions.
@@ -172,7 +175,7 @@ async function envoyerMail(db, b = {}) {
     }
     // Fiche cible à créer (domaine seul) : dans la même transaction, sous le verrou du site.
     if (aCreer) {
-      const hc = await nicheParNom(cl, siteId, HORS_CAMPAGNE, { creer: true, siteCible: c.domaine });
+      const hc = await nicheParNom(cl, siteId, nomNiche, { creer: true, siteCible: c.domaine });
       const ins = (await cl.query(
         `INSERT INTO seo_link_targets (niche_id, domain, via, statut, porte_url, contact_email, notes) VALUES ($1, $2, 'manuel', 'nouveau', $3, $4, 'créée à l''envoi (domaine seul)')
          ON CONFLICT (niche_id, domain) DO NOTHING RETURNING id`, [hc.id, domaine, aCreer.url, destinataire])).rows[0];

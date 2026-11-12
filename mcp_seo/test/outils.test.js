@@ -104,6 +104,23 @@ after(async () => {
   await admin.query('DROP DATABASE IF EXISTS mcp_outils_test').catch(() => {}); await admin.end();
 });
 
+test('list_link_campaigns : site de chaque campagne, filtre par site', opts, async () => {
+  const { DATABASE_SCHEMA } = require('../../backend/scripts/autoInitDatabase.js');
+  for (const name of ['seo_niches', 'seo_link_targets']) {
+    const cols = Object.entries(DATABASE_SCHEMA[name].columns).map(([c, d]) => `${c} ${d}`).join(', ');
+    await pool.query(`CREATE TABLE IF NOT EXISTS ${name} (${cols})`);
+  }
+  await pool.query('ALTER TABLE seo_niches ADD COLUMN IF NOT EXISTS site_id INTEGER');
+  await pool.query("INSERT INTO seo_sites (id, domain) VALUES (15, 'pixfeed.net') ON CONFLICT DO NOTHING");
+  const n = (await pool.query("INSERT INTO seo_niches (name, site_cible, site_id) VALUES ('Mocap', 'jurojin.net', 2), ('Agences', 'pixfeed.net', 15) RETURNING id")).rows;
+  await pool.query("INSERT INTO seo_link_targets (niche_id, domain, statut) VALUES ($1, 'a.fr', 'contacte'), ($1, 'b.fr', 'nouveau')", [n[0].id]);
+  const tools = await import('../tools.js');
+  const tous = await tools.listLinkCampaigns(pool);
+  assert.deepEqual(tous.map((c) => [c.name, c.site_id, c.site]).sort(), [['Agences', 15, 'pixfeed.net'], ['Mocap', 2, '127.0.0.1']]);
+  const j = await tools.listLinkCampaigns(pool, 2);
+  assert.deepEqual(j.map((c) => [c.name, c.nb_cibles, c.contactees]), [['Mocap', 2, 1]]);
+});
+
 test('get_page_dossier : chaque bloc sourcé et daté, réutilise les outils existants', opts, async () => {
   const { getPageDossier } = await import('../dossier.js');
   delete process.env.BING_WMT_API_KEY;

@@ -153,6 +153,25 @@ test('envoi : un seul endpoint, toutes les règles, relances encadrées, cadence
     await passe();
     r = await S.envoyerMail(db, { ...seul, domaine: 'rendus3d.fr', destinataire: 'contact@rendus3d.fr', simulation: false });
     assert.equal(r.cible.niche_creee, undefined); assert.equal(await nbHc(), 1);
+    // Campagne nommée par Claude : créée à l'envoi, puis reprise (casse ignorée) ; une fiche existante n'est pas déplacée.
+    await passe();
+    r = await S.envoyerMail(db, { ...seul, domaine: 'atelier3d.fr', destinataire: 'contact@atelier3d.fr', niche_nom: 'Ateliers 3D' });
+    assert.deepEqual([r.cible.niche, r.cible.a_creer], ['Ateliers 3D', true]);
+    assert.match(r.controles.map((x) => x.texte).join(' | '), /niche « Ateliers 3D » \(créée elle aussi\)/);
+    r = await S.envoyerMail(db, { ...seul, domaine: 'atelier3d.fr', destinataire: 'contact@atelier3d.fr', niche_nom: 'Ateliers 3D', simulation: false });
+    const at = (await pool.query("SELECT id, site_id FROM seo_niches WHERE name = 'Ateliers 3D'")).rows;
+    assert.equal(at.length, 1); assert.equal(at[0].site_id, 2);
+    assert.deepEqual([r.cible.niche, r.cible.niche_creee, r.mail.campaign_id], ['Ateliers 3D', true, at[0].id]);
+    await passe();
+    r = await S.envoyerMail(db, { ...seul, domaine: 'studio3d.fr', destinataire: 'contact@studio3d.fr', niche_nom: 'ateliers 3d', simulation: false });
+    assert.deepEqual([r.cible.niche, r.cible.niche_creee, r.mail.campaign_id], ['Ateliers 3D', undefined, at[0].id]);
+    await passe();
+    const garde = await cible(1, 'garde3d.fr');
+    r = await S.envoyerMail(db, { ...seul, domaine: 'garde3d.fr', destinataire: 'contact@garde3d.fr', niche_nom: 'Ateliers 3D' });
+    assert.deepEqual([r.cible.id, r.cible.niche], [garde, 'Mocap']);
+    assert.match(r.controles.map((x) => x.texte).join(' | '), /pas déplacée vers « Ateliers 3D »/);
+    await refus({ ...seul, domaine: 'x3d.fr', niche_nom: 'x'.repeat(121) }, /niche_nom : 1 à 120 caractères/);
+
     // Échec du serveur de mail : la fiche créée pour l'envoi est retirée.
     await passe();
     const T = require('../services/outreachSite');

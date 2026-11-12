@@ -502,9 +502,9 @@ export async function searchPages(pool, siteId, q, limit = 20) {
 // ---- Backlinks (module campagnes de netlinking, LECTURE SEULE) ----
 
 // list_link_campaigns : les niches/campagnes backlinks + compteurs + fraîcheur.
-export async function listLinkCampaigns(pool) {
+export async function listLinkCampaigns(pool, siteId = null) {
   const { rows } = await pool.query(
-    `SELECT n.id, n.name, n.site_cible, n.hubs, n.statut, n.discovery_phase, n.discovery_message,
+    `SELECT n.id, n.name, n.site_id, s.domain AS site, n.site_cible, n.hubs, n.statut, n.discovery_phase, n.discovery_message,
             n.created_at, n.discovery_done_at,
             EXTRACT(DAY FROM NOW() - COALESCE(n.discovery_done_at, n.created_at))::int AS jours_depuis_decouverte,
             COUNT(t.id)::int AS nb_cibles,
@@ -513,8 +513,9 @@ export async function listLinkCampaigns(pool) {
             COUNT(t.id) FILTER (WHERE t.rel_verifie_le IS NOT NULL)::int AS rel_verifies,
             COUNT(t.id) FILTER (WHERE t.dofollow = TRUE)::int AS dofollow_possibles,
             COUNT(t.id) FILTER (WHERE t.concurrent OR t.concurrent_probable)::int AS concurrents
-     FROM seo_niches n LEFT JOIN seo_link_targets t ON t.niche_id = n.id
-     GROUP BY n.id ORDER BY n.created_at DESC`
+     FROM seo_niches n LEFT JOIN seo_link_targets t ON t.niche_id = n.id LEFT JOIN seo_sites s ON s.id = n.site_id
+     WHERE ($1::int IS NULL OR n.site_id = $1)
+     GROUP BY n.id, s.domain ORDER BY n.created_at DESC`, [siteId == null ? null : Number(siteId)]
   );
   return rows.map((n) => ({
     ...n,

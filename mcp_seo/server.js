@@ -272,9 +272,9 @@ function buildServer() {
 
   server.tool(
     'list_link_campaigns',
-    "Campagnes de backlinks (netlinking) : niches avec leurs compteurs (cibles découvertes, contactées, liens obtenus) et l'état de la découverte. À appeler EN PREMIER pour obtenir l'id de campagne.",
-    {},
-    async () => ok(await tools.listLinkCampaigns(pool))
+    "Campagnes de backlinks (netlinking) : niches avec leur site (site_id, site), leurs compteurs (cibles découvertes, contactées, liens obtenus) et l'état de la découverte. site_id filtre sur un site. À appeler EN PREMIER pour obtenir l'id de campagne. Une campagne se crée par son nom avec ajouter_cibles(niche_nom) ou envoyer_mail_outreach(niche_nom).",
+    { site_id: z.number().int().optional() },
+    async ({ site_id }) => ok(await tools.listLinkCampaigns(pool, site_id ?? null))
   );
 
   server.tool(
@@ -376,8 +376,8 @@ function buildServer() {
   // ---- netlinking (jurojin.net…) : mêmes routes que l'onglet SEO, toutes les règles côté CRM ----
   server.tool(
     'envoyer_mail_outreach',
-    "ÉCRITURE (envoi d'un mail) : demande de lien à UNE cible, depuis l'expéditeur du site (jurojin.net : contact@jurojin.net, signature ajoutée par le CRM, aucun suivi de clic).\nCible : target_id, OU domaine seul (fiche reprise si le domaine est déjà dans une niche du site, sinon créée à l'envoi réel dans la niche « Hors campagne » du site, créée si besoin ; rien créé en simulation). Mêmes contrôles dans les deux cas, ils portent sur le domaine.\nUn destinataire, un objet et un corps écrits pour cette cible (pas de champ de fusion). Refus si le domaine a déjà reçu un mail (tous sites et campagnes, ancien envoi compris : date, objet, statut renvoyés),\nsauf relance (relance_de = id du mail précédent ; 2 relances au plus, 7 jours après le dernier mail, jamais après une réponse) ; refus si opposition, plafond du jour atteint ou délai depuis le dernier envoi\npas écoulé (prochain envoi possible renvoyé). simulation=true par défaut : contrôles et aperçu, rien envoyé. Après envoi : relance prévue à J+10, cible « contacte ».",
-    { site_id: z.number().int(), target_id: z.number().int().optional(), domaine: z.string().optional(), destinataire: z.string(), objet: z.string(), corps: z.string(), relance_de: z.number().int().optional(), simulation: z.boolean().optional() },
+    "ÉCRITURE (envoi d'un mail) : demande de lien à UNE cible, depuis l'expéditeur du site (jurojin.net : contact@jurojin.net, signature ajoutée par le CRM, aucun suivi de clic).\nCible : target_id, OU domaine seul (fiche reprise si le domaine est déjà dans une niche du site, sinon créée à l'envoi réel dans la campagne niche_nom du site, créée si besoin, à défaut « Hors campagne » ; rien créé en simulation ; une fiche existante n'est pas déplacée). Mêmes contrôles dans les deux cas, ils portent sur le domaine.\nUn destinataire, un objet et un corps écrits pour cette cible (pas de champ de fusion). Refus si le domaine a déjà reçu un mail (tous sites et campagnes, ancien envoi compris : date, objet, statut renvoyés),\nsauf relance (relance_de = id du mail précédent ; 2 relances au plus, 7 jours après le dernier mail, jamais après une réponse) ; refus si opposition, plafond du jour atteint ou délai depuis le dernier envoi\npas écoulé (prochain envoi possible renvoyé). simulation=true par défaut : contrôles et aperçu, rien envoyé. Après envoi : relance prévue à J+10, cible « contacte ».",
+    { site_id: z.number().int(), target_id: z.number().int().optional(), domaine: z.string().optional(), niche_nom: z.string().optional(), destinataire: z.string(), objet: z.string(), corps: z.string(), relance_de: z.number().int().optional(), simulation: z.boolean().optional() },
     async (a) => compactJson(await envoyerMailOutreach({ ...a, simulation: a.simulation ?? true }))
   );
   server.tool(

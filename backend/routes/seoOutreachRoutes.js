@@ -1,8 +1,9 @@
 // Netlinking multi-site — monté sous /api/seo/outreach (AVANT /api/seo). Un seul endpoint d'envoi :
 // POST /send, appelé par l'onglet SEO (session) et par le serveur MCP (secret partagé OUTILS_MCP_SECRET).
 // Toutes les règles sont dans services/outreachService.js ; aucune dans l'interface.
-//   POST /send { site_id, target_id | domaine, destinataire, objet, corps, relance_de?, simulation? (true par défaut) }
-//              domaine seul : fiche cible reprise, ou créée à l'envoi dans la niche « Hors campagne » du site
+//   POST /send { site_id, target_id | domaine, niche_nom?, destinataire, objet, corps, relance_de?, simulation? (true par défaut) }
+//              domaine seul : fiche cible reprise, ou créée à l'envoi dans la niche niche_nom du site
+//              (créée si absente), à défaut « Hors campagne »
 //   GET|POST /verifier { domaine | adresse }           déjà contacté ? (tous sites, ancien envoi compris)
 //   GET|POST /mails { site, campagne, statut, relances_dues, target_id }
 //   GET|POST /sans-reponse { site }                    cibles sans réponse (accueil du module)
