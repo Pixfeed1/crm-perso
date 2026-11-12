@@ -214,6 +214,11 @@ secret partagé) : toutes les règles sont dans le CRM (un destinataire, pas de 
 contacté tous sites confondus — ancien envoi Gmail compris —, relances encadrées dans le même fil, oppositions,
 plafond quotidien et délai aléatoire par site). Expéditeur et signature du site réglés dans `backend/.env` et
 `backend/config/signatures/`, aucun suivi de clic ni lien vers le CRM dans les mails. Simulation par défaut.
+`envoyer_mail_outreach` accepte un `domaine` seul à la place de `target_id` : la fiche du domaine (forme courte)
+est reprise si elle est déjà dans une niche du site, sinon créée à l'envoi réel dans la niche « Hors campagne »
+du site (créée si besoin ; rien n'est créé en simulation ni si le serveur de mail refuse). `ajouter_cibles`
+accepte `niche_nom` : niche du site reprise par son nom (casse et espaces ignorés), sinon créée à l'écriture,
+y compris quand `niche_id` n'existe pas.
 
 Titre SEO, méta, phrase clé et titre WordPress : `modifier_seo(site_id, url | id, titre_seo?, meta_description?,
 phrase_cle?, titre?, simulation=true)`. Tous les types qui exposent le champ `outils_yoast` du mu-plugin de

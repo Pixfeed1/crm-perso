@@ -3,6 +3,9 @@
 //
 // Contrôles, tous bloquants :
 //   - site avec un expéditeur réglé (services/outreachSite.js), cible rattachée à une niche de ce site ;
+//     sans target_id, un domaine seul suffit : la fiche cible est reprise si le domaine (forme courte) est
+//     déjà dans une niche du site, sinon créée à l'envoi réel dans la niche « Hors campagne » du site
+//     (créée elle aussi si besoin) ; en simulation, rien n'est créé ;
 //   - un seul destinataire, une adresse valide ; objet et corps fournis à l'appel, sans champ de fusion ;
 //   - domaine (forme courte) jamais contacté, toutes campagnes et tous sites confondus, y compris par
 //     l'ancien envoi de pixfeed.net (lecture seule de seo_link_outreach) ; sinon refus avec date, objet et
@@ -52,6 +55,21 @@ async function dejaContacte(db, { domaine = null, adresse = null } = {}) {
   return { domaine: d, adresse: a, contacts: [...nouveaux.map((x) => ({ origine: `outreach ${x.site_domaine || `site ${x.site}`}`, ...x })), ...anciens].sort((x, y) => new Date(x.envoye_le) - new Date(y.envoye_le)) };
 }
 
+// Niche d'un site par son nom (sans tenir compte de la casse) ; créée si absente et creer=true.
+const HORS_CAMPAGNE = 'Hors campagne';
+async function nicheParNom(q, siteId, nom, { creer = false, siteCible = null } = {}) {
+  const n = (await q.query('SELECT id, name, site_id FROM seo_niches WHERE site_id = $1 AND LOWER(TRIM(name)) = LOWER(TRIM($2)) ORDER BY id LIMIT 1', [siteId, nom])).rows[0];
+  if (n || !creer) return n ? { ...n, creee: false } : null;
+  const cree = (await q.query("INSERT INTO seo_niches (name, site_cible, site_id, statut) VALUES ($1, $2, $3, 'prete') RETURNING id, name, site_id", [String(nom).trim(), siteCible, siteId])).rows[0];
+  return { ...cree, creee: true };
+}
+
+// Cible d'un domaine dans les niches d'un site (forme courte : blog.exemple.fr = exemple.fr).
+async function cibleDuDomaine(q, siteId, domaine) {
+  const rows = (await q.query('SELECT t.*, n.site_id AS niche_site, n.name AS niche FROM seo_link_targets t JOIN seo_niches n ON n.id = t.niche_id WHERE n.site_id = $1 ORDER BY t.id', [siteId])).rows;
+  return rows.find((t) => domaineCourt(t.domain) === domaine) || null;
+}
+
 // Chaîne d'une relance : le premier mail et toutes ses relances.
 async function chaine(db, mailId) {
   let m = (await db.pool.query('SELECT * FROM outreach_mails WHERE id = $1', [mailId])).rows[0];
@@ -81,15 +99,33 @@ async function envoyerMail(db, b = {}) {
   if (RE_FUSION.test(objet) || RE_FUSION.test(corps)) throw err(400, `champ de fusion interdit (${(RE_FUSION.exec(objet) || RE_FUSION.exec(corps))[0]}) : le texte est écrit pour la cible`);
   ok('un seul destinataire, texte sans champ de fusion');
 
-  // La cible : niche rattachée à ce site.
-  const t = (await db.pool.query('SELECT t.*, n.site_id AS niche_site, n.name AS niche FROM seo_link_targets t JOIN seo_niches n ON n.id = t.niche_id WHERE t.id = $1', [b.target_id])).rows[0];
-  if (!t) throw err(404, `cible ${b.target_id} introuvable`);
-  if (Number(t.niche_site) !== siteId) throw err(409, `la cible ${t.domain} appartient à la niche « ${t.niche} », qui n'est pas rattachée à ce site`);
-  if (['refus', 'ecarte'].includes(t.statut)) throw err(409, `cible ${t.domain} au statut « ${t.statut} » : pas d'envoi`);
-  const domaine = domaineCourt(t.domain);
-  if (!domaine) throw err(400, `domaine de la cible illisible (${t.domain})`);
-  out.cible = { id: t.id, domaine, niche: t.niche, campaign_id: t.niche_id };
-  ok(`cible ${domaine} (niche « ${t.niche} »)`);
+  // La cible : niche rattachée à ce site. Par target_id, ou par un domaine seul (fiche reprise ou créée à l'envoi).
+  let t = null;
+  let aCreer = null; // { domaine, url } : fiche à créer dans « Hors campagne » à l'envoi réel
+  const domaineDemande = b.domaine ? domaineCourt(b.domaine) : null;
+  if (b.domaine && !domaineDemande) throw err(400, `domaine illisible (${b.domaine})`);
+  if (b.target_id) {
+    t = (await db.pool.query('SELECT t.*, n.site_id AS niche_site, n.name AS niche FROM seo_link_targets t JOIN seo_niches n ON n.id = t.niche_id WHERE t.id = $1', [b.target_id])).rows[0];
+    if (!t) throw err(404, `cible ${b.target_id} introuvable`);
+    if (domaineDemande && domaineCourt(t.domain) !== domaineDemande) throw err(409, `la cible ${b.target_id} est ${t.domain}, pas ${b.domaine} : donner l'un ou l'autre`);
+  } else if (domaineDemande) {
+    t = await cibleDuDomaine(db.pool, siteId, domaineDemande);
+    if (!t) aCreer = { domaine: domaineDemande, url: /^https?:\/\//i.test(String(b.domaine).trim()) ? String(b.domaine).trim() : null };
+  } else throw err(400, 'indiquer la cible : target_id, ou domaine seul (fiche créée dans « Hors campagne »)');
+  let domaine;
+  if (t) {
+    if (Number(t.niche_site) !== siteId) throw err(409, `la cible ${t.domain} appartient à la niche « ${t.niche} », qui n'est pas rattachée à ce site`);
+    if (['refus', 'ecarte'].includes(t.statut)) throw err(409, `cible ${t.domain} au statut « ${t.statut} » : pas d'envoi`);
+    domaine = domaineCourt(t.domain);
+    if (!domaine) throw err(400, `domaine de la cible illisible (${t.domain})`);
+    out.cible = { id: t.id, domaine, niche: t.niche, campaign_id: t.niche_id };
+    ok(`cible ${domaine} (niche « ${t.niche} »${b.target_id ? '' : ', fiche existante reprise'})`);
+  } else {
+    domaine = aCreer.domaine;
+    const hc = await nicheParNom(db.pool, siteId, HORS_CAMPAGNE);
+    out.cible = { id: null, domaine, niche: HORS_CAMPAGNE, campaign_id: hc ? hc.id : null, a_creer: true };
+    ok(`cible ${domaine} : pas encore de fiche sur ce site, créée à l'envoi dans la niche « ${HORS_CAMPAGNE} »${hc ? '' : ' (créée elle aussi)'}`);
+  }
 
   // Oppositions.
   if (await optout.isOptedOut(db, destinataire)) throw err(409, `${destinataire} est en opposition (désinscription ou refus de prospection) : pas d'envoi`);
@@ -134,6 +170,16 @@ async function envoyerMail(db, b = {}) {
       await cl.query('ROLLBACK');
       return { ...out, statut: 'simulation : rien envoyé', apercu: { de: c.from, a: destinataire, repondre_a: c.reply_to, objet, corps, signature: 'ajoutée à l\'envoi' } };
     }
+    // Fiche cible à créer (domaine seul) : dans la même transaction, sous le verrou du site.
+    if (aCreer) {
+      const hc = await nicheParNom(cl, siteId, HORS_CAMPAGNE, { creer: true, siteCible: c.domaine });
+      const ins = (await cl.query(
+        `INSERT INTO seo_link_targets (niche_id, domain, via, statut, porte_url, contact_email, notes) VALUES ($1, $2, 'manuel', 'nouveau', $3, $4, 'créée à l''envoi (domaine seul)')
+         ON CONFLICT (niche_id, domain) DO NOTHING RETURNING id`, [hc.id, domaine, aCreer.url, destinataire])).rows[0];
+      const id = ins ? ins.id : (await cl.query('SELECT id FROM seo_link_targets WHERE niche_id = $1 AND domain = $2', [hc.id, domaine])).rows[0].id;
+      t = { id, niche_id: hc.id, niche: hc.name, domain: domaine, creee: !!ins };
+      out.cible = { id, domaine, niche: hc.name, campaign_id: hc.id, creee: !!ins, ...(hc.creee ? { niche_creee: true } : {}) };
+    }
     // Réservation : la ligne et le prochain créneau, avant l'envoi (deux appels simultanés ne passent pas).
     ligne = (await cl.query(
       `INSERT INTO outreach_mails (site, campaign_id, target_id, domaine, destinataire, objet, corps, statut, relance_de) VALUES ($1, $2, $3, $4, $5, $6, $7, 'envoi', $8) RETURNING id`,
@@ -155,6 +201,8 @@ async function envoyerMail(db, b = {}) {
   } catch (e) {
     await db.pool.query('DELETE FROM outreach_mails WHERE id = $1', [ligne.id]).catch(() => {});
     await db.pool.query('UPDATE outreach_etat SET prochain_envoi_le = $2 WHERE site = $1', [siteId, out.etat_precedent]).catch(() => {});
+    // Fiche créée pour cet envoi : retirée (la niche « Hors campagne » reste, vide ou non).
+    if (t.creee) await db.pool.query('DELETE FROM seo_link_targets WHERE id = $1 AND NOT EXISTS (SELECT 1 FROM outreach_mails WHERE target_id = $1)', [t.id]).catch(() => {});
     throw err(502, `envoi refusé par le serveur de mail : ${e.message}`);
   }
   const prevue = new Date(Date.now() + RELANCE_PREVUE_JOURS * 86400000);
@@ -208,22 +256,37 @@ async function marquerReponse(db, { target_id: targetId, date = null, nature }) 
 
 // Ajout de cibles dans une niche du site (remplace l'import CSV) : crée les manquantes, ignore les domaines
 // déjà présents dans les niches du site ; signale ceux déjà connus ailleurs. simulation=true par défaut.
+// Niche : niche_id, ou niche_nom (reprise si une niche du site porte ce nom, sinon créée à l'écriture) ;
+// un niche_id inconnu avec un niche_nom crée la niche sous ce nom.
 const STATUTS_CIBLE = ['nouveau', 'a_contacter', 'contacte', 'lien_obtenu', 'refus', 'ecarte'];
-async function ajouterCibles(db, { site: s, niche_id: nicheId, cibles = [], simulation = true }) {
-  const niche = (await db.pool.query('SELECT id, name, site_id FROM seo_niches WHERE id = $1', [nicheId])).rows[0];
-  if (!niche) throw err(404, `niche ${nicheId} introuvable`);
-  if (Number(niche.site_id) !== Number(s)) throw err(409, `la niche « ${niche.name} » n'est pas rattachée au site ${s}`);
+async function ajouterCibles(db, { site: s, niche_id: nicheId = null, niche_nom: nicheNom = null, cibles = [], simulation = true }) {
+  const siteId = Number(s);
+  const nom = nicheNom ? String(nicheNom).trim() : '';
   if (!Array.isArray(cibles) || !cibles.length) throw err(400, 'cibles : liste non vide attendue');
   if (cibles.length > 500) throw err(400, '500 cibles au plus par appel');
+  let niche = nicheId ? (await db.pool.query('SELECT id, name, site_id FROM seo_niches WHERE id = $1', [nicheId])).rows[0] : null;
+  if (!niche && !nom) throw err(nicheId ? 404 : 400, nicheId ? `niche ${nicheId} introuvable : donner niche_nom pour la créer` : 'indiquer niche_id, ou niche_nom (créée si absente)');
+  let nicheACreer = false;
+  if (!niche) {
+    const site = (await db.pool.query('SELECT id, domain FROM seo_sites WHERE id = $1', [siteId])).rows[0];
+    if (!site) throw err(404, `site ${s} introuvable`);
+    if (nom.length > 120) throw err(400, 'niche_nom : 120 caractères au plus');
+    niche = await nicheParNom(db.pool, siteId, nom);
+    if (!niche) {
+      nicheACreer = true;
+      niche = simulation ? { id: null, name: nom, site_id: siteId } : await nicheParNom(db.pool, siteId, nom, { creer: true, siteCible: site.domain });
+    }
+  }
+  if (Number(niche.site_id) !== siteId) throw err(409, `la niche « ${niche.name} » n'est pas rattachée au site ${s}`);
   const existants = (await db.pool.query('SELECT t.domain, n.site_id, n.name FROM seo_link_targets t JOIN seo_niches n ON n.id = t.niche_id')).rows;
-  const out = { niche: niche.name, simulation, creees: [], ignorees: [] };
+  const out = { niche: niche.name, niche_id: niche.id, ...(nicheACreer ? { niche_creee: simulation ? 'créée à l\'écriture' : true } : {}), simulation, creees: [], ignorees: [] };
   const vus = new Set();
   for (const x of cibles) {
     const d = domaineCourt(x && (x.domaine || x.url));
     if (!d) { out.ignorees.push({ domaine: x && x.domaine, raison: 'domaine illisible' }); continue; }
     if (vus.has(d)) { out.ignorees.push({ domaine: d, raison: 'en double dans la liste' }); continue; }
     vus.add(d);
-    const ici = existants.find((e) => domaineCourt(e.domain) === d && Number(e.site_id) === Number(s));
+    const ici = existants.find((e) => domaineCourt(e.domain) === d && Number(e.site_id) === siteId);
     if (ici) { out.ignorees.push({ domaine: d, raison: `déjà présent (niche « ${ici.name} »)` }); continue; }
     const ailleurs = existants.find((e) => domaineCourt(e.domain) === d);
     const rel = String(x.rel || '').toLowerCase();
@@ -244,4 +307,4 @@ async function ajouterCibles(db, { site: s, niche_id: nicheId, cibles = [], simu
   return out;
 }
 
-module.exports = { envoyerMail, dejaContacte, lister, sansReponse, marquerReponse, ajouterCibles, NATURES, RELANCES_MAX };
+module.exports = { envoyerMail, dejaContacte, lister, sansReponse, marquerReponse, ajouterCibles, NATURES, RELANCES_MAX, HORS_CAMPAGNE };

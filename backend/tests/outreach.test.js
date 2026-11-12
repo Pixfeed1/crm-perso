@@ -30,6 +30,7 @@ test('envoi : un seul endpoint, toutes les règles, relances encadrées, cadence
     await pool.query(`CREATE TABLE prospect_refus (id SERIAL PRIMARY KEY, lead_id INTEGER, domaine TEXT, canal VARCHAR(10), motif TEXT, source TEXT, created_at TIMESTAMPTZ DEFAULT NOW(), retire_le TIMESTAMPTZ, retire_motif TEXT)`);
     const c = await pool.connect(); try { await ensureOutreachTables(c); } finally { c.release(); }
     await pool.query("INSERT INTO seo_niches (id, name, site_cible, site_id) VALUES (1, 'Mocap', 'jurojin.net', 2), (2, 'Agences', 'pixfeed.net', 15)");
+    await pool.query("SELECT setval(pg_get_serial_sequence('seo_niches', 'id'), 2)");
     const cible = async (nicheId, domain) => (await pool.query('INSERT INTO seo_link_targets (niche_id, domain) VALUES ($1, $2) RETURNING id', [nicheId, domain])).rows[0].id;
     const a = await cible(1, 'www.blog-mocap.fr'), b = await cible(1, 'tuto3d.fr'), x = await cible(1, 'deja-pixfeed.fr'), y = await cible(2, 'deja-pixfeed.fr'), z = await cible(1, 'oppose.fr');
     // Ancien envoi de pixfeed.net (Gmail) : lu par le contrôle.
@@ -121,6 +122,59 @@ test('envoi : un seul endpoint, toutes les règles, relances encadrées, cadence
     const n = (await pool.query("SELECT statut, dofollow, porte_type, notes FROM seo_link_targets WHERE domain = 'nouveau3d.fr'")).rows[0];
     assert.deepEqual([n.statut, n.dofollow, n.porte_type], ['a_contacter', true, 'formulaire']); assert.match(n.notes, /terrain : blog/);
     await assert.rejects(S.ajouterCibles(db, { site: 2, niche_id: 2, cibles: liste }), /n'est pas rattachée au site 2/);
+
+    // Domaine seul (sans target_id) : fiche reprise si connue sur le site, sinon créée à l'envoi dans « Hors campagne ».
+    const passe = () => pool.query("UPDATE outreach_mails SET envoye_le = NOW() - interval '9 days'").then(libre);
+    const nbHc = async () => (await pool.query("SELECT COUNT(*)::int AS n FROM seo_niches WHERE site_id = 2 AND name = 'Hors campagne'")).rows[0].n;
+    const seul = { site_id: 2, destinataire: 'contact@inconnu3d.fr', objet: 'Votre galerie', corps: 'Bonjour, votre galerie de rendus…' };
+    await passe();
+    await refus({ ...seul }, /target_id, ou domaine seul/);
+    await refus({ ...seul, target_id: b, domaine: 'autre.fr' }, /la cible \d+ est tuto3d\.fr, pas autre\.fr/);
+    r = await S.envoyerMail(db, { ...seul, domaine: 'https://www.inconnu3d.fr/galerie' });
+    assert.equal(r.statut, 'simulation : rien envoyé');
+    assert.deepEqual([r.cible.domaine, r.cible.niche, r.cible.a_creer, r.cible.id], ['inconnu3d.fr', 'Hors campagne', true, null]);
+    assert.equal(await nbHc(), 0, 'simulation : niche pas créée');
+    assert.equal((await pool.query("SELECT COUNT(*)::int AS n FROM seo_link_targets WHERE domain = 'inconnu3d.fr'")).rows[0].n, 0, 'simulation : fiche pas créée');
+    r = await S.envoyerMail(db, { ...seul, domaine: 'https://www.inconnu3d.fr/galerie', simulation: false });
+    assert.equal(r.statut, 'envoyé'); assert.equal(r.cible.creee, true); assert.equal(r.cible.niche_creee, true);
+    const hc = (await pool.query("SELECT id, site_id, site_cible, statut FROM seo_niches WHERE name = 'Hors campagne'")).rows;
+    assert.equal(hc.length, 1); assert.deepEqual([hc[0].site_id, hc[0].site_cible], [2, 'jurojin.net']);
+    const f = (await pool.query("SELECT id, niche_id, statut, contact_email, porte_url FROM seo_link_targets WHERE domain = 'inconnu3d.fr'")).rows[0];
+    assert.deepEqual([f.niche_id, f.statut, f.contact_email, f.porte_url], [hc[0].id, 'contacte', 'contact@inconnu3d.fr', 'https://www.inconnu3d.fr/galerie']);
+    assert.deepEqual([r.mail.target_id, r.mail.campaign_id, r.mail.domaine], [f.id, hc[0].id, 'inconnu3d.fr']);
+    // Mêmes contrôles : domaine déjà contacté (autre sous-domaine), même sans fiche donnée.
+    await passe();
+    await refus({ ...seul, domaine: 'blog.inconnu3d.fr', destinataire: 'blog@inconnu3d.fr', simulation: false }, /inconnu3d\.fr a déjà reçu un mail/);
+    // Domaine déjà dans une niche du site : sa fiche est reprise (pas de doublon dans « Hors campagne »).
+    const n3d = (await pool.query("SELECT id FROM seo_link_targets WHERE domain = 'nouveau3d.fr'")).rows[0].id;
+    r = await S.envoyerMail(db, { ...seul, domaine: 'nouveau3d.fr', destinataire: 'hello@nouveau3d.fr', simulation: false });
+    assert.deepEqual([r.cible.id, r.cible.niche, r.mail.campaign_id], [n3d, 'Mocap', 1]);
+    // Deuxième domaine inconnu : même niche « Hors campagne ».
+    await passe();
+    r = await S.envoyerMail(db, { ...seul, domaine: 'rendus3d.fr', destinataire: 'contact@rendus3d.fr', simulation: false });
+    assert.equal(r.cible.niche_creee, undefined); assert.equal(await nbHc(), 1);
+    // Échec du serveur de mail : la fiche créée pour l'envoi est retirée.
+    await passe();
+    const T = require('../services/outreachSite');
+    T.definirTransport({ sendMail: async () => { throw new Error('535 refusé'); } });
+    await refus({ ...seul, domaine: 'echec3d.fr', destinataire: 'contact@echec3d.fr', simulation: false }, /envoi refusé par le serveur de mail/);
+    assert.equal((await pool.query("SELECT COUNT(*)::int AS n FROM seo_link_targets WHERE domain = 'echec3d.fr'")).rows[0].n, 0);
+    T.definirTransport({ sendMail: async (m) => { envoyes.push(m); return { messageId: m.messageId, accepted: [m.to], rejected: [] }; } });
+
+    // ajouter_cibles : niche par son nom, créée si absente (aussi quand niche_id n'existe pas).
+    await assert.rejects(S.ajouterCibles(db, { site: 2, cibles: liste }), /niche_id, ou niche_nom/);
+    await assert.rejects(S.ajouterCibles(db, { site: 2, niche_id: 9999, cibles: liste }), /niche 9999 introuvable : donner niche_nom/);
+    const forums = [{ domaine: 'forum-blender.fr' }, { domaine: 'tuto3d.fr' }];
+    ac = await S.ajouterCibles(db, { site: 2, niche_nom: 'Forums 3D', cibles: forums });
+    assert.deepEqual([ac.niche, ac.niche_creee, ac.creees.length], ['Forums 3D', "créée à l'écriture", 1]);
+    assert.equal((await pool.query("SELECT COUNT(*)::int AS n FROM seo_niches WHERE name = 'Forums 3D'")).rows[0].n, 0, 'simulation : niche pas créée');
+    ac = await S.ajouterCibles(db, { site: 2, niche_id: 9999, niche_nom: 'Forums 3D', cibles: forums, simulation: false });
+    const fn = (await pool.query("SELECT id, site_id, site_cible, statut FROM seo_niches WHERE name = 'Forums 3D'")).rows;
+    assert.equal(fn.length, 1); assert.deepEqual([fn[0].site_id, fn[0].site_cible, ac.niche_id, ac.niche_creee], [2, 'jurojin.net', fn[0].id, true]);
+    assert.deepEqual(ac.creees.map((x) => x.domaine), ['forum-blender.fr']);
+    ac = await S.ajouterCibles(db, { site: 2, niche_nom: '  forums 3d ', cibles: [{ domaine: 'sculpt3d.fr' }], simulation: false });
+    assert.equal(ac.niche_id, fn[0].id, 'même nom (casse, espaces) : niche reprise'); assert.equal(ac.niche_creee, undefined);
+    assert.equal((await pool.query("SELECT COUNT(*)::int AS n FROM seo_niches WHERE LOWER(name) = 'forums 3d'")).rows[0].n, 1);
   });
 });
 

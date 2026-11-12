@@ -1,12 +1,13 @@
 // Netlinking multi-site — monté sous /api/seo/outreach (AVANT /api/seo). Un seul endpoint d'envoi :
 // POST /send, appelé par l'onglet SEO (session) et par le serveur MCP (secret partagé OUTILS_MCP_SECRET).
 // Toutes les règles sont dans services/outreachService.js ; aucune dans l'interface.
-//   POST /send { site_id, target_id, destinataire, objet, corps, relance_de?, simulation? (true par défaut) }
+//   POST /send { site_id, target_id | domaine, destinataire, objet, corps, relance_de?, simulation? (true par défaut) }
+//              domaine seul : fiche cible reprise, ou créée à l'envoi dans la niche « Hors campagne » du site
 //   GET|POST /verifier { domaine | adresse }           déjà contacté ? (tous sites, ancien envoi compris)
 //   GET|POST /mails { site, campagne, statut, relances_dues, target_id }
 //   GET|POST /sans-reponse { site }                    cibles sans réponse (accueil du module)
 //   POST /reponse { target_id, date?, nature }         positif | negatif | payant | refus | abandon
-//   POST /cibles { site, niche_id, cibles: [...], simulation? }   ajout de cibles (remplace l'import CSV)
+//   POST /cibles { site, niche_id | niche_nom, cibles: [...], simulation? }   ajout de cibles (niche créée par son nom si absente)
 //   GET /config                                        sites qui ont un expéditeur réglé
 const express = require('express');
 const crypto = require('crypto');
@@ -40,6 +41,6 @@ for (const m of ['get', 'post']) {
   router[m]('/sans-reponse', ok(async (db, b) => ({ cibles: await S.sansReponse(db, { site: b.site }) })));
 }
 router.post('/reponse', ok((db, b) => S.marquerReponse(db, { target_id: b.target_id, date: b.date, nature: b.nature })));
-router.post('/cibles', ok((db, b) => S.ajouterCibles(db, { site: b.site || b.site_id, niche_id: b.niche_id, cibles: b.cibles, simulation: b.simulation !== false })));
+router.post('/cibles', ok((db, b) => S.ajouterCibles(db, { site: b.site || b.site_id, niche_id: b.niche_id, niche_nom: b.niche_nom, cibles: b.cibles, simulation: b.simulation !== false })));
 
 module.exports = router;
