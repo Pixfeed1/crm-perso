@@ -1,12 +1,24 @@
 // Quels outils le serveur MCP sert-il vraiment ? Compare le service local (127.0.0.1:port) et l'adresse
 // publique utilisée par l'app Claude. N'affiche jamais le jeton.
 // Usage, depuis mcp_seo/ : node scripts/diag-outils.js [adresse publique]   (défaut https://seo.crm.pixfeed.net/mcp, celle de l'app)
+//                         node scripts/diag-outils.js --local --strict      (deploy.sh : service local seulement, code de sortie 1
+//                                                                            si un outil du code ou un paramètre attendu manque)
 import 'dotenv/config';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const PUBLIC = process.argv[2] || 'https://seo.crm.pixfeed.net/mcp';
+const ARGS = process.argv.slice(2);
+const SEUL_LOCAL = ARGS.includes('--local');
+const STRICT = ARGS.includes('--strict');
+const PUBLIC = ARGS.find((a) => !a.startsWith('--')) || 'https://seo.crm.pixfeed.net/mcp';
+// Paramètres qui doivent figurer dans inputSchema (un paramètre absent du schéma est invisible pour Claude).
+const PARAMS = {
+  ajouter_cibles: ['site_id', 'niche_id', 'niche_nom', 'creer_si_absente', 'cibles', 'simulation'],
+  envoyer_mail_outreach: ['site_id', 'target_id', 'domaine', 'niche_nom', 'creer_si_absente', 'destinataire', 'objet', 'corps', 'relance_de', 'simulation'],
+  creer_niche: ['site_id', 'nom', 'page_cible', 'hubs', 'simulation'],
+  list_link_campaigns: ['site_id'],
+};
 const LOCAL = `http://127.0.0.1:${process.env.MCP_SEO_PORT || 8790}/mcp`;
 const TOKEN = process.env.MCP_SEO_TOKEN || '';
 const ATTENDUS = ['get_live_page', 'get_page_dossier', 'check_urls', 'get_site_resources', 'demander_depot', 'prepare_draft', 'repointer_liens', 'poser_etiquettes', 'modifier_media', 'poser_lien'];
@@ -27,15 +39,29 @@ async function liste(url) {
   const outils = await appel(2, 'tools/list');
   if (outils.error) throw new Error(outils.error.message);
   const gsr = outils.result.tools.find((x) => x.name === 'get_site_resources');
-  return { serveur: init.result && init.result.serverInfo, noms: outils.result.tools.map((x) => x.name), fiche: gsr ? Object.keys((gsr.inputSchema && gsr.inputSchema.properties) || {}) : [] };
+  const props = Object.fromEntries(outils.result.tools.map((x) => [x.name, Object.keys((x.inputSchema && x.inputSchema.properties) || {})]));
+  return { serveur: init.result && init.result.serverInfo, noms: outils.result.tools.map((x) => x.name), fiche: gsr ? props.get_site_resources : [], props };
 }
+// Le service vient peut-être de redémarrer : quelques essais avant de conclure.
+async function listeAvecEssais(url) {
+  for (let i = 0; ; i++) {
+    try { return await liste(url); } catch (e) { if (i >= 9) throw e; await new Promise((r) => setTimeout(r, 2000)); }
+  }
+}
+let echec = false;
 
 console.log(`code déployé (server.js) : ${dansLeCode.length} outils`);
-for (const [nom, url] of [['service local', LOCAL], ['adresse publique', PUBLIC]]) {
+for (const [nom, url] of SEUL_LOCAL ? [['service local', LOCAL]] : [['service local', LOCAL], ['adresse publique', PUBLIC]]) {
   try {
-    const r = await liste(url);
+    const r = await listeAvecEssais(url);
+    const absentsDuService = dansLeCode.filter((x) => !r.noms.includes(x));
+    const paramsManquants = Object.entries(PARAMS).flatMap(([outil, ps]) => (r.props[outil] ? ps.filter((p) => !r.props[outil].includes(p)).map((p) => `${outil}.${p}`) : [`${outil} (outil absent)`]));
+    if (absentsDuService.length) console.log(`${nom.padEnd(16)} outils du code NON servis (service pas redémarré ?) : ${absentsDuService.join(', ')}`);
+    console.log(`${nom.padEnd(16)} netlinking : ${paramsManquants.length ? 'PARAMÈTRES MANQUANTS : ' + paramsManquants.join(', ') : Object.entries(PARAMS).map(([o, ps]) => `${o}(${ps.join(', ')})`).join(' ; ')}`);
+    if (absentsDuService.length || paramsManquants.length) echec = true;
     const manquants = ATTENDUS.filter((x) => !r.noms.includes(x));
     console.log(`${nom.padEnd(16)} ${url} : ${r.noms.length} outils (${r.serveur ? r.serveur.name + ' ' + r.serveur.version : '?'})${manquants.length ? ' ; MANQUANTS : ' + manquants.join(', ') : ` ; les ${ATTENDUS.length} nouveaux sont présents`}`);
     console.log(`${''.padEnd(16)} fiche de get_site_resources : ${r.fiche.join(', ')}`);
-  } catch (e) { console.log(`${nom.padEnd(16)} ${url} : ERREUR ${e.message}`); }
+  } catch (e) { console.log(`${nom.padEnd(16)} ${url} : ERREUR ${e.message}`); echec = true; }
 }
+if (STRICT && echec) process.exit(1);

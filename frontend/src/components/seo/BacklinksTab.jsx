@@ -116,7 +116,7 @@ const BacklinksTab = ({ siteId = null }) => {
     if (!form.name.trim() || !form.hubs.trim()) { toast.error('Nom et hubs requis'); return; }
     setSaving(true);
     try {
-      await seoBacklinksAPI.createNiche(form);
+      await seoBacklinksAPI.createNiche({ ...form, ...(siteId ? { site_id: siteId } : {}) });
       toast.success('Niche créée');
       setShowCreate(false); setForm({ name: '', site_cible: '', hubs: '', seeds: '' });
       load();

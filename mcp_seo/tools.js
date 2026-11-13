@@ -511,7 +511,7 @@ export async function listLinkCampaigns(pool, siteId = null) {
             COUNT(t.id) FILTER (WHERE t.statut IN ('contacte', 'lien_obtenu', 'refus'))::int AS contactees,
             COUNT(t.id) FILTER (WHERE t.statut = 'lien_obtenu')::int AS liens_obtenus,
             COUNT(t.id) FILTER (WHERE t.rel_verifie_le IS NOT NULL)::int AS rel_verifies,
-            COUNT(t.id) FILTER (WHERE t.dofollow = TRUE)::int AS dofollow_possibles,
+            COUNT(t.id) FILTER (WHERE t.dofollow = TRUE AND t.rel_verifie_le IS NOT NULL)::int AS dofollow_possibles,
             COUNT(t.id) FILTER (WHERE t.concurrent OR t.concurrent_probable)::int AS concurrents
      FROM seo_niches n LEFT JOIN seo_link_targets t ON t.niche_id = n.id LEFT JOIN seo_sites s ON s.id = n.site_id
      WHERE ($1::int IS NULL OR n.site_id = $1)

@@ -1,11 +1,11 @@
-// dofollow d'après un rel transmis (ajout de cibles, lecture manuelle) : true seulement si le rel PROUVE
-// l'absence de nofollow, false s'il contient nofollow / ugc / sponsored, null sinon (non fourni, illisible,
-// « à vérifier », « ? »…). Le rel doit être fait de valeurs de rel connues ; un seul mot inconnu donne null.
+// dofollow d'après un rel TRANSMIS (ajout de cibles) : seules les valeurs concluantes comptent —
+// dofollow, noopener (et noreferrer, qui l'accompagne) pour true ; nofollow, ugc, sponsored pour false.
+// Toute autre chaîne (« a verifier », « ? », « follow », « aucun », texte libre) laisse dofollow à null.
+// Seul record_link_rel (lecture dans la page, '' = aucun attribut) pose dofollow autrement.
 //   videAbsent : '' veut dire « aucun attribut rel » (lecture dans la page), donc dofollow.
 const BLOQUANTS = new Set(['nofollow', 'ugc', 'sponsored']);
-const NEUTRES = new Set(['dofollow', 'follow', 'noopener', 'noreferrer', 'noreferer', 'opener', 'external', 'me', 'author',
-  'bookmark', 'tag', 'next', 'prev', 'alternate', 'help', 'license', 'friend', 'contact', 'acquaintance', 'colleague']);
-const ABSENCE = /^(aucun|none|absent|vide|sans|aucun rel|pas de rel|sans rel|rel absent|aucun attribut|sans attribut|pas d'attribut|pas d attribut|aucun attribut rel|pas d'attribut rel)$/;
+const NEUTRES = new Set(['dofollow', 'noopener', 'noreferrer']);
+const ABSENCE = /^$/;
 
 function dofollowDuRel(rel, { videAbsent = false } = {}) {
   if (rel === undefined || rel === null) return null;

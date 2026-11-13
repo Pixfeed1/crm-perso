@@ -27,9 +27,9 @@ test('domaine court : sous-domaines, adresses, suffixes doubles', () => {
 });
 
 test('rel transmis : dofollow seulement si le rel le prouve', () => {
-  for (const r of ['dofollow', 'follow', 'noopener noreferrer', 'rel="noopener"', 'aucun', 'Aucun attribut']) assert.equal(dofollowDuRel(r), true, r);
+  for (const r of ['dofollow', 'DoFollow', 'noopener', 'noopener noreferrer', 'rel="noopener"']) assert.equal(dofollowDuRel(r), true, r);
   for (const r of ['nofollow', 'nofollow ugc', 'sponsored', 'noopener nofollow', 'UGC']) assert.equal(dofollowDuRel(r), false, r);
-  for (const r of ['a verifier', 'à vérifier', '?', 'inconnu', 'pas de nofollow', 'nofollow à vérifier', '', null, undefined]) assert.equal(dofollowDuRel(r), null, String(r));
+  for (const r of ['a verifier', 'à vérifier', '?', 'inconnu', 'pas de nofollow', 'nofollow à vérifier', 'follow', 'aucun', 'external', '', null, undefined]) assert.equal(dofollowDuRel(r), null, String(r));
   assert.equal(dofollowDuRel('', { videAbsent: true }), true, "'' lu dans la page = aucun attribut");
 });
 
@@ -177,15 +177,16 @@ test('envoi : un seul endpoint, toutes les règles, relances encadrées, cadence
     assert.equal(r.cible.niche_creee, undefined); assert.equal(await nbHc(), 1);
     // Campagne nommée par Claude : créée à l'envoi, puis reprise (casse ignorée) ; une fiche existante n'est pas déplacée.
     await passe();
-    r = await S.envoyerMail(db, { ...seul, domaine: 'atelier3d.fr', destinataire: 'contact@atelier3d.fr', niche_nom: 'Ateliers 3D' });
+    await refus({ ...seul, domaine: 'atelier3d.fr', destinataire: 'contact@atelier3d.fr', niche_nom: 'Ateliers 3D' }, /aucune niche « Ateliers 3D » rattachée au site 2 \(niches du site : « Mocap » \(1\), « Hors campagne »/);
+    r = await S.envoyerMail(db, { ...seul, domaine: 'atelier3d.fr', destinataire: 'contact@atelier3d.fr', niche_nom: 'Ateliers 3D', creer_si_absente: true });
     assert.deepEqual([r.cible.niche, r.cible.a_creer], ['Ateliers 3D', true]);
     assert.match(r.controles.map((x) => x.texte).join(' | '), /niche « Ateliers 3D » \(créée elle aussi\)/);
-    r = await S.envoyerMail(db, { ...seul, domaine: 'atelier3d.fr', destinataire: 'contact@atelier3d.fr', niche_nom: 'Ateliers 3D', simulation: false });
+    r = await S.envoyerMail(db, { ...seul, domaine: 'atelier3d.fr', destinataire: 'contact@atelier3d.fr', niche_nom: 'Ateliers 3D', creer_si_absente: true, simulation: false });
     const at = (await pool.query("SELECT id, site_id FROM seo_niches WHERE name = 'Ateliers 3D'")).rows;
     assert.equal(at.length, 1); assert.equal(at[0].site_id, 2);
     assert.deepEqual([r.cible.niche, r.cible.niche_creee, r.mail.campaign_id], ['Ateliers 3D', true, at[0].id]);
     await passe();
-    r = await S.envoyerMail(db, { ...seul, domaine: 'studio3d.fr', destinataire: 'contact@studio3d.fr', niche_nom: 'ateliers 3d', simulation: false });
+    r = await S.envoyerMail(db, { ...seul, domaine: 'studio3d.fr', destinataire: 'contact@studio3d.fr', niche_nom: '  ATÉLIERS   3d ', simulation: false });
     assert.deepEqual([r.cible.niche, r.cible.niche_creee, r.mail.campaign_id], ['Ateliers 3D', undefined, at[0].id]);
     await passe();
     const garde = await cible(1, 'garde3d.fr');
@@ -205,24 +206,65 @@ test('envoi : un seul endpoint, toutes les règles, relances encadrées, cadence
     // ajouter_cibles : niche par son nom, créée si absente (aussi quand niche_id n'existe pas).
     await assert.rejects(S.ajouterCibles(db, { site: 2, cibles: liste }), /niche_id, ou niche_nom/);
     await assert.rejects(S.ajouterCibles(db, { site: 2, niche_id: 9999, cibles: liste }), /niche 9999 introuvable : donner niche_nom/);
+    // Nom inconnu sans creer_si_absente : refus ; niche d'un autre site au même nom : jamais acceptée.
+    await assert.rejects(S.ajouterCibles(db, { site: 2, niche_nom: 'Forums 3D', cibles: liste }), /aucune niche « Forums 3D » rattachée au site 2.*creer_si_absente=true, ou creer_niche/);
+    await assert.rejects(S.ajouterCibles(db, { site: 2, niche_nom: 'agences', cibles: liste }), /aucune niche « agences » rattachée au site 2/);
     const forums = [{ domaine: 'forum-blender.fr' }, { domaine: 'tuto3d.fr' }];
-    ac = await S.ajouterCibles(db, { site: 2, niche_nom: 'Forums 3D', cibles: forums });
+    ac = await S.ajouterCibles(db, { site: 2, niche_nom: 'Forums 3D', creer_si_absente: true, cibles: forums });
     assert.deepEqual([ac.niche, ac.niche_creee, ac.creees.length], ['Forums 3D', "créée à l'écriture", 1]);
     assert.equal((await pool.query("SELECT COUNT(*)::int AS n FROM seo_niches WHERE name = 'Forums 3D'")).rows[0].n, 0, 'simulation : niche pas créée');
-    ac = await S.ajouterCibles(db, { site: 2, niche_id: 9999, niche_nom: 'Forums 3D', cibles: forums, simulation: false });
+    ac = await S.ajouterCibles(db, { site: 2, niche_id: 9999, niche_nom: 'Forums 3D', creer_si_absente: true, cibles: forums, simulation: false });
     const fn = (await pool.query("SELECT id, site_id, site_cible, statut FROM seo_niches WHERE name = 'Forums 3D'")).rows;
     assert.equal(fn.length, 1); assert.deepEqual([fn[0].site_id, fn[0].site_cible, ac.niche_id, ac.niche_creee], [2, 'jurojin.net', fn[0].id, true]);
     assert.deepEqual(ac.creees.map((x) => x.domaine), ['forum-blender.fr']);
     // Sous-domaines gardés et distincts ; dofollow seulement si le rel le prouve.
     ac = await S.ajouterCibles(db, { site: 2, niche_id: fn[0].id, simulation: false, cibles: [
-      { domaine: 'https://forum.blender-fr.org/', rel: 'a verifier' }, { domaine: 'blender-fr.org', rel: 'nofollow ugc' }, { domaine: 'www.forum.blender-fr.org' }, { domaine: 'wiki.blender-fr.org', rel: 'follow' }] });
-    assert.deepEqual(ac.creees.map((x) => [x.domaine, x.dofollow]), [['forum.blender-fr.org', null], ['blender-fr.org', false], ['wiki.blender-fr.org', true]]);
+      { domaine: 'https://forum.blender-fr.org/', rel: 'a verifier' }, { domaine: 'blender-fr.org', rel: 'nofollow ugc' }, { domaine: 'www.forum.blender-fr.org' }, { domaine: 'wiki.blender-fr.org', rel: 'dofollow', porte: 'formulaire /nous-contacter/' }, { domaine: 'docs.blender-fr.org', rel: 'follow', porte: 'via le discord du serveur, demander au modérateur principal' }] });
+    assert.deepEqual(ac.creees.map((x) => [x.domaine, x.dofollow]), [['forum.blender-fr.org', null], ['blender-fr.org', false], ['wiki.blender-fr.org', true], ['docs.blender-fr.org', null]]);
+    // rel transmis concluant : lecture datée ; porte : type + adresse, ou texte libre en note.
+    const wiki = (await pool.query("SELECT dofollow, rel_verifie_le, porte_type, porte_url, porte_note FROM seo_link_targets WHERE domain = 'wiki.blender-fr.org'")).rows[0];
+    assert.deepEqual([wiki.dofollow, !!wiki.rel_verifie_le, wiki.porte_type, wiki.porte_url, wiki.porte_note], [true, true, 'formulaire', 'https://wiki.blender-fr.org/nous-contacter/', null]);
+    const docs = (await pool.query("SELECT dofollow, rel_verifie_le, porte_type, porte_note FROM seo_link_targets WHERE domain = 'docs.blender-fr.org'")).rows[0];
+    assert.deepEqual([docs.dofollow, docs.rel_verifie_le, docs.porte_type, docs.porte_note], [null, null, null, 'via le discord du serveur, demander au modérateur principal']);
     assert.deepEqual(ac.ignorees.map((x) => [x.domaine, x.raison]), [['www.forum.blender-fr.org', 'en double dans la liste']]);
     const fb = (await pool.query("SELECT dofollow, notes FROM seo_link_targets WHERE domain = 'forum.blender-fr.org'")).rows[0];
     assert.equal(fb.dofollow, null); assert.match(fb.notes, /rel transmis : a verifier \(non concluant, dofollow inconnu\)/);
-    ac = await S.ajouterCibles(db, { site: 2, niche_nom: '  forums 3d ', cibles: [{ domaine: 'sculpt3d.fr' }], simulation: false });
+    ac = await S.ajouterCibles(db, { site: 2, niche_nom: '  FÖRUMS 3d ', cibles: [{ domaine: 'sculpt3d.fr' }], simulation: false });
     assert.equal(ac.niche_id, fn[0].id, 'même nom (casse, espaces) : niche reprise'); assert.equal(ac.niche_creee, undefined);
     assert.equal((await pool.query("SELECT COUNT(*)::int AS n FROM seo_niches WHERE LOWER(name) = 'forums 3d'")).rows[0].n, 1);
+
+    // Garde-fou : dofollow TRUE sans lecture du rel datée reste inconnu ; historique remis à NULL au démarrage.
+    await pool.query("UPDATE seo_link_targets SET dofollow = TRUE WHERE domain = 'docs.blender-fr.org'");
+    assert.equal((await pool.query("SELECT dofollow FROM seo_link_targets WHERE domain = 'docs.blender-fr.org'")).rows[0].dofollow, null);
+    await pool.query('ALTER TABLE seo_link_targets DISABLE TRIGGER seo_link_targets_dofollow_garde');
+    await pool.query("UPDATE seo_link_targets SET dofollow = TRUE WHERE niche_id = $1 AND rel_verifie_le IS NULL", [fn[0].id]);
+    await pool.query('ALTER TABLE seo_link_targets ENABLE TRIGGER seo_link_targets_dofollow_garde');
+    const c3 = await pool.connect(); try { await ensureOutreachTables(c3); } finally { c3.release(); }
+    assert.deepEqual((await pool.query("SELECT domain, dofollow FROM seo_link_targets WHERE niche_id = $1 AND dofollow IS TRUE ORDER BY domain", [fn[0].id])).rows.map((x) => x.domain), ['wiki.blender-fr.org']);
+    assert.equal((await pool.query("SELECT data_type FROM information_schema.columns WHERE table_name = 'seo_link_targets' AND column_name = 'porte_type'")).rows[0].data_type, 'text');
+
+    // creer_niche : rattachée au site, nom unique (casse, accents), page sur le site ; simulation par défaut.
+    let cn = await S.creerNiche(db, { site: 2, nom: 'Anime et Japon', page_cible: 'https://jurojin.net/anime/', hubs: ['animeland.fr', 'nautiljon.com'] });
+    assert.equal(cn.statut, 'simulation : rien créé');
+    assert.equal((await pool.query("SELECT COUNT(*)::int AS n FROM seo_niches WHERE name = 'Anime et Japon'")).rows[0].n, 0);
+    cn = await S.creerNiche(db, { site: 2, nom: 'Anime et Japon', page_cible: 'https://jurojin.net/anime/', hubs: ['animeland.fr', 'nautiljon.com'], simulation: false });
+    const aj = (await pool.query("SELECT id, site_id, site_cible, page_cible, hubs, seeds, statut FROM seo_niches WHERE name = 'Anime et Japon'")).rows[0];
+    assert.deepEqual([aj.site_id, aj.site_cible, aj.page_cible, aj.hubs, aj.seeds, aj.statut, cn.niche.id], [2, 'jurojin.net', 'https://jurojin.net/anime/', 'animeland.fr, nautiljon.com', 'animeland.fr, nautiljon.com', 'nouvelle', aj.id]);
+    await assert.rejects(S.creerNiche(db, { site: 2, nom: 'animé ET japon', simulation: false }), (e) => e.status === 409 && e.niche_id === aj.id);
+    await assert.rejects(S.creerNiche(db, { site: 2, nom: 'Autre', page_cible: 'https://pixfeed.net/x/' }), /n'est pas sur jurojin\.net/);
+    await assert.rejects(S.creerNiche(db, { site: 99, nom: 'Autre' }), /site 99 introuvable/);
+    ac = await S.ajouterCibles(db, { site: 2, niche_nom: 'anime et japon', cibles: [{ domaine: 'otaku.fr', rel: 'a verifier' }], simulation: false });
+    assert.equal(ac.niche_id, aj.id);
+
+    // Interface : la niche créée est rattachée à son site (site_id de l'onglet, sinon son domaine).
+    const ctrl = require('../controllers/seoBacklinksController');
+    const appel = async (body) => { let code = 201, j; await ctrl.createNiche({ app: { locals: { db } }, body }, { status(c) { code = c; return this; }, json(x) { j = x; return this; } }); return { code, j }; };
+    let rc = await appel({ name: 'Cosplay', site_cible: 'https://www.jurojin.net/', hubs: 'cosplay.fr' });
+    assert.deepEqual([rc.code, rc.j.site_id], [201, 2]);
+    rc = await appel({ name: 'Agences web', site_cible: '', hubs: 'x.fr', site_id: 15 });
+    assert.deepEqual([rc.code, rc.j.site_id, rc.j.site_cible], [201, 15, 'pixfeed.net']);
+    rc = await appel({ name: 'Perdue', site_cible: 'inconnu.fr', hubs: 'x.fr' });
+    assert.equal(rc.code, 400); assert.match(rc.j.message, /Site à faire linker inconnu/);
 
     // Mails écrits avant le changement (domaine racine) : repris du domaine complet de leur fiche au démarrage.
     await pool.query("UPDATE seo_link_targets SET domain = 'shop.blog-mocap.fr' WHERE id = $1", [a]);

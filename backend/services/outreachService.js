@@ -4,8 +4,9 @@
 // Contrôles, tous bloquants :
 //   - site avec un expéditeur réglé (services/outreachSite.js), cible rattachée à une niche de ce site ;
 //     sans target_id, un domaine seul suffit : la fiche cible est reprise si le domaine (forme courte) est
-//     déjà dans une niche du site, sinon créée à l'envoi réel dans la niche niche_nom du site, ou à défaut
-//     « Hors campagne » (créée elle aussi si besoin) ; en simulation, rien n'est créé ;
+//     déjà dans une niche du site, sinon créée à l'envoi réel dans la niche niche_nom du site (nom sans
+//     casse ni accents ; niche inconnue refusée, sauf creer_si_absente=true), ou à défaut « Hors campagne »
+//     (créée si besoin) ; en simulation, rien n'est créé ;
 //   - un seul destinataire, une adresse valide ; objet et corps fournis à l'appel, sans champ de fusion ;
 //   - domaine complet (sous-domaine compris, « www. » ignoré : blog.exemple.fr ≠ exemple.fr) et adresse
 //     jamais contactés, toutes campagnes et tous sites confondus, y compris par
@@ -72,13 +73,45 @@ async function dejaContacte(db, { domaine = null, adresse = null } = {}) {
   return { domaine: d, adresse: a, contacts, ...(memeRacine.length ? { meme_racine: memeRacine } : {}) };
 }
 
-// Niche d'un site par son nom (sans tenir compte de la casse) ; créée si absente et creer=true.
+// Niche d'un site par son nom : sans tenir compte de la casse, des accents ni des espaces, parmi les
+// niches RATTACHÉES à ce site seulement. Créée si absente et creer=true (rattachée au site à la création).
 const HORS_CAMPAGNE = 'Hors campagne';
-async function nicheParNom(q, siteId, nom, { creer = false, siteCible = null } = {}) {
-  const n = (await q.query('SELECT id, name, site_id FROM seo_niches WHERE site_id = $1 AND LOWER(TRIM(name)) = LOWER(TRIM($2)) ORDER BY id LIMIT 1', [siteId, nom])).rows[0];
+const cleNom = (x) => String(x || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+async function nichesDuSite(q, siteId) {
+  return (await q.query('SELECT id, name, site_id FROM seo_niches WHERE site_id = $1 ORDER BY id', [siteId])).rows;
+}
+async function nicheParNom(q, siteId, nom, { creer = false, siteCible = null, pageCible = null, hubs = null } = {}) {
+  const n = (await nichesDuSite(q, siteId)).find((x) => cleNom(x.name) === cleNom(nom));
   if (n || !creer) return n ? { ...n, creee: false } : null;
-  const cree = (await q.query("INSERT INTO seo_niches (name, site_cible, site_id, statut) VALUES ($1, $2, $3, 'prete') RETURNING id, name, site_id", [String(nom).trim(), siteCible, siteId])).rows[0];
+  const h = hubs ? String(hubs).trim() : null;
+  const cree = (await q.query(
+    'INSERT INTO seo_niches (name, site_cible, site_id, page_cible, hubs, seeds, statut) VALUES ($1, $2, $3, $4, $5, $5, $6) RETURNING id, name, site_id, site_cible, page_cible, hubs, statut',
+    [String(nom).trim().replace(/\s+/g, ' '), siteCible, siteId, pageCible, h || null, h ? 'nouvelle' : 'prete'])).rows[0];
   return { ...cree, creee: true };
+}
+// Niche inconnue : refus avec la liste des niches du site.
+async function nicheInconnue(q, siteId, nom) {
+  const liste = (await nichesDuSite(q, siteId)).map((x) => `« ${x.name} » (${x.id})`).join(', ') || 'aucune';
+  return err(404, `aucune niche « ${nom} » rattachée au site ${siteId} (niches du site : ${liste}). Pour la créer : creer_si_absente=true, ou creer_niche.`);
+}
+
+// Création explicite d'une niche (outil creer_niche) : rattachée au site dès la création, nom unique sur le
+// site (casse et accents ignorés). simulation=true par défaut.
+async function creerNiche(db, { site: s, nom, page_cible: pageCible = null, hubs = null, simulation = true }) {
+  const siteId = Number(s);
+  const site = (await db.pool.query('SELECT id, domain FROM seo_sites WHERE id = $1', [siteId])).rows[0];
+  if (!site) throw err(404, `site ${s} introuvable`);
+  const n = String(nom || '').trim();
+  if (!n || n.length > 120) throw err(400, 'nom : 1 à 120 caractères');
+  const page = pageCible ? String(pageCible).trim() : null;
+  if (page && !/^https?:\/\/[^\s]+$/i.test(page)) throw err(400, `page_cible : adresse complète attendue (https://…), reçu « ${page} »`);
+  if (page && cleDomaine(page) !== cleDomaine(site.domain)) throw err(400, `page_cible ${page} n'est pas sur ${site.domain}`);
+  const h = Array.isArray(hubs) ? hubs.join(', ') : (hubs ? String(hubs) : null);
+  const deja = await nicheParNom(db.pool, siteId, n);
+  if (deja) throw err(409, `la niche « ${deja.name} » (${deja.id}) existe déjà sur ce site : l'utiliser par son niche_id`, { niche_id: deja.id });
+  if (simulation) return { simulation, statut: 'simulation : rien créé', niche: { nom: n, site_id: siteId, site: site.domain, page_cible: page, hubs: h } };
+  const cree = await nicheParNom(db.pool, siteId, n, { creer: true, siteCible: site.domain, pageCible: page, hubs: h });
+  return { simulation, statut: 'créée', niche: { id: cree.id, nom: cree.name, site_id: siteId, site: site.domain, page_cible: cree.page_cible, hubs: cree.hubs, statut: cree.statut } };
 }
 
 // Cible d'un domaine dans les niches d'un site (domaine complet, « www. » ignoré).
@@ -138,11 +171,12 @@ async function envoyerMail(db, b = {}) {
     domaine = cleDomaine(t.domain);
     if (!domaine) throw err(400, `domaine de la cible illisible (${t.domain})`);
     out.cible = { id: t.id, domaine, niche: t.niche, campaign_id: t.niche_id };
-    const autre = b.niche_nom && t.niche.trim().toLowerCase() !== nomNiche.toLowerCase();
+    const autre = b.niche_nom && cleNom(t.niche) !== cleNom(nomNiche);
     ok(`cible ${domaine} (niche « ${t.niche} »${b.target_id ? '' : ', fiche existante reprise'}${autre ? `, pas déplacée vers « ${nomNiche} »` : ''})`);
   } else {
     domaine = aCreer.domaine;
     const hc = await nicheParNom(db.pool, siteId, nomNiche);
+    if (!hc && b.niche_nom && b.creer_si_absente !== true) throw await nicheInconnue(db.pool, siteId, nomNiche);
     out.cible = { id: null, domaine, niche: hc ? hc.name : nomNiche, campaign_id: hc ? hc.id : null, a_creer: true };
     ok(`cible ${domaine} : pas encore de fiche sur ce site, créée à l'envoi dans la niche « ${hc ? hc.name : nomNiche} »${hc ? '' : ' (créée elle aussi)'}`);
   }
@@ -281,22 +315,35 @@ async function marquerReponse(db, { target_id: targetId, date = null, nature }) 
 
 // Ajout de cibles dans une niche du site (remplace l'import CSV) : crée les manquantes, ignore les domaines
 // déjà présents dans les niches du site ; signale ceux déjà connus ailleurs. simulation=true par défaut.
-// Niche : niche_id, ou niche_nom (reprise si une niche du site porte ce nom, sinon créée à l'écriture) ;
-// un niche_id inconnu avec un niche_nom crée la niche sous ce nom.
+// Niche : niche_id, ou niche_nom (niche du site de ce nom, casse et accents ignorés) ; niche inconnue refusée
+// avec la liste des niches du site, sauf creer_si_absente=true (créée à l'écriture, rattachée au site).
 const STATUTS_CIBLE = ['nouveau', 'a_contacter', 'contacte', 'lien_obtenu', 'refus', 'ecarte'];
-async function ajouterCibles(db, { site: s, niche_id: nicheId = null, niche_nom: nicheNom = null, cibles = [], simulation = true }) {
+// Porte transmise (« formulaire /nous-contacter/ », « email contact@x.fr »…) : le type reconnu va dans
+// porte_type, une adresse ou un chemin dans porte_url, le reste en clair dans porte_note.
+const PORTES = ['email', 'formulaire', 'compte', 'reseau', 'commentaire', 'aucune'];
+function lirePorte(texte, hote) {
+  const s = String(texte || '').trim();
+  if (!s) return { type: null, url: null, note: null };
+  const [premier, ...reste] = s.split(/\s+/);
+  const type = PORTES.find((p) => p === cleNom(premier).replace(/[^a-z]/g, '')) || null;
+  const suite = (type ? reste.join(' ') : s).trim();
+  const lien = /^(https?:\/\/\S+|\/\S*)$/i.test(suite) ? (suite.startsWith('/') ? `https://${hote}${suite}` : suite) : null;
+  return { type, url: lien, note: lien ? (type ? null : s) : (suite || null) };
+}
+async function ajouterCibles(db, { site: s, niche_id: nicheId = null, niche_nom: nicheNom = null, creer_si_absente: creerSiAbsente = false, cibles = [], simulation = true }) {
   const siteId = Number(s);
   const nom = nicheNom ? String(nicheNom).trim() : '';
   if (!Array.isArray(cibles) || !cibles.length) throw err(400, 'cibles : liste non vide attendue');
   if (cibles.length > 500) throw err(400, '500 cibles au plus par appel');
   let niche = nicheId ? (await db.pool.query('SELECT id, name, site_id FROM seo_niches WHERE id = $1', [nicheId])).rows[0] : null;
-  if (!niche && !nom) throw err(nicheId ? 404 : 400, nicheId ? `niche ${nicheId} introuvable : donner niche_nom pour la créer` : 'indiquer niche_id, ou niche_nom (créée si absente)');
+  if (!niche && !nom) throw err(nicheId ? 404 : 400, nicheId ? `niche ${nicheId} introuvable : donner niche_nom (et creer_si_absente=true pour la créer)` : 'indiquer niche_id, ou niche_nom');
   let nicheACreer = false;
   if (!niche) {
     const site = (await db.pool.query('SELECT id, domain FROM seo_sites WHERE id = $1', [siteId])).rows[0];
     if (!site) throw err(404, `site ${s} introuvable`);
     if (nom.length > 120) throw err(400, 'niche_nom : 120 caractères au plus');
     niche = await nicheParNom(db.pool, siteId, nom);
+    if (!niche && creerSiAbsente !== true) throw await nicheInconnue(db.pool, siteId, nom);
     if (!niche) {
       nicheACreer = true;
       niche = simulation ? { id: null, name: nom, site_id: siteId } : await nicheParNom(db.pool, siteId, nom, { creer: true, siteCible: site.domain });
@@ -319,11 +366,13 @@ async function ajouterCibles(db, { site: s, niche_id: nicheId = null, niche_nom:
     const dofollow = dofollowDuRel(x.rel);
     const statut = STATUTS_CIBLE.includes(x.statut) ? x.statut : 'nouveau';
     const notes = [x.terrain && `terrain : ${x.terrain}`, x.rel && `rel transmis : ${x.rel}${dofollow === null ? ' (non concluant, dofollow inconnu)' : ''}`, x.note].filter(Boolean).join(' · ') || null;
-    const c = { domaine: hote, url: x.url || null, porte: x.porte || null, statut, dofollow, notes, ...(ailleurs ? { note_crm: `aussi présent dans une niche d'un autre site (« ${ailleurs.name} »)` } : {}) };
+    const porte = lirePorte(x.porte, hote);
+    const c = { domaine: hote, url: x.url || porte.url || null, porte: porte.type, ...(porte.note ? { porte_note: porte.note } : {}), statut, dofollow, notes, ...(ailleurs ? { note_crm: `aussi présent dans une niche d'un autre site (« ${ailleurs.name} »)` } : {}) };
     if (!simulation) {
       const r = await db.pool.query(
-        `INSERT INTO seo_link_targets (niche_id, domain, via, statut, dofollow, porte_type, porte_url, notes) VALUES ($1, $2, 'manuel', $3, $4, $5, $6, $7)
-         ON CONFLICT (niche_id, domain) DO NOTHING RETURNING id`, [niche.id, hote, statut, dofollow, c.porte, c.url, notes]);
+        `INSERT INTO seo_link_targets (niche_id, domain, via, statut, dofollow, rel_verifie_le, porte_type, porte_url, porte_note, notes)
+         VALUES ($1, $2, 'manuel', $3, $4, CASE WHEN $4::boolean IS NULL THEN NULL ELSE NOW() END, $5, $6, $7, $8)
+         ON CONFLICT (niche_id, domain) DO NOTHING RETURNING id`, [niche.id, hote, statut, dofollow, c.porte, c.url, porte.note, notes]);
       if (!r.rows[0]) { out.ignorees.push({ domaine: hote, raison: 'déjà présent' }); continue; }
       c.id = r.rows[0].id;
     }
@@ -333,4 +382,4 @@ async function ajouterCibles(db, { site: s, niche_id: nicheId = null, niche_nom:
   return out;
 }
 
-module.exports = { envoyerMail, dejaContacte, lister, sansReponse, marquerReponse, ajouterCibles, NATURES, RELANCES_MAX, HORS_CAMPAGNE };
+module.exports = { envoyerMail, dejaContacte, lister, sansReponse, marquerReponse, ajouterCibles, creerNiche, NATURES, RELANCES_MAX, HORS_CAMPAGNE };

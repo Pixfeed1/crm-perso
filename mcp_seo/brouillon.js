@@ -80,7 +80,7 @@ async function outreach(chemin, corps) {
   try {
     const r = await fetch(`${BACKEND}/api/seo/outreach/${chemin}`, { method: 'POST', signal: ctrl.signal, headers: { 'Content-Type': 'application/json', 'X-Outils-Secret': s }, body: JSON.stringify(corps) });
     const j = await r.json().catch(() => ({}));
-    if (!r.ok) return { refus: true, code: r.status, message: j.message || r.statusText, ...(j.precedents ? { precedents: j.precedents } : {}), ...(j.prochain_envoi_le ? { prochain_envoi_le: j.prochain_envoi_le } : {}) };
+    if (!r.ok) return { refus: true, code: r.status, message: j.message || r.statusText, ...(j.precedents ? { precedents: j.precedents } : {}), ...(j.prochain_envoi_le ? { prochain_envoi_le: j.prochain_envoi_le } : {}), ...(j.niche_id ? { niche_id: j.niche_id } : {}) };
     return compact(j);
   } catch (e) {
     return { erreur: { source: 'backend du CRM', code: e.name === 'AbortError' ? 'timeout' : 'réseau', message: txt(e.message) } };
@@ -91,6 +91,7 @@ export const verifierDejaContacte = (a) => outreach('verifier', a);
 export const listerOutreach = (a) => outreach('mails', a);
 export const marquerReponse = (a) => outreach('reponse', a);
 export const ajouterCibles = (a) => outreach('cibles', a);
+export const creerNiche = (a) => outreach('niches', a);
 
 // provenance du trafic GA4 (lecture seule, en direct, par le backend qui détient l'accès Google)
 export async function provenanceGa4(siteId, days = 28, canal, limit = 25) {

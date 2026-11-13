@@ -148,7 +148,7 @@ const DATABASE_SCHEMA = {
       dofollow: 'BOOLEAN',
       rel_verifie_le: 'TIMESTAMP',
       // Porte d'entrée pour contacter le site (email | formulaire | compte | reseau | commentaire | aucune).
-      porte_type: 'VARCHAR(20)',
+      porte_type: 'TEXT',
       porte_url: 'TEXT',
       porte_note: 'TEXT',
       // Concurrent (publie les mêmes contenus sur les mêmes requêtes) : pas une cible.
@@ -2483,6 +2483,26 @@ async function ensureCrawlNoCodeBackfill(client) {
 // /api/seo/outreach/send, cadence par site, niche rattachée à un site. pixfeed.net garde son envoi existant.
 async function ensureOutreachTables(client) {
   await client.query('ALTER TABLE IF EXISTS seo_niches ADD COLUMN IF NOT EXISTS site_id INTEGER;');
+  await client.query('ALTER TABLE IF EXISTS seo_niches ADD COLUMN IF NOT EXISTS page_cible TEXT;');
+  if ((await client.query("SELECT to_regclass('seo_link_targets') AS t")).rows[0].t) {
+    // Porte d'entrée : « formulaire /nous-contacter/ » ne tenait pas en VARCHAR(20).
+    await client.query(`DO $$ BEGIN
+      IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'seo_link_targets' AND column_name = 'porte_type' AND data_type <> 'text') THEN
+        ALTER TABLE seo_link_targets ALTER COLUMN porte_type TYPE TEXT;
+      END IF; END $$;`);
+    // Garde-fou : dofollow ne passe à TRUE qu'avec une lecture du rel datée (record_link_rel, vérification
+    // des emplacements, ou rel transmis concluant à l'ajout) ; sinon il reste inconnu (NULL).
+    await client.query(`CREATE OR REPLACE FUNCTION seo_link_targets_dofollow_garde() RETURNS trigger AS $$
+      BEGIN
+        IF NEW.dofollow IS TRUE AND NEW.rel_verifie_le IS NULL THEN NEW.dofollow := NULL; END IF;
+        RETURN NEW;
+      END $$ LANGUAGE plpgsql;`);
+    await client.query('DROP TRIGGER IF EXISTS seo_link_targets_dofollow_garde ON seo_link_targets;');
+    await client.query('CREATE TRIGGER seo_link_targets_dofollow_garde BEFORE INSERT OR UPDATE ON seo_link_targets FOR EACH ROW EXECUTE FUNCTION seo_link_targets_dofollow_garde();');
+    // Historique : dofollow posé à TRUE sans aucune lecture du rel (ajout de cibles avant le correctif).
+    const r = await client.query('UPDATE seo_link_targets SET dofollow = NULL WHERE dofollow IS TRUE AND rel_verifie_le IS NULL');
+    if (r.rowCount) console.log(`[netlinking] dofollow remis à inconnu sur ${r.rowCount} cible(s) jamais vérifiée(s)`);
+  }
   // Niches existantes : rattachées au site dont le domaine est leur « site à faire linker ».
   await client.query(`
     DO $$ BEGIN

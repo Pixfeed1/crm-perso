@@ -28,7 +28,7 @@ import { getContenuBrut } from './contenu.js';
 import { getPageDossier } from './dossier.js';
 import { checkUrls, MAX_URLS } from './checks.js';
 import { getSiteResources } from './ressources.js';
-import { demanderDepot, prepareDraft, repointerLiens, poserEtiquettes, modifierMedia, poserLien, modifierSeo, provenanceGa4, envoyerMailOutreach, verifierDejaContacte, listerOutreach, marquerReponse, ajouterCibles } from './brouillon.js';
+import { demanderDepot, prepareDraft, repointerLiens, poserEtiquettes, modifierMedia, poserLien, modifierSeo, provenanceGa4, envoyerMailOutreach, verifierDejaContacte, listerOutreach, marquerReponse, ajouterCibles, creerNiche } from './brouillon.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -376,8 +376,8 @@ function buildServer() {
   // ---- netlinking (jurojin.net…) : mêmes routes que l'onglet SEO, toutes les règles côté CRM ----
   server.tool(
     'envoyer_mail_outreach',
-    "ÉCRITURE (envoi d'un mail) : demande de lien à UNE cible, depuis l'expéditeur du site (jurojin.net : contact@jurojin.net, signature ajoutée par le CRM, aucun suivi de clic).\nCible : target_id, OU domaine seul (fiche reprise si le domaine est déjà dans une niche du site, sinon créée à l'envoi réel dans la campagne niche_nom du site, créée si besoin, à défaut « Hors campagne » ; rien créé en simulation ; une fiche existante n'est pas déplacée). Mêmes contrôles dans les deux cas, ils portent sur le domaine complet (sous-domaine compris, « www. » ignoré ; un autre sous-domaine du même domaine racine déjà contacté est signalé dans avertissements, sans bloquer) et sur l'adresse.\nUn destinataire, un objet et un corps écrits pour cette cible (pas de champ de fusion). Refus si le domaine a déjà reçu un mail (tous sites et campagnes, ancien envoi compris : date, objet, statut renvoyés),\nsauf relance (relance_de = id du mail précédent ; 2 relances au plus, 7 jours après le dernier mail, jamais après une réponse) ; refus si opposition, plafond du jour atteint ou délai depuis le dernier envoi\npas écoulé (prochain envoi possible renvoyé). simulation=true par défaut : contrôles et aperçu, rien envoyé. Après envoi : relance prévue à J+10, cible « contacte ».",
-    { site_id: z.number().int(), target_id: z.number().int().optional(), domaine: z.string().optional(), niche_nom: z.string().optional(), destinataire: z.string(), objet: z.string(), corps: z.string(), relance_de: z.number().int().optional(), simulation: z.boolean().optional() },
+    "ÉCRITURE (envoi d'un mail) : demande de lien à UNE cible, depuis l'expéditeur du site (jurojin.net : contact@jurojin.net, signature ajoutée par le CRM, aucun suivi de clic).\nCible : target_id, OU domaine seul (fiche reprise si le domaine est déjà dans une niche du site, sinon créée à l'envoi réel dans la niche niche_nom du site — nom sans casse ni accents, niche inconnue refusée sauf creer_si_absente=true —, à défaut « Hors campagne » ; rien créé en simulation ; une fiche existante n'est pas déplacée). Mêmes contrôles dans les deux cas, ils portent sur le domaine complet (sous-domaine compris, « www. » ignoré ; un autre sous-domaine du même domaine racine déjà contacté est signalé dans avertissements, sans bloquer) et sur l'adresse.\nUn destinataire, un objet et un corps écrits pour cette cible (pas de champ de fusion). Refus si le domaine a déjà reçu un mail (tous sites et campagnes, ancien envoi compris : date, objet, statut renvoyés),\nsauf relance (relance_de = id du mail précédent ; 2 relances au plus, 7 jours après le dernier mail, jamais après une réponse) ; refus si opposition, plafond du jour atteint ou délai depuis le dernier envoi\npas écoulé (prochain envoi possible renvoyé). simulation=true par défaut : contrôles et aperçu, rien envoyé. Après envoi : relance prévue à J+10, cible « contacte ».",
+    { site_id: z.number().int(), target_id: z.number().int().optional(), domaine: z.string().optional(), niche_nom: z.string().optional(), creer_si_absente: z.boolean().optional(), destinataire: z.string(), objet: z.string(), corps: z.string(), relance_de: z.number().int().optional(), simulation: z.boolean().optional() },
     async (a) => compactJson(await envoyerMailOutreach({ ...a, simulation: a.simulation ?? true }))
   );
   server.tool(
@@ -400,9 +400,18 @@ function buildServer() {
   );
   server.tool(
     'ajouter_cibles',
-    "ÉCRITURE (CRM seulement) : ajoute des cibles de netlinking dans une niche du site (domaine, url, terrain, rel, porte, statut, note). Domaine gardé tel que saisi, sous-domaine compris ; doublon = même domaine complet (« www. » ignoré). dofollow : true seulement si rel le prouve (dofollow, follow, noopener…, « aucun »), false si nofollow/ugc/sponsored, inconnu sinon (« à vérifier » laisse dofollow vide). Niche : niche_id, ou niche_nom (reprise si une niche du site porte ce nom, sinon créée à l'écriture ; aussi quand niche_id n'existe pas). Crée les manquantes, ignore les domaines déjà présents dans les niches du site, signale ceux connus ailleurs. simulation=true par défaut.",
-    { site_id: z.number().int(), niche_id: z.number().int().optional(), niche_nom: z.string().optional(), cibles: z.array(z.object({ domaine: z.string(), url: z.string().optional(), terrain: z.string().optional(), rel: z.string().optional(), porte: z.string().optional(), statut: z.string().optional(), note: z.string().optional() })).min(1).max(500), simulation: z.boolean().optional() },
-    async (a) => compactJson(await ajouterCibles({ site: a.site_id, niche_id: a.niche_id, niche_nom: a.niche_nom, cibles: a.cibles, simulation: a.simulation ?? true }))
+    "ÉCRITURE (CRM seulement) : ajoute des cibles de netlinking dans une niche du site (domaine, url, terrain, rel, porte, statut, note). Domaine gardé tel que saisi, sous-domaine compris ; doublon = même domaine complet (« www. » ignoré). dofollow : true seulement si rel vaut dofollow ou noopener (noreferrer), false si nofollow/ugc/sponsored, inconnu pour toute autre valeur (« a verifier » laisse dofollow vide). Niche : niche_id, OU niche_nom (niche du site de ce nom, casse et accents ignorés ; inconnue : refus avec la liste des niches du site, sauf creer_si_absente=true qui la crée rattachée au site). L'un des deux est obligatoire. porte : type (email, formulaire, compte, reseau, commentaire, aucune) suivi éventuellement d'une adresse ou d'un chemin (« formulaire /nous-contacter/ »). Crée les manquantes, ignore les domaines déjà présents dans les niches du site, signale ceux connus ailleurs. simulation=true par défaut.",
+    { site_id: z.number().int(), niche_id: z.number().int().optional(), niche_nom: z.string().optional(), creer_si_absente: z.boolean().optional(), cibles: z.array(z.object({ domaine: z.string(), url: z.string().optional(), terrain: z.string().optional(), rel: z.string().optional(), porte: z.string().optional(), statut: z.string().optional(), note: z.string().optional() })).min(1).max(500), simulation: z.boolean().optional() },
+    async (a) => {
+      if (!a.niche_id && !a.niche_nom) return compactJson({ refus: true, code: 400, message: 'indiquer niche_id ou niche_nom' });
+      return compactJson(await ajouterCibles({ site: a.site_id, niche_id: a.niche_id, niche_nom: a.niche_nom, creer_si_absente: a.creer_si_absente ?? false, cibles: a.cibles, simulation: a.simulation ?? true }));
+    }
+  );
+  server.tool(
+    'creer_niche',
+    "ÉCRITURE (CRM seulement) : crée une niche (campagne) de netlinking RATTACHÉE au site site_id dès la création. nom unique sur le site (casse et accents ignorés : si elle existe, refus avec son niche_id). page_cible = page du site à faire linker (adresse complète, sur ce site), hubs = domaines hubs de la niche (liste ou texte séparé par des virgules, pour la découverte depuis l'onglet SEO). simulation=true par défaut.",
+    { site_id: z.number().int(), nom: z.string(), page_cible: z.string().optional(), hubs: z.union([z.array(z.string()), z.string()]).optional(), simulation: z.boolean().optional() },
+    async (a) => compactJson(await creerNiche({ site_id: a.site_id, nom: a.nom, page_cible: a.page_cible, hubs: a.hubs, simulation: a.simulation ?? true }))
   );
 
   server.tool(

@@ -117,7 +117,7 @@ function runRelCheck(db, niche, targets) {
         if (done % 5 === 0) await setPhase(db, niche.id, 'rel_running', `Vérification du rel : ${done}/${targets.length} cibles…`);
       }
       const { rows } = await db.pool.query(
-        'SELECT COUNT(*)::int AS n FROM seo_link_targets WHERE niche_id = $1 AND dofollow = TRUE', [niche.id]);
+        'SELECT COUNT(*)::int AS n FROM seo_link_targets WHERE niche_id = $1 AND dofollow = TRUE AND rel_verifie_le IS NOT NULL', [niche.id]);
       dofollow = rows[0] ? rows[0].n : 0;
       await setPhase(db, niche.id, 'done', `Rel vérifié : ${ok}/${targets.length} sites lus, ${dofollow} avec au moins un emplacement dofollow`);
     } catch (e) {
@@ -329,7 +329,7 @@ const ctrl = {
         `SELECT n.*, COUNT(t.id)::int AS nb_cibles,
                 COUNT(t.id) FILTER (WHERE t.statut = 'lien_obtenu')::int AS liens_obtenus,
                 COUNT(t.id) FILTER (WHERE t.statut IN ('contacte', 'lien_obtenu', 'refus'))::int AS contactees,
-                COUNT(t.id) FILTER (WHERE t.dofollow = TRUE)::int AS dofollow_ok,
+                COUNT(t.id) FILTER (WHERE t.dofollow = TRUE AND t.rel_verifie_le IS NOT NULL)::int AS dofollow_ok,
                 COUNT(t.id) FILTER (WHERE t.concurrent OR t.concurrent_probable)::int AS concurrents,
                 COUNT(t.id) FILTER (WHERE t.rel_verifie_le IS NOT NULL)::int AS rel_verifies,
                 EXTRACT(DAY FROM NOW() - COALESCE(n.discovery_done_at, n.created_at))::int AS jours_depuis_decouverte
@@ -347,16 +347,21 @@ const ctrl = {
     }
   },
 
-  // POST /api/seo/backlinks/niches { name, site_cible, hubs, seeds? } — niche 100% texte.
+  // POST /api/seo/backlinks/niches { name, site_cible, hubs, seeds?, site_id? } — niche 100% texte, rattachée
+  // à son site dès la création (site_id de l'onglet, sinon le site suivi dont le domaine est site_cible).
   createNiche: async (req, res) => {
     const db = req.app.locals.db;
-    const { name, site_cible, hubs, seeds } = req.body || {};
+    const { name, site_cible, hubs, seeds, site_id } = req.body || {};
     if (!name || !name.trim()) return res.status(400).json({ message: 'Nom de niche requis' });
     if (!hubs || !hubs.trim()) return res.status(400).json({ message: 'Au moins un site hub requis (séparés par des virgules)' });
     try {
+      const nettoie = (x) => String(x || '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').split(/[/?#]/)[0];
+      const sites = (await db.pool.query('SELECT id, domain FROM seo_sites')).rows;
+      const site = sites.find((s) => Number(s.id) === Number(site_id)) || sites.find((s) => site_cible && nettoie(s.domain) === nettoie(site_cible));
+      if (!site) return res.status(400).json({ message: `Site à faire linker inconnu : indiquez le domaine d'un site suivi (${sites.map((s) => s.domain).join(', ')})` });
       const { rows } = await db.pool.query(
-        `INSERT INTO seo_niches (name, site_cible, hubs, seeds) VALUES ($1, $2, $3, $4) RETURNING *`,
-        [name.trim(), (site_cible || '').trim() || null, hubs.trim(), (seeds || '').trim() || null]
+        `INSERT INTO seo_niches (name, site_cible, hubs, seeds, site_id) VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+        [name.trim(), (site_cible || '').trim() || site.domain, hubs.trim(), (seeds || '').trim() || null, site.id]
       );
       res.status(201).json(rows[0]);
     } catch (e) {

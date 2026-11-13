@@ -207,7 +207,16 @@ fi
 titre "4. Serveur MCP"
 if touche "mcp_seo/"; then
   # sans ses dependances, le serveur MCP ne demarre plus (tous les outils SEO de Claude tombent)
-  deps mcp_seo && redemarrer crm-mcp-seo
+  if deps mcp_seo && redemarrer crm-mcp-seo; then
+    # Le service sert-il bien les outils et paramètres du code déployé ? (un redémarrage raté
+    # laisse l'ancienne liste d'outils : Claude ne voit pas les nouveaux paramètres)
+    if ( cd mcp_seo && node scripts/diag-outils.js --local --strict ) 2>&1 | sed 's/^/   /'; [[ ${PIPESTATUS[0]} -eq 0 ]]; then
+      vert "   outils servis = outils du code (reconnecter le connecteur dans Cowork pour les voir)"
+    else
+      rouge "   le service MCP ne sert pas les outils du code déployé"
+      ECHECS+=("crm-mcp-seo: outils servis différents du code")
+    fi
+  fi
 else
   gris "   inchangé"
 fi

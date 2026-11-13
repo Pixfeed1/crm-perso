@@ -227,6 +227,14 @@ sous-domaine du même domaine racine déjà contacté est signalé (`avertisseme
 la même adresse reste bloquante. `dofollow` ne passe à vrai que si le rel transmis le prouve (`dofollow`,
 `follow`, `noopener`…, « aucun »), à faux avec nofollow / ugc / sponsored, et reste vide sinon (« à vérifier »,
 « ? ») ; `record_link_rel` refuse un rel non concluant.
+Niches : `niche_nom` (ajouter_cibles, envoyer_mail_outreach) cherche parmi les niches RATTACHÉES au site, sans
+casse ni accents ; une niche inconnue est refusée (avec la liste des niches du site) sauf `creer_si_absente=true`.
+`creer_niche(site_id, nom, page_cible?, hubs?, simulation=true)` crée une niche rattachée au site. Rel transmis
+à l'ajout : seuls `dofollow` / `noopener` (`noreferrer`) donnent vrai, `nofollow` / `ugc` / `sponsored` faux, tout
+le reste inconnu ; un déclencheur en base empêche `dofollow = vrai` sans lecture du rel datée (`rel_verifie_le`).
+`porte` : « formulaire /nous-contacter/ » → type `formulaire` + adresse ; texte libre → `porte_note`.
+Après un déploiement : `node scripts/diag-outils.js --local --strict` (lancé par deploy.sh) vérifie que le service
+sert bien les outils et paramètres du code ; `node ../backend/scripts/verifier-netlinking.js` fait l'état des niches.
 
 Titre SEO, méta, phrase clé et titre WordPress : `modifier_seo(site_id, url | id, titre_seo?, meta_description?,
 phrase_cle?, titre?, simulation=true)`. Tous les types qui exposent le champ `outils_yoast` du mu-plugin de
