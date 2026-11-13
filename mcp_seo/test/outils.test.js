@@ -104,6 +104,14 @@ after(async () => {
   await admin.query('DROP DATABASE IF EXISTS mcp_outils_test').catch(() => {}); await admin.end();
 });
 
+test('record_link_rel : dofollow seulement si le rel lu le prouve', async () => {
+  const { dofollowDuRel } = await import('../tools.js');
+  assert.equal(dofollowDuRel('', { videAbsent: true }), true);
+  assert.equal(dofollowDuRel('noopener noreferrer', { videAbsent: true }), true);
+  assert.equal(dofollowDuRel('nofollow', { videAbsent: true }), false);
+  for (const r of ['a verifier', 'à vérifier', '?', 'pas de nofollow']) assert.equal(dofollowDuRel(r, { videAbsent: true }), null, r);
+});
+
 test('list_link_campaigns : site de chaque campagne, filtre par site', opts, async () => {
   const { DATABASE_SCHEMA } = require('../../backend/scripts/autoInitDatabase.js');
   for (const name of ['seo_niches', 'seo_link_targets']) {

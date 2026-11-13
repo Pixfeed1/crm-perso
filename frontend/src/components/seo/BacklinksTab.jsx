@@ -546,6 +546,7 @@ const BacklinksTab = ({ siteId = null }) => {
                 {outreachSite && apercu && (
                   <div className="rounded-lg border border-success-text/30 bg-success-bg/40 p-3 text-xs text-text-secondary space-y-0.5">
                     {(apercu.controles || []).map((c, i) => <div key={i}>✓ {c.texte}</div>)}
+                    {(apercu.avertissements || []).map((a, i) => <div key={`a${i}`} className="text-warning-text">⚠ {a}</div>)}
                   </div>
                 )}
                 {outreachSite && refusEnvoi && (

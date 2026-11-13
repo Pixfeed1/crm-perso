@@ -221,6 +221,12 @@ le serveur de mail refuse ; une fiche existante n'est pas déplacée). `list_lin
 de chaque campagne et filtre par site. `ajouter_cibles`
 accepte `niche_nom` : niche du site reprise par son nom (casse et espaces ignorés), sinon créée à l'écriture,
 y compris quand `niche_id` n'existe pas.
+Anti-doublon sur le domaine complet, sous-domaine compris (`blog.exemple.fr` ≠ `exemple.fr`, chaque forum
+`*.forumactif.com` est un site à part) ; seul `www.` est ignoré. Le domaine est gardé tel que saisi. Un autre
+sous-domaine du même domaine racine déjà contacté est signalé (`avertissements`, `meme_racine`), sans bloquer ;
+la même adresse reste bloquante. `dofollow` ne passe à vrai que si le rel transmis le prouve (`dofollow`,
+`follow`, `noopener`…, « aucun »), à faux avec nofollow / ugc / sponsored, et reste vide sinon (« à vérifier »,
+« ? ») ; `record_link_rel` refuse un rel non concluant.
 
 Titre SEO, méta, phrase clé et titre WordPress : `modifier_seo(site_id, url | id, titre_seo?, meta_description?,
 phrase_cle?, titre?, simulation=true)`. Tous les types qui exposent le champ `outils_yoast` du mu-plugin de

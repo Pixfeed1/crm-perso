@@ -2515,6 +2515,15 @@ async function ensureOutreachTables(client) {
   await client.query('CREATE INDEX IF NOT EXISTS idx_outreach_mails_site_domaine ON outreach_mails (site, domaine);');
   await client.query('CREATE INDEX IF NOT EXISTS idx_outreach_mails_domaine ON outreach_mails (domaine);');
   await client.query('CREATE INDEX IF NOT EXISTS idx_outreach_mails_target ON outreach_mails (target_id);');
+  // Anti-doublon sur le domaine complet (sous-domaine compris, « www. » ignoré), plus sur le domaine racine :
+  // les mails déjà écrits reprennent le domaine de leur fiche. Idempotent.
+  const { cleDomaine } = require('../utils/domaineCourt');
+  const aRevoir = (await client.query("SELECT to_regclass('seo_link_targets') AS t")).rows[0].t
+    ? (await client.query('SELECT m.id, m.domaine, t.domain FROM outreach_mails m JOIN seo_link_targets t ON t.id = m.target_id')).rows : [];
+  for (const r of aRevoir) {
+    const k = cleDomaine(r.domain);
+    if (k && k !== r.domaine) await client.query('UPDATE outreach_mails SET domaine = $2 WHERE id = $1', [r.id, k]);
+  }
   await client.query(`
     CREATE TABLE IF NOT EXISTS outreach_etat (
       site INTEGER PRIMARY KEY,

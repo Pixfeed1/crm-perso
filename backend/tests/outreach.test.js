@@ -6,7 +6,8 @@ const os = require('os');
 const path = require('path');
 const { hasDb, withSchema } = require('./helpers/db');
 const { DATABASE_SCHEMA, ensureOutreachTables } = require('../scripts/autoInitDatabase');
-const { domaineCourt } = require('../utils/domaineCourt');
+const { domaineCourt, cleDomaine, hoteSaisi } = require('../utils/domaineCourt');
+const { dofollowDuRel } = require('../utils/relLien');
 
 async function createFromSchema(pool, name) {
   const cols = Object.entries(DATABASE_SCHEMA[name].columns).map(([c, d]) => `${c} ${d.replace(/REFERENCES users\(id\)/, '')}`).join(', ');
@@ -18,6 +19,18 @@ test('domaine court : sous-domaines, adresses, suffixes doubles', () => {
   assert.equal(domaineCourt('https://www.blog.exemple.fr/page'), 'exemple.fr');
   assert.equal(domaineCourt('contact@news.exemple.co.uk'), 'exemple.co.uk');
   assert.equal(domaineCourt('pas un domaine'), null);
+  // Anti-doublon du netlinking : domaine complet, « www. » ignoré.
+  assert.equal(cleDomaine('https://www.Blog.Exemple.fr/page'), 'blog.exemple.fr');
+  assert.equal(cleDomaine('www.exemple.fr'), 'exemple.fr');
+  assert.equal(cleDomaine('monforum.forumactif.com'), 'monforum.forumactif.com');
+  assert.equal(hoteSaisi('https://www.exemple.fr/contact'), 'www.exemple.fr');
+});
+
+test('rel transmis : dofollow seulement si le rel le prouve', () => {
+  for (const r of ['dofollow', 'follow', 'noopener noreferrer', 'rel="noopener"', 'aucun', 'Aucun attribut']) assert.equal(dofollowDuRel(r), true, r);
+  for (const r of ['nofollow', 'nofollow ugc', 'sponsored', 'noopener nofollow', 'UGC']) assert.equal(dofollowDuRel(r), false, r);
+  for (const r of ['a verifier', 'à vérifier', '?', 'inconnu', 'pas de nofollow', 'nofollow à vérifier', '', null, undefined]) assert.equal(dofollowDuRel(r), null, String(r));
+  assert.equal(dofollowDuRel('', { videAbsent: true }), true, "'' lu dans la page = aucun attribut");
 });
 
 test('envoi : un seul endpoint, toutes les règles, relances encadrées, cadence, réponses, cibles', { skip: !hasDb() }, async () => {
@@ -78,7 +91,11 @@ test('envoi : un seul endpoint, toutes les règles, relances encadrées, cadence
     await libre();
     // Domaine déjà contacté : par ce module (autre sous-domaine), puis par l'ancien envoi de pixfeed.net.
     const t2 = await cible(1, 'news.blog-mocap.fr');
-    await assert.rejects(S.envoyerMail(db, { ...base, target_id: t2, destinataire: 'news@blog-mocap.fr' }), (e) => /déjà reçu un mail/.test(e.message) && e.precedents.length === 1);
+    // Autre sous-domaine : pas bloquant, mais signalé ; même adresse : bloquant.
+    r = await S.envoyerMail(db, { ...base, target_id: t2, destinataire: 'news@blog-mocap.fr' });
+    assert.equal(r.statut, 'simulation : rien envoyé');
+    assert.match(r.avertissements[0], /même domaine racine \(blog-mocap\.fr\) déjà contacté sur un autre sous-domaine : blog-mocap\.fr/);
+    await assert.rejects(S.envoyerMail(db, { ...base, target_id: t2 }), (e) => /déjà reçu un mail/.test(e.message) && e.precedents.length === 1);
     await refus({ ...base, target_id: x, destinataire: 'contact@deja-pixfeed.fr' }, /ancien envoi \(Gmail/);
 
     // Relance : trop tôt, puis à J+8 (même fil), puis plafond de relances.
@@ -117,7 +134,8 @@ test('envoi : un seul endpoint, toutes les règles, relances encadrées, cadence
     const liste = [{ domaine: 'nouveau3d.fr', url: 'https://nouveau3d.fr/contact', rel: 'dofollow', porte: 'formulaire', statut: 'a_contacter', terrain: 'blog', note: 'vu sur Reddit' }, { domaine: 'www.tuto3d.fr' }, { domaine: 'deja-pixfeed.fr' }];
     let ac = await S.ajouterCibles(db, { site: 2, niche_id: 1, cibles: liste });
     assert.equal(ac.statut, 'simulation : rien créé'); assert.equal(ac.creees.length, 1);
-    assert.deepEqual(ac.ignorees.map((i) => i.domaine), ['tuto3d.fr', 'deja-pixfeed.fr']);
+    assert.deepEqual(ac.ignorees.map((i) => i.domaine), ['www.tuto3d.fr', 'deja-pixfeed.fr']);
+    assert.match(ac.ignorees[0].raison, /sous la forme tuto3d\.fr/);
     ac = await S.ajouterCibles(db, { site: 2, niche_id: 1, cibles: liste, simulation: false });
     const n = (await pool.query("SELECT statut, dofollow, porte_type, notes FROM seo_link_targets WHERE domain = 'nouveau3d.fr'")).rows[0];
     assert.deepEqual([n.statut, n.dofollow, n.porte_type], ['a_contacter', true, 'formulaire']); assert.match(n.notes, /terrain : blog/);
@@ -134,17 +152,21 @@ test('envoi : un seul endpoint, toutes les règles, relances encadrées, cadence
     assert.equal(r.statut, 'simulation : rien envoyé');
     assert.deepEqual([r.cible.domaine, r.cible.niche, r.cible.a_creer, r.cible.id], ['inconnu3d.fr', 'Hors campagne', true, null]);
     assert.equal(await nbHc(), 0, 'simulation : niche pas créée');
-    assert.equal((await pool.query("SELECT COUNT(*)::int AS n FROM seo_link_targets WHERE domain = 'inconnu3d.fr'")).rows[0].n, 0, 'simulation : fiche pas créée');
+    assert.equal((await pool.query("SELECT COUNT(*)::int AS n FROM seo_link_targets WHERE domain LIKE '%inconnu3d.fr'")).rows[0].n, 0, 'simulation : fiche pas créée');
     r = await S.envoyerMail(db, { ...seul, domaine: 'https://www.inconnu3d.fr/galerie', simulation: false });
     assert.equal(r.statut, 'envoyé'); assert.equal(r.cible.creee, true); assert.equal(r.cible.niche_creee, true);
     const hc = (await pool.query("SELECT id, site_id, site_cible, statut FROM seo_niches WHERE name = 'Hors campagne'")).rows;
     assert.equal(hc.length, 1); assert.deepEqual([hc[0].site_id, hc[0].site_cible], [2, 'jurojin.net']);
-    const f = (await pool.query("SELECT id, niche_id, statut, contact_email, porte_url FROM seo_link_targets WHERE domain = 'inconnu3d.fr'")).rows[0];
+    const f = (await pool.query("SELECT id, niche_id, statut, contact_email, porte_url FROM seo_link_targets WHERE domain = 'www.inconnu3d.fr'")).rows[0];
+    assert.ok(f, 'domaine gardé tel que saisi (www compris)');
     assert.deepEqual([f.niche_id, f.statut, f.contact_email, f.porte_url], [hc[0].id, 'contacte', 'contact@inconnu3d.fr', 'https://www.inconnu3d.fr/galerie']);
     assert.deepEqual([r.mail.target_id, r.mail.campaign_id, r.mail.domaine], [f.id, hc[0].id, 'inconnu3d.fr']);
-    // Mêmes contrôles : domaine déjà contacté (autre sous-domaine), même sans fiche donnée.
+    // Mêmes contrôles : domaine déjà contacté (« www. » ignoré), même sans fiche donnée ; autre sous-domaine signalé.
     await passe();
-    await refus({ ...seul, domaine: 'blog.inconnu3d.fr', destinataire: 'blog@inconnu3d.fr', simulation: false }, /inconnu3d\.fr a déjà reçu un mail/);
+    await refus({ ...seul, domaine: 'inconnu3d.fr', destinataire: 'webmaster@inconnu3d.fr', simulation: false }, /inconnu3d\.fr a déjà reçu un mail/);
+    r = await S.envoyerMail(db, { ...seul, domaine: 'blog.inconnu3d.fr', destinataire: 'blog@inconnu3d.fr' });
+    assert.deepEqual([r.cible.domaine, r.cible.a_creer], ['blog.inconnu3d.fr', true]);
+    assert.match(r.avertissements[0], /inconnu3d\.fr/); assert.equal(r.meme_racine.length, 1);
     // Domaine déjà dans une niche du site : sa fiche est reprise (pas de doublon dans « Hors campagne »).
     const n3d = (await pool.query("SELECT id FROM seo_link_targets WHERE domain = 'nouveau3d.fr'")).rows[0].id;
     r = await S.envoyerMail(db, { ...seul, domaine: 'nouveau3d.fr', destinataire: 'hello@nouveau3d.fr', simulation: false });
@@ -191,9 +213,21 @@ test('envoi : un seul endpoint, toutes les règles, relances encadrées, cadence
     const fn = (await pool.query("SELECT id, site_id, site_cible, statut FROM seo_niches WHERE name = 'Forums 3D'")).rows;
     assert.equal(fn.length, 1); assert.deepEqual([fn[0].site_id, fn[0].site_cible, ac.niche_id, ac.niche_creee], [2, 'jurojin.net', fn[0].id, true]);
     assert.deepEqual(ac.creees.map((x) => x.domaine), ['forum-blender.fr']);
+    // Sous-domaines gardés et distincts ; dofollow seulement si le rel le prouve.
+    ac = await S.ajouterCibles(db, { site: 2, niche_id: fn[0].id, simulation: false, cibles: [
+      { domaine: 'https://forum.blender-fr.org/', rel: 'a verifier' }, { domaine: 'blender-fr.org', rel: 'nofollow ugc' }, { domaine: 'www.forum.blender-fr.org' }, { domaine: 'wiki.blender-fr.org', rel: 'follow' }] });
+    assert.deepEqual(ac.creees.map((x) => [x.domaine, x.dofollow]), [['forum.blender-fr.org', null], ['blender-fr.org', false], ['wiki.blender-fr.org', true]]);
+    assert.deepEqual(ac.ignorees.map((x) => [x.domaine, x.raison]), [['www.forum.blender-fr.org', 'en double dans la liste']]);
+    const fb = (await pool.query("SELECT dofollow, notes FROM seo_link_targets WHERE domain = 'forum.blender-fr.org'")).rows[0];
+    assert.equal(fb.dofollow, null); assert.match(fb.notes, /rel transmis : a verifier \(non concluant, dofollow inconnu\)/);
     ac = await S.ajouterCibles(db, { site: 2, niche_nom: '  forums 3d ', cibles: [{ domaine: 'sculpt3d.fr' }], simulation: false });
     assert.equal(ac.niche_id, fn[0].id, 'même nom (casse, espaces) : niche reprise'); assert.equal(ac.niche_creee, undefined);
     assert.equal((await pool.query("SELECT COUNT(*)::int AS n FROM seo_niches WHERE LOWER(name) = 'forums 3d'")).rows[0].n, 1);
+
+    // Mails écrits avant le changement (domaine racine) : repris du domaine complet de leur fiche au démarrage.
+    await pool.query("UPDATE seo_link_targets SET domain = 'shop.blog-mocap.fr' WHERE id = $1", [a]);
+    const c2 = await pool.connect(); try { await ensureOutreachTables(c2); } finally { c2.release(); }
+    assert.deepEqual([...new Set((await pool.query('SELECT domaine FROM outreach_mails WHERE target_id = $1', [a])).rows.map((x) => x.domaine))], ['shop.blog-mocap.fr']);
   });
 });
 

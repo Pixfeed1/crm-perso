@@ -7,9 +7,11 @@
 //     déjà dans une niche du site, sinon créée à l'envoi réel dans la niche niche_nom du site, ou à défaut
 //     « Hors campagne » (créée elle aussi si besoin) ; en simulation, rien n'est créé ;
 //   - un seul destinataire, une adresse valide ; objet et corps fournis à l'appel, sans champ de fusion ;
-//   - domaine (forme courte) jamais contacté, toutes campagnes et tous sites confondus, y compris par
+//   - domaine complet (sous-domaine compris, « www. » ignoré : blog.exemple.fr ≠ exemple.fr) et adresse
+//     jamais contactés, toutes campagnes et tous sites confondus, y compris par
 //     l'ancien envoi de pixfeed.net (lecture seule de seo_link_outreach) ; sinon refus avec date, objet et
-//     statut du précédent. Passage outre seulement pour une relance (relance_de), encadrée : même domaine,
+//     statut du précédent ; un autre sous-domaine du même domaine racine déjà contacté est signalé
+//     (avertissements), sans bloquer. Passage outre seulement pour une relance (relance_de), encadrée : même domaine,
 //     pas après une réponse ou un abandon, 2 relances au plus, 7 jours au moins après le dernier mail ;
 //   - adresse ou domaine en opposition (désinscription, refus de prospection), cible refusée ou écartée ;
 //   - plafond quotidien par site (15 par défaut) et délai aléatoire entre deux envois (4 à 12 min par défaut :
@@ -18,7 +20,8 @@
 // simulation=true par défaut : tous les contrôles, rien envoyé ni écrit.
 const site = require('./outreachSite');
 const optout = require('./optout');
-const { domaineCourt } = require('../utils/domaineCourt');
+const { domaineCourt, hoteSaisi, cleDomaine } = require('../utils/domaineCourt');
+const { dofollowDuRel } = require('../utils/relLien');
 
 const RELANCES_MAX = 2;
 const RELANCE_DELAI_JOURS = 7;
@@ -36,9 +39,10 @@ const delais = () => {
 const heure = (d) => new Date(d).toLocaleString('fr-FR', { timeZone: 'Europe/Paris', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 const jourParis = (d = new Date()) => new Intl.DateTimeFormat('fr-CA', { timeZone: 'Europe/Paris' }).format(d);
 
-// Contacts déjà faits pour un domaine (forme courte) ou une adresse, tous sites : nouveau module + ancien envoi.
+// Contacts déjà faits pour un domaine (complet, « www. » ignoré) ou une adresse, tous sites : nouveau module
+// + ancien envoi. meme_racine : autres sous-domaines du même domaine racine déjà contactés (pour information).
 async function dejaContacte(db, { domaine = null, adresse = null } = {}) {
-  const d = domaineCourt(domaine || adresse);
+  const d = cleDomaine(domaine || adresse);
   const a = adresse ? String(adresse).trim().toLowerCase() : null;
   if (!d && !a) throw err(400, 'indiquer un domaine ou une adresse');
   const nouveaux = (await db.pool.query(
@@ -50,9 +54,22 @@ async function dejaContacte(db, { domaine = null, adresse = null } = {}) {
   const anciens = (await db.pool.query(
     `SELECT o.id, o.target_id, t.niche_id AS campaign_id, t.domain, t.contact_email, o.subject AS objet, o.sent_at AS envoye_le, o.reponse
        FROM seo_link_outreach o JOIN seo_link_targets t ON t.id = o.target_id ORDER BY o.sent_at`).catch(() => ({ rows: [] }))).rows
-    .filter((o) => (d && domaineCourt(o.domain) === d) || (a && String(o.contact_email || '').toLowerCase() === a))
-    .map((o) => ({ origine: 'ancien envoi (Gmail, onglet Backlinks)', id: o.id, target_id: o.target_id, campaign_id: o.campaign_id, domaine: domaineCourt(o.domain), destinataire: o.contact_email, objet: o.objet, envoye_le: o.envoye_le, statut: o.reponse ? `repondu (${o.reponse})` : 'envoye' }));
-  return { domaine: d, adresse: a, contacts: [...nouveaux.map((x) => ({ origine: `outreach ${x.site_domaine || `site ${x.site}`}`, ...x })), ...anciens].sort((x, y) => new Date(x.envoye_le) - new Date(y.envoye_le)) };
+    .map((o) => ({ origine: 'ancien envoi (Gmail, onglet Backlinks)', id: o.id, target_id: o.target_id, campaign_id: o.campaign_id, domaine: cleDomaine(o.domain), destinataire: o.contact_email, objet: o.objet, envoye_le: o.envoye_le, statut: o.reponse ? `repondu (${o.reponse})` : 'envoye' }));
+  const parDate = (x, y) => new Date(x.envoye_le) - new Date(y.envoye_le);
+  const contacts = [...nouveaux.map((x) => ({ origine: `outreach ${x.site_domaine || `site ${x.site}`}`, ...x })),
+    ...anciens.filter((o) => (d && o.domaine === d) || (a && String(o.destinataire || '').toLowerCase() === a))].sort(parDate);
+  // Même domaine racine, autre sous-domaine : signalé, jamais bloquant.
+  const racine = domaine ? domaineCourt(domaine) : null;
+  let memeRacine = [];
+  if (racine && d) {
+    const tous = (await db.pool.query(
+      `SELECT m.id, m.site, s.domain AS site_domaine, m.domaine, m.destinataire, m.objet, m.envoye_le, m.statut
+         FROM outreach_mails m LEFT JOIN seo_sites s ON s.id = m.site WHERE m.statut <> 'envoi' AND m.domaine LIKE $1`, [`%${racine}`])).rows
+      .map((x) => ({ origine: `outreach ${x.site_domaine || `site ${x.site}`}`, ...x }));
+    const deja = new Set(contacts.map((x) => `${x.origine}#${x.id}`));
+    memeRacine = [...tous, ...anciens].filter((x) => x.domaine && x.domaine !== d && domaineCourt(x.domaine) === racine && !deja.has(`${x.origine}#${x.id}`)).sort(parDate);
+  }
+  return { domaine: d, adresse: a, contacts, ...(memeRacine.length ? { meme_racine: memeRacine } : {}) };
 }
 
 // Niche d'un site par son nom (sans tenir compte de la casse) ; créée si absente et creer=true.
@@ -64,10 +81,10 @@ async function nicheParNom(q, siteId, nom, { creer = false, siteCible = null } =
   return { ...cree, creee: true };
 }
 
-// Cible d'un domaine dans les niches d'un site (forme courte : blog.exemple.fr = exemple.fr).
+// Cible d'un domaine dans les niches d'un site (domaine complet, « www. » ignoré).
 async function cibleDuDomaine(q, siteId, domaine) {
   const rows = (await q.query('SELECT t.*, n.site_id AS niche_site, n.name AS niche FROM seo_link_targets t JOIN seo_niches n ON n.id = t.niche_id WHERE n.site_id = $1 ORDER BY t.id', [siteId])).rows;
-  return rows.find((t) => domaineCourt(t.domain) === domaine) || null;
+  return rows.find((t) => cleDomaine(t.domain) === domaine) || null;
 }
 
 // Chaîne d'une relance : le premier mail et toutes ses relances.
@@ -102,23 +119,23 @@ async function envoyerMail(db, b = {}) {
   // La cible : niche rattachée à ce site. Par target_id, ou par un domaine seul (fiche reprise ou créée à l'envoi).
   let t = null;
   let aCreer = null; // { domaine, url } : fiche à créer dans « Hors campagne » à l'envoi réel
-  const domaineDemande = b.domaine ? domaineCourt(b.domaine) : null;
+  const domaineDemande = b.domaine ? cleDomaine(b.domaine) : null;
   if (b.domaine && !domaineDemande) throw err(400, `domaine illisible (${b.domaine})`);
   const nomNiche = b.niche_nom ? String(b.niche_nom).trim() : HORS_CAMPAGNE;
   if (!nomNiche || nomNiche.length > 120) throw err(400, 'niche_nom : 1 à 120 caractères');
   if (b.target_id) {
     t = (await db.pool.query('SELECT t.*, n.site_id AS niche_site, n.name AS niche FROM seo_link_targets t JOIN seo_niches n ON n.id = t.niche_id WHERE t.id = $1', [b.target_id])).rows[0];
     if (!t) throw err(404, `cible ${b.target_id} introuvable`);
-    if (domaineDemande && domaineCourt(t.domain) !== domaineDemande) throw err(409, `la cible ${b.target_id} est ${t.domain}, pas ${b.domaine} : donner l'un ou l'autre`);
+    if (domaineDemande && cleDomaine(t.domain) !== domaineDemande) throw err(409, `la cible ${b.target_id} est ${t.domain}, pas ${b.domaine} : donner l'un ou l'autre`);
   } else if (domaineDemande) {
     t = await cibleDuDomaine(db.pool, siteId, domaineDemande);
-    if (!t) aCreer = { domaine: domaineDemande, url: /^https?:\/\//i.test(String(b.domaine).trim()) ? String(b.domaine).trim() : null };
+    if (!t) aCreer = { domaine: domaineDemande, hote: hoteSaisi(b.domaine), url: /^https?:\/\//i.test(String(b.domaine).trim()) ? String(b.domaine).trim() : null };
   } else throw err(400, 'indiquer la cible : target_id, ou domaine seul (fiche créée dans la campagne niche_nom, à défaut « Hors campagne »)');
   let domaine;
   if (t) {
     if (Number(t.niche_site) !== siteId) throw err(409, `la cible ${t.domain} appartient à la niche « ${t.niche} », qui n'est pas rattachée à ce site`);
     if (['refus', 'ecarte'].includes(t.statut)) throw err(409, `cible ${t.domain} au statut « ${t.statut} » : pas d'envoi`);
-    domaine = domaineCourt(t.domain);
+    domaine = cleDomaine(t.domain);
     if (!domaine) throw err(400, `domaine de la cible illisible (${t.domain})`);
     out.cible = { id: t.id, domaine, niche: t.niche, campaign_id: t.niche_id };
     const autre = b.niche_nom && t.niche.trim().toLowerCase() !== nomNiche.toLowerCase();
@@ -157,6 +174,11 @@ async function envoyerMail(db, b = {}) {
     const p = deja.contacts[deja.contacts.length - 1];
     throw err(409, `${domaine} a déjà reçu un mail le ${heure(p.envoye_le)} (« ${p.objet} », statut ${p.statut}, ${p.origine}). Seule une relance (relance_de) est possible.`, { precedents: deja.contacts });
   } else ok(`${domaine} jamais contacté (tous sites, toutes campagnes)`);
+  if (deja.meme_racine) {
+    const p = deja.meme_racine[deja.meme_racine.length - 1];
+    out.avertissements = [`même domaine racine (${domaineCourt(domaine)}) déjà contacté sur un autre sous-domaine : ${[...new Set(deja.meme_racine.map((x) => x.domaine))].join(', ')} (dernier mail le ${heure(p.envoye_le)}, « ${p.objet} », ${p.origine}). Pas bloquant : vérifier qu'il s'agit bien d'un autre site.`];
+    out.meme_racine = deja.meme_racine;
+  }
 
   // Cadence : plafond du jour et délai aléatoire, sous verrou par site.
   const cl = await db.pool.connect();
@@ -178,9 +200,9 @@ async function envoyerMail(db, b = {}) {
       const hc = await nicheParNom(cl, siteId, nomNiche, { creer: true, siteCible: c.domaine });
       const ins = (await cl.query(
         `INSERT INTO seo_link_targets (niche_id, domain, via, statut, porte_url, contact_email, notes) VALUES ($1, $2, 'manuel', 'nouveau', $3, $4, 'créée à l''envoi (domaine seul)')
-         ON CONFLICT (niche_id, domain) DO NOTHING RETURNING id`, [hc.id, domaine, aCreer.url, destinataire])).rows[0];
-      const id = ins ? ins.id : (await cl.query('SELECT id FROM seo_link_targets WHERE niche_id = $1 AND domain = $2', [hc.id, domaine])).rows[0].id;
-      t = { id, niche_id: hc.id, niche: hc.name, domain: domaine, creee: !!ins };
+         ON CONFLICT (niche_id, domain) DO NOTHING RETURNING id`, [hc.id, aCreer.hote, aCreer.url, destinataire])).rows[0];
+      const id = ins ? ins.id : (await cl.query('SELECT id FROM seo_link_targets WHERE niche_id = $1 AND domain = $2', [hc.id, aCreer.hote])).rows[0].id;
+      t = { id, niche_id: hc.id, niche: hc.name, domain: aCreer.hote, creee: !!ins };
       out.cible = { id, domaine, niche: hc.name, campaign_id: hc.id, creee: !!ins, ...(hc.creee ? { niche_creee: true } : {}) };
     }
     // Réservation : la ligne et le prochain créneau, avant l'envoi (deux appels simultanés ne passent pas).
@@ -285,23 +307,24 @@ async function ajouterCibles(db, { site: s, niche_id: nicheId = null, niche_nom:
   const out = { niche: niche.name, niche_id: niche.id, ...(nicheACreer ? { niche_creee: simulation ? 'créée à l\'écriture' : true } : {}), simulation, creees: [], ignorees: [] };
   const vus = new Set();
   for (const x of cibles) {
-    const d = domaineCourt(x && (x.domaine || x.url));
+    const hote = hoteSaisi(x && (x.domaine || x.url));
+    const d = cleDomaine(hote);
     if (!d) { out.ignorees.push({ domaine: x && x.domaine, raison: 'domaine illisible' }); continue; }
-    if (vus.has(d)) { out.ignorees.push({ domaine: d, raison: 'en double dans la liste' }); continue; }
+    if (vus.has(d)) { out.ignorees.push({ domaine: hote, raison: 'en double dans la liste' }); continue; }
     vus.add(d);
-    const ici = existants.find((e) => domaineCourt(e.domain) === d && Number(e.site_id) === siteId);
-    if (ici) { out.ignorees.push({ domaine: d, raison: `déjà présent (niche « ${ici.name} »)` }); continue; }
-    const ailleurs = existants.find((e) => domaineCourt(e.domain) === d);
-    const rel = String(x.rel || '').toLowerCase();
-    const dofollow = x.rel === undefined || x.rel === null || x.rel === '' ? null : !/nofollow|ugc|sponsored/.test(rel);
+    const ici = existants.find((e) => cleDomaine(e.domain) === d && Number(e.site_id) === siteId);
+    if (ici) { out.ignorees.push({ domaine: hote, raison: `déjà présent (niche « ${ici.name} »${ici.domain !== hote ? `, sous la forme ${ici.domain}` : ''})` }); continue; }
+    const ailleurs = existants.find((e) => cleDomaine(e.domain) === d);
+    // dofollow seulement si le rel le prouve ; « à vérifier », « ? »… : inconnu (null).
+    const dofollow = dofollowDuRel(x.rel);
     const statut = STATUTS_CIBLE.includes(x.statut) ? x.statut : 'nouveau';
-    const notes = [x.terrain && `terrain : ${x.terrain}`, x.rel && `rel lu : ${x.rel}`, x.note].filter(Boolean).join(' · ') || null;
-    const c = { domaine: d, url: x.url || null, porte: x.porte || null, statut, dofollow, notes, ...(ailleurs ? { note_crm: `aussi présent dans une niche d'un autre site (« ${ailleurs.name} »)` } : {}) };
+    const notes = [x.terrain && `terrain : ${x.terrain}`, x.rel && `rel transmis : ${x.rel}${dofollow === null ? ' (non concluant, dofollow inconnu)' : ''}`, x.note].filter(Boolean).join(' · ') || null;
+    const c = { domaine: hote, url: x.url || null, porte: x.porte || null, statut, dofollow, notes, ...(ailleurs ? { note_crm: `aussi présent dans une niche d'un autre site (« ${ailleurs.name} »)` } : {}) };
     if (!simulation) {
       const r = await db.pool.query(
         `INSERT INTO seo_link_targets (niche_id, domain, via, statut, dofollow, porte_type, porte_url, notes) VALUES ($1, $2, 'manuel', $3, $4, $5, $6, $7)
-         ON CONFLICT (niche_id, domain) DO NOTHING RETURNING id`, [niche.id, d, statut, dofollow, c.porte, c.url, notes]);
-      if (!r.rows[0]) { out.ignorees.push({ domaine: d, raison: 'déjà présent' }); continue; }
+         ON CONFLICT (niche_id, domain) DO NOTHING RETURNING id`, [niche.id, hote, statut, dofollow, c.porte, c.url, notes]);
+      if (!r.rows[0]) { out.ignorees.push({ domaine: hote, raison: 'déjà présent' }); continue; }
       c.id = r.rows[0].id;
     }
     out.creees.push(c);

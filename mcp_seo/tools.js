@@ -579,13 +579,30 @@ async function findTarget(pool, nicheId, domain) {
 }
 
 const EMPLACEMENTS = ['article', 'sources', 'blogroll', 'commentaire', 'forum_message', 'partenaires', 'profil', 'pied', 'autre'];
-const relIsDofollow = (rel) => !/\b(nofollow|ugc|sponsored)\b/i.test(String(rel || ''));
+// dofollow seulement si le rel transmis le prouve (même règle que backend/utils/relLien.js) : '' = aucun
+// attribut rel = dofollow ; nofollow/ugc/sponsored = non ; tout mot inconnu (« à vérifier », « ? ») = non concluant.
+const REL_BLOQUANTS = new Set(['nofollow', 'ugc', 'sponsored']);
+const REL_NEUTRES = new Set(['dofollow', 'follow', 'noopener', 'noreferrer', 'noreferer', 'opener', 'external', 'me', 'author',
+  'bookmark', 'tag', 'next', 'prev', 'alternate', 'help', 'license', 'friend', 'contact', 'acquaintance', 'colleague']);
+const REL_ABSENCE = /^(aucun|none|absent|vide|sans|aucun rel|pas de rel|sans rel|rel absent|aucun attribut|sans attribut|pas d'attribut|pas d attribut|aucun attribut rel|pas d'attribut rel)$/;
+export function dofollowDuRel(rel, { videAbsent = false } = {}) {
+  if (rel === undefined || rel === null) return null;
+  const s = String(rel).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
+    .replace(/^rel\s*=\s*/, '').replace(/^["'«\s]+|["'»\s]+$/g, '').trim();
+  if (!s) return videAbsent ? true : null;
+  if (REL_ABSENCE.test(s)) return true;
+  const mots = s.split(/[\s,;]+/).filter(Boolean);
+  if (!mots.every((m) => REL_BLOQUANTS.has(m) || REL_NEUTRES.has(m))) return null;
+  return !mots.some((m) => REL_BLOQUANTS.has(m));
+}
 const normalizeRel = (rel) => String(rel || '').toLowerCase().trim().split(/\s+/).filter(Boolean).sort().join(' ');
 
 // record_link_rel : ECRITURE. Capitalise une lecture manuelle du rel (par emplacement, avec
 // l'URL exacte). Recalcule dofollow de la cible = au moins un emplacement dofollow.
 export async function recordLinkRel(pool, nicheId, domain, emplacement, rel, url = null, note = null) {
   if (!EMPLACEMENTS.includes(emplacement)) throw new Error(`Emplacement invalide : ${EMPLACEMENTS.join(', ')}`);
+  const dofollow = dofollowDuRel(rel, { videAbsent: true });
+  if (dofollow === null) throw new Error(`rel non concluant (« ${rel} ») : donner le rel tel que lu dans la page ('' si aucun attribut rel), rien enregistré`);
   const t = await findTarget(pool, nicheId, domain);
   const relN = normalizeRel(rel);
   const { rows } = await pool.query(
@@ -595,7 +612,7 @@ export async function recordLinkRel(pool, nicheId, domain, emplacement, rel, url
        rel = EXCLUDED.rel, dofollow = EXCLUDED.dofollow, source = 'mcp',
        note = COALESCE(EXCLUDED.note, seo_link_target_spots.note), verified_at = NOW()
      RETURNING emplacement, url, rel, dofollow, verified_at`,
-    [t.id, emplacement, url || null, relN, relIsDofollow(relN), note || null]);
+    [t.id, emplacement, url || null, relN, dofollow, note || null]);
   const d = await pool.query(
     `UPDATE seo_link_targets x SET
        dofollow = (SELECT CASE WHEN COUNT(*) = 0 THEN NULL ELSE bool_or(s.dofollow) END FROM seo_link_target_spots s WHERE s.target_id = x.id),
