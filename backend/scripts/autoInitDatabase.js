@@ -2552,8 +2552,29 @@ async function ensureOutreachTables(client) {
   `);
 }
 
+// Charte de rédaction et identité de chaque site : une ligne = l'état complet d'une version (services/charteService.js).
+async function ensureCharteTables(client) {
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS charte_versions (
+      id          SERIAL PRIMARY KEY,
+      site_id     INTEGER NOT NULL,
+      version     INTEGER NOT NULL,
+      contenu     JSONB NOT NULL,
+      auteur      TEXT,
+      origine     VARCHAR(20),
+      motif       TEXT,
+      changements JSONB,
+      retour_de   INTEGER,
+      created_at  TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE (site_id, version)
+    );
+  `);
+}
+
 async function ensureSeoTables(client) {
   console.log('[AutoInit] Vérification des tables SEO...');
+
+  await ensureCharteTables(client);
 
   await ensureOutreachTables(client);
 
@@ -3134,7 +3155,7 @@ const MCP_READONLY_TABLES = [
   'gsc_index_status', 'gsc_index_history', 'seo_sitemap_urls', 'seo_redirects', 'seo_pagespeed',
   'seo_ga_daily', 'seo_ga_channels_daily', 'seo_authority_daily', 'seo_backlinks', 'seo_ref_domains',
   'seo_niches', 'seo_link_targets', 'seo_link_outreach', 'email_tracking',
-  'seo_link_target_spots', 'seo_link_platform_rules',
+  'seo_link_target_spots', 'seo_link_platform_rules', 'charte_versions',
 ];
 
 // Seules ECRITURES accordees au connecteur MCP : capitaliser le travail de verification
@@ -3314,4 +3335,4 @@ async function autoInitDatabase(pool) {
   }
 }
 
-module.exports = { ensureOutreachTables, autoInitDatabase, DATABASE_SCHEMA, EMAIL_TEMPLATE_SEED, EMAIL_TEMPLATE_SEED_V2, ensureEmailTemplatesTone, ensureSeoTables };   // ensureSeoTables : tests du connecteur MCP (schéma réel)
+module.exports = { ensureOutreachTables, ensureCharteTables, autoInitDatabase, DATABASE_SCHEMA, EMAIL_TEMPLATE_SEED, EMAIL_TEMPLATE_SEED_V2, ensureEmailTemplatesTone, ensureSeoTables };   // ensureSeoTables : tests du connecteur MCP (schéma réel)
