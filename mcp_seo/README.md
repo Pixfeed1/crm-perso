@@ -252,6 +252,20 @@ partie : regard, vécu, exemple, indépendance, registre, sel ; phrases citées,
 pas). Une nouvelle version de la charte relance la relecture. Chaque rapport commence par `entete` :
 `Identité jurojin v2 · Contrôles style : OK | ÉCHEC (n) · Voix : OK | À REPRENDRE · Faits : COMPLET | INCOMPLET`.
 
+### Campagnes de prospection par email
+
+Mêmes fonctions que l'onglet Campagnes, par `/api/campagnes-connecteur` (secret partagé) :
+- lecture : `lister_campagnes`, `lire_campagne` (réglages, stats, entonnoir, A/B, lignes paginées, textes sur
+  demande), `lire_ligne_campagne`, `chercher_prospects`, `lister_crawls_prospection`, `boite_campagnes` (lister) ;
+- préparation (rien n'est envoyé) : `creer_campagne`, `modifier_campagne`, `ajouter_a_campagne`,
+  `modifier_ligne_campagne`, `regenerer_lignes_campagne`, `reanalyser_campagne`, `reprendre_lignes_campagne`,
+  `regler_test_ab`, `piloter_campagne` (pause ; arrêt avec confirmer=true), `boite_campagnes` (relever, confirmer un
+  refus) ;
+- réservé à Marc, dans l'interface : valider une ligne, programmer l'envoi, relancer une campagne en pause,
+  supprimer une campagne, écarter un refus. Aucune route ne le permet au connecteur.
+Les réécritures en nombre (`regenerer_lignes_campagne`, mode claude) et les réanalyses tournent sur le serveur, avec la
+clé API du CRM : la réponse est un résumé, elles ne consomment pas Claude.ai.
+
 ### Sauvegardes de la base
 
 `backend/scripts/sauvegarde-base.sh` : pg_dump compressé, vérifié (pg_restore --list), dans `~/sauvegardes/crm`

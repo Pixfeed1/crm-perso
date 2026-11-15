@@ -22,6 +22,9 @@ const PARAMS = {
   modifier_charte: ['site_id', 'operations', 'revenir_a_version', 'motif', 'simulation'],
   demander_depot: ['site_id'],
   prepare_draft: ['depot', 'simulation', 'identite_version'],
+  lire_campagne: ['id', 'statut', 'textes', 'limite', 'apres'],
+  modifier_ligne_campagne: ['id', 'ligne', 'objet', 'texte', 'regenerer', 'statut', 'raison'],
+  regenerer_lignes_campagne: ['id', 'mode', 'ligne_ids', 'statuts'],
 };
 const LOCAL = `http://127.0.0.1:${process.env.MCP_SEO_PORT || 8790}/mcp`;
 const TOKEN = process.env.MCP_SEO_TOKEN || '';

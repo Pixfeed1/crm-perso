@@ -194,7 +194,8 @@ app.use('/api/events', require('./routes/eventsRoutes'));
 app.use('/api/goals', require('./routes/goalsRoutes'));
 app.use('/api/objectif', require('./routes/objectifRoutes'));
 app.use('/api/veille', require('./routes/veilleRoutes'));
-app.use('/api/charte', require('./routes/charteRoutes')); // charte de rédaction et identité des sites (versions, historique)
+app.use('/api/charte', require('./routes/charteRoutes'));
+app.use('/api/campagnes-connecteur', require('./routes/campagneConnecteurRoutes')); // campagnes de prospection pour le connecteur MCP (préparer, jamais valider ni envoyer) // charte de rédaction et identité des sites (versions, historique)
 app.use('/api/seo/outreach', require('./routes/seoOutreachRoutes')); // netlinking multi-site (jurojin.net) : un seul endpoint d'envoi
 app.use('/api/seo/backlinks', require('./routes/seoBacklinksRoutes')); // AVANT /api/seo (préfixe plus long)
 // Connexion Google SEO en un clic : monte AVANT /api/seo (son callback est public,

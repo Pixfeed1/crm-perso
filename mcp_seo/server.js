@@ -29,6 +29,7 @@ import { getPageDossier } from './dossier.js';
 import { checkUrls, MAX_URLS } from './checks.js';
 import { getSiteResources } from './ressources.js';
 import { getCharte, versionCharte } from './charte.js';
+import { campagnes } from './campagnes.js';
 import { demanderDepot, prepareDraft, repointerLiens, poserEtiquettes, modifierMedia, poserLien, modifierSeo, provenanceGa4, envoyerMailOutreach, verifierDejaContacte, listerOutreach, marquerReponse, ajouterCibles, creerNiche, modifierCharte } from './brouillon.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -362,6 +363,101 @@ function buildServer() {
       const v = await versionCharte(pool, site_id);
       return compactJson({ ...d, identite_version: v, charte: v ? `charte de rédaction du site en v${v} : \"identite_version\": ${v} dans manifeste-wp.json (get_charte pour la relire)` : 'aucune charte de rédaction pour ce site' });
     }
+  );
+
+  // ---- campagnes de prospection par email (onglet Campagnes du CRM) ----
+  // Lire et préparer : tout. Valider une ligne, programmer l'envoi, relancer une campagne en pause, supprimer :
+  // Marc, dans l'interface. Les gros travaux tournent sur le serveur du CRM (clé API du CRM), pas dans Claude.ai.
+  const RESERVE_MARC = "Valider une ligne, programmer ou relancer l'envoi, supprimer une campagne : réservé à Marc, dans l'interface du CRM (aucun envoi sans sa validation).";
+  server.tool(
+    'lister_campagnes',
+    `Lecture seule. Campagnes de prospection par email du CRM : id, nom, statut (brouillon, en_cours, pause, terminee, arretee), mode, cadence, nombre de lignes par statut. ${RESERVE_MARC}`,
+    {},
+    async () => compactJson(await campagnes('lister'))
+  );
+  server.tool(
+    'lire_campagne',
+    "Lecture seule. Une campagne en entier : réglages (mode, expéditeur, cadence, modèle, signature, relance, test A/B), lignes par statut, statistiques (réponses, rendez-vous, contrats, clics), entonnoir, résultats du test A/B, puis les lignes (prospect, adresse, statut et raison, mode, objet, début du texte ; textes=true pour les textes entiers). Filtre statut (pret, a_verifier, valide, exclu, programme, envoye, repondu, rebond, oppose, echec, arrete), pagination limite / apres.",
+    { id: z.number().int(), statut: liste(z.array(z.string())).optional(), textes: z.boolean().optional(), limite: z.number().int().optional(), apres: z.number().int().optional() },
+    async (a) => compactJson(await campagnes('lire', a))
+  );
+  server.tool(
+    'lire_ligne_campagne',
+    "Lecture seule. Une ligne de campagne : prospect, adresse, statut et raison, mode, objet et texte complets, preuve relevée sur le site (signal, valeur, adresse, date), identité utilisée pour la salutation.",
+    { id: z.number().int(), ligne: z.number().int() },
+    async (a) => compactJson(await campagnes('ligne', a))
+  );
+  server.tool(
+    'chercher_prospects',
+    "Lecture seule. Fiches prospects du CRM à ajouter à une campagne : recherche (nom, entreprise, email, site), filtre relation ; signale désinscrit, refus de prospection en cours et campagne en cours (les ajouter les exclura de toute façon).",
+    { recherche: z.string().optional(), relation: z.string().optional(), limite: z.number().int().optional() },
+    async (a) => compactJson(await campagnes('prospects', a))
+  );
+  server.tool(
+    'lister_crawls_prospection',
+    "Lecture seule. Crawls de prospection (sites détectés) : sans job_id, la liste ; avec job_id, ses résultats (domaine, plateforme, type, email, ville, score, déjà prospect), à ajouter par result_ids.",
+    { job_id: z.number().int().optional(), limite: z.number().int().optional(), apres: z.number().int().optional() },
+    async (a) => compactJson(await campagnes('crawls', a))
+  );
+  server.tool(
+    'creer_campagne',
+    `ÉCRITURE (CRM seulement, rien envoyé) : crée une campagne en brouillon. mode : preuve (constat relevé sur le site), maintenance, modele (template_id du menu), claude. Cadence : par_jour, heure_debut, heure_fin, espacement_min, jours_ouvres ; relance_jours, relance_canal ; signature_id. ${RESERVE_MARC}`,
+    { nom: z.string(), mode: z.enum(['preuve', 'maintenance', 'modele', 'claude']).optional(), template_id: z.number().int().optional(), signature_id: z.number().int().optional(), par_jour: z.number().int().optional(), heure_debut: z.number().int().optional(), heure_fin: z.number().int().optional(), espacement_min: z.number().int().optional(), jours_ouvres: z.boolean().optional(), relance_jours: z.number().int().optional(), relance_canal: z.string().optional() },
+    async (a) => compactJson(await campagnes('creer', a))
+  );
+  server.tool(
+    'modifier_campagne',
+    `ÉCRITURE (CRM seulement, rien envoyé) : réglages d'une campagne, comme dans l'interface (nom, mode, modèle, signature, cadence, relance). ${RESERVE_MARC}`,
+    { id: z.number().int(), nom: z.string().optional(), mode: z.enum(['preuve', 'maintenance', 'modele', 'claude']).optional(), template_id: z.number().int().optional(), signature_id: z.number().int().optional(), par_jour: z.number().int().optional(), heure_debut: z.number().int().optional(), heure_fin: z.number().int().optional(), espacement_min: z.number().int().optional(), jours_ouvres: z.boolean().optional(), relance_jours: z.number().int().optional(), relance_canal: z.string().optional() },
+    async (a) => compactJson(await campagnes('modifier', a))
+  );
+  server.tool(
+    'ajouter_a_campagne',
+    "ÉCRITURE (CRM seulement, rien envoyé) : ajoute des prospects (lead_ids) ou des sites d'un crawl (job_id + result_ids). Mêmes contrôles que l'interface : désinscrits, refus de prospection, déjà sollicités récemment, sans adresse : lignes exclues avec leur raison ; emails rédigés sur le serveur, puis réanalyse des sites lancée en arrière-plan.",
+    { id: z.number().int(), lead_ids: liste(z.array(z.number().int())).optional(), job_id: z.number().int().optional(), result_ids: liste(z.array(z.number().int())).optional() },
+    async (a) => compactJson(await campagnes('ajouter', a, 10 * 60 * 1000))
+  );
+  server.tool(
+    'modifier_ligne_campagne',
+    `ÉCRITURE (CRM seulement, rien envoyé) : une ligne. objet / texte (formulations interdites refusées), regenerer (preuve, maintenance, modele, claude : réécrit sur le serveur, ~0,003 € par ligne en mode claude), statut (pret, a_verifier, exclu, et après envoi repondu, rebond, oppose : une opposition bloque l'adresse et pose un refus de prospection) avec raison. Un texte changé sur une ligne validée la repasse « prêt ». statut=valide refusé : ${RESERVE_MARC}`,
+    { id: z.number().int(), ligne: z.number().int(), objet: z.string().optional(), texte: z.string().optional(), regenerer: z.enum(['preuve', 'maintenance', 'modele', 'claude']).optional(), statut: z.enum(['pret', 'a_verifier', 'exclu', 'repondu', 'rebond', 'oppose']).optional(), raison: z.string().optional(), entreprise: z.boolean().optional() },
+    async (a) => compactJson(await campagnes('modifier-ligne', a, 5 * 60 * 1000))
+  );
+  server.tool(
+    'regenerer_lignes_campagne',
+    "ÉCRITURE (CRM seulement, rien envoyé) : réécrit d'un coup les lignes d'une campagne dans un mode (preuve, maintenance, modele, claude), SUR LE SERVEUR du CRM avec sa clé API : seul un résumé revient (lignes réécrites, échecs). Par défaut les lignes prêtes et à vérifier ; statuts=[\"valide\"] ou ligne_ids pour cibler (200 au plus). Une ligne validée réécrite repasse « prêt ».",
+    { id: z.number().int(), mode: z.enum(['preuve', 'maintenance', 'modele', 'claude']), ligne_ids: liste(z.array(z.number().int())).optional(), statuts: liste(z.array(z.enum(['pret', 'a_verifier', 'valide']))).optional() },
+    async (a) => compactJson(await campagnes('regenerer', a, 30 * 60 * 1000))
+  );
+  server.tool(
+    'reanalyser_campagne',
+    "ÉCRITURE (CRM seulement, rien envoyé) : réanalyse sur le serveur (mesures du jour, SIRENE, score, email régénéré, ligne reclassée). Avec ligne : cette ligne, résultat renvoyé ; sans : toute la campagne en arrière-plan (lire_campagne ensuite).",
+    { id: z.number().int(), ligne: z.number().int().optional() },
+    async (a) => compactJson(await campagnes('reanalyser', a, 5 * 60 * 1000))
+  );
+  server.tool(
+    'reprendre_lignes_campagne',
+    "ÉCRITURE (CRM seulement, rien envoyé) : reprend des lignes exclues sans adresse, en échec ou arrêtées, sans nouveau crawl. Avec ligne (et adresse si on l'a trouvée) : cette ligne ; sans : en lot, quoi = sans_email ou echecs.",
+    { id: z.number().int(), ligne: z.number().int().optional(), adresse: z.string().optional(), quoi: z.enum(['sans_email', 'echecs']).optional() },
+    async (a) => compactJson(await campagnes('reprendre', a))
+  );
+  server.tool(
+    'regler_test_ab',
+    "ÉCRITURE (CRM seulement) : test A/B de la question finale d'une campagne. Sans ab : les formulations proposées. ab = { preuve: cle, maintenance: cle } pour lancer, null pour arrêter ; réglable tant que rien n'est parti ni programmé.",
+    { id: z.number().int(), ab: z.union([z.record(z.string()), z.null()]).optional() },
+    async (a) => compactJson(await campagnes('test-ab', a))
+  );
+  server.tool(
+    'piloter_campagne',
+    `ÉCRITURE : pause (les envois en attente restent en attente) ou arreter (annule définitivement les envois programmés : confirmer=true obligatoire). ${RESERVE_MARC}`,
+    { id: z.number().int(), action: z.enum(['pause', 'arreter']), confirmer: z.boolean().optional() },
+    async (a) => compactJson(await campagnes('piloter', a))
+  );
+  server.tool(
+    'boite_campagnes',
+    "Boîte de réception des campagnes : action=lister (réponses, rebonds, refus à confirmer), relever (lit la boîte maintenant), confirmer un refus à confirmer (message, decision : tout = refus de toute sollicitation, email = ne plus écrire). Écarter un refus (pas_refus) reste à Marc, dans l'interface.",
+    { action: z.enum(['lister', 'relever', 'confirmer']), message: z.number().int().optional(), decision: z.enum(['tout', 'email']).optional() },
+    async (a) => compactJson(await campagnes('boite', a, 5 * 60 * 1000))
   );
 
   // ---- charte de rédaction et identité du site (base du CRM : seule version qui fait foi) ----
