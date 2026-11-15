@@ -431,6 +431,24 @@ async function preparer(db, { depot, simulation = true, creer_etiquettes = false
     const p = await wp(`wp/v2/${rb}/${j[0].post_id}`, { params: { context: 'edit', _fields: 'id,status' } }).catch(() => null);
     if (p && ['draft', 'pending', 'dp-rewrite-republish'].includes(p.status)) cibleId = p.id;
   }
+  // Nouveau, brouillon désigné : « brouillon_id » réécrit ce brouillon précis (jamais un contenu publié, planifié
+  // ou privé). Son contenu actuel est gardé dans le journal (avant), comme pour toute réécriture.
+  if (m.brouillon_id !== undefined && m.brouillon_id !== null && m.brouillon_id !== '') {
+    const bid = Number(m.brouillon_id);
+    if (mode !== 'nouveau') bloque('brouillon_id', 'brouillon_id : seulement en mode nouveau (en mise à jour, la copie de travail se retrouve par url_origine)');
+    else if (!Number.isInteger(bid) || bid <= 0) bloque('brouillon_id', 'brouillon_id : numéro du brouillon attendu');
+    else {
+      const b = await wp(`wp/v2/${rb}/${bid}`, { params: { context: 'edit', _fields: 'id,status,slug,type' } }).catch((e) => ({ erreur: e }));
+      if (!b || b.erreur) bloque('brouillon_id', `brouillon #${bid} introuvable parmi les contenus de type ${t.type}${b && b.erreur ? ` (${b.erreur.message})` : ''}`);
+      else if (!['draft', 'pending'].includes(b.status)) bloque('brouillon_id', `#${bid} est « ${b.status} », pas un brouillon : jamais réécrit en mode nouveau (contenu publié : mode mise_a_jour)`);
+      else {
+        if (cibleId && cibleId !== bid) avert('brouillon_id', `le dépôt précédent de ce manifeste visait #${cibleId} : c'est #${bid}, désigné par brouillon_id, qui est réécrit`);
+        cibleId = bid;
+        const connu = (await db.pool.query('SELECT 1 FROM seo_wp_journal WHERE site_id = $1 AND simulation = false AND post_id = $2 LIMIT 1', [d.site_id, bid])).rows[0];
+        if (!connu) avert('brouillon_id', `brouillon #${bid} créé hors du CRM : son contenu actuel sera gardé dans le journal avant d'être remplacé`);
+      }
+    }
+  }
   if (mode === 'mise_a_jour' && m.url_origine) {
     const slugOrig = decodeURI(new URL(m.url_origine).pathname).replace(/\/+$/, '').split('/').pop();
     const liste = await wp(`wp/v2/${rb}`, { params: { slug: slugOrig, status: 'publish', context: 'edit', _fields: 'id,slug,link,title,content,outils_yoast,outils_plateformes' } }).catch((e) => { bloque('original', e.message); return []; });
@@ -454,7 +472,11 @@ async function preparer(db, { depot, simulation = true, creer_etiquettes = false
         avert('slug', `« ${slugVoulu} » est le slug du brouillon #${cibleId}, créé par le CRM et pas encore publié : il est mis à jour`);
       }
     }
-    if (autres.length) bloque('slug', `« ${slugVoulu} » déjà pris par le contenu #${autres[0].id}${['draft', 'pending'].includes(autres[0].status) ? ' (brouillon qui n\'a pas été créé par le CRM)' : ''}`);
+    if (autres.length) {
+      const a = autres[0];
+      const brouillon = ['draft', 'pending'].includes(a.status);
+      bloque('slug', `« ${slugVoulu} » déjà pris par le contenu #${a.id} (statut ${a.status || 'inconnu'}${brouillon ? ', brouillon inconnu du journal du CRM' : ''})${brouillon ? ` : pour réécrire ce brouillon, ajouter "brouillon_id": ${a.id} au manifeste` : a.status === 'publish' ? ' : pour modifier ce contenu publié, mode mise_a_jour avec url_origine' : ''}`);
+    }
   }
   if (mode === 'nouveau') action({ quoi: cibleId ? `mettre à jour le brouillon #${cibleId}` : 'créer un brouillon', type: t.type, slug: slugVoulu || '(tiré du titre)' });
   else if (original) action({ quoi: cibleId ? `mettre à jour la copie de travail #${cibleId}` : `créer une copie de travail de #${original.id}`, methode: inv.rewrite_republish ? 'Rewrite & Republish (Yoast Duplicate Post)' : "copie de travail + bouton « Remplacer l'original »", nouvelle_adresse: slugVoulu && slugVoulu !== original.slug ? `${slugVoulu} (appliquée à la validation)` : undefined });

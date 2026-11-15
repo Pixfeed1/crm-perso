@@ -390,10 +390,21 @@ test('nouveau : le slug d\'un brouillon créé par le CRM le met à jour (autre 
     // Brouillon créé à la main (inconnu du journal), puis contenu publié : toujours refusés.
     W.posts.set(900, { id: 900, status: 'draft', slug: 'brouillon-a-la-main', title: { raw: 'x' } });
     r = await preparer(db, { depot: (await nouveauDepot(db, { 'manifeste-wp.json': sansFichiers({ slug: 'brouillon-a-la-main' }), 'contenu.html': contenu })).depot, simulation: true });
-    assert.match(r.erreurs.map((e) => e.message).join(), /déjà pris par le contenu #900 \(brouillon qui n'a pas été créé par le CRM\)/);
+    assert.match(r.erreurs.map((e) => e.message).join(), /déjà pris par le contenu #900 \(statut draft, brouillon inconnu du journal du CRM\) : pour réécrire ce brouillon, ajouter "brouillon_id": 900 au manifeste/);
+    // brouillon_id : ce brouillon précis est réécrit, son contenu actuel gardé dans le journal.
+    r = await preparer(db, { depot: (await nouveauDepot(db, { 'manifeste-wp.json': sansFichiers({ slug: 'brouillon-a-la-main', brouillon_id: 900 }), 'contenu.html': contenu })).depot, simulation: true });
+    assert.deepEqual(r.erreurs, [], JSON.stringify(r.erreurs));
+    assert.ok(r.actions.some((a) => a.quoi === 'mettre à jour le brouillon #900'));
+    assert.ok(r.avertissements.some((a) => a.source === 'brouillon_id' && /créé hors du CRM/.test(a.message)));
+    r = await preparer(db, { depot: (await nouveauDepot(db, { 'manifeste-wp.json': sansFichiers({ slug: 'brouillon-a-la-main', brouillon_id: 900 }), 'contenu.html': contenu.replace('Premier jet', 'Repris') })).depot, simulation: false });
+    assert.equal(r.id, 900); assert.match(W.posts.get(900).content, /Repris/);
+    const avant = (await db.pool.query('SELECT avant FROM seo_wp_journal WHERE post_id = 900 AND simulation = false ORDER BY cree_le DESC LIMIT 1')).rows[0].avant;
+    assert.equal(avant.id, 900, 'état d\'avant gardé dans le journal');
     W.posts.set(id, { ...W.posts.get(id), status: 'publish' });
     r = await preparer(db, { depot: (await nouveauDepot(db, { 'manifeste-wp.json': sansFichiers({ slug: 'mac-studio-animation-3d', titre: 'Encore un titre' }), 'contenu.html': contenu })).depot, simulation: true });
-    assert.match(r.erreurs.map((e) => e.message).join(), new RegExp(`déjà pris par le contenu #${id}`), 'publié : jamais réécrit en mode nouveau');
+    assert.match(r.erreurs.map((e) => e.message).join(), new RegExp(`déjà pris par le contenu #${id} \\(statut publish\\) : pour modifier ce contenu publié, mode mise_a_jour`), 'publié : jamais réécrit en mode nouveau');
+    r = await preparer(db, { depot: (await nouveauDepot(db, { 'manifeste-wp.json': sansFichiers({ slug: 'mac-studio-animation-3d', brouillon_id: id }), 'contenu.html': contenu })).depot, simulation: true });
+    assert.match(r.erreurs.map((e) => e.message).join(), /est « publish », pas un brouillon : jamais réécrit en mode nouveau/);
     W.posts.delete(900);
   });
 });
