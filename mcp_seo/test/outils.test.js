@@ -239,3 +239,61 @@ test('get_site_resources : sections, étiquettes sur demande ou par recherche, b
   assert.deepEqual(b.redaction.blocs_detail.items, [{ nom: 'core/image', titre: 'Image', attributs: ['id', 'url', 'alt'] }]);
   assert.deepEqual(b.redaction.blocs_detail.absents, ['acme/inconnu']);
 });
+
+test('get_charte et section identite : version en cours, historique, jointe à redaction', opts, async () => {
+  const C = require('../../backend/services/charteService.js');
+  const donnees = JSON.parse(require('fs').readFileSync(require('path').join(process.cwd(), '..', 'backend', 'scripts', 'donnees', 'charte-initiale.json'), 'utf8'));
+  await pool.query("INSERT INTO seo_sites (id, domain) VALUES (15, 'pixfeed.net') ON CONFLICT DO NOTHING");
+  assert.deepEqual(await C.semerSiAbsente(pool, donnees), [2, 15]);
+  await C.modifier({ pool }, { site: 2, operations: [{ objet: 'liste', liste: 'liste_noire', action: 'ajouter', valeur: 'à la croisée des chemins', texte_simple: true }], motif: 'consigne', auteur: 'Claude (connecteur)', origine: 'mcp', simulation: false });
+  const { getCharte, versionCharte } = await import('../charte.js');
+  assert.equal(await versionCharte(pool, 2), 2);
+  assert.equal(await versionCharte(pool, 99), null);
+  const g = await getCharte(pool, 2, { historique: true });
+  assert.deepEqual([g.identite_version, g.registre, g.nom], [2, 'tutoiement', 'Jurojin']);
+  assert.match(g.usage, /identite_version: 2/);
+  assert.deepEqual(g.charte.map((x) => x.section), ['5', '7', '9', '11', '11.1', '11.2', '11.3', '11.4', '11.5', '12']);
+  assert.equal(g.charte.find((x) => x.section === '12').regles.find((r) => r.cle === '12.18').texte.slice(0, 30), "**L'accroche sentencieuse.** U");
+  assert.deepEqual(g.exemples.map((e) => e.id), ['e1', 'e2']);
+  assert.ok(g.controles.liste_noire.includes('à la croisée des chemins'));
+  assert.equal(g.controles.effets.blancs_rendu, 'avertissement');
+  assert.deepEqual(g.historique.map((h) => [h.version, h.par]), [[2, 'Claude (connecteur)'], [1, 'Marc']]);
+  const v1 = await getCharte(pool, 2, { version: 1 });
+  assert.match(v1.attention, /la version en cours est la 2/);
+  assert.equal((await getCharte(pool, 99)).erreur.code, 404);
+  const { getSiteResources } = await import('../ressources.js');
+  const r = await getSiteResources(pool, 2, { sections: ['redaction'] });
+  assert.deepEqual([r.identite.identite_version, r.identite.registre, r.identite.exemples.length], [2, 'tutoiement', 2]);
+  assert.match(r.identite.identite, /^Jurojin est un média d'artistes/);
+  assert.ok(!r.identite.controles.liste_noire, 'listes et seuils : get_charte');
+  const c = await getSiteResources(pool, 2, { sections: ['categories'] });
+  assert.ok(!c.identite, 'seulement avec redaction ou sur demande');
+});
+
+test('modifier_charte : par les routes du backend (secret partagé), simulation puis écriture, retour arrière', opts, async () => {
+  const express = require('../../backend/node_modules/express');
+  process.env.OUTILS_MCP_SECRET = 'm'.repeat(40);
+  const app = express(); app.use(express.json()); app.locals.db = { pool };
+  app.use('/api/charte', require('../../backend/routes/charteRoutes.js'));
+  const srv = app.listen(0, '127.0.0.1');
+  await new Promise((ok) => srv.once('listening', ok));
+  process.env.CRM_BACKEND_URL = `http://127.0.0.1:${srv.address().port}`;
+  const { modifierCharte } = await import(`../brouillon.js?charte=${Date.now()}`);
+  try {
+    const avant = (await pool.query('SELECT MAX(version)::int AS v FROM charte_versions WHERE site_id = 2')).rows[0].v;
+    let r = await modifierCharte({ site_id: 2, operations: [{ objet: 'regle', action: 'ajouter', cle: '12.21', texte: 'Pas de « en somme » en dernière phrase.' }], motif: 'consigne de Marc' });
+    assert.equal(r.statut, 'simulation : rien écrit');
+    assert.deepEqual(r.sites.map((x) => x.site_id), [2, 15], 'règle commune : les deux sites');
+    assert.equal(r.sites[0].version_nouvelle, avant + 1);
+    r = await modifierCharte({ site_id: 2, operations: [{ objet: 'regle', action: 'ajouter', cle: '12.21', texte: 'Pas de « en somme » en dernière phrase.' }], motif: 'consigne de Marc', simulation: false });
+    assert.equal(r.statut, 'écrit'); assert.match(r.suite, /identite_version/);
+    const h = (await pool.query("SELECT auteur, origine, motif FROM charte_versions WHERE site_id = 2 ORDER BY version DESC LIMIT 1")).rows[0];
+    assert.deepEqual([h.auteur, h.origine, h.motif], ['Claude (connecteur)', 'mcp', 'consigne de Marc']);
+    r = await modifierCharte({ site_id: 2, revenir_a_version: avant, simulation: false });
+    assert.equal(r.statut, 'écrit'); assert.equal(r.retour_a, avant);
+    r = await modifierCharte({ site_id: 2, operations: [{ objet: 'regle', action: 'retirer', cle: '99' }], simulation: false });
+    assert.deepEqual([r.refus, r.code], [true, 404]);
+    r = await modifierCharte({ site_id: 2 });
+    assert.match(r.message, /operations \(au moins une\) ou revenir_a_version/);
+  } finally { srv.close(); }
+});

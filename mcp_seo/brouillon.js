@@ -93,6 +93,24 @@ export const marquerReponse = (a) => outreach('reponse', a);
 export const ajouterCibles = (a) => outreach('cibles', a);
 export const creerNiche = (a) => outreach('niches', a);
 
+// ---- charte de rédaction : écrite par le backend seulement (versions, historique), mêmes routes que l'interface ----
+export async function modifierCharte({ site_id: siteId, operations, revenir_a_version: retour, motif, simulation = true }) {
+  const s = secret();
+  if (s.length < 32) return { erreur: { source: 'configuration', code: 'config', message: 'OUTILS_MCP_SECRET absent de backend/.env' } };
+  if (retour && operations && operations.length) return { refus: true, code: 400, message: 'operations ou revenir_a_version, pas les deux' };
+  if (!retour && !(operations && operations.length)) return { refus: true, code: 400, message: 'indiquer operations (au moins une) ou revenir_a_version' };
+  const chemin = retour ? `${siteId}/retour` : `${siteId}/modifier`;
+  const corps = retour ? { version: retour, motif, simulation } : { operations, motif, simulation };
+  try {
+    const r = await fetch(`${BACKEND}/api/charte/${chemin}`, { method: 'POST', signal: AbortSignal.timeout(60000), headers: { 'Content-Type': 'application/json', 'X-Outils-Secret': s }, body: JSON.stringify(corps) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) return { refus: true, code: r.status, message: j.message || r.statusText };
+    return compact({ fetched_at: new Date().toISOString(), ...j, ...(j.statut === 'écrit' ? { suite: 'dépôts suivants : identite_version = la nouvelle version (get_charte)' } : {}) });
+  } catch (e) {
+    return { erreur: { source: 'backend du CRM', code: e.name === 'TimeoutError' ? 'timeout' : 'réseau', message: txt(e.message) } };
+  }
+}
+
 // provenance du trafic GA4 (lecture seule, en direct, par le backend qui détient l'accès Google)
 export async function provenanceGa4(siteId, days = 28, canal, limit = 25) {
   const j = await backend('ga4-provenance', { site_id: siteId, days, canal, limit }, 90 * 1000);

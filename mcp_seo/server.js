@@ -28,7 +28,8 @@ import { getContenuBrut } from './contenu.js';
 import { getPageDossier } from './dossier.js';
 import { checkUrls, MAX_URLS } from './checks.js';
 import { getSiteResources } from './ressources.js';
-import { demanderDepot, prepareDraft, repointerLiens, poserEtiquettes, modifierMedia, poserLien, modifierSeo, provenanceGa4, envoyerMailOutreach, verifierDejaContacte, listerOutreach, marquerReponse, ajouterCibles, creerNiche } from './brouillon.js';
+import { getCharte, versionCharte } from './charte.js';
+import { demanderDepot, prepareDraft, repointerLiens, poserEtiquettes, modifierMedia, poserLien, modifierSeo, provenanceGa4, envoyerMailOutreach, verifierDejaContacte, listerOutreach, marquerReponse, ajouterCibles, creerNiche, modifierCharte } from './brouillon.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -345,8 +346,8 @@ function buildServer() {
 
   server.tool(
     'get_site_resources',
-    "Ce qu'il faut connaître d'un site pour écrire, par sections : categories, glossaire, shortcodes, icones ([spec] : table du thème, sprite ; icones=[…] vérifie des noms), redaction (types et champs, noms des blocs, compositions, fichiers acceptés).\nÉtiquettes seulement sur demande (sections=[\"etiquettes\"] ou etiquettes_recherche=\"nom\") ; blocs=[\"core/image\", …] donne les attributs de ces blocs.",
-    { site_id: z.number().int(), sections: liste(z.array(z.enum(['categories', 'etiquettes', 'glossaire', 'shortcodes', 'icones', 'redaction']))).optional(),
+    "Ce qu'il faut connaître d'un site pour écrire, par sections : categories, glossaire, shortcodes, icones ([spec] : table du thème, sprite ; icones=[…] vérifie des noms), redaction (types et champs, noms des blocs, compositions, fichiers acceptés), identite (voix du site : identité, registre, charte de rédaction commune et exemples, avec identite_version à reporter dans le manifeste ; toujours jointe à redaction).\nÉtiquettes seulement sur demande (sections=[\"etiquettes\"] ou etiquettes_recherche=\"nom\") ; blocs=[\"core/image\", …] donne les attributs de ces blocs.",
+    { site_id: z.number().int(), sections: liste(z.array(z.enum(['categories', 'etiquettes', 'glossaire', 'shortcodes', 'icones', 'redaction', 'identite']))).optional(),
       etiquettes_recherche: z.string().optional(), blocs: liste(z.array(z.string()).max(50)).optional(), icones: liste(z.array(z.string()).max(50)).optional() },
     async ({ site_id, sections, etiquettes_recherche, blocs, icones }) => compactJson(await getSiteResources(pool, site_id, { sections, etiquettes_recherche, blocs: blocs ?? [], icones: icones ?? [] }))
   );
@@ -354,9 +355,36 @@ function buildServer() {
 
   server.tool(
     'demander_depot',
-    "ÉCRITURE préparatoire : réserve un dossier de dépôt sur le serveur et renvoie un lien d'envoi à usage unique (30 min) avec la commande pour y envoyer,\nen zip, le dossier qui contient manifeste-wp.json (contenu en blocs + fichiers). Ensuite : prepare_draft(depot).",
+    "ÉCRITURE préparatoire : réserve un dossier de dépôt sur le serveur et renvoie un lien d'envoi à usage unique (30 min) avec la commande pour y envoyer,\nen zip, le dossier qui contient manifeste-wp.json (contenu en blocs + fichiers). Rappelle identite_version, la version en cours de la charte du site, à reporter dans le manifeste. Ensuite : prepare_draft(depot).",
     { site_id: z.number().int() },
-    async ({ site_id }) => compactJson(await demanderDepot(site_id))
+    async ({ site_id }) => {
+      const d = await demanderDepot(site_id);
+      const v = await versionCharte(pool, site_id);
+      return compactJson({ ...d, identite_version: v, charte: v ? `charte de rédaction du site en v${v} : \"identite_version\": ${v} dans manifeste-wp.json (get_charte pour la relire)` : 'aucune charte de rédaction pour ce site' });
+    }
+  );
+
+  // ---- charte de rédaction et identité du site (base du CRM : seule version qui fait foi) ----
+  server.tool(
+    'get_charte',
+    "Lecture seule. La charte de rédaction et l'identité d'un site, telles qu'en base du CRM : identite_version (version en cours, exigée par prepare_draft dans le manifeste), registre (tutoiement / vouvoiement), texte d'identité, charte commune aux deux sites par sections (5, 7, 9, 11, 12… : chaque règle a un repère « cle » pour modifier_charte), exemples, et réglages des contrôles automatiques (liste noire, intertitres imagés, connecteurs, comparaisons, symétries, ligne datée, seuils, effets propres au site, noms de l'autre site).\nversion=n pour relire une ancienne version ; historique=true ajoute la liste des versions (date, auteur, motif, changements avec l'ancien texte).",
+    { site_id: z.number().int(), version: z.number().int().optional(), historique: z.boolean().optional() },
+    async ({ site_id, version, historique }) => compactJson(await getCharte(pool, site_id, { version: version ?? null, historique: historique ?? false }))
+  );
+  server.tool(
+    'modifier_charte',
+    "ÉCRITURE (CRM seulement) : modifie la charte de rédaction ou l'identité d'un site quand Marc donne une consigne. Aucune validation dans l'interface : la nouvelle version vaut dès le dépôt suivant. simulation=true par défaut (aperçu avant → après, rien écrit) ; simulation=false pour enregistrer.\nChaque écriture crée une version (date, auteur, motif, ancien texte gardé) ; la charte commune (règles, exemples, listes, seuils) est partagée : la modifier fait monter la version des DEUX sites. revenir_a_version=n annule : nouvelle version qui reprend la version n (au lieu d'operations).\noperations (dans l'ordre, toutes ou aucune) :\n- { objet: \"regle\", action: ajouter | modifier | retirer, cle: \"12.21\", texte, section_titre? } (repères : get_charte)\n- { objet: \"exemple\", action: ajouter | modifier | retirer, id?: \"e1\", site_id?, texte }\n- { objet: \"identite\", action: modifier, texte } ; { objet: \"registre\", action: modifier, valeur: tutoiement | vouvoiement }\n- { objet: \"liste\", liste: liste_noire | intertitres_images | connecteurs | comparaisons_fin | symetries | mots_vides | ia_motifs | autre_site | mots_signales, action: ajouter | modifier | retirer, valeur, nouvelle_valeur?, texte_simple?: true (expression telle quelle, sans expression régulière) }\n- { objet: \"seuil\", cle, action: modifier, valeur: nombre } ; { objet: \"effet\", cle, action: modifier, valeur: bloquant | avertissement | inactif } ; { objet: \"motif\", cle: \"date_isolee\", action: modifier, valeur }\nmotif : la consigne en une phrase (gardé dans l'historique).",
+    { site_id: z.number().int(),
+      operations: z.array(z.object({
+        objet: z.enum(['regle', 'exemple', 'identite', 'registre', 'liste', 'seuil', 'effet', 'motif']),
+        action: z.enum(['ajouter', 'modifier', 'retirer']),
+        cle: z.string().optional(), id: z.string().optional(), site_id: z.number().int().optional(),
+        liste: z.enum(['liste_noire', 'intertitres_images', 'connecteurs', 'comparaisons_fin', 'symetries', 'mots_vides', 'ia_motifs', 'autre_site', 'mots_signales']).optional(),
+        texte: z.string().optional(), valeur: z.union([z.string(), z.number()]).optional(), nouvelle_valeur: z.string().optional(),
+        texte_simple: z.boolean().optional(), section: z.string().optional(), section_titre: z.string().optional(),
+      })).max(100).optional(),
+      revenir_a_version: z.number().int().optional(), motif: z.string().optional(), simulation: z.boolean().optional() },
+    async (a) => compactJson(await modifierCharte({ ...a, simulation: a.simulation ?? true }))
   );
 
   server.tool(

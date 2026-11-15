@@ -233,6 +233,11 @@ casse ni accents ; une niche inconnue est refusée (avec la liste des niches du 
 à l'ajout : seuls `dofollow` / `noopener` (`noreferrer`) donnent vrai, `nofollow` / `ugc` / `sponsored` faux, tout
 le reste inconnu ; un déclencheur en base empêche `dofollow = vrai` sans lecture du rel datée (`rel_verifie_le`).
 `porte` : « formulaire /nous-contacter/ » → type `formulaire` + adresse ; texte libre → `porte_note`.
+Charte de rédaction (base du CRM, table `charte_versions`, seule version qui fait foi) : `get_charte(site_id,
+version?, historique?)` en lecture ; `modifier_charte(site_id, operations | revenir_a_version, motif?, simulation=true)`
+pour enregistrer une consigne de Marc, sans validation dans l'interface (règle, exemple, identité, registre, liste,
+seuil, effet). Chaque écriture crée une version ; la charte commune fait monter les deux sites. `get_site_resources`
+joint la section `identite` à `redaction` ; `demander_depot` rappelle `identite_version`.
 Après un déploiement : `node scripts/diag-outils.js --local --strict` (lancé par deploy.sh) vérifie que le service
 sert bien les outils et paramètres du code ; `node ../backend/scripts/verifier-netlinking.js` fait l'état des niches.
 

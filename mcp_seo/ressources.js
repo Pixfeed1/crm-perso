@@ -3,6 +3,7 @@
 // Catégories, étiquettes et glossaire par l'API REST WordPress ; shortcodes déclarés et icônes de
 // [spec] par la route de lecture « outils-site/v1/ressources » (mu-plugin, voir wordpress/ressources-site.php).
 import { plafonne, compact, decode, txt, requete, erreurHttp, accesWordPress, clientWp, typesWp } from './live.js';
+import { identiteSite } from './charte.js';
 
 const MAX = { termes: 1000, glossaire: 2000 };
 const SRC = {
@@ -31,7 +32,7 @@ async function bloc(source, fn) {
   catch (e) { return { source, erreur: e && e.source ? e : { source, code: (e && e.code) || 'erreur', message: txt(e && e.message) } }; }
 }
 
-export const SECTIONS = ['categories', 'etiquettes', 'glossaire', 'shortcodes', 'icones', 'redaction'];
+export const SECTIONS = ['categories', 'etiquettes', 'glossaire', 'shortcodes', 'icones', 'redaction', 'identite'];
 const PAR_DEFAUT = SECTIONS.filter((x) => x !== 'etiquettes');      // étiquettes (souvent des centaines) : sur demande
 
 /**
@@ -46,6 +47,7 @@ export async function getSiteResources(pool, siteId, options = {}) {
   if (recherche) voulues.add('etiquettes');
   if (icones.length) voulues.add('icones');
   if (blocsDetail.length) voulues.add('redaction');
+  if (voulues.has('redaction')) voulues.add('identite');          // la voix du site va avec la technique de rédaction
   const sortie = { fetched_at: new Date().toISOString(), site_id: siteId, sections: [...voulues], autres_sections: SECTIONS.filter((x) => !voulues.has(x)) };
   const { rows } = await pool.query('SELECT domain, wp_base_url FROM seo_sites WHERE id = $1', [siteId]);
   if (!rows[0]) return { ...sortie, erreur: `site ${siteId} inconnu du CRM (voir list_sites)` };
@@ -135,5 +137,7 @@ export async function getSiteResources(pool, siteId, options = {}) {
     } catch (e) { return { source: SRC.redaction, erreur: { source: SRC.redaction, code: 'réseau', message: txt(e.message) } }; }
   })();
   const iconesSpec = !voulues.has('icones') || route.erreur || route.ignore ? undefined : { source: route.source, releve_le: route.releve_le, ...(route.icones || {}) };
-  return compact({ ...sortie, categories, etiquettes, glossaire, shortcodes, icones_spec: iconesSpec, redaction });
+  // identité et charte de rédaction du site (base du CRM), version que prepare_draft exige
+  const identite = voulues.has('identite') ? await identiteSite(pool, siteId) : undefined;
+  return compact({ ...sortie, categories, etiquettes, glossaire, shortcodes, icones_spec: iconesSpec, redaction, identite });
 }

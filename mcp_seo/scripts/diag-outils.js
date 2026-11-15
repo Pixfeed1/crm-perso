@@ -18,6 +18,9 @@ const PARAMS = {
   envoyer_mail_outreach: ['site_id', 'target_id', 'domaine', 'niche_nom', 'creer_si_absente', 'destinataire', 'objet', 'corps', 'relance_de', 'simulation'],
   creer_niche: ['site_id', 'nom', 'page_cible', 'hubs', 'simulation'],
   list_link_campaigns: ['site_id'],
+  get_charte: ['site_id', 'version', 'historique'],
+  modifier_charte: ['site_id', 'operations', 'revenir_a_version', 'motif', 'simulation'],
+  demander_depot: ['site_id'],
 };
 const LOCAL = `http://127.0.0.1:${process.env.MCP_SEO_PORT || 8790}/mcp`;
 const TOKEN = process.env.MCP_SEO_TOKEN || '';
