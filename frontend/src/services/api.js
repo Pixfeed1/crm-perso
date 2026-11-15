@@ -624,6 +624,19 @@ export const revenuesAPI = {
 // ===== SEO (lecture seule : données produites par le worker Python seo_worker) =====
 // Module Backlinks (suite SEO) — pipeline séparé du CRM client, envoi via Gmail perso.
 // Netlinking multi-site (jurojin.net…) : un seul endpoint d'envoi, toutes les règles côté serveur.
+// Charte de rédaction et identité des sites (versions, historique, retour arrière, export Markdown)
+export const charteAPI = {
+  get: (site) => apiRequest(`/charte/${site}`),
+  versions: (site) => apiRequest(`/charte/${site}/versions`),
+  modifier: (site, data) => apiRequest(`/charte/${site}/modifier`, 'POST', data),
+  retour: (site, data) => apiRequest(`/charte/${site}/retour`, 'POST', data),
+  exporter: async (site) => {
+    const r = await apiRequestRaw(`/charte/${site}/export.md`);
+    const nom = (/filename="([^"]+)"/.exec(r.headers.get('Content-Disposition') || '') || [])[1] || `charte-site-${site}.md`;
+    return { nom, texte: await r.text() };
+  }
+};
+
 export const outreachAPI = {
   config: () => apiRequest('/seo/outreach/config'),
   send: (data) => apiRequest('/seo/outreach/send', 'POST', data),

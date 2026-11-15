@@ -2571,6 +2571,17 @@ async function ensureCharteTables(client) {
   `);
 }
 
+// v1 de la charte, une seule fois, à partir de scripts/donnees/charte-initiale.json (retiré du dépôt ensuite) :
+// rien à lancer à la main. Une charte déjà présente n'est jamais touchée.
+async function semerCharte(client) {
+  const fichier = require('path').join(__dirname, 'donnees', 'charte-initiale.json');
+  if (!require('fs').existsSync(fichier)) return;
+  try {
+    const creees = await require('../services/charteService').semerSiAbsente(client, JSON.parse(require('fs').readFileSync(fichier, 'utf8')));
+    if (creees.length) console.log(`  ✓ Charte de rédaction : v1 créée pour le(s) site(s) ${creees.join(', ')}`);
+  } catch (e) { console.error('[AutoInit] charte initiale :', e.message); }
+}
+
 async function ensureSeoTables(client) {
   console.log('[AutoInit] Vérification des tables SEO...');
 
@@ -3144,6 +3155,7 @@ async function ensureSeoTables(client) {
   await client.query('CREATE INDEX IF NOT EXISTS idx_seo_wp_journal_cle ON seo_wp_journal(site_id, cle, cree_le DESC);');
 
   await ensureLinkPlatformRules(client);
+  await semerCharte(client);
   await grantMcpReadOnly(client);
 
   console.log('  ✓ Tables SEO vérifiées');

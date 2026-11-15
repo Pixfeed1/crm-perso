@@ -6,8 +6,7 @@
 //   GET  /:site/versions/:n              une version complète
 //   GET  /:site/export.md                version en cours en Markdown (archives)
 //   POST /:site/modifier { operations: [...], motif?, version_attendue?, simulation? (true par défaut) }
-//   POST /:site/retour { version, motif?, simulation? }                 interface seulement
-//   POST /:site/passages/article { url, extrait, simulation? }          « c'est nous », interface seulement
+//   POST /:site/retour { version, motif?, simulation? }   nouvelle version qui reprend la version n
 const express = require('express');
 const crypto = require('crypto');
 const authMiddleware = require('../middleware/authMiddleware');
@@ -37,15 +36,12 @@ const site = (req) => {
   if (!Number.isInteger(n) || n <= 0) throw Object.assign(new Error('site : numéro attendu'), { status: 400 });
   return n;
 };
-const interfaceSeule = (req) => {
-  if (req.origineCharte !== 'interface') throw Object.assign(new Error("action réservée à l'interface du CRM"), { status: 403 });
-};
 
 router.get('/', ok(async (db) => ({ sites: await C.sitesAvecCharte(db) })));
 router.get('/:site', ok(async (db, b, req) => {
   const c = await C.courante(db, site(req));
   if (!c) throw Object.assign(new Error(`aucune charte pour le site ${req.params.site}`), { status: 404 });
-  return c;
+  return { ...c, libelles: { listes: C.LIBELLES_LISTES, effets: C.LIBELLES_EFFETS, listes_communes: C.LISTES_COMMUNES, listes_site: C.LISTES_SITE, listes_regex: C.LISTES_REGEX, effets_possibles: C.EFFETS } };
 }));
 router.get('/:site/versions', ok(async (db, b, req) => ({ versions: await C.versions(db, site(req)) })));
 router.get('/:site/versions/:n', ok((db, b, req) => C.version(db, site(req), req.params.n)));
@@ -61,13 +57,8 @@ router.post('/:site/modifier', ok((db, b, req) => C.modifier(db, {
   site: site(req), operations: b.operations, motif: b.motif, version_attendue: b.version_attendue,
   auteur: req.auteurCharte, origine: req.origineCharte, simulation: b.simulation !== false,
 })));
-router.post('/:site/retour', ok((db, b, req) => {
-  interfaceSeule(req);
-  return C.retour(db, { site: site(req), version: b.version, motif: b.motif, auteur: req.auteurCharte, origine: req.origineCharte, simulation: b.simulation !== false });
-}));
-router.post('/:site/passages/article', ok((db, b, req) => {
-  interfaceSeule(req);
-  return C.passageDepuisArticle(db, { site: site(req), url: b.url, extrait: b.extrait, auteur: req.auteurCharte, simulation: b.simulation !== false });
-}));
+router.post('/:site/retour', ok((db, b, req) => C.retour(db, {
+  site: site(req), version: b.version, motif: b.motif, auteur: req.auteurCharte, origine: req.origineCharte, simulation: b.simulation !== false,
+})));
 
 module.exports = router;

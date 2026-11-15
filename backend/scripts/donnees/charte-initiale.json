@@ -1,5 +1,5 @@
 {
- "source": "charte-redaction-et-controles-crm.md et controle_style.py du 15/11/2026",
+ "source": "charte-redaction-et-controles-crm.md (sections 5, 7, 9, 10.5, 10.6, 11 et 12) et controle_style.py du 15/11/2026",
  "commun": {
   "regles": [
    {
@@ -313,6 +313,84 @@
     "section": "11.5",
     "section_titre": "Interdits valables partout",
     "texte": "Jurojin : les codes courts maison du thème, jamais de markdown brut. `[specs]` et `[spec]` à la place des tableaux, `[terme]` pour le glossaire, en 3D uniquement."
+   },
+   {
+    "cle": "12",
+    "section": "12",
+    "section_titre": "Ce que Google a relevé sur les passages de référence (15/11/2026)",
+    "texte": "Les deux passages proposés comme modèles ont été soumis au mode IA de Google, sans dire d'où ils venaient. Verdict : ni ferme à contenu, ni passionné qui écrit seul, mais un texte d'IA guidé par un expert, qui « surjoue l'humanité » à coups d'analogies et de jeux de mots. Les passages sont retirés. Les signatures relevées deviennent des règles, qui s'ajoutent aux sections 5 et 7 :"
+   },
+   {
+    "cle": "12.14",
+    "section": "12",
+    "section_titre": "Ce que Google a relevé sur les passages de référence (15/11/2026)",
+    "texte": "**L'analogie passe-partout.** Une image tirée de la vie courante pour illustrer un point technique : « comme les habitués d'un bar de quartier », « comme un ancien locataire qui aurait gardé un double des clés ». Un parallèle vient du milieu lui-même, de ce que les pratiquants vivent et voient : l'afflux de débutants sur les forums, les questions qui reviennent sur Reddit. Pour un public technique, le terme exact suffit : porte dérobée, script dormant."
+   },
+   {
+    "cle": "12.15",
+    "section": "12",
+    "section_titre": "Ce que Google a relevé sur les passages de référence (15/11/2026)",
+    "texte": "**La chute imagée.** Un paragraphe ne se termine ni par une métaphore ni par une formule. Une ou deux images par article au plus, jamais en dernière phrase de paragraphe."
+   },
+   {
+    "cle": "12.16",
+    "section": "12",
+    "section_titre": "Ce que Google a relevé sur les passages de référence (15/11/2026)",
+    "texte": "**Les constructions symétriques.** « Un rapport qui tient plus du club que de la licence », « contents pour le patron, moins pour leur place au comptoir », ou la morale finale qui referme la métaphore (« par où l'attaque est entrée… par la même porte »)."
+   },
+   {
+    "cle": "12.17",
+    "section": "12",
+    "section_titre": "Ce que Google a relevé sur les passages de référence (15/11/2026)",
+    "texte": "**Le jeu de mots par association évidente.** Jouer sur le sens premier d'un nom (Blender, le mixeur) est le premier réflexe d'une IA. Un jeu de mots n'a sa place que si un pratiquant pourrait le faire à voix haute."
+   },
+   {
+    "cle": "12.18",
+    "section": "12",
+    "section_titre": "Ce que Google a relevé sur les passages de référence (15/11/2026)",
+    "texte": "**L'accroche sentencieuse.** Une phrase courte et dramatique en ouverture : « Un site WordPress piraté ne prévient pas. » L'intro part d'un fait ou d'une situation précise."
+   },
+   {
+    "cle": "12.19",
+    "section": "12",
+    "section_titre": "Ce que Google a relevé sur les passages de référence (15/11/2026)",
+    "texte": "**La couleur sans contenu.** Les incises qui donnent un air parlé sans rien apporter : « dont personne n'a jamais entendu parler »."
+   },
+   {
+    "cle": "12.20",
+    "section": "12",
+    "section_titre": "Ce que Google a relevé sur les passages de référence (15/11/2026)",
+    "texte": "**Le mot fabriqué.** Un terme que le milieu n'emploie pas (« les blendériens »). On écrit comme parle la communauté : la commu Blender, les utilisateurs de Blender."
+   },
+   {
+    "cle": "12.change",
+    "section": "12",
+    "section_titre": "Ce que Google a relevé sur les passages de référence (15/11/2026)",
+    "texte": "**Ce que ça change.** L'humour, les jeux de mots et les parallèles restent dans l'ADN des deux sites, mais ils viennent de l'intérieur du sujet, ils sont rares et ne servent jamais de décor. La cause de fond : une IA n'a pas de vécu, alors elle le remplace par des images. Les détails vécus (ce qui a été testé, vu, raté) viennent de Marc ou de témoignages réels et attribués, et le texte se construit autour d'eux. Sans vécu, on s'en tient aux faits."
+   },
+   {
+    "cle": "12.controles",
+    "section": "12",
+    "section_titre": "Ce que Google a relevé sur les passages de référence (15/11/2026)",
+    "texte": "**Contrôles possibles sans IA**, en avertissement : une comparaison (« comme un », « comme une », « comme les ») dans la dernière phrase d'un paragraphe ; les tournures « plus du … que du … » et « pour …, moins pour … » ; une première phrase d'article de moins de huit mots. « Blendériens » et « dont personne n'a jamais entendu parler » entrent dans la liste noire. Le reste relève de la passe « voix »."
+   },
+   {
+    "cle": "12.exemples",
+    "section": "12",
+    "section_titre": "Ce que Google a relevé sur les passages de référence (15/11/2026)",
+    "texte": "**Ce qui passe : les deux exemples.** Réécrits à partir de faits réels (un fil de Blender Artists, une intervention réelle sur un serveur piraté), ces deux extraits ont été jugés humains à 90 et 95 % par le mode IA de Google, avec la même question que pour les premiers. Ils servent d'exemples à la relecture."
+   }
+  ],
+  "exemples": [
+   {
+    "id": "e1",
+    "site_id": 2,
+    "texte": "En juin 2025, Blender Artists, le forum historique de la communauté, a épinglé une règle sur l'IA : au-delà de 50 % de génération, une œuvre n'y a plus sa place. Un outil de retopologie assisté par IA reste permis, un modèle sorti d'un générateur à partir d'un prompt ne l'est pas. Si l'équipe a dû l'écrire, c'est que ces modèles arrivaient déjà dans les galeries. Dans le fil, un membre a demandé comment on mesure ce pourcentage sur un img2img ou un agrandissement par IA. Un autre lui a répondu : « N'utilisez pas d'IA, et vous connaîtrez le pourcentage. »\n\nLe ton n'étonnera pas ceux qui fréquentent la commu Blender. Le logiciel est libre parce que ses utilisateurs ont réuni 100 000 € en sept semaines, en 2002, pour racheter le code. Beaucoup le défendent encore comme un bien commun. Le problème, c'est que les générateurs envoient justement leur public vers lui. Meshy, Tripo ou Hunyuan3D sortent en quelques secondes des modèles faits de triangles serrés, sans boucles d'arêtes exploitables, avec au mieux un squelette automatique quand il s'agit d'un humanoïde. Pour les animer, il faut une retopologie, un rig, souvent une reprise des UV, et Blender fait tout ça gratuitement, avec une réponse déjà en ligne pour chaque étape."
+   },
+   {
+    "id": "e2",
+    "site_id": 15,
+    "texte": "En septembre, un client nous a appelés : son serveur venait d'être piraté, et il voulait surtout retrouver sa boutique PrestaShop telle qu'elle était. D'après lui, tout avait commencé sur son PC Windows, piraté avant le serveur. Le serveur avait été redémarré en mode secours. Avant de réparer quoi que ce soit, nous avons rapatrié la base de données, les fichiers du site et la configuration du serveur. Ensuite, nous avons choisi de réinstaller la machine plutôt que de la nettoyer sur place, parce que quand des accès ont fui, on ne sait jamais tout ce qui a pu être déposé. Si cela vous arrive, changez vos mots de passe depuis un autre ordinateur que celui qui a été touché : un poste encore infecté transmettrait aussi les nouveaux."
    }
   ],
   "controles": {
@@ -399,7 +477,16 @@
     "\\bpassons à\\b",
     "une fois dans la place",
     "\\bdébusquer\\b",
-    "porte d'entrée idéale"
+    "porte d'entrée idéale",
+    "blendérien",
+    "dont personne n'a jamais entendu parler"
+   ],
+   "comparaisons_fin": [
+    "\\bcomme (?:un|une|les)\\b"
+   ],
+   "symetries": [
+    "\\bplus du\\b[^.!?]{1,80}?\\bque (?:du|de la|de l'|des)\\b",
+    "\\bpour\\b[^.!?,;]{1,80},\\s*moins pour\\b"
    ],
    "intertitres_images": [
     "retraite",
@@ -504,7 +591,8 @@
     "marqueur_bloquant": 4,
     "recit_bloquant": 3,
     "recit_total_avertissement": 6,
-    "voix_tics_style_a_revoir": 5
+    "voix_tics_style_a_revoir": 5,
+    "premiere_phrase_mots_min": 8
    }
   }
  },
@@ -512,17 +600,7 @@
   "2": {
    "nom": "Jurojin",
    "registre": "tutoiement",
-   "identite": "Jurojin est un média d'artistes écrit par des passionnés. On y parle de 3D, d'animation, de jeux, de films et du matériel qui va avec, et ceux qui écrivent pratiquent ce dont ils parlent. Le lecteur ne revient pas pour la fiche technique, il la trouve partout. Il revient pour retrouver un regard : une façon de voir l'actualité, les outils et la 3D, qui dit ce que les communiqués et les tests recopiés ne disent pas. D'un article à l'autre, il doit reconnaître la même voix, comme on reconnaît un chroniqueur qu'on aime lire.\n\nCe regard part du travail réel. Quand on rend telle scène sur telle machine, ça donne ça. La frustration arrive à tel moment, et c'est là que tel processeur ou telle carte graphique vaut son prix. Sur d'autres projets, l'un et l'autre, c'est pareil, et l'écart de prix ne se justifie plus. Jurojin ne roule pour personne : ni pour Nvidia, ni pour AMD, ni pour Apple, ni pour Autodesk. L'analyse ose une thèse, et elle tient debout parce que chaque affirmation repose sur un fait vérifiable ou sur une situation vécue.\n\nLa voix est celle d'un connaisseur qui tutoie son lecteur, parce qu'ils partagent la même passion. Il vulgarise sans jamais passer en mode NASA, il rassure quand il le faut et il ne se met pas en avant. Le sel vient du sujet lui-même : un jeu de mots quand il se présente, comme Blender, le mixeur qui a fini par tout mélanger, ou un parallèle que tout le monde a vécu, comme le bar de quartier qui entre dans le guide du Routard. Jamais plaqué pour faire joli. Une critique de film suit la même logique : un spectateur qui sait regarder, qui tranche et qui dit pourquoi.\n\nLe test, à la fin de chaque article : le lecteur se dit « j'aime l'info, je vais revenir ».",
-   "passages": [
-    {
-     "texte": "Les blendériens ont toujours eu avec leur logiciel un rapport qui tient plus du club que de la licence. En 2002, ce sont eux qui ont réuni 100 000 € en sept semaines pour racheter le code et le libérer. Vingt ans plus tard, le club a perdu son entrée réservée. L'IA a ouvert la 3D à des gens qui n'en avaient jamais fait : un modèle sorti de Meshy ou de Tripo ressemble souvent à un mannequin moulé d'un seul bloc, sans rien qui plie. Il faut le nettoyer, refaire sa topologie, lui poser un squelette, et tout ce petit monde atterrit dans Blender, parce qu'il est gratuit et que la réponse à chaque question existe déjà en vidéo. Le mixeur a fini par tout mélanger. Maya garde les grands studios et leurs pipelines, à plus de 2 000 € la licence annuelle. Mais dans les écoles et sur YouTube, on ne jure plus que par Blender. Les anciens le vivent un peu comme les habitués d'un bar de quartier le jour où il entre dans le guide du Routard : contents pour le patron, moins pour leur place au comptoir.",
-     "date": "2026-11-15",
-     "statut": "valide",
-     "valide_par": "Marc",
-     "valide_le": "2026-11-15",
-     "origine": "charte du 15/11/2026"
-    }
-   ],
+   "identite": "Jurojin est un média d'artistes écrit par des passionnés. On y parle de 3D, d'animation, de jeux, de films et du matériel qui va avec, et ceux qui écrivent pratiquent ce dont ils parlent. Le lecteur ne revient pas pour la fiche technique, il la trouve partout. Il revient pour retrouver un regard : une façon de voir l'actualité, les outils et la 3D, qui dit ce que les communiqués et les tests recopiés ne disent pas. D'un article à l'autre, il doit reconnaître la même voix, comme on reconnaît un chroniqueur qu'on aime lire.\n\nCe regard part du travail réel. Quand on rend telle scène sur telle machine, ça donne ça. La frustration arrive à tel moment, et c'est là que tel processeur ou telle carte graphique vaut son prix. Sur d'autres projets, l'un et l'autre, c'est pareil, et l'écart de prix ne se justifie plus. Jurojin ne roule pour personne : ni pour Nvidia, ni pour AMD, ni pour Apple, ni pour Autodesk. L'analyse ose une thèse, et elle tient debout parce que chaque affirmation repose sur un fait vérifiable ou sur une situation vécue.\n\nLa voix est celle d'un connaisseur qui tutoie son lecteur, parce qu'ils partagent la même passion. Il vulgarise sans jamais passer en mode NASA, il rassure quand il le faut et il ne se met pas en avant. Le sel vient de l'intérieur du milieu : une remarque que seul un pratiquant peut faire, une référence que la communauté reconnaît. Il reste rare et ne sert jamais de décor. Les détails vécus viennent de ceux qui pratiquent, de ce qu'ils ont testé, vu passer sur les forums ou raté en production. Faute de vécu, on s'en tient aux faits, sans ajouter de comparaisons pour faire vivant. Une critique de film suit la même logique : un spectateur qui sait regarder, qui tranche et qui dit pourquoi.\n\nLe test, à la fin de chaque article : le lecteur se dit « j'aime l'info, je vais revenir ».",
    "controles": {
     "effets": {
      "blancs_source": "bloquant",
@@ -545,15 +623,7 @@
   "15": {
    "nom": "PixFeed",
    "registre": "vouvoiement",
-   "identite": "PixFeed est une agence web et de création visuelle. Elle écrit pour les gens qu'elle aide : des commerçants, des artisans, des associations, et aussi des équipes techniques. Le lecteur arrive souvent avec un vrai problème sur les bras, un site piraté, une boutique qui rame, une migration qui fait peur. Il veut comprendre ce qui se passe et savoir quoi faire. Ce qu'il vient retrouver d'un article à l'autre, c'est une façon de voir le code, le monde du développement et les clients : celle d'une équipe qui a déjà rencontré le problème, qui sait d'où il vient et qui l'explique sans en rajouter.\n\nOn vouvoie le lecteur, et on règle le niveau sur lui. Un article sur le choix d'un thème WordPress s'adresse à quelqu'un qui n'a jamais ouvert un fichier de code et qui peut très bien le faire lui-même, vibe coding compris. Un article sur une architecture Next.js parle à des développeurs et entre dans le détail du code. Dans les deux cas, un terme technique est soit expliqué au passage, soit indispensable.\n\nL'humour existe, à petite dose, quand une image fait comprendre plus vite qu'une explication. Le ton reste celui d'une agence à qui l'on confie son site : on ne prend personne de haut, et on ne vend rien avant d'avoir aidé. Un cas client se raconte d'un seul tenant, par l'enjeu avant la technique, et l'agence se présente par la difficulté des problèmes qu'elle résout. L'offre arrive en dernier, après des actions simples que le lecteur peut faire lui-même.\n\nLe test : le lecteur ferme la page en sachant quoi faire, et en se disant que ces gens-là savent de quoi ils parlent.",
-   "passages": [
-    {
-     "texte": "Un site WordPress piraté ne prévient pas. Le plus souvent, c'est un client qui appelle parce que Chrome affiche une page rouge à la place de la boutique, ou parce que l'accueil le renvoie vers un casino en ligne dont personne n'a jamais entendu parler. Le premier réflexe est de tout réinstaller. C'est rarement le bon : le code malveillant se loge volontiers dans la base de données ou dans le dossier des images, et il revient la semaine suivante, comme un ancien locataire qui aurait gardé un double des clés. Avant de toucher à quoi que ce soit, faites une copie complète du site dans son état infecté. C'est elle qui vous dira par où l'attaque est entrée, et tant que vous ne le savez pas, rien n'empêche le pirate de revenir par la même porte.",
-     "date": "2026-11-15",
-     "statut": "propose",
-     "origine": "charte du 15/11/2026 (proposé, en attente de validation)"
-    }
-   ],
+   "identite": "PixFeed est une agence web et de création visuelle. Elle écrit pour les gens qu'elle aide : des commerçants, des artisans, des associations, et aussi des équipes techniques. Le lecteur arrive souvent avec un vrai problème sur les bras, un site piraté, une boutique qui rame, une migration qui fait peur. Il veut comprendre ce qui se passe et savoir quoi faire. Ce qu'il vient retrouver d'un article à l'autre, c'est une façon de voir le code, le monde du développement et les clients : celle d'une équipe qui a déjà rencontré le problème, qui sait d'où il vient et qui l'explique sans en rajouter.\n\nOn vouvoie le lecteur, et on règle le niveau sur lui. Un article sur le choix d'un thème WordPress s'adresse à quelqu'un qui n'a jamais ouvert un fichier de code et qui peut très bien le faire lui-même, vibe coding compris. Un article sur une architecture Next.js parle à des développeurs et entre dans le détail du code. Dans les deux cas, un terme technique est soit expliqué au passage, soit indispensable.\n\nL'humour existe, à petite dose, quand il vient du métier. Pour un public technique, le terme exact, comme porte dérobée ou script dormant, vaut mieux qu'une comparaison. Le ton reste celui d'une agence à qui l'on confie son site : on ne prend personne de haut, et on ne vend rien avant d'avoir aidé. Un cas client se raconte d'un seul tenant, par l'enjeu avant la technique, et l'agence se présente par la difficulté des problèmes qu'elle résout. L'offre arrive en dernier, après des actions simples que le lecteur peut faire lui-même.\n\nLe test : le lecteur ferme la page en sachant quoi faire, et en se disant que ces gens-là savent de quoi ils parlent.",
    "controles": {
     "effets": {
      "blancs_source": "bloquant",

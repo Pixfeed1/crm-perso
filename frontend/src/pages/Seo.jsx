@@ -17,6 +17,7 @@ import { decodeHtml } from '../utils/formatters';
 import SeoGraph from '../components/seo/SeoGraph';
 import PositionsTab from '../components/seo/PositionsTab';
 import BacklinksTab from '../components/seo/BacklinksTab';
+import CharteTab from '../components/seo/CharteTab';
 import IndexationTab from '../components/seo/IndexationTab';
 import SpeedTab from '../components/seo/SpeedTab';
 import TrafficTab from '../components/seo/TrafficTab';
@@ -594,7 +595,8 @@ const Seo = () => {
                 { k: 'trafic', l: 'Trafic' },
                 { k: 'autorite', l: 'Autorité & liens' },
                 { k: 'positions', l: 'Suivi de positions' },
-                { k: 'backlinks', l: '🔗 Backlinks' }
+                { k: 'backlinks', l: '🔗 Backlinks' },
+                { k: 'charte', l: 'Charte de rédaction' }
               ].map((t) => (
                 <button key={t.k} onClick={() => setTab(t.k)}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === t.k ? 'bg-accent text-white' : 'bg-surface-strong text-text-secondary hover:bg-border-strong'}`}>
@@ -1063,6 +1065,8 @@ const Seo = () => {
             ) : tab === 'autorite' ? (
               /* Autorité du domaine (Open PageRank) + liens entrants (Bing WMT), job 'authority' */
               <AuthorityTab siteId={siteId} onLaunch={requestLaunch} job={job} jobActive={!!jobActive} />
+            ) : tab === 'charte' ? (
+              <CharteTab siteId={siteId} />
             ) : tab === 'backlinks' ? (
               /* Campagnes backlinks (niches, découverte, scoring, outreach Gmail) */
               <BacklinksTab siteId={siteId} />
