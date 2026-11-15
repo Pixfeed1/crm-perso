@@ -81,24 +81,28 @@ const ligne = (r) => `${r.statut}${r.erreurs && r.erreurs.length ? ` ; ERREURS :
   const ju = await site(2);
   console.log(`== auteur jurojin.net : ${await auteur(ju)}`);
 
+  // version en cours de la charte de rédaction de chaque site (prepare_draft l'exige)
+  const versionCharte = async (id) => (await pool.query('SELECT MAX(version)::int AS v FROM charte_versions WHERE site_id = $1', [id]).catch(() => ({ rows: [{}] }))).rows[0].v || null;
+  const v15 = await versionCharte(15), v2 = await versionCharte(2);
+
   console.log('\n== 1. pixfeed.net, mode nouveau');
   const dep = await mcp.demanderDepot(15);
   if (dep.erreur) throw new Error(`${dep.erreur.source} : ${dep.erreur.message}`);
   const recu = await envoyer(ESSAI, dep.url_envoi);
   console.log(`   dépôt #${dep.depot} : ${recu.fichiers} fichiers reçus (${(recu.octets / 1024).toFixed(0)} Ko, ${recu.methode}), manifeste : ${recu.manifeste ? 'oui' : 'NON'}`);
-  const sim = await mcp.prepareDraft(dep.depot, true);
+  const sim = await mcp.prepareDraft(dep.depot, true, false, true, v15);
   console.log(`   simulation : ${ligne(sim)}`);
   console.log(`      ${sim.actions.length} actions (${sim.actions.filter((a) => a.quoi === 'téléverser').length} fichiers à téléverser) ; blocs : ${Object.entries(sim.blocs || {}).map(([k, v]) => `${k.replace('core/', '')}×${v}`).join(', ')}`);
   console.log(`      intégrations : ${(sim.integrations || []).map((i) => `${i.url} → ${i.fournisseur}`).join(' ; ')}`);
   for (const a of sim.avertissements || []) console.log(`      avertissement : ${a.source} : ${a.message}`);
-  const ec = await mcp.prepareDraft(dep.depot, false);
+  const ec = await mcp.prepareDraft(dep.depot, false, false, true, v15);
   console.log(`   écriture : ${ligne(ec)}`);
   if (ec.id) {
     console.log(`      brouillon #${ec.id} (${ec.statut_wordpress}) ; ${ec.fichiers.length} fichiers : ${ec.fichiers.map((f) => `${f.fichier}#${f.id}`).join(', ')}`);
     console.log(`      APERÇU : ${ec.lien_apercu}`);
     console.log(`      ÉDITION : ${ec.lien_edition}`);
   }
-  const ec2 = await mcp.prepareDraft(dep.depot, false);
+  const ec2 = await mcp.prepareDraft(dep.depot, false, false, true, v15);
   console.log(`   second appel identique : ${ligne(ec2)} ; brouillon #${ec2.id} ${ec2.id === ec.id ? '(le même)' : '(DIFFÉRENT !)'} ; fichiers réutilisés : ${(ec2.fichiers || []).filter((f) => f.reutilise).length}/${(ec2.fichiers || []).length}`);
 
   console.log('\n== 2. jurojin.net, mise à jour de l\'article Blender, SIMULATION seulement');
@@ -108,7 +112,7 @@ const ligne = (r) => `${r.statut}${r.erreurs && r.erreurs.length ? ` ; ERREURS :
   fs.writeFileSync(path.join(dossier, 'manifeste-wp.json'), JSON.stringify({ site_id: 2, type: 'post', mode: 'mise_a_jour', url_origine: BLENDER, slug: 'motion-capture-pour-blender-les-meilleurs-outils-et-addons', titre: avant[0] ? avant[0].title.raw : 'Motion capture pour Blender', contenu: 'contenu.html', yoast: { phrase_cle: 'motion capture blender' } }));
   const dep2 = await mcp.demanderDepot(2);
   const recu2 = await envoyer(dossier, dep2.url_envoi);
-  const sim2 = await mcp.prepareDraft(dep2.depot, true);
+  const sim2 = await mcp.prepareDraft(dep2.depot, true, false, true, v2);
   console.log(`   dépôt #${dep2.depot} (${recu2.fichiers} fichiers) ; simulation : ${ligne(sim2)}`);
   for (const a of sim2.actions || []) console.log(`      prévu : ${a.quoi}${a.methode ? ' — ' + a.methode : ''}`);
   const apres = await ju.wp('wp/v2/posts', { params: { slug: 'motion-capture-pour-blender-les-meilleurs-outils-et-addons', context: 'edit', _fields: 'id,modified_gmt' } });

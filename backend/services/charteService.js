@@ -294,6 +294,24 @@ async function retour(db, { site, version: n, motif = null, auteur, origine = 'i
   return { ...out, statut: 'écrit', versions: ecrites };
 }
 
+// La charte d'un site sous la forme que reçoit le rédacteur (get_charte) : renvoyée par prepare_draft quand il refuse
+// un dépôt dont identite_version n'est pas la version en cours.
+function pourRedaction(c) {
+  const { commun: C, site: S } = c.contenu;
+  const sections = [];
+  for (const r of C.regles) {
+    const g = sections.find((x) => x.section === r.section);
+    if (g) g.regles.push({ cle: r.cle, texte: r.texte }); else sections.push({ section: r.section, titre: r.section_titre, regles: [{ cle: r.cle, texte: r.texte }] });
+  }
+  const K = C.controles || {};
+  return {
+    site_id: c.site_id, domaine: c.domain, nom: S.nom, identite_version: c.version, version_du: c.created_at,
+    usage: `reporter "identite_version": ${c.version} dans manifeste-wp.json (ou en paramètre de prepare_draft)`,
+    registre: S.registre, identite: S.identite, charte: sections, exemples: C.exemples || [],
+    controles: { liste_noire: K.liste_noire, intertitres_images: K.intertitres_images, connecteurs: K.connecteurs, comparaisons_fin: K.comparaisons_fin, symetries: K.symetries, date_isolee: K.date_isolee, seuils: K.seuils, effets: (S.controles || {}).effets, autre_site: (S.controles || {}).autre_site, mots_signales: (S.controles || {}).mots_signales },
+  };
+}
+
 // Export de la version en cours en Markdown (archives).
 function exporterMarkdown(c) {
   const { commun: C, site: S } = c.contenu;
@@ -337,6 +355,6 @@ async function semerSiAbsente(q, donnees, { auteur = 'Marc' } = {}) {
 }
 
 module.exports = {
-  sitesAvecCharte, courante, versions, version, modifier, retour, exporterMarkdown, semerSiAbsente, diff,
+  sitesAvecCharte, courante, versions, version, modifier, retour, exporterMarkdown, semerSiAbsente, diff, pourRedaction,
   LISTES_COMMUNES, LISTES_SITE, LISTES_REGEX, EFFETS, LIBELLES_LISTES, LIBELLES_EFFETS,
 };

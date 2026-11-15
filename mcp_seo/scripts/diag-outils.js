@@ -21,6 +21,7 @@ const PARAMS = {
   get_charte: ['site_id', 'version', 'historique'],
   modifier_charte: ['site_id', 'operations', 'revenir_a_version', 'motif', 'simulation'],
   demander_depot: ['site_id'],
+  prepare_draft: ['depot', 'simulation', 'identite_version'],
 };
 const LOCAL = `http://127.0.0.1:${process.env.MCP_SEO_PORT || 8790}/mcp`;
 const TOKEN = process.env.MCP_SEO_TOKEN || '';

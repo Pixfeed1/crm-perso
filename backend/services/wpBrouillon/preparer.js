@@ -9,6 +9,7 @@ const crypto = require('crypto');
 const depots = require('./depot');
 const { client } = require('./wp');
 const { relire } = require('./relecture');
+const charte = require('../charteService');
 const R = require('./remplacements');
 
 const LIMITE_TITRE_SEO = 60;
@@ -45,7 +46,7 @@ function mimeDe(nom, types) {
   return null;
 }
 
-async function preparer(db, { depot, simulation = true, creer_etiquettes = false, relecture = true } = {}) {
+async function preparer(db, { depot, simulation = true, creer_etiquettes = false, relecture = true, identite_version: versionParam = null } = {}) {
   const r = { fetched_at: new Date().toISOString(), depot, simulation, actions: [], avertissements: [], erreurs: [] };
   const bloque = (source, message, code = 'bloquant') => r.erreurs.push({ source, code, message });
   const avert = (source, message) => r.avertissements.push({ source, message });
@@ -70,6 +71,27 @@ async function preparer(db, { depot, simulation = true, creer_etiquettes = false
   if (!m.contenu && !parRemplacements) bloque('manifeste', 'contenu manquant (fichier HTML en blocs, ou remplacements en mise à jour)');
   if (m.statut || m.status || m.date) bloque('manifeste', 'statut et date de publication hors de portée : toujours un brouillon');
   r.mode = mode; r.titre = m.titre;
+
+  // ---- charte de rédaction : le dépôt doit avoir été écrit avec la version en cours (identite_version) ----
+  let fiche = null;
+  try { fiche = await charte.courante(db, d.site_id); } catch (e) { if (e.code !== '42P01') throw e; }
+  if (fiche) {
+    const vManif = m.identite_version === undefined || m.identite_version === null || m.identite_version === '' ? null : Number(m.identite_version);
+    const vParam = versionParam === undefined || versionParam === null || versionParam === '' ? null : Number(versionParam);
+    const donnee = vParam !== null ? vParam : vManif;
+    const motif = vParam !== null && vManif !== null && vParam !== vManif ? `identite_version différente dans le manifeste (${vManif}) et en paramètre (${vParam})`
+      : donnee === null ? 'identite_version absente (manifeste-wp.json ou paramètre de prepare_draft)'
+        : donnee !== fiche.version ? `identite_version ${donnee} : la charte du site est en v${fiche.version}` : null;
+    r.identite = { site: fiche.contenu.site.nom || fiche.domain, version: fiche.version };
+    if (motif) {
+      bloque('charte', `${motif}. Dépôt refusé : relire la charte de rédaction et l'identité du site ci-dessous (champ « charte »), réécrire au besoin, puis déposer avec "identite_version": ${fiche.version}.`, 'identite_version');
+      r.charte = charte.pourRedaction(fiche);
+      return fin();
+    }
+    action({ quoi: `charte de rédaction de ${fiche.domain} v${fiche.version}`, identite_version: fiche.version });
+  } else {
+    avert('charte', `aucune charte de rédaction pour le site ${d.site_id} : identite_version non contrôlée`);
+  }
 
   // ---- site, accès, inventaire ----
   const { rows: s } = await db.pool.query('SELECT domain, wp_base_url, wp_auteur FROM seo_sites WHERE id = $1', [d.site_id]);

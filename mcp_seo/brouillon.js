@@ -48,8 +48,8 @@ export async function demanderDepot(siteId) {
   });
 }
 
-export async function prepareDraft(depot, simulation = true, creerEtiquettes = false, relecture = true) {
-  const j = await backend('preparer', { depot, simulation, creer_etiquettes: creerEtiquettes, relecture }, 30 * 60 * 1000);
+export async function prepareDraft(depot, simulation = true, creerEtiquettes = false, relecture = true, identiteVersion = null) {
+  const j = await backend('preparer', { depot, simulation, creer_etiquettes: creerEtiquettes, relecture, ...(identiteVersion !== null ? { identite_version: identiteVersion } : {}) }, 30 * 60 * 1000);
   if (j.erreur) return { fetched_at: new Date().toISOString(), depot, simulation, ...j };
   return compact(j);
 }

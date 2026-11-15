@@ -238,6 +238,8 @@ version?, historique?)` en lecture ; `modifier_charte(site_id, operations | reve
 pour enregistrer une consigne de Marc, sans validation dans l'interface (règle, exemple, identité, registre, liste,
 seuil, effet). Chaque écriture crée une version ; la charte commune fait monter les deux sites. `get_site_resources`
 joint la section `identite` à `redaction` ; `demander_depot` rappelle `identite_version`.
+`prepare_draft` exige `"identite_version"` (manifeste-wp.json ou paramètre) égal à la version en cours de la charte
+du site : sinon dépôt refusé, simulation comprise, avec la charte complète dans la réponse (champ `charte`).
 Après un déploiement : `node scripts/diag-outils.js --local --strict` (lancé par deploy.sh) vérifie que le service
 sert bien les outils et paramètres du code ; `node ../backend/scripts/verifier-netlinking.js` fait l'état des niches.
 

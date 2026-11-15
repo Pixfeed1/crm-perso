@@ -157,6 +157,35 @@ test('simulation : plan complet, aucune écriture dans WordPress', opts, async (
   });
 });
 
+test('charte : identite_version obligatoire (manifeste ou paramètre), refus avec la charte, simulation comprise', opts, async () => {
+  await avecBase(async (db) => {
+    const C = require('../services/charteService');
+    const donnees = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'scripts', 'donnees', 'charte-initiale.json'), 'utf8'));
+    assert.deepEqual(await C.semerSiAbsente(db.pool, { ...donnees, sites: { 15: donnees.sites['15'] } }), [15]);
+    await C.modifier(db, { site: 15, operations: [{ objet: 'registre', action: 'modifier', valeur: 'tutoiement' }], auteur: 'x', simulation: false });
+    await C.modifier(db, { site: 15, operations: [{ objet: 'registre', action: 'modifier', valeur: 'vouvoiement' }], auteur: 'x', simulation: false });
+    const essai = async (extra, param) => preparer(db, { depot: (await nouveauDepot(db, { 'manifeste-wp.json': { ...manifeste(), ...extra } })).depot, simulation: true, relecture: false, ...(param !== undefined ? { identite_version: param } : {}) });
+    let r = await essai({});
+    assert.equal(r.statut, 'bloqué');
+    assert.deepEqual(r.erreurs.map((e) => [e.source, e.code]), [['charte', 'identite_version']]);
+    assert.match(r.erreurs[0].message, /identite_version absente.*"identite_version": 3/);
+    assert.deepEqual([r.charte.identite_version, r.charte.registre, r.charte.nom], [3, 'vouvoiement', 'PixFeed']);
+    assert.match(r.charte.identite, /^PixFeed est une agence web/);
+    assert.ok(r.charte.charte.length && r.charte.exemples.length === 2 && r.charte.controles.liste_noire.length);
+    assert.ok(!r.actions.length, 'rien préparé, aucune lecture de WordPress');
+    r = await essai({ identite_version: 1 });
+    assert.match(r.erreurs[0].message, /identite_version 1 : la charte du site est en v3/);
+    r = await essai({ identite_version: 3 }, 2);
+    assert.match(r.erreurs[0].message, /différente dans le manifeste \(3\) et en paramètre \(2\)/);
+    r = await essai({ identite_version: 3 });
+    assert.ok(!r.erreurs.some((e) => e.source === 'charte'), JSON.stringify(r.erreurs));
+    assert.deepEqual(r.identite, { site: 'PixFeed', version: 3 });
+    assert.ok(r.actions.some((a) => a.quoi === 'charte de rédaction de 127.0.0.1 v3'));
+    r = await essai({}, 3);
+    assert.ok(!r.erreurs.some((e) => e.source === 'charte'), 'en paramètre');
+  });
+});
+
 test('plateformes : cases et adresses ensemble, contrôles, avant / après, écriture', opts, async () => {
   await avecBase(async (db) => {
     const m = manifeste();

@@ -77,7 +77,8 @@ function passageUnique(raw) {
   const d = await depots.creer(db, siteId);
   await depots.recevoir(db, d.jeton, [{ fieldname: 'fichiers', originalname: 'manifeste-wp.json', path: fichier, size: fs.statSync(fichier).size }]);
   fs.rmSync(tmp, { recursive: true, force: true });
-  const r = await preparer(db, { depot: d.depot, simulation: !ecrire, relecture: false });
+  const v = (await db.pool.query('SELECT MAX(version)::int AS v FROM charte_versions WHERE site_id = $1', [siteId]).catch(() => ({ rows: [{}] }))).rows[0].v || null;
+  const r = await preparer(db, { depot: d.depot, simulation: !ecrire, relecture: false, identite_version: v });   // version en cours de la charte du site
   console.log(`Statut : ${r.statut}`);
   for (const a of r.actions) console.log(`  · ${a.quoi}${a.methode ? ` (${a.methode})` : ''}${a.avant ? `\n      avant : ${a.avant}\n      après : ${a.apres}` : ''}`);
   for (const e of r.erreurs) console.log(`  BLOQUANT ${e.source} : ${e.message}`);
