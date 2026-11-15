@@ -10,6 +10,7 @@ const depots = require('./depot');
 const { client } = require('./wp');
 const { relire } = require('./relecture');
 const charte = require('../charteService');
+const style = require('./controleStyle');
 const R = require('./remplacements');
 
 const LIMITE_TITRE_SEO = 60;
@@ -117,6 +118,7 @@ async function preparer(db, { depot, simulation = true, creer_etiquettes = false
 
   // ---- remplacements (mise à jour) : on part du content.raw actuel de la page publiée ----
   let contenuRemplace = null;
+  let ancienRemplace = null;                                                      // content.raw de départ (périmètre des contrôles de style)
   if (parRemplacements && !r.erreurs.length && m.url_origine) {
     try {
       const slugOrig = decodeURI(new URL(m.url_origine).pathname).replace(/\/+$/, '').split('/').pop();
@@ -134,6 +136,7 @@ async function preparer(db, { depot, simulation = true, creer_etiquettes = false
           if (!res.erreurs.length) {
             R.controler(base, res.texte).forEach((e) => bloque('remplacements', e));
             contenuRemplace = res.texte;
+            ancienRemplace = base;
             action({ quoi: 'contenu de départ', source: `content.raw actuel de #${orig.id}`, sha256: empreinte, longueur: Array.from(base).length });
             for (const x of res.rapport) action({ quoi: `remplacement n° ${x.n}`, occurrences: x.occurrences, avant: x.avant, apres: x.apres });
             action({ quoi: 'contenu obtenu', longueur: Array.from(res.texte).length, sha256: R.sha256(res.texte) });
@@ -242,6 +245,34 @@ async function preparer(db, { depot, simulation = true, creer_etiquettes = false
     }
   }
 
+  // ---- contrôles de style (charte en base) : périmètre, puis évaluation d'un texte ----
+  // Nouveau, ou mise à jour qui remplace tout le contenu : tout l'article est contrôlé. Mise à jour par
+  // remplacements : seules les parties que le dépôt écrit bloquent ; les tics de l'ancien texte sont listés.
+  const MESURES = ['paragraphes_1_phrase', 'paragraphes_courts', 'rythme', 'phrases_longues'];
+  const evaluer = (texte) => {
+    const y = m.yoast || {};
+    const opts = { titre: m.titre, cle: y.phrase_cle || '', champs: { titre_seo: y.titre, meta: y.meta }, charte: fiche.contenu };
+    const complet = style.controler(texte, opts);
+    if (!parRemplacements || ancienRemplace === null) return { complet, bloquant: complet.bloquant, avertissement: complet.avertissement, existant: [] };
+    const ecrites = style.partiesEcrites(ancienRemplace, texte);
+    const ecrit = style.controler(ecrites.join('\n'), opts);
+    const nParas = ecrites.filter((u) => /^<p[\s>]/i.test(u)).length;
+    const minParas = Number(((fiche.contenu.commun.controles || {}).seuils || {}).mise_a_jour_mesures_min_paragraphes) || 0;
+    const bloquant = [], avertissement = [...ecrit.avertissement];
+    for (const p of ecrit.bloquant) {
+      if (MESURES.includes(p.code) && nParas < minParas) avertissement.push({ ...p, texte: `${p.texte} (mesure sur ${nParas} paragraphe(s) écrit(s), sous le seuil de ${minParas} : non bloquant)` });
+      else bloquant.push(p);
+    }
+    const cleP = (p) => `${p.code}|${p.texte}`;
+    const dansEcrit = new Set([...ecrit.bloquant, ...ecrit.avertissement].map(cleP));
+    const existant = [...complet.bloquant, ...complet.avertissement].filter((p) => !dansEcrit.has(cleP(p)) && !MESURES.includes(p.code));
+    return { complet, ecrit, bloquant, avertissement, existant, parties_ecrites: ecrites.length, paragraphes_ecrits: nParas };
+  };
+  let styleDepose = null;
+  if (fiche && (m.contenu || contenuRemplace !== null)) {
+    try { styleDepose = evaluer(lireContenu()); } catch (e) { /* contenu illisible : signalé plus bas */ }
+  }
+
   // ---- relecture complète (un Claude indépendant) : avant tous les contrôles, qui portent sur le texte corrigé ----
   let contenuRelu = null;
   const titreDepose = m.titre;                                                   // repère stable du brouillon, avant relecture
@@ -274,6 +305,7 @@ async function preparer(db, { depot, simulation = true, creer_etiquettes = false
   if (Object.keys(m.yoast || {}).length && !inv.yoast_actif) avert('Yoast', "Yoast n'est pas actif : les champs seront enregistrés mais sans effet");
 
   // ---- fichiers ----
+  const styleFichiers = [];                                                       // Claude / Anthropic dans les médias
   const fichiers = new Map();                                                     // chemin relatif -> infos
   const declarer = (f) => {
     const rel = norm(f.fichier);
@@ -298,7 +330,17 @@ async function preparer(db, { depot, simulation = true, creer_etiquettes = false
         if (!x.alt || !String(x.alt).trim()) bloque('fichiers', `${x.fichier} : texte alternatif (alt) manquant`);
         if (!x.legende) avert('fichiers', `${x.fichier} : pas de légende`);
       }
-      x.sha = sha256(fs.readFileSync(abs));
+      const octets = fs.readFileSync(abs);
+      x.sha = sha256(octets);
+      if (fiche) {
+        const motifs = (fiche.contenu.commun.controles || {}).ia_motifs || [];
+        const dansFichier = style.iaDansFichier(octets, motifs);
+        if (dansFichier) styleFichiers.push({ code: 'ia_credits', texte: `« ${dansFichier} » dans les métadonnées de ${x.fichier} (XMP, C2PA ou EXIF) : retirer les métadonnées, le crédit est le site` });
+        for (const [champ, v] of [['légende', x.legende], ['titre', x.titre], ['description', x.description], ['texte alternatif', x.alt]]) {
+          const trouve = v && style.iaDansFichier(String(v), motifs);
+          if (trouve) styleFichiers.push({ code: champ === 'texte alternatif' ? 'ia_texte' : 'ia_credits', texte: `« ${trouve} » dans le champ ${champ} de ${x.fichier} : « ${String(v).slice(0, 100)} »` });
+        }
+      }
       const ex = await wp('outils-site/v1/media-empreinte', { params: { sha: x.sha } });
       if (ex && ex.id) { x.id = ex.id; x.url = ex.url; x.reutilise = true; }
       action({ quoi: x.reutilise ? 'réutiliser le média' : 'téléverser', fichier: x.fichier, ...(x.reutilise ? { id: x.id } : { octets: x.octets, type: x.mime }) });
@@ -339,6 +381,32 @@ async function preparer(db, { depot, simulation = true, creer_etiquettes = false
       r.integrations = (v.embeds || []).map((e) => ({ url: e.url, fournisseur: e.fournisseur || 'aucun' }));
     } catch (e) { bloque('vérification du contenu', e.message); }
   }
+
+  // ---- contrôles de style sur le texte final (après les corrections de la relecture) ----
+  if (fiche && contenu) {
+    const fin2 = evaluer(contenu);
+    const effets = ((fiche.contenu.site.controles || {}).effets) || {};
+    for (const p of styleFichiers) {
+      const e = effets[p.code] || 'bloquant';
+      if (e === 'bloquant') fin2.bloquant.push(p); else if (e === 'avertissement') fin2.avertissement.push(p);
+    }
+    const textes = (l) => l.map((p) => p.texte);
+    const avant = styleDepose ? new Set(textes(styleDepose.bloquant)) : new Set();
+    const introduits = contenuRelu !== null ? fin2.bloquant.filter((p) => !avant.has(p.texte) && !styleFichiers.includes(p)) : [];
+    r.style = {
+      statut: fin2.bloquant.length ? 'ÉCHEC' : 'OK', bloquants: fin2.bloquant.length,
+      perimetre: parRemplacements ? `parties écrites par le dépôt (${fin2.parties_ecrites || 0}, dont ${fin2.paragraphes_ecrits || 0} paragraphe(s)) ; ancien texte listé sans bloquer` : 'article entier',
+      bloquant: textes(fin2.bloquant), avertissement: textes(fin2.avertissement), mesures: fin2.complet.mesures,
+      ...(fin2.existant.length ? { ancien_texte_non_bloquant: textes(fin2.existant) } : {}),
+      ...(introduits.length ? { introduits_par_la_relecture: textes(introduits) } : {}),
+      ...(styleDepose && contenuRelu !== null && styleDepose.bloquant.length !== fin2.bloquant.length ? { avant_relecture: { bloquants: styleDepose.bloquant.length, bloquant: textes(styleDepose.bloquant) } } : {}),
+    };
+    for (const p of introduits) avert('style', `introduit par une correction de la relecture : ${p.texte}`);
+    for (const p of fin2.bloquant) {
+      if (simulation) avert('style', `bloquera à l'écriture : ${p.texte}`);
+      else bloque('style', p.texte, `style_${p.code}`);
+    }
+  } else if (fiche && !contenu && !r.erreurs.length) avert('style', 'contenu vide : contrôles de style non faits');
 
   // ---- cible : même brouillon d'un appel à l'autre ; slug libre ----
   const repere = mode === 'mise_a_jour' ? String(m.url_origine).replace(/[?#].*$/, '').replace(/\/+$/, '') : (m.slug || titreDepose);
@@ -428,6 +496,22 @@ async function preparer(db, { depot, simulation = true, creer_etiquettes = false
       id = copie;
     }
     const apres = await wp(`wp/v2/${rb}/${id}`, { params: { context: 'edit', _fields: 'id,status,slug,link,title,outils_yoast,outils_plateformes,featured_media' } });
+    // Blancs avant la ponctuation dans le rendu du brouillon (codes courts du thème) : contrôlé après écriture.
+    let renduEchec = false;
+    if (fiche) {
+      const e = (((fiche.contenu.site.controles || {}).effets) || {}).blancs_rendu || 'bloquant';
+      if (e !== 'inactif') {
+        try {
+          const rendu = await wp(`wp/v2/${rb}/${id}`, { params: { context: 'edit', _fields: 'content' } });
+          const blancs = style.blancsRendu(rendu && rendu.content && rendu.content.rendered);
+          r.style = { ...(r.style || {}), rendu: blancs.length ? { statut: 'ÉCHEC', effet: e, paragraphes: blancs.slice(0, 10) } : { statut: 'OK' } };
+          if (blancs.length) {
+            const msg = `aperçu rendu : blanc avant la ponctuation ou après une apostrophe dans ${blancs.length} paragraphe(s), ex. « ${blancs[0]} » (code court du thème)`;
+            if (e === 'bloquant') { bloque('style (rendu)', `${msg} : ne pas publier`, 'style_blancs_rendu'); renduEchec = true; } else avert('style (rendu)', msg);
+          }
+        } catch (err) { avert('style (rendu)', `aperçu rendu non contrôlé : ${err.message}`); }
+      }
+    }
     const sortieFichiers = [...fichiers.values()].map((x) => ({ fichier: x.fichier, id: x.id, url: x.url, reutilise: x.reutilise || undefined }));
     const apercu = `${base}/?${t.type === 'page' ? 'page_id' : 'p'}=${id}${['post', 'page'].includes(t.type) ? '' : `&post_type=${t.type}`}&preview=true`;
     await db.pool.query(
@@ -436,7 +520,8 @@ async function preparer(db, { depot, simulation = true, creer_etiquettes = false
       [d.site_id, d.id, cle, mode, id, original ? original.id : null, t.type, m.titre, JSON.stringify(sortieFichiers),
         avant ? JSON.stringify(avant) : null, JSON.stringify(apres), JSON.stringify({ actions: r.actions, avertissements: r.avertissements })]);
     return {
-      ...fin(), id, statut_wordpress: apres.status, methode, original_id: original ? original.id : undefined,
+      ...fin(), ...(renduEchec ? { statut: 'écrit, mais rendu en échec (blancs avant la ponctuation) : ne pas publier' } : {}),
+      id, statut_wordpress: apres.status, methode, original_id: original ? original.id : undefined,
       lien_apercu: apercu, lien_edition: `${base}/wp-admin/post.php?post=${id}&action=edit`, fichiers: sortieFichiers,
     };
   } catch (e) {

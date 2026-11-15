@@ -240,6 +240,12 @@ seuil, effet). Chaque écriture crée une version ; la charte commune fait monte
 joint la section `identite` à `redaction` ; `demander_depot` rappelle `identite_version`.
 `prepare_draft` exige `"identite_version"` (manifeste-wp.json ou paramètre) égal à la version en cours de la charte
 du site : sinon dépôt refusé, simulation comprise, avec la charte complète dans la réponse (champ `charte`).
+Contrôles de style (`backend/services/wpBrouillon/controleStyle.js`) : portage de `controle_style.py`, mêmes calculs et
+mêmes messages (parité vérifiée par `backend/tests/controleStyle.test.js` sur les quatre textes d'essai), avec les
+listes et seuils lus dans la charte à chaque dépôt ; en plus, section 12 et interdits de la section 11.5 avec l'effet
+réglé par site. Affichés en simulation, bloquants en écriture, repassés après la relecture ; en mise à jour par
+remplacements, seules les parties écrites bloquent (`mise_a_jour_mesures_min_paragraphes` pour les proportions).
+Après écriture, blancs avant la ponctuation dans l'aperçu rendu (effet `blancs_rendu` par site).
 Après un déploiement : `node scripts/diag-outils.js --local --strict` (lancé par deploy.sh) vérifie que le service
 sert bien les outils et paramètres du code ; `node ../backend/scripts/verifier-netlinking.js` fait l'état des niches.
 

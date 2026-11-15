@@ -47,6 +47,14 @@ test('charte en base : v1 au démarrage, modifications versionnées, historique,
     // Remplissage automatique : une seule fois, jamais par-dessus une charte existante.
     assert.deepEqual(await C.semerSiAbsente(pool, donnees()), [2, 15]);
     assert.deepEqual(await C.semerSiAbsente(pool, donnees()), []);
+    assert.deepEqual(await C.completerReglages(pool), [], 'v1 complète : rien à ajouter');
+    // Une charte d'avant un nouveau réglage (ici la production, remplie avant le 16/11) : complétée une fois.
+    await pool.query("UPDATE charte_versions SET contenu = contenu #- '{commun,controles,seuils,mise_a_jour_mesures_min_paragraphes}'");
+    assert.deepEqual(await C.completerReglages(pool), [{ site_id: 2, version: 2 }, { site_id: 15, version: 2 }]);
+    assert.deepEqual(await C.completerReglages(pool), []);
+    const v2 = await C.courante(db, 2);
+    assert.deepEqual([v2.auteur, v2.origine, v2.contenu.commun.controles.seuils.mise_a_jour_mesures_min_paragraphes], ['CRM', 'reglages', 5]);
+    await pool.query('DELETE FROM charte_versions WHERE version = 2');
     let j = await C.courante(db, 2);
     assert.deepEqual([j.version, j.origine, j.domain, j.contenu.site.registre, j.contenu.commun.regles.length], [1, 'remplissage', 'jurojin.net', 'tutoiement', 63]);
     assert.equal((await C.sitesAvecCharte(db)).length, 2);

@@ -336,6 +336,36 @@ function exporterMarkdown(c) {
   return l.join('\n');
 }
 
+// Réglages introduits après la v1 (nouveaux contrôles) : ajoutés une fois à la charte en cours, par une nouvelle
+// version des deux sites (jamais de valeur cachée dans le code). Une valeur déjà présente n'est jamais modifiée.
+const REGLAGES_AJOUTES = {
+  seuils: {
+    // mise à jour par remplacements : les mesures de proportion (paragraphes d'une phrase, rythme, phrases longues)
+    // ne bloquent que si le dépôt écrit au moins ce nombre de paragraphes (en dessous, elles sont affichées)
+    mise_a_jour_mesures_min_paragraphes: 5,
+  },
+};
+async function completerReglages(q) {
+  const sites = (await q.query('SELECT DISTINCT ON (site_id) site_id, version, contenu FROM charte_versions ORDER BY site_id, version DESC')).rows;
+  if (!sites.length) return [];
+  const manque = {};
+  for (const [k, v] of Object.entries(REGLAGES_AJOUTES.seuils)) if (sites.some((s) => !((s.contenu.commun.controles || {}).seuils || {}).hasOwnProperty(k))) manque[k] = v;
+  if (!Object.keys(manque).length) return [];
+  const ecrites = [];
+  for (const s of sites) {
+    const apres = copie(s.contenu);
+    const seuils = apres.commun.controles.seuils = apres.commun.controles.seuils || {};
+    for (const [k, v] of Object.entries(manque)) if (!(k in seuils)) seuils[k] = v;
+    const changements = diff(s.contenu, apres);
+    if (!changements.length) continue;
+    const r = await q.query(
+      "INSERT INTO charte_versions (site_id, version, contenu, auteur, origine, motif, changements) VALUES ($1, $2, $3, 'CRM', 'reglages', $4, $5) ON CONFLICT (site_id, version) DO NOTHING RETURNING version",
+      [s.site_id, s.version + 1, JSON.stringify(apres), `nouveaux réglages des contrôles : ${Object.keys(manque).join(', ')}`, JSON.stringify(changements)]);
+    if (r.rows[0]) ecrites.push({ site_id: s.site_id, version: r.rows[0].version });
+  }
+  return ecrites;
+}
+
 // Remplissage initial, au démarrage du backend (autoInitDatabase) : v1 de chaque site du fichier de données qui
 // existe dans le CRM et n'a pas encore de charte. Rien d'autre à faire ; le fichier est retiré du dépôt ensuite.
 async function semerSiAbsente(q, donnees, { auteur = 'Marc' } = {}) {
@@ -355,6 +385,6 @@ async function semerSiAbsente(q, donnees, { auteur = 'Marc' } = {}) {
 }
 
 module.exports = {
-  sitesAvecCharte, courante, versions, version, modifier, retour, exporterMarkdown, semerSiAbsente, diff, pourRedaction,
+  sitesAvecCharte, courante, versions, version, modifier, retour, exporterMarkdown, semerSiAbsente, completerReglages, diff, pourRedaction,
   LISTES_COMMUNES, LISTES_SITE, LISTES_REGEX, EFFETS, LIBELLES_LISTES, LIBELLES_EFFETS,
 };

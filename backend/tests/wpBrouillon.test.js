@@ -80,7 +80,13 @@ function wpFaux(req, res, corps) {
     const x = { ...(W.posts.get(id) || { id, status: 'draft' }), ...b, id };
     x.link = `${base}/${x.slug || '?p=' + id}/`; W.posts.set(id, x); return json(m[1] ? 200 : 201, x);
   }
-  if (m && req.method === 'GET') { const x = W.posts.get(Number(m[1])); return x ? json(200, x) : json(404, { code: 'rest_post_invalid_id', message: 'non' }); }
+  if (m && req.method === 'GET') {
+    const x = W.posts.get(Number(m[1]));
+    if (!x) return json(404, { code: 'rest_post_invalid_id', message: 'non' });
+    // Rendu (context=edit, _fields=content) : [terme] rendu comme le thème JurojiNet avant correctif (blancs autour du mot).
+    if (u.searchParams.get('_fields') === 'content' && typeof x.content === 'string') return json(200, { content: { raw: x.content, rendered: x.content.replace(/\[terme[^\]]*\]([\s\S]*?)\[\/terme\]/g, '<span class="term-tooltip">\n        $1        <span class="term-tooltip__popup">…</span>\n    </span>\n    ') } });
+    return json(200, x);
+  }
   if (p === 'outils-site/v1/copie-de-travail') { ecrit(); const b = JSON.parse(corps); const id = W.prochain++; W.posts.set(id, { id, status: 'draft', copie_de: b.original, slug_voulu: b.slug }); return json(200, { id, original: b.original, methode: 'copie_outils' }); }
   return json(404, { code: 'rest_no_route', message: `route inconnue ${req.method} ${p}` });
 }
@@ -183,6 +189,69 @@ test('charte : identite_version obligatoire (manifeste ou paramètre), refus ave
     assert.ok(r.actions.some((a) => a.quoi === 'charte de rédaction de 127.0.0.1 v3'));
     r = await essai({}, 3);
     assert.ok(!r.erreurs.some((e) => e.source === 'charte'), 'en paramètre');
+  });
+});
+
+test('contrôles de style : affichés en simulation, bloquants en écriture, repassés après la relecture, périmètre des mises à jour, rendu', opts, async () => {
+  await avecBase(async (db) => {
+    const C = require('../services/charteService');
+    const donnees = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'scripts', 'donnees', 'charte-initiale.json'), 'utf8'));
+    await C.semerSiAbsente(db.pool, { ...donnees, sites: { 15: donnees.sites['15'] } });
+    const p = (t) => `<!-- wp:paragraph -->\n<p>${t}</p>\n<!-- /wp:paragraph -->`;
+    const dev = "Une boutique PrestaShop qui rame a rarement un seul coupable, et le premier réflexe consiste souvent à changer d'hébergeur sans rien mesurer. Avant de toucher au serveur, on relève les temps de réponse de la page d'accueil, d'une fiche produit et du panier, à froid puis à chaud. Ces trois mesures disent déjà si le problème vient du code, de la base ou de la machine. Ici, le panier mettait quatre secondes.";
+    const propre = [p(dev), p(dev.replace('quatre', 'trois')), p(dev.replace('quatre', 'deux'))].join('\n');
+    const avecTics = [p(`${dev} Bonne nouvelle, la cerise sur le gâteau reste le cache.`), p(dev), p(dev.replace('quatre', 'deux'))].join('\n');
+    const deposer = async (contenu, extra = {}) => (await nouveauDepot(db, { 'manifeste-wp.json': { ...manifeste(), fichiers: [], image_a_la_une: undefined, yoast: { phrase_cle: 'boutique prestashop' }, ...extra }, 'contenu.html': contenu })).depot;
+    const prep = (depot, simulation) => preparer(db, { depot, simulation, relecture: false, identite_version: 1 });
+
+    // Simulation : affichés (bloquera à l'écriture) ; écriture : bloquée, rien écrit.
+    let depot = await deposer(avecTics, { slug: 'style-tics' });
+    let r = await prep(depot, true);
+    assert.deepEqual(r.erreurs, [], JSON.stringify(r.erreurs));
+    assert.deepEqual([r.style.statut, r.style.perimetre], ['ÉCHEC', 'article entier']);
+    assert.match(r.style.bloquant[0], /expressions toutes faites : \['Bonne nouvelle', 'cerise sur le gâteau'\]/);
+    assert.ok(r.avertissements.some((a) => a.source === 'style' && /^bloquera à l'écriture : expressions toutes faites/.test(a.message)));
+    const avant = W.ecritures;
+    r = await prep(depot, false);
+    assert.equal(r.statut, 'bloqué');
+    assert.deepEqual(r.erreurs.map((e) => [e.source, e.code]), [['style', 'style_liste_noire']]);
+    assert.equal(W.ecritures, avant, 'rien écrit');
+
+    // Texte propre : écrit ; un tic introduit par une correction de la relecture est repéré et bloque.
+    relecture.definirAppel(async () => ({ corrections: [{ type: 'langue', champ: 'contenu', avant: 'Ici, le panier mettait trois secondes.', apres: 'Bonne nouvelle : pas de panique, le panier mettait trois secondes.' }], signalements: [], affirmations: { relevees: 0 }, resume: 'une correction' }));
+    try {
+      depot = await deposer(propre, { slug: 'style-relecture' });
+      r = await preparer(db, { depot, simulation: false, identite_version: 1 });
+      assert.deepEqual(r.erreurs.map((e) => e.source), ['style']);
+      assert.match(r.style.introduits_par_la_relecture[0], /Bonne nouvelle', 'pas de panique/);
+      assert.ok(r.avertissements.some((a) => /^introduit par une correction de la relecture/.test(a.message)));
+    } finally { relecture.definirAppel(relecteurVide); }
+
+    // Rendu : [terme] rendu avec des blancs (thème) : écrit, mais signalé ; bloquant sur pixfeed.net.
+    depot = await deposer([p(dev.replace('les temps de réponse', 'le [terme slug="ttfb"]TTFB[/terme], puis les temps de réponse')), p(dev), p(dev.replace('quatre', 'deux'))].join('\n'), { slug: 'style-rendu' });
+    r = await prep(depot, false);
+    assert.ok(r.id, 'brouillon écrit');
+    assert.match(r.statut, /^écrit, mais rendu en échec/);
+    assert.equal(r.style.rendu.statut, 'ÉCHEC');
+    assert.match(r.style.rendu.paragraphes[0], /le TTFB .* ,/, 'blanc avant la virgule après le code court');
+
+    // Mise à jour par remplacements : seules les parties écrites bloquent, l'ancien texte est listé.
+    const ANCIEN = [p(`${dev} Mauvaise surprise, le nerf de la guerre reste le cache.`), p(dev.replace('quatre', 'deux')), p('Tarif : 50 € par mois, sans engagement, pour la surveillance et les mises à jour de la boutique.')].join('\n');
+    W.posts.set(70, { id: 70, status: 'publish', slug: 'boutique-lente', link: `${base}/boutique-lente/`, modified_gmt: '2026-11-01T10:00:00', title: { raw: 'Boutique lente' }, content: { raw: ANCIEN } });
+    const sha = require('../services/wpBrouillon/remplacements').sha256(ANCIEN);
+    const maj = async (remplacements, simulation) => {
+      const m = { ...manifeste(), fichiers: [], image_a_la_une: undefined, yoast: { phrase_cle: 'boutique prestashop' }, mode: 'mise_a_jour', url_origine: `${base}/boutique-lente/`, slug: 'boutique-lente', base_sha256: sha, remplacements };
+      delete m.contenu;
+      return prep((await nouveauDepot(db, { 'manifeste-wp.json': m })).depot, simulation);
+    };
+    r = await maj([{ avant: '50 €', apres: '55 €' }], false);
+    assert.deepEqual(r.erreurs, [], JSON.stringify(r.erreurs));
+    assert.equal(r.style.statut, 'OK');
+    assert.match(r.style.perimetre, /parties écrites par le dépôt \(1, dont 1 paragraphe/);
+    assert.ok(r.style.ancien_texte_non_bloquant.some((t) => /expressions toutes faites : \['Mauvaise surprise', 'nerf de la guerre'\]/.test(t)));
+    r = await maj([{ avant: '50 € par mois', apres: '55 € par mois (pas de panique, la cerise sur le gâteau)' }], false);
+    assert.deepEqual(r.erreurs.map((e) => e.code), ['style_liste_noire']);
+    W.posts.delete(70);
   });
 });
 

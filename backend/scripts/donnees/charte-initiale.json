@@ -592,7 +592,8 @@
     "recit_bloquant": 3,
     "recit_total_avertissement": 6,
     "voix_tics_style_a_revoir": 5,
-    "premiere_phrase_mots_min": 8
+    "premiere_phrase_mots_min": 8,
+    "mise_a_jour_mesures_min_paragraphes": 5
    }
   }
  },

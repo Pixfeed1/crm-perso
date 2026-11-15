@@ -1,0 +1,144 @@
+[
+ {
+  "fichier": "1-ancien-mac-studio.html",
+  "titre": "Faut-il acheter un Mac Studio M3/M4 pour faire de l'animation 3D ? Notre avis sans filtre",
+  "cle": "mac studio",
+  "attendu": {
+   "bloquant": [
+    "expressions toutes faites : ['Avant de casser', 'Bonne nouvelle', 'Mauvaise surprise', 'casser ta tirelire', 'coup de chaud', 'court derrière', \"fait de l'œil\", 'filer vers', 'la pomme', 'le débat est clos', 'le joker', 'mauvaises nouvelles', 'on a fait le calcul', 'pris sa retraite', 'sans filtre']",
+    "28 % de paragraphes d'une seule phrase (max 20 %) : Faits et prix relevés le 15 novembre 2026. | Depuis, le M4 Max et le M3 Ultra ont quitté la gamme, selon l'historiq | L'animation 3D, c'est surtout de la manipulation : poser des clés, tor | Pour ces tâches, Puget Systems est formel dans ses conseils pour Blend | Selon Puget, ajouter des cœurs n'accélère ni la modélisation ni l'anim | Dans Redshift, Apple annonce un rendu 1,4 fois plus rapide sur le M5 M",
+    "ligne datée isolée en gabarit : « Faits et prix relevés le 15 novembre 2026. »",
+    "intertitre imagé : « Le Mac Studio M3/M4 a déjà pris sa retraite »",
+    "intertitre imagé : « Au rendu, la pomme court derrière les GeForce »",
+    "intertitre imagé : « La mémoire unifiée, le joker que Nvidia n'a pas »",
+    "intertitre imagé : « Les logiciels : qui a le droit d'entrer dans le Mac Studio ? »",
+    "intertitre imagé : « Notre avis sans filtre sur le Mac Studio »"
+   ],
+   "avertissement": [
+    "paragraphes trop courts en moyenne (moins de 2,5 phrases)",
+    "rythme uniforme : écart type de 4.0 mots (viser 6 ou plus)",
+    "0 % de phrases de plus de 20 mots : texte haché",
+    "écho du titre dans le corps : « studio m3 » (2 fois)",
+    "écho du titre dans le corps : « m3 m4 » (2 fois)",
+    "5 paragraphes ouverts par un connecteur mécanique",
+    "marqueur répété en tête de phrase : « le m3 ultra » 3 fois",
+    "marqueur répété en tête de phrase : « le m5 max » 3 fois",
+    "marqueur répété en tête de phrase : « le m4 max » 3 fois"
+   ],
+   "mesures": {
+    "paragraphes": 53,
+    "part_paragraphes_1_phrase": 28,
+    "phrases_par_paragraphe": 1.75,
+    "phrases": 93,
+    "mots_par_phrase": 12.6,
+    "ecart_type": 4.0,
+    "part_phrases_plus_20_mots": 0,
+    "phrase_la_plus_longue": 20,
+    "intertitres": [
+     "Le Mac Studio M3/M4 a déjà pris sa retraite",
+     "Pour animer, un cœur rapide vaut mieux que dix",
+     "Au rendu, la pomme court derrière les GeForce",
+     "La mémoire unifiée, le joker que Nvidia n'a pas",
+     "Les logiciels : qui a le droit d'entrer dans le Mac Studio ?",
+     "M4 Max d'occasion ou M5 Max neuf : on a fait le calcul",
+     "Notre avis sans filtre sur le Mac Studio"
+    ]
+   },
+   "statut": "ÉCHEC"
+  }
+ },
+ {
+  "fichier": "2-mac-studio-reecrit.html",
+  "titre": "Faut-il acheter un Mac Studio M3/M4 pour faire de l'animation 3D ?",
+  "cle": "mac studio",
+  "attendu": {
+   "bloquant": [],
+   "avertissement": [
+    "écho du titre dans le corps : « studio m3 » (2 fois)",
+    "écho du titre dans le corps : « m3 m4 » (2 fois)",
+    "marqueur répété en tête de phrase : « le m5 max » 3 fois",
+    "marqueur répété en tête de phrase : « le m4 max » 3 fois"
+   ],
+   "mesures": {
+    "paragraphes": 16,
+    "part_paragraphes_1_phrase": 0,
+    "phrases_par_paragraphe": 4.81,
+    "phrases": 77,
+    "mots_par_phrase": 16.6,
+    "ecart_type": 6.1,
+    "part_phrases_plus_20_mots": 23,
+    "phrase_la_plus_longue": 33,
+    "intertitres": [
+     "Un Mac Studio M3/M4 ne s'achète plus qu'en reconditionné",
+     "Pour animer, la vitesse d'un cœur compte plus que leur nombre",
+     "Au rendu, le M5 Ultra approche la RTX 5090 et le M5 Max reste sous la RTX 5080",
+     "La mémoire unifiée charge des scènes trop lourdes pour une GeForce, à 27,50 € le Go",
+     "Les logiciels d'animation tournent sur Mac, à l'exception de 3ds Max et d'iClone",
+     "M4 Max reconditionné ou M5 Max neuf : 100 points de rendu coûtent moins cher sur le M5",
+     "Notre verdict"
+    ]
+   },
+   "statut": "OK"
+  }
+ },
+ {
+  "fichier": "3-extrait-pixfeed.html",
+  "titre": "Site WordPress piraté : que faire ?",
+  "cle": "site wordpress piraté",
+  "attendu": {
+   "bloquant": [
+    "expressions toutes faites : ['Viennent ensuite', 'Voici la méthode', 'fait le reste', 'étape par étape']",
+    "marqueur répété en tête de phrase : « chez notre client » 4 fois",
+    "source récitée : « wordpress.org recommande / conseille / précise… » 3 fois",
+    "phrase-annonce : ['La base de données suit.']"
+   ],
+   "avertissement": [
+    "rythme uniforme : écart type de 2.1 mots (viser 6 ou plus)",
+    "0 % de phrases de plus de 20 mots : texte haché",
+    "intro ouverte par une citation choc : gabarit d'accroche"
+   ],
+   "mesures": {
+    "paragraphes": 5,
+    "part_paragraphes_1_phrase": 0,
+    "phrases_par_paragraphe": 3,
+    "phrases": 15,
+    "mots_par_phrase": 7.4,
+    "ecart_type": 2.1,
+    "part_phrases_plus_20_mots": 0,
+    "phrase_la_plus_longue": 13,
+    "intertitres": []
+   },
+   "statut": "ÉCHEC"
+  }
+ },
+ {
+  "fichier": "4-identite-des-sites.html",
+  "titre": "Identité éditoriale de Jurojin et PixFeed",
+  "cle": "identité éditoriale",
+  "attendu": {
+   "bloquant": [],
+   "avertissement": [
+    "39 % de phrases de plus de 20 mots (Yoast : 25 % max)",
+    "phrase de 45 mots : Le sel vient du sujet lui-même : un jeu de mots quand il se présente, comme Blender, le mi…",
+    "phrase de 42 mots : Ce qu'il vient retrouver d'un article à l'autre, c'est une façon de voir le code, le monde…"
+   ],
+   "mesures": {
+    "paragraphes": 10,
+    "part_paragraphes_1_phrase": 20,
+    "phrases_par_paragraphe": 4.6,
+    "phrases": 46,
+    "mots_par_phrase": 19.8,
+    "ecart_type": 9.8,
+    "part_phrases_plus_20_mots": 39,
+    "phrase_la_plus_longue": 45,
+    "intertitres": [
+     "Identité de Jurojin.net",
+     "Passage de référence Jurojin",
+     "Identité de PixFeed",
+     "Passage de référence PixFeed"
+    ]
+   },
+   "statut": "OK"
+  }
+ }
+]
