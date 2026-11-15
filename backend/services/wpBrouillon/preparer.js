@@ -439,9 +439,22 @@ async function preparer(db, { depot, simulation = true, creer_etiquettes = false
   }
   const slugVoulu = m.slug ? String(m.slug).toLowerCase() : null;
   if (slugVoulu && (mode === 'nouveau' || (original && slugVoulu !== original.slug))) {
-    const pris = await wp(`wp/v2/${rb}`, { params: { slug: slugVoulu, status: 'any', context: 'edit', _fields: 'id' } }).catch(() => []);
-    const autres = pris.filter((p) => p.id !== cibleId && (!original || p.id !== original.id));
-    if (autres.length) bloque('slug', `« ${slugVoulu} » déjà pris par le contenu #${autres[0].id}`);
+    const pris = await wp(`wp/v2/${rb}`, { params: { slug: slugVoulu, status: 'any', context: 'edit', _fields: 'id,status' } }).catch(() => []);
+    let autres = pris.filter((p) => p.id !== cibleId && (!original || p.id !== original.id));
+    // Nouveau : le slug appartient à un brouillon non publié que le CRM a lui-même créé sur ce site (dépôt
+    // précédent avec un autre titre, sans slug…) : c'est ce brouillon qu'on réécrit, pas un conflit.
+    if (mode === 'nouveau' && !cibleId && autres.length) {
+      const brouillons = autres.filter((p) => ['draft', 'pending'].includes(p.status)).map((p) => p.id);
+      const duCrm = brouillons.length ? (await db.pool.query(
+        'SELECT post_id FROM seo_wp_journal WHERE site_id = $1 AND simulation = false AND mode = $2 AND post_id = ANY($3::bigint[]) ORDER BY cree_le DESC LIMIT 1',
+        [d.site_id, 'nouveau', brouillons])).rows[0] : null;
+      if (duCrm) {
+        cibleId = Number(duCrm.post_id);
+        autres = autres.filter((p) => p.id !== cibleId);
+        avert('slug', `« ${slugVoulu} » est le slug du brouillon #${cibleId}, créé par le CRM et pas encore publié : il est mis à jour`);
+      }
+    }
+    if (autres.length) bloque('slug', `« ${slugVoulu} » déjà pris par le contenu #${autres[0].id}${['draft', 'pending'].includes(autres[0].status) ? ' (brouillon qui n\'a pas été créé par le CRM)' : ''}`);
   }
   if (mode === 'nouveau') action({ quoi: cibleId ? `mettre à jour le brouillon #${cibleId}` : 'créer un brouillon', type: t.type, slug: slugVoulu || '(tiré du titre)' });
   else if (original) action({ quoi: cibleId ? `mettre à jour la copie de travail #${cibleId}` : `créer une copie de travail de #${original.id}`, methode: inv.rewrite_republish ? 'Rewrite & Republish (Yoast Duplicate Post)' : "copie de travail + bouton « Remplacer l'original »", nouvelle_adresse: slugVoulu && slugVoulu !== original.slug ? `${slugVoulu} (appliquée à la validation)` : undefined });

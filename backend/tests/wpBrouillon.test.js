@@ -370,6 +370,34 @@ test('erreurs bloquantes : bloc, alt, Yoast, taxonomie, marqueur, poids, statut,
   });
 });
 
+test('nouveau : le slug d\'un brouillon créé par le CRM le met à jour (autre titre, ancien dépôt) ; autre contenu : refus', opts, async () => {
+  await avecBase(async (db) => {
+    const sansFichiers = (extra) => ({ ...manifeste(), fichiers: [], image_a_la_une: undefined, yoast: { phrase_cle: 'mac studio' }, ...extra });
+    const contenu = '<!-- wp:paragraph -->\n<p>Premier jet.</p>\n<!-- /wp:paragraph -->';
+    let r = await preparer(db, { depot: (await nouveauDepot(db, { 'manifeste-wp.json': sansFichiers({ slug: 'mac-studio-animation-3d', titre: 'Premier titre' }), 'contenu.html': contenu })).depot, simulation: false });
+    assert.deepEqual(r.erreurs, [], JSON.stringify(r.erreurs));
+    const id = r.id;
+    // Le brouillon a été créé sous une autre clé (ancien dépôt, autre repère) : le nouveau dépôt ne le retrouve que par son slug.
+    await db.pool.query("UPDATE seo_wp_journal SET cle = 'ancienne-cle' WHERE post_id = $1", [id]);
+    const manif2 = sansFichiers({ slug: 'mac-studio-animation-3d', titre: 'Titre réécrit' });
+    r = await preparer(db, { depot: (await nouveauDepot(db, { 'manifeste-wp.json': manif2, 'contenu.html': contenu.replace('Premier jet', 'Réécriture') })).depot, simulation: true });
+    assert.deepEqual(r.erreurs, [], JSON.stringify(r.erreurs));
+    assert.ok(r.actions.some((a) => a.quoi === `mettre à jour le brouillon #${id}`), JSON.stringify(r.actions));
+    assert.ok(r.avertissements.some((a) => a.source === 'slug' && /brouillon #\d+, créé par le CRM et pas encore publié : il est mis à jour/.test(a.message)));
+    r = await preparer(db, { depot: (await nouveauDepot(db, { 'manifeste-wp.json': manif2, 'contenu.html': contenu.replace('Premier jet', 'Réécriture') })).depot, simulation: false });
+    assert.equal(r.id, id, 'même brouillon');
+    assert.match(W.posts.get(id).content, /Réécriture/);
+    // Brouillon créé à la main (inconnu du journal), puis contenu publié : toujours refusés.
+    W.posts.set(900, { id: 900, status: 'draft', slug: 'brouillon-a-la-main', title: { raw: 'x' } });
+    r = await preparer(db, { depot: (await nouveauDepot(db, { 'manifeste-wp.json': sansFichiers({ slug: 'brouillon-a-la-main' }), 'contenu.html': contenu })).depot, simulation: true });
+    assert.match(r.erreurs.map((e) => e.message).join(), /déjà pris par le contenu #900 \(brouillon qui n'a pas été créé par le CRM\)/);
+    W.posts.set(id, { ...W.posts.get(id), status: 'publish' });
+    r = await preparer(db, { depot: (await nouveauDepot(db, { 'manifeste-wp.json': sansFichiers({ slug: 'mac-studio-animation-3d', titre: 'Encore un titre' }), 'contenu.html': contenu })).depot, simulation: true });
+    assert.match(r.erreurs.map((e) => e.message).join(), new RegExp(`déjà pris par le contenu #${id}`), 'publié : jamais réécrit en mode nouveau');
+    W.posts.delete(900);
+  });
+});
+
 test('écriture, puis second appel identique : même brouillon, aucun fichier en double, journal', opts, async () => {
   await avecBase(async (db) => {
     const d = await nouveauDepot(db);
