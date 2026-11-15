@@ -257,7 +257,15 @@ pas). Une nouvelle version de la charte relance la relecture. Chaque rapport com
 `backend/scripts/sauvegarde-base.sh` : pg_dump compressé, vérifié (pg_restore --list), dans `~/sauvegardes/crm`
 (lisible par jurojinn seul), 14 jours gardés (seules les sauvegardes du script, `crm-AAAAMMJJ-HHMM.dump`, sont
 supprimées), copie hors du serveur par rclone si `SAUVEGARDE_DISTANT` est réglé dans `backend/.env`. Essai sans
-aucune suppression : `backend/scripts/sauvegarde-base.sh --essai`. Planification quotidienne (une fois) :
+aucune suppression : `backend/scripts/sauvegarde-base.sh --essai`. Copie hors du serveur : Google Drive par rclone (installé sans root dans `~/bin`), à travers une destination
+`crypt` (`crm-chiffre:`, qui enveloppe le dossier Drive `crm-sauvegardes`) : chiffrée avant l'envoi, noms compris ;
+une destination non chiffrée est refusée. Autorisation Drive limitée aux fichiers créés par rclone (`drive.file`).
+Le mot de passe et le sel du chiffrement sont gardés par Marc hors du serveur (gestionnaire de mots de passe).
+Relire une copie depuis n'importe quelle machine : installer rclone, `rclone config` → une destination `drive`
+(scope drive.file, même compte Google) et une destination `crypt` (remote = `<drive>:crm-sauvegardes`, chiffrement
+standard des noms et des dossiers, même mot de passe, même sel), puis `rclone copy crm-chiffre:crm-AAAAMMJJ-HHMM.dump .`
+et `pg_restore -d <base> crm-AAAAMMJJ-HHMM.dump`.
+Planification quotidienne (une fois) :
 `(crontab -l 2>/dev/null; echo '17 3 * * * $HOME/crm.pixfeed.net/backend/scripts/sauvegarde-base.sh >> $HOME/sauvegardes/crm-journal.log 2>&1') | crontab -`
 Après un déploiement : `node scripts/diag-outils.js --local --strict` (lancé par deploy.sh) vérifie que le service
 sert bien les outils et paramètres du code ; `node ../backend/scripts/verifier-netlinking.js` fait l'état des niches.
