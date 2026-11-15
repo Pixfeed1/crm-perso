@@ -271,14 +271,16 @@ clé API du CRM : la réponse est un résumé, elles ne consomment pas Claude.ai
 `backend/scripts/sauvegarde-base.sh` : pg_dump compressé, vérifié (pg_restore --list), dans `~/sauvegardes/crm`
 (lisible par jurojinn seul), 14 jours gardés (seules les sauvegardes du script, `crm-AAAAMMJJ-HHMM.dump`, sont
 supprimées), copie hors du serveur par rclone si `SAUVEGARDE_DISTANT` est réglé dans `backend/.env`. Essai sans
-aucune suppression : `backend/scripts/sauvegarde-base.sh --essai`. Copie hors du serveur : Google Drive par rclone (installé sans root dans `~/bin`), à travers une destination
-`crypt` (`crm-chiffre:`, qui enveloppe le dossier Drive `crm-sauvegardes`) : chiffrée avant l'envoi, noms compris ;
-une destination non chiffrée est refusée. Autorisation Drive limitée aux fichiers créés par rclone (`drive.file`).
-Le mot de passe et le sel du chiffrement sont gardés par Marc hors du serveur (gestionnaire de mots de passe).
-Relire une copie depuis n'importe quelle machine : installer rclone, `rclone config` → une destination `drive`
-(scope drive.file, même compte Google) et une destination `crypt` (remote = `<drive>:crm-sauvegardes`, chiffrement
-standard des noms et des dossiers, même mot de passe, même sel), puis `rclone copy crm-chiffre:crm-AAAAMMJJ-HHMM.dump .`
-et `pg_restore -d <base> crm-AAAAMMJJ-HHMM.dump`.
+aucune suppression : `backend/scripts/sauvegarde-base.sh --essai`. Copie hors du serveur : par le CRM lui-même, sans commande (`backend/services/sauvegardeDrive.js`). Paramètres >
+Sauvegardes > « Connecter Google Drive pour les sauvegardes » : même client OAuth et même adresse de retour que la
+Search Console, scope `drive.file` seul (le CRM ne voit que ses fichiers). Clé AES-256 créée à la connexion dans
+`backend/config/sauvegarde-drive.key` (hors dépôt, mode 600), affichée une seule fois dans l'interface ; aucun envoi
+tant qu'elle n'est pas marquée rangée. Chaque nuit à 3 h 41 : pg_dump, chiffrement AES-256-GCM, dossier Drive
+`crm-sauvegardes`, copies du CRM de plus de 30 jours retirées (réglable). Le dimanche à 5 h 23 : la dernière copie est
+redescendue, déchiffrée, relue (tables, charte comprise) ; tout échec part par mail (ALERT_EMAIL). Relire une copie
+sans le CRM : `node backend/scripts/dechiffrer-sauvegarde.js <copie>` (clé demandée), puis `pg_restore`. L'API Google
+Drive doit être activée une fois dans le projet Google du CRM (le message d'erreur le dit sinon).
+Sauvegardes locales (script ci-dessus, cron) :
 Planification quotidienne (une fois) :
 `(crontab -l 2>/dev/null; echo '17 3 * * * $HOME/crm.pixfeed.net/backend/scripts/sauvegarde-base.sh >> $HOME/sauvegardes/crm-journal.log 2>&1') | crontab -`
 Après un déploiement : `node scripts/diag-outils.js --local --strict` (lancé par deploy.sh) vérifie que le service

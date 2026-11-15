@@ -41,3 +41,4 @@ backend/.cache/
 
 # Signatures des expéditeurs de netlinking (copiées depuis Roundcube, propres au serveur)
 backend/config/signatures/*.html
+backend/config/sauvegarde-drive.key

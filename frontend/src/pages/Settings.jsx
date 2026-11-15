@@ -1,7 +1,7 @@
 // src/pages/Settings.jsx
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FiSave, FiBriefcase, FiMail, FiCheckCircle, FiXCircle, FiAlertCircle, FiVideo, FiBell, FiSun, FiMoon, FiFileText, FiEdit3 } from 'react-icons/fi';
+import { FiSave, FiBriefcase, FiMail, FiCheckCircle, FiXCircle, FiAlertCircle, FiVideo, FiBell, FiSun, FiMoon, FiFileText, FiEdit3, FiHardDrive } from 'react-icons/fi';
 import DOMPurify from 'dompurify';
 import { settingsAPI } from '../services/settingsAPI';
 import { useToast } from '../hooks/useToast';
@@ -10,11 +10,13 @@ import VideoConferenceSettings from '../components/settings/VideoConferenceSetti
 import ReminderSettings from '../components/settings/ReminderSettings';
 import EmailTemplatesSettings from '../components/settings/EmailTemplatesSettings';
 import EmailSignaturesSettings from '../components/settings/EmailSignaturesSettings';
+import SauvegardesSettings from '../components/settings/SauvegardesSettings';
 
 const Settings = () => {
   const { toast } = useToast();
   const { theme, setTheme } = useTheme();
-  const [activeTab, setActiveTab] = useState('company');
+  // ?onglet=sauvegardes : retour de la connexion Google Drive
+  const [activeTab, setActiveTab] = useState(() => (new URLSearchParams(window.location.search).get('onglet') === 'sauvegardes' ? 'sauvegardes' : 'company'));
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isTestingEmail, setIsTestingEmail] = useState(false);
@@ -296,6 +298,17 @@ const Settings = () => {
         >
           <FiSun />
           <span>Apparence</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('sauvegardes')}
+          className={`px-4 py-2 flex items-center gap-2 border-b-2 transition-colors whitespace-nowrap ${
+            activeTab === 'sauvegardes'
+              ? 'border-indigo-500 text-indigo-300'
+              : 'border-transparent text-text-muted hover:text-text-secondary'
+          }`}
+        >
+          <FiHardDrive />
+          <span>Sauvegardes</span>
         </button>
       </div>
 
@@ -637,6 +650,8 @@ const Settings = () => {
         {activeTab === 'templates' && <EmailTemplatesSettings />}
 
         {activeTab === 'signatures' && <EmailSignaturesSettings />}
+
+        {activeTab === 'sauvegardes' && <SauvegardesSettings />}
 
         {activeTab === 'appearance' && (
           <div className="bg-surface/30 rounded-lg border border-border/50 p-6">

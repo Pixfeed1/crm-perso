@@ -31,8 +31,24 @@ router.get('/callback', async (req, res) => {
     return res.redirect(`${auth.frontendUrl()}/seo?${q.toString()}`);
   };
   const { code, state, error } = req.query;
+  const but = auth.verifyState(state);
+  // Retour d'une connexion Google Drive pour les sauvegardes (même client, même adresse de retour).
+  if (but === 'drive') {
+    const retour = (statut, detail) => res.redirect(`${auth.frontendUrl()}/settings?${new URLSearchParams({ onglet: 'sauvegardes', drive: statut, ...(detail ? { detail: String(detail).slice(0, 200) } : {}) }).toString()}`);
+    if (error) return retour('error', error);
+    if (!code) return retour('error', 'code manquant');
+    try {
+      const t = await auth.exchangeCode(String(code));
+      await require('../services/sauvegardeDrive').enregistrerConnexion(req.app.locals.db, t);
+      console.log(`[Sauvegarde Drive] connexion enregistrée (${t.email || 'compte non précisé'})`);
+      return retour('success');
+    } catch (e) {
+      console.error('[Sauvegarde Drive] retour Google :', e.message);
+      return retour('error', e.message);
+    }
+  }
   if (error) return back('error', error);
-  if (!auth.verifyState(state)) return back('error', 'état invalide ou expiré, relancer la connexion');
+  if (!but) return back('error', 'état invalide ou expiré, relancer la connexion');
   if (!code) return back('error', 'code manquant');
   try {
     const t = await auth.exchangeCode(String(code));

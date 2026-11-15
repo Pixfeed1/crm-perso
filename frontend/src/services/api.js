@@ -624,6 +624,17 @@ export const revenuesAPI = {
 // ===== SEO (lecture seule : données produites par le worker Python seo_worker) =====
 // Module Backlinks (suite SEO) — pipeline séparé du CRM client, envoi via Gmail perso.
 // Netlinking multi-site (jurojin.net…) : un seul endpoint d'envoi, toutes les règles côté serveur.
+// Sauvegardes hors du serveur : copie chiffrée de la base sur Google Drive (Paramètres > Sauvegardes)
+export const sauvegardeAPI = {
+  etat: () => apiRequest('/sauvegardes/etat'),
+  connecter: () => apiRequest('/sauvegardes/connecter'),
+  cle: () => apiRequest('/sauvegardes/cle'),
+  cleRangee: () => apiRequest('/sauvegardes/cle/rangee', 'POST', {}),
+  envoyer: () => apiRequest('/sauvegardes/envoyer', 'POST', {}),
+  tester: () => apiRequest('/sauvegardes/tester', 'POST', {}),
+  reglages: (data) => apiRequest('/sauvegardes/reglages', 'PUT', data)
+};
+
 // Charte de rédaction et identité des sites (versions, historique, retour arrière, export Markdown)
 export const charteAPI = {
   get: (site) => apiRequest(`/charte/${site}`),

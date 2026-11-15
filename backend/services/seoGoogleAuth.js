@@ -47,19 +47,25 @@ function sign(payload) {
   return crypto.createHmac('sha256', process.env.JWT_SECRET).update(payload).digest('hex');
 }
 
-// state = "<timestamp>.<signature>" : illisible sans le secret, perime apres STATE_TTL_MS.
-function buildState() {
+// state = "<timestamp>.<but>.<signature>" : illisible sans le secret, perime apres STATE_TTL_MS. Le but dit au
+// retour de Google a quoi sert la connexion : « seo » (Search Console + Analytics) ou « drive » (sauvegardes),
+// pour reutiliser le meme client OAuth et la meme adresse de retour, sans rien declarer de plus chez Google.
+const BUTS = ['seo', 'drive'];
+function buildState(but = 'seo') {
   const ts = String(Date.now());
-  return `${ts}.${sign(ts)}`;
+  return `${ts}.${but}.${sign(`${ts}.${but}`)}`;
 }
 
+// Renvoie le but ('seo' | 'drive') si l'etat est valide, false sinon. Ancien format "<ts>.<sig>" : 'seo'.
 function verifyState(state) {
   if (!state || typeof state !== 'string') return false;
-  const [ts, sig] = state.split('.');
-  if (!ts || !sig || !/^\d+$/.test(ts)) return false;
-  const expected = sign(ts);
+  const p = state.split('.');
+  const [ts, but, sig] = p.length === 2 ? [p[0], null, p[1]] : p;
+  if (!ts || !sig || !/^\d+$/.test(ts) || (but !== null && !BUTS.includes(but))) return false;
+  const expected = sign(but === null ? ts : `${ts}.${but}`);
   if (sig.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) return false;
-  return Date.now() - Number(ts) < STATE_TTL_MS;
+  if (Date.now() - Number(ts) >= STATE_TTL_MS) return false;
+  return but || 'seo';
 }
 
 function getAuthUrl() {
@@ -68,7 +74,20 @@ function getAuthUrl() {
     prompt: 'consent',           // force la remise d'un refresh_token, meme si deja autorise
     include_granted_scopes: true,
     scope: SCOPES,
-    state: buildState(),
+    state: buildState('seo'),
+  });
+}
+
+// Sauvegardes sur Google Drive : le seul scope drive.file (le CRM ne voit que ses propres fichiers), sans y
+// ajouter les autorisations deja accordees (Search Console, Analytics) : ce jeton-la ne sert qu'aux sauvegardes.
+const SCOPES_DRIVE = ['https://www.googleapis.com/auth/drive.file', 'https://www.googleapis.com/auth/userinfo.email'];
+function getDriveAuthUrl() {
+  return client().generateAuthUrl({
+    access_type: 'offline',
+    prompt: 'consent',
+    include_granted_scopes: false,
+    scope: SCOPES_DRIVE,
+    state: buildState('drive'),
   });
 }
 
@@ -107,4 +126,4 @@ async function storeToken(pool, { email, refresh_token, scope }) {
   return ins.rows[0].id;
 }
 
-module.exports = { SCOPES, configured, redirectUri, frontendUrl, getAuthUrl, buildState, verifyState, exchangeCode, storeToken };
+module.exports = { SCOPES, SCOPES_DRIVE, configured, redirectUri, frontendUrl, getAuthUrl, getDriveAuthUrl, buildState, verifyState, exchangeCode, storeToken };

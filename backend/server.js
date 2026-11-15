@@ -194,6 +194,7 @@ app.use('/api/events', require('./routes/eventsRoutes'));
 app.use('/api/goals', require('./routes/goalsRoutes'));
 app.use('/api/objectif', require('./routes/objectifRoutes'));
 app.use('/api/veille', require('./routes/veilleRoutes'));
+app.use('/api/sauvegardes', require('./routes/sauvegardeRoutes')); // copie chiffrée de la base sur Google Drive (Paramètres > Sauvegardes)
 app.use('/api/charte', require('./routes/charteRoutes'));
 app.use('/api/campagnes-connecteur', require('./routes/campagneConnecteurRoutes')); // campagnes de prospection pour le connecteur MCP (préparer, jamais valider ni envoyer) // charte de rédaction et identité des sites (versions, historique)
 app.use('/api/seo/outreach', require('./routes/seoOutreachRoutes')); // netlinking multi-site (jurojin.net) : un seul endpoint d'envoi
@@ -354,6 +355,7 @@ async function startServer() {
   require('./services/purgeService').start(app.locals.db);
   // Boîte d'envoi : réponses et rebonds relevés toutes les 15 min (si IMAP_* est réglé dans .env).
   require('./services/boiteService').start(app.locals.db);
+  require('./services/sauvegardeDrive').start(app.locals.db);   // copie chiffrée sur Drive la nuit, test de relecture le dimanche
   // Prélèvements : les fiches restées « en attente » sont relues chez Stripe (webhook manqué)
   require('./services/maintenanceBillingService').startSyncEnAttente(app.locals.db);
 
