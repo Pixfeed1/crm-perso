@@ -258,7 +258,8 @@ function analyserCharte(contenu, { champs = {}, controles = {}, site = {} } = {}
     const m = /[ \u00a0\u202f]–[ \u00a0\u202f]/u.exec(t);
     if (m) P('demi_cadratin_incise', `demi-cadratin employé comme tiret d'incise (${ou}) : « ${extrait(t, m.index)} »`);
   }
-  // Claude / Anthropic : crédit (légendes de crédit, attributions) bloquant ; simple mention : avertissement.
+  // Claude / Anthropic : crédit (légende de crédit, attribution d'une image) bloquant ; toute autre mention, dans le
+  // texte comme dans une légende (article d'actualité sur Anthropic, Claude Chabrol…) : avertissement.
   const ia = (controles.ia_motifs || []).map((v) => [v, motEntier(v)]);
   const legendes = [...html.matchAll(/<figcaption[^>]*>([\s\S]*?)<\/figcaption>/giu)].map((x) => texteDe(x[1]));
   const RE_CREDIT = /(?:©|cr[ée]dits?|g[ée]n[ée]r[ée]e?s?|r[ée]alis[ée]e?s?|cr[ée][ée]e?s?|illustrations?|images?|graphiques?|visuels?|photos?|par|with|by|avec)\s*(?::|par\s)?\s*[^.;\n]{0,40}$/iu;
@@ -266,7 +267,7 @@ function analyserCharte(contenu, { champs = {}, controles = {}, site = {} } = {}
     let credit = false;
     for (const l of legendes) {
       const m = r.exec(l);
-      if (m && (/anthropic/i.test(v) || RE_CREDIT.test(l.slice(Math.max(0, m.index - 45), m.index)))) { P('ia_credits', `« ${v} » crédité dans une légende : « ${tranche(l, 120)} » ; le crédit est le site`); credit = true; }
+      if (m && RE_CREDIT.test(l.slice(Math.max(0, m.index - 45), m.index))) { P('ia_credits', `« ${v} » crédité dans une légende : « ${tranche(l, 120)} » ; le crédit est le site`); credit = true; }
     }
     for (const [ou, t] of partout) {
       const m = r.exec(t);

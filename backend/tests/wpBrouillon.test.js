@@ -255,6 +255,54 @@ test('contrôles de style : affichés en simulation, bloquants en écriture, rep
   });
 });
 
+test('relecture avec la charte (style, voix) et ligne d\'en-tête de chaque rapport', opts, async () => {
+  await avecBase(async (db) => {
+    const C = require('../services/charteService');
+    const donnees = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'scripts', 'donnees', 'charte-initiale.json'), 'utf8'));
+    await C.semerSiAbsente(db.pool, { ...donnees, sites: { 15: donnees.sites['15'] } });
+    const p = (t) => `<!-- wp:paragraph -->\n<p>${t}</p>\n<!-- /wp:paragraph -->`;
+    const dev = "Une boutique PrestaShop qui rame a rarement un seul coupable, et le premier réflexe consiste souvent à changer d'hébergeur sans rien mesurer. Avant de toucher au serveur, on relève les temps de réponse de la page d'accueil, d'une fiche produit et du panier, à froid puis à chaud. Ces trois mesures disent déjà si le problème vient du code, de la base ou de la machine. Ici, le panier mettait quatre secondes.";
+    const contenu = [p(dev), p(dev.replace('quatre', 'trois')), p(dev.replace('quatre', 'deux'))].join('\n');
+    const recus = [];
+    relecture.definirAppel(async ({ charte }) => {
+      recus.push(charte);
+      return {
+        corrections: [], signalements: [], affirmations: { relevees: 2, confirmees: 2 }, resume: 'rien à corriger',
+        style: { statut: 'OK', tics: [{ extrait: 'le premier réflexe consiste souvent', regle: '5.2', proposition: 'avant → après' }], intertitres: [], chiffres_sans_analyse: [] },
+        voix: { statut: 'à reprendre', explication: 'Aucun cas vécu.', parties: [{ partie: 'introduction', regard: { present: true }, vecu: { present: false, citation: 'Ici, le panier mettait quatre secondes.' }, sel: { present: false, sans_objet: true } }] },
+      };
+    });
+    try {
+      const depot = (await nouveauDepot(db, { 'manifeste-wp.json': { ...manifeste(), fichiers: [], image_a_la_une: undefined, slug: 'en-tete', yoast: { phrase_cle: 'boutique prestashop' } }, 'contenu.html': contenu })).depot;
+      let r = await preparer(db, { depot, simulation: true, identite_version: 1 });
+      assert.deepEqual(r.erreurs, [], JSON.stringify(r.erreurs));
+      assert.equal(Object.keys(r)[0], 'entete', 'la ligne vient en tête du rapport');
+      assert.equal(r.entete, 'Identité pixfeed v1 · Contrôles style : OK · Voix : À REPRENDRE · Faits : COMPLET');
+      // La relecture a reçu la charte en base (identité, registre, règles, exemples) et rend style et voix.
+      assert.deepEqual([recus[0].version, recus[0].contenu.site.registre, recus[0].contenu.commun.exemples.length], [1, 'vouvoiement', 2]);
+      assert.match(relecture.SYSTEME('pixfeed.net', recus[0]), /6\. VOIX[\s\S]*registre du site \(vouvoiement\)[\s\S]*\(11\.4\.2\) PixFeed est toujours une agence[\s\S]*exemple e2 \(site 15\)/);
+      assert.deepEqual([r.relecture.charte_version, r.relecture.style.tics[0].citation_trouvee, r.relecture.voix.parties[0].vecu.citation_trouvee], [1, true, true]);
+      assert.ok(r.avertissements.some((a) => a.source === 'relecture' && /^voix à reprendre : Aucun cas vécu/.test(a.message)));
+      // Même charte : une seule relecture (simulation puis écriture) ; nouvelle version de la charte : relue à nouveau.
+      r = await preparer(db, { depot, simulation: false, identite_version: 1 });
+      assert.equal(recus.length, 1);
+      assert.match(r.entete, /^Identité pixfeed v1 · Contrôles style : OK · Voix : À REPRENDRE · Faits : COMPLET$/);
+      assert.ok(r.id);
+      const journal = (await db.pool.query('SELECT rapport FROM seo_wp_journal WHERE post_id = $1 ORDER BY cree_le DESC LIMIT 1', [r.id])).rows[0].rapport;
+      assert.match((typeof journal === 'string' ? JSON.parse(journal) : journal).entete, /^Identité pixfeed v1 · /, 'en-tête gardé dans le journal');
+      await C.modifier(db, { site: 15, operations: [{ objet: 'registre', action: 'modifier', valeur: 'tutoiement' }], auteur: 'x', simulation: false });
+      r = await preparer(db, { depot, simulation: true, identite_version: 2 });
+      assert.equal(recus.length, 2, 'nouvelle charte : nouvelle relecture');
+      assert.equal(recus[1].version, 2);
+      // Refus de version, relecture désactivée : la ligne le dit.
+      r = await preparer(db, { depot, simulation: true, identite_version: 1 });
+      assert.equal(r.entete, 'Identité pixfeed v2 · Contrôles style : NON FAITS (dépôt refusé : identite_version) · Voix : NON RELUE · Faits : INCOMPLET (relecture non faite)');
+      r = await preparer(db, { depot, simulation: true, identite_version: 2, relecture: false });
+      assert.equal(r.entete, 'Identité pixfeed v2 · Contrôles style : OK · Voix : NON RELUE · Faits : INCOMPLET (relecture non faite)');
+    } finally { relecture.definirAppel(relecteurVide); }
+  });
+});
+
 test('plateformes : cases et adresses ensemble, contrôles, avant / après, écriture', opts, async () => {
   await avecBase(async (db) => {
     const m = manifeste();

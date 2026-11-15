@@ -56,7 +56,9 @@ test('contrôles de la charte : section 12 et interdits de la section 11.5, avec
   r = ctl([...base, fig('Rendu de la scène. Image générée avec Claude.')].join('\n'));
   assert.ok(codes(r, 'bloquant').includes('ia_credits'));
   r = ctl([...base, fig('Graphique Anthropic pour Jurojin.net.')].join('\n'));
-  assert.ok(codes(r, 'bloquant').includes('ia_credits'), 'Anthropic : toujours un crédit');
+  assert.ok(codes(r, 'bloquant').includes('ia_credits'), 'Anthropic crédité');
+  r = ctl([p(`${long} Anthropic a présenté son modèle le 12 novembre.`), base[1], fig("Le siège d'Anthropic à San Francisco.")].join('\n'));
+  assert.deepEqual([codes(r, 'bloquant').includes('ia_credits'), codes(r, 'bloquant').includes('ia_texte'), codes(r, 'avertissement').includes('ia_texte')], [false, false, true], 'article d\'actualité sur Anthropic : avertissement');
   r = ctl([p(`${long} Claude Chabrol filmait ses scènes en deux prises au plus.`), base[1]].join('\n'));
   assert.deepEqual([codes(r, 'bloquant').includes('ia_texte'), codes(r, 'avertissement').includes('ia_texte')], [false, true]);
   // L'autre site : nom ou lien, bloquant ; nom signalé sur PixFeed : avertissement.

@@ -52,7 +52,18 @@ async function preparer(db, { depot, simulation = true, creer_etiquettes = false
   const bloque = (source, message, code = 'bloquant') => r.erreurs.push({ source, code, message });
   const avert = (source, message) => r.avertissements.push({ source, message });
   const action = (x) => r.actions.push(x);
-  const fin = () => ({ ...r, statut: r.erreurs.length ? 'bloqué' : simulation ? 'simulation : rien écrit' : 'écrit' });
+  // Ligne d'en-tête de chaque rapport : Identité <site> v<n> · Contrôles style · Voix · Faits.
+  const entete = () => {
+    const id = r.identite ? `Identité ${String(r.identite.site).toLowerCase()} v${r.identite.version}` : 'Identité : aucune charte pour ce site';
+    const refus = r.erreurs.some((e) => e.code === 'identite_version');
+    const n = r.style ? r.style.bloquants + (r.style.rendu && r.style.rendu.statut === 'ÉCHEC' && r.style.rendu.effet === 'bloquant' ? 1 : 0) : 0;
+    const style = r.style ? (n ? `ÉCHEC (${n})` : 'OK') : refus ? 'NON FAITS (dépôt refusé : identite_version)' : 'NON FAITS';
+    const rl = r.relecture;
+    const voix = rl && rl.voix ? rl.voix.statut : 'NON RELUE';
+    const faits = rl ? (rl.complete ? 'COMPLET' : 'INCOMPLET') : 'INCOMPLET (relecture non faite)';
+    return `${id} · Contrôles style : ${style} · Voix : ${voix} · Faits : ${faits}`;
+  };
+  const fin = () => ({ entete: entete(), ...r, statut: r.erreurs.length ? 'bloqué' : simulation ? 'simulation : rien écrit' : 'écrit' });
 
   // ---- dépôt et manifeste ----
   let d, m;
@@ -281,7 +292,7 @@ async function preparer(db, { depot, simulation = true, creer_etiquettes = false
   else if (m.contenu || contenuRemplace !== null) {
     try {
       const y = m.yoast || {};
-      const res = await relire({ domaine: s[0].domain, dossier: d.dossier, champs: { titre: m.titre, titre_seo: y.titre, meta: y.meta, contenu: lireContenu() } });
+      const res = await relire({ domaine: s[0].domain, dossier: d.dossier, charte: fiche, champs: { titre: m.titre, titre_seo: y.titre, meta: y.meta, contenu: lireContenu() } });
       contenuRelu = res.champs.contenu;
       m.titre = res.champs.titre; r.titre = m.titre;
       if (m.yoast && y.titre !== undefined) m.yoast.titre = res.champs.titre_seo;
@@ -290,6 +301,8 @@ async function preparer(db, { depot, simulation = true, creer_etiquettes = false
       action({ quoi: 'relecture', corrections: res.rapport.corrections_appliquees.length, signalements: (res.rapport.signalements || []).length });
       if (!res.rapport.complete) avert('relecture', `relecture INCOMPLÈTE${res.rapport.quota_atteint ? ` : ${res.rapport.quota_atteint}` : ''}${res.rapport.non_verifiees ? ` ; ${res.rapport.non_verifiees.length} affirmation(s) non vérifiée(s) : voir relecture.non_verifiees` : ''}`);
       if (res.rapport.signalements) avert('relecture', `${res.rapport.signalements.length} point(s) signalé(s) sans correction (style, structure, cohérence…) : voir relecture.signalements`);
+      if (res.rapport.style && res.rapport.style.statut === 'STYLE À REVOIR') avert('relecture', `style à revoir : ${res.rapport.style.tics.length} tic(s) relevé(s) d'après la charte, avec une proposition avant → après (voir relecture.style ; rien n'est réécrit)`);
+      if (res.rapport.voix && res.rapport.voix.statut !== 'OK') avert('relecture', `voix à reprendre${res.rapport.voix.explication ? ` : ${res.rapport.voix.explication}` : ''} (voir relecture.voix : phrases citées, jamais réécrites ; ne bloque pas, Marc décide)`);
       if (res.rapport.corrections_non_appliquees) avert('relecture', `${res.rapport.corrections_non_appliquees.length} correction(s) proposée(s) mais non appliquée(s) : voir relecture.corrections_non_appliquees`);
     } catch (e) { bloque('relecture', `relecture impossible : ${e.message} (relancer, ou relecture=false pour préparer sans relecture)`, e.code || 'relecture'); }
   }
@@ -518,7 +531,7 @@ async function preparer(db, { depot, simulation = true, creer_etiquettes = false
       `INSERT INTO seo_wp_journal (site_id, depot_id, cle, mode, simulation, post_id, original_id, type, titre, fichiers, avant, apres, rapport)
        VALUES ($1, $2, $3, $4, false, $5, $6, $7, $8, $9, $10, $11, $12)`,
       [d.site_id, d.id, cle, mode, id, original ? original.id : null, t.type, m.titre, JSON.stringify(sortieFichiers),
-        avant ? JSON.stringify(avant) : null, JSON.stringify(apres), JSON.stringify({ actions: r.actions, avertissements: r.avertissements })]);
+        avant ? JSON.stringify(avant) : null, JSON.stringify(apres), JSON.stringify({ entete: entete(), actions: r.actions, avertissements: r.avertissements, style: r.style, voix: r.relecture && r.relecture.voix })]);
     return {
       ...fin(), ...(renduEchec ? { statut: 'écrit, mais rendu en échec (blancs avant la ponctuation) : ne pas publier' } : {}),
       id, statut_wordpress: apres.status, methode, original_id: original ? original.id : undefined,

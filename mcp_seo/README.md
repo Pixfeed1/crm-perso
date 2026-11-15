@@ -246,6 +246,19 @@ listes et seuils lus dans la charte à chaque dépôt ; en plus, section 12 et i
 réglé par site. Affichés en simulation, bloquants en écriture, repassés après la relecture ; en mise à jour par
 remplacements, seules les parties écrites bloquent (`mise_a_jour_mesures_min_paragraphes` pour les proportions).
 Après écriture, blancs avant la ponctuation dans l'aperçu rendu (effet `blancs_rendu` par site).
+La relecture reçoit la charte et l'identité du site lues en base (exemples compris) et rend `style` (tics cités mot
+pour mot, avant → après jamais appliqué, « STYLE À REVOIR » au-delà de `voix_tics_style_a_revoir`) et `voix` (par
+partie : regard, vécu, exemple, indépendance, registre, sel ; phrases citées, jamais réécrites ; À REPRENDRE ne bloque
+pas). Une nouvelle version de la charte relance la relecture. Chaque rapport commence par `entete` :
+`Identité jurojin v2 · Contrôles style : OK | ÉCHEC (n) · Voix : OK | À REPRENDRE · Faits : COMPLET | INCOMPLET`.
+
+### Sauvegardes de la base
+
+`backend/scripts/sauvegarde-base.sh` : pg_dump compressé, vérifié (pg_restore --list), dans `~/sauvegardes/crm`
+(lisible par jurojinn seul), 14 jours gardés (seules les sauvegardes du script, `crm-AAAAMMJJ-HHMM.dump`, sont
+supprimées), copie hors du serveur par rclone si `SAUVEGARDE_DISTANT` est réglé dans `backend/.env`. Essai sans
+aucune suppression : `backend/scripts/sauvegarde-base.sh --essai`. Planification quotidienne (une fois) :
+`(crontab -l 2>/dev/null; echo '17 3 * * * $HOME/crm.pixfeed.net/backend/scripts/sauvegarde-base.sh >> $HOME/sauvegardes/crm-journal.log 2>&1') | crontab -`
 Après un déploiement : `node scripts/diag-outils.js --local --strict` (lancé par deploy.sh) vérifie que le service
 sert bien les outils et paramètres du code ; `node ../backend/scripts/verifier-netlinking.js` fait l'état des niches.
 
