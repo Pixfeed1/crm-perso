@@ -45,7 +45,7 @@ function Ligne({ p, campagnes, onChange }) {
             <span className="text-xs text-text-muted">{p.domaine}{p.siren ? ` · SIREN ${p.siren}` : ''}</span>
             <span className={`px-2 py-0.5 rounded-full text-xs ${n.cls}`}>{n.label}</span>
           </div>
-          {preuve && <div className="text-xs text-text-secondary mt-1">{preuve.nature}{preuve.date ? ` · ${preuve.source} du ${fmt(preuve.date)}` : ''}{preuve.tribunal ? ` · ${preuve.tribunal}` : ''}</div>}
+          {preuve && <div className="text-xs text-text-secondary mt-1">{preuve.nature}{preuve.date ? ` · ${preuve.source || 'vérification du site'} du ${fmt(preuve.date)}` : ''}{preuve.tribunal ? ` · ${preuve.tribunal}` : ''}</div>}
         </div>
         <div className="flex items-center gap-3 flex-shrink-0">
           <span className="text-sm text-text-primary">{p.nb_clients} site{p.nb_clients > 1 ? 's' : ''} client{p.nb_clients > 1 ? 's' : ''}</span>
@@ -61,7 +61,7 @@ function Ligne({ p, campagnes, onChange }) {
           <ul className="space-y-1">
             {(p.preuves || []).map((x, i) => (
               <li key={i} className="text-sm text-text-primary">
-                {x.niveau === 1 ? '◦' : '•'} {x.nature}{x.date ? ` (${x.source}, ${fmt(x.date)})` : ''}{x.tribunal ? `, ${x.tribunal}` : ''}{x.niveau === 1 ? ' : indice, jamais cité' : ''}
+                {x.niveau >= 2 ? '•' : '◦'} {x.nature}{x.date ? ` (${x.source || 'vérification du site'} du ${fmt(x.date)})` : ''}{x.tribunal ? `, ${x.tribunal}` : ''}{x.niveau === 1 ? ' : indice, jamais cité' : x.niveau === 0 ? ' : indice faible, affiché seulement avec un autre signal' : ''}
                 {x.url && <a href={x.url} target="_blank" rel="noreferrer" className="ml-2 text-accent inline-flex items-center gap-1 text-xs">source <FiExternalLink size={11} /></a>}
               </li>
             ))}

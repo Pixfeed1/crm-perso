@@ -18,11 +18,23 @@ test('preuves : annonces BODACC, indices du site, conclusion', () => {
   assert.equal(P.preuveBodacc({ familleavis: 'immatriculation' }), null);
   assert.equal(P.preuveBodacc({ familleavis: 'dpc', familleavis_lib: 'Dépôts des comptes' }), null);
   const maintenant = new Date('2026-11-16');
-  assert.match(P.indiceSite(null, maintenant).nature, /injoignable/);
-  assert.match(P.indiceSite({ http_status: 503 }, maintenant).nature, /erreur \(503\)/);
-  assert.match(P.indiceSite({ http_status: 200, parked: true }, maintenant).nature, /parqué/);
-  assert.match(P.indiceSite({ http_status: 200, copyright_annee: 2023 }, maintenant).nature, /figé \(copyright 2023\)/);
-  assert.equal(P.indiceSite({ http_status: 200, copyright_annee: 2025 }, maintenant), null);
+  const sig = (row, echecsAvant = 0, detectOk = true) => P.signauxSite(row, { maintenant, echecsAvant, detectOk });
+  // Injoignable ou en erreur : rien à la première panne, un indice à la deuxième vérification de suite ; retour : remis à zéro.
+  assert.deepEqual([sig(null).echecs, sig(null).preuves.length], [1, 0]);
+  assert.match(sig(null, 1).preuves[0].nature, /injoignable lors de 2 vérifications de suite/);
+  assert.match(sig({ http_status: 503 }, 1).preuves[0].nature, /en erreur \(503\) lors de 2 vérifications de suite/);
+  assert.equal(sig({ http_status: 200 }, 3).echecs, 0);
+  assert.deepEqual(sig(null, 1, false), { echecs: 1, preuves: [], faible: null }, 'analyse en panne : rien ne change');
+  // Parqué : tout de suite ; copyright ancien : indice faible, jamais seul.
+  assert.match(sig({ http_status: 200, parked: true }).preuves[0].nature, /parqué/);
+  const vieux = sig({ http_status: 200, copyright_annee: 2023 });
+  assert.deepEqual([vieux.preuves.length, vieux.faible.niveau, vieux.faible.faible], [0, 0, true]);
+  assert.match(vieux.faible.nature, /non mis à jour \(copyright 2023\)/);
+  assert.equal(sig({ http_status: 200, copyright_annee: 2025 }).faible, null);
+  assert.equal(sig(null, 1).preuves[0].source, 'vérification du site', 'la source s\'affiche (plus « undefined »)');
+  // Faux prestataires : hébergeurs, CMS, réseaux, outils, raccourcisseurs ; pas les noms qui les contiennent.
+  for (const d of ['hostinger.com', 'hostinger.fr', 'ovh.net', 'o2switch.fr', 'ionos.fr', 'gandi.net', 'monsite.wixsite.com', 'squarespace.com', 'wordpress.org', 'fr.wordpress.com', 'boutique.myshopify.com', 'prestashop.com', 'maps.app.goo.gl', 'goo.gl', 'g.page', 'facebook.com', 'instagram.com', 'linkedin.com', 'youtube.com', 'tiktok.com', 'x.com', 'twitter.com', 'pinterest.fr', 'cloudflare.com', 'bit.ly', 'linktr.ee']) assert.equal(P.estExclu(d), true, d);
+  for (const d of ['agence-x.fr', 'agence-google-ads.fr', 'pixel-x.com', 'wixel.fr', 'ovhgeek.fr']) assert.equal(P.estExclu(d), false, d);
   assert.deepEqual(P.conclure([{ niveau: 1 }, { niveau: 3 }]), { gravite: 3, statut: 'procedure' });
   assert.deepEqual(P.conclure([]), { gravite: 0, statut: 'actif' });
 });
@@ -73,8 +85,15 @@ test('vérification, liste, prospects, angle « prestataire » dans une campagne
     await site('jardin-eragny.fr', 'ancienne-agence.fr');
     await site('bijoux-auvers.fr', 'agence-saine.fr');
     await pool.query("UPDATE crawl_results SET prestataire = 'www.agence-x.fr' WHERE id = $1", [c2]);
+    await site('gite-vexin.fr', 'agence-figee.fr');
+    await site('miel-vexin.fr', 'agence-parquee.fr');
+    await site('pizza-osny.fr', 'hostinger.com');
+    await site('coiffure-osny.fr', 'maps.app.goo.gl');
+    await P.assurerTables(pool);
+    await pool.query("INSERT INTO prestataires (domaine, statut, gravite) VALUES ('maps.app.goo.gl', 'abandon', 1), ('bit.ly', 'abandon', 1)");
 
-    assert.deepEqual(await P.inventaire(db), { prestataires: 4, nouveaux: 4 });
+    const inv = await P.inventaire(db);
+    assert.deepEqual([inv.prestataires, inv.nouveaux, inv.retires.sort()], [6, 6, ['bit.ly', 'maps.app.goo.gl']], 'faux prestataires jamais ajoutés, anciens retirés');
     // Sources factices : site du prestataire, annuaire des entreprises, BODACC.
     const deps = {
       pause: 0,
@@ -83,13 +102,22 @@ test('vérification, liste, prospects, angle « prestataire » dans une campagne
         'freelance-y.fr': { domain: d, http_status: 0 },
         'ancienne-agence.fr': { domain: d, http_status: 200, title: 'Ancienne Agence', copyright_annee: 2026 },
         'agence-saine.fr': { domain: d, http_status: 200, title: 'Agence Saine', siren_site: '443061841', copyright_annee: 2026 },
+        'agence-figee.fr': { domain: d, http_status: 200, copyright_annee: 2021 },
+        'agence-parquee.fr': { domain: d, http_status: 200, parked: true, copyright_annee: 2020 },
       }[d])),
       parSiren: async (s) => ({ found: true, siren: s, raison_sociale: s === '732829320' ? 'AGENCE X' : 'AGENCE SAINE', etat: 'A' }),
       enrichMatch: async () => ({ found: true, match: 'sur', siren: '552100554', raison_sociale: 'ANCIENNE AGENCE', etat: 'C', date_fermeture: '2026-06-30' }),
       bodacc: async (s) => (s === '732829320' ? [COLLECTIVE, { familleavis: 'immatriculation', dateparution: '2019-03-01' }] : []),
     };
-    const v = await P.verifier(db, {}, deps);
-    const par = Object.fromEntries(v.resultats.map((x) => [x.domaine, x]));
+    let v = await P.verifier(db, {}, deps);
+    let par = Object.fromEntries(v.resultats.map((x) => [x.domaine, x]));
+    assert.deepEqual([par['freelance-y.fr'].statut, par['agence-figee.fr'].statut], ['actif', 'actif'], 'une seule panne, copyright seul : rien');
+    assert.equal(par['agence-parquee.fr'].statut, 'abandon');
+    const parquee = await P.detail(db, 'agence-parquee.fr');
+    assert.deepEqual(parquee.preuves.map((x) => [x.niveau, x.source]), [[1, 'vérification du site'], [0, 'vérification du site']], 'copyright affiché parce que le domaine est parqué');
+    assert.equal((await P.detail(db, 'agence-figee.fr')).preuves.length, 0);
+    v = await P.verifier(db, { domaines: ['freelance-y.fr'] }, deps);          // deuxième vérification en échec
+    par = { ...par, ...Object.fromEntries(v.resultats.map((x) => [x.domaine, x])) };
     assert.deepEqual([par['agence-x.fr'].statut, par['agence-x.fr'].gravite], ['procedure', 3]);
     assert.deepEqual([par['ancienne-agence.fr'].statut, par['ancienne-agence.fr'].gravite], ['ferme', 2]);
     assert.deepEqual([par['freelance-y.fr'].statut, par['freelance-y.fr'].siren], ['abandon', null]);
@@ -97,8 +125,9 @@ test('vérification, liste, prospects, angle « prestataire » dans une campagne
 
     // Liste : par gravité, avec le nombre de sites clients (www. compris).
     let l = await P.lister(db);
-    assert.deepEqual(l.prestataires.map((p) => [p.domaine, p.nb_clients]), [['agence-x.fr', 2], ['ancienne-agence.fr', 1], ['freelance-y.fr', 1]]);
-    assert.deepEqual(l.totaux, { procedure: 1, ferme: 1, abandon: 1, actif: 1 });
+    assert.deepEqual(l.prestataires.map((p) => [p.domaine, p.nb_clients]), [['agence-x.fr', 2], ['ancienne-agence.fr', 1], ['agence-parquee.fr', 1], ['freelance-y.fr', 1]]);
+    assert.deepEqual(l.totaux, { procedure: 1, ferme: 1, abandon: 2, actif: 2 });
+    assert.ok(!l.prestataires.some((p) => /hostinger|goo\.gl/.test(p.domaine)));
     const d = await P.detail(db, 'agence-x.fr');
     assert.deepEqual([d.nom, d.siren_source, d.contact.email], ['AGENCE X', 'mentions légales du site', 'bonjour@agence-x.fr']);
 

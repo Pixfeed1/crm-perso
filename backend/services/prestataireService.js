@@ -16,7 +16,30 @@ const sirene = require('./sireneEnrich');
 
 const BODACC_URL = () => process.env.BODACC_API_URL || 'https://bodacc-datadila.opendatasoft.com/api/explore/v2.1/catalog/datasets/annonces-commerciales/records';
 const MOIS_BODACC = 36;                     // annonces prises en compte
-const ANS_COPYRIGHT = 2;                    // copyright de N ans ou plus : site à l'abandon (indice)
+const ANS_COPYRIGHT = 2;                    // copyright de N ans ou plus : indice FAIBLE (jamais seul)
+const ECHECS_SITE = 2;                      // site injoignable ou en erreur : compte après N vérifications de suite
+
+// Faux prestataires : liens de pied de page qui ne désignent pas une agence (hébergeurs, CMS, réseaux sociaux,
+// outils, raccourcisseurs). Écartés avant toute vérification ; ceux déjà en base sont retirés à la suivante.
+// MARQUES : un niveau du domaine égal au nom, quel que soit le suffixe (« ovh » écarte ovh.com, ovh.net,
+// ftp.ovh.fr ; pas agence-ovh.fr) ; DOMAINES : ce domaine exact et ses sous-domaines. À compléter au besoin.
+const PRESTATAIRES_EXCLUS = {
+  marques: ['hostinger', 'ovh', 'ovhcloud', 'o2switch', 'ionos', '1and1', 'gandi', 'wix', 'wixsite', 'squarespace', 'wordpress', 'shopify',
+    'myshopify', 'prestashop', 'google', 'facebook', 'instagram', 'linkedin', 'youtube', 'tiktok', 'twitter', 'pinterest', 'cloudflare'],
+  domaines: ['maps.app.goo.gl', 'goo.gl', 'g.page', 'g.co', 'youtu.be', 'fb.me', 'x.com', 't.co', 'bit.ly', 'linktr.ee', 'lnkd.in'],
+};
+function estExclu(domaine) {
+  const d = hote(domaine);
+  if (!d) return true;
+  if (PRESTATAIRES_EXCLUS.domaines.some((x) => d === x || d.endsWith(`.${x}`))) return true;
+  return d.split('.').slice(0, -1).some((niveau) => PRESTATAIRES_EXCLUS.marques.includes(niveau));
+}
+async function retirerExclus(db) {
+  const { rows } = await db.pool.query('SELECT domaine FROM prestataires');
+  const exclus = rows.map((r) => r.domaine).filter(estExclu);
+  if (exclus.length) await db.pool.query('DELETE FROM prestataires WHERE domaine = ANY($1::text[])', [exclus]);
+  return exclus;
+}
 const err = (status, message) => Object.assign(new Error(message), { status });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const hote = (x) => String(x || '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').split(/[/?#]/)[0] || null;
@@ -42,6 +65,7 @@ async function assurerTables(q) {
       created_at     TIMESTAMPTZ DEFAULT NOW()
     );`);
   await q.query('CREATE INDEX IF NOT EXISTS idx_prestataires_gravite ON prestataires (gravite DESC, verifie_le)');
+  await q.query('ALTER TABLE prestataires ADD COLUMN IF NOT EXISTS echecs_site INTEGER DEFAULT 0');   // vérifications de suite en échec
 }
 
 // ---------- inventaire : les prestataires crédités dans les crawls et les fiches ----------
@@ -50,13 +74,14 @@ async function inventaire(db) {
   const { rows } = await db.pool.query(
     `SELECT DISTINCT LOWER(prestataire) AS p FROM crawl_results WHERE prestataire IS NOT NULL AND prestataire <> ''
      UNION SELECT DISTINCT LOWER(prestataire) FROM leads WHERE prestataire IS NOT NULL AND prestataire <> ''`);
-  const domaines = [...new Set(rows.map((r) => hote(r.p)).filter(Boolean))];
+  const domaines = [...new Set(rows.map((r) => hote(r.p)).filter(Boolean))].filter((d) => !estExclu(d));
+  const retires = await retirerExclus(db);
   let nouveaux = 0;
   for (const d of domaines) {
     const r = await db.pool.query('INSERT INTO prestataires (domaine) VALUES ($1) ON CONFLICT (domaine) DO NOTHING RETURNING domaine', [d]);
     nouveaux += r.rowCount;
   }
-  return { prestataires: domaines.length, nouveaux };
+  return { prestataires: domaines.length, nouveaux, retires };
 }
 
 // Sites clients d'un prestataire : résultats de crawl et fiches qui le créditent.
@@ -106,18 +131,28 @@ function preuveBodacc(a) {
   return null;
 }
 
-// Site du prestataire : indice d'abandon (jamais une preuve citable).
-function indiceSite(row, maintenant = new Date()) {
-  if (!row) return { type: 'site', niveau: 1, nature: 'site du prestataire injoignable', date: maintenant.toISOString().slice(0, 10) };
-  const code = Number(row.http_status) || 0;
-  const annee = Number(row.copyright_annee) || null;
+// Site du prestataire : indices (jamais une preuve citable). source « vérification du site ».
+//   - injoignable ou en erreur : compte seulement après ECHECS_SITE vérifications de suite en échec ;
+//   - domaine parqué : compte tout de suite ;
+//   - copyright ancien : indice FAIBLE (niveau 0), affiché seulement s'il s'ajoute à un autre signal.
+// echecsAvant : échecs consécutifs déjà comptés ; detectOk=false (analyse du lot en panne) : rien ne change.
+function signauxSite(row, { maintenant = new Date(), echecsAvant = 0, detectOk = true } = {}) {
+  const date = maintenant.toISOString().slice(0, 10);
+  const indice = (niveau, nature, extra = {}) => ({ source: 'vérification du site', type: 'site', niveau, nature, date, ...extra });
+  if (!detectOk) return { echecs: echecsAvant, preuves: [], faible: null };
+  const code = row ? Number(row.http_status) || 0 : 0;
+  if (!row || !code || code >= 400) {
+    const echecs = echecsAvant + 1;
+    const nature = !code ? 'site du prestataire injoignable' : `site du prestataire en erreur (${code})`;
+    return { echecs, preuves: echecs >= ECHECS_SITE ? [indice(1, `${nature} lors de ${echecs} vérifications de suite`)] : [], faible: null };
+  }
   const parque = row.parked === true || row.parked === 'oui' || row.parked === 'true';
-  let nature = null;
-  if (!code) nature = 'site du prestataire injoignable';
-  else if (code >= 400) nature = `site du prestataire en erreur (${code})`;
-  else if (parque) nature = 'domaine du prestataire parqué (page de parking)';
-  else if (annee && annee <= maintenant.getFullYear() - ANS_COPYRIGHT) nature = `site du prestataire figé (copyright ${annee})`;
-  return nature ? { type: 'site', niveau: 1, nature, date: maintenant.toISOString().slice(0, 10) } : null;
+  const annee = Number(row.copyright_annee) || null;
+  return {
+    echecs: 0,
+    preuves: parque ? [indice(1, 'domaine du prestataire parqué (page de parking)')] : [],
+    faible: annee && annee <= maintenant.getFullYear() - ANS_COPYRIGHT ? indice(0, `pied de page du prestataire non mis à jour (copyright ${annee})`, { faible: true }) : null,
+  };
 }
 
 // Statut d'ensemble à partir des preuves.
@@ -137,11 +172,13 @@ const D = (deps = {}) => ({
 async function verifier(db, { domaines = null, limite = 200, pas_depuis: depuis = null } = {}, deps = {}) {
   const x = D(deps);
   await assurerTables(db.pool);
+  await retirerExclus(db);
   const liste = domaines && domaines.length
     ? (await db.pool.query('SELECT * FROM prestataires WHERE domaine = ANY($1::text[])', [domaines.map(hote)])).rows
     : (await db.pool.query('SELECT * FROM prestataires WHERE ignore_le IS NULL AND ($2::timestamptz IS NULL OR verifie_le IS NULL OR verifie_le < $2) ORDER BY verifie_le NULLS FIRST LIMIT $1', [limite, depuis])).rows;
   if (!liste.length) return { verifies: 0, resultats: [] };
-  const lignes = await x.detect(liste.map((p) => p.domaine)).catch(() => []);
+  let detectOk = true;
+  const lignes = await x.detect(liste.map((p) => p.domaine)).catch(() => { detectOk = false; return []; });
   const parDomaine = new Map(lignes.map((r) => [hote(r.domain), r]));
   const resultats = [];
   for (const p of liste) {
@@ -173,16 +210,17 @@ async function verifier(db, { domaines = null, limite = 200, pas_depuis: depuis 
         }
       } catch (e) { erreurs.push(`BODACC : ${e.message}`); }
     }
-    const indice = indiceSite(row, maintenant);
-    if (indice) preuves.push(indice);
+    const site = signauxSite(row, { maintenant, echecsAvant: Number(p.echecs_site) || 0, detectOk });
+    preuves.push(...site.preuves);
+    if (site.faible && preuves.length) preuves.push(site.faible);   // copyright ancien : jamais seul
     preuves.sort((a, b) => (b.niveau - a.niveau) || String(b.date || '').localeCompare(String(a.date || '')));
     const { gravite, statut } = conclure(preuves);
     const contact = row ? { email: row.email || null, telephone: row.phone || null, titre: row.title || null } : p.contact;
     await db.pool.query(
-      `UPDATE prestataires SET nom = $2, siren = $3, siren_source = $4, statut = $5, gravite = $6, preuves = $7, site = $8, contact = $9, verifie_le = $10, erreur = $11 WHERE domaine = $1`,
+      `UPDATE prestataires SET nom = $2, siren = $3, siren_source = $4, statut = $5, gravite = $6, preuves = $7, site = $8, contact = $9, verifie_le = $10, erreur = $11, echecs_site = $12 WHERE domaine = $1`,
       [p.domaine, nom || null, siren || null, source || null, statut, gravite, JSON.stringify(preuves),
         JSON.stringify(row ? { http_status: row.http_status || null, parked: row.parked || null, copyright_annee: row.copyright_annee || null, title: row.title || null } : null),
-        JSON.stringify(contact || null), maintenant, erreurs.join(' ; ') || null]);
+        JSON.stringify(contact || null), maintenant, [erreurs.join(' ; ') || null, detectOk ? null : 'analyse des sites indisponible : site non vérifié cette fois'].filter(Boolean).join(' ; ') || null, site.echecs]);
     resultats.push({ domaine: p.domaine, statut, gravite, siren: siren || null, erreur: erreurs.join(' ; ') || undefined });
     if (x.pause) await sleep(x.pause);
   }
@@ -226,7 +264,7 @@ async function promouvoir(db, domaine, { result_ids: ids = null } = {}) {
   const p = await detail(db, domaine);
   const crawl = require('../controllers/crawlController');
   const preuve = (p.preuves || [])[0];
-  const ligne = preuve ? `Prestataire crédité : ${p.nom || p.domaine} (${p.domaine}) : ${preuve.nature}${preuve.date ? ` (${preuve.source}, ${new Date(preuve.date).toLocaleDateString('fr-FR')})` : ''}${preuve.niveau === 1 ? ', indice à vérifier, ne pas le citer' : ''}` : `Prestataire crédité : ${p.domaine}`;
+  const ligne = preuve ? `Prestataire crédité : ${p.nom || p.domaine} (${p.domaine}) : ${preuve.nature}${preuve.date ? ` (${preuve.source || 'vérification du site'}, ${new Date(preuve.date).toLocaleDateString('fr-FR')})` : ''}${preuve.niveau < 2 ? ', indice à vérifier, ne pas le citer' : ''}` : `Prestataire crédité : ${p.domaine}`;
   const out = { creees: 0, deja: 0, lead_ids: [] };
   for (const c of p.clients) {
     if (ids && c.result_id && !ids.includes(Number(c.result_id))) continue;
@@ -257,7 +295,7 @@ async function ficheDuPrestataire(db, domaine) {
   const c = p.contact || {};
   const notes = [
     `Prestataire web crédité en pied de page de ${p.clients.length} site(s) de la base (piste : reprise de portefeuille).`,
-    ...(p.preuves || []).map((x) => `• ${x.nature}${x.date ? ` (${x.source}, ${new Date(x.date).toLocaleDateString('fr-FR')})` : ''}${x.url ? ` : ${x.url}` : ''}${x.niveau === 1 ? ' [indice]' : ''}`),
+    ...(p.preuves || []).map((x) => `• ${x.nature}${x.date ? ` (${x.source || 'vérification du site'}, ${new Date(x.date).toLocaleDateString('fr-FR')})` : ''}${x.url ? ` : ${x.url}` : ''}${x.niveau < 2 ? ' [indice]' : ''}`),
     `Sites clients : ${p.clients.slice(0, 30).map((x) => x.domain).join(', ')}${p.clients.length > 30 ? '…' : ''}`,
     'Approche : en message privé, jamais en public. Côté clients, PixFeed assure la suite, jamais « reprend les dossiers abandonnés ».',
   ].join('\n');
@@ -293,4 +331,4 @@ function start(db) {
   cron.schedule('7 6 * * 1', () => lancer(db), { timezone: 'Europe/Paris' });
 }
 
-module.exports = { assurerTables, inventaire, verifier, lister, detail, clients, signalPourSite, promouvoir, versCampagne, ficheDuPrestataire, ignorer, lancer, etat, start, preuveBodacc, indiceSite, conclure, annoncesBodacc };
+module.exports = { assurerTables, inventaire, verifier, lister, detail, clients, signalPourSite, promouvoir, versCampagne, ficheDuPrestataire, ignorer, lancer, etat, start, preuveBodacc, signauxSite, conclure, annoncesBodacc, estExclu, PRESTATAIRES_EXCLUS };
