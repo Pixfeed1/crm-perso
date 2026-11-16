@@ -155,8 +155,8 @@ test('classement sur de vrais objets du BOAMP', () => {
     'Définition et mise en oeuvre de schémas directeurs d\'accessibilité numérique, avec dispositif d\'audit',
   ]) assert.equal(cible(o), 'pertinent', o);
   assert.ok(M.analyser(avis('r', 'TMA LOGMI', { donnees: JSON.stringify({ cpv: '72267100' }) }), r).themes.length === 0);
-  // Sans montant publié, au-dessus des seuils européens : hors cible pour un maximum de 200 000 € HT.
-  const grand = M.analyser(avis('r', 'Services d’hébergement et d’infogérance de type cloud public pour les applications', { descripteur_libelle: ['Site internet'], famille: 'JOUE', famille_libelle: 'Marchés supérieurs aux seuils européens' }), r);
-  assert.deepEqual([grand.cible, grand.raisons.includes('au-dessus des seuils européens')], ['hors_cible', true]);
-  assert.equal(M.analyser(avis('r', 'Refonte du site internet', { famille: 'JOUE' }), { montant_max: 500000 }).cible, 'pertinent', 'maximum relevé : gardé');
+  // Marché européen sans montant publié : gardé, avec l'information (souvent un accord-cadre sur plusieurs années).
+  const grand = M.analyser(avis('r', 'Tierce maintenance applicative du portail Prevair', { famille: 'JOUE', famille_libelle: 'Marchés européens' }), r);
+  assert.equal(grand.cible, 'pertinent');
+  assert.ok(grand.raisons.some((x) => /marché européen/.test(x)));
 });

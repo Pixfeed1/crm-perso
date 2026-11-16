@@ -114,13 +114,10 @@ function analyser(rec, reglages = {}, maintenant = new Date()) {
   const montant = don.montant;
   const max = Number(reglages.montant_max) || 200000;
   // Jamais retenu sur le seul texte de l'avis : il faut le web dans l'objet, les descripteurs ou les CPV.
-  // Sans montant publié : un marché au-dessus des seuils européens (famille JOUE) dépasse un maximum plus bas.
-  const famille = String(lire(o, 'famille') || '');
-  const tranche = sans(lire(o, 'famille_libelle', 'famillelibelle') || '');
-  const auDessusSeuils = /^joue/i.test(famille) || /(superieurs?|au-dessus|au dela) (des |aux )?seuils/.test(tranche);
-  if (!montant && auDessusSeuils && max < 215000) raisons.push('au-dessus des seuils européens');
-  const tropGros = montant ? montant > max : auDessusSeuils && max < 215000;
-  const cible = !principal || score < 3 ? 'non_pertinent' : tropGros ? 'hors_cible' : 'pertinent';
+  // Marché européen (famille JOUE) : montant total au-dessus des seuils, souvent sur plusieurs années
+  // (accord-cadre) ; une simple information, jamais un motif d'écart. Seul un montant publié compte.
+  if (/^joue/i.test(String(lire(o, 'famille') || ''))) raisons.push('marché européen (montant total au-dessus des seuils, souvent sur plusieurs années)');
+  const cible = !principal || score < 3 ? 'non_pertinent' : montant && montant > max ? 'hors_cible' : 'pertinent';
   return {
     idweb: String(idweb), objet: objet.slice(0, 1000), acheteur: String(lire(o, 'nomacheteur', 'nom_acheteur', 'acheteur') || '').slice(0, 300) || null,
     departements, date_parution: lire(o, 'dateparution', 'date_parution'), date_limite: limite || null,
