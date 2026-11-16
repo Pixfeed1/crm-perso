@@ -123,9 +123,19 @@ test('vérification, liste, prospects, angle « prestataire » dans une campagne
     assert.deepEqual([par['freelance-y.fr'].statut, par['freelance-y.fr'].siren], ['abandon', null]);
     assert.equal(par['agence-saine.fr'].statut, 'actif');
 
-    // Liste : par gravité, avec le nombre de sites clients (www. compris).
+    // Sites clients enregistrés sous d'autres formes : URL complète dans un crawl, fiche rattachée à un crawl qui ne
+    // cite pas le prestataire, fiche sans crawl ; le même site n'est compté qu'une fois.
+    const c3 = await site('the-parquee.fr', 'https://www.agence-parquee.fr/mentions');
+    const c4 = await site('olives-vexin.fr', null);
+    await pool.query("INSERT INTO leads (company, website, crawl_result_id, prestataire) VALUES ('Olives', 'https://olives-vexin.fr', $1, 'HTTPS://agence-parquee.fr/'), ('The Parquée', 'the-parquee.fr', $2, 'agence-parquee.fr'), ('Sans crawl', 'https://www.thé-vexin.fr/', NULL, 'www.agence-parquee.fr')", [c4, c3]);
+    assert.deepEqual((await P.detail(db, 'agence-parquee.fr')).clients.map((c) => c.domain).sort(), ['miel-vexin.fr', 'olives-vexin.fr', 'the-parquee.fr', 'thé-vexin.fr']);
+    assert.equal((await P.inventaire(db)).nouveaux, 0, 'les autres formes ne créent pas de doublon');
+
+    // Liste : par gravité, avec le nombre de sites clients (www., protocole et chemin compris).
     let l = await P.lister(db);
-    assert.deepEqual(l.prestataires.map((p) => [p.domaine, p.nb_clients]), [['agence-x.fr', 2], ['ancienne-agence.fr', 1], ['agence-parquee.fr', 1], ['freelance-y.fr', 1]]);
+    assert.deepEqual(l.prestataires.map((p) => [p.domaine, p.nb_clients]), [['agence-x.fr', 2], ['ancienne-agence.fr', 1], ['agence-parquee.fr', 4], ['freelance-y.fr', 1]]);
+    await pool.query("DELETE FROM leads WHERE prestataire ILIKE '%agence-parquee%'");
+    await pool.query('DELETE FROM crawl_results WHERE id = ANY($1)', [[c3, c4]]);
     assert.deepEqual(l.totaux, { procedure: 1, ferme: 1, abandon: 2, actif: 2 });
     assert.ok(!l.prestataires.some((p) => /hostinger|goo\.gl/.test(p.domaine)));
     const d = await P.detail(db, 'agence-x.fr');

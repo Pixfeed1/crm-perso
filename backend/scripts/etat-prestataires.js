@@ -16,8 +16,9 @@ const fmt = (d) => (d ? new Date(d).toLocaleDateString('fr-FR') : '');
     console.log(`Inventaire : ${inv.prestataires} prestataire(s), ${inv.nouveaux} nouveau(x), ${inv.retires.length} faux prestataire(s) retiré(s)${inv.retires.length ? ` (${inv.retires.join(', ')})` : ''}`);
     const debut = new Date();
     let n = 0;
-    for (;;) { const r = await P.verifier(db, { limite: 100, pas_depuis: debut }); n += r.verifies; process.stdout.write(`\r${n} vérifié(s)…`); if (r.verifies < 100) break; }
-    console.log('');
+    const surAvancee = (x) => { n += 1; console.log(`${String(n).padStart(4)}. ${x.domaine} : ${x.statut}${x.erreur ? ` (${x.erreur})` : ''}`); };
+    for (;;) { const r = await P.verifier(db, { limite: 100, pas_depuis: debut, surAvancee }); if (r.verifies < 100) break; }
+    console.log(`Vérification terminée : ${n} prestataire(s).`);
   }
   const l = await P.lister(db, { gravite_min: 0 });
   const t = l.totaux;
@@ -32,4 +33,6 @@ const fmt = (d) => (d ? new Date(d).toLocaleDateString('fr-FR') : '');
     const liste = l.prestataires.filter((p) => p.statut === s);
     if (liste.length) console.log(`\n${s === 'procedure' ? 'En procédure' : 'Fermés'} : ${liste.map((p) => `${p.domaine} (${p.nb_clients})`).join(', ')}`);
   }
-})().catch((e) => { console.error('Erreur :', e.message); process.exitCode = 1; }).finally(() => pool.end());
+})().catch((e) => { console.error('Erreur :', e.message); process.exitCode = 1; })
+  // Fin nette : des connexions HTTP gardées ouvertes (keep-alive) ne doivent pas retenir le script.
+  .finally(async () => { await pool.end().catch(() => {}); process.exit(process.exitCode || 0); });

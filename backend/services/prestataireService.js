@@ -72,8 +72,8 @@ async function assurerTables(q) {
 async function inventaire(db) {
   await assurerTables(db.pool);
   const { rows } = await db.pool.query(
-    `SELECT DISTINCT LOWER(prestataire) AS p FROM crawl_results WHERE prestataire IS NOT NULL AND prestataire <> ''
-     UNION SELECT DISTINCT LOWER(prestataire) FROM leads WHERE prestataire IS NOT NULL AND prestataire <> ''`);
+    `SELECT DISTINCT ${NORM('prestataire')} AS p FROM crawl_results WHERE prestataire IS NOT NULL AND prestataire <> ''
+     UNION SELECT DISTINCT ${NORM('prestataire')} FROM leads WHERE prestataire IS NOT NULL AND prestataire <> ''`);
   const domaines = [...new Set(rows.map((r) => hote(r.p)).filter(Boolean))].filter((d) => !estExclu(d));
   const retires = await retirerExclus(db);
   let nouveaux = 0;
@@ -84,20 +84,23 @@ async function inventaire(db) {
   return { prestataires: domaines.length, nouveaux, retires };
 }
 
-// Sites clients d'un prestataire : résultats de crawl et fiches qui le créditent.
-const SQL_CLIENTS = `
-  SELECT r.id AS result_id, r.domain, r.platform, r.email, r.http_status, l.id AS lead_id, l.relation_status,
-         EXISTS (SELECT 1 FROM email_optout o WHERE o.email = LOWER(COALESCE(l.email, r.email))) AS desinscrit
+// Prestataire tel qu'enregistré (« https://www.agence.fr/ », « www.agence.fr »…) ramené au domaine nu, comme hote().
+const NORM = (col) => `LOWER(REGEXP_REPLACE(REGEXP_REPLACE(REGEXP_REPLACE(TRIM(${col}), '^https?://', '', 'i'), '^www\\.', '', 'i'), '[/?#].*$', ''))`;
+// Sites clients d'un prestataire : résultats de crawl qui le créditent, et fiches qui le créditent (avec ou sans
+// résultat de crawl rattaché) ; un même site n'est compté qu'une fois.
+const SQL_CLIENTS_BASE = `
+  SELECT r.id AS result_id, r.domain AS domain, r.platform, r.http_status, l.id AS lead_id, l.relation_status, COALESCE(l.email, r.email) AS email
     FROM crawl_results r LEFT JOIN leads l ON l.crawl_result_id = r.id
-   WHERE LOWER(REGEXP_REPLACE(r.prestataire, '^www\\.', '')) = $1
+   WHERE ${NORM('r.prestataire')} = $1
   UNION ALL
-  SELECT NULL, l.company, l.platform, l.email, NULL, l.id, l.relation_status,
-         EXISTS (SELECT 1 FROM email_optout o WHERE o.email = LOWER(l.email))
-    FROM leads l WHERE l.crawl_result_id IS NULL AND LOWER(REGEXP_REPLACE(l.prestataire, '^www\\.', '')) = $1`;
+  SELECT r.id, COALESCE(r.domain, ${NORM('l.website')}, l.company), COALESCE(r.platform, l.platform), r.http_status, l.id, l.relation_status, COALESCE(l.email, r.email)
+    FROM leads l LEFT JOIN crawl_results r ON r.id = l.crawl_result_id
+   WHERE ${NORM('l.prestataire')} = $1`;
+const SQL_CLIENTS = `SELECT c.*, EXISTS (SELECT 1 FROM email_optout o WHERE o.email = LOWER(c.email)) AS desinscrit FROM (${SQL_CLIENTS_BASE}) c ORDER BY c.lead_id NULLS LAST`;
 async function clients(db, domaine) {
   const { rows } = await db.pool.query(SQL_CLIENTS, [hote(domaine)]);
   const vus = new Set();
-  return rows.filter((r) => { const k = String(r.domain || '').toLowerCase(); if (vus.has(k)) return false; vus.add(k); return true; });
+  return rows.filter((r) => { const k = String(r.domain || '').toLowerCase().replace(/^www\./, ''); if (vus.has(k)) return false; vus.add(k); return true; });
 }
 
 // ---------- sources ----------
@@ -169,7 +172,7 @@ const D = (deps = {}) => ({
 });
 
 // Vérifie un lot de prestataires (les plus anciennement vérifiés d'abord, ceux qui ont des clients).
-async function verifier(db, { domaines = null, limite = 200, pas_depuis: depuis = null } = {}, deps = {}) {
+async function verifier(db, { domaines = null, limite = 200, pas_depuis: depuis = null, surAvancee = null } = {}, deps = {}) {
   const x = D(deps);
   await assurerTables(db.pool);
   await retirerExclus(db);
@@ -222,6 +225,7 @@ async function verifier(db, { domaines = null, limite = 200, pas_depuis: depuis 
         JSON.stringify(row ? { http_status: row.http_status || null, parked: row.parked || null, copyright_annee: row.copyright_annee || null, title: row.title || null } : null),
         JSON.stringify(contact || null), maintenant, [erreurs.join(' ; ') || null, detectOk ? null : 'analyse des sites indisponible : site non vérifié cette fois'].filter(Boolean).join(' ; ') || null, site.echecs]);
     resultats.push({ domaine: p.domaine, statut, gravite, siren: siren || null, erreur: erreurs.join(' ; ') || undefined });
+    if (surAvancee) surAvancee(resultats[resultats.length - 1], resultats.length, liste.length);
     if (x.pause) await sleep(x.pause);
   }
   return { verifies: resultats.length, resultats };
@@ -231,8 +235,7 @@ async function verifier(db, { domaines = null, limite = 200, pas_depuis: depuis 
 async function lister(db, { gravite_min = 1, statut = null, avec_ignores = false, limite = 200 } = {}) {
   await assurerTables(db.pool);
   const { rows } = await db.pool.query(
-    `SELECT p.*, (SELECT COUNT(*)::int FROM crawl_results r WHERE LOWER(REGEXP_REPLACE(r.prestataire, '^www\\.', '')) = p.domaine)
-              + (SELECT COUNT(*)::int FROM leads l WHERE l.crawl_result_id IS NULL AND LOWER(REGEXP_REPLACE(l.prestataire, '^www\\.', '')) = p.domaine) AS nb_clients
+    `SELECT p.*, (SELECT COUNT(DISTINCT LOWER(REGEXP_REPLACE(c.domain, '^www\\.', '')))::int FROM (${SQL_CLIENTS_BASE.replace(/\$1/g, 'p.domaine')}) c) AS nb_clients
        FROM prestataires p
       WHERE p.gravite >= $1 AND ($2::text IS NULL OR p.statut = $2) AND ($3 OR p.ignore_le IS NULL)
       ORDER BY p.gravite DESC, nb_clients DESC, p.domaine LIMIT $4`,
