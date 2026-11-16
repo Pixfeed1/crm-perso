@@ -107,6 +107,7 @@ function analyser(rec, reglages = {}, maintenant = new Date()) {
     idweb: String(idweb), objet: objet.slice(0, 1000), acheteur: String(lire(o, 'nomacheteur', 'nom_acheteur', 'acheteur') || '').slice(0, 300) || null,
     departements, date_parution: lire(o, 'dateparution', 'date_parution'), date_limite: limite || null,
     procedure: String(lire(o, 'procedure_libelle', 'procedurelibelle', 'type_procedure', 'procedure') || '').slice(0, 200) || null,
+    tranche: String(lire(o, 'famille_libelle', 'famillelibelle') || '').slice(0, 200) || null,   // ex. « Marchés entre 90 k€ et seuils européens »
     nature: nature.slice(0, 200) || null, type_marche: typesMarche, descripteurs, cpv: don.cpv.slice(0, 20), montant,
     url: lire(o, 'url_avis', 'urlavis', 'url') || `https://www.boamp.fr/pages/avis/?q=idweb:%22${encodeURIComponent(idweb)}%22`,
     themes: [...themes], score, raisons, cible, rectificatif: /rectificati/.test(sans(nature)),
@@ -144,6 +145,7 @@ async function assurerTables(q) {
       updated_at    TIMESTAMPTZ DEFAULT NOW()
     );
     CREATE INDEX IF NOT EXISTS idx_marches_limite ON marches_publics (cible, date_limite);
+    ALTER TABLE marches_publics ADD COLUMN IF NOT EXISTS tranche TEXT;
     CREATE TABLE IF NOT EXISTS marches_reglages (
       id            INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1),
       montant_max   INTEGER DEFAULT 200000,
@@ -211,14 +213,14 @@ async function relever(db, { jours = null, surJour = null } = {}, deps = {}) {
         const a = analyser(rec, r, maintenant);
         if (!a || a.cible === 'non_pertinent') { out.ecartes++; continue; }
         const ins = await db.pool.query(
-          `INSERT INTO marches_publics (idweb, objet, acheteur, departements, date_parution, date_limite, procedure, nature, type_marche, descripteurs, cpv, montant, url, themes, score, raisons, cible, rectificatif)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
+          `INSERT INTO marches_publics (idweb, objet, acheteur, departements, date_parution, date_limite, procedure, nature, type_marche, descripteurs, cpv, montant, url, themes, score, raisons, cible, rectificatif, tranche)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
            ON CONFLICT (idweb) DO UPDATE SET objet = EXCLUDED.objet, acheteur = EXCLUDED.acheteur, departements = EXCLUDED.departements, date_limite = EXCLUDED.date_limite,
              procedure = EXCLUDED.procedure, nature = EXCLUDED.nature, type_marche = EXCLUDED.type_marche, descripteurs = EXCLUDED.descripteurs, cpv = EXCLUDED.cpv,
              montant = EXCLUDED.montant, url = EXCLUDED.url, themes = EXCLUDED.themes, score = EXCLUDED.score, raisons = EXCLUDED.raisons, cible = EXCLUDED.cible,
-             rectificatif = EXCLUDED.rectificatif, updated_at = NOW()
+             rectificatif = EXCLUDED.rectificatif, tranche = EXCLUDED.tranche, updated_at = NOW()
            RETURNING (xmax = 0) AS nouveau`,
-          [a.idweb, a.objet, a.acheteur, a.departements, a.date_parution, a.date_limite, a.procedure, a.nature, a.type_marche, a.descripteurs, a.cpv, a.montant, a.url, a.themes, a.score, a.raisons, a.cible, a.rectificatif]);
+          [a.idweb, a.objet, a.acheteur, a.departements, a.date_parution, a.date_limite, a.procedure, a.nature, a.type_marche, a.descripteurs, a.cpv, a.montant, a.url, a.themes, a.score, a.raisons, a.cible, a.rectificatif, a.tranche]);
         if (ins.rows[0].nouveau) { out.nouveaux++; if (a.cible === 'pertinent') out.pertinents_nouveaux.push(a); } else out.mis_a_jour++;
       }
       if (p.records.length < 100 || offset >= 9900) break;
@@ -242,7 +244,7 @@ async function alerter(marches) {
   const mail = require('./emailService');
   const to = process.env.ALERT_EMAIL || process.env.REPORT_REPLY_TO || process.env.EMAIL_USER;
   if (!to) return;
-  const lignes = marches.map((m) => `• ${m.objet}\n  ${m.acheteur || 'acheteur non précisé'}${m.departements.length ? ` (${m.departements.join(', ')})` : ''} · réponse avant le ${fmtDate(m.date_limite)}${m.montant ? ` · environ ${Math.round(m.montant).toLocaleString('fr-FR')} € HT` : ''}\n  ${m.themes.map((t) => (THEMES[t] || {}).libelle || t).join(', ')}\n  ${m.url}`);
+  const lignes = marches.map((m) => `• ${m.objet}\n  ${m.acheteur || 'acheteur non précisé'}${m.departements.length ? ` (${m.departements.join(', ')})` : ''} · réponse avant le ${fmtDate(m.date_limite)}${m.montant ? ` · environ ${Math.round(m.montant).toLocaleString('fr-FR')} € HT` : m.tranche ? ` · ${m.tranche}` : ''}\n  ${m.themes.map((t) => (THEMES[t] || {}).libelle || t).join(', ')}\n  ${m.url}`);
   const texte = `${marches.length} nouveau(x) marché(s) public(s) web pour vous :\n\n${lignes.join('\n\n')}\n\nÀ suivre dans le CRM : Portefeuille > Signaux > Marchés publics.`;
   await mail.sendEmail({ to, subject: `Marchés publics : ${marches.length} nouveau(x) marché(s) web`, text: texte, html: `<div style="font-family:sans-serif;font-size:15px;line-height:1.6;white-space:pre-line">${texte.replace(/[<>&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]))}</div>` });
 }

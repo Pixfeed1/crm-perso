@@ -26,7 +26,7 @@ function Ligne({ m, themes, onChange }) {
           <div className="text-sm font-medium text-text-primary">{m.objet}</div>
           <div className="text-xs text-text-muted mt-1">
             {m.acheteur || 'Acheteur non précisé'}{m.departements && m.departements.length ? ` · ${m.departements.join(', ')}` : ''}
-            {m.montant ? ` · environ ${Math.round(Number(m.montant)).toLocaleString('fr-FR')} € HT` : ''}{m.procedure ? ` · ${m.procedure}` : ''}
+            {m.montant ? ` · environ ${Math.round(Number(m.montant)).toLocaleString('fr-FR')} € HT` : m.tranche ? ` · ${m.tranche}` : ''}{m.procedure ? ` · ${m.procedure}` : ''}
           </div>
           <div className="flex flex-wrap gap-1 mt-1.5">
             {(m.themes || []).map((t) => <span key={t} className={`px-2 py-0.5 rounded-full text-xs ${t === 'maintenance' ? 'bg-warning-bg text-warning-text' : 'bg-neutral-bg text-neutral-text'}`}>{themes[t] || t}</span>)}

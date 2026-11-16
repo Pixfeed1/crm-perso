@@ -8,7 +8,7 @@ const M = require('../services/marchesService');
 const futur = new Date(Date.now() + 20 * 86400000).toISOString();
 const avis = (idweb, objet, extra = {}) => ({
   idweb, objet, nomacheteur: 'Commune de Test', code_departement: ['95'], dateparution: new Date().toISOString().slice(0, 10), datelimitereponse: futur,
-  nature_categorise_libelle: 'Avis de marché', procedure_libelle: 'Procédure adaptée', type_marche: ['SERVICES'], descripteur_libelle: [], donnees: null, url_avis: `https://www.boamp.fr/pages/avis/?q=idweb:${idweb}`, ...extra,
+  nature_categorise_libelle: 'Avis de marché', procedure_libelle: 'Procédure adaptée', famille_libelle: 'Marchés entre 90 k€ et seuils européens', type_marche: ['SERVICES'], descripteur_libelle: [], donnees: null, url_avis: `https://www.boamp.fr/pages/avis/?q=idweb:${idweb}`, ...extra,
 });
 const ANNONCES = [
   avis('26-1', 'Refonte du site internet de la commune', { descripteur_libelle: ['Informatique (prestations de services)', 'Site internet'], donnees: JSON.stringify({ EFORMS: { ContractNotice: { 'cbc:ItemClassificationCode': '72413000', 'cbc:EstimatedOverallContractAmount': '40000' } } }) }),
@@ -104,7 +104,8 @@ test('relevé, mail, suivi, réglages, connecteur', { skip: !hasDb() && 'TEST_DA
     const C = require('../services/campagneConnecteur');
     const c = await C.marches(db, { theme: 'maintenance', ouverts: false });
     assert.deepEqual(c.marches.map((m) => [m.idweb, m.statut]), [['26-3', 'repondu'], ['26-7', 'nouveau']], 'le grand portail entre dans la cible avec le nouveau montant maximal');
-    assert.equal((await C.marches(db, { idweb: '26-1' })).cpv[0], '72413000');
+    const d1 = await C.marches(db, { idweb: '26-1' });
+    assert.deepEqual([d1.cpv[0], d1.tranche], ['72413000', 'Marchés entre 90 k€ et seuils européens']);
     assert.equal((await C.marcheSuivre(db, { idweb: '26-8', statut: 'a_etudier' })).statut, 'a_etudier');
     await assert.rejects(C.marcheSuivre(db, {}), /idweb requis/);
   });

@@ -214,7 +214,7 @@ async function marches(db, { theme = null, statut = null, cible = 'pertinent', o
     return r;
   }
   const l = await M().lister(db, { theme, statut, cible, ouverts, departement });
-  return { totaux: l.totaux, releve: l.releve, reglages: l.reglages, themes: l.themes, statuts: l.statuts, marches: l.marches.map((m) => ({ idweb: m.idweb, objet: m.objet, acheteur: m.acheteur, departements: m.departements, date_limite: m.date_limite, montant_ht: m.montant ? Number(m.montant) : undefined, procedure: m.procedure, themes: m.themes, score: m.score, raisons: m.raisons, cible: m.cible, rectificatif: m.rectificatif || undefined, statut: m.statut, note: m.note || undefined, url: m.url })) };
+  return { totaux: l.totaux, releve: l.releve, reglages: l.reglages, themes: l.themes, statuts: l.statuts, marches: l.marches.map((m) => ({ idweb: m.idweb, objet: m.objet, acheteur: m.acheteur, departements: m.departements, date_limite: m.date_limite, montant_ht: m.montant ? Number(m.montant) : undefined, tranche: m.tranche || undefined, procedure: m.procedure, themes: m.themes, score: m.score, raisons: m.raisons, cible: m.cible, rectificatif: m.rectificatif || undefined, statut: m.statut, note: m.note || undefined, url: m.url })) };
 }
 const marcheSuivre = async (db, { idweb, statut, note } = {}) => { if (!idweb) throw err(400, 'idweb requis'); return M().suivre(db, idweb, { statut, note }); };
 
