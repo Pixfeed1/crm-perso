@@ -197,7 +197,7 @@ async function prestataireVerifier(db, { domaine } = {}, deps = {}) {
   return { ...reste, statut_avant: avant.statut, erreur: (r.resultats[0] && r.resultats[0].erreur) || undefined, sites_clients: clients.length };
 }
 // Fiche du prestataire lui-même (piste : reprise de son portefeuille, en message privé) ; rien n'est envoyé.
-const prestataireFiche = (db, { domaine } = {}) => { if (!domaine) throw err(400, 'domaine requis'); return P().ficheDuPrestataire(db, domaine); };
+const prestataireFiche = async (db, { domaine } = {}) => { if (!domaine) throw err(400, 'domaine requis'); return P().ficheDuPrestataire(db, domaine); };
 // Écarter un prestataire de la liste (faux prestataire, déjà traité…), ou l'y remettre avec retablir=true.
 async function prestataireIgnorer(db, { domaine, raison = null, retablir = false } = {}) {
   if (!domaine) throw err(400, 'domaine requis');
@@ -205,4 +205,17 @@ async function prestataireIgnorer(db, { domaine, raison = null, retablir = false
   return P().ignorer(db, domaine, { raison: raison && String(raison).trim(), retablir: !!retablir });
 }
 
-module.exports = { prestataires, prestataireProspects, prestataireCampagne, prestataireVerifier, prestataireFiche, prestataireIgnorer, lister, lire, ligne, prospects, crawls, creer, modifier, ajouter, modifierLigne, regenerer, reanalyser, reprendre, testAb, piloter, boiteReception };
+// Marchés publics web (BOAMP) : lire et suivre. Répondre reste à Marc ; rien n'est déposé.
+const M = () => require('./marchesService');
+async function marches(db, { theme = null, statut = null, cible = 'pertinent', ouverts = true, departement = null, idweb = null } = {}) {
+  if (idweb) {
+    const r = (await db.pool.query('SELECT * FROM marches_publics WHERE idweb = $1', [String(idweb)]).catch(() => ({ rows: [] }))).rows[0];
+    if (!r) throw err(404, `marché ${idweb} inconnu`);
+    return r;
+  }
+  const l = await M().lister(db, { theme, statut, cible, ouverts, departement });
+  return { totaux: l.totaux, releve: l.releve, reglages: l.reglages, themes: l.themes, statuts: l.statuts, marches: l.marches.map((m) => ({ idweb: m.idweb, objet: m.objet, acheteur: m.acheteur, departements: m.departements, date_limite: m.date_limite, montant_ht: m.montant ? Number(m.montant) : undefined, procedure: m.procedure, themes: m.themes, score: m.score, raisons: m.raisons, cible: m.cible, rectificatif: m.rectificatif || undefined, statut: m.statut, note: m.note || undefined, url: m.url })) };
+}
+const marcheSuivre = async (db, { idweb, statut, note } = {}) => { if (!idweb) throw err(400, 'idweb requis'); return M().suivre(db, idweb, { statut, note }); };
+
+module.exports = { marches, marcheSuivre, prestataires, prestataireProspects, prestataireCampagne, prestataireVerifier, prestataireFiche, prestataireIgnorer, lister, lire, ligne, prospects, crawls, creer, modifier, ajouter, modifierLigne, regenerer, reanalyser, reprendre, testAb, piloter, boiteReception };

@@ -224,6 +224,7 @@ app.use('/api/interventions', require('./routes/interventionRoutes'));
 app.use('/api/interactions', require('./routes/interactionRoutes'));
 app.use('/api/portefeuille/crawl', require('./routes/crawlRoutes'));
 app.use('/api/portefeuille/signaux', require('./routes/domainSignalRoutes')); // nouveaux domaines .fr (AFNIC)
+app.use('/api/portefeuille/marches', require('./routes/marchesRoutes')); // veille des marchés publics web (BOAMP)
 app.use('/api/portefeuille/prestataires', require('./routes/prestataireRoutes')); // prestataires crédités en difficulté ou disparus (BODACC, SIRENE)
 app.use('/api/affaires', require('./routes/affairesRoutes')); // affaires (lot 5) : plusieurs par entreprise
 app.use('/api/campagnes', require('./routes/campaignRoutes')); // campagnes de prospection (préparer, relire, programmer)
@@ -357,6 +358,7 @@ async function startServer() {
   // Boîte d'envoi : réponses et rebonds relevés toutes les 15 min (si IMAP_* est réglé dans .env).
   require('./services/boiteService').start(app.locals.db);
   require('./services/sauvegardeDrive').start(app.locals.db);
+  require('./services/marchesService').start(app.locals.db);        // marchés publics web : relevé du BOAMP à 7 h 47 et 13 h 47
   require('./services/prestataireService').start(app.locals.db);   // prestataires crédités : vérification BODACC / SIRENE chaque lundi   // copie chiffrée sur Drive la nuit, test de relecture le dimanche
   // Prélèvements : les fiches restées « en attente » sont relues chez Stripe (webhook manqué)
   require('./services/maintenanceBillingService').startSyncEnAttente(app.locals.db);

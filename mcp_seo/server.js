@@ -473,6 +473,18 @@ function buildServer() {
     async (a) => compactJson(await campagnes(a.id ? 'prestataire-campagne' : 'prestataire-prospects', a, 10 * 60 * 1000))
   );
   server.tool(
+    'lister_marches_publics',
+    "Lecture seule. Veille des marchés publics web du BOAMP, relevée deux fois par jour : création et refonte de sites, e-commerce, maintenance et hébergement, référencement et marketing numérique, applications web, accessibilité, design web. Par défaut : les marchés pertinents encore ouverts, par date limite. theme pour un seul thème (maintenance pour les voir à part), statut pour le suivi, cible=hors_cible (montant au-delà du maximum réglé) ou tous, departement. idweb : une annonce en détail (descripteurs, CPV, raisons du classement, lien BOAMP). Répondre à un marché reste une décision de Marc : rien n'est déposé.",
+    { theme: z.enum(['site', 'ecommerce', 'maintenance', 'referencement', 'appli', 'accessibilite', 'design']).optional(), statut: z.enum(['nouveau', 'a_etudier', 'je_reponds', 'repondu', 'gagne', 'perdu', 'ecarte']).optional(), cible: z.enum(['pertinent', 'hors_cible', 'tous']).optional(), ouverts: z.boolean().optional(), departement: z.string().optional(), idweb: z.string().optional() },
+    async (a) => compactJson(await campagnes('marches', a))
+  );
+  server.tool(
+    'suivre_marche_public',
+    "ÉCRITURE (CRM seulement, rien n'est déposé ni envoyé) : statut de suivi d'un marché public (a_etudier, je_reponds, repondu, gagne, perdu, ecarte) et/ou note (pièces à préparer, questions à poser à l'acheteur, prix envisagé…). Le dépôt d'une offre reste à Marc, sur la plateforme de l'acheteur.",
+    { idweb: z.string(), statut: z.enum(['nouveau', 'a_etudier', 'je_reponds', 'repondu', 'gagne', 'perdu', 'ecarte']).optional(), note: z.string().optional() },
+    async (a) => compactJson(await campagnes('marche-suivre', a))
+  );
+  server.tool(
     'verifier_prestataire',
     "Revérifie maintenant un prestataire du signal (BODACC, SIRENE, son site) et renvoie son nouveau statut (statut_avant pour comparer), ses preuves datées, citable_dans_un_email et le nombre de sites clients. Une panne du site ne compte qu'après deux vérifications de suite en échec. Ne crée ni fiche ni prospect, n'envoie rien.",
     { domaine: z.string() },

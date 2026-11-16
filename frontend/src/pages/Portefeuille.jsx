@@ -15,6 +15,7 @@ import SuiviCockpit from '../components/suivi/SuiviCockpit';
 import CrawlPanel from '../components/crawl/CrawlPanel';
 import SignauxPanel from '../components/signaux/SignauxPanel';
 import PrestatairesPanel from '../components/signaux/PrestatairesPanel';
+import MarchesPanel from '../components/signaux/MarchesPanel';
 import CampaignsPanel from '../components/campagnes/CampaignsPanel';
 
 const TABS = [
@@ -90,12 +91,12 @@ const Portefeuille = () => {
           <div className="h-full overflow-y-auto p-2 sm:p-4 lg:p-6">
             <div className="max-w-6xl mx-auto w-full">
               <div className="flex gap-2 mb-4">
-                {[{ k: 'domaines', l: 'Nouveaux domaines (AFNIC)' }, { k: 'prestataires', l: 'Prestataires en difficulté' }].map((x) => (
+                {[{ k: 'domaines', l: 'Nouveaux domaines (AFNIC)' }, { k: 'prestataires', l: 'Prestataires en difficulté' }, { k: 'marches', l: 'Marchés publics' }].map((x) => (
                   <button key={x.k} onClick={() => setSousSignaux(x.k)}
                     className={`px-3 py-1.5 rounded-lg text-sm ${sousSignaux === x.k ? 'bg-accent text-white' : 'bg-surface-strong text-text-secondary hover:bg-border-strong'}`}>{x.l}</button>
                 ))}
               </div>
-              {sousSignaux === 'prestataires' ? <PrestatairesPanel /> : <SignauxPanel />}
+              {sousSignaux === 'prestataires' ? <PrestatairesPanel /> : sousSignaux === 'marches' ? <MarchesPanel /> : <SignauxPanel />}
             </div>
           </div>
         )}

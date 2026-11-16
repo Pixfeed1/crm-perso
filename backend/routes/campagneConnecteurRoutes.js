@@ -23,6 +23,7 @@ const ACTIONS = {
   creer: C.creer, modifier: C.modifier, ajouter: C.ajouter, 'modifier-ligne': C.modifierLigne, regenerer: C.regenerer,
   reanalyser: C.reanalyser, reprendre: C.reprendre, 'test-ab': C.testAb, piloter: C.piloter, boite: C.boiteReception,
   prestataires: C.prestataires, 'prestataire-prospects': C.prestataireProspects, 'prestataire-campagne': C.prestataireCampagne,
+  marches: C.marches, 'marche-suivre': C.marcheSuivre,
   'prestataire-verifier': (db, b) => C.prestataireVerifier(db, b), 'prestataire-fiche': C.prestataireFiche, 'prestataire-ignorer': C.prestataireIgnorer,
 };
 for (const [chemin, fn] of Object.entries(ACTIONS)) router.post(`/${chemin}`, ok(fn));

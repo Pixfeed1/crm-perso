@@ -1413,6 +1413,13 @@ export const crawlAPI = {
 
 // Signaux d'intention : nouveaux domaines .fr (AFNIC) -> table tampon -> prospects
 // Signal « prestataire en difficulté ou disparu » (Signaux > Prestataires)
+export const marchesAPI = {
+  lister: (params = {}) => apiRequest(`/portefeuille/marches?${new URLSearchParams(Object.fromEntries(Object.entries(params).filter(([, v]) => v !== null && v !== undefined && v !== '').map(([k, v]) => [k, String(v)]))).toString()}`),
+  relever: () => apiRequest('/portefeuille/marches/relever', 'POST', {}),
+  regler: (data) => apiRequest('/portefeuille/marches/reglages', 'PUT', data),
+  suivre: (idweb, data) => apiRequest(`/portefeuille/marches/${encodeURIComponent(idweb)}`, 'PUT', data)
+};
+
 export const prestatairesAPI = {
   lister: (params = {}) => apiRequest(`/portefeuille/prestataires?${new URLSearchParams(Object.fromEntries(Object.entries(params).map(([k, v]) => [k, String(v)]))).toString()}`),
   etat: () => apiRequest('/portefeuille/prestataires/etat'),
