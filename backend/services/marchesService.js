@@ -19,22 +19,25 @@ const sans = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g,
 // ---------- thèmes ----------
 // fort : suffit seul ; contexte : ne compte que si l'annonce parle aussi du web (une « maintenance » d'ascenseur
 // ou un « hébergement » de personnes ne sont pas des marchés web).
-const WEB = /\b(site|sites) (internet|web)\b|\bsite web\b|\bweb\b|\binternet\b|\bportail\b|\bintranet\b|\bextranet\b|\bcms\b|wordpress|drupal|joomla|typo3|prestashop|woocommerce|magento|\bapplication(s)? (web|en ligne|mobile)\b|\ben ligne\b|numerique/;
+// Mots qui disent « web » dans l'objet ou les descripteurs. « portails » au pluriel = des portails de clôture ;
+// « numérique » seul (« Commissariat au numérique ») ne suffit pas.
+const SITE = String.raw`(sites? (internet|web)|sites? web|portail\b(?!s)(?! (automatique|coulissant|battant))|portails (web|internet|numeriques)|intranets?|extranets?|cms|wordpress|applications? web)`;
+const WEB = new RegExp(String.raw`\b(site|sites) (internet|web)\b|\bsites? web\b|\bweb\b|\binternet\b|\bportail\b(?!s)(?! (automatique|coulissant|battant))|\bportails (web|internet|numeriques)\b|\bintranets?\b|\bextranets?\b|\bcms\b|wordpress|drupal|joomla|typo3|prestashop|woocommerce|magento|\bapplications? (web|en ligne|mobiles?)\b|\bappli\b|\ben ligne\b|\b(produits?|services?|outils?|plateformes?|solutions?|supports?|espaces?|accessibilite|communication|strategie|marketing|offre) numeriques?\b`);
 const THEMES = {
-  site: { libelle: 'Site internet', fort: /\b(site|sites) (internet|web|vitrine|institutionnel)\b|\bsite web\b|\brefonte (du |de son |de |des )?(site|portail)|\bcreation (d'un |du |de )?(site|portail)|\bportail (web|internet|citoyen|famille|usagers?)\b|\bintranet\b|\bextranet\b|wordpress|drupal|joomla|typo3|\bweb ?design/ },
+  site: { libelle: 'Site internet', fort: new RegExp(String.raw`\b(site|sites) (internet|web|vitrine|institutionnel)\b|\bsites? web\b|\brefonte (du |de son |de |des )?(site|portail\b(?!s))|\bcreation (d'un |du |de )?(site|portail\b(?!s))|\bportail (web|internet|citoyen|famille|usagers?)\b|\bintranets?\b|\bextranets?\b|wordpress|drupal|joomla|typo3|\bweb ?design`) },
   ecommerce: { libelle: 'E-commerce', fort: /e-?commerce|boutique en ligne|vente en ligne|prestashop|woocommerce|magento|shopify|billetterie en ligne|paiement en ligne|place de marche (en ligne|numerique)/ },
-  maintenance: { libelle: 'Maintenance et hébergement', fort: /tierce maintenance applicative|\btma\b|maintenance (corrective|evolutive|applicative)? ?(du |des |de |d'un |de son )?(site|sites|portail|cms|wordpress|application web)|hebergement (du |des |de |d'un )?(site|sites|portail|application web)|infogerance (du |des |de )?(site|portail)/, contexte: /maintenance|maintien en condition|\bmco\b|hebergement|infogerance|mises? a jour|supervision|support (technique|applicatif)/ },
-  referencement: { libelle: 'Référencement et marketing numérique', fort: /referencement|\bseo\b|\bsea\b|google ads|marketing (digital|numerique)|communication (digitale|numerique)|strategie (digitale|numerique)|community manage|reseaux sociaux|campagnes? (digitales?|en ligne)|newsletter/ },
-  appli: { libelle: 'Application web', fort: /application(s)? (web|en ligne)|plateforme (web|numerique|en ligne|collaborative)|teleservices?|developpement (web|d'une application web|d'une plateforme)|formulaires? en ligne|espace (usagers?|client|famille) en ligne|prise de rendez-vous en ligne/, contexte: /developpement (d'un logiciel|logiciel|informatique|specifique)|\bapi\b|application/ },
+  // TMA, MCO, hébergement… : seulement d'un site, d'un portail ou d'une application web (pas d'un logiciel métier).
+  maintenance: { libelle: 'Maintenance et hébergement', fort: new RegExp(String.raw`(tierce maintenance applicative|\btma\b|maintenance (corrective|evolutive|applicative)?|hebergement|infogerance|maintien en condition) [^.;]{0,60}\b${SITE}`), contexte: /maintenance|maintien en condition|\bmco\b|hebergement|infogerance|mises? a jour|\btma\b|tierce maintenance|support (technique|applicatif)/ },
+  // « référencement » seul = liste de fournisseurs, « géoréférencement » = topographie : il faut le sens web.
+  referencement: { libelle: 'Référencement et marketing numérique', fort: /referencement (naturel|web|payant|internet|seo|sea|local|du site|des sites)|\bseo\b|\bsea\b|moteurs? de recherche|google ads|marketing (digital|numerique)|communication (digitale|numerique)|strategie (digitale|numerique)|community manag|(gestion|animation|strategie)[^.;]{0,40}reseaux sociaux|campagnes? (digitales?|numeriques?|en ligne)|newsletter/ },
+  appli: { libelle: 'Application web', fort: /application(s)? (web|en ligne)|plateforme (web|numerique|en ligne|collaborative)|teleservices?|developpement (web|d'une application web|d'une plateforme)|formulaires? en ligne|espace (usagers?|client|famille) en ligne|prise de rendez-vous en ligne/, contexte: /developpement|\bapi\b|\bapplications?\b|\bappli\b/ },
   accessibilite: { libelle: 'Accessibilité numérique', fort: /accessibilite numerique|\brgaa\b|audit d'accessibilite (du |des |de )?(site|numerique)|declaration d'accessibilite/ },
-  design: { libelle: 'Design web', contexte: /charte graphique|identite visuelle|\bux\b|\bui\b|ergonomie|maquettes?|webdesign/ },
+  design: { libelle: 'Design web', fort: /\bux\b|\bui design\b|experience utilisateur|webdesign|design (d'interfaces?|numerique)/, contexte: /charte graphique|identite visuelle|ergonomie|maquettes?/ },
 };
-// Codes CPV du web (8 chiffres, sans le chiffre de contrôle).
-const CPV_WEB = {
-  72413000: 'site', 72212224: 'site', 72420000: 'appli', 72421000: 'appli', 72422000: 'appli', 72415000: 'maintenance',
-  72416000: 'maintenance', 72267000: 'maintenance', 72267100: 'maintenance', 72400000: 'site', 72410000: 'site',
-  79342000: 'referencement', 79341400: 'referencement', 72212000: 'appli', 72212100: 'appli', 72000000: null, 72200000: null,
-};
+// Codes CPV (8 chiffres, sans le chiffre de contrôle). Web : suffisent à eux seuls. Informatique générale
+// (maintenance de logiciels, services informatiques, publicité) : ajoutent au score, sans faire un marché web.
+const CPV_WEB = { 72413000: 'site', 72212224: 'site', 72420000: 'appli', 72421000: 'appli', 72422000: 'appli', 72415000: 'maintenance', 72400000: 'site' };
+const CPV_INFO = ['72267000', '72267100', '72000000', '72200000', '72212000', '72212100', '72416000', '72410000', '79342000', '79341400'];
 // Hors de portée d'une agence web : un de ces mots dans l'objet, sans thème web dans l'objet, et l'annonce baisse.
 const EXCLUSIONS = /\btravaux\b|\bbtp\b|batiment|voirie|nettoyage|restauration|fourniture (de |d')?(materiel|mobilier|vehicule|ordinateurs?|postes?)|videoprotection|videosurveillance|telephonie|cablage|fibre optique|\bimpression\b|imprimerie|signaletique|assurances?|\btransport\b|ascenseurs?|chauffage|electricite|espaces verts|gardiennage|denrees|\bsirh\b|logiciel de paie|progiciel|licences?|infrastructure (reseau|serveurs?)|\bmateriel informatique\b/;
 const ECARTES_NATURE = /attribution|resultat|annulation|infructueux|sans suite/;
@@ -87,8 +90,9 @@ function analyser(rec, reglages = {}, maintenant = new Date()) {
   // toujours d'« adresse internet », de « site internet de l'acheteur » ou de « plateforme en ligne » de dépôt.
   const tPrincipal = `${tObjet} ${tDesc}`;
   const cpvWeb = don.cpv.filter((c) => c in CPV_WEB);
-  const web = WEB.test(tPrincipal) || cpvWeb.some((c) => CPV_WEB[c]);
-  let principal = cpvWeb.some((c) => CPV_WEB[c]);
+  const cpvInfo = don.cpv.filter((c) => CPV_INFO.includes(c));
+  const web = WEB.test(tPrincipal) || cpvWeb.length > 0;
+  let principal = cpvWeb.length > 0;
   const themes = new Set(); let score = 0; const raisons = [];
   for (const [k, t] of Object.entries(THEMES)) {
     const fortO = t.fort && t.fort.test(tObjet), fortD = t.fort && t.fort.test(tDesc), fortT = t.fort && t.fort.test(tTout);
@@ -98,8 +102,9 @@ function analyser(rec, reglages = {}, maintenant = new Date()) {
     else if (ctx) { themes.add(k); score += t.contexte.test(tObjet) ? 2 : 1; principal = true; raisons.push(`${t.libelle} (avec le web)`); }
     else if (fortT && web) { themes.add(k); score += 1; raisons.push(`${t.libelle} (texte de l'avis)`); }
   }
-  for (const c of cpvWeb) if (CPV_WEB[c]) themes.add(CPV_WEB[c]);
-  if (cpvWeb.length) { score += 2; raisons.push(`CPV ${cpvWeb.join(', ')}`); }
+  for (const c of cpvWeb) themes.add(CPV_WEB[c]);
+  if (cpvWeb.length) { score += 2; raisons.push(`CPV web ${cpvWeb.join(', ')}`); }
+  if (cpvInfo.length && principal) { score += 1; raisons.push(`CPV informatique ${cpvInfo.join(', ')}`); }
   const exclusions = new RegExp([EXCLUSIONS.source, ...(reglages.exclusions || []).map((m) => sans(m).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))].filter(Boolean).join('|'));
   const themeDansObjet = Object.values(THEMES).some((t) => (t.fort && t.fort.test(tObjet)) || (t.contexte && WEB.test(tObjet) && t.contexte.test(tObjet)));
   if (exclusions.test(tObjet) && !themeDansObjet) { score -= 4; raisons.push('hors métier dans l\'objet'); }
@@ -109,7 +114,13 @@ function analyser(rec, reglages = {}, maintenant = new Date()) {
   const montant = don.montant;
   const max = Number(reglages.montant_max) || 200000;
   // Jamais retenu sur le seul texte de l'avis : il faut le web dans l'objet, les descripteurs ou les CPV.
-  const cible = !principal || score < 3 ? 'non_pertinent' : montant && montant > max ? 'hors_cible' : 'pertinent';
+  // Sans montant publié : un marché au-dessus des seuils européens (famille JOUE) dépasse un maximum plus bas.
+  const famille = String(lire(o, 'famille') || '');
+  const tranche = sans(lire(o, 'famille_libelle', 'famillelibelle') || '');
+  const auDessusSeuils = /^joue/i.test(famille) || /(superieurs?|au-dessus|au dela) (des |aux )?seuils/.test(tranche);
+  if (!montant && auDessusSeuils && max < 215000) raisons.push('au-dessus des seuils européens');
+  const tropGros = montant ? montant > max : auDessusSeuils && max < 215000;
+  const cible = !principal || score < 3 ? 'non_pertinent' : tropGros ? 'hors_cible' : 'pertinent';
   return {
     idweb: String(idweb), objet: objet.slice(0, 1000), acheteur: String(lire(o, 'nomacheteur', 'nom_acheteur', 'acheteur') || '').slice(0, 300) || null,
     departements, date_parution: lire(o, 'dateparution', 'date_parution'), date_limite: limite || null,

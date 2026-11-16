@@ -121,3 +121,42 @@ test('relevé, mail, suivi, réglages, connecteur', { skip: !hasDb() && 'TEST_DA
     await assert.rejects(C.marcheSuivre(db, {}), /idweb requis/);
   });
 });
+
+// Objets réels relevés le 16/11/2026 sur le BOAMP : ce que le tri doit garder, et ce qu'il doit écarter.
+test('classement sur de vrais objets du BOAMP', () => {
+  const r = { montant_max: 200000 };
+  const cible = (objet, x = {}) => M.analyser(avis('r', objet, x), r).cible;
+  for (const o of [
+    'Prestations de géolocalisation et géoréférencement de réseaux-.',
+    'Détection, localisation et géoréférencement des réseaux enterrés',
+    'Référencement de sociétés pour la conversion (rétrofit) de véhicules de différentes catégories',
+    'Référencement et promotion de l’offre légale de services de médias audiovisuels à la demande',
+    'Entretien et maintenance des portails, des portes sectionnelles, des portes rapides et des rideaux métalliques',
+    'TMA LOGMI', 'TMA STATIONS ET SERVITUDES',
+    'Maintenance logiciel Business Objects, prestations de mises à jour et assistance associées',
+    'Maintenance de la solution de sauvegarde informatique', 'maintenance des pare-feu de la DIRCE',
+    'MCO et MCS du système d’information logistique SILICIUM du Commissariat au Numérique de Défense',
+    'Prestations de location et d\'hébergement d\'une solution TV live et de réalisation de live sur les réseaux sociaux',
+  ]) assert.equal(cible(o, { donnees: JSON.stringify({ cpv: '72267100' }) }), 'non_pertinent', o);
+  assert.equal(cible('CONCESSION DE SERVICE PUBLIC DE MISE À DISPOSITION, POSE, DÉPOSE, ENTRETIEN, MAINTENANCE ET EXPLOITATION DE MOBILIER URBAIN', { donnees: JSON.stringify({ cpv: '79341400' }) }), 'non_pertinent');
+  for (const o of [
+    'Hébergement, maintenance et gestion des sites internet de l\'agglomération, accessibilité numérique',
+    'Tierce maintenance applicative des applications et des sites webs des Services du Premier Ministre',
+    'Hébergement, maintenance et développement Site internet des Célestins, Théâtre de Lyon',
+    'ACCORD-CADRE RELATIF AUX PRESTATIONS DE TIERCE MAINTENANCE APPLICATIVE DU PORTAIL PREVAIR',
+    'Réalisation, maintenance et hébergement du site internet du Centre de mémoire et d\'histoire d\'Oradour',
+    'Maintenance et Prestations complémentaires pour l\'Intranet du Département du Val de marne',
+    'Mise en œuvre et maintenance de sites d\'intranets et de portails métier',
+    'Conception, développement, maintien en condition opérationnelle et évolution des produits numériques',
+    'Marché d\'accompagnement et réalisation de campagnes digitales et médias pour la CARSAT',
+    'GESTION DES RELATIONS PRESSE ET RESEAUX SOCIAUX TOURISME REGION DES PAYS DE LA LOIRE',
+    'Solution de paiement en ligne des loyers des locataires de Var Habitat',
+    'Relance lot n°2 "Mise en œuvre de démarches UX" - Marché d\'accompagnement',
+    'Définition et mise en oeuvre de schémas directeurs d\'accessibilité numérique, avec dispositif d\'audit',
+  ]) assert.equal(cible(o), 'pertinent', o);
+  assert.ok(M.analyser(avis('r', 'TMA LOGMI', { donnees: JSON.stringify({ cpv: '72267100' }) }), r).themes.length === 0);
+  // Sans montant publié, au-dessus des seuils européens : hors cible pour un maximum de 200 000 € HT.
+  const grand = M.analyser(avis('r', 'Services d’hébergement et d’infogérance de type cloud public pour les applications', { descripteur_libelle: ['Site internet'], famille: 'JOUE', famille_libelle: 'Marchés supérieurs aux seuils européens' }), r);
+  assert.deepEqual([grand.cible, grand.raisons.includes('au-dessus des seuils européens')], ['hors_cible', true]);
+  assert.equal(M.analyser(avis('r', 'Refonte du site internet', { famille: 'JOUE' }), { montant_max: 500000 }).cible, 'pertinent', 'maximum relevé : gardé');
+});
