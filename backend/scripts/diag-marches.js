@@ -11,9 +11,9 @@ const db = { pool };
 const arg = (n) => { const i = process.argv.indexOf(n); return i > 0 ? process.argv[i + 1] : null; };
 
 (async () => {
-  const hier = new Date(Date.now() - 2 * 86400000).toISOString().slice(0, 10);
+  const hier = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
   const p = await M.pageApi(hier, 0);
-  console.log(`API BOAMP : OK, ${p.total ?? '?'} annonce(s) parue(s) depuis le ${hier}`);
+  console.log(`API BOAMP : OK, ${p.total ?? '?'} annonce(s) parue(s) le ${hier}`);
   const ex = p.records[0];
   if (!ex) { console.log('Aucune annonce dans la page.'); return; }
   console.log('\nChamps d\'une annonce :');
@@ -29,7 +29,8 @@ const arg = (n) => { const i = process.argv.indexOf(n); return i > 0 ? process.a
   for (const x of [...par('pertinent'), ...par('hors_cible')].slice(0, 15)) console.log(`  [${x.score}] ${x.objet.slice(0, 90)} · ${x.themes.join(', ')} · ${x.raisons.join(' ; ')}`);
   if (process.argv.includes('--relever')) {
     console.log('\nRelevé :');
-    const out = await M.relever(db, { jours: arg('--jours') ? Number(arg('--jours')) : null });
+    const surJour = (x) => console.log(`  ${new Date(x.jour).toLocaleDateString('fr-FR')} : ${x.lues} annonce(s) lue(s), ${x.nouveaux} marché(s) web retenu(s)`);
+    const out = await M.relever(db, { jours: arg('--jours') ? Number(arg('--jours')) : null, surJour });
     console.log(`  ${out.detail}`);
     const l = await M.lister(db);
     const t = l.totaux;

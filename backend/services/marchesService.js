@@ -177,9 +177,10 @@ async function regler(db, { montant_max: m, departements: d, exclusions: x, aler
 }
 
 // ---------- relevé ----------
-async function pageApi(depuis, offset) {
+// Une page des annonces parues un jour donné (l'API plafonne une recherche à 10 000 résultats : on lit jour par jour).
+async function pageApi(jour, offset) {
   const res = await axios.get(API(), {
-    params: { where: `dateparution >= date'${depuis}'`, order_by: 'dateparution desc', limit: 100, offset },
+    params: { where: `dateparution = date'${jour}'`, order_by: 'idweb', limit: 100, offset },
     timeout: 30000, headers: { 'User-Agent': 'CRM-PixFeed/1.0' }, validateStatus: () => true,
   });
   if (res.status >= 400) throw new Error(`BOAMP a répondu ${res.status}${res.data && res.data.message ? ` : ${res.data.message}` : ''}`);
@@ -188,7 +189,7 @@ async function pageApi(depuis, offset) {
 const jourIso = (d) => new Date(d).toISOString().slice(0, 10);
 
 let enCours = null;
-async function relever(db, { jours = null } = {}, deps = {}) {
+async function relever(db, { jours = null, surJour = null } = {}, deps = {}) {
   if (enCours) throw err(409, `relevé déjà en cours depuis ${enCours.toLocaleTimeString('fr-FR')}`);
   enCours = new Date();
   const page = deps.page || pageApi;
@@ -198,10 +199,13 @@ async function relever(db, { jours = null } = {}, deps = {}) {
     // Depuis le dernier relevé réussi (un jour de marge), 7 jours au premier.
     const depuis = jours ? jourIso(maintenant.getTime() - jours * 86400000)
       : r.releve_le && r.releve_statut === 'OK' ? jourIso(new Date(r.releve_le).getTime() - 86400000) : jourIso(maintenant.getTime() - 7 * 86400000);
-    let offset = 0, lus = 0;
-    const out = { lues: 0, nouveaux: 0, pertinents_nouveaux: [], mis_a_jour: 0, ecartes: 0 };
-    for (;;) {
-      const p = await page(depuis, offset);
+    let lus = 0;
+    const out = { lues: 0, nouveaux: 0, pertinents_nouveaux: [], mis_a_jour: 0, ecartes: 0, jours: 0 };
+    const aujourdhui = jourIso(maintenant);
+    for (let jour = depuis; jour <= aujourdhui; jour = jourIso(new Date(`${jour}T12:00:00Z`).getTime() + 86400000)) {
+     const avantJour = { lus, nouveaux: out.nouveaux };
+     for (let offset = 0; ; offset += 100) {
+      const p = await page(jour, offset);
       lus += p.records.length;
       for (const rec of p.records) {
         const a = analyser(rec, r, maintenant);
@@ -218,7 +222,9 @@ async function relever(db, { jours = null } = {}, deps = {}) {
         if (ins.rows[0].nouveau) { out.nouveaux++; if (a.cible === 'pertinent') out.pertinents_nouveaux.push(a); } else out.mis_a_jour++;
       }
       if (p.records.length < 100 || offset >= 9900) break;
-      offset += 100;
+     }
+     out.jours++;
+     if (surJour) surJour({ jour, lues: lus - avantJour.lus, nouveaux: out.nouveaux - avantJour.nouveaux });
     }
     out.lues = lus;
     const detail = `${lus} annonce(s) lue(s) depuis le ${new Date(depuis).toLocaleDateString('fr-FR')}, ${out.nouveaux} nouveau(x) marché(s) web dont ${out.pertinents_nouveaux.length} pertinent(s)`;

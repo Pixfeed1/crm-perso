@@ -53,21 +53,28 @@ test('relevé, mail, suivi, réglages, connecteur', { skip: !hasDb() && 'TEST_DA
   await withSchema('marches', async ({ pool }) => {
     const db = { pool };
     const appels = [];
-    const page = async (depuis, offset) => { appels.push([depuis, offset]); return { total: ANNONCES.length, records: offset === 0 ? ANNONCES : [] }; };
+    // Un jour à 150 annonces (deux pages), les autres vides : lecture jour par jour.
+    const jourPlein = new Date().toISOString().slice(0, 10);
+    const bourrage = Array.from({ length: 139 }, (_, i) => avis(`26-b${i}`, 'Fourniture de denrées alimentaires', { type_marche: ['FOURNITURES'] }));
+    const page = async (jour, offset) => { appels.push([jour, offset]); const l = jour === jourPlein ? [...ANNONCES, ...bourrage] : []; return { total: l.length, records: l.slice(offset, offset + 100) }; };
     const mails = [];
     const deps = { page, mail: async (l) => { mails.push(l); } };
     await M.regler(db, { departements: '95, 78' });
-    let r = await M.relever(db, {}, deps);
+    const jours = [];
+    let r = await M.relever(db, { surJour: (x) => jours.push(x) }, deps);
     assert.equal(r.statut, 'OK');
-    assert.deepEqual([r.lues, r.nouveaux, r.pertinents_nouveaux.sort()], [11, 6, ['26-1', '26-10', '26-11', '26-3', '26-8']]);
+    assert.deepEqual([r.lues, r.nouveaux, r.pertinents_nouveaux.sort()], [150, 6, ['26-1', '26-10', '26-11', '26-3', '26-8']]);
     assert.equal(appels[0][0], new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10), 'premier relevé : 7 jours');
+    assert.deepEqual([r.jours, jours.length, jours[jours.length - 1]], [8, 8, { jour: jourPlein, lues: 150, nouveaux: 6 }], 'un jour après l\'autre, aujourd\'hui compris');
+    assert.deepEqual(appels.filter((a) => a[0] === jourPlein).map((a) => a[1]), [0, 100], 'deux pages pour le jour plein');
+    appels.length = 0;
     assert.equal(mails.length, 1);
     assert.equal(mails[0].length, 5);
     // Second relevé : aucun doublon, aucun mail, depuis la veille du dernier relevé.
     r = await M.relever(db, {}, deps);
     assert.deepEqual([r.nouveaux, r.mis_a_jour], [0, 6]);
     assert.equal(mails.length, 1);
-    assert.equal(appels[1][0], new Date(Date.now() - 86400000).toISOString().slice(0, 10));
+    assert.deepEqual(appels.map((a) => a[0]), [new Date(Date.now() - 86400000).toISOString().slice(0, 10), jourPlein, jourPlein], 'depuis la veille du dernier relevé');
     let l = await M.lister(db);
     assert.equal(l.marches.length, 5);
     assert.deepEqual(l.totaux, { ouverts: 5, nouveaux: 5, maintenance: 1, en_reponse: 0, hors_cible: 1 });
