@@ -27,8 +27,15 @@ const ECHECS_PAUSE = 3; // échecs d'envoi consécutifs -> pause automatique de 
 async function getCampaign(db, id) {
   const r = await db.pool.query('SELECT * FROM campaigns WHERE id = $1', [id]);
   if (!r.rows[0]) throw Object.assign(new Error('Campagne introuvable'), { status: 404 });
-  return r.rows[0];
+  return avecForfaits(db, r.rows[0]);
 }
+// Test A/B « correction au forfait » : la carte des prix accompagne la campagne pour la génération.
+async function avecForfaits(db, c) {
+  if (!c || !c.ab_question || c.ab_question.preuve !== 'p_forfait') return c;
+  return { ...c, forfaits: await require('./forfaitService').carte(db) };
+}
+// Contexte de la version B : la preuve citée par l'email et les prix.
+const ctxB = (campaign, preuve) => ({ preuve: preuve || null, forfaits: campaign.forfaits || null });
 
 async function listCampaigns(db) {
   const { rows } = await db.pool.query(
@@ -138,7 +145,7 @@ async function setAbTest(db, campaignId, ab) {
   const parti = (await db.pool.query("SELECT COUNT(*)::int AS n FROM campaign_items WHERE campaign_id = $1 AND (sent_at IS NOT NULL OR statut IN ('programme', 'envoye', 'repondu', 'rebond', 'oppose'))", [campaignId])).rows[0].n;
   if (parti) throw Object.assign(new Error("Test A/B figé : des emails de cette campagne sont déjà programmés ou partis. Créez une nouvelle campagne pour un autre test."), { status: 409 });
   await db.pool.query('UPDATE campaigns SET ab_question = $2, updated_at = NOW() WHERE id = $1', [campaignId, config ? JSON.stringify(config) : null]);
-  const campaign = { ...c, ab_question: config };
+  const campaign = await avecForfaits(db, { ...c, ab_question: config });
   const { rows } = await db.pool.query("SELECT * FROM campaign_items WHERE campaign_id = $1 AND statut IN ('pret', 'a_verifier', 'valide', 'exclu') AND body IS NOT NULL ORDER BY id", [campaignId]);
   const compte = {};
   const out = { lignes: 0, A: 0, B: 0, hors_test: 0, a_relire: 0 };
@@ -146,14 +153,14 @@ async function setAbTest(db, campaignId, ab) {
     // Texte de base (version A) : la question d'origine remise si la ligne était en B.
     let body = it.question_a && it.variante === 'B' ? (abq.remplacerQuestion(it.body, it.question_a) || { body: it.body }).body : it.body;
     let variante = null, questionA = null;
-    if (config && abq.texteB(config, it.mode) && abq.questionDe(body)) {
+    if (config && abq.texteB(config, it.mode, false, ctxB(campaign, it.preuve_signal)) && abq.questionDe(body)) {
       const k = compte[it.mode] || (compte[it.mode] = { A: 0, B: 0 });
       variante = ['A', 'B'].includes(it.variante) ? it.variante : abq.choisir(k.A, k.B); // version déjà tirée : gardée
       k[variante]++;
       if (variante === 'B') {
         const lead = it.lead_id ? (await db.pool.query('SELECT * FROM leads WHERE id = $1', [it.lead_id])).rows[0] : null;
         const row = lead ? await rowForLead(db, lead) : null;
-        const r = abq.remplacerQuestion(body, abq.texteB(config, it.mode, proof.typeSite(row || {}) === 'boutique'));
+        const r = abq.remplacerQuestion(body, abq.texteB(config, it.mode, proof.typeSite(row || {}) === 'boutique', ctxB(campaign, it.preuve_signal)));
         if (r) { questionA = r.ancienne; body = r.body; }
       }
       out[variante]++;
@@ -222,13 +229,17 @@ function remplirModele(texte, row, lead) {
 
 function generer(campaign, row, lead, template = null, variante = null) {
   const email = genererA(campaign, row, lead, template);
-  return varier(email, campaign, variante, row);
+  const out = varier(email, campaign, variante, row);
+  // Version gardée seulement si l'email entre encore dans le test (ex. : défaut sans prix fixe après une
+  // réanalyse) : sinon la ligne sort du test, pour des chiffres A/B honnêtes.
+  const eligible = !!(campaign.ab_question && email && email.ok && abq.texteB(campaign.ab_question, email.mode, false, ctxB(campaign, email.detail && email.detail.signal)));
+  return out && out.ok ? { ...out, variante_effective: eligible ? variante : null } : out;
 }
 
 // Test A/B de la question finale : la version B remplace seulement la dernière question.
 function varier(email, campaign, variante, row) {
   if (!email || !email.ok || variante !== 'B' || !campaign.ab_question) return email;
-  const b = abq.texteB(campaign.ab_question, email.mode, proof.typeSite(row || {}) === 'boutique');
+  const b = abq.texteB(campaign.ab_question, email.mode, proof.typeSite(row || {}) === 'boutique', ctxB(campaign, email.detail && email.detail.signal));
   const r = b && abq.remplacerQuestion(email.body, b);
   return r ? { ...email, body: r.body, question_a: r.ancienne } : email;
 }
@@ -301,7 +312,7 @@ async function addLeads(db, campaignId, leadIds) {
     let email = generer(campaign, row, lead, template);
     // Test A/B : version tirée pour la famille de l'email (preuve / premier contact), moitié-moitié.
     let variante = null;
-    if (campaign.ab_question && email.ok && abq.texteB(campaign.ab_question, email.mode)) {
+    if (campaign.ab_question && email.ok && abq.texteB(campaign.ab_question, email.mode, false, ctxB(campaign, email.detail && email.detail.signal))) {
       const c = (await db.pool.query(`SELECT COUNT(*) FILTER (WHERE variante = 'A')::int AS a, COUNT(*) FILTER (WHERE variante = 'B')::int AS b FROM campaign_items WHERE campaign_id = $1 AND mode = $2`, [campaignId, email.mode])).rows[0];
       variante = abq.choisir(c.a, c.b);
       email = varier(email, campaign, variante, row);
@@ -374,6 +385,7 @@ async function updateItem(db, campaignId, itemId, { subject, body, statut, raiso
     }
     if (!email.ok) throw Object.assign(new Error(email.raison || 'génération impossible dans ce mode'), { status: 422 });
     Object.assign(fields, { mode: email.mode, subject: email.subject, body: email.body, preuve_signal: email.detail ? email.detail.signal : null, preuve_brut: email.detail ? email.detail.brut : null, question_a: email.question_a || null });
+    if (email.variante_effective !== undefined) fields.variante = email.variante_effective;
     if (item.statut === 'valide') fields.statut = 'pret'; // un texte régénéré se relit avant d'être validé
   }
   if (statut) {
@@ -431,9 +443,10 @@ async function reanalyzeItem(db, campaignId, itemId, deps = {}) {
   const detail = email.ok ? email.detail : null;
   await db.pool.query(
     `UPDATE campaign_items SET crawl_result_id = $2, to_email = COALESCE($3, to_email), statut = $4, raison = $5, mode = $6, subject = $7, body = $8,
-       preuve_signal = $9, preuve_brut = $10, preuve_url = $11, preuve_date = $12, identite = $13, question_a = $14, updated_at = NOW() WHERE id = $1`,
+       preuve_signal = $9, preuve_brut = $10, preuve_url = $11, preuve_date = $12, identite = $13, question_a = $14, variante = $15, updated_at = NOW() WHERE id = $1`,
     [item.id, lead.crawl_result_id || item.crawl_result_id, (lead.email || '').trim() || null, cls.statut, cls.raison, email.ok ? email.mode : null, email.ok ? email.subject : null, email.ok ? email.body : null,
-     detail ? detail.signal : null, detail ? detail.brut : null, detail ? detail.url_controlee : null, detail && detail.analyse_le ? detail.analyse_le : null, detail ? detail.identite : null, email.question_a || null]
+     detail ? detail.signal : null, detail ? detail.brut : null, detail ? detail.url_controlee : null, detail && detail.analyse_le ? detail.analyse_le : null, detail ? detail.identite : null, email.question_a || null,
+     email.ok && email.variante_effective !== undefined ? email.variante_effective : item.variante]
   );
   return { item: (await db.pool.query('SELECT * FROM campaign_items WHERE id = $1', [item.id])).rows[0], analyse: out };
 }
@@ -512,11 +525,12 @@ async function reprendreItem(db, campaignId, itemId, { to_email } = {}) {
   const statut = cls.statut === 'pret' && dejaRelu ? 'valide' : cls.statut;
   const detail = regenere && email.ok ? email.detail : null;
   const champs = regenere
-    ? `, mode = $5, subject = $6, body = $7, preuve_signal = $8, preuve_brut = $9, preuve_url = $10, preuve_date = $11, identite = $12, question_a = $13`
+    ? `, mode = $5, subject = $6, body = $7, preuve_signal = $8, preuve_brut = $9, preuve_url = $10, preuve_date = $11, identite = $12, question_a = $13, variante = $14`
     : '';
   const params = [item.id, (lead.email || '').trim() || null, statut, statut === 'valide' ? null : cls.raison];
   if (regenere) params.push(email.ok ? email.mode : null, email.ok ? email.subject : null, email.ok ? email.body : null,
-    detail ? detail.signal : null, detail ? detail.brut : null, detail ? detail.url_controlee : null, detail && detail.analyse_le ? detail.analyse_le : null, detail ? detail.identite : null, email.question_a || null);
+    detail ? detail.signal : null, detail ? detail.brut : null, detail ? detail.url_controlee : null, detail && detail.analyse_le ? detail.analyse_le : null, detail ? detail.identite : null, email.question_a || null,
+    email.ok && email.variante_effective !== undefined ? email.variante_effective : item.variante);
   await db.pool.query(
     `UPDATE campaign_items SET to_email = $2, statut = $3, raison = $4, scheduled_email_id = NULL, scheduled_at = NULL, updated_at = NOW()${champs} WHERE id = $1`, params
   );

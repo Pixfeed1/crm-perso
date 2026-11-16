@@ -14,6 +14,9 @@ const okBoite = (fn) => async (req, res) => { try { res.json(await fn(req.app.lo
 router.get('/boite', okBoite((db) => boite.lister(db)));
 // Test A/B de la question finale : formulations proposées, réglage par campagne, résultats.
 router.get('/ab/propositions', okBoite(async () => require('../utils/abQuestion').catalogue()));
+// Offre de correction au forfait (version B « p_forfait ») : prix HT et contenu par défaut constaté.
+router.get('/ab/forfaits', okBoite((db) => require('../services/forfaitService').lister(db)));
+router.put('/ab/forfaits/:preuve', okBoite((db, req) => require('../services/forfaitService').modifier(db, req.params.preuve, req.body || {})));
 router.put('/:id/ab', okBoite((db, req) => require('../services/campaignService').setAbTest(db, req.params.id, (req.body || {}).ab === undefined ? null : req.body.ab)));
 router.post('/boite/relever', okBoite((db) => boite.relever(db)));
 router.post('/boite/:id/confirmer', okBoite((db, req) => boite.confirmer(db, req.params.id, (req.body || {}).decision)));

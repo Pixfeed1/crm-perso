@@ -101,3 +101,82 @@ test('campagne : moitié-moitié par famille, seule la question change, relire s
     assert.equal(ab.campagne.verdict.conclusion, 'trop_tot');
   });
 });
+
+test('version B « correction au forfait » : texte, prix HT, une seule question, défauts sans prix hors test', () => {
+  const ctx = { preuve: 'http_non_securise', forfaits: { http_non_securise: { prix_ht: 1290, contenu: 'installer le certificat' } } };
+  const t = abq.texteB({ preuve: 'p_forfait' }, 'preuve', true, ctx);
+  assert.equal(t, "Je peux m'en charger pour un forfait de 1 290 € HT : installer le certificat. Les trois mois suivants, je surveille la boutique et fais ses mises à jour sans frais ; ensuite, je vous ferai une proposition de suivi, libre à vous de l'accepter ou non. Voulez-vous que je m'en occupe ?");
+  assert.equal((t.match(/\?/g) || []).length, 1);
+  assert.doesNotMatch(t, FORMULES_INTERDITES);
+  assert.doesNotMatch(t, /\n/, 'un seul paragraphe : remplace la question finale');
+  assert.equal(abq.texteB({ preuve: 'p_forfait' }, 'preuve', false, { ...ctx, preuve: 'mobile' }), null, 'défaut sans prix : hors test');
+  assert.equal(abq.texteB({ preuve: 'p_forfait' }, 'preuve', false), null, 'sans prix connus : hors test');
+  assert.equal(abq.texteB({ preuve: 'p_forfait' }, 'maintenance', false, ctx), null);
+  const cat = abq.catalogue().preuve.find((p) => p.cle === 'p_forfait');
+  assert.ok(cat.exemple && /90 € HT/.test(cat.texte));
+});
+
+test('campagne au forfait : prix du défaut constaté, défauts sans prix hors test, tarifs réglables', { skip: !hasDb() }, async () => {
+  await withSchema('abforfait', async ({ pool }) => {
+    const db = { pool };
+    const S = require('../services/campaignService');
+    const F = require('../services/forfaitService');
+    const { typedResult, insertCrawlResult } = require('../controllers/crawlController');
+    for (const t of ['crawl_jobs', 'crawl_results', 'campaigns', 'campaign_items', 'scheduled_emails']) await createFromSchema(pool, t);
+    await pool.query('CREATE TABLE crawl_seen_domains (domain TEXT PRIMARY KEY, source VARCHAR(20), first_seen TIMESTAMP DEFAULT NOW())');
+    await pool.query(`CREATE TABLE leads (id SERIAL PRIMARY KEY, name TEXT, company TEXT, website TEXT, email TEXT, relation_status TEXT DEFAULT 'nouveau', status TEXT, crawl_result_id INTEGER, platform TEXT, angles TEXT, score INTEGER, notes TEXT, source TEXT, type TEXT, phone TEXT, facebook_url TEXT, instagram_url TEXT, site_type TEXT, siren TEXT, sector TEXT, naf TEXT, effectif TEXT, city TEXT, postal_code TEXT, department TEXT, prestataire TEXT, created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP)`);
+    await pool.query(`CREATE TABLE interactions (id SERIAL PRIMARY KEY, contact_type VARCHAR(10), contact_id INT, type TEXT, reached TEXT, date TIMESTAMP DEFAULT NOW(), notes TEXT, result TEXT, relation_status TEXT, next_followup_date DATE, next_followup_channel TEXT, followup_done BOOLEAN DEFAULT FALSE, relance_step INT, created_at TIMESTAMP DEFAULT NOW())`);
+    await pool.query('CREATE TABLE email_optout (email TEXT PRIMARY KEY, source TEXT, created_at TIMESTAMPTZ DEFAULT NOW())');
+    await pool.query('CREATE TABLE email_log (id SERIAL PRIMARY KEY, to_email TEXT, source VARCHAR(40), created_at TIMESTAMP DEFAULT NOW())');
+    await pool.query(`CREATE TABLE prospect_refus (id SERIAL PRIMARY KEY, lead_id INTEGER, domaine TEXT, canal VARCHAR(10) NOT NULL, motif TEXT, source VARCHAR(30), created_at TIMESTAMPTZ DEFAULT NOW(), retire_le TIMESTAMPTZ, retire_motif TEXT)`);
+    const job = (await pool.query("INSERT INTO crawl_jobs (techno, nb_sites, statut) VALUES ('prestashop', 1, 'done') RETURNING id")).rows[0].id;
+    const leads = [];
+    for (let i = 0; i < 7; i++) {
+      // 4 sites servis en HTTP (au forfait), 3 inadaptés au mobile (pas de prix fixe).
+      const http = i < 4;
+      const rid = await insertCrawlResult(db, job, typedResult({ domain: `f${i}.fr`, platform: 'PrestaShop', http_status: '200', final_url: http ? `http://f${i}.fr/` : `https://f${i}.fr/`, https_final: http ? 'non' : 'oui', ssl_ok: 'oui', mobile_ok: http ? 'oui' : 'non', title: `Boutique ${i}`, email: `contact@f${i}.fr`, analyse_le: new Date().toISOString(), ecommerce_actif: 'oui' }));
+      leads.push((await pool.query('INSERT INTO leads (name, company, email, crawl_result_id) VALUES ($1, $2, $3, $4) RETURNING id', [`F${i}`, `f${i}.fr`, `contact@f${i}.fr`, rid])).rows[0].id);
+    }
+    const t = await F.lister(db);
+    assert.deepEqual([t.taxe, t.mois_suivi], ['HT', 3]);
+    assert.deepEqual(Object.keys(await F.carte(db)).sort(), ['accueil_404', 'http_non_securise', 'invisible_google', 'mentions_404', 'ssl_expire', 'ssl_invalide', 'titre_defaut']);
+    const c = await S.createCampaign(db, { nom: 'Forfait', mode: 'preuve' });
+    await S.addLeads(db, c.id, leads.slice(0, 6));
+    const avant = Object.fromEntries((await pool.query('SELECT id, body FROM campaign_items WHERE campaign_id = $1', [c.id])).rows.map((x) => [x.id, x.body]));
+    const r = await S.setAbTest(db, c.id, { preuve: 'p_forfait' });
+    assert.deepEqual([r.A + r.B, r.hors_test], [4, 2]);
+    let its = (await pool.query('SELECT * FROM campaign_items WHERE campaign_id = $1 ORDER BY id', [c.id])).rows;
+    for (const it of its) {
+      if (it.preuve_signal === 'mobile') { assert.equal(it.variante, null, 'mobile : hors test'); assert.equal(it.body, avant[it.id]); continue; }
+      assert.equal(it.preuve_signal, 'http_non_securise');
+      if (it.variante === 'A') assert.equal(it.body, avant[it.id]);
+      else {
+        assert.match(it.body, /Je peux m'en charger pour un forfait de 90 € HT : installer le certificat et rediriger toutes les adresses vers la version sécurisée, avec le cadenas\. Les trois mois suivants, je surveille la boutique/);
+        assert.match(it.body, /Voulez-vous que je m'en occupe \?\n\nBonne journée,$/);
+        assert.equal((it.body.match(/\?/g) || []).length, 1);
+      }
+    }
+    assert.equal(its.filter((x) => x.variante === 'B').length, 2);
+    // Nouveau prospect d'un défaut sans prix : hors test aussi.
+    await S.addLeads(db, c.id, [leads[6]]);
+    assert.equal((await pool.query('SELECT variante FROM campaign_items WHERE campaign_id = $1 AND lead_id = $2', [c.id, leads[6]])).rows[0].variante, null);
+    // Tarifs : contrôles, prix changé pris en compte au prochain réglage.
+    await assert.rejects(F.modifier(db, 'mobile', { actif: true }), /il faut un prix/);
+    await assert.rejects(F.modifier(db, 'http_non_securise', { prix_ht: 12.5 }), /entier/);
+    await assert.rejects(F.modifier(db, 'http_non_securise', { contenu: 'tout réparer ?' }), /une seule question/);
+    await assert.rejects(F.modifier(db, 'inconnu', { prix_ht: 10 }), (x) => x.status === 404);
+    await F.modifier(db, 'http_non_securise', { prix_ht: 120 });
+    await S.setAbTest(db, c.id, { preuve: 'p_forfait' });
+    its = (await pool.query("SELECT body FROM campaign_items WHERE campaign_id = $1 AND variante = 'B'", [c.id])).rows;
+    assert.ok(its.length && its.every((x) => /forfait de 120 € HT/.test(x.body)));
+    // Défaut retiré du forfait : ses lignes sortent du test et retrouvent leur question.
+    await F.modifier(db, 'http_non_securise', { actif: false });
+    const r2 = await S.setAbTest(db, c.id, { preuve: 'p_forfait' });
+    assert.deepEqual([r2.A, r2.B], [0, 0]);
+    for (const it of (await pool.query('SELECT * FROM campaign_items WHERE campaign_id = $1', [c.id])).rows) if (avant[it.id]) assert.equal(it.body, avant[it.id]);
+    const C = require('../services/campagneConnecteur');
+    const p = await C.testAb(db, { id: c.id });
+    assert.equal(p.forfaits_p_forfait.taxe, 'HT');
+    assert.equal(p.forfaits_p_forfait.defauts.find((d) => d.preuve === 'http_non_securise').propose, false);
+  });
+});

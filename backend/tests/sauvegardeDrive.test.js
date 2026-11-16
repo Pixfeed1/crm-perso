@@ -88,7 +88,9 @@ test('envoi de la nuit et test de la semaine : vrai pg_dump, chiffré, rotation,
     await pool.query("INSERT INTO charte_versions (contenu) VALUES ('{\"v\":1}')");
     const mails = [];
     const drive = fauxDrive();
-    const deps = { drive, mail: async (sujet, texte) => { mails.push({ sujet, texte }); } };
+    // Vrai pg_dump, limité au schéma de ce test : les autres fichiers de test créent et suppriment les leurs en parallèle.
+    const pgDump = async (cible) => { execFileSync('pg_dump', ['-h', process.env.DB_HOST, '-p', process.env.DB_PORT, '-U', process.env.DB_USER, '-n', `test_sauv_drive_${process.pid}`, '-Fc', '-f', cible, process.env.DB_NAME], { env: { ...process.env, PGPASSWORD: process.env.DB_PASSWORD } }); };
+    const deps = { drive, pgDump, mail: async (sujet, texte) => { mails.push({ sujet, texte }); } };
 
     await assert.rejects(S.envoyer(db, deps), /n'est pas connecté/);
     await assert.rejects(S.enregistrerConnexion(db, { refresh_token: 'rt', scope: 'https://www.googleapis.com/auth/webmasters', email: 'marc@x.fr' }), /drive\.file\) non accordée/);

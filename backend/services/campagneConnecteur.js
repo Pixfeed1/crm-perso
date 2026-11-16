@@ -145,7 +145,14 @@ async function reprendre(db, { id: cid, ligne: lid = null, adresse = null, quoi 
   return S.reprendreMany(db, id(cid), quoi === 'echecs' ? 'echecs' : 'sans_email');
 }
 async function testAb(db, { id: cid, ab }) {
-  if (ab === undefined) return { propositions: require('../utils/abQuestion').catalogue(), usage: 'ab = { preuve: cle, maintenance: cle }, ou null pour arrêter' };
+  if (ab === undefined) {
+    const { forfaits, mois_suivi: mois } = await require('./forfaitService').lister(db);
+    return {
+      propositions: require('../utils/abQuestion').catalogue(),
+      forfaits_p_forfait: { taxe: 'HT', mois_suivi_sans_frais: mois, defauts: forfaits.map((f) => ({ preuve: f.preuve, libelle: f.libelle, prix_ht: f.prix_ht, propose: f.actif, contenu: f.contenu || undefined })), note: 'p_forfait : seuls les défauts proposés entrent dans le test, les autres gardent leur question (hors test). Les prix se règlent dans l\'interface (Campagnes > test A/B), par Marc.' },
+      usage: 'ab = { preuve: cle, maintenance: cle }, ou null pour arrêter',
+    };
+  }
   return S.setAbTest(db, id(cid), ab);
 }
 async function piloter(db, { id: cid, action, confirmer = false }) {

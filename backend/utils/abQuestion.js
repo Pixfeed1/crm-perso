@@ -8,7 +8,10 @@ const PROPOSITIONS = {
   preuve: [
     { cle: 'p_origine', texte: () => "Voulez-vous que je vous indique d'où ça vient ?" },
     { cle: 'p_quelquun', texte: () => "Est-ce que quelqu'un peut s'en charger de votre côté ?" },
-    { cle: 'p_plus', texte: () => 'Est-ce utile que je vous en dise plus ?' }
+    { cle: 'p_plus', texte: () => 'Est-ce utile que je vous en dise plus ?' },
+    // Offre de correction au forfait : prix fixe HT du défaut constaté (Campagnes > test A/B > tarifs).
+    // Défaut sans prix fixe : la ligne reste hors test, avec sa question d'origine.
+    { cle: 'p_forfait', libelle: 'Correction au forfait (prix fixe par défaut)', texte: (boutique, ctx) => texteForfait(ctx, boutique) }
   ],
   maintenance: [
     { cle: 'm_sauvegardes', texte: (boutique) => `Avez-vous déjà quelqu'un pour les mises à jour et les sauvegardes ${boutique ? 'de la boutique' : 'du site'} ?` },
@@ -17,6 +20,17 @@ const PROPOSITIONS = {
   ]
 };
 const FAMILLES = Object.keys(PROPOSITIONS);
+
+// ctx = { preuve, forfaits: { preuve: { prix_ht, contenu } } } ; sans ctx (catalogue) : un exemple.
+const EXEMPLE = { preuve: 'ssl_expire', forfaits: { ssl_expire: { prix_ht: 90, contenu: "renouveler le certificat, mettre en place son renouvellement automatique et vérifier que toutes les pages s'ouvrent en https" } } };
+const prixLisible = (n) => `${Number(n).toLocaleString('fr-FR').replace(/\u202f|\u00a0/g, ' ')} € HT`;
+function texteForfait(ctx, boutique = false) {
+  const c = ctx || EXEMPLE;
+  const f = c.forfaits && c.preuve ? c.forfaits[c.preuve] : null;
+  if (!f || !f.prix_ht || !f.contenu) return null;
+  const qui = boutique ? 'la boutique' : 'le site';
+  return `Je peux m'en charger pour un forfait de ${prixLisible(f.prix_ht)} : ${f.contenu}. Les trois mois suivants, je surveille ${qui} et fais ses mises à jour sans frais ; ensuite, je vous ferai une proposition de suivi, libre à vous de l'accepter ou non. Voulez-vous que je m'en occupe ?`;
+}
 
 const proposition = (famille, cle) => (PROPOSITIONS[famille] || []).find((p) => p.cle === cle) || null;
 
@@ -35,10 +49,12 @@ function valider(ab) {
 }
 
 // Texte B pour un email (mode preuve ou maintenance), ou null si cette famille n'est pas testée.
-function texteB(ab, mode, boutique = false) {
+function texteB(ab, mode, boutique = false, ctx = null) {
   if (!ab || !ab[mode]) return null;
   const p = proposition(mode, ab[mode]);
-  return p ? p.texte(boutique) : null;
+  if (!p) return null;
+  if (p.cle === 'p_forfait') return ctx ? texteForfait(ctx, boutique) : null;
+  return p.texte(boutique);
 }
 
 // Remplace la dernière question (le paragraphe juste avant « Bonne journée, »).
@@ -57,6 +73,6 @@ function choisir(compteA, compteB, hasard = Math.random) {
   return hasard() < 0.5 ? 'A' : 'B';
 }
 
-const catalogue = () => Object.fromEntries(FAMILLES.map((f) => [f, PROPOSITIONS[f].map((p) => ({ cle: p.cle, texte: p.texte(false), texte_boutique: p.texte(true) }))]));
+const catalogue = () => Object.fromEntries(FAMILLES.map((f) => [f, PROPOSITIONS[f].map((p) => ({ cle: p.cle, libelle: p.libelle, texte: p.texte(false), texte_boutique: p.texte(true), ...(p.cle === 'p_forfait' ? { exemple: true } : {}) }))]));
 
-module.exports = { PROPOSITIONS, FAMILLES, valider, texteB, questionDe, remplacerQuestion, choisir, catalogue };
+module.exports = { PROPOSITIONS, FAMILLES, valider, texteB, texteForfait, questionDe, remplacerQuestion, choisir, catalogue };

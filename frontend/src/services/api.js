@@ -1481,6 +1481,8 @@ export const campagnesAPI = {
   // Test A/B de la question finale.
   abPropositions: () => apiRequest('/campagnes/ab/propositions'),
   setAb: (id, ab) => apiRequest(`/campagnes/${id}/ab`, 'PUT', { ab }),
+  forfaits: () => apiRequest('/campagnes/ab/forfaits'),
+  setForfait: (preuve, data) => apiRequest(`/campagnes/ab/forfaits/${preuve}`, 'PUT', data),
   create: (payload) => apiRequest('/campagnes', 'POST', payload),
   get: (id) => apiRequest(`/campagnes/${id}`),
   update: (id, payload) => apiRequest(`/campagnes/${id}`, 'PATCH', payload),

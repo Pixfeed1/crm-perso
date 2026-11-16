@@ -443,7 +443,7 @@ function buildServer() {
   );
   server.tool(
     'regler_test_ab',
-    "ÉCRITURE (CRM seulement) : test A/B de la question finale d'une campagne. Sans ab : les formulations proposées. ab = { preuve: cle, maintenance: cle } pour lancer, null pour arrêter ; réglable tant que rien n'est parti ni programmé.",
+    "ÉCRITURE (CRM seulement) : test A/B de la question finale d'une campagne. Sans ab : les formulations proposées, et les prix de la version « p_forfait » (correction du défaut constaté à prix fixe HT, puis trois mois de suivi sans frais ; défauts sans prix fixe hors test). ab = { preuve: cle, maintenance: cle } pour lancer, null pour arrêter ; réglable tant que rien n'est parti ni programmé.",
     { id: z.number().int(), ab: z.union([z.record(z.string()), z.null()]).optional() },
     async (a) => compactJson(await campagnes('test-ab', a))
   );

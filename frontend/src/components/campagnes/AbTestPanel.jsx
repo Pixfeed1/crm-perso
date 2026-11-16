@@ -7,6 +7,39 @@ import { campagnesAPI } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
 
 const FAMILLES = { preuve: 'Emails « par la preuve » (après un constat)', maintenance: 'Premiers contacts (sans constat)' };
+
+// Tarifs de la version « correction au forfait » : prix HT et ce que comprend la correction, par défaut constaté.
+// Les nouveaux prix valent pour les lignes préparées ou régénérées ensuite.
+function ForfaitsEditor() {
+  const { toast } = useToast();
+  const [data, setData] = useState(null);
+  const [brouillon, setBrouillon] = useState({});
+  const charger = () => campagnesAPI.forfaits().then((d) => { setData(d); setBrouillon({}); }).catch((e) => toast.error(e.message || 'Tarifs illisibles'));
+  useEffect(() => { charger(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!data) return null;
+  const val = (f, k) => (brouillon[f.preuve] && brouillon[f.preuve][k] !== undefined ? brouillon[f.preuve][k] : f[k]);
+  const changer = (f, k, v) => setBrouillon({ ...brouillon, [f.preuve]: { ...(brouillon[f.preuve] || {}), [k]: v } });
+  const enregistrer = async (f) => {
+    try { setData(await campagnesAPI.setForfait(f.preuve, brouillon[f.preuve] || {})); setBrouillon({ ...brouillon, [f.preuve]: undefined }); toast.success(`Tarif enregistré : ${f.libelle}`); }
+    catch (e) { toast.error(e.message || 'Enregistrement impossible'); }
+  };
+  return (
+    <div className="mt-2 rounded-lg border border-border p-3 space-y-2">
+      <div className="text-xs text-text-muted">
+        Prix {data.taxe}, puis {data.mois_suivi} mois de suivi sans frais et une proposition que le client accepte ou non. Seuls les défauts cochés sont proposés au forfait ;
+        les autres gardent leur question d'origine et restent hors du test. Un prix changé vaut pour les lignes préparées ou régénérées ensuite.
+      </div>
+      {data.forfaits.map((f) => (
+        <div key={f.preuve} className="flex flex-wrap items-start gap-2 text-sm">
+          <label className="flex items-center gap-1.5 w-56 text-text-primary"><input type="checkbox" checked={!!val(f, 'actif')} onChange={(e) => changer(f, 'actif', e.target.checked)} /> {f.libelle}</label>
+          <input type="number" min="1" value={val(f, 'prix_ht') ?? ''} onChange={(e) => changer(f, 'prix_ht', e.target.value === '' ? null : Number(e.target.value))} className="w-20 px-2 py-1 rounded bg-surface-muted border border-border text-text-primary" placeholder="€ HT" />
+          <input value={val(f, 'contenu') || ''} onChange={(e) => changer(f, 'contenu', e.target.value)} className="flex-1 min-w-[16rem] px-2 py-1 rounded bg-surface-muted border border-border text-text-primary" placeholder="ce que comprend la correction" />
+          {brouillon[f.preuve] && <button onClick={() => enregistrer(f)} className="px-2.5 py-1 text-xs rounded-lg bg-accent text-white">Enregistrer</button>}
+        </div>
+      ))}
+    </div>
+  );
+}
 const pc = (x) => (x === null || x === undefined ? '—' : `${String(x).replace('.', ',')} %`);
 
 export default function AbTestPanel({ campaign, ab, verrouille, onChange }) {
@@ -52,9 +85,10 @@ export default function AbTestPanel({ campaign, ab, verrouille, onChange }) {
                 {props[f].map((p) => (
                   <label key={p.cle} className="flex items-center gap-2 text-sm text-text-primary">
                     <input type="radio" name={`ab-${f}`} checked={choix[f] === p.cle} onChange={() => setChoix({ ...choix, [f]: p.cle })} />
-                    « {p.texte} »{p.texte_boutique !== p.texte ? <span className="text-xs text-text-muted"> (boutique : « {p.texte_boutique} »)</span> : null}
+                    {p.libelle ? <span><b>{p.libelle}</b> <span className="text-xs text-text-muted">(exemple : « {p.texte} »)</span></span> : <>« {p.texte} »{p.texte_boutique !== p.texte ? <span className="text-xs text-text-muted"> (boutique : « {p.texte_boutique} »)</span> : null}</>}
                   </label>
                 ))}
+                {f === 'preuve' && choix.preuve === 'p_forfait' && <ForfaitsEditor />}
               </div>
             </div>
           ))}
@@ -68,9 +102,10 @@ export default function AbTestPanel({ campaign, ab, verrouille, onChange }) {
         <>
           {ab && (
             <ul className="text-sm text-text-secondary mb-2 space-y-0.5">
-              {Object.entries(ab.formulations).map(([f, t]) => <li key={f}>{FAMILLES[f]} : B = « {t} »</li>)}
+              {Object.entries(ab.formulations).map(([f, t]) => <li key={f}>{FAMILLES[f]} : B = {campaign.ab_question[f] === 'p_forfait' ? 'correction au forfait, au prix du défaut constaté' : `« ${t} »`}</li>)}
             </ul>
           )}
+          {campaign.ab_question && campaign.ab_question.preuve === 'p_forfait' && <ForfaitsEditor />}
           {ab && [['Cette campagne', ab.campagne], ...(ab.cumul ? [[`Cumul (${ab.cumul.campagnes.length} campagnes : ${ab.cumul.campagnes.join(', ')})`, ab.cumul]] : [])].map(([titre, bloc]) => (
             <div key={titre} className="mt-2">
               <div className="text-xs text-text-muted mb-1">{titre}</div>
