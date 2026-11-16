@@ -25,7 +25,7 @@ const { auditFlags, phpEol, nomMalOrthographie } = require('../utils/prospectSco
 
 // Ordre de conviction des preuves : ce qui coûte des ventes ou fait honte d'abord.
 const PREUVES_ORDRE = [
-  'accueil_404', 'erreur_serveur', 'invisible_google', 'nom_mal_orthographie', 'http_non_securise', 'ssl_expire',
+  'accueil_404', 'erreur_serveur', 'prestataire_difficulte', 'invisible_google', 'nom_mal_orthographie', 'http_non_securise', 'ssl_expire',
   'ssl_invalide', 'titre_defaut', 'mentions_404', 'mobile'
 ];
 const PREUVES = new Set(PREUVES_ORDRE);
@@ -57,7 +57,27 @@ const tracePanne = (r) => `HTTP ${r.http_status}${r.panne_vue_le ? ` · panne vu
 const DEJA_REPERE = 'Est-ce un point que vous aviez déjà repéré ?';
 // Pour chaque preuve : objet (court, sur le prospect), constat (un fait que le gérant vérifie en
 // ouvrant son site), portée (pourquoi ça le concerne, rien qu'on ne puisse démontrer), question.
+// Date d'une annonce officielle, en toutes lettres : « 4 novembre 2026 ».
+const dateLongue = (d) => { const x = new Date(d); return Number.isNaN(x.getTime()) ? null : x.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Paris' }); };
 const CATALOGUE = {
+  // Prestataire crédité en pied de page, en procédure collective ou fermé : fait publié (BODACC, SIRENE), daté.
+  prestataire_difficulte: (r) => {
+    const s = r.prestataire_signal;
+    const nom = s.nom ? joliNom(s.nom) : s.domaine;
+    const date = s.date ? dateLongue(s.date) : null;
+    const fait = s.type === 'procedure'
+      ? `le BODACC${date ? ` du ${date}` : ''} publie, pour cette société, l'annonce « ${s.nature} »${s.tribunal ? ` (${s.tribunal})` : ''}`
+      : s.type === 'radiation'
+        ? `le BODACC${date ? ` du ${date}` : ''} publie sa radiation du registre du commerce`
+        : `le répertoire des entreprises (SIRENE) l'indique comme cessée${date ? ` depuis le ${date}` : ''}`;
+    return {
+      sujet: `Le suivi de ${site(r)}`,
+      preuve: `Le pied de page de ${site(r)} indique que le site a été réalisé par ${nom}. Or ${fait}.`,
+      consequence: `Dans ce cas, les mises à jour et la sécurité d'un site ne sont souvent plus assurées, et il arrive que les accès à l'hébergement ou au nom de domaine soient restés au nom du prestataire.`,
+      question: `Savez-vous aujourd'hui qui détient ces accès pour votre site ?`,
+      brut: `${s.source} : ${s.nature}${s.date ? ` (${s.date})` : ''}${s.tribunal ? `, ${s.tribunal}` : ''}${s.url ? ` · ${s.url}` : ''} · prestataire ${s.domaine}${s.siren ? `, SIREN ${s.siren} lu dans ses mentions légales` : ''}`
+    };
+  },
   accueil_404: (r) => ({
     sujet: `Votre page d'accueil`,
     preuve: `En ouvrant ${site(r)}, la page d'accueil affiche une erreur 404 : le domaine répond, mais aucune page ne s'affiche${deuxMesures(r)}.`,
@@ -317,7 +337,7 @@ function buildProofEmail(r, lead) {
   // preuves. Elles deviennent « non confirmées », à réanalyser depuis la fiche.
   const ancienCrawl = !r.analyse_le;
   const nonConfirmees = ancienCrawl ? flags.filter((f) => PREUVES_HTTPS.has(f.key)).map((f) => `${f.label} (ancien crawl, non confirmé : réanalyser)`) : [];
-  const preuvesTrouvees = PREUVES_ORDRE.filter((k) => flags.some((f) => f.key === k) && !(ancienCrawl && PREUVES_HTTPS.has(k)));
+  const preuvesTrouvees = PREUVES_ORDRE.filter((k) => (k === 'prestataire_difficulte' ? !!r.prestataire_signal : flags.some((f) => f.key === k)) && !(ancienCrawl && PREUVES_HTTPS.has(k)));
   const indices = [...flags.filter((f) => !PREUVES.has(f.key)).map((f) => f.label), ...nonConfirmees];
   if (preuvesTrouvees.length === 0) {
     // Boutique identifiée et en ligne, sans preuve confirmée : email de maintenance sobre, sans

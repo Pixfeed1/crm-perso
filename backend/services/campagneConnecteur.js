@@ -168,4 +168,17 @@ async function boiteReception(db, { action = 'lister', message = null, decision 
   throw err(400, 'action : lister, relever ou confirmer');
 }
 
-module.exports = { lister, lire, ligne, prospects, crawls, creer, modifier, ajouter, modifierLigne, regenerer, reanalyser, reprendre, testAb, piloter, boiteReception };
+// Signal « prestataire en difficulté ou disparu » : lire, et préparer (prospects, campagne). Jamais d'envoi.
+const P = () => require('./prestataireService');
+async function prestataires(db, { domaine = null, gravite_min = 1, statut = null } = {}) {
+  if (domaine) {
+    const d = await P().detail(db, domaine);
+    return { ...d, citable_dans_un_email: d.siren_source === 'mentions légales du site' && d.gravite >= 2, clients: d.clients.slice(0, 200) };
+  }
+  const l = await P().lister(db, { gravite_min, statut });
+  return { totaux: l.totaux, prestataires: l.prestataires.map((p) => ({ domaine: p.domaine, nom: p.nom || undefined, siren: p.siren || undefined, identite: p.siren_source || undefined, statut: p.statut, gravite: p.gravite, preuve: (p.preuves || [])[0], sites_clients: p.nb_clients, verifie_le: p.verifie_le })) };
+}
+const prestataireProspects = (db, { domaine }) => P().promouvoir(db, domaine);
+const prestataireCampagne = (db, { domaine, id: cid }) => P().versCampagne(db, domaine, id(cid));
+
+module.exports = { prestataires, prestataireProspects, prestataireCampagne, lister, lire, ligne, prospects, crawls, creer, modifier, ajouter, modifierLigne, regenerer, reanalyser, reprendre, testAb, piloter, boiteReception };

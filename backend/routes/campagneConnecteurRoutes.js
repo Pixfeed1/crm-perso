@@ -22,6 +22,7 @@ const ACTIONS = {
   lister: C.lister, lire: C.lire, ligne: C.ligne, prospects: C.prospects, crawls: C.crawls,
   creer: C.creer, modifier: C.modifier, ajouter: C.ajouter, 'modifier-ligne': C.modifierLigne, regenerer: C.regenerer,
   reanalyser: C.reanalyser, reprendre: C.reprendre, 'test-ab': C.testAb, piloter: C.piloter, boite: C.boiteReception,
+  prestataires: C.prestataires, 'prestataire-prospects': C.prestataireProspects, 'prestataire-campagne': C.prestataireCampagne,
 };
 for (const [chemin, fn] of Object.entries(ACTIONS)) router.post(`/${chemin}`, ok(fn));
 

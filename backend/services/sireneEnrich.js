@@ -60,6 +60,7 @@ function parseCompany(company) {
     ville: company.siege?.libelle_commune || null,
     date_creation: company.date_creation || company.siege?.date_creation || null, // immatriculation (signaux : âge de l'entreprise)
     etat: company.etat_administratif || null, // A (active) | C (cessée)
+    date_fermeture: company.date_fermeture || null, // cessation (signal prestataire disparu)
     nature_juridique: company.nature_juridique || null // 92xx association, 9150 copro, 72xx commune…
   };
 }

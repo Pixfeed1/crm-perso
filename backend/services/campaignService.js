@@ -278,7 +278,10 @@ async function remplirPourFiche(db, leadId, templateId) {
 async function rowForLead(db, lead) {
   if (!lead.crawl_result_id) return null;
   const r = await db.pool.query('SELECT * FROM crawl_results WHERE id = $1', [lead.crawl_result_id]);
-  return r.rows[0] || null;
+  const row = r.rows[0] || null;
+  // Prestataire crédité en procédure collective ou fermé (fait daté, identité certaine) : angle de l'email par la preuve.
+  if (row && row.prestataire) row.prestataire_signal = await require('./prestataireService').signalPourSite(db, row.prestataire).catch(() => null);
+  return row;
 }
 
 // Ajoute des prospects existants à la campagne (depuis la liste des Prospects).

@@ -460,6 +460,19 @@ function buildServer() {
     async (a) => compactJson(await campagnes('boite', a, 5 * 60 * 1000))
   );
 
+  server.tool(
+    'lister_prestataires_signal',
+    "Lecture seule. Signal « prestataire en difficulté ou disparu » : agences et freelances crédités en pied de page des sites crawlés, vérifiés chaque semaine (procédure collective ou radiation au BODACC, entreprise cessée dans SIRENE, site du prestataire à l'abandon = simple indice). Sans domaine : la liste triée par gravité (3 procédure, 2 fermé, 1 indice), avec la preuve datée et le nombre de sites clients. Avec domaine : le détail, les preuves et les sites clients (fiche, email, désinscrit). citable_dans_un_email : seulement si l'identité est certaine (SIREN lu dans ses mentions légales) et le fait daté (niveau 2 ou 3).",
+    { domaine: z.string().optional(), gravite_min: z.number().int().optional(), statut: z.enum(['procedure', 'ferme', 'abandon', 'actif', 'a_verifier']).optional() },
+    async (a) => compactJson(await campagnes('prestataires', a))
+  );
+  server.tool(
+    'prospects_depuis_prestataire',
+    "ÉCRITURE (CRM seulement, rien envoyé) : les sites clients d'un prestataire signalé deviennent des prospects (fiches créées si besoin, avec la preuve dans les notes) ; renvoie les lead_ids. Avec id (campagne) : ils sont aussi ajoutés à cette campagne, avec les contrôles habituels ; l'email par la preuve y prend l'angle « prestataire » quand le fait est citable. La validation et l'envoi restent à Marc.",
+    { domaine: z.string(), id: z.number().int().optional() },
+    async (a) => compactJson(await campagnes(a.id ? 'prestataire-campagne' : 'prestataire-prospects', a, 10 * 60 * 1000))
+  );
+
   // ---- charte de rédaction et identité du site (base du CRM : seule version qui fait foi) ----
   server.tool(
     'get_charte',

@@ -73,7 +73,8 @@ test('ton : aucune formule interdite, 35 à 90 mots, structure constat / portée
     ssl_invalide: { ssl_ok: false, ssl_erreur: 'certificat valable pour un autre nom' },
     titre_defaut: { title: 'PrestaShop' },
     mentions_404: { mentions_404: true },
-    mobile: { mobile_ok: false }
+    mobile: { mobile_ok: false },
+    prestataire_difficulte: { prestataire: 'agence-x.fr', prestataire_signal: { domaine: 'agence-x.fr', nom: 'AGENCE X', siren: '732829320', source: 'BODACC', type: 'procedure', niveau: 3, nature: "Jugement d'ouverture de liquidation judiciaire", date: '2026-11-04', tribunal: 'Tribunal de commerce de Pontoise' } }
   };
   assert.deepEqual([...PREUVES_ORDRE].sort(), Object.keys(cas).sort(), 'chaque preuve du catalogue a son cas');
   for (const [key, extra] of Object.entries(cas)) {

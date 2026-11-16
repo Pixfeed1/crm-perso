@@ -224,6 +224,7 @@ app.use('/api/interventions', require('./routes/interventionRoutes'));
 app.use('/api/interactions', require('./routes/interactionRoutes'));
 app.use('/api/portefeuille/crawl', require('./routes/crawlRoutes'));
 app.use('/api/portefeuille/signaux', require('./routes/domainSignalRoutes')); // nouveaux domaines .fr (AFNIC)
+app.use('/api/portefeuille/prestataires', require('./routes/prestataireRoutes')); // prestataires crédités en difficulté ou disparus (BODACC, SIRENE)
 app.use('/api/affaires', require('./routes/affairesRoutes')); // affaires (lot 5) : plusieurs par entreprise
 app.use('/api/campagnes', require('./routes/campaignRoutes')); // campagnes de prospection (préparer, relire, programmer)
 app.use('/api/diffuseur', require('./routes/diffuseurRoutes')); // diffusion des créations 3D (préparation, validation, exports, dépôt Bluesky)
@@ -355,7 +356,8 @@ async function startServer() {
   require('./services/purgeService').start(app.locals.db);
   // Boîte d'envoi : réponses et rebonds relevés toutes les 15 min (si IMAP_* est réglé dans .env).
   require('./services/boiteService').start(app.locals.db);
-  require('./services/sauvegardeDrive').start(app.locals.db);   // copie chiffrée sur Drive la nuit, test de relecture le dimanche
+  require('./services/sauvegardeDrive').start(app.locals.db);
+  require('./services/prestataireService').start(app.locals.db);   // prestataires crédités : vérification BODACC / SIRENE chaque lundi   // copie chiffrée sur Drive la nuit, test de relecture le dimanche
   // Prélèvements : les fiches restées « en attente » sont relues chez Stripe (webhook manqué)
   require('./services/maintenanceBillingService').startSyncEnAttente(app.locals.db);
 

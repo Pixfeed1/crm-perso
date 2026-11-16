@@ -266,6 +266,16 @@ Mêmes fonctions que l'onglet Campagnes, par `/api/campagnes-connecteur` (secret
 Les réécritures en nombre (`regenerer_lignes_campagne`, mode claude) et les réanalyses tournent sur le serveur, avec la
 clé API du CRM : la réponse est un résumé, elles ne consomment pas Claude.ai.
 
+### Signal « prestataire en difficulté ou disparu »
+
+`backend/services/prestataireService.js` : prestataires crédités en pied de page des sites crawlés (colonne
+`prestataire`), SIREN lu dans leurs mentions légales (sinon rapprochement sûr par le nom), vérifiés chaque lundi :
+procédure collective (BODACC, niveau 3), radiation ou cessation (BODACC, SIRENE, niveau 2), site à l'abandon (indice,
+niveau 1, jamais cité). Portefeuille > Signaux > Prestataires : sites clients en prospects, ajout à une campagne
+(préparée seulement), fiche du prestataire (reprise de portefeuille), ignorer. L'email par la preuve prend l'angle
+`prestataire_difficulte` seulement pour un fait daté (niveau 2 ou 3) sur une identité certaine. Connecteur :
+`lister_prestataires_signal`, `prospects_depuis_prestataire`. API : `BODACC_API_URL` (open data DILA).
+
 ### Sauvegardes de la base
 
 `backend/scripts/sauvegarde-base.sh` : pg_dump compressé, vérifié (pg_restore --list), dans `~/sauvegardes/crm`

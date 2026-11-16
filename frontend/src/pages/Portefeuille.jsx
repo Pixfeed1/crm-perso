@@ -14,6 +14,7 @@ import Projects from './Projects';
 import SuiviCockpit from '../components/suivi/SuiviCockpit';
 import CrawlPanel from '../components/crawl/CrawlPanel';
 import SignauxPanel from '../components/signaux/SignauxPanel';
+import PrestatairesPanel from '../components/signaux/PrestatairesPanel';
 import CampaignsPanel from '../components/campagnes/CampaignsPanel';
 
 const TABS = [
@@ -30,6 +31,7 @@ const Portefeuille = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const rawTab = searchParams.get('tab');
   const activeTab = TABS.some((t) => t.key === rawTab) ? rawTab : 'prospects';
+  const [sousSignaux, setSousSignaux] = React.useState('domaines'); // Signaux : nouveaux domaines ou prestataires
 
   const selectTab = (key) => {
     // On repart sur un onglet "propre" (on retire les params spécifiques id/filter de l'onglet précédent).
@@ -87,7 +89,13 @@ const Portefeuille = () => {
         {activeTab === 'signaux' && (
           <div className="h-full overflow-y-auto p-2 sm:p-4 lg:p-6">
             <div className="max-w-6xl mx-auto w-full">
-              <SignauxPanel />
+              <div className="flex gap-2 mb-4">
+                {[{ k: 'domaines', l: 'Nouveaux domaines (AFNIC)' }, { k: 'prestataires', l: 'Prestataires en difficulté' }].map((x) => (
+                  <button key={x.k} onClick={() => setSousSignaux(x.k)}
+                    className={`px-3 py-1.5 rounded-lg text-sm ${sousSignaux === x.k ? 'bg-accent text-white' : 'bg-surface-strong text-text-secondary hover:bg-border-strong'}`}>{x.l}</button>
+                ))}
+              </div>
+              {sousSignaux === 'prestataires' ? <PrestatairesPanel /> : <SignauxPanel />}
             </div>
           </div>
         )}

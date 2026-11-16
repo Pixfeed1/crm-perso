@@ -1412,6 +1412,18 @@ export const crawlAPI = {
 };
 
 // Signaux d'intention : nouveaux domaines .fr (AFNIC) -> table tampon -> prospects
+// Signal « prestataire en difficulté ou disparu » (Signaux > Prestataires)
+export const prestatairesAPI = {
+  lister: (params = {}) => apiRequest(`/portefeuille/prestataires?${new URLSearchParams(Object.fromEntries(Object.entries(params).map(([k, v]) => [k, String(v)]))).toString()}`),
+  etat: () => apiRequest('/portefeuille/prestataires/etat'),
+  detail: (d) => apiRequest(`/portefeuille/prestataires/${encodeURIComponent(d)}`),
+  verifier: (domaine) => apiRequest('/portefeuille/prestataires/verifier', 'POST', domaine ? { domaine } : {}),
+  prospects: (d) => apiRequest(`/portefeuille/prestataires/${encodeURIComponent(d)}/prospects`, 'POST', {}),
+  campagne: (d, campagneId) => apiRequest(`/portefeuille/prestataires/${encodeURIComponent(d)}/campagne`, 'POST', { campagne_id: campagneId }),
+  fiche: (d) => apiRequest(`/portefeuille/prestataires/${encodeURIComponent(d)}/fiche`, 'POST', {}),
+  ignorer: (d, data) => apiRequest(`/portefeuille/prestataires/${encodeURIComponent(d)}/ignorer`, 'POST', data)
+};
+
 export const signauxAPI = {
   list: (statut) => apiRequest(`/portefeuille/signaux${statut ? `?statut=${encodeURIComponent(statut)}` : ''}`),
   imports: () => apiRequest('/portefeuille/signaux/imports'),
