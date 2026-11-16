@@ -100,7 +100,7 @@ test('vérification, liste, prospects, angle « prestataire » dans une campagne
       detect: async (l) => l.map((d) => ({
         'agence-x.fr': { domain: d, http_status: 200, title: 'Agence X', siren_site: '732829320', email: 'bonjour@agence-x.fr', phone: '0102030405', copyright_annee: 2026 },
         'freelance-y.fr': { domain: d, http_status: 0 },
-        'ancienne-agence.fr': { domain: d, http_status: 200, title: 'Ancienne Agence', copyright_annee: 2026 },
+        'ancienne-agence.fr': { domain: d, http_status: 200, title: 'Ancienne Agence' },
         'agence-saine.fr': { domain: d, http_status: 200, title: 'Agence Saine', siren_site: '443061841', copyright_annee: 2026 },
         'agence-figee.fr': { domain: d, http_status: 200, copyright_annee: 2021 },
         'agence-parquee.fr': { domain: d, http_status: 200, parked: true, copyright_annee: 2020 },
@@ -196,5 +196,21 @@ test('vérification, liste, prospects, angle « prestataire » dans une campagne
     assert.equal((await C.prestataires(db, { domaine: 'agence-parquee.fr' })).ignore_raison, 'déjà contacté');
     await C.prestataireIgnorer(db, { domaine: 'agence-parquee.fr', retablir: true });
     assert.ok((await C.prestataires(db, {})).prestataires.some((p) => p.domaine === 'agence-parquee.fr'), 'rétabli');
+
+    // Fermé dans SIRENE mais site en ligne et à jour : « à vérifier », jamais cité ; une procédure collective reste.
+    await pool.query("INSERT INTO prestataires (domaine, siren, siren_source) VALUES ('agence-reprise.fr', '552100554', 'mentions légales du site'), ('agence-redressement.fr', '732829320', 'mentions légales du site')");
+    const annee = new Date().getFullYear();
+    const depsVivant = { ...deps, detect: async (l) => l.map((d) => ({ domain: d, http_status: 200, title: d, copyright_annee: annee })) };
+    v = await P.verifier(db, { domaines: ['agence-reprise.fr', 'agence-redressement.fr'] }, depsVivant);
+    par = Object.fromEntries(v.resultats.map((x) => [x.domaine, x]));
+    assert.deepEqual([par['agence-reprise.fr'].statut, par['agence-reprise.fr'].gravite], ['a_verifier', 1]);
+    assert.deepEqual([par['agence-redressement.fr'].statut, par['agence-redressement.fr'].gravite], ['procedure', 3], 'procédure collective : inchangée');
+    const rep = await P.detail(db, 'agence-reprise.fr');
+    assert.match(rep.preuves.find((x) => x.type === 'contradiction').nature, /toujours en ligne et à jour \(copyright \d{4}\) : activité peut-être reprise/);
+    assert.equal(await P.signalPourSite(db, 'agence-reprise.fr'), null, 'à vérifier : jamais cité dans un email');
+    assert.ok((await P.lister(db)).prestataires.some((p) => p.domaine === 'agence-reprise.fr'), 'visible dans la liste');
+    // Site à jour mais d'il y a trois ans : reste fermé.
+    v = await P.verifier(db, { domaines: ['agence-reprise.fr'] }, { ...deps, detect: async (l) => l.map((d) => ({ domain: d, http_status: 200, copyright_annee: annee - 3 })) });
+    assert.equal(v.resultats[0].statut, 'ferme');
   });
 });

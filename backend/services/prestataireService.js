@@ -153,6 +153,8 @@ function signauxSite(row, { maintenant = new Date(), echecsAvant = 0, detectOk =
   const annee = Number(row.copyright_annee) || null;
   return {
     echecs: 0,
+    // En ligne, pas parqué, pied de page de cette année ou de l'an dernier : le prestataire travaille encore.
+    a_jour: !parque && code < 400 && !!annee && annee >= maintenant.getFullYear() - 1 ? annee : null,
     preuves: parque ? [indice(1, 'domaine du prestataire parqué (page de parking)')] : [],
     faible: annee && annee <= maintenant.getFullYear() - ANS_COPYRIGHT ? indice(0, `pied de page du prestataire non mis à jour (copyright ${annee})`, { faible: true }) : null,
   };
@@ -217,7 +219,14 @@ async function verifier(db, { domaines = null, limite = 200, pas_depuis: depuis 
     preuves.push(...site.preuves);
     if (site.faible && preuves.length) preuves.push(site.faible);   // copyright ancien : jamais seul
     preuves.sort((a, b) => (b.niveau - a.niveau) || String(b.date || '').localeCompare(String(a.date || '')));
-    const { gravite, statut } = conclure(preuves);
+    let { gravite, statut } = conclure(preuves);
+    // Fermé selon les registres, mais site en ligne et à jour : les deux sources se contredisent (activité reprise
+    // sous un autre numéro, homonyme…). « À vérifier », jamais cité dans un email. Une procédure collective n'est
+    // pas concernée : l'entreprise continue souvent son activité pendant un redressement.
+    if (statut === 'ferme' && site.a_jour) {
+      statut = 'a_verifier'; gravite = 1;
+      preuves.push({ source: 'vérification du site', type: 'contradiction', niveau: 1, date: maintenant.toISOString().slice(0, 10), nature: `fermé selon les registres, mais son site est toujours en ligne et à jour (copyright ${site.a_jour}) : activité peut-être reprise sous un autre numéro, à vérifier` });
+    }
     const contact = row ? { email: row.email || null, telephone: row.phone || null, titre: row.title || null } : p.contact;
     await db.pool.query(
       `UPDATE prestataires SET nom = $2, siren = $3, siren_source = $4, statut = $5, gravite = $6, preuves = $7, site = $8, contact = $9, verifie_le = $10, erreur = $11, echecs_site = $12 WHERE domaine = $1`,

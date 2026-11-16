@@ -22,7 +22,7 @@ function Ligne({ p, campagnes, onChange }) {
   const [detail, setDetail] = useState(null);
   const [campagne, setCampagne] = useState('');
   const [busy, setBusy] = useState('');
-  const n = NIVEAUX[p.statut] || NIVEAUX.a_verifier;
+  const n = p.statut === 'a_verifier' && p.verifie_le ? { label: 'À vérifier : fermé selon les registres, site actif', cls: 'bg-warning-bg text-warning-text' } : (NIVEAUX[p.statut] || NIVEAUX.a_verifier);
   const preuve = (p.preuves || [])[0];
   const certain = p.siren_source === 'mentions légales du site';
 

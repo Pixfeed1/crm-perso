@@ -29,9 +29,9 @@ const fmt = (d) => (d ? new Date(d).toLocaleDateString('fr-FR') : '');
     console.log(`- ${p.domaine}${p.nom ? ` (${p.nom})` : ''} · ${p.nb_clients} site(s) client(s)`);
     for (const x of p.preuves || []) console.log(`    ${x.niveau === 0 ? 'faible' : 'indice'} : ${x.nature} (${x.source || 'vérification du site'} du ${fmt(x.date)})`);
   }
-  for (const s of ['procedure', 'ferme']) {
-    const liste = l.prestataires.filter((p) => p.statut === s);
-    if (liste.length) console.log(`\n${s === 'procedure' ? 'En procédure' : 'Fermés'} : ${liste.map((p) => `${p.domaine} (${p.nb_clients})`).join(', ')}`);
+  for (const s of ['procedure', 'ferme', 'a_verifier']) {
+    const liste = l.prestataires.filter((p) => p.statut === s && (s !== 'a_verifier' || p.verifie_le));
+    if (liste.length) console.log(`\n${{ procedure: 'En procédure', ferme: 'Fermés', a_verifier: 'À vérifier (fermés selon les registres, site actif)' }[s]} : ${liste.map((p) => `${p.domaine} (${p.nb_clients})`).join(', ')}`);
   }
 })().catch((e) => { console.error('Erreur :', e.message); process.exitCode = 1; })
   // Fin nette : des connexions HTTP gardées ouvertes (keep-alive) ne doivent pas retenir le script.
