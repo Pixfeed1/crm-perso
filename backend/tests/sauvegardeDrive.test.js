@@ -138,6 +138,33 @@ test('envoi de la nuit et test de la semaine : vrai pg_dump, chiffré, rotation,
     await assert.rejects(S.envoyer(db, { ...deps, drive: refuse, maintenant: () => new Date(Date.now() + 122000) }), /l'API Google Drive n'est pas activée/);
     assert.match(mails[1].sujet, /envoi sur Google Drive en échec/);
     assert.equal((await S.etat(db)).envoi.statut, 'ÉCHEC');
+
+    // Drive qui ne répond plus : erreur claire au bout de la limite, jamais d'attente sans fin ; une seule opération à la fois.
+    const { PassThrough } = require('stream');
+    const avant = { ...S.LIMITES };
+    Object.assign(S.LIMITES, { appel: 300, silence: 300 });
+    try {
+      const muet = { ...drive, files: { ...drive.files, get: async (a) => (a.alt === 'media' ? { data: new PassThrough() } : drive.files.get(a)) } };
+      const etapes = [];
+      const enCours = S.tester(db, { ...deps, drive: muet, surEtape: (t) => etapes.push(t) });
+      await new Promise((ok) => setTimeout(ok, 50));
+      assert.equal((await S.etat(db)).en_cours.quoi, 'test de relecture');
+      await assert.rejects(S.envoyer(db, deps), (x) => x.status === 409 && /déjà en cours/.test(x.message));
+      await assert.rejects(S.lancer(db, 'envoyer', deps), (x) => x.status === 409);
+      await assert.rejects(enCours, /téléchargement depuis Google Drive bloqué : plus rien reçu/);
+      assert.deepEqual(etapes.map((t) => t.split(' ')[0]), ['connexion', 'téléchargement']);
+      e = await S.etat(db);
+      assert.equal(e.en_cours, null);
+      assert.equal(e.test.statut, 'ÉCHEC');
+      const sourd = { ...drive, files: { ...drive.files, list: () => new Promise(() => {}) } };
+      await assert.rejects(S.tester(db, { ...deps, drive: sourd }), /Google Drive \(liste des copies\) : pas de réponse au bout de 0 s/);
+      // Lancement depuis l'interface : en arrière-plan, l'état suit l'étape puis donne le résultat.
+      const l = await S.lancer(db, 'tester', deps);
+      assert.ok(l.en_cours);
+      while ((await S.etat(db)).en_cours) await new Promise((ok) => setTimeout(ok, 20));
+      assert.equal((await S.etat(db)).test.statut, 'ÉCHEC', 'copie toujours abîmée : le résultat du lancement est bien enregistré');
+    } finally { Object.assign(S.LIMITES, avant); }
+
     await assert.rejects(S.reglages(db, { garder_jours: 3 }), /entre 7 et 365/);
     assert.equal((await S.reglages(db, { garder_jours: 60 })).garder_jours, 60);
   });

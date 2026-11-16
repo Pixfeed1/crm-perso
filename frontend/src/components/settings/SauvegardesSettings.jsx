@@ -1,7 +1,7 @@
 // Paramètres > Sauvegardes : copie chiffrée de la base sur Google Drive, sans aucune commande à taper.
 // Connexion en un clic (scope drive.file : le CRM ne voit que ses propres fichiers), clé de chiffrement affichée
 // une seule fois, envoi chaque nuit, test de relecture chaque semaine, alerte par mail en cas d'échec.
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { FiHardDrive, FiKey, FiUploadCloud, FiCheckCircle, FiAlertTriangle, FiRefreshCw, FiCopy } from 'react-icons/fi';
 import { sauvegardeAPI } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
@@ -30,6 +30,19 @@ export default function SauvegardesSettings() {
   const charger = useCallback(async () => {
     try { setEtat(await sauvegardeAPI.etat()); } catch (e) { toast.error(e.message || 'État des sauvegardes illisible'); }
   }, [toast]);
+  // Envoi et test tournent en arrière-plan sur le serveur : on suit l'étape, puis on annonce le résultat.
+  const suivi = useRef(null);
+  useEffect(() => {
+    if (!etat) return undefined;
+    if (etat.en_cours) { suivi.current = etat.en_cours.quoi; const t = setTimeout(charger, 3000); return () => clearTimeout(t); }
+    if (suivi.current) {
+      const s = suivi.current === 'envoi' ? etat.envoi : etat.test;
+      suivi.current = null;
+      if (s && s.statut === 'OK') toast.success(`${s === etat.envoi ? 'Copie envoyée' : 'Copie relue'} : ${s.detail || s.fichier}`);
+      else if (s) toast.error(`${s === etat.envoi ? 'Envoi' : 'Test de relecture'} en échec : ${s.detail || ''}`);
+    }
+    return undefined;
+  }, [etat, charger, toast]);
   useEffect(() => {
     charger();
     const q = new URLSearchParams(window.location.search);
@@ -39,7 +52,7 @@ export default function SauvegardesSettings() {
 
   const action = async (quoi, fn, ok) => {
     setBusy(quoi);
-    try { const r = await fn(); if (ok) toast.success(ok(r)); await charger(); return r; }
+    try { const r = await fn(); if (ok) toast.success(ok(r)); if (quoi !== 'envoyer' && quoi !== 'tester') await charger(); return r; }
     catch (e) { toast.error(e.message || 'Échec'); await charger(); return null; }
     finally { setBusy(''); }
   };
@@ -68,13 +81,14 @@ export default function SauvegardesSettings() {
           <div className="text-text-primary">Google Drive connecté{etat.compte ? ` : ${etat.compte}` : ''}, le {fmt(etat.connecte_le)}</div>
           <div><span className="text-text-secondary">Dernier envoi : </span><Statut s={etat.envoi} /></div>
           <div><span className="text-text-secondary">Dernier test de relecture : </span><Statut s={etat.test} /></div>
+          {etat.en_cours && <div className="text-text-primary">En cours : {etat.en_cours.quoi}, {etat.en_cours.etape || 'démarrage'} (depuis {new Date(etat.en_cours.depuis).toLocaleTimeString('fr-FR')})</div>}
           <div className="text-text-muted text-xs">{etat.planning} ; copies gardées {etat.garder_jours} jours sur Drive.</div>
           <div className="flex flex-wrap gap-2 pt-2">
-            <button onClick={() => action('envoyer', () => sauvegardeAPI.envoyer(), (r) => `Copie envoyée : ${r.fichier}`)} disabled={!!busy || etat.cle.a_afficher} className={`${bouton} bg-surface-strong text-text-primary`}>
-              <FiUploadCloud /> {busy === 'envoyer' ? 'Envoi…' : 'Envoyer une copie maintenant'}
+            <button onClick={() => action('envoyer', async () => setEtat(await sauvegardeAPI.envoyer()))} disabled={!!busy || !!etat.en_cours || etat.cle.a_afficher} className={`${bouton} bg-surface-strong text-text-primary`}>
+              <FiUploadCloud /> {etat.en_cours && etat.en_cours.quoi === 'envoi' ? 'Envoi…' : 'Envoyer une copie maintenant'}
             </button>
-            <button onClick={() => action('tester', () => sauvegardeAPI.tester(), (r) => `Copie relue : ${r.fichier}, ${r.tables} tables`)} disabled={!!busy || !etat.envoi} className={`${bouton} bg-surface-strong text-text-primary`}>
-              <FiRefreshCw /> {busy === 'tester' ? 'Test…' : 'Tester la relecture maintenant'}
+            <button onClick={() => action('tester', async () => setEtat(await sauvegardeAPI.tester()))} disabled={!!busy || !!etat.en_cours || !etat.envoi} className={`${bouton} bg-surface-strong text-text-primary`}>
+              <FiRefreshCw className={etat.en_cours && etat.en_cours.quoi !== 'envoi' ? 'animate-spin' : ''} /> {etat.en_cours && etat.en_cours.quoi !== 'envoi' ? 'Test…' : 'Tester la relecture maintenant'}
             </button>
             <button onClick={connecter} disabled={!!busy} className={`${bouton} text-text-muted`}>Reconnecter</button>
           </div>

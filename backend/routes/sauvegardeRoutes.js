@@ -3,8 +3,8 @@
 //   GET  /connecter       { authUrl } : Google, scope drive.file seulement
 //   GET  /cle             la clé de chiffrement, une seule fois (tant qu'elle n'est pas marquée rangée)
 //   POST /cle/rangee      « j'ai rangé la clé » : elle ne s'affichera plus
-//   POST /envoyer         une copie chiffrée maintenant
-//   POST /tester          redescendre la dernière copie, la déchiffrer, la relire
+//   POST /envoyer         une copie chiffrée maintenant (en arrière-plan : l'état donne l'étape en cours)
+//   POST /tester          redescendre la dernière copie, la déchiffrer, la relire (idem)
 //   PUT  /reglages        { garder_jours }
 const express = require('express');
 const authMiddleware = require('../middleware/authMiddleware');
@@ -27,8 +27,8 @@ router.get('/connecter', ok(async () => {
 }));
 router.get('/cle', ok((db) => S.cleAAfficher(db)));
 router.post('/cle/rangee', ok((db) => S.cleRangee(db)));
-router.post('/envoyer', ok((db) => S.envoyer(db)));
-router.post('/tester', ok((db) => S.tester(db)));
+router.post('/envoyer', ok((db) => S.lancer(db, 'envoyer')));
+router.post('/tester', ok((db) => S.lancer(db, 'tester')));
 router.put('/reglages', ok((db, b) => S.reglages(db, b)));
 
 module.exports = router;

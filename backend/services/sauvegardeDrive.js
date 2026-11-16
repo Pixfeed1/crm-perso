@@ -49,6 +49,7 @@ async function assurerTable(q) {
       test_statut        TEXT,
       test_detail        TEXT
     );`);
+  await q.query('ALTER TABLE sauvegarde_drive ADD COLUMN IF NOT EXISTS en_cours TEXT, ADD COLUMN IF NOT EXISTS en_cours_depuis TIMESTAMPTZ');
 }
 const ligne = async (db) => (await db.pool.query('SELECT * FROM sauvegarde_drive WHERE id = 1')).rows[0] || null;
 async function maj(db, champs) {
@@ -101,7 +102,11 @@ async function dechiffrer(source, cible, cle) {
 }
 
 // ---------- PostgreSQL (mêmes réglages que le backend) ----------
-const executer = (cmd, args, env = {}) => new Promise((ok, ko) => execFile(cmd, args, { env: { ...process.env, ...env }, maxBuffer: 64 * 1024 * 1024 }, (e, stdout, stderr) => (e ? ko(Object.assign(e, { message: String(stderr || e.message).trim() })) : ok(stdout))));
+const executer = (cmd, args, env = {}) => new Promise((ok, ko) => execFile(cmd, args, { env: { ...process.env, ...env }, maxBuffer: 64 * 1024 * 1024, timeout: LIMITES.commande }, (e, stdout, stderr) => {
+  if (!e) return ok(stdout);
+  if (e.killed) return ko(new Error(`${cmd} arrêté : pas fini au bout de ${LIMITES.commande / 60000} min`));
+  return ko(Object.assign(e, { message: String(stderr || e.message).trim() }));
+}));
 async function pgDump(cible) {
   await executer('pg_dump', ['-h', process.env.DB_HOST || 'localhost', '-p', String(process.env.DB_PORT || 5432), '-U', process.env.DB_USER || 'postgres', '-Fc', '-f', cible, process.env.DB_NAME || 'mcrm_dev'], { PGPASSWORD: process.env.DB_PASSWORD || '' });
 }
@@ -109,6 +114,36 @@ async function relireDump(fichier) {
   const liste = await executer('pg_restore', ['--list', fichier]);
   const tables = (liste.match(/ TABLE DATA /g) || []).length;
   return { tables, charte: / TABLE DATA \S+ charte_versions /.test(liste) };
+}
+
+// ---------- limites de temps : une étape bloquée devient une erreur claire, jamais une attente sans fin ----------
+const LIMITES = { appel: 60000, transfert: 15 * 60000, silence: 90000, commande: 15 * 60000 };
+const OPTS = { timeout: LIMITES.appel };                                   // appels Drive courts (liste, dossier…)
+function delai(promesse, ms, quoi) {
+  let t;
+  return Promise.race([promesse, new Promise((_, ko) => { t = setTimeout(() => ko(new Error(`${quoi} : pas de réponse au bout de ${Math.round(ms / 1000)} s`)), ms); })]).finally(() => clearTimeout(t));
+}
+// Téléchargement : erreur si plus aucune donnée pendant LIMITES.silence, ou si le tout dépasse LIMITES.transfert.
+async function telecharger(flux, cible) {
+  let t;
+  const relancer = () => { clearTimeout(t); t = setTimeout(() => flux.destroy(new Error(`téléchargement depuis Google Drive bloqué : plus rien reçu depuis ${LIMITES.silence / 1000} s`)), LIMITES.silence); };
+  flux.on('data', relancer); relancer();
+  try { await delai(pipeline(flux, fs.createWriteStream(cible)), LIMITES.transfert, 'téléchargement depuis Google Drive'); }
+  finally { clearTimeout(t); }
+}
+
+// ---------- étape en cours (affichée dans l'interface ; une seule opération à la fois) ----------
+let occupe = null;   // { quoi, etape, depuis }
+async function etape(db, x, texte) {
+  occupe.etape = texte;
+  if (x.surEtape) x.surEtape(texte);
+  await maj(db, { en_cours: `${occupe.quoi} : ${texte}`, en_cours_depuis: occupe.depuis }).catch(() => {});
+}
+async function exclusif(db, quoi, fn) {
+  if (occupe) throw err(409, `${occupe.quoi} déjà en cours (${occupe.etape || 'démarrage'}) : attendre la fin`);
+  occupe = { quoi, etape: null, depuis: new Date() };
+  try { return await fn(); }
+  finally { occupe = null; await maj(db, { en_cours: null, en_cours_depuis: null }).catch(() => {}); }
 }
 
 // ---------- Google Drive ----------
@@ -134,16 +169,16 @@ const D = (deps = {}) => ({ pgDump, relireDump, mail: alerter, maintenant: () =>
 
 async function dossierDrive(db, drive, r) {
   if (r.dossier_id) {
-    try { const f = await drive.files.get({ fileId: r.dossier_id, fields: 'id, trashed' }); if (f.data && !f.data.trashed) return r.dossier_id; } catch { /* recréé ci-dessous */ }
+    try { const f = await delai(drive.files.get({ fileId: r.dossier_id, fields: 'id, trashed' }, OPTS), LIMITES.appel, 'Google Drive (dossier)'); if (f.data && !f.data.trashed) return r.dossier_id; } catch { /* recréé ci-dessous */ }
   }
-  const l = await drive.files.list({ q: `name = '${DOSSIER}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`, fields: 'files(id, name)', spaces: 'drive' });
+  const l = await delai(drive.files.list({ q: `name = '${DOSSIER}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`, fields: 'files(id, name)', spaces: 'drive' }, OPTS), LIMITES.appel, 'Google Drive (recherche du dossier)');
   let id = l.data.files && l.data.files[0] && l.data.files[0].id;
-  if (!id) id = (await drive.files.create({ requestBody: { name: DOSSIER, mimeType: 'application/vnd.google-apps.folder' }, fields: 'id' })).data.id;
+  if (!id) id = (await delai(drive.files.create({ requestBody: { name: DOSSIER, mimeType: 'application/vnd.google-apps.folder' }, fields: 'id' }, OPTS), LIMITES.appel, 'Google Drive (création du dossier)')).data.id;
   await maj(db, { dossier_id: id });
   return id;
 }
 async function copiesDrive(drive, dossier) {
-  const l = await drive.files.list({ q: `'${dossier}' in parents and trashed = false`, orderBy: 'createdTime desc', fields: 'files(id, name, size, createdTime)', pageSize: 200, spaces: 'drive' });
+  const l = await delai(drive.files.list({ q: `'${dossier}' in parents and trashed = false`, orderBy: 'createdTime desc', fields: 'files(id, name, size, createdTime)', pageSize: 200, spaces: 'drive' }, OPTS), LIMITES.appel, 'Google Drive (liste des copies)');
   return (l.data.files || []).filter((f) => RE_COPIE.test(f.name));
 }
 const stamp = (d) => d.toLocaleString('sv-SE', { timeZone: 'Europe/Paris' }).replace(/[-:]/g, '').replace(' ', '-').slice(0, 13);
@@ -158,7 +193,8 @@ async function enregistrerConnexion(db, { refresh_token: rt, scope, email }) {
 }
 
 // ---------- envoi de la nuit ----------
-async function envoyer(db, deps = {}) {
+async function envoyer(db, deps = {}) { return exclusif(db, 'envoi', () => envoyerSansVerrou(db, deps)); }
+async function envoyerSansVerrou(db, deps) {
   const x = D(deps);
   await assurerTable(db.pool);
   const r = await ligne(db);
@@ -172,20 +208,25 @@ async function envoyer(db, deps = {}) {
   const nom = `crm-${stamp(x.maintenant())}.dump.chiffre`;
   try {
     const dump = path.join(tmp, 'base.dump'), chiffre = path.join(tmp, nom);
+    await etape(db, x, 'copie de la base (pg_dump)');
     await x.pgDump(dump);
     const lu = await x.relireDump(dump);
     if (!lu.tables) throw new Error('pg_dump a produit une sauvegarde vide');
+    await etape(db, x, 'chiffrement');
     await chiffrer(dump, chiffre, cle);
     fs.rmSync(dump, { force: true });
+    await etape(db, x, 'connexion à Google Drive');
     const drive = x.drive || driveDe(r.refresh_token);
     const dossier = await dossierDrive(db, drive, r);
     const octets = fs.statSync(chiffre).size;
-    await drive.files.create({ requestBody: { name: nom, parents: [dossier] }, media: { mimeType: 'application/octet-stream', body: fs.createReadStream(chiffre) }, fields: 'id, name, size' });
+    await etape(db, x, `envoi sur Google Drive (${(octets / 1048576).toFixed(1)} Mo)`);
+    await delai(drive.files.create({ requestBody: { name: nom, parents: [dossier] }, media: { mimeType: 'application/octet-stream', body: fs.createReadStream(chiffre) }, fields: 'id, name, size' }, { timeout: LIMITES.transfert }), LIMITES.transfert, 'envoi sur Google Drive');
+    await etape(db, x, 'rotation des anciennes copies');
     // rotation : seulement les copies déposées par le CRM dans son dossier
     const limite = x.maintenant().getTime() - (Number(r.garder_jours) || 30) * 86400000;
     const retirees = [];
     for (const f of await copiesDrive(drive, dossier)) {
-      if (f.name !== nom && new Date(f.createdTime).getTime() < limite) { await drive.files.delete({ fileId: f.id }); retirees.push(f.name); }
+      if (f.name !== nom && new Date(f.createdTime).getTime() < limite) { await delai(drive.files.delete({ fileId: f.id }, OPTS), LIMITES.appel, 'Google Drive (retrait d\'une ancienne copie)'); retirees.push(f.name); }
     }
     const detail = `${lu.tables} tables, ${(octets / 1048576).toFixed(1)} Mo chiffrés${retirees.length ? `, ${retirees.length} copie(s) de plus de ${r.garder_jours || 30} jours retirée(s)` : ''}`;
     await maj(db, { envoi_le: x.maintenant(), envoi_fichier: nom, envoi_octets: octets, envoi_statut: 'OK', envoi_detail: detail });
@@ -199,7 +240,8 @@ async function envoyer(db, deps = {}) {
 }
 
 // ---------- test de la semaine : redescendre, déchiffrer, relire ----------
-async function tester(db, deps = {}) {
+async function tester(db, deps = {}) { return exclusif(db, 'test de relecture', () => testerSansVerrou(db, deps)); }
+async function testerSansVerrou(db, deps) {
   const x = D(deps);
   await assurerTable(db.pool);
   const r = await ligne(db);
@@ -209,6 +251,7 @@ async function tester(db, deps = {}) {
   try {
     const cle = lireCle();
     if (!cle) throw new Error(`clé de chiffrement absente du serveur (${fichierCle()})`);
+    await etape(db, x, 'connexion à Google Drive');
     const drive = x.drive || driveDe(r.refresh_token);
     const dossier = await dossierDrive(db, drive, r);
     const derniere = (await copiesDrive(drive, dossier))[0];
@@ -216,9 +259,12 @@ async function tester(db, deps = {}) {
     nom = derniere.name;
     const age = (x.maintenant().getTime() - new Date(derniere.createdTime).getTime()) / 86400000;
     const local = path.join(tmp, nom), dump = path.join(tmp, 'relu.dump');
-    const flux = await drive.files.get({ fileId: derniere.id, alt: 'media' }, { responseType: 'stream' });
-    await pipeline(flux.data, fs.createWriteStream(local));
+    await etape(db, x, `téléchargement de ${nom}${derniere.size ? ` (${(Number(derniere.size) / 1048576).toFixed(1)} Mo)` : ''}`);
+    const flux = await delai(drive.files.get({ fileId: derniere.id, alt: 'media' }, { responseType: 'stream', timeout: LIMITES.appel }), LIMITES.appel, 'Google Drive (début du téléchargement)');
+    await telecharger(flux.data, local);
+    await etape(db, x, 'déchiffrement');
     await dechiffrer(local, dump, cle);
+    await etape(db, x, 'relecture (pg_restore --list)');
     const lu = await x.relireDump(dump);
     if (!lu.tables) throw new Error('la copie déchiffrée ne contient aucune table');
     if (!lu.charte) throw new Error('la copie déchiffrée ne contient pas la charte de rédaction (charte_versions)');
@@ -251,6 +297,7 @@ async function etat(db) {
     cle: { presente: !!cle, a_afficher: !!(cle && r && r.refresh_token && !r.cle_affichee_le), affichee_le: r && r.cle_affichee_le, coherente: !!(cle && r && (!r.cle_empreinte || r.cle_empreinte === empreinte(cle))) },
     envoi: r && r.envoi_le ? { le: r.envoi_le, fichier: r.envoi_fichier, octets: r.envoi_octets, statut: r.envoi_statut, detail: r.envoi_detail } : null,
     test: r && r.test_le ? { le: r.test_le, fichier: r.test_fichier, statut: r.test_statut, detail: r.test_detail } : null,
+    en_cours: occupe ? { quoi: occupe.quoi, etape: occupe.etape, depuis: occupe.depuis } : null,
     planning: 'envoi chaque nuit à 3 h 41 ; test de relecture le dimanche à 5 h 23',
   };
 }
@@ -273,10 +320,19 @@ async function reglages(db, { garder_jours: j }) {
   return etat(db);
 }
 
+// Interface : l'opération part en arrière-plan ; l'écran suit l'étape en cours puis lit le résultat.
+async function lancer(db, quoi, deps = {}) {
+  if (occupe) throw err(409, `${occupe.quoi} déjà en cours (${occupe.etape || 'démarrage'}) : attendre la fin`);
+  const fn = quoi === 'tester' ? tester : envoyer;
+  fn(db, deps).catch((e) => console.error(`[Sauvegarde Drive] ${quoi} en échec :`, e.message));
+  await new Promise((ok) => setImmediate(ok));
+  return etat(db);
+}
+
 let jobs = [];
 function start(db) {
   const cron = require('node-cron');
-  assurerTable(db.pool).catch((e) => console.error('[Sauvegarde Drive] table :', e.message));
+  assurerTable(db.pool).then(() => maj(db, { en_cours: null, en_cours_depuis: null })).catch((e) => console.error('[Sauvegarde Drive] table :', e.message));
   const si = (fn, quoi) => async () => {
     const r = await ligne(db).catch(() => null);
     if (!r || !r.refresh_token) return;
@@ -286,4 +342,4 @@ function start(db) {
   jobs.push(cron.schedule('23 5 * * 0', si(tester, 'test de relecture'), { timezone: 'Europe/Paris' }));
 }
 
-module.exports = { SCOPE, DOSSIER, assurerTable, enregistrerConnexion, envoyer, tester, etat, cleAAfficher, cleRangee, reglages, start, chiffrer, dechiffrer, cleDepuisTexte, cleLisible, lireCle, creerCleSiAbsente };
+module.exports = { SCOPE, DOSSIER, LIMITES, assurerTable, enregistrerConnexion, envoyer, tester, lancer, etat, cleAAfficher, cleRangee, reglages, start, chiffrer, dechiffrer, cleDepuisTexte, cleLisible, lireCle, creerCleSiAbsente };
