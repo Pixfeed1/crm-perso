@@ -166,7 +166,7 @@ test('simulation : plan complet, aucune écriture dans WordPress', opts, async (
 test('charte : identite_version obligatoire (manifeste ou paramètre), refus avec la charte, simulation comprise', opts, async () => {
   await avecBase(async (db) => {
     const C = require('../services/charteService');
-    const donnees = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'scripts', 'donnees', 'charte-initiale.json'), 'utf8'));
+    const donnees = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'charte', 'charte-test.json'), 'utf8'));
     assert.deepEqual(await C.semerSiAbsente(db.pool, { ...donnees, sites: { 15: donnees.sites['15'] } }), [15]);
     await C.modifier(db, { site: 15, operations: [{ objet: 'registre', action: 'modifier', valeur: 'tutoiement' }], auteur: 'x', simulation: false });
     await C.modifier(db, { site: 15, operations: [{ objet: 'registre', action: 'modifier', valeur: 'vouvoiement' }], auteur: 'x', simulation: false });
@@ -195,7 +195,7 @@ test('charte : identite_version obligatoire (manifeste ou paramètre), refus ave
 test('contrôles de style : affichés en simulation, bloquants en écriture, repassés après la relecture, périmètre des mises à jour, rendu', opts, async () => {
   await avecBase(async (db) => {
     const C = require('../services/charteService');
-    const donnees = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'scripts', 'donnees', 'charte-initiale.json'), 'utf8'));
+    const donnees = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'charte', 'charte-test.json'), 'utf8'));
     await C.semerSiAbsente(db.pool, { ...donnees, sites: { 15: donnees.sites['15'] } });
     const p = (t) => `<!-- wp:paragraph -->\n<p>${t}</p>\n<!-- /wp:paragraph -->`;
     const dev = "Une boutique PrestaShop qui rame a rarement un seul coupable, et le premier réflexe consiste souvent à changer d'hébergeur sans rien mesurer. Avant de toucher au serveur, on relève les temps de réponse de la page d'accueil, d'une fiche produit et du panier, à froid puis à chaud. Ces trois mesures disent déjà si le problème vient du code, de la base ou de la machine. Ici, le panier mettait quatre secondes.";
@@ -258,7 +258,7 @@ test('contrôles de style : affichés en simulation, bloquants en écriture, rep
 test('relecture avec la charte (style, voix) et ligne d\'en-tête de chaque rapport', opts, async () => {
   await avecBase(async (db) => {
     const C = require('../services/charteService');
-    const donnees = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'scripts', 'donnees', 'charte-initiale.json'), 'utf8'));
+    const donnees = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'charte', 'charte-test.json'), 'utf8'));
     await C.semerSiAbsente(db.pool, { ...donnees, sites: { 15: donnees.sites['15'] } });
     const p = (t) => `<!-- wp:paragraph -->\n<p>${t}</p>\n<!-- /wp:paragraph -->`;
     const dev = "Une boutique PrestaShop qui rame a rarement un seul coupable, et le premier réflexe consiste souvent à changer d'hébergeur sans rien mesurer. Avant de toucher au serveur, on relève les temps de réponse de la page d'accueil, d'une fiche produit et du panier, à froid puis à chaud. Ces trois mesures disent déjà si le problème vient du code, de la base ou de la machine. Ici, le panier mettait quatre secondes.";

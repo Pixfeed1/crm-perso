@@ -242,7 +242,7 @@ test('get_site_resources : sections, étiquettes sur demande ou par recherche, b
 
 test('get_charte et section identite : version en cours, historique, jointe à redaction', opts, async () => {
   const C = require('../../backend/services/charteService.js');
-  const donnees = JSON.parse(require('fs').readFileSync(require('path').join(process.cwd(), '..', 'backend', 'scripts', 'donnees', 'charte-initiale.json'), 'utf8'));
+  const donnees = JSON.parse(require('fs').readFileSync(require('path').join(process.cwd(), '..', 'backend', 'tests', 'fixtures', 'charte', 'charte-test.json'), 'utf8'));
   await pool.query("INSERT INTO seo_sites (id, domain) VALUES (15, 'pixfeed.net') ON CONFLICT DO NOTHING");
   assert.deepEqual(await C.semerSiAbsente(pool, donnees), [2, 15]);
   await C.modifier({ pool }, { site: 2, operations: [{ objet: 'liste', liste: 'liste_noire', action: 'ajouter', valeur: 'à la croisée des chemins', texte_simple: true }], motif: 'consigne', auteur: 'Claude (connecteur)', origine: 'mcp', simulation: false });

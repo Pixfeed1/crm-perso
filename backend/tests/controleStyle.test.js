@@ -8,7 +8,7 @@ const S = require('../services/wpBrouillon/controleStyle');
 
 const FIX = path.join(__dirname, 'fixtures', 'charte');
 const cas = JSON.parse(fs.readFileSync(path.join(FIX, 'attendus-python.json'), 'utf8'));
-const donnees = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'scripts', 'donnees', 'charte-initiale.json'), 'utf8'));
+const donnees = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'charte', 'charte-test.json'), 'utf8'));
 const AJOUTS_12 = ['blendérien', "dont personne n'a jamais entendu parler"];
 const lire = (f) => fs.readFileSync(path.join(FIX, f), 'utf8');
 

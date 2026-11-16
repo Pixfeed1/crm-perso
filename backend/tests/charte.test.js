@@ -7,7 +7,7 @@ const { hasDb, withSchema } = require('./helpers/db');
 const { ensureCharteTables } = require('../scripts/autoInitDatabase');
 const C = require('../services/charteService');
 
-const DONNEES = path.join(__dirname, '..', 'scripts', 'donnees', 'charte-initiale.json');
+const DONNEES = path.join(__dirname, 'fixtures', 'charte', 'charte-test.json');
 const donnees = () => JSON.parse(fs.readFileSync(DONNEES, 'utf8'));
 
 test('données de la v1 : charte (5, 7, 9, 11, 12), exemples, identités, registres, réglages choisis par Marc', () => {

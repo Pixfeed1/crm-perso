@@ -45,7 +45,7 @@ async function courante(db, siteId, q = db.pool) {
 }
 async function exiger(db, siteId, q) {
   const c = await courante(db, siteId, q);
-  if (!c) throw err(404, `aucune charte pour le site ${siteId} (remplissage initial : node scripts/charte-initiale.js --ecrire)`);
+  if (!c) throw err(404, `aucune charte pour le site ${siteId}`);
   return c;
 }
 async function versions(db, siteId) {
