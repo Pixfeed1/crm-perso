@@ -34,6 +34,8 @@ const arg = (n) => { const i = process.argv.indexOf(n); return i > 0 ? process.a
     console.log(`  ${out.detail}`);
     const l = await M.lister(db);
     const t = l.totaux;
+    console.log('\nMarchés retenus (objet · thèmes · raisons) :');
+    for (const m of l.marches) console.log(`  [${m.score}] ${m.objet.slice(0, 100)} · ${(m.themes || []).join(', ')} · ${(m.raisons || []).join(' ; ')}`);
     console.log(`\n${t.ouverts} marché(s) web ouverts · ${t.nouveaux} nouveau(x) · ${t.maintenance} en maintenance · ${t.en_reponse} en réponse · ${t.hors_cible} hors cible (montant)`);
   }
 })().catch((e) => { console.error('Erreur :', e.message); process.exitCode = 1; })

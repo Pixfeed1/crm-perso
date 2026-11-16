@@ -58,7 +58,9 @@ function lireDonnees(brut) {
       const n = Number(s.replace(/\s/g, '').replace(',', '.'));
       if (Number.isFinite(n) && n >= 1000) montants.push(n);
     }
-    if (s.length > 2 && textes.join(' ').length < 20000) textes.push(s);
+    if (/url|adresse|address|courriel|email|mail|profil|website|endpoint/i.test(cle)) return;   // adresses : pas du sujet
+    const t = s.replace(/https?:\/\/\S+|www\.\S+|\S+@\S+/gi, ' ');
+    if (t.trim().length > 2 && textes.join(' ').length < 20000) textes.push(t);
   };
   if (d) visiter(d);
   else if (brut) textes.push(String(brut).slice(0, 20000));
@@ -81,17 +83,21 @@ function analyser(rec, reglages = {}, maintenant = new Date()) {
   const typesMarche = liste(lire(o, 'type_marche', 'typemarche', 'type_marche_facette'));
   const don = lireDonnees(lire(o, 'donnees'));
   const tObjet = sans(objet), tDesc = sans(descripteurs.join(' ')), tTout = sans(`${objet} ${descripteurs.join(' ')} ${don.texte}`);
-  const web = WEB.test(tTout);
+  // Le web se lit dans l'objet, les descripteurs ou les codes CPV : le texte complet d'un avis parle presque
+  // toujours d'« adresse internet », de « site internet de l'acheteur » ou de « plateforme en ligne » de dépôt.
+  const tPrincipal = `${tObjet} ${tDesc}`;
+  const cpvWeb = don.cpv.filter((c) => c in CPV_WEB);
+  const web = WEB.test(tPrincipal) || cpvWeb.some((c) => CPV_WEB[c]);
+  let principal = cpvWeb.some((c) => CPV_WEB[c]);
   const themes = new Set(); let score = 0; const raisons = [];
   for (const [k, t] of Object.entries(THEMES)) {
     const fortO = t.fort && t.fort.test(tObjet), fortD = t.fort && t.fort.test(tDesc), fortT = t.fort && t.fort.test(tTout);
-    const ctx = t.contexte && web && t.contexte.test(tTout);
-    if (fortO) { themes.add(k); score += 3; raisons.push(`${t.libelle} (objet)`); }
-    else if (fortD) { themes.add(k); score += 2; raisons.push(`${t.libelle} (descripteurs)`); }
-    else if (fortT) { themes.add(k); score += 1; raisons.push(`${t.libelle} (texte de l'avis)`); }
-    else if (ctx) { themes.add(k); score += t.contexte.test(tObjet) && WEB.test(tObjet) ? 2 : 1; raisons.push(`${t.libelle} (avec le web)`); }
+    const ctx = t.contexte && web && t.contexte.test(tPrincipal);
+    if (fortO) { themes.add(k); score += 3; principal = true; raisons.push(`${t.libelle} (objet)`); }
+    else if (fortD) { themes.add(k); score += 2; principal = true; raisons.push(`${t.libelle} (descripteurs)`); }
+    else if (ctx) { themes.add(k); score += t.contexte.test(tObjet) ? 2 : 1; principal = true; raisons.push(`${t.libelle} (avec le web)`); }
+    else if (fortT && web) { themes.add(k); score += 1; raisons.push(`${t.libelle} (texte de l'avis)`); }
   }
-  const cpvWeb = don.cpv.filter((c) => c in CPV_WEB);
   for (const c of cpvWeb) if (CPV_WEB[c]) themes.add(CPV_WEB[c]);
   if (cpvWeb.length) { score += 2; raisons.push(`CPV ${cpvWeb.join(', ')}`); }
   const exclusions = new RegExp([EXCLUSIONS.source, ...(reglages.exclusions || []).map((m) => sans(m).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))].filter(Boolean).join('|'));
@@ -102,7 +108,8 @@ function analyser(rec, reglages = {}, maintenant = new Date()) {
   if ((reglages.departements || []).length && departements.some((d) => reglages.departements.includes(d))) { score += 1; raisons.push('département suivi'); }
   const montant = don.montant;
   const max = Number(reglages.montant_max) || 200000;
-  const cible = score < 3 ? 'non_pertinent' : montant && montant > max ? 'hors_cible' : 'pertinent';
+  // Jamais retenu sur le seul texte de l'avis : il faut le web dans l'objet, les descripteurs ou les CPV.
+  const cible = !principal || score < 3 ? 'non_pertinent' : montant && montant > max ? 'hors_cible' : 'pertinent';
   return {
     idweb: String(idweb), objet: objet.slice(0, 1000), acheteur: String(lire(o, 'nomacheteur', 'nom_acheteur', 'acheteur') || '').slice(0, 300) || null,
     departements, date_parution: lire(o, 'dateparution', 'date_parution'), date_limite: limite || null,
@@ -202,7 +209,7 @@ async function relever(db, { jours = null, surJour = null } = {}, deps = {}) {
     const depuis = jours ? jourIso(maintenant.getTime() - jours * 86400000)
       : r.releve_le && r.releve_statut === 'OK' ? jourIso(new Date(r.releve_le).getTime() - 86400000) : jourIso(maintenant.getTime() - 7 * 86400000);
     let lus = 0;
-    const out = { lues: 0, nouveaux: 0, pertinents_nouveaux: [], mis_a_jour: 0, ecartes: 0, jours: 0 };
+    const out = { lues: 0, nouveaux: 0, pertinents_nouveaux: [], mis_a_jour: 0, ecartes: 0, declasses: 0, jours: 0 };
     const aujourdhui = jourIso(maintenant);
     for (let jour = depuis; jour <= aujourdhui; jour = jourIso(new Date(`${jour}T12:00:00Z`).getTime() + 86400000)) {
      const avantJour = { lus, nouveaux: out.nouveaux };
@@ -211,7 +218,15 @@ async function relever(db, { jours = null, surJour = null } = {}, deps = {}) {
       lus += p.records.length;
       for (const rec of p.records) {
         const a = analyser(rec, r, maintenant);
-        if (!a || a.cible === 'non_pertinent') { out.ecartes++; continue; }
+        if (!a || a.cible === 'non_pertinent') {
+          out.ecartes++;
+          // Retenu par un tri précédent et pas encore suivi : déclassé (rien n'est supprimé).
+          if (a) {
+            const d = await db.pool.query("UPDATE marches_publics SET cible = 'non_pertinent', themes = $2, score = $3, raisons = $4, updated_at = NOW() WHERE idweb = $1 AND statut = 'nouveau' AND cible <> 'non_pertinent'", [a.idweb, a.themes, a.score, a.raisons]);
+            out.declasses += d.rowCount;
+          }
+          continue;
+        }
         const ins = await db.pool.query(
           `INSERT INTO marches_publics (idweb, objet, acheteur, departements, date_parution, date_limite, procedure, nature, type_marche, descripteurs, cpv, montant, url, themes, score, raisons, cible, rectificatif, tranche)
            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
@@ -229,7 +244,7 @@ async function relever(db, { jours = null, surJour = null } = {}, deps = {}) {
      if (surJour) surJour({ jour, lues: lus - avantJour.lus, nouveaux: out.nouveaux - avantJour.nouveaux });
     }
     out.lues = lus;
-    const detail = `${lus} annonce(s) lue(s) depuis le ${new Date(depuis).toLocaleDateString('fr-FR')}, ${out.nouveaux} nouveau(x) marché(s) web dont ${out.pertinents_nouveaux.length} pertinent(s)`;
+    const detail = `${lus} annonce(s) lue(s) depuis le ${new Date(depuis).toLocaleDateString('fr-FR')}, ${out.nouveaux} nouveau(x) marché(s) web dont ${out.pertinents_nouveaux.length} pertinent(s)${out.declasses ? `, ${out.declasses} déclassé(s) par le nouveau tri` : ''}`;
     await db.pool.query('UPDATE marches_reglages SET releve_le = $1, releve_statut = $2, releve_detail = $3 WHERE id = 1', [maintenant, 'OK', detail]);
     if (out.pertinents_nouveaux.length && r.alerte_mail) await (deps.mail || alerter)(out.pertinents_nouveaux).catch((e) => console.error('[Marchés] mail :', e.message));
     return { statut: 'OK', detail, ...out, pertinents_nouveaux: out.pertinents_nouveaux.map((x) => x.idweb) };

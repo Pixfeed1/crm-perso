@@ -22,6 +22,9 @@ const ANNONCES = [
   avis('26-9', 'Fourniture de matériel informatique pour les écoles', { type_marche: ['FOURNITURES'], donnees: JSON.stringify({ texte: 'Les offres sont déposées sur le site internet de la plateforme.' }) }),
   avis('26-10', 'Boutique en ligne et billetterie du musée', { descripteur_libelle: ['Commerce électronique'] }),
   avis('26-11', 'Audit d\'accessibilité numérique (RGAA) des sites de la ville', {}),
+  // Texte complet typique d'un avis : adresses, « site internet » de l'acheteur, plateforme en ligne, maintenance.
+  avis('26-14', 'Maintenance des installations de chauffage et de ventilation', { type_marche: ['SERVICES'], donnees: JSON.stringify({ acheteur: { adresse_internet: 'https://www.ville.fr', url_profil: 'https://marches.ville.fr' }, texte: "Les documents sont disponibles sur le site internet de l'acheteur et sur la plateforme en ligne. Maintenance préventive et corrective, application des normes, mises à jour des registres, support technique." }) }),
+  avis('26-15', 'Prestations de nettoyage des locaux', { type_marche: ['SERVICES'], donnees: JSON.stringify({ t: 'Refonte du site internet de la ville en cours ; dépôt des offres en ligne.' }) }),
 ];
 
 test('classement : thèmes, maintenance seulement avec le web, exclusions, attribution et date passée écartées, montant', () => {
@@ -41,6 +44,9 @@ test('classement : thèmes, maintenance seulement avec le web, exclusions, attri
   assert.equal(a['26-9'].cible, 'non_pertinent', 'matériel informatique, « site internet » seulement pour le dépôt');
   assert.ok(a['26-10'].themes.includes('ecommerce') && a['26-10'].cible === 'pertinent');
   assert.ok(a['26-11'].themes.includes('accessibilite') && a['26-11'].cible === 'pertinent');
+  assert.equal(a['26-14'].cible, 'non_pertinent', 'chauffage : le « site internet » et la « maintenance » du texte complet ne suffisent pas');
+  assert.ok(!a['26-14'].themes.includes('maintenance'));
+  assert.equal(a['26-15'].cible, 'non_pertinent', 'jamais retenu sur le seul texte de l\'avis');
   // Champs en camelCase (autre version de l'API) : lus pareil.
   const camel = M.analyser({ idWeb: '26-12', objet: 'Création d\'un site internet', dateLimiteReponse: futur, typeMarche: ['SERVICES'], nomAcheteur: 'CCAS' }, r);
   assert.deepEqual([camel.idweb, camel.acheteur, camel.cible], ['26-12', 'CCAS', 'pertinent']);
@@ -60,12 +66,17 @@ test('relevé, mail, suivi, réglages, connecteur', { skip: !hasDb() && 'TEST_DA
     const mails = [];
     const deps = { page, mail: async (l) => { mails.push(l); } };
     await M.regler(db, { departements: '95, 78' });
+    // Deux annonces retenues à tort par un ancien tri ; la seconde est déjà suivie.
+    await pool.query("INSERT INTO marches_publics (idweb, objet, cible, statut, themes) VALUES ('26-14', 'Maintenance chauffage', 'pertinent', 'nouveau', '{maintenance}'), ('26-15', 'Nettoyage', 'pertinent', 'a_etudier', '{site}')");
     const jours = [];
     let r = await M.relever(db, { surJour: (x) => jours.push(x) }, deps);
     assert.equal(r.statut, 'OK');
-    assert.deepEqual([r.lues, r.nouveaux, r.pertinents_nouveaux.sort()], [150, 6, ['26-1', '26-10', '26-11', '26-3', '26-8']]);
+    assert.deepEqual([r.lues, r.nouveaux, r.pertinents_nouveaux.sort(), r.declasses], [152, 6, ['26-1', '26-10', '26-11', '26-3', '26-8'], 1]);
+    assert.equal((await pool.query("SELECT cible, statut FROM marches_publics WHERE idweb = '26-14'")).rows[0].cible, 'non_pertinent', 'retenu à tort par l\'ancien tri : déclassé');
+    assert.equal((await pool.query("SELECT cible FROM marches_publics WHERE idweb = '26-15'")).rows[0].cible, 'pertinent', 'déjà suivi par Marc : jamais déclassé');
+    await pool.query("DELETE FROM marches_publics WHERE idweb = '26-15'");   // donnée de test retirée pour la suite
     assert.equal(appels[0][0], new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10), 'premier relevé : 7 jours');
-    assert.deepEqual([r.jours, jours.length, jours[jours.length - 1]], [8, 8, { jour: jourPlein, lues: 150, nouveaux: 6 }], 'un jour après l\'autre, aujourd\'hui compris');
+    assert.deepEqual([r.jours, jours.length, jours[jours.length - 1]], [8, 8, { jour: jourPlein, lues: 152, nouveaux: 6 }], 'un jour après l\'autre, aujourd\'hui compris');
     assert.deepEqual(appels.filter((a) => a[0] === jourPlein).map((a) => a[1]), [0, 100], 'deux pages pour le jour plein');
     appels.length = 0;
     assert.equal(mails.length, 1);
