@@ -105,7 +105,7 @@ test('vérification, liste, prospects, angle « prestataire » dans une campagne
         'agence-figee.fr': { domain: d, http_status: 200, copyright_annee: 2021 },
         'agence-parquee.fr': { domain: d, http_status: 200, parked: true, copyright_annee: 2020 },
       }[d])),
-      parSiren: async (s) => ({ found: true, siren: s, raison_sociale: s === '732829320' ? 'AGENCE X' : 'AGENCE SAINE', etat: 'A' }),
+      parSiren: async (s) => (s === '552100554' ? { found: true, siren: s, raison_sociale: 'ANCIENNE AGENCE', etat: 'C', date_fermeture: '2026-06-30' } : { found: true, siren: s, raison_sociale: s === '732829320' ? 'AGENCE X' : 'AGENCE SAINE', etat: 'A' }),
       enrichMatch: async () => ({ found: true, match: 'sur', siren: '552100554', raison_sociale: 'ANCIENNE AGENCE', etat: 'C', date_fermeture: '2026-06-30' }),
       bodacc: async (s) => (s === '732829320' ? [COLLECTIVE, { familleavis: 'immatriculation', dateparution: '2019-03-01' }] : []),
     };
@@ -181,5 +181,20 @@ test('vérification, liste, prospects, angle « prestataire » dans une campagne
     l = await P.lister(db);
     assert.ok(!l.prestataires.some((p) => p.domaine === 'freelance-y.fr'));
     assert.equal(await P.signalPourSite(db, 'agence-saine.fr'), null);
+
+    // Connecteur Claude.ai : revérifier, fiche du prestataire, ignorer (raison obligatoire) puis rétablir.
+    const C = require('../services/campagneConnecteur');
+    const rv = await C.prestataireVerifier(db, { domaine: 'https://www.ancienne-agence.fr/' }, deps);
+    assert.deepEqual([rv.domaine, rv.statut_avant, rv.statut, rv.citable_dans_un_email, rv.sites_clients], ['ancienne-agence.fr', 'ferme', 'ferme', false, 1]);
+    await assert.rejects(C.prestataireVerifier(db, { domaine: 'inconnu.fr' }, deps), (x) => x.status === 404);
+    await assert.rejects(C.prestataireVerifier(db, {}, deps), (x) => x.status === 400);
+    assert.deepEqual(await C.prestataireFiche(db, { domaine: 'agence-x.fr' }), { lead_id: f.lead_id, deja: true });
+    assert.equal((await C.prestataireFiche(db, { domaine: 'ancienne-agence.fr' })).deja, false);
+    await assert.rejects(C.prestataireIgnorer(db, { domaine: 'agence-parquee.fr' }), /raison requise/);
+    assert.deepEqual(await C.prestataireIgnorer(db, { domaine: 'agence-parquee.fr', raison: 'déjà contacté' }), { domaine: 'agence-parquee.fr', ignore: true });
+    assert.ok(!(await C.prestataires(db, {})).prestataires.some((p) => p.domaine === 'agence-parquee.fr'));
+    assert.equal((await C.prestataires(db, { domaine: 'agence-parquee.fr' })).ignore_raison, 'déjà contacté');
+    await C.prestataireIgnorer(db, { domaine: 'agence-parquee.fr', retablir: true });
+    assert.ok((await C.prestataires(db, {})).prestataires.some((p) => p.domaine === 'agence-parquee.fr'), 'rétabli');
   });
 });

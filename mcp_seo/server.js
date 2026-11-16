@@ -472,6 +472,24 @@ function buildServer() {
     { domaine: z.string(), id: z.number().int().optional() },
     async (a) => compactJson(await campagnes(a.id ? 'prestataire-campagne' : 'prestataire-prospects', a, 10 * 60 * 1000))
   );
+  server.tool(
+    'verifier_prestataire',
+    "Revérifie maintenant un prestataire du signal (BODACC, SIRENE, son site) et renvoie son nouveau statut (statut_avant pour comparer), ses preuves datées, citable_dans_un_email et le nombre de sites clients. Une panne du site ne compte qu'après deux vérifications de suite en échec. Ne crée ni fiche ni prospect, n'envoie rien.",
+    { domaine: z.string() },
+    async (a) => compactJson(await campagnes('prestataire-verifier', a, 3 * 60 * 1000))
+  );
+  server.tool(
+    'fiche_prestataire',
+    "ÉCRITURE (CRM seulement, rien envoyé) : crée la fiche du prestataire lui-même (piste : reprise de son portefeuille ; approche en message privé, jamais en public), avec ses preuves, son contact et ses sites clients dans les notes. Renvoie lead_id ; deja=true si elle existait.",
+    { domaine: z.string() },
+    async (a) => compactJson(await campagnes('prestataire-fiche', a))
+  );
+  server.tool(
+    'ignorer_prestataire',
+    "ÉCRITURE (CRM seulement) : écarte un prestataire de la liste du signal (faux prestataire, déjà traité, hors cible…), raison obligatoire, gardée dans le CRM ; il n'est plus vérifié chaque semaine. retablir=true le remet dans la liste. Réversible, rien n'est supprimé.",
+    { domaine: z.string(), raison: z.string().optional(), retablir: z.boolean().optional() },
+    async (a) => compactJson(await campagnes('prestataire-ignorer', a))
+  );
 
   // ---- charte de rédaction et identité du site (base du CRM : seule version qui fait foi) ----
   server.tool(

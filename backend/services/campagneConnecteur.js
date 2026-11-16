@@ -180,5 +180,22 @@ async function prestataires(db, { domaine = null, gravite_min = 1, statut = null
 }
 const prestataireProspects = (db, { domaine }) => P().promouvoir(db, domaine);
 const prestataireCampagne = (db, { domaine, id: cid }) => P().versCampagne(db, domaine, id(cid));
+// Revérifier un prestataire maintenant (BODACC, SIRENE, son site) ; renvoie le nouveau statut et ses preuves.
+async function prestataireVerifier(db, { domaine } = {}, deps = {}) {
+  if (!domaine) throw err(400, 'domaine requis');
+  const avant = await P().detail(db, domaine);                 // 404 si inconnu
+  const r = await P().verifier(db, { domaines: [avant.domaine] }, deps);
+  const apres = await prestataires(db, { domaine: avant.domaine });
+  const { clients, ...reste } = apres;
+  return { ...reste, statut_avant: avant.statut, erreur: (r.resultats[0] && r.resultats[0].erreur) || undefined, sites_clients: clients.length };
+}
+// Fiche du prestataire lui-même (piste : reprise de son portefeuille, en message privé) ; rien n'est envoyé.
+const prestataireFiche = (db, { domaine } = {}) => { if (!domaine) throw err(400, 'domaine requis'); return P().ficheDuPrestataire(db, domaine); };
+// Écarter un prestataire de la liste (faux prestataire, déjà traité…), ou l'y remettre avec retablir=true.
+async function prestataireIgnorer(db, { domaine, raison = null, retablir = false } = {}) {
+  if (!domaine) throw err(400, 'domaine requis');
+  if (!retablir && !String(raison || '').trim()) throw err(400, 'raison requise pour ignorer un prestataire (elle reste dans le CRM)');
+  return P().ignorer(db, domaine, { raison: raison && String(raison).trim(), retablir: !!retablir });
+}
 
-module.exports = { prestataires, prestataireProspects, prestataireCampagne, lister, lire, ligne, prospects, crawls, creer, modifier, ajouter, modifierLigne, regenerer, reanalyser, reprendre, testAb, piloter, boiteReception };
+module.exports = { prestataires, prestataireProspects, prestataireCampagne, prestataireVerifier, prestataireFiche, prestataireIgnorer, lister, lire, ligne, prospects, crawls, creer, modifier, ajouter, modifierLigne, regenerer, reanalyser, reprendre, testAb, piloter, boiteReception };

@@ -274,7 +274,8 @@ procédure collective (BODACC, niveau 3), radiation ou cessation (BODACC, SIRENE
 niveau 1, jamais cité). Portefeuille > Signaux > Prestataires : sites clients en prospects, ajout à une campagne
 (préparée seulement), fiche du prestataire (reprise de portefeuille), ignorer. L'email par la preuve prend l'angle
 `prestataire_difficulte` seulement pour un fait daté (niveau 2 ou 3) sur une identité certaine. Connecteur :
-`lister_prestataires_signal`, `prospects_depuis_prestataire`. API : `BODACC_API_URL` (open data DILA).
+`lister_prestataires_signal`, `prospects_depuis_prestataire`, `verifier_prestataire`, `fiche_prestataire`,
+`ignorer_prestataire` (raison obligatoire, réversible avec retablir). API : `BODACC_API_URL` (open data DILA).
 
 ### Sauvegardes de la base
 
