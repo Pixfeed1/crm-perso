@@ -70,6 +70,7 @@ async function preparer(db, { depot, simulation = true, creer_etiquettes = false
   try { d = await depots.ouvrir(db, depot); } catch (e) { bloque('dépôt', e.message, e.status || 'depot'); return fin(); }
   r.site_id = d.site_id;
   try { m = JSON.parse(fs.readFileSync(d.manifeste, 'utf8')); } catch (e) { bloque('manifeste', `manifeste-wp.json illisible : ${e.message}`); return fin(); }
+  const manifesteDepose = JSON.parse(JSON.stringify(m));                         // tel que déposé : empreinte de la relecture
   const fichierDepot = (rel) => depots.resoudre(d.dossier, path.posix.join(d.base, norm(rel)));
   if (m.site_id && Number(m.site_id) !== d.site_id) bloque('manifeste', `site_id ${m.site_id} ≠ site du dépôt (${d.site_id})`);
   const mode = m.mode || 'nouveau';
@@ -292,7 +293,10 @@ async function preparer(db, { depot, simulation = true, creer_etiquettes = false
   else if (m.contenu || contenuRemplace !== null) {
     try {
       const y = m.yoast || {};
-      const res = await relire({ domaine: s[0].domain, dossier: d.dossier, charte: fiche, champs: { titre: m.titre, titre_seo: y.titre, meta: y.meta, contenu: lireContenu() } });
+      // Repère de l'article pour la relecture incrémentale : url_origine en mise à jour, sinon brouillon visé, slug ou titre.
+      const repereArticle = mode === 'mise_a_jour' ? `url:${String(m.url_origine).replace(/[?#].*$/, '').replace(/\/+$/, '')}`
+        : m.brouillon_id ? `brouillon:${m.brouillon_id}` : m.slug ? `slug:${m.slug}` : `titre:${titreDepose}`;
+      const res = await relire({ db, domaine: s[0].domain, charte: fiche, site_id: d.site_id, depot_id: d.id, repere: repereArticle, manifeste: manifesteDepose, champs: { titre: m.titre, titre_seo: y.titre, meta: y.meta, contenu: lireContenu() } });
       contenuRelu = res.champs.contenu;
       m.titre = res.champs.titre; r.titre = m.titre;
       if (m.yoast && y.titre !== undefined) m.yoast.titre = res.champs.titre_seo;

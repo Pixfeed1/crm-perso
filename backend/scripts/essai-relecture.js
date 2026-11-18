@@ -1,31 +1,47 @@
-/* Essai réel du relecteur de prepare_draft, sur un court texte contenant des erreurs volontaires.
-   Ne touche à aucun site WordPress ; un seul appel à l'API (quelques recherches web).
-   Usage, depuis backend/ : node scripts/essai-relecture.js */
+/* Essai de la relecture économe sur un vrai dépôt, sans rien écrire dans WordPress (appels réels à l'API) :
+     node scripts/essai-relecture.js <numéro de dépôt>
+   1. relecture du dépôt tel quel ;
+   2. même contenu une seconde fois : doit coûter 0 $ (rapport enregistré, aucun appel) ;
+   3. une phrase ajoutée au premier paragraphe : relecture incrémentale de ce seul paragraphe.
+   Affiche pour chaque passage les jetons (entrée, sortie, cache lu, cache écrit), les recherches et le coût. */
 require('dotenv').config();
-const { relire } = require('../services/wpBrouillon/relecture');
+const fs = require('fs');
+const path = require('path');
+const { Pool } = require('pg');
+const depots = require('../services/wpBrouillon/depot');
+const charte = require('../services/charteService');
+const R = require('../services/wpBrouillon/relecture');
 
-const champs = {
-  titre: 'Blender 4.2 LTS : les nouveautées pour la motion capture',
-  titre_seo: 'Blender 4.2 LTS et motion capture',
-  meta: "Blender 4.2 LTS, sorti en 2019, et ce qu'il change pour la motion capture.",
-  contenu: [
-    '<!-- wp:paragraph -->',
-    "<p>Blender 4.2 LTS est sorti en juillet 2019. Il est maintenu pendant dix ans et il n'importe plus les fichiers FBX.</p>",
-    '<!-- /wp:paragraph -->',
-    '<!-- wp:paragraph -->',
-    "<p>Nous avons testé tout les addons de retargeting sur trois combinaisons, et le meilleur reste <a href=\"https://jurojin.net/\">Rokoko</a>.</p>",
-    '<!-- /wp:paragraph -->',
-  ].join('\n'),
-};
+const pool = new Pool({ user: process.env.DB_USER || 'postgres', host: process.env.DB_HOST || 'localhost', database: process.env.DB_NAME || 'mcrm_dev', password: process.env.DB_PASSWORD || 'postgres', port: process.env.DB_PORT || 5432 });
+const db = { pool };
 
 (async () => {
-  const debut = Date.now();
-  const { champs: c, rapport: r } = await relire({ domaine: 'jurojin.net', champs, dossier: null });
-  console.log(`modèle : ${r.modele} ; ${Math.round((Date.now() - debut) / 1000)} s ; recherches web : ${r.recherches_web ?? '?'}${r.erreurs_recherche ? ` (erreurs : ${r.erreurs_recherche.join(', ')})` : ''}`);
-  console.log(`résumé : ${r.resume || '-'}`);
-  console.log(`affirmations : ${JSON.stringify(r.affirmations || {})}`);
-  for (const x of r.corrections_appliquees) console.log(`  CORRIGÉ [${x.type}] ${x.champ} : « ${x.avant} » → « ${x.apres} »${x.source ? ` (${x.source})` : ''}`);
-  for (const x of r.corrections_non_appliquees || []) console.log(`  non appliqué [${x.type}] « ${x.avant} » → « ${x.apres} » : ${x.pourquoi}`);
-  for (const x of r.signalements || []) console.log(`  signalé [${x.type}] « ${x.extrait} » : ${x.remarque}`);
-  console.log(`\ntitre corrigé : ${c.titre}\ncontenu corrigé :\n${c.contenu}`);
-})().catch((e) => { console.error('Erreur :', e.message); process.exit(1); });
+  const id = Number(process.argv[2]);
+  if (!id) throw new Error('numéro de dépôt attendu : node scripts/essai-relecture.js 187');
+  const d = await depots.ouvrir(db, id);
+  const m = JSON.parse(fs.readFileSync(d.manifeste, 'utf8'));
+  if (!m.contenu) throw new Error('ce dépôt n\'a pas de fichier HTML (contenu) : prendre un dépôt avec un article complet');
+  const html = fs.readFileSync(depots.resoudre(d.dossier, path.posix.join(d.base, m.contenu)), 'utf8');
+  const site = (await pool.query('SELECT domain FROM seo_sites WHERE id = $1', [d.site_id])).rows[0];
+  const fiche = await charte.courante(db, d.site_id).catch(() => null);
+  const y = m.yoast || {};
+  const champs = { titre: m.titre, titre_seo: y.titre, meta: y.meta, contenu: html };
+  const repere = m.mode === 'mise_a_jour' ? `url:${String(m.url_origine).replace(/[?#].*$/, '').replace(/\/+$/, '')}` : m.brouillon_id ? `brouillon:${m.brouillon_id}` : m.slug ? `slug:${m.slug}` : `titre:${m.titre}`;
+  const base = { db, domaine: site.domain, charte: fiche, site_id: d.site_id, depot_id: d.id, repere, manifeste: m };
+  const passage = async (titre, ch) => {
+    const t0 = Date.now();
+    const r = await R.relire({ ...base, champs: ch });
+    const c = r.rapport.consommation;
+    console.log(`\n${titre} (${Math.round((Date.now() - t0) / 1000)} s)\n  ${r.rapport.cout}\n  faits : ${r.rapport.complete ? 'COMPLET' : 'INCOMPLET'}${r.rapport.non_verifiees ? ` (${r.rapport.non_verifiees.length} non vérifiée(s))` : ''} · ${r.rapport.corrections_appliquees.length} correction(s) · relecture n° ${c.relecture_id}`);
+    return c;
+  };
+  console.log(`Dépôt ${d.id} · ${site.domain} · « ${m.titre} » · repère ${repere}${fiche ? ` · charte v${fiche.version}` : ''}`);
+  const c1 = await passage('1. Dépôt tel quel', champs);
+  const c2 = await passage('2. Même contenu, une seconde fois', champs);
+  const modifie = html.replace(/(<p[^>]*>)([\s\S]*?)(<\/p>)/i, (t, a, b, f) => `${a}${b} Cette phrase est ajoutée pour un essai de relecture.${f}`);
+  if (modifie === html) throw new Error('aucun paragraphe <p> trouvé pour l\'essai de modification');
+  const c3 = await passage('3. Une phrase ajoutée au premier paragraphe', { ...champs, contenu: modifie });
+  const total = c1.cout_usd + c2.cout_usd + c3.cout_usd;
+  console.log(`\nTotal des trois passages : ${total.toFixed(2).replace('.', ',')} $ · détail : node scripts/relectures.js`);
+})().catch((e) => { console.error('Erreur :', e.message); process.exitCode = 1; })
+  .finally(async () => { await pool.end().catch(() => {}); process.exit(process.exitCode || 0); });
