@@ -45,6 +45,9 @@ test('requête : partie fixe en cache une heure, article ensuite, recherches pla
     assert.equal(requetes[1].system[0].text, q.system[0].text, 'même partie fixe d\'une reprise à l\'autre');
     assert.deepEqual(r.conso, { entree: 3000, sortie: 200, cache_lu: 16000, cache_ecrit_5m: 0, cache_ecrit_1h: 18000, recherches_api: 4, recherches: 4 });
     assert.equal(r.verifiees[0].source, 'https://www.apple.com/fr/');
+    // Crédit épuisé : message clair, code repérable.
+    R.definirClient({ beta: { messages: { create: async () => { throw Object.assign(new Error('400 {"type":"error","error":{"type":"invalid_request_error","message":"Your credit balance is too low to access the Anthropic API."}}'), { status: 400 }); } } } });
+    await assert.rejects(R.appelReel({ domaine: 'jurojin.net', message: 'x', recherches_max: 10 }), (e) => e.code === 'credit_api' && /crédit de l'API Anthropic épuisé[\s\S]*Rien n'a été consommé/.test(e.message));
   } finally { R.definirClient(null); }
 });
 

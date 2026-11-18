@@ -96,6 +96,17 @@ Réponds UNIQUEMENT par un objet JSON valide, sans texte autour :
  "affirmations":{"relevees":0,"confirmees":0,"corrigees":0,"retirees":0,"non_verifiees":0},
  "resume":"deux phrases au plus"}${texteCharte(charte)}`;
 
+// Appel à l'API ; crédit épuisé ou clé refusée : un message clair (rien n'a été consommé).
+async function creer(params) {
+  try { return await api().beta.messages.create(params); }
+  catch (e) {
+    const m = String((e && e.message) || e);
+    if (/credit balance is too low/i.test(m)) throw Object.assign(new Error('crédit de l\'API Anthropic épuisé pour la clé du CRM : le recharger sur console.anthropic.com (Plans & Billing), puis relancer prepare_draft. Rien n\'a été consommé.'), { code: 'credit_api' });
+    if (e && e.status === 401) throw Object.assign(new Error('clé de l\'API Anthropic refusée (ANTHROPIC_API_KEY dans backend/.env)'), { code: 'cle_api' });
+    throw e;
+  }
+}
+
 // Consommation d'une réponse de l'API, additionnée sur les reprises (pause_turn).
 function ajouterUsage(t, u = {}) {
   t.entree += u.input_tokens || 0;
@@ -125,7 +136,7 @@ async function appelReel({ domaine, charte = null, message, recherches_max: maxR
   const diagnostic = { recherches: 0, sans_resultat: 0, erreurs_recherche: [], reprises: 0 };
   let r;
   for (let tour = 0; tour < 6; tour++) {
-    r = await api().beta.messages.create({
+    r = await creer({
       model: MODELE(), max_tokens: charte ? 24000 : 16000,
       betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default',
       system: [{ type: 'text', text: SYSTEME(domaine, charte), cache_control: { type: 'ephemeral', ttl: '1h' } }],
