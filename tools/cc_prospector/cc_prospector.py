@@ -31,6 +31,7 @@ import csv
 import gzip
 import re
 import sys
+import time
 from pathlib import Path
 
 import httpx
@@ -1315,12 +1316,42 @@ CC_UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
          "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
 
 
-def list_cc_parquet_urls(crawl: str) -> list[str]:
+# Common Crawl répond 503 (« Slow Down ») quand il est surchargé ou qu'une adresse fait trop de requêtes :
+# on réessaie en espaçant (environ 6 minutes en tout), puis on dit clairement ce qui se passe.
+CC_ESSAIS = [10, 20, 40, 60, 90, 120]
+
+
+def _cc_get(client, url, sleep=time.sleep):
+    dernier = None
+    for i, attente in enumerate([0] + CC_ESSAIS):
+        if attente:
+            print(f"  Common Crawl indisponible ({dernier}), nouvel essai dans {attente} s "
+                  f"({i}/{len(CC_ESSAIS)})...", file=sys.stderr)
+            sleep(attente)
+        try:
+            r = client.get(url)
+        except httpx.TransportError as e:
+            dernier = f"réseau : {e.__class__.__name__}"
+            continue
+        if r.status_code in (429, 500, 502, 503, 504):
+            corps = (r.text or "")[:200].replace("\n", " ")
+            dernier = f"HTTP {r.status_code}{' : ' + corps if corps.strip() else ''}"
+            continue
+        if r.status_code in (403, 404):
+            raise RuntimeError(f"HTTP {r.status_code} sur {url} : ce crawl n'existe pas ou n'est pas "
+                               "(encore) publié. Liste des crawls : https://index.commoncrawl.org/collinfo.json")
+        r.raise_for_status()
+        return r
+    raise RuntimeError(f"Common Crawl refuse toujours après {len(CC_ESSAIS) + 1} essais ({dernier}). "
+                       "S'il répond « Slow Down », il limite cette adresse après trop de requêtes : "
+                       "réessayer plus tard. État du service : https://status.commoncrawl.org/")
+
+
+def list_cc_parquet_urls(crawl: str, sleep=time.sleep) -> list[str]:
     manifest_url = f"{CC_READ_BASE}/crawl-data/{crawl}/cc-index-table.paths.gz"
     with httpx.Client(timeout=60.0, follow_redirects=True,
                       headers={"User-Agent": CC_UA}) as client:
-        r = client.get(manifest_url)
-        r.raise_for_status()
+        r = _cc_get(client, manifest_url, sleep)
         text = gzip.decompress(r.content).decode("utf-8", errors="replace")
     urls = []
     for line in text.splitlines():
@@ -1396,6 +1427,12 @@ def discover(crawl, tld, mode, max_domains, output, parquet, exclude_file=""):
 
     con = duckdb.connect()
     con.execute("INSTALL httpfs; LOAD httpfs;")
+    # Lecture des fichiers Parquet : mêmes nouvelles tentatives espacées sur les 503 de Common Crawl.
+    for reglage in ("SET http_retries = 8", "SET http_retry_wait_ms = 5000", "SET http_retry_backoff = 2"):
+        try:
+            con.execute(reglage)
+        except Exception:
+            pass
     try:
         con.execute("CREATE SECRET cc_http (TYPE HTTP, EXTRA_HTTP_HEADERS MAP "
                     "{'User-Agent': '" + CC_UA + "'})")
