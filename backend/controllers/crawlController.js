@@ -20,7 +20,8 @@ const { prospectScore, auditFlags, promotionBlocker, departmentFromPostalCode, d
 // signaux de domaine) : un `git pull` suffit à mettre le crawler à jour.
 const { PYTHON_BIN, SCRIPT } = require('../services/ccProspectorRunner');
 const { parseCsv, csvEscape, normalizeDomain } = require('../utils/csvParse');
-const COMMON_CRAWL_ID = process.env.COMMON_CRAWL_ID || 'CC-MAIN-2026-21';
+// Crawl Common Crawl : le plus récent publié (services/commonCrawl.js), ou COMMON_CRAWL_ID du .env s'il est réglé.
+const { crawlCourant } = require('../services/commonCrawl');
 
 // `spip` / `drupal` / `cms` cherchent TOUS les sites du CMS concerné (tous secteurs) :
 // la découverte e-commerce ne les trouvait jamais, faute d'URL de type panier/produit.
@@ -67,7 +68,9 @@ async function runCrawl(db, jobId, techno, nbSites) {
   const excludePath = path.join(jobDir, 'exclude.txt');
   const excludeCount = await buildExcludeFile(db, excludePath);
 
-  const args = ['run', '--crawl', COMMON_CRAWL_ID, '--mode', techno, '--max-domains', String(nbSites), '--output', csvPath];
+  const crawl = await crawlCourant();
+  console.log(`[Crawl] job ${jobId} : ${crawl.id} (${crawl.source})`);
+  const args = ['run', '--crawl', crawl.id, '--mode', techno, '--max-domains', String(nbSites), '--output', csvPath];
   if (excludeCount > 0) args.push('--exclude', excludePath);
   const child = spawn(PYTHON_BIN, [SCRIPT, ...args], { cwd: jobDir });
 
