@@ -11,6 +11,7 @@ const pool = new Pool({ user: process.env.DB_USER || 'postgres', host: process.e
 const db = { pool };
 
 (async () => {
+  if (V.enPause()) { console.log('Veille Reddit en pause : REDDIT_CLIENT_ID et REDDIT_CLIENT_SECRET absents de backend/.env. Aucun passage lancé.'); return; }
   const t0 = Date.now();
   const deps = process.argv.includes('--sans-mail') ? { mail: async () => {} } : {};
   console.log(`Accès : ${process.env.REDDIT_CLIENT_ID && process.env.REDDIT_CLIENT_SECRET ? 'OAuth' : 'public'} · User-Agent pixfeed-crm/1.0 (by u/${process.env.REDDIT_USERNAME || 'pixfeed'})`);

@@ -358,7 +358,7 @@ async function regles(db) {
   const liste = (await db.pool.query('SELECT * FROM veille_reddit_regles ORDER BY type, etiquette NULLS FIRST, id')).rows;
   const dernier = (await db.pool.query('SELECT * FROM veille_reddit_passages ORDER BY id DESC LIMIT 1')).rows[0] || null;
   const etat = (await db.pool.query('SELECT * FROM veille_reddit_etat WHERE id = 1')).rows[0];
-  return { sources, regles: liste, dernier_passage: dernier, panne: etat, en_cours: enCours, acces: oauthActif() ? 'OAuth (application)' : 'public, sans authentification', frequence: 'toutes les 10 minutes' };
+  return { sources, regles: liste, dernier_passage: dernier, panne: etat, en_cours: enCours, en_pause: enPause() ? PAUSE : undefined, acces: oauthActif() ? 'OAuth (application)' : 'aucun (clés OAuth absentes)', frequence: enPause() ? 'en pause' : 'toutes les 10 minutes' };
 }
 // Réglages depuis l'interface : sources et règles (ajouter, désactiver, supprimer).
 async function ajouterSource(db, { type, valeur, etiquette, actif = true } = {}) {
@@ -402,7 +402,18 @@ async function supprimerRegle(db, id) {
   return { supprimee: Number(id) };
 }
 
+// En pause tant que REDDIT_CLIENT_ID et REDDIT_CLIENT_SECRET manquent dans backend/.env : Reddit refuse l'accès
+// public depuis le serveur (403). En pause : aucun passage (planifié ou manuel), aucun mail (panne, bilan).
+const enPause = () => !oauthActif();
+const PAUSE = 'Veille Reddit en pause : ajouter REDDIT_CLIENT_ID et REDDIT_CLIENT_SECRET dans backend/.env (application Reddit de type « script »), puis redémarrer le CRM.';
+// Une tâche planifiée : rien du tout tant que la veille est en pause.
+async function tick(db, quoi = 'passage', deps = {}) {
+  if (enPause()) return { en_pause: true };
+  return quoi === 'bilan' ? bilan(db, deps) : passage(db, deps);
+}
+
 function lancer(db) {
+  if (enPause()) throw err(409, PAUSE);
   if (enCours) return { deja_en_cours: true, depuis: enCours };
   passage(db).then((r) => console.log(`[Veille Reddit] passage manuel : ${r.lus} lue(s), ${r.nouveaux.length} nouvelle(s), ${r.sources_ko} source(s) en erreur`)).catch((e) => console.error('[Veille Reddit] passage :', e.message));
   return { lance: true };
@@ -410,9 +421,10 @@ function lancer(db) {
 function start(db) {
   const cron = require('node-cron');
   assurerTables(db.pool).catch((e) => console.error('[Veille Reddit] tables :', e.message));
-  cron.schedule('*/10 * * * *', () => { passage(db).catch((e) => console.error('[Veille Reddit] passage :', e.message)); }, { timezone: 'Europe/Paris' });
-  cron.schedule('13 8 * * 1', () => { bilan(db).catch((e) => console.error('[Veille Reddit] bilan :', e.message)); }, { timezone: 'Europe/Paris' });
+  if (enPause()) console.log('[Veille Reddit] en pause : REDDIT_CLIENT_ID et REDDIT_CLIENT_SECRET absents de backend/.env');
+  cron.schedule('*/10 * * * *', () => { tick(db, 'passage').catch((e) => console.error('[Veille Reddit] passage :', e.message)); }, { timezone: 'Europe/Paris' });
+  cron.schedule('13 8 * * 1', () => { tick(db, 'bilan').catch((e) => console.error('[Veille Reddit] bilan :', e.message)); }, { timezone: 'Europe/Paris' });
 }
 const _reinitialiser = () => { jeton = null; derniereRequete = 0; enCours = null; };
 
-module.exports = { ETIQUETTES, STATUTS, SOURCES_DEPART, REGLES_DEPART, assurerTables, classer, regleListes, budget, motif, passage, bilan, lister, marquer, regles, ajouterSource, modifierSource, supprimerSource, ajouterRegle, modifierRegle, supprimerRegle, lancer, start, texteNouvelles, _reinitialiser };
+module.exports = { tick, enPause, ETIQUETTES, STATUTS, SOURCES_DEPART, REGLES_DEPART, assurerTables, classer, regleListes, budget, motif, passage, bilan, lister, marquer, regles, ajouterSource, modifierSource, supprimerSource, ajouterRegle, modifierRegle, supprimerRegle, lancer, start, texteNouvelles, _reinitialiser };

@@ -51,6 +51,13 @@ test('passages : dédoublonnage, commentaires, rythme, OAuth, erreurs sans nouve
       return { status: 200, json: listing() };
     };
     const deps = { http, sleep: async (ms) => { pauses.push(ms); horloge += ms; }, maintenant: () => horloge, mail: async (sujet, texte) => { mails.push({ sujet, texte }); } };
+    // Sans REDDIT_CLIENT_ID / REDDIT_CLIENT_SECRET : en pause, aucune requête, aucun mail, passage manuel refusé.
+    delete process.env.REDDIT_CLIENT_ID; delete process.env.REDDIT_CLIENT_SECRET;
+    assert.deepEqual(await V.tick(db, 'passage', deps), { en_pause: true });
+    assert.deepEqual(await V.tick(db, 'bilan', deps), { en_pause: true });
+    assert.throws(() => V.lancer(db), (e) => e.status === 409 && /en pause/.test(e.message));
+    assert.match((await V.regles(db)).en_pause, /REDDIT_CLIENT_ID et REDDIT_CLIENT_SECRET/);
+    assert.equal(appels.length + mails.length, 0, 'rien appelé, rien envoyé');
     V._reinitialiser();
     reponses = {
       '/r/HungryArtists/new': { status: 200, json: listing(

@@ -128,6 +128,8 @@ export default function VeilleRedditPanel() {
   const [filtre, setFiltre] = useState({ etiquette: '', subreddit: '', budget: '', depuis_heures: '' });
   const [data, setData] = useState(null);
   const [voirReglages, setVoirReglages] = useState(false);
+  const [pause, setPause] = useState(null);
+  useEffect(() => { veilleRedditAPI.reglages().then((r) => setPause(r.en_pause || null)).catch(() => {}); }, []);
   const charger = useCallback(async () => {
     try { setData(await veilleRedditAPI.annonces({ statut: onglet, ...filtre })); } catch (e) { toast.error(e.message || 'Liste indisponible'); }
   }, [onglet, filtre, toast]);
@@ -144,9 +146,10 @@ export default function VeilleRedditPanel() {
         </div>
         <div className="flex gap-2">
           <button onClick={() => setVoirReglages((v) => !v)} className={`${bouton} text-text-muted`}><FiSettings /> Réglages</button>
-          <button onClick={passage} className={`${bouton} bg-surface-strong text-text-primary`}><FiRefreshCw /> Passage maintenant</button>
+          <button onClick={passage} disabled={!!pause} title={pause || ''} className={`${bouton} bg-surface-strong text-text-primary`}><FiRefreshCw /> Passage maintenant</button>
         </div>
       </div>
+      {pause && <div className="rounded-xl border border-warning-text/40 bg-warning-bg/40 p-3 text-sm text-text-primary">{pause} Les annonces déjà relevées restent consultables.</div>}
       {voirReglages && <Reglages onChange={charger} />}
       <div className="flex flex-wrap gap-1.5">
         {ONGLETS.map((o) => <button key={o.k} onClick={() => setOnglet(o.k)} className={`px-3 py-1.5 rounded-lg text-xs ${onglet === o.k ? 'bg-accent text-white' : 'bg-surface-strong text-text-secondary hover:bg-border-strong'}`}>{o.l}{c[o.k] ? ` (${c[o.k]})` : ''}</button>)}

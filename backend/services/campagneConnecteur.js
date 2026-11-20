@@ -238,7 +238,7 @@ async function reglesReddit(db) {
     type_garde: parType('garder_type'), type_rejete: parType('rejeter_type'), exclusions: parType('exclusion'),
     mots_cles: { '3D': parType('mot_cle', '3D'), PixFeed: parType('mot_cle', 'PixFeed') },
     desactivees: r.regles.filter((x) => !x.actif).map((x) => `${x.type}${x.etiquette ? ` ${x.etiquette}` : ''} : ${x.valeur}`),
-    dernier_passage: r.dernier_passage, panne: r.panne, acces: r.acces, frequence: r.frequence,
+    en_pause: r.en_pause, dernier_passage: r.dernier_passage, panne: r.panne, acces: r.acces, frequence: r.frequence,
     note: 'Lecture seule : les listes se modifient dans le CRM (Veille Reddit > Réglages). Mots entiers, insensibles à la casse ; pluriels compris pour les mots-clés ; « free » ignore « feel free » et « free to DM ».',
   };
 }
