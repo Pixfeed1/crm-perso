@@ -18,12 +18,17 @@ const ok = (fn) => async (req, res) => {
     res.status(e.status || 500).json({ message: e.status ? e.message : `Campagnes : ${e.message}` });
   }
 };
+const PF = require('../services/portefeuilleConnecteur');
 const ACTIONS = {
   lister: C.lister, lire: C.lire, ligne: C.ligne, prospects: C.prospects, crawls: C.crawls,
   creer: C.creer, modifier: C.modifier, ajouter: C.ajouter, 'modifier-ligne': C.modifierLigne, regenerer: C.regenerer,
   reanalyser: C.reanalyser, reprendre: C.reprendre, 'test-ab': C.testAb, piloter: C.piloter, boite: C.boiteReception,
   prestataires: C.prestataires, 'prestataire-prospects': C.prestataireProspects, 'prestataire-campagne': C.prestataireCampagne,
   marches: C.marches, 'marche-suivre': C.marcheSuivre,
+  // Portefeuille (crawl, prospects, clients, signaux AFNIC) : mêmes actions que les boutons de l'interface.
+  'crawl-lancer': PF.lancerCrawl, 'crawl-etat': PF.etatCrawl, 'crawl-resultat': PF.lireResultat, 'crawl-convertir': PF.convertir,
+  'reanalyser-site': PF.reanalyser, 'prospect-lire': PF.lireProspect, 'clients-lister': PF.listerClients, 'client-lire': PF.lireClient,
+  interagir: PF.interagir, 'signaux-domaines': PF.signauxDomaines, 'signaux-promouvoir': PF.promouvoirSignaux,
   'prestataire-verifier': (db, b) => C.prestataireVerifier(db, b), 'prestataire-fiche': C.prestataireFiche, 'prestataire-ignorer': C.prestataireIgnorer,
 };
 for (const [chemin, fn] of Object.entries(ACTIONS)) router.post(`/${chemin}`, ok(fn));

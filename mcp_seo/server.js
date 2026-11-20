@@ -389,8 +389,8 @@ function buildServer() {
   );
   server.tool(
     'chercher_prospects',
-    "Lecture seule. Fiches prospects du CRM à ajouter à une campagne : recherche (nom, entreprise, email, site), filtre relation ; signale désinscrit, refus de prospection en cours et campagne en cours (les ajouter les exclura de toute façon).",
-    { recherche: z.string().optional(), relation: z.string().optional(), limite: z.number().int().optional() },
+    "Lecture seule. Portefeuille de prospects : recherche (nom, entreprise, email, site), filtres relation (nouveau, a_contacter, contacte, en_discussion, devis_envoye, gagne, perdu, pas_business), ville ou département, plateforme, score_min ; pagination limite / apres. Signale désinscrit, refus de prospection et campagne en cours. Fiche complète : lire_prospect.",
+    { recherche: z.string().optional(), relation: z.string().optional(), ville: z.string().optional(), plateforme: z.string().optional(), score_min: z.number().int().optional(), limite: z.number().int().optional(), apres: z.number().int().optional() },
     async (a) => compactJson(await campagnes('prospects', a))
   );
   server.tool(
@@ -471,6 +471,73 @@ function buildServer() {
     "ÉCRITURE (CRM seulement, rien envoyé) : les sites clients d'un prestataire signalé deviennent des prospects (fiches créées si besoin, avec la preuve dans les notes) ; renvoie les lead_ids. Avec id (campagne) : ils sont aussi ajoutés à cette campagne, avec les contrôles habituels ; l'email par la preuve y prend l'angle « prestataire » quand le fait est citable. La validation et l'envoi restent à Marc.",
     { domaine: z.string(), id: z.number().int().optional() },
     async (a) => compactJson(await campagnes(a.id ? 'prestataire-campagne' : 'prestataire-prospects', a, 10 * 60 * 1000))
+  );
+  // ---- portefeuille : crawl, prospects, clients, signaux (aucun appel à l'API Claude : tout tourne sur le serveur) ----
+  server.tool(
+    'lancer_crawl',
+    "ÉCRITURE (CRM seulement) : lance un crawl de prospection, comme le bouton du CRM (un seul à la fois ; crawl Common Crawl le plus récent ; domaines déjà connus exclus). techno : ecommerce, woocommerce, prestashop, spip, drupal, cms. nb_sites : 1 à 5000. Suivi avec etat_crawl ; plusieurs minutes à quelques heures selon le nombre de sites.",
+    { techno: z.enum(['ecommerce', 'woocommerce', 'prestashop', 'spip', 'drupal', 'cms']), nb_sites: z.number().int().min(1).max(5000) },
+    async (a) => compactJson(await campagnes('crawl-lancer', a))
+  );
+  server.tool(
+    'etat_crawl',
+    "Lecture seule. Avancement d'un crawl (sans job_id : le dernier) : statut, phase (recherche dans Common Crawl, puis détection site par site), avancement, message d'erreur, nombre de résultats et de prospects déjà créés. Résultats : lister_crawls_prospection avec job_id.",
+    { job_id: z.number().int().optional() },
+    async (a) => compactJson(await campagnes('crawl-etat', a))
+  );
+  server.tool(
+    'lire_resultat_crawl',
+    "Lecture seule. Un site crawlé en détail : adresse, plateforme et version, type de site, contact, identité (raison sociale, SIREN et source), prestataire crédité, score, date d'analyse, PREUVES (défauts constatés, citables) et INDICES (non citables), fiche prospect déjà créée ou non.",
+    { id: z.number().int() },
+    async (a) => compactJson(await campagnes('crawl-resultat', a))
+  );
+  server.tool(
+    'convertir_en_prospect',
+    "ÉCRITURE (CRM seulement, rien envoyé) : comme « Convertir en lead » : des résultats de crawl deviennent des fiches prospects, avec les mêmes contrôles (agence concurrente, domaine parqué, antirobot, email déjà présent : ignorés, avec la raison). pas_business=true : fiches créées mais classées « pas de business » (note conseillée). Renvoie les lead_ids.",
+    { result_ids: liste(z.array(z.number().int())), pas_business: z.boolean().optional(), note: z.string().optional() },
+    async (a) => compactJson(await campagnes('crawl-convertir', a))
+  );
+  server.tool(
+    'reanalyser_site',
+    "ÉCRITURE (CRM seulement) : « Réanalyser le site » : le crawler repasse sur le site maintenant (HTTPS, certificat, plateforme, défauts, mentions…), refait l'identité SIREN et le score. lead_id pour une fiche prospect (score et angles de la fiche mis à jour), ou result_id pour un résultat de crawl pas encore converti. Une à deux minutes.",
+    { lead_id: z.number().int().optional(), result_id: z.number().int().optional() },
+    async (a) => compactJson(await campagnes('reanalyser-site', a, 5 * 60 * 1000))
+  );
+  server.tool(
+    'lire_prospect',
+    "Lecture seule. Fiche prospect complète : coordonnées, relation, score, notes, analyse du site (preuves, indices, identité, prestataire), contacts, 20 derniers échanges, affaires, campagnes, refus de prospection.",
+    { id: z.number().int() },
+    async (a) => compactJson(await campagnes('prospect-lire', a))
+  );
+  server.tool(
+    'lister_clients',
+    "Lecture seule. Portefeuille clients : recherche (nom, email, téléphone), filtre relation, pagination limite / apres ; contrats de maintenance actifs, reste à payer, dernier échange. Fiche complète : lire_client.",
+    { recherche: z.string().optional(), relation: z.string().optional(), limite: z.number().int().optional(), apres: z.number().int().optional() },
+    async (a) => compactJson(await campagnes('clients-lister', a))
+  );
+  server.tool(
+    'lire_client',
+    "Lecture seule. Fiche client complète : coordonnées, relation, notes, 20 derniers échanges, contrats de maintenance, abonnements, factures (statut, reste à payer, échéance), devis, projets, affaires.",
+    { id: z.number().int() },
+    async (a) => compactJson(await campagnes('client-lire', a))
+  );
+  server.tool(
+    'noter_echange',
+    "ÉCRITURE (journal du CRM seulement : AUCUN message n'est envoyé) : note un échange sur une fiche prospect (contact_type=lead) ou client (contact_type=client), comme le bouton « Noter un échange » : type (appel, email, sms, rdv, note), notes, joint (joint, pas_reponse, message), relation_status (nouveau, a_contacter, contacte, en_discussion, devis_envoye, gagne, perdu, pas_business), relance_le (AAAA-MM-JJ) et relance_canal (appel, email, sms, linkedin, autre). Une relance est refusée si le prospect a un refus de prospection sur ce canal.",
+    { contact_type: z.enum(['lead', 'client']), contact_id: z.number().int(), type: z.enum(['appel', 'email', 'sms', 'rdv', 'note']).optional(), notes: z.string().optional(), joint: z.enum(['joint', 'pas_reponse', 'message']).optional(), resultat: z.string().optional(), relation_status: z.enum(['nouveau', 'a_contacter', 'contacte', 'en_discussion', 'devis_envoye', 'gagne', 'perdu', 'pas_business']).optional(), relance_le: z.string().optional(), relance_canal: z.enum(['appel', 'email', 'sms', 'linkedin', 'autre']).optional() },
+    async (a) => compactJson(await campagnes('interagir', { ...a, reached: a.joint }))
+  );
+  server.tool(
+    'lister_signaux_domaines',
+    "Lecture seule. Signaux > Nouveaux domaines (AFNIC) : domaines récemment enregistrés, qualifiés (métier, entreprise, SIREN, dirigeant, ville, site en ligne ou non, plateforme, contact, score d'intention). statut : nouveau, a_surveiller, qualifie, promu, rejete ; compteurs par statut.",
+    { statut: z.enum(['nouveau', 'a_surveiller', 'qualifie', 'promu', 'rejete']).optional(), limite: z.number().int().optional() },
+    async (a) => compactJson(await campagnes('signaux-domaines', a))
+  );
+  server.tool(
+    'promouvoir_signaux',
+    "ÉCRITURE (CRM seulement, rien envoyé) : comme « Promouvoir en prospect » dans Signaux > Nouveaux domaines : les signaux choisis deviennent des fiches prospects. pas_business=true : fiches classées « pas de business » (note conseillée).",
+    { ids: liste(z.array(z.number().int())), pas_business: z.boolean().optional(), note: z.string().optional() },
+    async (a) => compactJson(await campagnes('signaux-promouvoir', a))
   );
   server.tool(
     'lister_marches_publics',

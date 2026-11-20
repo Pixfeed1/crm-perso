@@ -94,4 +94,38 @@ async function reanalyzeLead(db, leadId, deps = {}) {
   };
 }
 
-module.exports = { reanalyzeLead, ensureReanalyseJob };
+/**
+ * Réanalyse un résultat de crawl qui n'est pas (encore) un prospect : mêmes mesures du jour, même identité
+ * SIREN, même score. S'il est déjà rattaché à une fiche, c'est la réanalyse de la fiche (qui met aussi
+ * à jour le score et les angles du prospect).
+ */
+async function reanalyzeResult(db, resultId, deps = {}) {
+  const r = (await db.pool.query('SELECT * FROM crawl_results WHERE id = $1', [resultId])).rows[0];
+  if (!r) throw Object.assign(new Error('Résultat de crawl introuvable'), { status: 404 });
+  const lead = (await db.pool.query('SELECT id FROM leads WHERE crawl_result_id = $1 ORDER BY id LIMIT 1', [resultId])).rows[0];
+  if (lead) return { lead_id: lead.id, ...(await reanalyzeLead(db, lead.id, deps)) };
+  const detect = deps.detect || runDetect;
+  const sirene = deps.sirene || sireneEnrich.enrichMatch;
+  const domain = normalizeDomain(r.domain);
+  const rows = await detect([domain], { concurrency: 2, timeout: 10 });
+  const raw = rows.find((x) => normalizeDomain(x.domain) === domain) || rows[0];
+  if (!raw) throw Object.assign(new Error('Le crawler n\'a rien renvoyé pour ce domaine.'), { status: 502 });
+  const typed = crawl.typedResult(raw);
+  if (!typed.analyse_le) typed.analyse_le = new Date().toISOString();
+  await crawl.updateCrawlResult(db, resultId, typed);
+  let sireneInfo = null;
+  try { sireneInfo = await identiteService.identifier(db, resultId, { sirene }); }
+  catch (e) { console.error('[Réanalyse] SIRENE', domain, e.message); sireneInfo = { match: 'erreur', erreur: e.message }; }
+  const fresh = (await db.pool.query('SELECT * FROM crawl_results WHERE id = $1', [resultId])).rows[0];
+  const flags = auditFlags(fresh);
+  const score = prospectScore(fresh);
+  await db.pool.query('UPDATE crawl_results SET score = $1 WHERE id = $2', [score, resultId]);
+  return {
+    domain, crawl_result_id: resultId, analyse_le: fresh.analyse_le, http_status: fresh.http_status, final_url: fresh.final_url, score,
+    preuves: flags.filter((f) => PREUVE_KEYS.has(f.key)).map((f) => f.label),
+    indices: flags.filter((f) => !PREUVE_KEYS.has(f.key)).map((f) => f.label),
+    sirene: sireneInfo,
+  };
+}
+
+module.exports = { reanalyzeLead, reanalyzeResult, ensureReanalyseJob };

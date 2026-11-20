@@ -65,10 +65,10 @@ async function ligne(db, { id: cid, ligne: lid }) {
 }
 
 // Prospects à ajouter : recherche dans les fiches, avec ce qui les bloque (désinscription, refus, campagne en cours).
-async function prospects(db, { recherche = '', relation = null, limite = 30 } = {}) {
+async function prospects(db, { recherche = '', relation = null, ville = null, plateforme = null, score_min: scoreMin = null, limite = 30, apres = 0 } = {}) {
   const q = String(recherche || '').trim();
   const { rows } = await db.pool.query(
-    `SELECT l.id, l.name, l.company, l.email, l.website, COALESCE(l.relation_status, 'nouveau') AS relation,
+    `SELECT l.id, l.name, l.company, l.email, l.website, l.city, l.platform, l.score, COALESCE(l.relation_status, 'nouveau') AS relation,
             EXISTS (SELECT 1 FROM email_optout o WHERE o.email = LOWER(l.email)) AS desinscrit,
             EXISTS (SELECT 1 FROM prospect_refus r WHERE r.lead_id = l.id AND r.retire_le IS NULL) AS refus,
             (SELECT c.nom FROM campaign_items i JOIN campaigns c ON c.id = i.campaign_id
@@ -76,8 +76,11 @@ async function prospects(db, { recherche = '', relation = null, limite = 30 } = 
        FROM leads l
       WHERE ($1 = '' OR l.name ILIKE $2 OR l.company ILIKE $2 OR l.email ILIKE $2 OR l.website ILIKE $2)
         AND ($3::text IS NULL OR COALESCE(l.relation_status, 'nouveau') = $3)
-      ORDER BY l.id DESC LIMIT $4`, [q, `%${q}%`, relation, Math.min(200, Number(limite) || 30)]);
-  return { prospects: rows.map((r) => ({ id: r.id, nom: r.name, entreprise: r.company || undefined, email: r.email || undefined, site: r.website || undefined, relation: r.relation, ...(r.desinscrit ? { desinscrit: true } : {}), ...(r.refus ? { refus_prospection: true } : {}), ...(r.en_campagne ? { en_campagne: r.en_campagne } : {}) })) };
+        AND ($5::text IS NULL OR l.city ILIKE $5 OR l.department = $6)
+        AND ($7::text IS NULL OR l.platform ILIKE $7)
+        AND ($8::int IS NULL OR COALESCE(l.score, 0) >= $8)
+      ORDER BY l.id DESC LIMIT $4 OFFSET $9`, [q, `%${q}%`, relation, Math.min(200, Number(limite) || 30), ville ? `%${ville}%` : null, ville ? String(ville).trim() : null, plateforme ? `%${plateforme}%` : null, scoreMin === null || scoreMin === undefined ? null : Number(scoreMin), Number(apres) || 0]);
+  return { prospects: rows.map((r) => ({ id: r.id, nom: r.name, entreprise: r.company || undefined, email: r.email || undefined, site: r.website || undefined, ville: r.city || undefined, plateforme: r.platform || undefined, score: r.score ?? undefined, relation: r.relation, ...(r.desinscrit ? { desinscrit: true } : {}), ...(r.refus ? { refus_prospection: true } : {}), ...(r.en_campagne ? { en_campagne: r.en_campagne } : {}) })) };
 }
 
 // Crawls de prospection : la liste, ou les résultats d'un crawl (à ajouter par result_ids).

@@ -276,6 +276,10 @@ niveau 1, jamais cité). Portefeuille > Signaux > Prestataires : sites clients e
 `prestataire_difficulte` seulement pour un fait daté (niveau 2 ou 3) sur une identité certaine. Connecteur :
 `lister_prestataires_signal`, `prospects_depuis_prestataire`, `verifier_prestataire`, `fiche_prestataire`,
 `ignorer_prestataire` (raison obligatoire, réversible avec retablir).
+Portefeuille (aucun appel à l'API Claude) : `lancer_crawl`, `etat_crawl`, `lire_resultat_crawl`, `convertir_en_prospect`,
+`reanalyser_site` (fiche prospect ou résultat de crawl), `chercher_prospects` (filtres ville, plateforme, score),
+`lire_prospect`, `lister_clients`, `lire_client`, `noter_echange` (journal seulement, rien envoyé),
+`lister_signaux_domaines`, `promouvoir_signaux`.
 Marchés publics web (BOAMP, relevé deux fois par jour) : `lister_marches_publics` (theme=maintenance pour la maintenance
 à part), `suivre_marche_public` (statut, note ; rien n'est déposé). API : `BOAMP_API_URL` (open data DILA). API : `BODACC_API_URL` (open data DILA).
 
