@@ -25,6 +25,7 @@ const ACTIONS = {
   reanalyser: C.reanalyser, reprendre: C.reprendre, 'test-ab': C.testAb, piloter: C.piloter, boite: C.boiteReception,
   prestataires: C.prestataires, 'prestataire-prospects': C.prestataireProspects, 'prestataire-campagne': C.prestataireCampagne,
   marches: C.marches, 'marche-suivre': C.marcheSuivre,
+  'reddit-annonces': C.annoncesReddit, 'reddit-marquer': C.marquerReddit, 'reddit-regles': C.reglesReddit,
   // Portefeuille (crawl, prospects, clients, signaux AFNIC) : mêmes actions que les boutons de l'interface.
   'crawl-lancer': PF.lancerCrawl, 'crawl-etat': PF.etatCrawl, 'crawl-resultat': PF.lireResultat, 'crawl-convertir': PF.convertir,
   'reanalyser-site': PF.reanalyser, 'prospect-lire': PF.lireProspect, 'clients-lister': PF.listerClients, 'client-lire': PF.lireClient,

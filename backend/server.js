@@ -194,6 +194,7 @@ app.use('/api/events', require('./routes/eventsRoutes'));
 app.use('/api/goals', require('./routes/goalsRoutes'));
 app.use('/api/objectif', require('./routes/objectifRoutes'));
 app.use('/api/veille', require('./routes/veilleRoutes'));
+app.use('/api/veille-reddit', require('./routes/veilleRedditRoutes')); // annonces Reddit (3D, PixFeed), tri sans IA, lecture seule
 app.use('/api/sauvegardes', require('./routes/sauvegardeRoutes')); // copie chiffrée de la base sur Google Drive (Paramètres > Sauvegardes)
 app.use('/api/charte', require('./routes/charteRoutes'));
 app.use('/api/campagnes-connecteur', require('./routes/campagneConnecteurRoutes')); // campagnes de prospection pour le connecteur MCP (préparer, jamais valider ni envoyer) // charte de rédaction et identité des sites (versions, historique)
@@ -358,6 +359,7 @@ async function startServer() {
   // Boîte d'envoi : réponses et rebonds relevés toutes les 15 min (si IMAP_* est réglé dans .env).
   require('./services/boiteService').start(app.locals.db);
   require('./services/sauvegardeDrive').start(app.locals.db);
+  require('./services/veilleReddit').start(app.locals.db);         // veille Reddit toutes les 10 min, bilan le lundi
   require('./services/marchesService').start(app.locals.db);        // marchés publics web : relevé du BOAMP à 7 h 47 et 13 h 47
   require('./services/prestataireService').start(app.locals.db);   // prestataires crédités : vérification BODACC / SIRENE chaque lundi   // copie chiffrée sur Drive la nuit, test de relecture le dimanche
   // Prélèvements : les fiches restées « en attente » sont relues chez Stripe (webhook manqué)

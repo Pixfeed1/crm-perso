@@ -741,6 +741,20 @@ export const seoAPI = {
 };
 
 // ===== VEILLE MISSIONS (agent annonces freelance) =====
+// Veille Reddit : annonces repérées (lecture seule sur Reddit), suivi, sources et règles du tri.
+export const veilleRedditAPI = {
+  annonces: (params = {}) => apiRequest(`/veille-reddit/annonces?${new URLSearchParams(Object.fromEntries(Object.entries(params).filter(([, v]) => v !== null && v !== undefined && v !== ''))).toString()}`),
+  marquer: (id, data) => apiRequest(`/veille-reddit/annonces/${id}`, 'PUT', data),
+  passage: () => apiRequest('/veille-reddit/passage', 'POST', {}),
+  reglages: () => apiRequest('/veille-reddit/reglages'),
+  ajouterSource: (data) => apiRequest('/veille-reddit/sources', 'POST', data),
+  modifierSource: (id, data) => apiRequest(`/veille-reddit/sources/${id}`, 'PUT', data),
+  supprimerSource: (id) => apiRequest(`/veille-reddit/sources/${id}`, 'DELETE'),
+  ajouterRegle: (data) => apiRequest('/veille-reddit/regles', 'POST', data),
+  modifierRegle: (id, data) => apiRequest(`/veille-reddit/regles/${id}`, 'PUT', data),
+  supprimerRegle: (id) => apiRequest(`/veille-reddit/regles/${id}`, 'DELETE')
+};
+
 export const veilleAPI = {
   getAnnonces: (params = {}) => {
     const qs = new URLSearchParams(params).toString();

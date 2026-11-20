@@ -472,6 +472,26 @@ function buildServer() {
     { domaine: z.string(), id: z.number().int().optional() },
     async (a) => compactJson(await campagnes(a.id ? 'prestataire-campagne' : 'prestataire-prospects', a, 10 * 60 * 1000))
   );
+  // ---- veille Reddit (lecture seule sur Reddit : aucun outil ne peut y poster, commenter ni envoyer) ----
+  server.tool(
+    'lister_annonces_reddit',
+    "Lecture seule. Annonces Reddit repérées toutes les 10 minutes par la veille du CRM (3D pour l'activité d'artiste, PixFeed pour le web), triées sans IA. Par défaut : statut nouveau, 48 dernières heures, 30 au plus. statut (nouveau, vu, repondu, ecarte, ecarte_auto, ou tous), etiquette (3D, PixFeed), depuis_heures, mot_cle, inclure_ecartees (ajoute les écartées automatiquement, avec leur raison). Toutes les colonnes, texte complet compris : budget (texte, montant minimum, devise), commentaires, auteur, lien. Marc répond lui-même sur Reddit.",
+    { statut: z.enum(['nouveau', 'vu', 'repondu', 'ecarte', 'ecarte_auto', 'tous']).optional(), etiquette: z.enum(['3D', 'PixFeed']).optional(), depuis_heures: z.number().int().optional(), mot_cle: z.string().optional(), inclure_ecartees: z.boolean().optional(), limite: z.number().int().optional() },
+    async (a) => compactJson(await campagnes('reddit-annonces', a))
+  );
+  server.tool(
+    'marquer_annonce_reddit',
+    "ÉCRITURE (CRM seulement, rien n'est écrit sur Reddit) : statut d'une annonce Reddit : vu, repondu (Marc a répondu sur Reddit) ou ecarte ; note optionnelle (angle de réponse, prix envisagé…).",
+    { id: z.number().int(), statut: z.enum(['vu', 'repondu', 'ecarte']), note: z.string().optional() },
+    async (a) => compactJson(await campagnes('reddit-marquer', a))
+  );
+  server.tool(
+    'regles_veille_reddit',
+    "Lecture seule. Réglages de la veille Reddit : sources (forums et recherches, étiquette, état, dernière erreur), termes de type gardés et rejetés, exclusions, mots-clés par étiquette, dernier passage et état de panne. Pour proposer des ajustements ; les modifier reste dans le CRM.",
+    {},
+    async () => compactJson(await campagnes('reddit-regles', {}))
+  );
+
   // ---- portefeuille : crawl, prospects, clients, signaux (aucun appel à l'API Claude : tout tourne sur le serveur) ----
   server.tool(
     'lancer_crawl',

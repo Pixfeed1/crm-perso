@@ -221,4 +221,26 @@ async function marches(db, { theme = null, statut = null, cible = 'pertinent', o
 }
 const marcheSuivre = async (db, { idweb, statut, note } = {}) => { if (!idweb) throw err(400, 'idweb requis'); return M().suivre(db, idweb, { statut, note }); };
 
-module.exports = { marches, marcheSuivre, prestataires, prestataireProspects, prestataireCampagne, prestataireVerifier, prestataireFiche, prestataireIgnorer, lister, lire, ligne, prospects, crawls, creer, modifier, ajouter, modifierLigne, regenerer, reanalyser, reprendre, testAb, piloter, boiteReception };
+// Veille Reddit : lire et suivre les annonces (lecture seule sur Reddit, rien n'y est jamais posté).
+const VR = () => require('./veilleReddit');
+async function annoncesReddit(db, { statut = 'nouveau', etiquette = null, depuis_heures: h = 48, mot_cle: mc = null, inclure_ecartees: inclure = false, limite = 30 } = {}) {
+  return VR().lister(db, { statut, etiquette, depuis_heures: h, mot_cle: mc, inclure_ecartees: inclure, limite });
+}
+async function marquerReddit(db, { id: aid, statut, note } = {}) {
+  if (!['vu', 'repondu', 'ecarte'].includes(statut)) throw err(400, 'statut : vu, repondu ou ecarte');
+  return VR().marquer(db, id(aid), { statut, note });
+}
+async function reglesReddit(db) {
+  const r = await VR().regles(db);
+  const parType = (t, e) => r.regles.filter((x) => x.type === t && x.actif && (e === undefined || x.etiquette === e)).map((x) => x.valeur);
+  return {
+    sources: r.sources.map((s) => ({ id: s.id, type: s.type, valeur: s.valeur, etiquette: s.etiquette, actif: s.actif, derniere_lecture: s.derniere_lecture, derniere_erreur: s.derniere_erreur || undefined })),
+    type_garde: parType('garder_type'), type_rejete: parType('rejeter_type'), exclusions: parType('exclusion'),
+    mots_cles: { '3D': parType('mot_cle', '3D'), PixFeed: parType('mot_cle', 'PixFeed') },
+    desactivees: r.regles.filter((x) => !x.actif).map((x) => `${x.type}${x.etiquette ? ` ${x.etiquette}` : ''} : ${x.valeur}`),
+    dernier_passage: r.dernier_passage, panne: r.panne, acces: r.acces, frequence: r.frequence,
+    note: 'Lecture seule : les listes se modifient dans le CRM (Veille Reddit > Réglages). Mots entiers, insensibles à la casse ; pluriels compris pour les mots-clés ; « free » ignore « feel free » et « free to DM ».',
+  };
+}
+
+module.exports = { annoncesReddit, marquerReddit, reglesReddit, marches, marcheSuivre, prestataires, prestataireProspects, prestataireCampagne, prestataireVerifier, prestataireFiche, prestataireIgnorer, lister, lire, ligne, prospects, crawls, creer, modifier, ajouter, modifierLigne, regenerer, reanalyser, reprendre, testAb, piloter, boiteReception };

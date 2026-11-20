@@ -1,10 +1,11 @@
 // src/components/leads/ProspectionPanel.jsx
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiSearch, FiMapPin, FiUserPlus, FiExternalLink, FiAlertCircle, FiDollarSign, FiRefreshCw, FiEdit, FiPhone, FiGlobe, FiMail, FiArrowRight, FiTarget, FiSend, FiRadio, FiCpu } from 'react-icons/fi';
+import { FiSearch, FiMapPin, FiUserPlus, FiExternalLink, FiAlertCircle, FiDollarSign, FiRefreshCw, FiEdit, FiPhone, FiGlobe, FiMail, FiArrowRight, FiTarget, FiSend, FiRadio, FiCpu, FiMessageSquare } from 'react-icons/fi';
 import { prospectionAPI } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
 import VeilleMissionsPanel from './VeilleMissionsPanel';
+import VeilleRedditPanel from './VeilleRedditPanel';
 
 // Badge SOURCE homogene (meme rendu pour toutes les sources, seul le libelle change).
 // Tokens semantiques uniquement (charte) : aucune couleur en dur.
@@ -414,11 +415,23 @@ const ProspectionPanel = ({ onLeadCreated, onNavigate }) => {
             <FiCpu size={15} />
             <span>Veille missions</span>
           </button>
+          <button
+            onClick={() => setActiveTab('reddit')}
+            className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+              activeTab === 'reddit'
+                ? 'bg-accent text-white'
+                : 'bg-surface-strong text-text-secondary hover:bg-border-strong hover:text-text-primary'
+            }`}
+          >
+            <FiMessageSquare size={15} />
+            <span>Veille Reddit</span>
+          </button>
         </div>
       </div>
 
       {/* Contenu onglet Veille missions */}
       {activeTab === 'veille' && <VeilleMissionsPanel />}
+      {activeTab === 'reddit' && <VeilleRedditPanel />}
 
       {/* Contenu onglet Offres d'emploi */}
       {activeTab === 'jobs' && (

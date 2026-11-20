@@ -280,6 +280,7 @@ Portefeuille (aucun appel à l'API Claude) : `lancer_crawl`, `etat_crawl`, `lire
 `reanalyser_site` (fiche prospect ou résultat de crawl), `chercher_prospects` (filtres ville, plateforme, score),
 `lire_prospect`, `lister_clients`, `lire_client`, `noter_echange` (journal seulement, rien envoyé),
 `lister_signaux_domaines`, `promouvoir_signaux`.
+Veille Reddit (lecture seule sur Reddit) : `lister_annonces_reddit`, `marquer_annonce_reddit`, `regles_veille_reddit`.
 Marchés publics web (BOAMP, relevé deux fois par jour) : `lister_marches_publics` (theme=maintenance pour la maintenance
 à part), `suivre_marche_public` (statut, note ; rien n'est déposé). API : `BOAMP_API_URL` (open data DILA). API : `BODACC_API_URL` (open data DILA).
 
