@@ -1,7 +1,8 @@
 // Netlinking multi-site — monté sous /api/seo/outreach (AVANT /api/seo). Un seul endpoint d'envoi :
 // POST /send, appelé par l'onglet SEO (session) et par le serveur MCP (secret partagé OUTILS_MCP_SECRET).
 // Toutes les règles sont dans services/outreachService.js ; aucune dans l'interface.
-//   POST /send { site_id, target_id | domaine, niche_nom?, destinataire, objet, corps, relance_de?, simulation? (true par défaut) }
+//   POST /send { site_id, target_id | domaine, niche_nom?, destinataire, objet, corps, relance_de?, envoyer_le? (ISO 8601, futur : programmé), simulation? (true par défaut) }
+//   POST /annuler { id } : annule un envoi programmé pas encore parti
 //              domaine seul : fiche cible reprise, ou créée à l'envoi dans la niche niche_nom du site
 //              (créée si absente), à défaut « Hors campagne »
 //   GET|POST /verifier { domaine | adresse }           déjà contacté ? (tous sites, ancien envoi compris)
@@ -37,6 +38,7 @@ const vrai = (v) => v === true || v === 'true' || v === '1';
 
 router.get('/config', ok(async () => ({ sites: sitesConfigures() })));
 router.post('/send', ok((db, b) => S.envoyerMail(db, b)));
+router.post('/annuler', ok((db, b) => S.annulerProgramme(db, { id: b.id })));
 for (const m of ['get', 'post']) {
   router[m]('/verifier', ok((db, b) => S.dejaContacte(db, { domaine: b.domaine, adresse: b.adresse })));
   router[m]('/mails', ok((db, b) => S.lister(db, { site: b.site, campagne: b.campagne, statut: b.statut, relances_dues: vrai(b.relances_dues), target_id: b.target_id })));

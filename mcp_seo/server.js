@@ -30,7 +30,7 @@ import { checkUrls, MAX_URLS } from './checks.js';
 import { getSiteResources } from './ressources.js';
 import { getCharte, versionCharte } from './charte.js';
 import { campagnes } from './campagnes.js';
-import { demanderDepot, prepareDraft, repointerLiens, poserEtiquettes, modifierMedia, poserLien, modifierSeo, provenanceGa4, envoyerMailOutreach, verifierDejaContacte, listerOutreach, marquerReponse, ajouterCibles, creerNiche, modifierCharte } from './brouillon.js';
+import { demanderDepot, prepareDraft, repointerLiens, poserEtiquettes, modifierMedia, poserLien, modifierSeo, provenanceGa4, envoyerMailOutreach, annulerOutreach, verifierDejaContacte, listerOutreach, marquerReponse, ajouterCibles, creerNiche, modifierCharte } from './brouillon.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -630,9 +630,15 @@ function buildServer() {
   // ---- netlinking (jurojin.net…) : mêmes routes que l'onglet SEO, toutes les règles côté CRM ----
   server.tool(
     'envoyer_mail_outreach',
-    "ÉCRITURE (envoi d'un mail) : demande de lien à UNE cible, depuis l'expéditeur du site (jurojin.net : contact@jurojin.net, signature ajoutée par le CRM, aucun suivi de clic).\nCible : target_id, OU domaine seul (fiche reprise si le domaine est déjà dans une niche du site, sinon créée à l'envoi réel dans la niche niche_nom du site — nom sans casse ni accents, niche inconnue refusée sauf creer_si_absente=true —, à défaut « Hors campagne » ; rien créé en simulation ; une fiche existante n'est pas déplacée). Mêmes contrôles dans les deux cas, ils portent sur le domaine complet (sous-domaine compris, « www. » ignoré ; un autre sous-domaine du même domaine racine déjà contacté est signalé dans avertissements, sans bloquer) et sur l'adresse.\nUn destinataire, un objet et un corps écrits pour cette cible (pas de champ de fusion). Refus si le domaine a déjà reçu un mail (tous sites et campagnes, ancien envoi compris : date, objet, statut renvoyés),\nsauf relance (relance_de = id du mail précédent ; 2 relances au plus, 7 jours après le dernier mail, jamais après une réponse) ; refus si opposition, plafond du jour atteint ou délai depuis le dernier envoi\npas écoulé (prochain envoi possible renvoyé). simulation=true par défaut : contrôles et aperçu, rien envoyé. Après envoi : relance prévue à J+10, cible « contacte ».",
-    { site_id: z.number().int(), target_id: z.number().int().optional(), domaine: z.string().optional(), niche_nom: z.string().optional(), creer_si_absente: z.boolean().optional(), destinataire: z.string(), objet: z.string(), corps: z.string(), relance_de: z.number().int().optional(), simulation: z.boolean().optional() },
+    "ÉCRITURE (envoi d'un mail) : demande de lien à UNE cible, depuis l'expéditeur du site (jurojin.net : contact@jurojin.net, signature ajoutée par le CRM, aucun suivi de clic).\nCible : target_id, OU domaine seul (fiche reprise si le domaine est déjà dans une niche du site, sinon créée à l'envoi réel dans la niche niche_nom du site — nom sans casse ni accents, niche inconnue refusée sauf creer_si_absente=true —, à défaut « Hors campagne » ; rien créé en simulation ; une fiche existante n'est pas déplacée). Mêmes contrôles dans les deux cas, ils portent sur le domaine complet (sous-domaine compris, « www. » ignoré ; un autre sous-domaine du même domaine racine déjà contacté est signalé dans avertissements, sans bloquer) et sur l'adresse.\nUn destinataire, un objet et un corps écrits pour cette cible (pas de champ de fusion). Refus si le domaine a déjà reçu un mail (tous sites et campagnes, ancien envoi compris : date, objet, statut renvoyés),\nsauf relance (relance_de = id du mail précédent ; 2 relances au plus, 7 jours après le dernier mail, jamais après une réponse) ; refus si opposition, plafond du jour atteint ou délai depuis le dernier envoi\npas écoulé (prochain envoi possible renvoyé). simulation=true par défaut : contrôles et aperçu, rien envoyé. Après envoi : relance prévue à J+10, cible « contacte ».\nenvoyer_le (ISO 8601 avec fuseau, ex. 2026-11-24T09:30:00+01:00, dans le futur, 60 jours au plus) : PROGRAMMÉ au lieu d'envoyé ; mêmes contrôles maintenant et de nouveau à l'expédition (domaine contacté depuis, opposition… : annulé avec la raison) ; la cadence (délai entre deux envois, plafond du jour) s'applique à l'expédition : créneau pas libre, il part au passage suivant (toutes les 5 min). La réponse donne envoyer_le au lieu de envoye_le. Annulable avec annuler_envoi_programme tant qu'il n'est pas parti.",
+    { site_id: z.number().int(), target_id: z.number().int().optional(), domaine: z.string().optional(), niche_nom: z.string().optional(), creer_si_absente: z.boolean().optional(), destinataire: z.string(), objet: z.string(), corps: z.string(), relance_de: z.number().int().optional(), envoyer_le: z.string().optional(), simulation: z.boolean().optional() },
     async (a) => compactJson(await envoyerMailOutreach({ ...a, simulation: a.simulation ?? true }))
+  );
+  server.tool(
+    'annuler_envoi_programme',
+    "ÉCRITURE (CRM seulement) : annule un mail de netlinking programmé (statut programme) qui n'est pas encore parti ; id = numéro du mail (lister_outreach statut=programme). Un mail déjà parti ou en cours d'envoi ne s'annule pas.",
+    { id: z.number().int() },
+    async (a) => compactJson(await annulerOutreach(a))
   );
   server.tool(
     'verifier_deja_contacte',
@@ -642,7 +648,7 @@ function buildServer() {
   );
   server.tool(
     'lister_outreach',
-    "Lecture seule. Mails de netlinking envoyés par le CRM : filtres site, campagne (niche), statut (envoye, relance, repondu, abandonne), relances_dues=true (relance prévue passée, sans suite), target_id.",
+    "Lecture seule. Mails de netlinking du CRM : filtres site, campagne (niche), statut (envoye, relance, repondu, abandonne, programme : envois programmés par ordre d'heure, annule : annulés avec la raison, echec), relances_dues=true (relance prévue passée, sans suite), target_id.",
     { site: z.number().int().optional(), campagne: z.number().int().optional(), statut: z.string().optional(), relances_dues: z.boolean().optional(), target_id: z.number().int().optional() },
     async (a) => compactJson(await listerOutreach(a))
   );

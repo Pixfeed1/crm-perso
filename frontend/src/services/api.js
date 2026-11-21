@@ -653,7 +653,8 @@ export const outreachAPI = {
   send: (data) => apiRequest('/seo/outreach/send', 'POST', data),
   mails: (params = {}) => apiRequest(`/seo/outreach/mails?${new URLSearchParams(Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== ''))).toString()}`),
   sansReponse: (site) => apiRequest(`/seo/outreach/sans-reponse?site=${site}`),
-  reponse: (data) => apiRequest('/seo/outreach/reponse', 'POST', data)
+  reponse: (data) => apiRequest('/seo/outreach/reponse', 'POST', data),
+  annuler: (id) => apiRequest('/seo/outreach/annuler', 'POST', { id })
 };
 
 export const seoBacklinksAPI = {

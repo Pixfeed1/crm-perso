@@ -19,6 +19,10 @@
 //     OUTREACH_DELAI_MIN / OUTREACH_DELAI_MAX) : refus avec l'heure du prochain envoi possible.
 // À l'envoi réussi : ligne écrite, message_id gardé, relance prévue à J+10, cible « contacte ».
 // simulation=true par défaut : tous les contrôles, rien envoyé ni écrit.
+// Envoi programmé (envoyer_le, ISO 8601, dans le futur) : mêmes contrôles à la création, ligne « programme » ; un
+// cron (toutes les 5 min) l'expédie à l'heure dite en refaisant les contrôles (contacté depuis, opposition… →
+// annulé avec la raison) et en appliquant la cadence (créneau pas libre → reste programmé, passage suivant).
+// Annulable tant qu'il n'est pas parti ; une réponse notée annule les envois programmés de la cible.
 const site = require('./outreachSite');
 const optout = require('./optout');
 const { domaineCourt, hoteSaisi, cleDomaine } = require('../utils/domaineCourt');
@@ -42,21 +46,21 @@ const jourParis = (d = new Date()) => new Intl.DateTimeFormat('fr-CA', { timeZon
 
 // Contacts déjà faits pour un domaine (complet, « www. » ignoré) ou une adresse, tous sites : nouveau module
 // + ancien envoi. meme_racine : autres sous-domaines du même domaine racine déjà contactés (pour information).
-async function dejaContacte(db, { domaine = null, adresse = null } = {}) {
+async function dejaContacte(db, { domaine = null, adresse = null, exclure = null } = {}) {
   const d = cleDomaine(domaine || adresse);
   const a = adresse ? String(adresse).trim().toLowerCase() : null;
   if (!d && !a) throw err(400, 'indiquer un domaine ou une adresse');
   const nouveaux = (await db.pool.query(
-    `SELECT m.id, m.site, s.domain AS site_domaine, m.campaign_id, m.target_id, m.domaine, m.destinataire, m.objet, m.envoye_le, m.statut, m.relance_de, m.reponse_le, m.reponse_nature
+    `SELECT m.id, m.site, s.domain AS site_domaine, m.campaign_id, m.target_id, m.domaine, m.destinataire, m.objet, m.envoye_le, m.envoyer_le, m.statut, m.relance_de, m.reponse_le, m.reponse_nature
        FROM outreach_mails m LEFT JOIN seo_sites s ON s.id = m.site
-      WHERE m.statut <> 'envoi' AND (($1::text IS NOT NULL AND m.domaine = $1) OR ($2::text IS NOT NULL AND LOWER(m.destinataire) = $2))
-      ORDER BY m.envoye_le`, [d, a])).rows;
+      WHERE m.statut NOT IN ('envoi', 'annule', 'echec') AND ($3::int IS NULL OR m.id <> $3) AND (($1::text IS NOT NULL AND m.domaine = $1) OR ($2::text IS NOT NULL AND LOWER(m.destinataire) = $2))
+      ORDER BY COALESCE(m.envoye_le, m.envoyer_le)`, [d, a, exclure])).rows;
   // Ancien envoi (Gmail perso, pixfeed.net) : lu seulement.
   const anciens = (await db.pool.query(
     `SELECT o.id, o.target_id, t.niche_id AS campaign_id, t.domain, t.contact_email, o.subject AS objet, o.sent_at AS envoye_le, o.reponse
        FROM seo_link_outreach o JOIN seo_link_targets t ON t.id = o.target_id ORDER BY o.sent_at`).catch(() => ({ rows: [] }))).rows
     .map((o) => ({ origine: 'ancien envoi (Gmail, onglet Backlinks)', id: o.id, target_id: o.target_id, campaign_id: o.campaign_id, domaine: cleDomaine(o.domain), destinataire: o.contact_email, objet: o.objet, envoye_le: o.envoye_le, statut: o.reponse ? `repondu (${o.reponse})` : 'envoye' }));
-  const parDate = (x, y) => new Date(x.envoye_le) - new Date(y.envoye_le);
+  const parDate = (x, y) => new Date(x.envoye_le || x.envoyer_le) - new Date(y.envoye_le || y.envoyer_le);
   const contacts = [...nouveaux.map((x) => ({ origine: `outreach ${x.site_domaine || `site ${x.site}`}`, ...x })),
     ...anciens.filter((o) => (d && o.domaine === d) || (a && String(o.destinataire || '').toLowerCase() === a))].sort(parDate);
   // Même domaine racine, autre sous-domaine : signalé, jamais bloquant.
@@ -65,7 +69,7 @@ async function dejaContacte(db, { domaine = null, adresse = null } = {}) {
   if (racine && d) {
     const tous = (await db.pool.query(
       `SELECT m.id, m.site, s.domain AS site_domaine, m.domaine, m.destinataire, m.objet, m.envoye_le, m.statut
-         FROM outreach_mails m LEFT JOIN seo_sites s ON s.id = m.site WHERE m.statut <> 'envoi' AND m.domaine LIKE $1`, [`%${racine}`])).rows
+         FROM outreach_mails m LEFT JOIN seo_sites s ON s.id = m.site WHERE m.statut NOT IN ('envoi', 'annule', 'echec') AND ($2::int IS NULL OR m.id <> $2) AND m.domaine LIKE $1`, [`%${racine}`, exclure])).rows
       .map((x) => ({ origine: `outreach ${x.site_domaine || `site ${x.site}`}`, ...x }));
     const deja = new Set(contacts.map((x) => `${x.origine}#${x.id}`));
     memeRacine = [...tous, ...anciens].filter((x) => x.domaine && x.domaine !== d && domaineCourt(x.domaine) === racine && !deja.has(`${x.origine}#${x.id}`)).sort(parDate);
@@ -126,18 +130,21 @@ async function chaine(db, mailId) {
   if (!m) return null;
   while (m.relance_de) m = (await db.pool.query('SELECT * FROM outreach_mails WHERE id = $1', [m.relance_de])).rows[0];
   const tous = [m];
-  for (let i = 0; i < tous.length; i++) tous.push(...(await db.pool.query("SELECT * FROM outreach_mails WHERE relance_de = $1 AND statut <> 'envoi' ORDER BY envoye_le", [tous[i].id])).rows);
+  for (let i = 0; i < tous.length; i++) tous.push(...(await db.pool.query("SELECT * FROM outreach_mails WHERE relance_de = $1 AND statut NOT IN ('envoi', 'annule', 'echec') ORDER BY COALESCE(envoye_le, envoyer_le)", [tous[i].id])).rows);
   return { premier: m, mails: tous };
 }
 
-async function envoyerMail(db, b = {}) {
+// Contrôles d'un mail (expéditeur, texte, cible, oppositions, déjà contacté, relance) : les mêmes à l'envoi
+// immédiat, à la programmation et à l'expédition d'un mail programmé. maintenant : instant de référence pour le
+// délai d'une relance (heure d'envoi prévue pour une programmation). exclure : le mail programmé qu'on expédie.
+async function controler(db, b = {}, { maintenant = new Date(), exclure = null } = {}) {
   const simulation = b.simulation !== false;
   const out = { simulation, controles: [], fetched_at: new Date().toISOString() };
   const ok = (texte) => out.controles.push({ ok: true, texte });
   const siteId = Number(b.site_id || b.site);
   const c = site.config(siteId);
-  if (!c) throw err(400, `site ${siteId || '?'} : aucun expéditeur de netlinking réglé (OUTREACH_SMTP_*_${siteId || '<site>'} dans backend/.env). pixfeed.net garde son envoi actuel (onglet Backlinks).`);
-  if (!site.signature(c)) throw err(400, `signature de ${c.adresse} absente : déposer son HTML dans ${c.fichierSignature} (copié depuis Roundcube)`);
+  if (!c) throw err(400, `site ${siteId || '?'} : aucun expéditeur de netlinking réglé (OUTREACH_SMTP_*_${siteId || '<site>'} dans backend/.env). pixfeed.net garde son envoi actuel (onglet Backlinks).`, { config: true });
+  if (!site.signature(c)) throw err(400, `signature de ${c.adresse} absente : déposer son HTML dans ${c.fichierSignature} (copié depuis Roundcube)`, { config: true });
   ok(`expéditeur ${c.adresse}, signature du site ajoutée à l'envoi, aucun suivi de clic`);
 
   // Un envoi, un destinataire, un texte écrit pour la cible.
@@ -185,64 +192,81 @@ async function envoyerMail(db, b = {}) {
   if (await optout.isOptedOut(db, destinataire)) throw err(409, `${destinataire} est en opposition (désinscription ou refus de prospection) : pas d'envoi`);
   ok('adresse et domaine sans opposition');
 
-  // Déjà contacté ? Passage outre seulement pour une relance encadrée.
-  const deja = await dejaContacte(db, { domaine, adresse: destinataire });
+  // Déjà contacté (un mail programmé compte) ? Passage outre seulement pour une relance encadrée.
+  const deja = await dejaContacte(db, { domaine, adresse: destinataire, exclure });
   let relance = null;
   if (b.relance_de) {
     const ch = await chaine(db, Number(b.relance_de));
     if (!ch) throw err(404, `mail ${b.relance_de} (relance_de) introuvable`);
-    const parent = ch.mails.find((m) => m.id === Number(b.relance_de));
+    const mails = ch.mails.filter((m) => m.id !== exclure);
+    const parent = mails.find((m) => m.id === Number(b.relance_de));
     if (ch.premier.domaine !== domaine) throw err(409, `relance_de #${b.relance_de} concerne ${ch.premier.domaine}, pas ${domaine}`);
     if (ch.premier.site !== siteId) throw err(409, `relance_de #${b.relance_de} a été envoyé par un autre site`);
-    const fin = ch.mails.find((m) => ['repondu', 'abandonne'].includes(m.statut));
+    const fin = mails.find((m) => ['repondu', 'abandonne'].includes(m.statut));
     if (fin) throw err(409, `pas de relance : le mail #${fin.id} est « ${fin.statut} »${fin.reponse_le ? ` (réponse du ${heure(fin.reponse_le)})` : ''}`);
-    const nbRelances = ch.mails.length - 1;
+    const enAttente = mails.find((m) => m.statut === 'programme');
+    if (enAttente) throw err(409, `une relance est déjà programmée pour ${domaine} (#${enAttente.id}, le ${heure(enAttente.envoyer_le)}) : l'annuler d'abord`);
+    const nbRelances = mails.length - 1;
     if (nbRelances >= RELANCES_MAX) throw err(409, `déjà ${nbRelances} relance(s) pour ${domaine} : ${RELANCES_MAX} au plus`);
-    const dernier = ch.mails.reduce((x, y) => (new Date(y.envoye_le) > new Date(x.envoye_le) ? y : x));
-    const ecart = (Date.now() - new Date(dernier.envoye_le).getTime()) / 86400000;
+    const dernier = mails.reduce((x, y) => (new Date(y.envoye_le) > new Date(x.envoye_le) ? y : x));
+    const ecart = (new Date(maintenant).getTime() - new Date(dernier.envoye_le).getTime()) / 86400000;
     if (ecart < RELANCE_DELAI_JOURS) throw err(409, `relance trop tôt : dernier mail le ${heure(dernier.envoye_le)}, relance possible à partir du ${heure(new Date(dernier.envoye_le).getTime() + RELANCE_DELAI_JOURS * 86400000)}`);
     relance = { parent, premier: ch.premier, dernier, rang: nbRelances + 1 };
     out.relance = { de: parent.id, rang: relance.rang, en_reponse_a: dernier.message_id };
     ok(`relance n° ${relance.rang} de #${ch.premier.id} (${RELANCES_MAX} au plus, ${Math.floor(ecart)} jours après le dernier mail)`);
   } else if (deja.contacts.length) {
     const p = deja.contacts[deja.contacts.length - 1];
-    throw err(409, `${domaine} a déjà reçu un mail le ${heure(p.envoye_le)} (« ${p.objet} », statut ${p.statut}, ${p.origine}). Seule une relance (relance_de) est possible.`, { precedents: deja.contacts });
+    const quand = p.statut === 'programme' ? `a déjà un mail programmé pour le ${heure(p.envoyer_le)}` : `a déjà reçu un mail le ${heure(p.envoye_le)}`;
+    throw err(409, `${domaine} ${quand} (« ${p.objet} », statut ${p.statut}, ${p.origine}). Seule une relance (relance_de) est possible.`, { precedents: deja.contacts });
   } else ok(`${domaine} jamais contacté (tous sites, toutes campagnes)`);
   if (deja.meme_racine) {
     const p = deja.meme_racine[deja.meme_racine.length - 1];
-    out.avertissements = [`même domaine racine (${domaineCourt(domaine)}) déjà contacté sur un autre sous-domaine : ${[...new Set(deja.meme_racine.map((x) => x.domaine))].join(', ')} (dernier mail le ${heure(p.envoye_le)}, « ${p.objet} », ${p.origine}). Pas bloquant : vérifier qu'il s'agit bien d'un autre site.`];
+    out.avertissements = [`même domaine racine (${domaineCourt(domaine)}) déjà contacté sur un autre sous-domaine : ${[...new Set(deja.meme_racine.map((x) => x.domaine))].join(', ')} (dernier mail le ${heure(p.envoye_le || p.envoyer_le)}, « ${p.objet} », ${p.origine}). Pas bloquant : vérifier qu'il s'agit bien d'un autre site.`];
     out.meme_racine = deja.meme_racine;
   }
+  return { out, ok, c, siteId, destinataire, objet, corps, t, aCreer, nomNiche, domaine, relance, simulation };
+}
 
-  // Cadence : plafond du jour et délai aléatoire, sous verrou par site.
+// Fiche cible à créer (domaine seul), dans la transaction de l'appelant.
+async function creerCible(cl, x) {
+  const hc = await nicheParNom(cl, x.siteId, x.nomNiche, { creer: true, siteCible: x.c.domaine });
+  const ins = (await cl.query(
+    `INSERT INTO seo_link_targets (niche_id, domain, via, statut, porte_url, contact_email, notes) VALUES ($1, $2, 'manuel', 'nouveau', $3, $4, 'créée à l''envoi (domaine seul)')
+     ON CONFLICT (niche_id, domain) DO NOTHING RETURNING id`, [hc.id, x.aCreer.hote, x.aCreer.url, x.destinataire])).rows[0];
+  const id = ins ? ins.id : (await cl.query('SELECT id FROM seo_link_targets WHERE niche_id = $1 AND domain = $2', [hc.id, x.aCreer.hote])).rows[0].id;
+  x.t = { id, niche_id: hc.id, niche: hc.name, domain: x.aCreer.hote, creee: !!ins };
+  x.out.cible = { id, domaine: x.domaine, niche: hc.name, campaign_id: hc.id, creee: !!ins, ...(hc.creee ? { niche_creee: true } : {}) };
+  x.aCreer = null;
+}
+
+// Cadence (plafond du jour, délai depuis le dernier envoi) sous verrou par site, puis expédition. Mail programmé
+// (ligneId) : la ligne passe de « programme » à « envoi » ; créneau pas libre → erreur 429, la ligne reste programmée.
+async function cadencerEtEnvoyer(db, x, { ligneId = null } = {}) {
+  const { out, ok, c, siteId, destinataire, objet, corps, relance } = x;
   const cl = await db.pool.connect();
   let ligne;
   try {
     await cl.query('BEGIN');
     await cl.query('SELECT pg_advisory_xact_lock($1)', [910000 + siteId]);
-    const n = (await cl.query(`SELECT COUNT(*)::int AS n FROM outreach_mails WHERE site = $1 AND statut <> 'envoi' AND (envoye_le AT TIME ZONE 'Europe/Paris')::date = $2::date`, [siteId, jourParis()])).rows[0].n;
+    const n = (await cl.query(`SELECT COUNT(*)::int AS n FROM outreach_mails WHERE site = $1 AND statut NOT IN ('envoi', 'programme', 'annule') AND (envoye_le AT TIME ZONE 'Europe/Paris')::date = $2::date`, [siteId, jourParis()])).rows[0].n;
     if (n >= c.plafond) throw err(429, `plafond du jour atteint pour ce site : ${n} / ${c.plafond} envois. Prochain envoi possible demain.`);
     const etat = (await cl.query('SELECT prochain_envoi_le FROM outreach_etat WHERE site = $1', [siteId])).rows[0];
     if (etat && etat.prochain_envoi_le && new Date(etat.prochain_envoi_le) > new Date()) throw err(429, `trop tôt après le dernier envoi : prochain envoi possible à ${heure(etat.prochain_envoi_le)}`, { prochain_envoi_le: etat.prochain_envoi_le });
     ok(`cadence : ${n} / ${c.plafond} aujourd'hui, délai depuis le dernier envoi respecté`);
-    if (simulation) {
+    if (x.simulation) {
       await cl.query('ROLLBACK');
       return { ...out, statut: 'simulation : rien envoyé', apercu: { de: c.from, a: destinataire, repondre_a: c.reply_to, objet, corps, signature: 'ajoutée à l\'envoi' } };
     }
-    // Fiche cible à créer (domaine seul) : dans la même transaction, sous le verrou du site.
-    if (aCreer) {
-      const hc = await nicheParNom(cl, siteId, nomNiche, { creer: true, siteCible: c.domaine });
-      const ins = (await cl.query(
-        `INSERT INTO seo_link_targets (niche_id, domain, via, statut, porte_url, contact_email, notes) VALUES ($1, $2, 'manuel', 'nouveau', $3, $4, 'créée à l''envoi (domaine seul)')
-         ON CONFLICT (niche_id, domain) DO NOTHING RETURNING id`, [hc.id, aCreer.hote, aCreer.url, destinataire])).rows[0];
-      const id = ins ? ins.id : (await cl.query('SELECT id FROM seo_link_targets WHERE niche_id = $1 AND domain = $2', [hc.id, aCreer.hote])).rows[0].id;
-      t = { id, niche_id: hc.id, niche: hc.name, domain: aCreer.hote, creee: !!ins };
-      out.cible = { id, domaine, niche: hc.name, campaign_id: hc.id, creee: !!ins, ...(hc.creee ? { niche_creee: true } : {}) };
-    }
+    if (x.aCreer) await creerCible(cl, x);
     // Réservation : la ligne et le prochain créneau, avant l'envoi (deux appels simultanés ne passent pas).
-    ligne = (await cl.query(
-      `INSERT INTO outreach_mails (site, campaign_id, target_id, domaine, destinataire, objet, corps, statut, relance_de) VALUES ($1, $2, $3, $4, $5, $6, $7, 'envoi', $8) RETURNING id`,
-      [siteId, t.niche_id, t.id, domaine, destinataire, objet, corps, relance ? relance.parent.id : null])).rows[0];
+    if (ligneId) {
+      ligne = (await cl.query("UPDATE outreach_mails SET statut = 'envoi', campaign_id = $2, target_id = $3 WHERE id = $1 AND statut = 'programme' RETURNING id", [ligneId, x.t.niche_id, x.t.id])).rows[0];
+      if (!ligne) throw err(409, `mail #${ligneId} plus programmé (annulé entre-temps ?) : rien envoyé`);
+    } else {
+      ligne = (await cl.query(
+        `INSERT INTO outreach_mails (site, campaign_id, target_id, domaine, destinataire, objet, corps, statut, relance_de) VALUES ($1, $2, $3, $4, $5, $6, $7, 'envoi', $8) RETURNING id`,
+        [siteId, x.t.niche_id, x.t.id, x.domaine, destinataire, objet, corps, relance ? relance.parent.id : null])).rows[0];
+    }
     const { min, max } = delais();
     const attente = (min + Math.random() * (max - min)) * 60000;
     out.etat_precedent = etat ? etat.prochain_envoi_le : null;
@@ -258,19 +282,112 @@ async function envoyerMail(db, b = {}) {
   try {
     res = await site.envoyer(c, site.composer(c, { destinataire, objet, corps, en_reponse_a: relance ? relance.dernier.message_id : null }));
   } catch (e) {
-    await db.pool.query('DELETE FROM outreach_mails WHERE id = $1', [ligne.id]).catch(() => {});
     await db.pool.query('UPDATE outreach_etat SET prochain_envoi_le = $2 WHERE site = $1', [siteId, out.etat_precedent]).catch(() => {});
+    if (ligneId) {
+      // Mail programmé : il reste programmé (nouvel essai au passage suivant), 3 essais au plus.
+      const r = (await db.pool.query(`UPDATE outreach_mails SET tentatives = COALESCE(tentatives, 0) + 1, erreur = $2,
+          statut = CASE WHEN COALESCE(tentatives, 0) + 1 >= ${ESSAIS_PROGRAMME} THEN 'echec' ELSE 'programme' END WHERE id = $1 RETURNING statut`, [ligne.id, `envoi refusé par le serveur de mail : ${e.message}`]).catch(() => ({ rows: [] }))).rows[0];
+      throw err(502, `envoi refusé par le serveur de mail : ${e.message}${r && r.statut === 'echec' ? ` (abandonné après ${ESSAIS_PROGRAMME} essais)` : ' (nouvel essai au passage suivant)'}`);
+    }
+    await db.pool.query('DELETE FROM outreach_mails WHERE id = $1', [ligne.id]).catch(() => {});
     // Fiche créée pour cet envoi : retirée (la niche « Hors campagne » reste, vide ou non).
-    if (t.creee) await db.pool.query('DELETE FROM seo_link_targets WHERE id = $1 AND NOT EXISTS (SELECT 1 FROM outreach_mails WHERE target_id = $1)', [t.id]).catch(() => {});
+    if (x.t.creee) await db.pool.query('DELETE FROM seo_link_targets WHERE id = $1 AND NOT EXISTS (SELECT 1 FROM outreach_mails WHERE target_id = $1)', [x.t.id]).catch(() => {});
     throw err(502, `envoi refusé par le serveur de mail : ${e.message}`);
   }
   const prevue = new Date(Date.now() + RELANCE_PREVUE_JOURS * 86400000);
-  await db.pool.query(`UPDATE outreach_mails SET statut = 'envoye', envoye_le = NOW(), message_id = $2, relance_prevue_le = $3::date WHERE id = $1`, [ligne.id, res.message_id, jourParis(prevue)]);
+  await db.pool.query(`UPDATE outreach_mails SET statut = 'envoye', envoye_le = NOW(), message_id = $2, relance_prevue_le = $3::date, erreur = NULL WHERE id = $1`, [ligne.id, res.message_id, jourParis(prevue)]);
   if (relance) await db.pool.query(`UPDATE outreach_mails SET statut = 'relance', relance_prevue_le = NULL WHERE id = ANY($1::int[]) AND statut = 'envoye'`, [[relance.premier.id, relance.parent.id, relance.dernier.id]]);
-  await db.pool.query(`UPDATE seo_link_targets SET statut = 'contacte', contact_email = COALESCE(contact_email, $2) WHERE id = $1 AND statut IN ('nouveau', 'a_contacter', 'contacte')`, [t.id, destinataire]);
+  await db.pool.query(`UPDATE seo_link_targets SET statut = 'contacte', contact_email = COALESCE(contact_email, $2) WHERE id = $1 AND statut IN ('nouveau', 'a_contacter', 'contacte')`, [x.t.id, destinataire]);
   const m = (await db.pool.query('SELECT * FROM outreach_mails WHERE id = $1', [ligne.id])).rows[0];
   delete out.etat_precedent;
-  return { ...out, statut: 'envoyé', mail: m, relance_prevue_le: m.relance_prevue_le };
+  return { ...out, statut: 'envoyé', mail: m, envoye_le: m.envoye_le, relance_prevue_le: m.relance_prevue_le };
+}
+
+// Heure d'envoi demandée (ISO 8601) : null si absente ; erreur si illisible, passée ou trop lointaine.
+const PROGRAMMATION_JOURS_MAX = 60;
+function lireEnvoyerLe(v, maintenant = new Date()) {
+  if (v === undefined || v === null || v === '') return null;
+  const d = new Date(v);
+  if (Number.isNaN(d.getTime()) || !/^\d{4}-\d{2}-\d{2}/.test(String(v).trim())) throw err(400, `envoyer_le illisible (${v}) : date ISO 8601 attendue, par exemple 2026-11-24T09:30:00+01:00`);
+  if (d.getTime() <= maintenant.getTime()) throw err(400, `envoyer_le (${heure(d)}) est déjà passé : l'omettre pour envoyer maintenant`);
+  if (d.getTime() > maintenant.getTime() + PROGRAMMATION_JOURS_MAX * 86400000) throw err(400, `envoyer_le : ${PROGRAMMATION_JOURS_MAX} jours au plus`);
+  return d;
+}
+
+async function envoyerMail(db, b = {}) {
+  const envoyerLe = lireEnvoyerLe(b.envoyer_le);
+  const x = await controler(db, b, { maintenant: envoyerLe || new Date() });
+  if (!envoyerLe) return cadencerEtEnvoyer(db, x);
+  // Programmé : mêmes contrôles maintenant, et de nouveau à l'expédition ; la cadence s'applique à l'expédition.
+  x.ok(`programmé pour le ${heure(envoyerLe)} : contrôles refaits à l'expédition ; cadence (plafond du jour, délai entre deux envois) appliquée à ce moment-là`);
+  if (x.simulation) return { ...x.out, statut: 'simulation : rien programmé', envoyer_le: envoyerLe, apercu: { de: x.c.from, a: x.destinataire, repondre_a: x.c.reply_to, objet: x.objet, corps: x.corps, signature: 'ajoutée à l\'envoi' } };
+  const cl = await db.pool.connect();
+  let ligne;
+  try {
+    await cl.query('BEGIN');
+    await cl.query('SELECT pg_advisory_xact_lock($1)', [910000 + x.siteId]);
+    if (x.aCreer) await creerCible(cl, x);
+    ligne = (await cl.query(
+      `INSERT INTO outreach_mails (site, campaign_id, target_id, domaine, destinataire, objet, corps, statut, relance_de, envoyer_le) VALUES ($1, $2, $3, $4, $5, $6, $7, 'programme', $8, $9) RETURNING *`,
+      [x.siteId, x.t.niche_id, x.t.id, x.domaine, x.destinataire, x.objet, x.corps, x.relance ? x.relance.parent.id : null, envoyerLe])).rows[0];
+    await cl.query('COMMIT');
+  } catch (e) { await cl.query('ROLLBACK').catch(() => {}); throw e; } finally { cl.release(); }
+  // Même jour déjà chargé : simple avertissement (le mail partira au premier créneau libre).
+  const jour = (await db.pool.query(`SELECT COUNT(*)::int AS n FROM outreach_mails WHERE site = $1 AND statut NOT IN ('annule', 'echec') AND (COALESCE(envoyer_le, envoye_le) AT TIME ZONE 'Europe/Paris')::date = $2::date`, [x.siteId, jourParis(envoyerLe)])).rows[0].n;
+  if (jour > x.c.plafond) (x.out.avertissements = x.out.avertissements || []).push(`${jour} mails envoyés ou programmés ce jour-là pour ${x.c.plafond} par jour : celui-ci partira au premier créneau libre, au plus tôt le lendemain`);
+  return { ...x.out, statut: 'programmé', mail: ligne, envoyer_le: ligne.envoyer_le };
+}
+
+// Cron : expédie les mails programmés arrivés à l'heure, un par site et par passage au plus (la cadence fait le
+// reste). Contrôles refaits (domaine contacté depuis, opposition, cible refusée…) : s'ils échouent, le mail est
+// annulé avec la raison. Créneau pas libre : il reste programmé et repart au passage suivant.
+const ESSAIS_PROGRAMME = 3;
+let expeditionEnCours = false;
+async function expedierProgrammes(db) {
+  if (expeditionEnCours) return { deja_en_cours: true };
+  expeditionEnCours = true;
+  const out = { envoyes: [], reportes: [], annules: [], erreurs: [] };
+  try {
+    const dus = (await db.pool.query("SELECT * FROM outreach_mails WHERE statut = 'programme' AND envoyer_le <= NOW() ORDER BY envoyer_le, id")).rows;
+    const sitesFaits = new Set();
+    for (const m of dus) {
+      if (sitesFaits.has(m.site)) { out.reportes.push(m.id); continue; }
+      let x;
+      try {
+        x = await controler(db, { site_id: m.site, target_id: m.target_id, destinataire: m.destinataire, objet: m.objet, corps: m.corps, relance_de: m.relance_de, simulation: false }, { exclure: m.id });
+      } catch (e) {
+        if (e.config) { out.erreurs.push({ id: m.id, message: e.message }); await db.pool.query('UPDATE outreach_mails SET erreur = $2 WHERE id = $1', [m.id, e.message]); continue; }
+        await db.pool.query("UPDATE outreach_mails SET statut = 'annule', annule_le = NOW(), erreur = $2 WHERE id = $1 AND statut = 'programme'", [m.id, `annulé à l'expédition : ${e.message}`]);
+        out.annules.push({ id: m.id, raison: e.message });
+        continue;
+      }
+      try { await cadencerEtEnvoyer(db, x, { ligneId: m.id }); out.envoyes.push(m.id); sitesFaits.add(m.site); }
+      catch (e) {
+        if (e.status === 429) { out.reportes.push(m.id); sitesFaits.add(m.site); }
+        else out.erreurs.push({ id: m.id, message: e.message });
+      }
+    }
+    return out;
+  } finally { expeditionEnCours = false; }
+}
+
+// Annule un envoi programmé qui n'est pas encore parti.
+async function annulerProgramme(db, { id } = {}) {
+  const n = Number(id);
+  if (!Number.isInteger(n) || n <= 0) throw err(400, 'id : numéro du mail programmé');
+  const r = (await db.pool.query("UPDATE outreach_mails SET statut = 'annule', annule_le = NOW(), erreur = 'annulé à la demande' WHERE id = $1 AND statut = 'programme' RETURNING *", [n])).rows[0];
+  if (r) return { statut: 'annulé', mail: r };
+  const m = (await db.pool.query('SELECT id, statut, envoye_le FROM outreach_mails WHERE id = $1', [n])).rows[0];
+  if (!m) throw err(404, `mail #${n} introuvable`);
+  throw err(409, m.statut === 'envoi' ? `mail #${n} en cours d'envoi : trop tard pour l'annuler` : `mail #${n} au statut « ${m.statut} »${m.envoye_le ? `, parti le ${heure(m.envoye_le)}` : ''} : seul un mail programmé s'annule`);
+}
+
+function start(db) {
+  const cron = require('node-cron');
+  cron.schedule('*/5 * * * *', () => {
+    expedierProgrammes(db).then((r) => { if (r.envoyes && (r.envoyes.length || r.annules.length || r.erreurs.length)) console.log(`[Netlinking] programmés : ${r.envoyes.length} envoyé(s), ${r.reportes.length} reporté(s), ${r.annules.length} annulé(s), ${r.erreurs.length} erreur(s)`); })
+      .catch((e) => console.error('[Netlinking] envois programmés :', e.message));
+  }, { timezone: 'Europe/Paris' });
 }
 
 // Liste : filtres site, campagne (niche), statut, relances dues (date passée, pas de suite).
@@ -282,7 +399,7 @@ async function lister(db, { site: s = null, campagne = null, statut = null, rela
         AND ($1::int IS NULL OR m.site = $1) AND ($2::int IS NULL OR m.campaign_id = $2) AND ($3::text IS NULL OR m.statut = $3)
         AND ($4::int IS NULL OR m.target_id = $4)
         AND (NOT $5::boolean OR (m.statut = 'envoye' AND m.relance_prevue_le <= $6::date))
-      ORDER BY ${relances_dues ? 'm.relance_prevue_le ASC' : 'm.envoye_le DESC'} LIMIT $7`,
+      ORDER BY ${relances_dues ? 'm.relance_prevue_le ASC' : statut === 'programme' ? 'm.envoyer_le ASC' : 'COALESCE(m.envoye_le, m.envoyer_le) DESC'} LIMIT $7`,
     [s ? Number(s) : null, campagne ? Number(campagne) : null, statut || null, target_id ? Number(target_id) : null, !!relances_dues, jourParis(), Math.min(1000, Number(limite) || 200)]);
   return { fetched_at: new Date().toISOString(), total: rows.length, mails: rows };
 }
@@ -301,16 +418,18 @@ async function sansReponse(db, { site: s }) {
 // Réponse (ou abandon) sur la cible : le dernier mail de son fil prend le statut, les relances s'arrêtent.
 async function marquerReponse(db, { target_id: targetId, date = null, nature }) {
   if (!NATURES.includes(nature)) throw err(400, `nature : ${NATURES.join(', ')}`);
-  const fil = (await db.pool.query("SELECT * FROM outreach_mails WHERE target_id = $1 AND statut <> 'envoi' ORDER BY envoye_le DESC", [targetId])).rows;
+  const fil = (await db.pool.query("SELECT * FROM outreach_mails WHERE target_id = $1 AND statut NOT IN ('envoi', 'programme', 'annule', 'echec') ORDER BY envoye_le DESC", [targetId])).rows;
   if (!fil.length) throw err(404, `aucun mail envoyé à la cible ${targetId}`);
   const quand = date ? new Date(date) : new Date();
   if (isNaN(quand.getTime())) throw err(400, 'date invalide');
   const statut = nature === 'abandon' ? 'abandonne' : 'repondu';
   await db.pool.query('UPDATE outreach_mails SET statut = $2, reponse_le = $3, reponse_nature = $4, relance_prevue_le = NULL WHERE id = $1', [fil[0].id, statut, nature === 'abandon' ? null : quand, nature === 'abandon' ? null : nature]);
   await db.pool.query("UPDATE outreach_mails SET relance_prevue_le = NULL WHERE target_id = $1", [targetId]);
+  // Une réponse (ou un abandon) annule les envois encore programmés pour cette cible.
+  const annules = (await db.pool.query("UPDATE outreach_mails SET statut = 'annule', annule_le = NOW(), erreur = $2 WHERE target_id = $1 AND statut = 'programme' RETURNING id", [targetId, `annulé : ${nature === 'abandon' ? 'abandon' : 'réponse'} notée`])).rows.map((r) => r.id);
   const statutCible = { refus: 'refus', negatif: 'refus' }[nature];
   if (statutCible) await db.pool.query('UPDATE seo_link_targets SET statut = $2 WHERE id = $1', [targetId, statutCible]);
-  return { target_id: Number(targetId), mail: (await db.pool.query('SELECT * FROM outreach_mails WHERE id = $1', [fil[0].id])).rows[0] };
+  return { target_id: Number(targetId), mail: (await db.pool.query('SELECT * FROM outreach_mails WHERE id = $1', [fil[0].id])).rows[0], ...(annules.length ? { programmes_annules: annules } : {}) };
 }
 
 // Ajout de cibles dans une niche du site (remplace l'import CSV) : crée les manquantes, ignore les domaines
@@ -382,4 +501,4 @@ async function ajouterCibles(db, { site: s, niche_id: nicheId = null, niche_nom:
   return out;
 }
 
-module.exports = { envoyerMail, dejaContacte, lister, sansReponse, marquerReponse, ajouterCibles, creerNiche, NATURES, RELANCES_MAX, HORS_CAMPAGNE };
+module.exports = { expedierProgrammes, annulerProgramme, start, lireEnvoyerLe, envoyerMail, dejaContacte, lister, sansReponse, marquerReponse, ajouterCibles, creerNiche, NATURES, RELANCES_MAX, HORS_CAMPAGNE };

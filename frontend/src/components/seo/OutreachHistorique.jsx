@@ -5,7 +5,7 @@ import { FiMail, FiRotateCcw } from 'react-icons/fi';
 import { outreachAPI } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
 
-const STATUTS = { envoye: 'envoyé', relance: 'relancé', repondu: 'répondu', abandonne: 'abandonné' };
+const STATUTS = { envoye: 'envoyé', relance: 'relancé', repondu: 'répondu', abandonne: 'abandonné', programme: 'programmé', annule: 'annulé', echec: 'échec d\'envoi' };
 const NATURES = [['positif', 'Positive'], ['payant', 'Lien payant proposé'], ['negatif', 'Négative'], ['refus', 'Refus'], ['abandon', 'Abandon (pas de réponse)']];
 const fmt = (d) => (d ? new Date(d).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '');
 
@@ -32,12 +32,13 @@ export default function OutreachHistorique({ targetId, onRelancer, version }) {
         {mails.map((m) => (
           <li key={m.id} className="text-sm">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-text-muted tabular-nums">{fmt(m.envoye_le)}</span>
+              <span className="text-text-muted tabular-nums">{m.statut === 'programme' ? `prévu le ${fmt(m.envoyer_le)}` : fmt(m.envoye_le || m.annule_le)}</span>
               <span className="text-text-primary">« {m.objet} »</span>
               <span className="text-xs px-2 py-0.5 rounded-full bg-surface-strong text-text-secondary">{STATUTS[m.statut] || m.statut}{m.reponse_nature ? ` (${m.reponse_nature})` : ''}</span>
               {m.relance_de && <span className="text-xs text-text-muted">relance de #{m.relance_de}</span>}
+              {m.statut === 'programme' && <button onClick={async () => { try { await outreachAPI.annuler(m.id); toast.success('Envoi programmé annulé'); charger(); } catch (e) { toast.error(e.message || 'Annulation impossible'); } }} className="text-xs text-danger-text hover:underline">Annuler l'envoi</button>}
             </div>
-            <div className="text-xs text-text-muted">à {m.destinataire}{m.relance_prevue_le ? ` · relance prévue le ${new Date(m.relance_prevue_le).toLocaleDateString('fr-FR')}` : ''}</div>
+            <div className="text-xs text-text-muted">à {m.destinataire}{m.relance_prevue_le ? ` · relance prévue le ${new Date(m.relance_prevue_le).toLocaleDateString('fr-FR')}` : ''}{m.erreur ? ` · ${m.erreur}` : ''}</div>
           </li>
         ))}
       </ul>

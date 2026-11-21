@@ -2533,6 +2533,9 @@ async function ensureOutreachTables(client) {
     );
   `);
   await client.query('CREATE INDEX IF NOT EXISTS idx_outreach_mails_site_domaine ON outreach_mails (site, domaine);');
+  // Envois programmés : heure voulue, annulation, erreur et essais à l'expédition.
+  await client.query('ALTER TABLE outreach_mails ADD COLUMN IF NOT EXISTS envoyer_le TIMESTAMPTZ, ADD COLUMN IF NOT EXISTS annule_le TIMESTAMPTZ, ADD COLUMN IF NOT EXISTS erreur TEXT, ADD COLUMN IF NOT EXISTS tentatives INTEGER DEFAULT 0;');
+  await client.query("CREATE INDEX IF NOT EXISTS idx_outreach_mails_programme ON outreach_mails (envoyer_le) WHERE statut = 'programme';");
   await client.query('CREATE INDEX IF NOT EXISTS idx_outreach_mails_domaine ON outreach_mails (domaine);');
   await client.query('CREATE INDEX IF NOT EXISTS idx_outreach_mails_target ON outreach_mails (target_id);');
   // Anti-doublon sur le domaine complet (sous-domaine compris, « www. » ignoré), plus sur le domaine racine :

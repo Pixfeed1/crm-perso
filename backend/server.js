@@ -359,6 +359,7 @@ async function startServer() {
   // Boîte d'envoi : réponses et rebonds relevés toutes les 15 min (si IMAP_* est réglé dans .env).
   require('./services/boiteService').start(app.locals.db);
   require('./services/sauvegardeDrive').start(app.locals.db);
+  require('./services/outreachService').start(app.locals.db);       // netlinking : envois programmés, toutes les 5 min
   require('./services/veilleReddit').start(app.locals.db);         // veille Reddit toutes les 10 min, bilan le lundi
   require('./services/marchesService').start(app.locals.db);        // marchés publics web : relevé du BOAMP à 7 h 47 et 13 h 47
   require('./services/prestataireService').start(app.locals.db);   // prestataires crédités : vérification BODACC / SIRENE chaque lundi   // copie chiffrée sur Drive la nuit, test de relecture le dimanche

@@ -87,6 +87,7 @@ async function outreach(chemin, corps) {
   } finally { clearTimeout(t); }
 }
 export const envoyerMailOutreach = (a) => outreach('send', a);
+export const annulerOutreach = (a) => outreach('annuler', a);
 export const verifierDejaContacte = (a) => outreach('verifier', a);
 export const listerOutreach = (a) => outreach('mails', a);
 export const marquerReponse = (a) => outreach('reponse', a);
