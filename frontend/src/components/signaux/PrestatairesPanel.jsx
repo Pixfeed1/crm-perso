@@ -12,6 +12,7 @@ const NIVEAUX = {
   abandon: { label: 'Site à l\'abandon (indice)', cls: 'bg-neutral-bg text-neutral-text' },
   actif: { label: 'Rien à signaler', cls: 'bg-success-bg text-success-text' },
   a_verifier: { label: 'Pas encore vérifié', cls: 'bg-neutral-bg text-neutral-text' },
+  homonyme: { label: 'Homonyme probable', cls: 'bg-neutral-bg text-neutral-text' },
 };
 const fmt = (d) => (d ? new Date(d).toLocaleDateString('fr-FR') : '');
 const bouton = 'px-2.5 py-1.5 rounded-lg text-xs inline-flex items-center gap-1.5 disabled:opacity-50';
@@ -22,7 +23,7 @@ function Ligne({ p, campagnes, onChange }) {
   const [detail, setDetail] = useState(null);
   const [campagne, setCampagne] = useState('');
   const [busy, setBusy] = useState('');
-  const n = p.statut === 'a_verifier' && p.verifie_le ? { label: 'À vérifier : fermé selon les registres, site actif', cls: 'bg-warning-bg text-warning-text' } : (NIVEAUX[p.statut] || NIVEAUX.a_verifier);
+  const n = p.statut === 'a_verifier' && p.motif && p.motif !== 'pas encore vérifié' ? { label: `À vérifier : ${p.motif}`, cls: 'bg-warning-bg text-warning-text' } : (NIVEAUX[p.statut] || NIVEAUX.a_verifier);
   const preuve = (p.preuves || [])[0];
   const certain = p.siren_source === 'mentions légales du site';
 
@@ -55,7 +56,7 @@ function Ligne({ p, campagnes, onChange }) {
       {ouvert && (
         <div className="px-4 pb-4 space-y-3 border-t border-border pt-3">
           <div className="text-xs text-text-muted">
-            {p.siren ? (certain ? 'Identité certaine : SIREN lu dans les mentions légales du site du prestataire. L\'email par la preuve peut citer le fait.' : `Identité ${p.siren_source || 'non sûre'} : le fait n'est pas cité dans les emails (risque d'homonyme).`) : 'SIREN introuvable : seul le site du prestataire est vérifié (indice).'}
+            {p.siren ? (certain ? 'Identité certaine : SIREN lu dans les mentions légales du site du prestataire. L\'email par la preuve peut citer le fait.' : `Identité ${p.siren_source || 'non sûre'}${p.identite_indices ? ` (${p.identite_indices})` : ''} : le fait n'est jamais cité dans les emails (risque d'homonyme).`) : 'SIREN introuvable : seul le site du prestataire est vérifié (indice).'}
             {p.verifie_le ? ` Vérifié le ${fmt(p.verifie_le)}.` : ''}{p.erreur ? ` Erreur : ${p.erreur}` : ''}
           </div>
           <ul className="space-y-1">
@@ -169,7 +170,7 @@ export default function PrestatairesPanel() {
             entreprises cessées dans SIRENE, et site du prestataire (simple indice). Leurs clients risquent de se retrouver sans suivi.
           </p>
           <div className="text-xs text-text-secondary mt-2">
-            {t.procedure || 0} en procédure · {t.ferme || 0} fermés · {t.abandon || 0} indices · {t.actif || 0} sans problème · {t.a_verifier || 0} à vérifier
+            {t.procedure || 0} en procédure · {t.ferme || 0} fermés · {t.abandon || 0} indices · {t.actif || 0} sans problème · {t.a_verifier || 0} à vérifier{t.homonyme ? ` · ${t.homonyme} homonyme(s) probable(s), hors liste` : ''}
             {enCours ? ` · vérification en cours depuis ${new Date(enCours).toLocaleTimeString('fr-FR')}` : ''}
           </div>
         </div>

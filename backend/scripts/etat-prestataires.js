@@ -1,6 +1,8 @@
 /* Signal « prestataire en difficulté ou disparu » : compteur et indices restants.
      node scripts/etat-prestataires.js              lecture seule
      node scripts/etat-prestataires.js --verifier   vérification complète d'abord (comme « Vérifier maintenant »)
+     node scripts/etat-prestataires.js --identites  contrôle des identités « trouvées par le nom » et des faux clients
+     node scripts/etat-prestataires.js --voir guiltek.fr,mooood.fr   détail de quelques prestataires (statut, citable, clients)
    N'affiche aucun accès. */
 require('dotenv').config();
 const { Pool } = require('pg');
@@ -10,7 +12,24 @@ const pool = new Pool({ user: process.env.DB_USER || 'postgres', host: process.e
 const db = { pool };
 const fmt = (d) => (d ? new Date(d).toLocaleDateString('fr-FR') : '');
 
+const arg = (n) => { const i = process.argv.indexOf(n); return i > 0 ? process.argv[i + 1] : null; };
 (async () => {
+  if (process.argv.includes('--identites')) {
+    const r = await require('../services/prestatairesBodacc').controlerIdentites(db);
+    console.log(`Identités contrôlées : ${r.controles.length}`);
+    for (const c of r.controles) console.log(`  ${c.domaine} : ${c.retenu ? 'retenu' : 'HOMONYME PROBABLE'} (${c.indices.length ? c.indices.join(', ') : 'aucun indice'})`);
+    console.log(`Faux clients (institutions, plateformes) détachés : ${r.faux_clients_detaches}\n`);
+  }
+  if (arg('--voir')) {
+    for (const d of arg('--voir').split(',').map((x) => x.trim()).filter(Boolean)) {
+      try {
+        const p = await P.detail(db, d);
+        console.log(`${p.domaine} · ${p.statut}${p.motif ? ` (${p.motif})` : ''} · gravité ${p.gravite} · identité ${p.siren_source || '?'} · citable ${p.siren_source === 'mentions légales du site' && p.gravite >= 2 ? 'oui' : 'non'} · ${p.clients.length} site(s) client(s)`);
+        console.log(`    ${p.clients.map((c) => c.domain).join(', ')}`);
+      } catch (e) { console.log(`${d} : ${e.message}`); }
+    }
+    console.log('');
+  }
   if (process.argv.includes('--verifier')) {
     const inv = await P.inventaire(db);
     console.log(`Inventaire : ${inv.prestataires} prestataire(s), ${inv.nouveaux} nouveau(x), ${inv.retires.length} faux prestataire(s) retiré(s)${inv.retires.length ? ` (${inv.retires.join(', ')})` : ''}`);

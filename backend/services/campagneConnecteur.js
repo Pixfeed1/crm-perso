@@ -186,7 +186,7 @@ async function prestataires(db, { domaine = null, gravite_min = 1, statut = null
     return { ...d, citable_dans_un_email: d.siren_source === 'mentions légales du site' && d.gravite >= 2, clients: d.clients.slice(0, 200) };
   }
   const l = await P().lister(db, { gravite_min, statut });
-  return { totaux: l.totaux, prestataires: l.prestataires.map((p) => ({ domaine: p.domaine, nom: p.nom || undefined, siren: p.siren || undefined, identite: p.siren_source || undefined, statut: p.statut, gravite: p.gravite, preuve: (p.preuves || [])[0], sites_clients: p.nb_clients, verifie_le: p.verifie_le })) };
+  return { totaux: l.totaux, note: 'homonymes probables (site trouvé par le nom sans indices suffisants) : hors liste par défaut, gravite_min=0 pour les voir', prestataires: l.prestataires.map((p) => ({ domaine: p.domaine, nom: p.nom || undefined, siren: p.siren || undefined, identite: p.siren_source || undefined, identite_indices: p.identite_indices || undefined, statut: p.statut, motif: p.motif || undefined, gravite: p.gravite, citable_dans_un_email: p.siren_source === 'mentions légales du site' && p.gravite >= 2, preuve: (p.preuves || [])[0], sites_clients: p.nb_clients, verifie_le: p.verifie_le })) };
 }
 const prestataireProspects = (db, { domaine }) => P().promouvoir(db, domaine);
 // Agences et prestataires web repérés directement au BODACC, avec leur site et leurs clients retrouvés.

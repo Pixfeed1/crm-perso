@@ -206,7 +206,8 @@ test('vérification, liste, prospects, angle « prestataire » dans une campagne
     assert.deepEqual([par['agence-reprise.fr'].statut, par['agence-reprise.fr'].gravite], ['a_verifier', 1]);
     assert.deepEqual([par['agence-redressement.fr'].statut, par['agence-redressement.fr'].gravite], ['procedure', 3], 'procédure collective : inchangée');
     const rep = await P.detail(db, 'agence-reprise.fr');
-    assert.match(rep.preuves.find((x) => x.type === 'contradiction').nature, /toujours en ligne et à jour \(copyright \d{4}\) : activité peut-être reprise/);
+    assert.match(rep.preuves.find((x) => x.type === 'contradiction').nature, /fermé au registre, mais son site est à jour \(copyright \d{4}\) : activité probablement reprise/);
+    assert.equal(rep.motif, 'activité probablement reprise');
     assert.equal(await P.signalPourSite(db, 'agence-reprise.fr'), null, 'à vérifier : jamais cité dans un email');
     assert.ok((await P.lister(db)).prestataires.some((p) => p.domaine === 'agence-reprise.fr'), 'visible dans la liste');
     // Site à jour mais d'il y a trois ans : reste fermé.

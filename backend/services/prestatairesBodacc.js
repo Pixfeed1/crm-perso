@@ -43,7 +43,8 @@ async function assurerTables(q) {
     CREATE TABLE IF NOT EXISTS siren_naf (siren TEXT PRIMARY KEY, naf TEXT, nom TEXT, maj_le TIMESTAMPTZ DEFAULT NOW());
     ALTER TABLE crawl_results ADD COLUMN IF NOT EXISTS prestataire_source TEXT;
     ALTER TABLE crawl_results ADD COLUMN IF NOT EXISTS prestataire_preuve_url TEXT;
-    ALTER TABLE prestataires ADD COLUMN IF NOT EXISTS portefeuille_le TIMESTAMPTZ;`);
+    ALTER TABLE prestataires ADD COLUMN IF NOT EXISTS portefeuille_le TIMESTAMPTZ;
+    ALTER TABLE prestataires ADD COLUMN IF NOT EXISTS identite_indices TEXT;`);
   prets.add(q);
 }
 
@@ -124,11 +125,102 @@ async function clientsCites(domaine, { page = pageDefaut } = {}) {
       let u; try { u = new URL(l.href, pages[i]); } catch { continue; }
       if (!/^https?:$/.test(u.protocol)) continue;
       const h = hoteNu(u.hostname);
-      if (!h.includes('.') || h === soi || h.endsWith(`.${soi}`) || HOTES_EXCLUS.test(h) || /^\d+\.\d+\.\d+\.\d+$/.test(h)) continue;
+      if (!h.includes('.') || h === soi || h.endsWith(`.${soi}`) || horsPortefeuille(h) || /^\d+\.\d+\.\d+\.\d+$/.test(h)) continue;
       if (!vus.has(h)) vus.set(h, pages[i]);
     }
   });
   return { clients: [...vus.entries()].slice(0, CLIENTS_MAX).map(([d, source]) => ({ domaine: d, source })), pages };
+}
+
+// ---------- faux clients : institutions et plateformes ----------
+// Jamais un site client : institutions (universités, .gouv, organismes de recherche) et plateformes (annuaires,
+// avis, constructeurs de sites, banques d'images, thèmes…).
+const PLATEFORMES = /(^|\.)(sortlist|trustindex|zyro|orcid|freepik|themeisle|themeforest|envato|codecanyon|templatemonster|elegantthemes|wpengine|wordpress|canva|unsplash|pexels|pixabay|shutterstock|adobe|figma|malt|codeur|clutch|goodfirms|designrush|awwwards|cssdesignawards|trustpilot|avis-verifies|linktr|linktree|researchgate|academia|arxiv|doi|semanticscholar|wikipedia|wikimedia|archive|issuu|slideshare|scribd|blogspot|over-blog|jimdo|weebly|webnode|site123|strikingly|godaddy|framer|carrd|airtable|jotform|tally|zapier|sumup|payplug|alma|klarna|stackoverflow|npmjs|bitbucket)\.[a-z.]+$/i;
+const INSTITUTIONS = /\.gouv\.fr$|\.gov(\.[a-z]{2})?$|\.edu(\.[a-z]{2})?$|\.ac\.[a-z]{2}$|\.int$|(^|\.)(univ-[a-z0-9-]+|universite-[a-z0-9-]+|[a-z0-9-]+-univ|u-[a-z]+|unistra|sorbonne-universite|cnrs|inria|inserm|cea|ird|inrae|ifremer|cnes|onera|obspm|iap|cern|eso|nasa|esa|europa|unesco|oecd|who|insee|service-public|legifrance|ameli|caf|francetravail|pole-emploi|urssaf|impots|ademe|bpifrance|hal|theses|persee|cairn)\.[a-z.]+$|(^|\.)ac-[a-z-]+\.fr$/i;
+const horsPortefeuille = (h) => PLATEFORMES.test(h) || INSTITUTIONS.test(h) || HOTES_EXCLUS.test(h);
+
+// ---------- identité d'un site trouvé par le nom ----------
+// Un nom seul fait des homonymes (un astronome, une société népalaise, un cabinet espagnol). Le site n'est retenu
+// qu'avec au moins deux indices concordants parmi quatre ; sinon : « homonyme probable », gravité 0, hors liste.
+const INDICES_MIN = 2;
+const texteDe = (html) => String(html || '').replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/gi, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;|&#160;/g, ' ').replace(/\s+/g, ' ');
+const MOTS_FR = /\b(le|la|les|des|et|est|pour|vous|nous|une|sur|avec|dans|qui|votre|notre|accueil|mentions)\b/gi;
+const MOTS_EN = /\b(the|and|for|you|with|our|is|are|of|to|your|home|about|contact us)\b/gi;
+const CP_FR = /\b(?:0[1-9]|[1-8]\d|9[0-5]|97[1-6])\d{3}\b/;
+async function indicesIdentite({ domaine, siren, nom, code_postal: cp = null, ville = null, tribunal = null }, x) {
+  const base = `https://${domaine}/`;
+  const accueil = await x.page(base).catch(() => '');
+  let mentions = '';
+  for (const l of hrefs(accueil)) {
+    let u; try { u = new URL(l.href, base); } catch { continue; }
+    if (hoteNu(u.hostname) === hoteNu(domaine) && /mentions|legal|l[ée]gales|cgv|cgu|a-propos|qui-sommes|contact|imprint|impressum/i.test(`${u.pathname} ${l.texte}`)) { mentions = await x.page(u.href).catch(() => ''); break; }
+  }
+  const html = `${accueil} ${mentions}`;
+  const texte = texteDe(html), t = fold(texte);
+  const fr = (texte.match(MOTS_FR) || []).length, en = (texte.match(MOTS_EN) || []).length;
+  const indices = [];
+  // 1. Site en français : attribut lang, ou contenu.
+  if (/<html[^>]*\blang\s*=\s*["']?fr/i.test(accueil) || (fr >= 15 && fr > en * 1.5)) indices.push('site en français');
+  // 2. Domaine .fr, ou .com avec une adresse en France.
+  const adresseFrance = CP_FR.test(texte) && /\bfrance\b|\+33|\b0[1-9](?:[ .]?\d{2}){4}\b/i.test(texte);
+  if (/\.fr$/i.test(domaine)) indices.push('domaine .fr');
+  else if (/\.com$/i.test(domaine) && adresseFrance) indices.push('.com avec une adresse en France');
+  // 3. Ville ou code postal du siège, ou ville du greffe de l'annonce.
+  const greffe = tribunal ? (/(?:de|d')\s*([A-ZÉÈÂa-zéèâêëîïôûüç' -]+)$/i.exec(String(tribunal).trim()) || [])[1] : null;
+  const lieu = (cp && new RegExp(`\\b${String(cp).replace(/\D/g, '')}\\b`).test(texte)) ? `code postal du siège (${cp})`
+    : (ville && fold(ville).length >= 3 && new RegExp(`\\b${fold(ville)}\\b`).test(t)) ? `ville du siège (${ville})`
+      : (greffe && fold(greffe).length >= 3 && new RegExp(`\\b${fold(greffe)}\\b`).test(t)) ? `ville du greffe (${greffe.trim()})` : null;
+  if (lieu) indices.push(lieu);
+  // 4. SIREN, SIRET ou raison sociale exacte.
+  const chiffres = texte.replace(/[\s.]/g, '');
+  const nomExact = fold(nom);
+  if (siren && chiffres.includes(siren)) indices.push('SIREN ou SIRET sur le site');
+  else if (nomExact.length >= 4 && ` ${t} `.includes(` ${nomExact} `)) indices.push('raison sociale exacte sur le site');
+  return { indices, retenu: indices.length >= INDICES_MIN, lu: !!accueil };
+}
+const texteIndices = (r) => `${r.indices.length} indice(s) sur 4${r.indices.length ? ` : ${r.indices.join(', ')}` : ''}${r.lu ? '' : ' (site illisible)'}`;
+
+// Clients rattachés depuis les références d'un domaine : détachés (homonyme, ou faux client). Rien n'est supprimé.
+async function detacher(db, ids) {
+  if (!ids.length) return 0;
+  await db.pool.query('UPDATE leads SET prestataire = NULL WHERE crawl_result_id = ANY($1::int[])', [ids]).catch(() => {});
+  const r = await db.pool.query('UPDATE crawl_results SET prestataire = NULL, prestataire_source = NULL, prestataire_preuve_url = NULL WHERE id = ANY($1::int[])', [ids]);
+  return r.rowCount;
+}
+
+// Homonyme probable : statut, gravité 0, raison dans les preuves, références détachées. Une identité certaine
+// (SIREN lu dans les mentions légales) n'est jamais touchée.
+async function marquerHomonyme(db, domaine, raison) {
+  await db.pool.query(
+    `UPDATE prestataires SET statut = 'homonyme', gravite = 0, identite_indices = $2,
+       preuves = $3::jsonb || COALESCE((SELECT jsonb_agg(e) FROM jsonb_array_elements(COALESCE(preuves, '[]'::jsonb)) e WHERE e->>'type' <> 'homonyme'), '[]'::jsonb)
+     WHERE domaine = $1 AND COALESCE(siren_source, '') <> 'mentions légales du site'`,
+    [domaine, raison, JSON.stringify([{ source: 'contrôle d\'identité', type: 'homonyme', niveau: 0, date: new Date().toISOString().slice(0, 10), nature: `homonyme probable : ${raison}` }])]);
+  const ids = (await db.pool.query("SELECT id FROM crawl_results WHERE LOWER(REGEXP_REPLACE(prestataire, '^www\\.', '')) = $1 AND prestataire_source = 'références du prestataire'", [domaine])).rows.map((r) => r.id);
+  return detacher(db, ids);
+}
+
+/**
+ * Données existantes : 1) chaque site « trouvé par le nom » est recontrôlé (deux indices au moins, sinon homonyme
+ * probable) ; 2) institutions et plateformes détachées des portefeuilles. À chaque relevé, et au démarrage.
+ */
+async function controlerIdentites(db, deps = {}) {
+  const x = D(deps);
+  await assurerTables(db.pool);
+  const out = { controles: [], homonymes: [], faux_clients_detaches: 0 };
+  const { rows } = await db.pool.query(
+    `SELECT p.domaine, p.nom, p.siren, b.nom AS nom_bodacc, b.code_postal, b.ville, b.tribunal FROM prestataires p LEFT JOIN prestataires_bodacc b ON b.siren = p.siren
+      WHERE p.siren_source = 'BODACC, site trouvé par le nom' AND p.statut <> 'homonyme' AND p.identite_indices IS NULL AND p.ignore_le IS NULL`);
+  for (const p of rows) {
+    const r = await indicesIdentite({ domaine: p.domaine, siren: p.siren, nom: p.nom_bodacc || p.nom, code_postal: p.code_postal, ville: p.ville, tribunal: p.tribunal }, x);
+    const raison = `site trouvé par le nom, ${texteIndices(r)}`;
+    if (r.retenu) await db.pool.query('UPDATE prestataires SET identite_indices = $2 WHERE domaine = $1', [p.domaine, raison]);
+    else { await marquerHomonyme(db, p.domaine, raison); out.homonymes.push(p.domaine); if (p.siren) await db.pool.query("UPDATE prestataires_bodacc SET statut = 'homonyme', nb_clients = 0 WHERE siren = $1", [p.siren]); }
+    out.controles.push({ domaine: p.domaine, retenu: r.retenu, indices: r.indices });
+  }
+  const faux = (await db.pool.query("SELECT id, domain FROM crawl_results WHERE prestataire IS NOT NULL AND prestataire_source = 'références du prestataire'")).rows.filter((r) => horsPortefeuille(hoteNu(r.domain)));
+  out.faux_clients_detaches = await detacher(db, faux.map((r) => r.id));
+  return out;
 }
 
 // Rattache les sites clients au prestataire : analyse par le crawler, ligne de crawl créée (ou complétée).
@@ -218,12 +310,27 @@ async function traiterAnnonce(db, a, x) {
   // Prestataire du signal : même table que ceux crédités sur les sites crawlés (vérification du lundi comprise).
   const certain = site.source === 'SIREN lu sur le site';
   const { gravite, statut } = P.conclure([preuve]);
+  // Trouvé par le nom : deux indices concordants au moins, sinon homonyme probable (hors liste, jamais de références).
+  let indicesTexte = null;
+  if (site.source === 'nom dans le titre du site') {
+    const r = await indicesIdentite({ domaine: site.domaine, siren, nom: fiche.nom, code_postal: fiche.code_postal, ville: fiche.ville, tribunal: fiche.tribunal }, x);
+    indicesTexte = `site trouvé par le nom, ${texteIndices(r)}`;
+    if (!r.retenu) {
+      await db.pool.query(
+        `INSERT INTO prestataires (domaine, nom, siren, siren_source, statut, gravite, preuves, verifie_le) VALUES ($1, $2, $3, 'BODACC, site trouvé par le nom', 'homonyme', 0, '[]'::jsonb, NOW())
+         ON CONFLICT (domaine) DO NOTHING`, [site.domaine, fiche.nom, siren]);
+      await marquerHomonyme(db, site.domaine, indicesTexte);
+      await db.pool.query("UPDATE prestataires_bodacc SET domaine = $2, domaine_source = $3, nb_clients = 0, statut = 'homonyme', maj_le = NOW() WHERE siren = $1", [siren, site.domaine, `${site.source} ; homonyme probable (${texteIndices(r)})`]);
+      return { ...fiche, domaine: site.domaine, domaine_source: `homonyme probable (${texteIndices(r)})`, nb_clients: 0, homonyme: true, nouveau: !deja };
+    }
+  }
   await db.pool.query(
     `INSERT INTO prestataires (domaine, nom, siren, siren_source, statut, gravite, preuves, verifie_le) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
      ON CONFLICT (domaine) DO UPDATE SET siren = COALESCE(prestataires.siren, EXCLUDED.siren), siren_source = COALESCE(prestataires.siren_source, EXCLUDED.siren_source),
        nom = COALESCE(prestataires.nom, EXCLUDED.nom), statut = CASE WHEN EXCLUDED.gravite > prestataires.gravite THEN EXCLUDED.statut ELSE prestataires.statut END,
        gravite = GREATEST(prestataires.gravite, EXCLUDED.gravite), preuves = CASE WHEN EXCLUDED.gravite > prestataires.gravite THEN EXCLUDED.preuves ELSE prestataires.preuves END`,
     [site.domaine, fiche.nom, siren, certain ? 'mentions légales du site' : 'BODACC, site trouvé par le nom', statut, gravite, JSON.stringify([preuve])]);
+  if (indicesTexte) await db.pool.query('UPDATE prestataires SET identite_indices = $2 WHERE domaine = $1', [site.domaine, indicesTexte]);
   const pf = await decouvrirPortefeuille(db, site.domaine, x).catch((er) => ({ rattaches: 0, erreur: er.message }));
   const nb = (await db.pool.query("SELECT COUNT(*)::int AS n FROM crawl_results WHERE LOWER(REGEXP_REPLACE(prestataire, '^www\\.', '')) = $1", [site.domaine])).rows[0].n;
   await db.pool.query('UPDATE prestataires_bodacc SET domaine = $2, domaine_source = $3, nb_clients = $4, statut = $5, erreur = $6, maj_le = NOW() WHERE siren = $1',
@@ -243,7 +350,7 @@ async function relever(db, deps = {}, { jours = null } = {}) {
     const liste = [];
     for (let i = jours || JOURS_MAX; i >= 1; i--) liste.push(jourIso(auj.getTime() - i * 86400000));
     const faits = new Set((await db.pool.query('SELECT jour::text FROM bodacc_jours WHERE jour = ANY($1::date[])', [liste])).rows.map((r) => r.jour));
-    const out = { jours: [], nouveaux: [] };
+    const out = { jours: [], nouveaux: [], identites: await controlerIdentites(db, x).catch((e) => ({ erreur: e.message })) };
     for (const jour of liste.filter((j) => !faits.has(j))) {
       const annonces = await annoncesDuJour(jour, x.get);
       let web = 0;
@@ -256,6 +363,7 @@ async function relever(db, deps = {}, { jours = null } = {}) {
       await db.pool.query('INSERT INTO bodacc_jours (jour, annonces, web) VALUES ($1, $2, $3) ON CONFLICT (jour) DO UPDATE SET annonces = EXCLUDED.annonces, web = EXCLUDED.web, traite_le = NOW()', [jour, annonces.length, web]);
       out.jours.push({ jour, annonces: annonces.length, web });
     }
+    out.nouveaux = out.nouveaux.filter((f) => !f.homonyme);
     if (out.nouveaux.length) await x.mail(`Prestataires web en difficulté : ${out.nouveaux.length} nouveau(x) au BODACC`, texteMail(out.nouveaux)).catch((e) => console.error('[Prestataires BODACC] mail :', e.message));
     return out;
   } finally { enCours = null; }
@@ -282,7 +390,7 @@ async function envoyerMail(sujet, texte) {
 // Prestataires déjà repérés (crawl ou BODACC) en difficulté dont les références n'ont pas encore été lues.
 async function portefeuillesEnAttente(db, deps = {}, { limite = 20 } = {}) {
   await assurerTables(db.pool);
-  const { rows } = await db.pool.query("SELECT domaine FROM prestataires WHERE statut IN ('procedure', 'ferme', 'a_verifier', 'abandon') AND portefeuille_le IS NULL AND ignore_le IS NULL ORDER BY gravite DESC, domaine LIMIT $1", [limite]);
+  const { rows } = await db.pool.query("SELECT domaine FROM prestataires WHERE statut IN ('procedure', 'ferme', 'a_verifier', 'abandon') AND portefeuille_le IS NULL AND ignore_le IS NULL ORDER BY gravite DESC, domaine LIMIT $1", [limite]);   // jamais un homonyme
   const out = [];
   for (const r of rows) out.push(await decouvrirPortefeuille(db, r.domaine, deps).catch((e) => ({ domaine: r.domaine, erreur: e.message })));
   return out;
@@ -297,7 +405,8 @@ async function lister(db, { statut = null, limite = 100 } = {}) {
 
 function start(db) {
   const cron = require('node-cron');
-  assurerTables(db.pool).catch((e) => console.error('[Prestataires BODACC] tables :', e.message));
+  assurerTables(db.pool).then(() => controlerIdentites(db)).then((r) => { if (r.homonymes.length || r.faux_clients_detaches) console.log(`[Prestataires BODACC] identités : ${r.homonymes.length} homonyme(s) probable(s) (${r.homonymes.join(', ')}), ${r.faux_clients_detaches} faux client(s) détaché(s)`); })
+    .catch((e) => console.error('[Prestataires BODACC] démarrage :', e.message));
   cron.schedule('37 6 * * *', async () => {
     try {
       const r = await relever(db);
@@ -313,4 +422,4 @@ function lancer(db) {
 }
 const _reinitialiser = () => { enCours = null; };
 
-module.exports = { NAF_WEB, assurerTables, annoncesDuJour, liquidateur, domainesCandidats, choisirSite, clientsCites, decouvrirPortefeuille, traiterAnnonce, relever, portefeuillesEnAttente, lister, lancer, start, texteMail, _reinitialiser };
+module.exports = { controlerIdentites, indicesIdentite, horsPortefeuille, NAF_WEB, assurerTables, annoncesDuJour, liquidateur, domainesCandidats, choisirSite, clientsCites, decouvrirPortefeuille, traiterAnnonce, relever, portefeuillesEnAttente, lister, lancer, start, texteMail, _reinitialiser };

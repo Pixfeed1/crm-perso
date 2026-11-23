@@ -100,7 +100,17 @@ const SQL_CLIENTS = `SELECT c.*, EXISTS (SELECT 1 FROM email_optout o WHERE o.em
 async function clients(db, domaine) {
   const { rows } = await db.pool.query(SQL_CLIENTS, [hote(domaine)]);
   const vus = new Set();
-  return rows.filter((r) => { const k = String(r.domain || '').toLowerCase().replace(/^www\./, ''); if (vus.has(k)) return false; vus.add(k); return true; });
+  const { horsPortefeuille } = require('./prestatairesBodacc');   // institutions et plateformes : jamais des clients
+  return rows.filter((r) => { const k = String(r.domain || '').toLowerCase().replace(/^www\./, ''); if (vus.has(k) || horsPortefeuille(k)) return false; vus.add(k); return true; });
+}
+// Pourquoi un prestataire est « à vérifier » : activité probablement reprise (fermé au registre, site à jour).
+function motif(p) {
+  if (p.statut === 'homonyme') return 'homonyme probable : site trouvé par le nom sans indices suffisants';
+  if (p.statut !== 'a_verifier') return null;
+  const c = (p.preuves || []).find((x) => x && x.type === 'contradiction');
+  if (!c) return p.verifie_le ? null : 'pas encore vérifié';
+  const annee = Number(c.copyright) || Number((/copyright (\d{4})/.exec(c.nature || '') || [])[1]);
+  return annee && annee >= new Date().getFullYear() ? 'activité probablement reprise' : 'fermé au registre, site encore en ligne';
 }
 
 // ---------- sources ----------
@@ -194,6 +204,14 @@ async function verifier(db, { domaines = null, limite = 200, pas_depuis: depuis 
     // SIREN : lu dans les mentions légales du site du prestataire, sinon rapprochement SÛR par le nom.
     let siren = p.siren, source = p.siren_source, nom = p.nom, entreprise = null;
     const sirenSite = row && sirene.sirenValide(row.siren_site) ? String(row.siren_site) : null;
+    // Homonyme probable (site trouvé par le nom, indices insuffisants) : il le reste, sauf si son site porte
+    // désormais le SIREN de l'annonce (identité certaine).
+    if (p.statut === 'homonyme' && !(sirenSite && sirenSite === p.siren)) {
+      await db.pool.query('UPDATE prestataires SET verifie_le = $2 WHERE domaine = $1', [p.domaine, maintenant]);
+      resultats.push({ domaine: p.domaine, statut: 'homonyme', gravite: 0, avant: p.statut, nom: p.nom || null, preuve: null, siren: p.siren || null });
+      if (surAvancee) surAvancee(resultats[resultats.length - 1], resultats.length, liste.length);
+      continue;
+    }
     try {
       if (sirenSite) { entreprise = await x.parSiren(sirenSite); if (entreprise.found) { siren = sirenSite; source = 'mentions légales du site'; } }
       else if (siren) entreprise = await x.parSiren(siren);
@@ -225,7 +243,10 @@ async function verifier(db, { domaines = null, limite = 200, pas_depuis: depuis 
     // pas concernée : l'entreprise continue souvent son activité pendant un redressement.
     if (statut === 'ferme' && site.a_jour) {
       statut = 'a_verifier'; gravite = 1;
-      preuves.push({ source: 'vérification du site', type: 'contradiction', niveau: 1, date: maintenant.toISOString().slice(0, 10), nature: `fermé selon les registres, mais son site est toujours en ligne et à jour (copyright ${site.a_jour}) : activité peut-être reprise sous un autre numéro, à vérifier` });
+      const reprise = site.a_jour >= maintenant.getFullYear();
+      preuves.push({ source: 'vérification du site', type: 'contradiction', niveau: 1, copyright: site.a_jour, date: maintenant.toISOString().slice(0, 10), nature: reprise
+        ? `fermé au registre, mais son site est à jour (copyright ${site.a_jour}) : activité probablement reprise, sous un autre numéro ou une autre forme`
+        : `fermé au registre, mais son site est encore en ligne (copyright ${site.a_jour}) : à vérifier` });
     }
     const contact = row ? { email: row.email || null, telephone: row.phone || null, titre: row.title || null } : p.contact;
     await db.pool.query(
@@ -250,12 +271,12 @@ async function lister(db, { gravite_min = 1, statut = null, avec_ignores = false
       ORDER BY p.gravite DESC, nb_clients DESC, p.domaine LIMIT $4`,
     [Number(gravite_min) || 0, statut, !!avec_ignores, Math.min(500, Number(limite) || 200)]);
   const totaux = (await db.pool.query(`SELECT statut, COUNT(*)::int AS n FROM prestataires WHERE ignore_le IS NULL GROUP BY statut`)).rows;
-  return { prestataires: rows, totaux: Object.fromEntries(totaux.map((t) => [t.statut, t.n])) };
+  return { prestataires: rows.map((p) => ({ ...p, motif: motif(p) || undefined })), totaux: Object.fromEntries(totaux.map((t) => [t.statut, t.n])) };
 }
 async function detail(db, domaine) {
   const p = (await db.pool.query('SELECT * FROM prestataires WHERE domaine = $1', [hote(domaine)])).rows[0];
   if (!p) throw err(404, `prestataire ${domaine} inconnu`);
-  return { ...p, clients: await clients(db, p.domaine) };
+  return { ...p, motif: motif(p) || undefined, clients: await clients(db, p.domaine) };
 }
 
 // Le signal à joindre à un site client pour l'email par la preuve : niveaux 2 et 3 seulement (faits datés), et
@@ -363,4 +384,4 @@ function start(db) {
   cron.schedule('7 6 * * 1', () => lancer(db), { timezone: 'Europe/Paris' });
 }
 
-module.exports = { assurerTables, inventaire, verifier, lister, detail, clients, signalPourSite, promouvoir, versCampagne, ficheDuPrestataire, ignorer, lancer, etat, start, preuveBodacc, signauxSite, conclure, annoncesBodacc, estExclu, PRESTATAIRES_EXCLUS };
+module.exports = { motif, assurerTables, inventaire, verifier, lister, detail, clients, signalPourSite, promouvoir, versCampagne, ficheDuPrestataire, ignorer, lancer, etat, start, preuveBodacc, signauxSite, conclure, annoncesBodacc, estExclu, PRESTATAIRES_EXCLUS };
