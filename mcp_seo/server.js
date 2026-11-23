@@ -467,6 +467,12 @@ function buildServer() {
     async (a) => compactJson(await campagnes('prestataires', a))
   );
   server.tool(
+    'lister_agences_bodacc',
+    "Lecture seule. Agences et prestataires web repérés DIRECTEMENT au BODACC chaque matin (procédure collective, radiation ; codes NAF du web), même s'ils n'apparaissent sur aucun site crawlé : nom, ville, activité, dirigeant, événement et date, tribunal, liquidateur ou mandataire quand l'annonce le donne (piste de rachat de clientèle), site retrouvé (et comment) et nombre de sites clients retrouvés dans ses pages de références. statut : sans_site, site_trouve, clients_trouves.",
+    { statut: z.enum(['sans_site', 'site_trouve', 'clients_trouves']).optional(), limite: z.number().int().optional() },
+    async (a) => compactJson(await campagnes('agences-bodacc', a))
+  );
+  server.tool(
     'prospects_depuis_prestataire',
     "ÉCRITURE (CRM seulement, rien envoyé) : les sites clients d'un prestataire signalé deviennent des prospects (fiches créées si besoin, avec la preuve dans les notes) ; renvoie les lead_ids. Avec id (campagne) : ils sont aussi ajoutés à cette campagne, avec les contrôles habituels ; l'email par la preuve y prend l'angle « prestataire » quand le fait est citable. La validation et l'envoi restent à Marc.",
     { domaine: z.string(), id: z.number().int().optional() },

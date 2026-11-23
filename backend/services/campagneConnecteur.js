@@ -189,6 +189,11 @@ async function prestataires(db, { domaine = null, gravite_min = 1, statut = null
   return { totaux: l.totaux, prestataires: l.prestataires.map((p) => ({ domaine: p.domaine, nom: p.nom || undefined, siren: p.siren || undefined, identite: p.siren_source || undefined, statut: p.statut, gravite: p.gravite, preuve: (p.preuves || [])[0], sites_clients: p.nb_clients, verifie_le: p.verifie_le })) };
 }
 const prestataireProspects = (db, { domaine }) => P().promouvoir(db, domaine);
+// Agences et prestataires web repérés directement au BODACC, avec leur site et leurs clients retrouvés.
+async function agencesBodacc(db, { statut = null, limite = 50 } = {}) {
+  const r = await require('./prestatairesBodacc').lister(db, { statut, limite });
+  return { derniers_jours: r.derniers_jours, agences: r.agences.map((a) => ({ siren: a.siren, nom: a.nom, ville: a.ville, code_postal: a.code_postal, activite: a.naf_libelle, dirigeant: a.dirigeant || undefined, evenement: a.nature, famille: a.famille, bodacc_du: a.date_parution, tribunal: a.tribunal, liquidateur: a.liquidateur || undefined, annonce: a.url, site: a.domaine || undefined, site_trouve_par: a.domaine_source || undefined, sites_clients: a.nb_clients, suite: a.domaine ? 'lister_prestataires_signal avec ce domaine pour les sites clients, puis prospects_depuis_prestataire' : undefined })) };
+}
 const prestataireCampagne = (db, { domaine, id: cid }) => P().versCampagne(db, domaine, id(cid));
 // Revérifier un prestataire maintenant (BODACC, SIRENE, son site) ; renvoie le nouveau statut et ses preuves.
 async function prestataireVerifier(db, { domaine } = {}, deps = {}) {
@@ -243,4 +248,4 @@ async function reglesReddit(db) {
   };
 }
 
-module.exports = { annoncesReddit, marquerReddit, reglesReddit, marches, marcheSuivre, prestataires, prestataireProspects, prestataireCampagne, prestataireVerifier, prestataireFiche, prestataireIgnorer, lister, lire, ligne, prospects, crawls, creer, modifier, ajouter, modifierLigne, regenerer, reanalyser, reprendre, testAb, piloter, boiteReception };
+module.exports = { agencesBodacc, annoncesReddit, marquerReddit, reglesReddit, marches, marcheSuivre, prestataires, prestataireProspects, prestataireCampagne, prestataireVerifier, prestataireFiche, prestataireIgnorer, lister, lire, ligne, prospects, crawls, creer, modifier, ajouter, modifierLigne, regenerer, reanalyser, reprendre, testAb, piloter, boiteReception };

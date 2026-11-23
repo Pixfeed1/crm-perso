@@ -23,6 +23,10 @@ const ok = (fn) => async (req, res) => {
 router.get('/', ok((db, b, req) => P.lister(db, { gravite_min: req.query.gravite_min ?? 1, statut: req.query.statut || null, avec_ignores: req.query.avec_ignores === '1' })));
 router.get('/etat', ok(async () => P.etat()));
 router.post('/verifier', ok(async (db, b) => (b.domaine ? P.verifier(db, { domaines: [b.domaine] }) : P.lancer(db))));
+// Agences et prestataires web repérés directement au BODACC (avant /:domaine).
+const B = require('../services/prestatairesBodacc');
+router.get('/bodacc', ok((db, b, req) => B.lister(db, { statut: req.query.statut || null })));
+router.post('/bodacc/relever', ok(async (db) => B.lancer(db)));
 router.get('/:domaine', ok((db, b, req) => P.detail(db, req.params.domaine)));
 router.post('/:domaine/prospects', ok((db, b, req) => P.promouvoir(db, req.params.domaine, { result_ids: Array.isArray(b.result_ids) ? b.result_ids.map(Number) : null })));
 router.post('/:domaine/campagne', ok((db, b, req) => P.versCampagne(db, req.params.domaine, b.campagne_id)));

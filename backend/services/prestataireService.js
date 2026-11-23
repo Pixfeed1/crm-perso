@@ -233,7 +233,7 @@ async function verifier(db, { domaines = null, limite = 200, pas_depuis: depuis 
       [p.domaine, nom || null, siren || null, source || null, statut, gravite, JSON.stringify(preuves),
         JSON.stringify(row ? { http_status: row.http_status || null, parked: row.parked || null, copyright_annee: row.copyright_annee || null, title: row.title || null } : null),
         JSON.stringify(contact || null), maintenant, [erreurs.join(' ; ') || null, detectOk ? null : 'analyse des sites indisponible : site non vérifié cette fois'].filter(Boolean).join(' ; ') || null, site.echecs]);
-    resultats.push({ domaine: p.domaine, statut, gravite, siren: siren || null, erreur: erreurs.join(' ; ') || undefined });
+    resultats.push({ domaine: p.domaine, statut, gravite, avant: p.statut, nom: nom || null, preuve: preuves[0] || null, siren: siren || null, erreur: erreurs.join(' ; ') || undefined });
     if (surAvancee) surAvancee(resultats[resultats.length - 1], resultats.length, liste.length);
     if (x.pause) await sleep(x.pause);
   }
@@ -330,13 +330,33 @@ function lancer(db) {
   if (enCours) return { deja: true, depuis: enCours };
   enCours = new Date().toISOString();
   (async () => {
-    try { await inventaire(db); const debut = new Date(enCours); let n = 0; for (;;) { const r = await verifier(db, { limite: 100, pas_depuis: debut }); n += r.verifies; if (r.verifies < 100 || n >= 3000) break; } console.log(`[Prestataires] ${n} vérifié(s)`); }
+    try {
+      await inventaire(db); const debut = new Date(enCours); let n = 0; const graves = [];
+      for (;;) { const r = await verifier(db, { limite: 100, pas_depuis: debut }); n += r.verifies; graves.push(...r.resultats.filter((x) => ['procedure', 'ferme'].includes(x.statut) && !['procedure', 'ferme'].includes(x.avant))); if (r.verifies < 100 || n >= 3000) break; }
+      console.log(`[Prestataires] ${n} vérifié(s), ${graves.length} nouveau(x) en difficulté`);
+      if (graves.length) await alerterNouveaux(db, graves).catch((e) => console.error('[Prestataires] mail :', e.message));
+      // Leurs clients, d'après leurs pages de références.
+      await require('./prestatairesBodacc').portefeuillesEnAttente(db).catch((e) => console.error('[Prestataires] références :', e.message));
+    }
     catch (e) { console.error('[Prestataires] vérification :', e.message); }
     finally { enCours = null; }
   })();
   return { lancee: true };
 }
 function etat() { return { en_cours: enCours }; }
+// Mail : prestataires déjà connus passés en procédure collective ou fermés à cette vérification.
+async function alerterNouveaux(db, liste) {
+  const lignes = [];
+  for (const x of liste) {
+    const n = (await clients(db, x.domaine)).length;
+    lignes.push(`• ${x.nom || x.domaine} (${x.domaine}) : ${x.preuve ? x.preuve.nature : x.statut}${x.preuve && x.preuve.date ? ` (${x.preuve.source}, ${new Date(x.preuve.date).toLocaleDateString('fr-FR')})` : ''} · ${n} site(s) client(s)`);
+  }
+  const mail = require('./emailService');
+  const to = process.env.ALERT_EMAIL || process.env.REPORT_REPLY_TO || process.env.EMAIL_USER;
+  if (!to) return;
+  const texte = `${liste.length} prestataire(s) crédité(s) sur vos sites crawlés vien(nen)t de passer en difficulté :\n\n${lignes.join('\n')}\n\nÀ suivre dans le CRM : Portefeuille > Signaux > Prestataires en difficulté.`;
+  await mail.sendEmail({ to, subject: `Prestataires en difficulté : ${liste.length} nouveau(x)`, text: texte, html: `<div style="font-family:sans-serif;font-size:15px;line-height:1.6;white-space:pre-line">${texte.replace(/[<>&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]))}</div>` });
+}
 function start(db) {
   const cron = require('node-cron');
   assurerTables(db.pool).catch((e) => console.error('[Prestataires] table :', e.message));

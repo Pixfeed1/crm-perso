@@ -100,6 +100,43 @@ function Ligne({ p, campagnes, onChange }) {
   );
 }
 
+// Agences et prestataires web repérés directement au BODACC (procédure collective, radiation), avec leurs clients
+// retrouvés dans leurs pages de références ; le liquidateur quand l'annonce le donne (piste de rachat de clientèle).
+function AgencesBodacc() {
+  const { toast } = useToast();
+  const [d, setD] = useState(null);
+  const charger = useCallback(() => prestatairesAPI.bodacc().then(setD).catch(() => setD({ agences: [], derniers_jours: [] })), []);
+  useEffect(() => { charger(); }, [charger]);
+  if (!d) return null;
+  const dernier = d.derniers_jours && d.derniers_jours[0];
+  return (
+    <div className="bg-surface border border-border rounded-xl p-4 space-y-2">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <div className="font-semibold text-text-primary">Repérés au BODACC : agences et prestataires web</div>
+          <p className="text-xs text-text-muted mt-1 max-w-3xl">Chaque matin, les procédures collectives et radiations des entreprises du web (programmation, conseil informatique, portails, communication, design). Site retrouvé, puis ses clients dans ses pages de références ; mail à chaque nouveauté.{dernier ? ` Dernier jour relevé : ${new Date(dernier.jour).toLocaleDateString('fr-FR')}, ${dernier.annonces} annonce(s), ${dernier.web} du web.` : ''}</p>
+        </div>
+        <button onClick={async () => { try { await prestatairesAPI.releverBodacc(); toast.success('Relevé du BODACC lancé'); setTimeout(charger, 60000); } catch (e) { toast.error(e.message); } }} disabled={!!d.en_cours} className={`${bouton} bg-surface-strong text-text-primary`}><FiRefreshCw className={d.en_cours ? 'animate-spin' : ''} /> Relever maintenant</button>
+      </div>
+      {d.agences.length === 0 && <div className="text-sm text-text-muted">Aucune entreprise du web repérée pour l'instant.</div>}
+      {d.agences.map((a) => (
+        <div key={a.siren} className="border-t border-border pt-2 text-sm">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-medium text-text-primary">{a.nom || a.siren}</span>
+            <span className="text-xs text-text-muted">{a.ville || ''}{a.code_postal ? ` (${String(a.code_postal).slice(0, 2)})` : ''} · SIREN {a.siren} · {a.naf_libelle}</span>
+            <span className={`px-2 py-0.5 rounded-full text-xs ${a.famille === 'procedure' ? 'bg-danger-bg text-danger-text' : 'bg-warning-bg text-warning-text'}`}>{a.nature}</span>
+          </div>
+          <div className="text-xs text-text-secondary mt-0.5">
+            BODACC du {fmt(a.date_parution)}{a.tribunal ? ` · ${a.tribunal}` : ''}{a.liquidateur ? ` · ${a.liquidateur}` : ''}
+            {a.url && <a href={a.url} target="_blank" rel="noreferrer" className="ml-2 text-accent inline-flex items-center gap-1">annonce <FiExternalLink size={11} /></a>}
+          </div>
+          <div className="text-xs text-text-muted mt-0.5">{a.domaine ? `Site ${a.domaine} (${a.domaine_source}) · ${a.nb_clients} site(s) client(s) retrouvé(s) : voir la liste ci-dessous` : 'Site non trouvé d\'après son nom'}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function PrestatairesPanel() {
   const { toast } = useToast();
   const [data, setData] = useState(null);
@@ -141,6 +178,7 @@ export default function PrestatairesPanel() {
           <button onClick={toutVerifier} disabled={!!enCours} className={`${bouton} bg-surface-strong text-text-primary`}><FiRefreshCw className={enCours ? 'animate-spin' : ''} /> Vérifier maintenant</button>
         </div>
       </div>
+      <AgencesBodacc />
       {data.prestataires.length === 0 && <div className="text-sm text-text-muted p-4">Aucun prestataire à signaler{tous ? '' : ' (cochez « tous les prestataires » pour voir la liste complète)'}.</div>}
       {data.prestataires.map((p) => <Ligne key={p.domaine} p={p} campagnes={campagnes} onChange={charger} />)}
     </div>

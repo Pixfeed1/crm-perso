@@ -72,10 +72,13 @@ const CATALOGUE = {
         : `le répertoire des entreprises (SIRENE) l'indique comme cessée${date ? ` depuis le ${date}` : ''}`;
     return {
       sujet: `Le suivi de ${site(r)}`,
-      preuve: `Le pied de page de ${site(r)} indique que le site a été réalisé par ${nom}. Or ${fait}.`,
+      // Lien site → prestataire : crédit en pied de page, ou site cité dans les références du prestataire.
+      preuve: r.prestataire_source === 'références du prestataire'
+        ? `${nom} présente ${site(r)} parmi les réalisations de son propre site. Or ${fait}.`
+        : `Le pied de page de ${site(r)} indique que le site a été réalisé par ${nom}. Or ${fait}.`,
       consequence: `Dans ce cas, les mises à jour et la sécurité d'un site ne sont souvent plus assurées, et il arrive que les accès à l'hébergement ou au nom de domaine soient restés au nom du prestataire.`,
       question: `Savez-vous aujourd'hui qui détient ces accès pour votre site ?`,
-      brut: `${s.source} : ${s.nature}${s.date ? ` (${s.date})` : ''}${s.tribunal ? `, ${s.tribunal}` : ''}${s.url ? ` · ${s.url}` : ''} · prestataire ${s.domaine}${s.siren ? `, SIREN ${s.siren} lu dans ses mentions légales` : ''}`
+      brut: `${s.source} : ${s.nature}${s.date ? ` (${s.date})` : ''}${s.tribunal ? `, ${s.tribunal}` : ''}${s.url ? ` · ${s.url}` : ''} · prestataire ${s.domaine}${s.siren ? `, SIREN ${s.siren} lu dans ses mentions légales` : ''}${r.prestataire_source === 'références du prestataire' ? ` · site cité dans ses références${r.prestataire_preuve_url ? ` : ${r.prestataire_preuve_url}` : ''}` : ''}`
     };
   },
   accueil_404: (r) => ({

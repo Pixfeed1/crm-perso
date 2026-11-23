@@ -1443,7 +1443,9 @@ export const prestatairesAPI = {
   prospects: (d) => apiRequest(`/portefeuille/prestataires/${encodeURIComponent(d)}/prospects`, 'POST', {}),
   campagne: (d, campagneId) => apiRequest(`/portefeuille/prestataires/${encodeURIComponent(d)}/campagne`, 'POST', { campagne_id: campagneId }),
   fiche: (d) => apiRequest(`/portefeuille/prestataires/${encodeURIComponent(d)}/fiche`, 'POST', {}),
-  ignorer: (d, data) => apiRequest(`/portefeuille/prestataires/${encodeURIComponent(d)}/ignorer`, 'POST', data)
+  ignorer: (d, data) => apiRequest(`/portefeuille/prestataires/${encodeURIComponent(d)}/ignorer`, 'POST', data),
+  bodacc: () => apiRequest('/portefeuille/prestataires/bodacc'),
+  releverBodacc: () => apiRequest('/portefeuille/prestataires/bodacc/relever', 'POST', {})
 };
 
 export const signauxAPI = {
