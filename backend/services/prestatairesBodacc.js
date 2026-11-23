@@ -247,9 +247,11 @@ async function relever(db, deps = {}, { jours = null } = {}) {
     for (const jour of liste.filter((j) => !faits.has(j))) {
       const annonces = await annoncesDuJour(jour, x.get);
       let web = 0;
-      for (const a of annonces) {
+      if (x.surProgression) x.surProgression({ jour, fait: 0, total: annonces.length, web });
+      for (const [i, a] of annonces.entries()) {
         const f = await traiterAnnonce(db, a, x).catch((e) => { console.error('[Prestataires BODACC]', sirenDe(a), e.message); return null; });
-        if (f) { web++; if (f.nouveau) out.nouveaux.push(f); }
+        if (f) { web++; if (f.nouveau) out.nouveaux.push(f); if (x.surProgression) x.surProgression({ jour, fait: i + 1, total: annonces.length, web, trouve: f }); }
+        else if (x.surProgression && (i + 1) % 100 === 0) x.surProgression({ jour, fait: i + 1, total: annonces.length, web });
       }
       await db.pool.query('INSERT INTO bodacc_jours (jour, annonces, web) VALUES ($1, $2, $3) ON CONFLICT (jour) DO UPDATE SET annonces = EXCLUDED.annonces, web = EXCLUDED.web, traite_le = NOW()', [jour, annonces.length, web]);
       out.jours.push({ jour, annonces: annonces.length, web });

@@ -14,6 +14,12 @@ const arg = (n) => { const i = process.argv.indexOf(n); return i > 0 ? process.a
 (async () => {
   const t0 = Date.now();
   const deps = process.argv.includes('--sans-mail') ? { mail: async () => {} } : {};
+  // Progression : une ligne toutes les 100 annonces, et chaque entreprise du web dès qu'elle est trouvée.
+  deps.surProgression = ({ jour, fait, total, web, trouve }) => {
+    const j = new Date(jour).toLocaleDateString('fr-FR');
+    if (trouve) console.log(`  ${j} · ${fait}/${total} · WEB : ${trouve.nom || trouve.siren} (${trouve.ville || '?'}) · ${trouve.nature}${trouve.domaine ? ` · site ${trouve.domaine}, ${trouve.nb_clients} client(s)` : ' · site non trouvé'}`);
+    else console.log(`  ${j} · ${fait}/${total} annonce(s) vérifiée(s), ${web} du web`);
+  };
   const jours = arg('--jours') ? Number(arg('--jours')) : null;
   if (jours) await pool.query("DELETE FROM bodacc_jours WHERE jour >= CURRENT_DATE - $1::int", [jours]).catch(() => {});   // relire ces jours
   const r = await B.relever(db, deps, { jours });
